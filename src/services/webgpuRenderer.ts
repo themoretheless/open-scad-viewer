@@ -9,7 +9,7 @@ import type { MeshData } from './openscadParser'
 /* ── WGSL shaders ─────────────────────────────────── */
 
 const MESH_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
 struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f }
 
 @group(0) @binding(0) var<uniform> sc: Scene;
@@ -24,6 +24,9 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
 }
 
 @fragment fn fs(v: V) -> @location(0) vec4f {
+  // Clipping plane
+  if (sc.clip.y > 0.5 && v.w.y < sc.clip.x) { discard; }
+
   let N = normalize(v.n);
   let L = normalize(sc.light.xyz);
   let V2 = normalize(sc.eye.xyz - v.w);
@@ -31,13 +34,21 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
   let d = max(dot(N, L), 0.0);
   let s = pow(max(dot(N, H), 0.0), 40.0);
   let bd = max(dot(-N, L), 0.0) * 0.25;
-  let c = sc.ambient.rgb * ob.color.rgb + d * ob.color.rgb + s * vec3f(0.25) + bd * ob.color.rgb * 0.5;
+  var c = sc.ambient.rgb * ob.color.rgb + d * ob.color.rgb + s * vec3f(0.25) + bd * ob.color.rgb * 0.5;
+
+  // Fog
+  if (sc.fogParams.z > 0.5) {
+    let dist = length(sc.eye.xyz - v.w);
+    let fogFactor = clamp((dist - sc.fogParams.x) / (sc.fogParams.y - sc.fogParams.x), 0.0, 1.0);
+    c = mix(c, sc.fogColor.rgb, fogFactor);
+  }
+
   return vec4f(c, ob.color.a);
 }
 `
 
 const LINE_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
 @group(0) @binding(0) var<uniform> sc: Scene;
 
 struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
@@ -87,6 +98,19 @@ export class WebGPURenderer {
 
   /* auto-rotate */
   autoRotate = false
+
+  /* lighting preset */
+  lightingPreset = 'default'
+
+  /* clipping plane */
+  clipEnabled = false
+  clipY = 0
+
+  /* fog */
+  fogEnabled = false
+
+  /* reflection */
+  showReflection = false
 
   /* orthographic projection */
   orthographic = false
@@ -227,7 +251,7 @@ export class WebGPURenderer {
   }
 
   private buildSceneUB() {
-    this.sceneUB = this.dev.createBuffer({ size: 112, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.sceneUB = this.dev.createBuffer({ size: 192, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
     this.sceneBG = this.dev.createBindGroup({
       layout: this.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
@@ -364,11 +388,20 @@ export class WebGPURenderer {
     this.lastW = w
     this.lastH = h
     const vp = transpose(vpMat)
-    const sd = new Float32Array(28)
+    const sd = new Float32Array(48)
     sd.set(vp, 0)
     sd.set([cx,cy,cz,1], 16)
-    sd.set([0.55,0.75,0.45,0], 20)
-    sd.set([0.22,0.22,0.24,1], 24)
+    // Lighting (use preset values)
+    const lp = this.getLightingValues()
+    sd.set(lp.light, 20)
+    sd.set(lp.ambient, 24)
+    // Clipping plane
+    sd.set([this.clipY, this.clipEnabled ? 1.0 : 0.0, 0, 0], 28)
+    // Fog
+    const fogNear = this.dist * 0.5
+    const fogFar = this.dist * 3.0
+    sd.set([fogNear, fogFar, this.fogEnabled ? 1.0 : 0.0, 0], 32)
+    sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
     this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
 
     const enc = this.dev.createCommandEncoder()
@@ -420,7 +453,76 @@ export class WebGPURenderer {
     }
 
     pass.end()
+
+    // Reflection pass - render mirrored meshes with low alpha
+    if (this.showReflection && this.meshes.length > 0) {
+      const reflPass = enc.beginRenderPass({
+        colorAttachments: [{
+          view: this.ctx.getCurrentTexture().createView(),
+          loadOp: 'load', storeOp: 'store',
+        }],
+        depthStencilAttachment: {
+          view: this.depth.createView(),
+          depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+        },
+      })
+
+      // Use transparent pipeline for reflections
+      reflPass.setPipeline(this.meshPipeT)
+      reflPass.setBindGroup(0, this.sceneBG)
+
+      for (const m of this.lastRawMeshes) {
+        // Create mirrored transform (flip Y)
+        const mt = new Float32Array(16)
+        mt.set(m.transform)
+        // Negate Y row: indices 4,5,6,7
+        mt[4] = -mt[4]; mt[5] = -mt[5]; mt[6] = -mt[6]; mt[7] = -mt[7]
+
+        const reflUB = this.dev.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+        this.dev.queue.writeBuffer(reflUB, 0, transpose(mt))
+        const nm = transpose(invert(mt))
+        this.dev.queue.writeBuffer(reflUB, 64, transpose(nm))
+        // Use original color but with very low alpha
+        const reflColor = new Float32Array([m.color[0] * 0.5, m.color[1] * 0.5, m.color[2] * 0.5, 0.15])
+        this.dev.queue.writeBuffer(reflUB, 128, reflColor)
+
+        const reflBG = this.dev.createBindGroup({
+          layout: this.objBGL,
+          entries: [{ binding: 0, resource: { buffer: reflUB } }],
+        })
+
+        // Find the corresponding GPU mesh to get vb and ib
+        const idx = this.lastRawMeshes.indexOf(m)
+        if (idx >= 0 && idx < this.meshes.length) {
+          reflPass.setBindGroup(1, reflBG)
+          reflPass.setVertexBuffer(0, this.meshes[idx].vb)
+          reflPass.setIndexBuffer(this.meshes[idx].ib, 'uint32')
+          reflPass.drawIndexed(this.meshes[idx].ic)
+        }
+
+        // Schedule cleanup
+        setTimeout(() => { reflUB.destroy() }, 0)
+      }
+
+      reflPass.end()
+    }
+
     this.dev.queue.submit([enc.finish()])
+  }
+
+  private getLightingValues(): { light: [number, number, number, number]; ambient: [number, number, number, number] } {
+    switch (this.lightingPreset) {
+      case 'studio':
+        return { light: [0.6, 0.8, 0.3, 0], ambient: [0.30, 0.30, 0.32, 1] }
+      case 'outdoor':
+        return { light: [0.5, 0.85, 0.2, 0], ambient: [0.18, 0.22, 0.35, 1] }
+      case 'dramatic':
+        return { light: [0.4, 0.9, 0.1, 0], ambient: [0.08, 0.08, 0.10, 1] }
+      case 'soft':
+        return { light: [0.4, 0.6, 0.4, 0], ambient: [0.42, 0.42, 0.44, 1] }
+      default: // 'default'
+        return { light: [0.55, 0.75, 0.45, 0], ambient: [0.22, 0.22, 0.24, 1] }
+    }
   }
 
   private easeInOutCubic(t: number): number {
@@ -746,6 +848,39 @@ export class WebGPURenderer {
     this.clearR = r
     this.clearG = g
     this.clearB = b
+  }
+
+  /** Set a lighting preset. */
+  setLighting(preset: string) {
+    this.lightingPreset = preset
+  }
+
+  /** Toggle clipping plane on/off. */
+  toggleClip(): boolean {
+    this.clipEnabled = !this.clipEnabled
+    return this.clipEnabled
+  }
+
+  /** Set clipping plane Y value. */
+  setClipY(y: number) {
+    this.clipY = y
+  }
+
+  /** Toggle fog on/off. */
+  toggleFog(): boolean {
+    this.fogEnabled = !this.fogEnabled
+    return this.fogEnabled
+  }
+
+  /** Toggle reflection on/off. */
+  toggleReflection(): boolean {
+    this.showReflection = !this.showReflection
+    return this.showReflection
+  }
+
+  /** Get bounds for clipping plane range. */
+  getClipRange(): { min: number; max: number } {
+    return { min: this.boundsMin[1] - 5, max: this.boundsMax[1] + 5 }
   }
 
   /** Build a line-list vertex buffer with edges from the current meshes. */
