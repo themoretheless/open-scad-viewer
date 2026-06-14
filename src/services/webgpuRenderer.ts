@@ -73,6 +73,7 @@ export class WebGPURenderer {
   private depth!: GPUTexture
 
   private meshes: GMesh[] = []
+  private lastRawMeshes: MeshData[] = []
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
 
@@ -199,6 +200,7 @@ export class WebGPURenderer {
   }
 
   setMeshes(meshes: MeshData[]) {
+    this.lastRawMeshes = meshes
     for (const g of this.meshes) { g.vb.destroy(); g.ib.destroy(); g.ub.destroy() }
     this.meshes = []
 
@@ -350,6 +352,36 @@ export class WebGPURenderer {
     c.addEventListener('pointerup', this.onUp)
     c.addEventListener('wheel', this.onWheel, { passive: false })
     c.addEventListener('contextmenu', this.noCtx)
+  }
+
+  /** Set camera yaw and pitch directly (e.g. for view presets). */
+  setCamera(yaw: number, pitch: number) {
+    this.yaw = yaw
+    this.pitch = pitch
+  }
+
+  /** Public wrapper for autoFit — re-fits camera to current meshes' bounding box. */
+  autoFitAll() {
+    // Rebuild the bounding box from existing GPU meshes isn't practical,
+    // so we store the last raw MeshData set for re-fitting.
+    if (this.lastRawMeshes && this.lastRawMeshes.length) {
+      this.autoFit(this.lastRawMeshes)
+    }
+  }
+
+  /** Take a screenshot of the current canvas and download as PNG. */
+  screenshot() {
+    // Render one frame to ensure the canvas has content
+    this.render()
+    this.canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `openscad-screenshot-${Date.now()}.png`
+      a.click()
+      URL.revokeObjectURL(url)
+    }, 'image/png')
   }
 
   destroy() {
