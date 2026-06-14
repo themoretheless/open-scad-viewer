@@ -54,6 +54,12 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
     c = mix(c, sc.fogColor.rgb, fogFactor);
   }
 
+  // SSAO approximation
+  if (sc._pad0.y > 0.5) {
+    let ao = 0.5 + 0.5 * max(dot(N, V2), 0.0);
+    c = c * ao;
+  }
+
   return vec4f(c, ob.color.a);
 }
 `
@@ -69,6 +75,48 @@ struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
 }
 @fragment fn fs(v: V) -> @location(0) vec4f { return v.c; }
 `
+
+const OUTLINE_WGSL = /* wgsl */`
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
+struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f }
+
+@group(0) @binding(0) var<uniform> sc: Scene;
+@group(1) @binding(0) var<uniform> ob: Obj;
+
+@vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f) -> @builtin(position) vec4f {
+  let wp = (ob.model * vec4f(pos,1)).xyz + normalize((ob.nmat * vec4f(norm,0)).xyz) * 0.3;
+  return sc.vp * vec4f(wp,1);
+}
+
+@fragment fn fs() -> @location(0) vec4f {
+  return vec4f(0.0, 0.0, 0.0, 1.0);
+}
+`
+
+const SKY_WGSL = /* wgsl */`
+struct SkyParams { topColor: vec4f, bottomColor: vec4f }
+@group(0) @binding(0) var<uniform> sky: SkyParams;
+
+struct V { @builtin(position) p: vec4f, @location(0) uv: f32 }
+
+@vertex fn vs(@builtin(vertex_index) vi: u32) -> V {
+  let x = f32(i32(vi) / 2) * 4.0 - 1.0;
+  let y = f32(i32(vi) % 2) * 4.0 - 1.0;
+  return V(vec4f(x, y, 0.999, 1.0), (y + 1.0) * 0.5);
+}
+
+@fragment fn fs(v: V) -> @location(0) vec4f {
+  return mix(sky.bottomColor, sky.topColor, v.uv);
+}
+`
+
+const SKY_PRESETS: Record<string, { top: [number,number,number,number], bottom: [number,number,number,number] }> = {
+  none: { top: [0,0,0,0], bottom: [0,0,0,0] },
+  clearSky: { top: [0.4, 0.6, 0.9, 1], bottom: [0.85, 0.9, 0.95, 1] },
+  sunset: { top: [0.15, 0.05, 0.3, 1], bottom: [0.85, 0.4, 0.15, 1] },
+  studio: { top: [0.05, 0.05, 0.05, 1], bottom: [0.2, 0.2, 0.22, 1] },
+  neutral: { top: [0.4, 0.4, 0.42, 1], bottom: [0.4, 0.4, 0.42, 1] },
+}
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -87,6 +135,11 @@ export class WebGPURenderer {
 
   private meshPipe!: GPURenderPipeline
   private meshPipeT!: GPURenderPipeline
+  private outlinePipe!: GPURenderPipeline
+  private skyPipe: GPURenderPipeline | null = null
+  private skyUB: GPUBuffer | null = null
+  private skyBG: GPUBindGroup | null = null
+  private skyBGL: GPUBindGroupLayout | null = null
   private linePipe!: GPURenderPipeline
   private sceneBGL!: GPUBindGroupLayout
   private objBGL!: GPUBindGroupLayout
@@ -153,6 +206,18 @@ export class WebGPURenderer {
 
   /* reflection */
   showReflection = false
+
+  /* SSAO */
+  ssao = false
+
+  /* outline */
+  showOutline = false
+
+  /* normal smoothing */
+  normalSmoothing = false
+
+  /* skybox */
+  skyPreset = 'none'
 
   /* orthographic projection */
   orthographic = false
@@ -324,6 +389,32 @@ export class WebGPURenderer {
       depthStencil: ds,
       multisample: { count: 4 },
     })
+
+    // Outline pipeline (same layout as mesh, but cull front faces)
+    const outlineMod = this.dev.createShaderModule({ code: OUTLINE_WGSL })
+    this.outlinePipe = this.dev.createRenderPipeline({
+      layout: meshLayout,
+      vertex: { module: outlineMod, entryPoint: 'vs', buffers: [vbl] },
+      fragment: { module: outlineMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
+      primitive: { topology: 'triangle-list', cullMode: 'front' },
+      depthStencil: ds,
+      multisample: { count: 4 },
+    })
+
+    // Sky pipeline
+    this.skyBGL = this.dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+    ] })
+    const skyMod = this.dev.createShaderModule({ code: SKY_WGSL })
+    const skyLayout = this.dev.createPipelineLayout({ bindGroupLayouts: [this.skyBGL] })
+    this.skyPipe = this.dev.createRenderPipeline({
+      layout: skyLayout,
+      vertex: { module: skyMod, entryPoint: 'vs', buffers: [] },
+      fragment: { module: skyMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
+      primitive: { topology: 'triangle-list' },
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'always' },
+      multisample: { count: 4 },
+    })
   }
 
   private buildSceneUB() {
@@ -337,6 +428,13 @@ export class WebGPURenderer {
     this.reflBG = this.dev.createBindGroup({
       layout: this.objBGL,
       entries: [{ binding: 0, resource: { buffer: this.reflUB } }],
+    })
+
+    // Sky uniform buffer (2 x vec4f = 32 bytes)
+    this.skyUB = this.dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.skyBG = this.dev.createBindGroup({
+      layout: this.skyBGL!,
+      entries: [{ binding: 0, resource: { buffer: this.skyUB } }],
     })
   }
 
@@ -417,6 +515,12 @@ export class WebGPURenderer {
 
   setMeshes(meshes: MeshData[]) {
     this.lastRawMeshes = meshes
+
+    // Apply normal smoothing if enabled
+    if (this.normalSmoothing) {
+      meshes = this.smoothNormals(meshes)
+    }
+
     for (const g of this.meshes) { g.vb.destroy(); g.ib.destroy(); g.ub.destroy() }
     this.meshes = []
 
@@ -539,6 +643,8 @@ export class WebGPURenderer {
     sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
     // Flat shading flag in _pad0.x
     sd[40] = this.flatShading ? 1.0 : 0.0
+    // SSAO flag in _pad0.y
+    sd[41] = this.ssao ? 1.0 : 0.0
   }
 
   private render() {
@@ -596,6 +702,26 @@ export class WebGPURenderer {
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.plateVB)
       pass.draw(this.plateVC)
+    }
+
+    // Sky background
+    if (this.skyPreset !== 'none' && this.skyPipe && this.skyBG) {
+      pass.setPipeline(this.skyPipe)
+      pass.setBindGroup(0, this.skyBG)
+      pass.draw(3)
+    }
+
+    // Outline pass
+    if (this.showOutline && this.renderMode !== 'wireframe') {
+      pass.setPipeline(this.outlinePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
     }
 
     // Render mode dispatch
@@ -1141,6 +1267,26 @@ export class WebGPURenderer {
       pass.draw(this.plateVC)
     }
 
+    // Sky background
+    if (this.skyPreset !== 'none' && this.skyPipe && this.skyBG) {
+      pass.setPipeline(this.skyPipe)
+      pass.setBindGroup(0, this.skyBG)
+      pass.draw(3)
+    }
+
+    // Outline pass
+    if (this.showOutline && this.renderMode !== 'wireframe') {
+      pass.setPipeline(this.outlinePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+    }
+
     // Render mode dispatch (same logic as render())
     if (this.renderMode === 'wireframe') {
       // wireframe only
@@ -1359,6 +1505,123 @@ export class WebGPURenderer {
   /** Check whether reflection is enabled. */
   isReflectionEnabled(): boolean {
     return this.showReflection
+  }
+
+  /** Toggle SSAO on/off. */
+  toggleSsao(): boolean {
+    this.ssao = !this.ssao
+    this.requestRender()
+    return this.ssao
+  }
+
+  /** Set SSAO enabled state. */
+  setSsao(v: boolean) {
+    this.ssao = v
+    this.requestRender()
+  }
+
+  /** Check whether SSAO is enabled. */
+  isSsaoEnabled(): boolean {
+    return this.ssao
+  }
+
+  /** Toggle outline on/off. */
+  toggleOutline(): boolean {
+    this.showOutline = !this.showOutline
+    this.requestRender()
+    return this.showOutline
+  }
+
+  /** Set outline enabled state. */
+  setOutline(v: boolean) {
+    this.showOutline = v
+    this.requestRender()
+  }
+
+  /** Check whether outline is enabled. */
+  isOutlineEnabled(): boolean {
+    return this.showOutline
+  }
+
+  /** Toggle normal smoothing on/off. Re-uploads meshes. */
+  toggleNormalSmoothing(): boolean {
+    this.normalSmoothing = !this.normalSmoothing
+    if (this.lastRawMeshes.length) {
+      this.setMeshes(this.lastRawMeshes)
+    }
+    return this.normalSmoothing
+  }
+
+  /** Set normal smoothing enabled state. Re-uploads meshes. */
+  setNormalSmoothing(v: boolean) {
+    if (this.normalSmoothing === v) return
+    this.normalSmoothing = v
+    if (this.lastRawMeshes.length) {
+      this.setMeshes(this.lastRawMeshes)
+    }
+  }
+
+  /** Check whether normal smoothing is enabled. */
+  isNormalSmoothingEnabled(): boolean {
+    return this.normalSmoothing
+  }
+
+  /**
+   * Smooth normals by welding vertices at the same position and averaging normals.
+   * Gives a smooth appearance instead of faceted.
+   */
+  private smoothNormals(meshes: MeshData[]): MeshData[] {
+    return meshes.map(m => {
+      const verts = m.vertices
+      const vertCount = verts.length / 6
+
+      // Build a map from position key to list of vertex indices
+      const posMap = new Map<string, number[]>()
+      for (let i = 0; i < vertCount; i++) {
+        const x = verts[i * 6], y = verts[i * 6 + 1], z = verts[i * 6 + 2]
+        // Round to avoid floating-point mismatches
+        const key = `${(x * 1000 | 0)},${(y * 1000 | 0)},${(z * 1000 | 0)}`
+        let list = posMap.get(key)
+        if (!list) { list = []; posMap.set(key, list) }
+        list.push(i)
+      }
+
+      // Average normals for shared positions
+      const newVerts = new Float32Array(verts)
+      for (const group of posMap.values()) {
+        if (group.length <= 1) continue
+        let nx = 0, ny = 0, nz = 0
+        for (const vi of group) {
+          nx += verts[vi * 6 + 3]
+          ny += verts[vi * 6 + 4]
+          nz += verts[vi * 6 + 5]
+        }
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+        nx /= len; ny /= len; nz /= len
+        for (const vi of group) {
+          newVerts[vi * 6 + 3] = nx
+          newVerts[vi * 6 + 4] = ny
+          newVerts[vi * 6 + 5] = nz
+        }
+      }
+
+      return { ...m, vertices: newVerts, indices: new Uint32Array(m.indices) }
+    })
+  }
+
+  /** Set the sky/environment background preset. */
+  setSkyPreset(preset: string) {
+    this.skyPreset = preset
+    if (this.skyUB) {
+      const p = SKY_PRESETS[preset] || SKY_PRESETS.none
+      this.dev.queue.writeBuffer(this.skyUB, 0, new Float32Array([...p.top, ...p.bottom]))
+    }
+    this.requestRender()
+  }
+
+  /** Get current sky preset name. */
+  getSkyPreset(): string {
+    return this.skyPreset
   }
 
   /** Get bounds for clipping plane range on the current (or specified) axis. */
@@ -1594,6 +1857,7 @@ export class WebGPURenderer {
     this.depth?.destroy()
     this.sceneUB?.destroy()
     this.reflUB?.destroy()
+    this.skyUB?.destroy()
     this.dev.destroy()
   }
 }

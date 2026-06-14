@@ -361,6 +361,27 @@ const L: Record<string, Record<string, string>> = {
     modeXray: 'Рентген',
     // Flat shading
     flatShading: 'Плоское затенение',
+    // SSAO
+    ssao: 'Окклюзия (SSAO)',
+    // Outline
+    outline: 'Контур (силуэт)',
+    // Normal smoothing
+    smoothNormals: 'Сглаживание нормалей',
+    // Color grading
+    colorGrading: 'Цветокоррекция',
+    cgNone: 'Нет',
+    cgWarm: 'Тёплый',
+    cgCool: 'Холодный',
+    cgVintage: 'Винтаж',
+    cgNoir: 'Нуар',
+    cgVivid: 'Насыщенный',
+    // Sky preset
+    skyPreset: 'Небо / Фон',
+    skyNone: 'Нет',
+    skyClearSky: 'Ясное небо',
+    skySunset: 'Закат',
+    skyStudio: 'Студия',
+    skyNeutral: 'Нейтральный',
     // Clip axis
     clipAxisLabel: 'Ось сечения',
     // 3MF export
@@ -694,6 +715,27 @@ const L: Record<string, Record<string, string>> = {
     modeXray: 'X-Ray',
     // Flat shading
     flatShading: 'Flat Shading',
+    // SSAO
+    ssao: 'Ambient Occlusion',
+    // Outline
+    outline: 'Outline',
+    // Normal smoothing
+    smoothNormals: 'Smooth Normals',
+    // Color grading
+    colorGrading: 'Color Grading',
+    cgNone: 'None',
+    cgWarm: 'Warm',
+    cgCool: 'Cool',
+    cgVintage: 'Vintage',
+    cgNoir: 'Noir',
+    cgVivid: 'Vivid',
+    // Sky preset
+    skyPreset: 'Sky / Background',
+    skyNone: 'None',
+    skyClearSky: 'Clear Sky',
+    skySunset: 'Sunset',
+    skyStudio: 'Studio',
+    skyNeutral: 'Neutral',
     // Clip axis
     clipAxisLabel: 'Clip Axis',
     // 3MF export
@@ -1022,6 +1064,22 @@ const isAutoRotate = ref(false)
 const isOrthographic = ref(false)
 const activeRenderMode = ref<string>('solid')
 const flatShadingEnabled = ref(false)
+const ssaoEnabled = ref(false)
+const outlineEnabled = ref(false)
+const smoothNormalsEnabled = ref(false)
+const colorGrading = ref('none')
+const skyPreset = ref('none')
+
+const COLOR_GRADING_FILTERS: Record<string, string> = {
+  none: '',
+  warm: 'sepia(0.15) saturate(1.2)',
+  cool: 'hue-rotate(10deg) saturate(0.9) brightness(1.05)',
+  vintage: 'sepia(0.3) contrast(1.1) brightness(0.95)',
+  noir: 'grayscale(1) contrast(1.3)',
+  vivid: 'saturate(1.6) contrast(1.1)',
+}
+
+const canvasFilter = computed(() => COLOR_GRADING_FILTERS[colorGrading.value] || '')
 
 /* ── Code Folding ── */
 const foldedLines = ref<Set<number>>(new Set())
@@ -4499,6 +4557,35 @@ function toggleFlatShading() {
   renderer?.setFlatShading(flatShadingEnabled.value)
 }
 
+/* ── Feature: SSAO ── */
+function toggleSSAO() {
+  ssaoEnabled.value = !ssaoEnabled.value
+  renderer?.setSsao(ssaoEnabled.value)
+}
+
+/* ── Feature: Outline ── */
+function toggleOutline() {
+  outlineEnabled.value = !outlineEnabled.value
+  renderer?.setOutline(outlineEnabled.value)
+}
+
+/* ── Feature: Normal Smoothing ── */
+function toggleNormalSmoothing() {
+  smoothNormalsEnabled.value = !smoothNormalsEnabled.value
+  renderer?.setNormalSmoothing(smoothNormalsEnabled.value)
+}
+
+/* ── Feature: Color Grading ── */
+function setColorGrading(preset: string) {
+  colorGrading.value = preset
+}
+
+/* ── Feature: Skybox / Environment Background ── */
+function setSkyPreset(preset: string) {
+  skyPreset.value = preset
+  renderer?.setSkyPreset(preset)
+}
+
 /* ── Feature 3: Build Plate / Print Bed ── */
 const buildPlateEnabled = ref(localStorage.getItem('scad-buildplate') === 'true')
 const buildPlateX = ref(parseInt(localStorage.getItem('scad-buildplate-x') || '220') || 220)
@@ -5817,6 +5904,7 @@ translate([0, 0, 39])
           ref="canvasRef"
           class="gpu-canvas"
           :class="{ 'canvas-transparent': !!canvasGradient }"
+          :style="{ filter: canvasFilter }"
           tabindex="0"
           @keydown="handleCanvasKeydown"
           @pointerdown="onCanvasPointerDown"
@@ -5994,6 +6082,18 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="fogEnabled">&#10003;</span>
                 {{ t('fog') }}
               </button>
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleSSAO(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="ssaoEnabled">&#10003;</span>
+                {{ t('ssao') }}
+              </button>
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleOutline(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="outlineEnabled">&#10003;</span>
+                {{ t('outline') }}
+              </button>
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleNormalSmoothing(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="smoothNormalsEnabled">&#10003;</span>
+                {{ t('smoothNormals') }}
+              </button>
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
               <button class="vp-dd-item" v-show="!simpleMode" @click="toggleClip()">
                 <span class="vp-dd-check" v-if="clipEnabled">&#10003;</span>
@@ -6016,6 +6116,25 @@ translate([0, 0, 39])
                 <option value="outdoor">{{ t('lightOutdoor') }}</option>
                 <option value="dramatic">{{ t('lightDramatic') }}</option>
                 <option value="soft">{{ t('lightSoft') }}</option>
+              </select>
+              <div class="vp-dd-sep" v-show="!simpleMode"></div>
+              <div class="vp-dd-label" v-show="!simpleMode">{{ t('colorGrading') }}</div>
+              <select v-show="!simpleMode" class="lighting-select vp-dd-select" :value="colorGrading" @change="setColorGrading(($event.target as HTMLSelectElement).value)">
+                <option value="none">{{ t('cgNone') }}</option>
+                <option value="warm">{{ t('cgWarm') }}</option>
+                <option value="cool">{{ t('cgCool') }}</option>
+                <option value="vintage">{{ t('cgVintage') }}</option>
+                <option value="noir">{{ t('cgNoir') }}</option>
+                <option value="vivid">{{ t('cgVivid') }}</option>
+              </select>
+              <div class="vp-dd-sep" v-show="!simpleMode"></div>
+              <div class="vp-dd-label" v-show="!simpleMode">{{ t('skyPreset') }}</div>
+              <select v-show="!simpleMode" class="lighting-select vp-dd-select" :value="skyPreset" @change="setSkyPreset(($event.target as HTMLSelectElement).value)">
+                <option value="none">{{ t('skyNone') }}</option>
+                <option value="clearSky">{{ t('skyClearSky') }}</option>
+                <option value="sunset">{{ t('skySunset') }}</option>
+                <option value="studio">{{ t('skyStudio') }}</option>
+                <option value="neutral">{{ t('skyNeutral') }}</option>
               </select>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="toggleAutoRotate(); closeAllMenus()">
