@@ -1282,6 +1282,9 @@ function onDocClick(e: MouseEvent) {
   if (showRecent.value && !target.closest('.recent-wrapper')) {
     showRecent.value = false
   }
+  if (showThemeDropdown.value && !target.closest('.theme-selector-wrapper')) {
+    showThemeDropdown.value = false
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -1325,6 +1328,9 @@ onMounted(async () => {
   if (!ok) { gpuOk.value = false; return }
   doRender()
 
+  // Start axis label updates
+  updateAxisLabels()
+
   // Stats polling
   statsInterval = setInterval(() => {
     if (!renderer) return
@@ -1341,6 +1347,7 @@ onUnmounted(() => {
   if (debounce) clearTimeout(debounce)
   if (minimapDebounce) clearTimeout(minimapDebounce)
   if (statsInterval) clearInterval(statsInterval)
+  if (axisLabelRAF) cancelAnimationFrame(axisLabelRAF)
   renderer?.destroy(); renderer = null
 })
 
@@ -1557,8 +1564,26 @@ translate([0, 0, 35])
       <div class="topbar-right">
         <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')">?</button>
         <button class="tb-btn" @click="toggleLang">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
-        <span class="theme-label">{{ t('theme') }}</span>
-        <button class="tb-btn" @click="toggleTheme">{{ isDark ? '&#9790;' : '&#9788;' }}</button>
+        <!-- Theme selector dropdown -->
+        <div class="theme-selector-wrapper">
+          <button class="tb-btn" @click.stop="showThemeDropdown = !showThemeDropdown" :title="t('themeSelector')">
+            {{ isDark ? '&#9790;' : '&#9788;' }}
+            <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" style="margin-left:3px;vertical-align:0px;"><path d="M2 4l4 4 4-4z"/></svg>
+          </button>
+          <div v-if="showThemeDropdown" class="theme-dropdown">
+            <div
+              v-for="theme in EDITOR_THEMES"
+              :key="theme.id"
+              class="theme-option"
+              :class="{ active: theme.id === activeThemeId }"
+              @click="selectTheme(theme.id)"
+            >
+              <span class="theme-swatch" :style="{ background: theme.vars['--bg'], borderColor: theme.vars['--accent'] }"></span>
+              <span class="theme-option-name">{{ theme.name[lang] }}</span>
+              <span v-if="theme.id === activeThemeId" class="theme-check">&#10003;</span>
+            </div>
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -1640,6 +1665,13 @@ translate([0, 0, 35])
             </button>
             <span v-if="showCopied" class="copied-tooltip">{{ t('copied') }}</span>
           </div>
+          <!-- Format button -->
+          <button class="btn btn-sm" @click="formatCode" :title="t('format')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="21" y2="12"/><line x1="5" y1="18" x2="21" y2="18"/>
+            </svg>
+            {{ t('format') }}
+          </button>
           <!-- Recent dropdown -->
           <div class="recent-wrapper">
             <button class="btn btn-sm" @click.stop="showRecent = !showRecent">
@@ -1843,6 +1875,16 @@ translate([0, 0, 35])
             </svg>
           </button>
           <div class="view-separator"></div>
+          <!-- Orthographic toggle -->
+          <button class="view-btn view-btn-toggle" :class="{ active: isOrthographic }" @click="toggleProjection" :title="isOrthographic ? t('persp') : t('ortho')">
+            {{ isOrthographic ? t('ortho') : t('persp') }}
+          </button>
+          <!-- Zoom controls -->
+          <div class="zoom-row">
+            <button class="view-btn zoom-btn" @click="doZoomIn" :title="t('zoomIn')">+</button>
+            <button class="view-btn zoom-btn" @click="doZoomOut" :title="t('zoomOut')">&minus;</button>
+          </div>
+          <div class="view-separator"></div>
           <!-- Background color swatches -->
           <div class="bg-color-row">
             <span class="bg-label">{{ t('bgColor') }}</span>
@@ -1857,6 +1899,23 @@ translate([0, 0, 35])
             />
           </div>
         </div>
+
+        <!-- Axis labels -->
+        <span
+          v-if="axisLabelX.visible"
+          class="axis-label axis-label-x"
+          :style="{ left: axisLabelX.x + 'px', top: axisLabelX.y + 'px' }"
+        >X</span>
+        <span
+          v-if="axisLabelY.visible"
+          class="axis-label axis-label-y"
+          :style="{ left: axisLabelY.x + 'px', top: axisLabelY.y + 'px' }"
+        >Y</span>
+        <span
+          v-if="axisLabelZ.visible"
+          class="axis-label axis-label-z"
+          :style="{ left: axisLabelZ.x + 'px', top: axisLabelZ.y + 'px' }"
+        >Z</span>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
@@ -2509,6 +2568,75 @@ html, body, #app {
 }
 .minimap-toggle:hover { opacity: 1; color: var(--text); }
 .minimap-toggle.active { opacity: 1; color: var(--accent); border-color: var(--accent); }
+
+/* ── Theme selector dropdown ── */
+.theme-selector-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.theme-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  min-width: 170px;
+  z-index: 200;
+  overflow: hidden;
+}
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.theme-option:hover { background: var(--hover); }
+.theme-option.active { background: rgba(74,158,255,.1); }
+.theme-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+.theme-option-name { flex: 1; }
+.theme-check { color: var(--accent); font-size: 0.85rem; font-weight: 700; }
+
+/* ── Orthographic / Zoom in view-buttons ── */
+.zoom-row {
+  display: flex;
+  gap: 4px;
+}
+.zoom-btn {
+  flex: 1;
+  font-size: 0.85rem !important;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 8px;
+}
+
+/* ── Axis labels ── */
+.axis-label {
+  position: absolute;
+  z-index: 5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,.7), 0 0 6px rgba(0,0,0,.4);
+  transform: translate(-50%, -50%);
+  user-select: none;
+}
+.axis-label-x { color: #e05555; }
+.axis-label-y { color: #44cc55; }
+.axis-label-z { color: #4488ee; }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
