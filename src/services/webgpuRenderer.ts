@@ -88,6 +88,10 @@ export class WebGPURenderer {
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
 
+  /* reusable reflection uniform buffer + bind group */
+  private reflUB!: GPUBuffer
+  private reflBG!: GPUBindGroup
+
   /* wireframe overlay */
   private wireframeVB: GPUBuffer | null = null
   private wireframeVC = 0
@@ -255,6 +259,12 @@ export class WebGPURenderer {
     this.sceneBG = this.dev.createBindGroup({
       layout: this.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
+    })
+    // Reusable per-object UB and bind group for reflections
+    this.reflUB = this.dev.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.reflBG = this.dev.createBindGroup({
+      layout: this.objBGL,
+      entries: [{ binding: 0, resource: { buffer: this.reflUB } }],
     })
   }
 
@@ -513,13 +523,13 @@ export class WebGPURenderer {
   private getLightingValues(): { light: [number, number, number, number]; ambient: [number, number, number, number] } {
     switch (this.lightingPreset) {
       case 'studio':
-        return { light: [0.6, 0.8, 0.3, 0], ambient: [0.30, 0.30, 0.32, 1] }
+        return { light: [0.6, 0.8, 0.3, 0], ambient: [0.30, 0.28, 0.32, 1] }
       case 'outdoor':
-        return { light: [0.5, 0.85, 0.2, 0], ambient: [0.18, 0.22, 0.35, 1] }
+        return { light: [0.4, 0.9, 0.3, 0], ambient: [0.18, 0.22, 0.35, 1] }
       case 'dramatic':
-        return { light: [0.4, 0.9, 0.1, 0], ambient: [0.08, 0.08, 0.10, 1] }
+        return { light: [0.8, 0.5, 0.1, 0], ambient: [0.08, 0.08, 0.10, 1] }
       case 'soft':
-        return { light: [0.4, 0.6, 0.4, 0], ambient: [0.42, 0.42, 0.44, 1] }
+        return { light: [0.3, 0.6, 0.5, 0], ambient: [0.40, 0.38, 0.42, 1] }
       default: // 'default'
         return { light: [0.55, 0.75, 0.45, 0], ambient: [0.22, 0.22, 0.24, 1] }
     }
@@ -861,6 +871,11 @@ export class WebGPURenderer {
     return this.clipEnabled
   }
 
+  /** Set clipping plane enabled state. */
+  setClipEnabled(v: boolean) {
+    this.clipEnabled = v
+  }
+
   /** Set clipping plane Y value. */
   setClipY(y: number) {
     this.clipY = y
@@ -872,9 +887,29 @@ export class WebGPURenderer {
     return this.fogEnabled
   }
 
+  /** Set fog enabled state. */
+  setFogEnabled(v: boolean) {
+    this.fogEnabled = v
+  }
+
+  /** Check whether fog is enabled. */
+  isFogEnabled(): boolean {
+    return this.fogEnabled
+  }
+
   /** Toggle reflection on/off. */
   toggleReflection(): boolean {
     this.showReflection = !this.showReflection
+    return this.showReflection
+  }
+
+  /** Set reflection enabled state. */
+  setReflection(v: boolean) {
+    this.showReflection = v
+  }
+
+  /** Check whether reflection is enabled. */
+  isReflectionEnabled(): boolean {
     return this.showReflection
   }
 
