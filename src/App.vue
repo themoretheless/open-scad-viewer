@@ -4,6 +4,7 @@ import { parseOpenSCADWithAST } from './services/openscadParser'
 import type { MeshData, ASTNode } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
+import { exportOBJ } from './services/objExport'
 
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
@@ -198,6 +199,24 @@ const L: Record<string, Record<string, string>> = {
     cmdToggleConsole: 'Переключить консоль',
     cmdToggleObjectTree: 'Переключить дерево объектов',
     cmdNewTab: 'Новая вкладка',
+    exportObj: 'Экспорт OBJ',
+    cmdExportOBJ: 'Экспорт OBJ',
+    gear: 'Шестерня',
+    vase: 'Ваза',
+    chess: 'Пешка',
+    gearTip: 'Зубчатое колесо',
+    vaseTip: 'Фигурная ваза',
+    chessTip: 'Шахматная пешка',
+    basicTip: 'Базовые формы',
+    csgTip: 'Булевы операции',
+    houseTip: 'Простой домик',
+    towerTip: 'Декоративная башня',
+    bgGradDark: 'Тёмный градиент',
+    bgGradBlue: 'Голубой градиент',
+    bgGradSunset: 'Закат',
+    sc_wasd: 'Камера: вперёд/назад/орбита',
+    sc_shiftWasd: 'Панорамирование камеры',
+    sc_qe: 'Камера: наклон вверх/вниз',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -319,6 +338,24 @@ const L: Record<string, Record<string, string>> = {
     cmdToggleConsole: 'Toggle Console',
     cmdToggleObjectTree: 'Toggle Object Tree',
     cmdNewTab: 'New Tab',
+    exportObj: 'Export OBJ',
+    cmdExportOBJ: 'Export OBJ',
+    gear: 'Gear',
+    vase: 'Vase',
+    chess: 'Pawn',
+    gearTip: 'Toothed gear',
+    vaseTip: 'Curved vase',
+    chessTip: 'Chess pawn',
+    basicTip: 'Basic shapes',
+    csgTip: 'Boolean ops',
+    houseTip: 'Simple house',
+    towerTip: 'Decorative tower',
+    bgGradDark: 'Dark Gradient',
+    bgGradBlue: 'Blue Gradient',
+    bgGradSunset: 'Sunset Gradient',
+    sc_wasd: 'Camera: forward/back/orbit',
+    sc_shiftWasd: 'Camera pan',
+    sc_qe: 'Camera: pitch up/down',
   },
 }
 
@@ -578,6 +615,7 @@ async function copyCanvasToClipboard() {
   if (ok) {
     showCopiedImage.value = true
     setTimeout(() => { showCopiedImage.value = false }, 1500)
+    addToast(t('copiedImage'), 'success')
   } else {
     // Fallback to download
     takeScreenshot()
@@ -714,11 +752,37 @@ function setBgColor(index: number) {
   renderer?.setClearColor(c.r, c.g, c.b)
 }
 
+/* ── Toast Notifications ── */
+interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'info' | 'error'
+}
+let toastIdCounter = 0
+const toasts = ref<Toast[]>([])
+
+function addToast(message: string, type: 'success' | 'info' | 'error' = 'info') {
+  const id = toastIdCounter++
+  toasts.value.push({ id, message, type })
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }, 3000)
+}
+
 /* ── STL Export ── */
 function doExportSTL() {
   if (!lastParsedMeshes.length) return
   const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
   exportSTL(lastParsedMeshes, `${tabName}.stl`)
+  addToast(t('exportStl') + ': ' + tabName + '.stl', 'success')
+}
+
+/* ── OBJ Export ── */
+function doExportOBJ() {
+  if (!lastParsedMeshes.length) return
+  const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
+  exportOBJ(lastParsedMeshes, `${tabName}.obj`)
+  addToast(t('exportObj') + ': ' + tabName + '.obj', 'success')
 }
 
 /* ── Share Link ── */
@@ -730,6 +794,7 @@ function shareLink() {
   navigator.clipboard.writeText(url).then(() => {
     showCopied.value = true
     setTimeout(() => { showCopied.value = false }, 1500)
+    addToast(t('copied'), 'success')
   }).catch(() => {
     // Fallback: manual copy
     const ta = document.createElement('textarea')
@@ -740,6 +805,7 @@ function shareLink() {
     document.body.removeChild(ta)
     showCopied.value = true
     setTimeout(() => { showCopied.value = false }, 1500)
+    addToast(t('copied'), 'success')
   })
 }
 
@@ -1353,6 +1419,7 @@ function saveFile() {
   a.click()
   URL.revokeObjectURL(url)
   addToRecent(activeTab.value.name, code.value)
+  addToast(t('save') + ': ' + (activeTab.value.name || 'model') + '.scad', 'success')
 }
 
 function onEditorDragEnter(e: DragEvent) {
@@ -1511,6 +1578,7 @@ function setView(name: string) {
 function takeScreenshot() {
   if (!renderer) return
   renderer.screenshot()
+  addToast(t('screenshot'), 'success')
 }
 
 /* ── Toggle wireframe ── */
