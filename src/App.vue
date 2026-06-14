@@ -483,6 +483,19 @@ const L: Record<string, Record<string, string>> = {
     exportScad: 'Экспорт .scad',
     // Responsive
     resetView: 'Сбросить вид',
+    // OpenSCAD Reference
+    scadReference: 'Справочник OpenSCAD',
+    cmdScadReference: 'Справочник OpenSCAD',
+    ariaScadReference: 'Справочник OpenSCAD',
+    refPrimitives3D: '3D-примитивы',
+    refPrimitives2D: '2D-примитивы',
+    refTransforms: 'Трансформации',
+    refCSG: 'Булевы операции (CSG)',
+    refExtrusions: 'Экструзии',
+    refMathFunctions: 'Математические функции',
+    refSpecialVars: 'Специальные переменные',
+    refControlFlow: 'Управление потоком',
+    refOther: 'Прочее',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -872,6 +885,19 @@ const L: Record<string, Record<string, string>> = {
     exportScad: 'Export .scad',
     // Responsive
     resetView: 'Reset View',
+    // OpenSCAD Reference
+    scadReference: 'OpenSCAD Reference',
+    cmdScadReference: 'OpenSCAD Reference',
+    ariaScadReference: 'OpenSCAD reference',
+    refPrimitives3D: '3D Primitives',
+    refPrimitives2D: '2D Primitives',
+    refTransforms: 'Transforms',
+    refCSG: 'Boolean Operations (CSG)',
+    refExtrusions: 'Extrusions',
+    refMathFunctions: 'Math Functions',
+    refSpecialVars: 'Special Variables',
+    refControlFlow: 'Control Flow',
+    refOther: 'Other',
   },
 }
 
@@ -2154,6 +2180,9 @@ const OPENSCAD_DOCS: Record<string, DocEntry> = {
   assert: { sig: 'assert(condition, message)', desc: { ru: 'Проверка условия, ошибка если ложь', en: 'Checks condition, logs error if false' } },
   use: { sig: 'use <filename>', desc: { ru: 'Импорт модулей из другого файла/вкладки', en: 'Import modules from another file/tab' } },
   include: { sig: 'include <filename>', desc: { ru: 'Включение кода из другого файла/вкладки', en: 'Include code from another file/tab' } },
+  polyhedron: { sig: 'polyhedron(points, faces)', desc: { ru: 'Многогранник из точек и граней', en: 'Creates a polyhedron from points and faces' } },
+  offset: { sig: 'offset(r|delta, chamfer)', desc: { ru: 'Смещение 2D-контура', en: 'Offsets a 2D outline inward or outward' } },
+  projection: { sig: 'projection(cut)', desc: { ru: 'Проекция 3D на плоскость XY', en: 'Projects 3D geometry onto XY plane' } },
 }
 
 const hoverDocVisible = ref(false)
@@ -3343,6 +3372,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (showPreferences.value) { showPreferences.value = false; return }
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
+    if (showScadReference.value) { showScadReference.value = false; return }
     if (showExampleGallery.value) { closeExampleGallery(); return }
     if (showSnippetPanel.value) { showSnippetPanel.value = false; return }
     if (acVisible.value) { acVisible.value = false; return }
@@ -4315,6 +4345,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'insertSnippet:parametricModule', label: () => 'Insert: ' + t('snippetParametricModule'), action: () => insertSnippet(SNIPPETS[4]) },
   { id: 'insertSnippet:threadedInsert', label: () => 'Insert: ' + t('snippetThreadedInsert'), action: () => insertSnippet(SNIPPETS[5]) },
   { id: 'cameraInfo', label: () => t('showCameraInfo'), action: () => toggleCameraInfo() },
+  { id: 'scadReference', label: () => t('cmdScadReference'), action: () => toggleScadReference() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -4754,6 +4785,12 @@ function formatNumber(n: number, decimals = 1): string {
   })
 }
 
+function fmtInt(n: number): string {
+  return n.toLocaleString(lang.value === 'ru' ? 'ru-RU' : 'en-US', {
+    maximumFractionDigits: 0,
+  })
+}
+
 function toggleStatistics() {
   showStatistics.value = !showStatistics.value
   if (showStatistics.value) computeStatistics()
@@ -4763,6 +4800,87 @@ function toggleStatistics() {
 watch([meshCount, triCount], () => {
   if (showStatistics.value) computeStatistics()
 })
+
+/* ── OpenSCAD Reference Panel ── */
+const showScadReference = ref(false)
+
+interface RefEntry { name: string; sig: string; desc: { ru: string; en: string } }
+
+const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
+  { key: 'refPrimitives3D', entries: [
+    { name: 'cube', sig: 'cube(size, center)', desc: { ru: 'Прямоугольный параллелепипед', en: 'Rectangular box' } },
+    { name: 'sphere', sig: 'sphere(r|d, $fn)', desc: { ru: 'Сфера', en: 'Sphere' } },
+    { name: 'cylinder', sig: 'cylinder(h, r|r1/r2, center, $fn)', desc: { ru: 'Цилиндр или конус', en: 'Cylinder or cone' } },
+    { name: 'polyhedron', sig: 'polyhedron(points, faces)', desc: { ru: 'Произвольный многогранник', en: 'Custom polyhedron from points and faces' } },
+    { name: 'surface', sig: 'surface(data, center)', desc: { ru: 'Поверхность из 2D-массива высот', en: 'Surface from 2D height array' } },
+    { name: 'text', sig: 'text(text, size, spacing)', desc: { ru: 'Объёмный текст', en: '3D text' } },
+  ]},
+  { key: 'refPrimitives2D', entries: [
+    { name: 'circle', sig: 'circle(r|d, $fn)', desc: { ru: 'Окружность', en: 'Circle' } },
+    { name: 'square', sig: 'square(size, center)', desc: { ru: 'Прямоугольник', en: 'Rectangle' } },
+    { name: 'polygon', sig: 'polygon(points, paths)', desc: { ru: '2D-многоугольник', en: '2D polygon' } },
+  ]},
+  { key: 'refTransforms', entries: [
+    { name: 'translate', sig: 'translate([x, y, z])', desc: { ru: 'Перемещение', en: 'Move children' } },
+    { name: 'rotate', sig: 'rotate([x,y,z]) | rotate(a, v)', desc: { ru: 'Поворот', en: 'Rotate children' } },
+    { name: 'scale', sig: 'scale([x, y, z])', desc: { ru: 'Масштабирование', en: 'Scale children' } },
+    { name: 'mirror', sig: 'mirror([x, y, z])', desc: { ru: 'Зеркальное отражение', en: 'Mirror children' } },
+    { name: 'resize', sig: 'resize(newsize, auto)', desc: { ru: 'Изменить размер до заданного', en: 'Resize children to target size' } },
+    { name: 'multmatrix', sig: 'multmatrix(m)', desc: { ru: 'Произвольная матрица 4x4', en: 'Apply arbitrary 4x4 matrix' } },
+    { name: 'color', sig: 'color(c, alpha)', desc: { ru: 'Задать цвет', en: 'Set color of children' } },
+    { name: 'offset', sig: 'offset(r|delta, chamfer)', desc: { ru: 'Смещение 2D-контура', en: 'Offset 2D outline' } },
+  ]},
+  { key: 'refCSG', entries: [
+    { name: 'union', sig: 'union() { ... }', desc: { ru: 'Объединение', en: 'Combine children' } },
+    { name: 'difference', sig: 'difference() { ... }', desc: { ru: 'Вычитание: первый минус остальные', en: 'Subtract subsequent from first' } },
+    { name: 'intersection', sig: 'intersection() { ... }', desc: { ru: 'Пересечение', en: 'Keep only overlap' } },
+    { name: 'hull', sig: 'hull() { ... }', desc: { ru: 'Выпуклая оболочка', en: 'Convex hull of children' } },
+    { name: 'minkowski', sig: 'minkowski() { ... }', desc: { ru: 'Сумма Минковского', en: 'Minkowski sum' } },
+  ]},
+  { key: 'refExtrusions', entries: [
+    { name: 'linear_extrude', sig: 'linear_extrude(height, twist, slices, $fn)', desc: { ru: 'Линейная экструзия 2D-формы', en: 'Extrude 2D shape along Z' } },
+    { name: 'rotate_extrude', sig: 'rotate_extrude(angle, $fn)', desc: { ru: 'Вращательная экструзия', en: 'Revolve 2D shape around Z' } },
+    { name: 'projection', sig: 'projection(cut)', desc: { ru: 'Проекция 3D на плоскость XY', en: 'Project 3D onto XY plane' } },
+  ]},
+  { key: 'refMathFunctions', entries: [
+    { name: 'sin/cos/tan', sig: 'sin(deg), cos(deg), tan(deg)', desc: { ru: 'Тригонометрия (градусы)', en: 'Trigonometry (degrees)' } },
+    { name: 'asin/acos/atan', sig: 'asin(x), acos(x), atan(x), atan2(y,x)', desc: { ru: 'Обратная тригонометрия', en: 'Inverse trig (returns degrees)' } },
+    { name: 'sqrt/pow/exp/ln', sig: 'sqrt(x), pow(b,e), exp(x), ln(x)', desc: { ru: 'Корень, степень, экспонента, логарифм', en: 'Root, power, exponential, log' } },
+    { name: 'abs/sign', sig: 'abs(x), sign(x)', desc: { ru: 'Модуль и знак', en: 'Absolute value and sign' } },
+    { name: 'min/max', sig: 'min(a,b,...), max(a,b,...)', desc: { ru: 'Минимум/максимум', en: 'Minimum / maximum' } },
+    { name: 'floor/ceil/round', sig: 'floor(x), ceil(x), round(x)', desc: { ru: 'Округление', en: 'Rounding functions' } },
+    { name: 'len', sig: 'len(array|string)', desc: { ru: 'Длина массива или строки', en: 'Length of array or string' } },
+    { name: 'norm/cross', sig: 'norm(v), cross(v1, v2)', desc: { ru: 'Норма вектора, векторное произведение', en: 'Vector magnitude, cross product' } },
+    { name: 'rands', sig: 'rands(min, max, count, seed)', desc: { ru: 'Массив случайных чисел', en: 'Array of random numbers' } },
+    { name: 'lookup', sig: 'lookup(key, table)', desc: { ru: 'Интерполяция по таблице', en: 'Table-based interpolation' } },
+    { name: 'str/chr/ord', sig: 'str(...), chr(code), ord(char)', desc: { ru: 'Строковые функции', en: 'String functions' } },
+    { name: 'concat', sig: 'concat(a, b, ...)', desc: { ru: 'Объединение массивов/строк', en: 'Concatenate arrays or strings' } },
+  ]},
+  { key: 'refSpecialVars', entries: [
+    { name: '$fn', sig: '$fn = N', desc: { ru: 'Количество сегментов для скруглений', en: 'Number of segments for curves' } },
+    { name: '$fa', sig: '$fa = angle', desc: { ru: 'Минимальный угол сегмента', en: 'Minimum angle per segment' } },
+    { name: '$fs', sig: '$fs = size', desc: { ru: 'Минимальная длина сегмента', en: 'Minimum segment size' } },
+    { name: '$t', sig: '$t (0..1)', desc: { ru: 'Параметр анимации', en: 'Animation parameter' } },
+  ]},
+  { key: 'refControlFlow', entries: [
+    { name: 'for', sig: 'for(i = [start:step:end]) { ... }', desc: { ru: 'Цикл', en: 'Loop' } },
+    { name: 'if/else', sig: 'if (cond) { ... } else { ... }', desc: { ru: 'Условие', en: 'Conditional' } },
+    { name: 'let', sig: 'let(var = val) { ... }', desc: { ru: 'Локальная переменная', en: 'Local variable binding' } },
+    { name: 'module', sig: 'module name(params) { ... }', desc: { ru: 'Определение модуля', en: 'Module definition' } },
+    { name: 'children()', sig: 'children()', desc: { ru: 'Дочерние объекты модуля', en: 'Module child objects' } },
+    { name: 'echo', sig: 'echo(val, ...)', desc: { ru: 'Вывод в консоль', en: 'Print to console' } },
+    { name: 'assert', sig: 'assert(cond, msg)', desc: { ru: 'Проверка условия', en: 'Assertion check' } },
+  ]},
+  { key: 'refOther', entries: [
+    { name: 'use', sig: 'use <file>', desc: { ru: 'Импорт модулей из файла', en: 'Import modules from file' } },
+    { name: 'include', sig: 'include <file>', desc: { ru: 'Включение файла целиком', en: 'Include entire file' } },
+    { name: 'import', sig: 'import("file.stl")', desc: { ru: 'Импорт 3D-модели (не поддерживается в веб)', en: 'Import 3D model (not supported in web)' } },
+  ]},
+]
+
+function toggleScadReference() {
+  showScadReference.value = !showScadReference.value
+}
 
 /* ── Feature 5: Custom-Resolution PNG Export ── */
 const pngScale = ref(parseInt(localStorage.getItem('scad-png-scale') || '1') || 1)
@@ -5411,6 +5529,11 @@ translate([0, 0, 39])
           {{ simpleMode ? t('simpleMode') : t('advancedMode') }}
         </button>
         <!-- Collapsible buttons: hidden on small screens, shown in hamburger -->
+        <button class="tb-btn topbar-collapsible" @click="toggleScadReference" :title="t('scadReference')" :aria-label="t('ariaScadReference')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </button>
         <button class="tb-btn tb-btn-help topbar-collapsible" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
         <button class="tb-btn tb-btn-gear topbar-collapsible" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -5425,6 +5548,7 @@ translate([0, 0, 39])
             </svg>
           </button>
           <div v-if="hamburgerOpen" class="hamburger-dropdown" @click="hamburgerOpen = false">
+            <button class="hamburger-item" @click="toggleScadReference">{{ t('scadReference') }}</button>
             <button class="hamburger-item" @click="showShortcuts = true">{{ t('shortcuts') }}</button>
             <button class="hamburger-item" @click="showPreferences = !showPreferences">{{ t('preferences') }}</button>
           </div>
@@ -5473,6 +5597,26 @@ translate([0, 0, 39])
             <div class="shortcut-row"><kbd>Ctrl+Tab</kbd><span>{{ t('sc_nextTab') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+Shift+Tab</kbd><span>{{ t('sc_prevTab') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+W</kbd><span>{{ t('sc_closeTab') }}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OpenSCAD Reference Panel -->
+      <div v-if="showScadReference" class="modal-backdrop" @click.self="showScadReference = false">
+        <div class="modal-box scad-ref-modal" role="dialog" aria-modal="true" :aria-label="t('ariaScadReference')">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('scadReference') }}</span>
+            <button class="modal-close" @click="showScadReference = false" :aria-label="t('ariaCloseModal')">&times;</button>
+          </div>
+          <div class="modal-body scad-ref-scroll">
+            <div v-for="section in SCAD_REF_SECTIONS" :key="section.key" class="scad-ref-section">
+              <div class="scad-ref-section-title">{{ t(section.key) }}</div>
+              <div v-for="entry in section.entries" :key="entry.name" class="scad-ref-entry">
+                <div class="scad-ref-name">{{ entry.name }}</div>
+                <code class="scad-ref-sig">{{ entry.sig }}</code>
+                <div class="scad-ref-desc">{{ entry.desc[lang] || entry.desc.en }}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6159,21 +6303,21 @@ translate([0, 0, 39])
             <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
             </svg>
-            <span class="stat-val">{{ meshCount }}</span>
+            <span class="stat-val">{{ fmtInt(meshCount) }}</span>
           </div>
           <span class="stat-div"></span>
           <div class="stat-seg" :title="t('statTriangles')">
             <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 3 22 20 2 20 12 3z"/>
             </svg>
-            <span class="stat-val">{{ triCount }}</span>
+            <span class="stat-val">{{ fmtInt(triCount) }}</span>
           </div>
           <span class="stat-div"></span>
           <div class="stat-seg" :title="t('statVertices')">
             <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5 5 19 5 12 19 5 5z"/>
             </svg>
-            <span class="stat-val">{{ vertexCount }}</span>
+            <span class="stat-val">{{ fmtInt(vertexCount) }}</span>
           </div>
           <template v-if="renderTime > 0">
             <span class="stat-div"></span>
@@ -6181,7 +6325,7 @@ translate([0, 0, 39])
               <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
               </svg>
-              <span class="stat-val">{{ renderTime }}ms</span>
+              <span class="stat-val">{{ fmtInt(renderTime) }}ms</span>
             </div>
           </template>
           <span class="stat-div"></span>
@@ -6197,7 +6341,7 @@ translate([0, 0, 39])
               <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
               </svg>
-              <span class="stat-val">{{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }}</span>
+              <span class="stat-val">{{ formatNumber(boundsSize[0]) }}&times;{{ formatNumber(boundsSize[1]) }}&times;{{ formatNumber(boundsSize[2]) }}</span>
             </div>
           </template>
           <template v-if="selectionInfo">
@@ -6610,11 +6754,11 @@ translate([0, 0, 39])
           <div class="stats-panel-body">
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsTriangles') }}</span>
-              <span class="stats-panel-val">{{ triCount.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') }}</span>
+              <span class="stats-panel-val">{{ fmtInt(triCount) }}</span>
             </div>
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsVertices') }}</span>
-              <span class="stats-panel-val">{{ vertexCount.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') }}</span>
+              <span class="stats-panel-val">{{ fmtInt(vertexCount) }}</span>
             </div>
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsVolume') }}</span>
@@ -6626,7 +6770,7 @@ translate([0, 0, 39])
             </div>
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsBoundingBox') }}</span>
-              <span class="stats-panel-val">{{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }} mm</span>
+              <span class="stats-panel-val">{{ formatNumber(boundsSize[0]) }}&times;{{ formatNumber(boundsSize[1]) }}&times;{{ formatNumber(boundsSize[2]) }} mm</span>
             </div>
           </div>
         </div>
@@ -6641,13 +6785,13 @@ translate([0, 0, 39])
           </div>
           <div class="perf-panel-body">
             <div class="perf-section-title">Timing</div>
-            <div class="perf-row"><span class="perf-key">{{ t('perfParseTime') }}</span><span class="perf-val">{{ perfParseTime }}ms</span></div>
-            <div class="perf-row"><span class="perf-key">{{ t('perfGpuUploadTime') }}</span><span class="perf-val">{{ perfGpuUploadTime }}ms</span></div>
-            <div class="perf-row"><span class="perf-key">{{ t('statRender') }}</span><span class="perf-val">{{ renderTime }}ms</span></div>
-            <div class="perf-row"><span class="perf-key">{{ t('statFps') }}</span><span class="perf-val">{{ fpsVal }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfParseTime') }}</span><span class="perf-val">{{ fmtInt(perfParseTime) }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfGpuUploadTime') }}</span><span class="perf-val">{{ fmtInt(perfGpuUploadTime) }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('statRender') }}</span><span class="perf-val">{{ fmtInt(renderTime) }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('statFps') }}</span><span class="perf-val">{{ fmtInt(fpsVal) }}</span></div>
             <div class="perf-section-title">Geometry</div>
-            <div class="perf-row"><span class="perf-key">{{ t('perfTriangles') }}</span><span class="perf-val">{{ triCount.toLocaleString() }}</span></div>
-            <div class="perf-row"><span class="perf-key">{{ t('perfVertices') }}</span><span class="perf-val">{{ vertexCount.toLocaleString() }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfTriangles') }}</span><span class="perf-val">{{ fmtInt(triCount) }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfVertices') }}</span><span class="perf-val">{{ fmtInt(vertexCount) }}</span></div>
             <div class="perf-row"><span class="perf-key">{{ t('perfVertexBuffer') }}</span><span class="perf-val">{{ perfBufferStats.totalVertexBytes ? (perfBufferStats.totalVertexBytes / 1024).toFixed(1) + ' KB' : '0' }}</span></div>
             <div class="perf-row"><span class="perf-key">{{ t('perfIndexBuffer') }}</span><span class="perf-val">{{ perfBufferStats.totalIndexBytes ? (perfBufferStats.totalIndexBytes / 1024).toFixed(1) + ' KB' : '0' }}</span></div>
             <div class="perf-section-title">GPU</div>
@@ -6707,19 +6851,19 @@ translate([0, 0, 39])
           <div class="camera-info-title">{{ t('cameraInfo') }}</div>
           <div class="camera-info-row">
             <span class="camera-info-key">{{ t('cameraYaw') }}</span>
-            <span class="camera-info-val">{{ cameraInfoData.yaw.toFixed(1) }}&deg;</span>
+            <span class="camera-info-val">{{ formatNumber(cameraInfoData.yaw) }}&deg;</span>
           </div>
           <div class="camera-info-row">
             <span class="camera-info-key">{{ t('cameraPitch') }}</span>
-            <span class="camera-info-val">{{ cameraInfoData.pitch.toFixed(1) }}&deg;</span>
+            <span class="camera-info-val">{{ formatNumber(cameraInfoData.pitch) }}&deg;</span>
           </div>
           <div class="camera-info-row">
             <span class="camera-info-key">{{ t('cameraDist') }}</span>
-            <span class="camera-info-val">{{ cameraInfoData.dist.toFixed(1) }}</span>
+            <span class="camera-info-val">{{ formatNumber(cameraInfoData.dist) }}</span>
           </div>
           <div class="camera-info-row">
             <span class="camera-info-key">{{ t('cameraTarget') }}</span>
-            <span class="camera-info-val">{{ cameraInfoData.tx.toFixed(1) }}, {{ cameraInfoData.ty.toFixed(1) }}, {{ cameraInfoData.tz.toFixed(1) }}</span>
+            <span class="camera-info-val">{{ formatNumber(cameraInfoData.tx) }}, {{ formatNumber(cameraInfoData.ty) }}, {{ formatNumber(cameraInfoData.tz) }}</span>
           </div>
         </div>
         </transition>
@@ -9190,6 +9334,65 @@ textarea.code:focus-visible {
 }
 .shortcut-category:first-child {
   margin-top: 4px;
+}
+
+/* ── OpenSCAD Reference Panel ── */
+.scad-ref-modal {
+  max-height: 85vh;
+  max-width: 620px;
+  width: 90vw;
+  display: flex;
+  flex-direction: column;
+}
+.scad-ref-scroll {
+  overflow-y: auto;
+  max-height: 72vh;
+  flex: 1;
+  padding: 6px 0;
+}
+.scad-ref-section {
+  margin-bottom: 12px;
+}
+.scad-ref-section-title {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-top: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.scad-ref-entry {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  grid-template-rows: auto auto;
+  gap: 0 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+.scad-ref-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--hl-keyword, var(--accent));
+  grid-row: 1 / 3;
+  align-self: center;
+}
+.scad-ref-sig {
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--hl-string, #6ec87a);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.scad-ref-desc {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  margin-top: 1px;
 }
 
 /* ── Split Editor Container ── */

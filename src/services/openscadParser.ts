@@ -1704,6 +1704,43 @@ function convexHull3D(points: Vec3[]): { v: number[]; ix: number[] } {
   return { v, ix }
 }
 
+function makePolyhedron(points: number[][], faces: number[][]): { v: number[]; ix: number[] } {
+  const v: number[] = []
+  const ix: number[] = []
+  if (points.length < 3 || faces.length < 1) return { v, ix }
+
+  // Each face gets its own vertices (flat shading)
+  let vi = 0
+  for (const face of faces) {
+    if (face.length < 3) continue
+    // Compute face normal from first three vertices
+    const p0 = points[face[0]] || [0,0,0]
+    const p1 = points[face[1]] || [0,0,0]
+    const p2 = points[face[2]] || [0,0,0]
+    const e1x = p1[0] - p0[0], e1y = p1[1] - p0[1], e1z = p1[2] - p0[2]
+    const e2x = p2[0] - p0[0], e2y = p2[1] - p0[1], e2z = p2[2] - p0[2]
+    let nx = e1y * e2z - e1z * e2y
+    let ny = e1z * e2x - e1x * e2z
+    let nz = e1x * e2y - e1y * e2x
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz)
+    if (len > 1e-10) { nx /= len; ny /= len; nz /= len }
+
+    // Emit vertices for each point in the face
+    const baseVi = vi
+    for (const idx of face) {
+      const p = points[idx] || [0,0,0]
+      v.push(p[0], p[1], p[2], nx, ny, nz)
+      vi++
+    }
+
+    // Fan triangulation: anchor on the first vertex of the face
+    for (let j = 1; j < face.length - 1; j++) {
+      ix.push(baseVi, baseVi + j, baseVi + j + 1)
+    }
+  }
+  return { v, ix }
+}
+
 /* ── Main evaluator ───────────────────────────────── */
 
 function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[]): MeshData[] {
@@ -2165,6 +2202,56 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         transform: tf,
       }]
     }
+    case 'polyhedron': {
+      const pts = arg(a, 'points', 0, [])
+      const fcs = arg(a, 'faces', 1, arg(a, 'triangles', -1, []))
+      if (!Array.isArray(pts) || !Array.isArray(fcs)) return []
+      const { v, ix } = makePolyhedron(pts, fcs)
+      if (!v.length) return []
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'offset': {
+      const r = typeof arg(a, 'r', 0, 0) === 'number' ? arg(a, 'r', 0, 0) as number : 0
+      const delta = typeof arg(a, 'delta', -1, 0) === 'number' ? arg(a, 'delta', -1, 0) as number : 0
+      const amount = r !== 0 ? r : delta
+
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren)
+      if (childMeshes.length === 0) return []
+
+      const out: MeshData[] = []
+      for (const childMesh of childMeshes) {
+        const verts = childMesh.vertices
+        const nv = verts.length / 6
+
+        // Compute centroid
+        let cx = 0, cy = 0
+        for (let i = 0; i < nv; i++) {
+          cx += verts[i * 6]
+          cy += verts[i * 6 + 1]
+        }
+        cx /= nv; cy /= nv
+
+        // Offset each vertex away from centroid
+        const newVerts = new Float32Array(verts)
+        for (let i = 0; i < nv; i++) {
+          const x = verts[i * 6] - cx
+          const y = verts[i * 6 + 1] - cy
+          const dist = Math.sqrt(x * x + y * y)
+          if (dist > 1e-10) {
+            newVerts[i * 6] = verts[i * 6] + (x / dist) * amount
+            newVerts[i * 6 + 1] = verts[i * 6 + 1] + (y / dist) * amount
+          }
+        }
+
+        out.push({
+          vertices: newVerts,
+          indices: new Uint32Array(childMesh.indices),
+          color: col ?? childMesh.color,
+          transform: tf,
+        })
+      }
+      return out
+    }
     case 'assert': {
       const cond = arg(a, '_0', 0, true)
       const message = arg(a, '_1', 1, arg(a, 'message', -1, 'Assertion failed'))
@@ -2206,7 +2293,57 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       }
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
-    case 'minkowski': case 'projection': case 'render': case 'group':
+    case 'projection': {
+      const cut = arg(a, 'cut', 0, false) === true
+
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren)
+      if (childMeshes.length === 0) return []
+
+      const out: MeshData[] = []
+      for (const childMesh of childMeshes) {
+        const verts = childMesh.vertices
+        const nv = verts.length / 6
+        const m = childMesh.transform
+
+        const newVerts = new Float32Array(verts.length)
+        let hasVerts = false
+
+        for (let i = 0; i < nv; i++) {
+          const x = verts[i * 6], y = verts[i * 6 + 1], z = verts[i * 6 + 2]
+          // Apply transform to get world-space Z
+          const tz = m[8]*x + m[9]*y + m[10]*z + m[11]
+
+          if (cut && Math.abs(tz) > 0.1) {
+            // In cut mode, only keep vertices near Z=0
+            newVerts[i * 6] = verts[i * 6]
+            newVerts[i * 6 + 1] = verts[i * 6 + 1]
+            newVerts[i * 6 + 2] = 0.01
+            newVerts[i * 6 + 3] = 0
+            newVerts[i * 6 + 4] = 0
+            newVerts[i * 6 + 5] = 1
+          } else {
+            newVerts[i * 6] = verts[i * 6]
+            newVerts[i * 6 + 1] = verts[i * 6 + 1]
+            newVerts[i * 6 + 2] = 0.01
+            newVerts[i * 6 + 3] = 0
+            newVerts[i * 6 + 4] = 0
+            newVerts[i * 6 + 5] = 1
+            hasVerts = true
+          }
+        }
+
+        if (!cut || hasVerts) {
+          out.push({
+            vertices: newVerts,
+            indices: new Uint32Array(childMesh.indices),
+            color: col ?? childMesh.color,
+            transform: tf,
+          })
+        }
+      }
+      return out.length > 0 ? out : evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
+    }
+    case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     case 'module': case 'function': case '__assign':
       return []
