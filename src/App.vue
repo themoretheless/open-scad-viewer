@@ -5,6 +5,7 @@ import type { MeshData, ASTNode } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
 import { exportOBJ } from './services/objExport'
+import { export3MF } from './services/threemfExport'
 import { parseSTL } from './services/stlImport'
 
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
@@ -272,7 +273,7 @@ const L: Record<string, Record<string, string>> = {
     welcomeTagline: 'Пишите OpenSCAD и смотрите результат в реальном времени с рендерингом через WebGPU.',
     welcomeFeat1: 'Редактирование OpenSCAD в реальном времени',
     welcomeFeat2: 'Быстрый 3D-рендеринг на WebGPU',
-    welcomeFeat3: 'Экспорт в STL / OBJ',
+    welcomeFeat3: 'Экспорт в STL / OBJ / 3MF',
     welcomeFeat4: 'Темы оформления и горячие клавиши',
     welcomeStart: 'Начать',
     showWelcome: 'Показать приветствие',
@@ -352,6 +353,19 @@ const L: Record<string, Record<string, string>> = {
     colorPicker: 'Палитра цветов',
     useInclude: 'use/include между вкладками',
     assertFailed: 'Ошибка assert',
+    // Render modes
+    renderMode: 'Режим рендера',
+    modeSolid: 'Сплошной',
+    modeSolidEdges: 'Сплошной + рёбра',
+    modeWireframe: 'Каркас',
+    modeXray: 'Рентген',
+    // Flat shading
+    flatShading: 'Плоское затенение',
+    // Clip axis
+    clipAxisLabel: 'Ось сечения',
+    // 3MF export
+    export3mf: 'Экспорт 3MF',
+    cmdExport3MF: 'Экспорт 3MF',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -531,7 +545,7 @@ const L: Record<string, Record<string, string>> = {
     welcomeTagline: 'Write OpenSCAD and see it rendered in real time with WebGPU.',
     welcomeFeat1: 'Real-time OpenSCAD editing',
     welcomeFeat2: 'Fast WebGPU 3D rendering',
-    welcomeFeat3: 'Export to STL / OBJ',
+    welcomeFeat3: 'Export to STL / OBJ / 3MF',
     welcomeFeat4: 'Editor themes & keyboard shortcuts',
     welcomeStart: 'Get Started',
     showWelcome: 'Show Welcome',
@@ -611,6 +625,19 @@ const L: Record<string, Record<string, string>> = {
     colorPicker: 'Color Picker',
     useInclude: 'use/include across tabs',
     assertFailed: 'Assert failed',
+    // Render modes
+    renderMode: 'Render Mode',
+    modeSolid: 'Solid',
+    modeSolidEdges: 'Solid + Edges',
+    modeWireframe: 'Wireframe',
+    modeXray: 'X-Ray',
+    // Flat shading
+    flatShading: 'Flat Shading',
+    // Clip axis
+    clipAxisLabel: 'Clip Axis',
+    // 3MF export
+    export3mf: 'Export 3MF',
+    cmdExport3MF: 'Export 3MF',
   },
 }
 
@@ -865,6 +892,8 @@ const showWireframe = ref(false)
 const showGrid = ref(true)
 const isAutoRotate = ref(false)
 const isOrthographic = ref(false)
+const activeRenderMode = ref<string>('solid')
+const flatShadingEnabled = ref(false)
 
 /* ── Code Folding ── */
 const foldedLines = ref<Set<number>>(new Set())
@@ -1221,6 +1250,14 @@ function doExportOBJ() {
   const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
   exportOBJ(lastParsedMeshes, `${tabName}.obj`)
   addToast(t('exportObj') + ': ' + tabName + '.obj', 'success')
+}
+
+/* ── 3MF Export ── */
+function doExport3MF() {
+  if (!lastParsedMeshes.length) return
+  const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
+  export3MF(lastParsedMeshes, `${tabName}.3mf`)
+  addToast(t('export3mf') + ': ' + tabName + '.3mf', 'success')
 }
 
 /* ── Share Link ── */
@@ -2389,7 +2426,12 @@ function takeScreenshot() {
 /* ── Toggle wireframe ── */
 function toggleWireframe() {
   if (!renderer) return
-  showWireframe.value = renderer.toggleWireframe()
+  // Use render mode system: toggle between 'solid' and 'wireframe'
+  if (activeRenderMode.value === 'wireframe') {
+    setRenderMode('solid')
+  } else {
+    setRenderMode('wireframe')
+  }
 }
 
 /* ── Toggle grid ── */
@@ -3650,6 +3692,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'copyImage', label: () => t('cmdCopyImage'), action: () => copyCanvasToClipboard() },
   { id: 'exportStl', label: () => t('cmdExportSTL'), action: () => doExportSTL() },
   { id: 'exportObj', label: () => t('cmdExportOBJ'), action: () => doExportOBJ() },
+  { id: 'export3mf', label: () => t('cmdExport3MF'), action: () => doExport3MF() },
   { id: 'openFile', label: () => t('cmdOpenFile'), shortcut: 'Ctrl+O', action: () => openFile() },
   { id: 'saveFile', label: () => t('cmdSaveFile'), shortcut: 'Ctrl+S', action: () => saveFile() },
   { id: 'share', label: () => t('cmdShare'), action: () => shareLink() },
@@ -3851,6 +3894,7 @@ function setLighting(preset: string) {
 /* ── Feature: Clipping Plane ── */
 const clipEnabled = ref(false)
 const clipY = ref(0)
+const clipAxis = ref(1) // 0=X, 1=Y, 2=Z
 
 function toggleClip() {
   clipEnabled.value = !clipEnabled.value
@@ -3860,7 +3904,17 @@ function toggleClip() {
 function onClipYChange(e: Event) {
   const val = parseFloat((e.target as HTMLInputElement).value)
   clipY.value = val
-  renderer?.setClipY(val)
+  renderer?.setClipValue(val)
+}
+
+function onClipAxisChange(e: Event) {
+  const val = parseInt((e.target as HTMLSelectElement).value)
+  clipAxis.value = val
+  renderer?.setClipAxis(val)
+  // Reset clip value to middle of new axis range
+  const range = clipRange.value
+  clipY.value = (range.min + range.max) / 2
+  renderer?.setClipValue(clipY.value)
 }
 
 const clipRange = computed(() => {
@@ -3882,6 +3936,20 @@ const reflectionEnabled = ref(false)
 function toggleReflection() {
   reflectionEnabled.value = !reflectionEnabled.value
   renderer?.setReflection(reflectionEnabled.value)
+}
+
+/* ── Feature: Render Mode ── */
+function setRenderMode(mode: string) {
+  activeRenderMode.value = mode
+  renderer?.setRenderMode(mode)
+  // Sync wireframe ref for any UI that still reads it
+  showWireframe.value = mode === 'wireframe'
+}
+
+/* ── Feature: Flat Shading ── */
+function toggleFlatShading() {
+  flatShadingEnabled.value = !flatShadingEnabled.value
+  renderer?.setFlatShading(flatShadingEnabled.value)
 }
 
 /* ── Feature 3: Build Plate / Print Bed ── */
@@ -5225,9 +5293,17 @@ translate([0, 0, 39])
             </button>
             <transition name="vp-dropdown">
             <div v-if="renderMenuOpen" class="vp-dropdown">
-              <button class="vp-dd-item" @click="toggleWireframe(); closeAllMenus()">
-                <span class="vp-dd-check" v-if="showWireframe">&#10003;</span>
-                {{ t('wireframe') }}
+              <div class="vp-dd-label">{{ t('renderMode') }}</div>
+              <select class="lighting-select vp-dd-select" :value="activeRenderMode" @change="setRenderMode(($event.target as HTMLSelectElement).value)">
+                <option value="solid">{{ t('modeSolid') }}</option>
+                <option value="solid+edges">{{ t('modeSolidEdges') }}</option>
+                <option value="wireframe">{{ t('modeWireframe') }}</option>
+                <option value="xray">{{ t('modeXray') }}</option>
+              </select>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="toggleFlatShading()">
+                <span class="vp-dd-check" v-if="flatShadingEnabled">&#10003;</span>
+                {{ t('flatShading') }}
               </button>
               <button class="vp-dd-item" @click="toggleGrid(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="showGrid">&#10003;</span>
@@ -5247,6 +5323,11 @@ translate([0, 0, 39])
                 {{ t('clipPlane') }}
               </button>
               <div v-if="clipEnabled" class="vp-dd-slider-row">
+                <select class="clip-axis-select" :value="clipAxis" @change="onClipAxisChange">
+                  <option :value="0">X</option>
+                  <option :value="1">Y</option>
+                  <option :value="2">Z</option>
+                </select>
                 <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
                 <span class="clip-value">{{ clipY.toFixed(1) }}</span>
               </div>
@@ -5307,6 +5388,7 @@ translate([0, 0, 39])
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="doExportSTL(); closeAllMenus()">{{ t('exportStl') }}</button>
               <button class="vp-dd-item" @click="doExportOBJ(); closeAllMenus()">{{ t('exportObj') }}</button>
+              <button class="vp-dd-item" @click="doExport3MF(); closeAllMenus()">{{ t('export3mf') }}</button>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
             </div>
@@ -6680,6 +6762,20 @@ textarea.code:focus-visible {
 }
 [data-theme="light"] .clip-value {
   color: rgba(0,0,0,.5);
+}
+.clip-axis-select {
+  background: rgba(255,255,255,.08);
+  color: inherit;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 3px;
+  font-size: 0.65rem;
+  padding: 1px 2px;
+  cursor: pointer;
+  outline: none;
+}
+[data-theme="light"] .clip-axis-select {
+  background: rgba(0,0,0,.05);
+  border-color: rgba(0,0,0,.15);
 }
 
 /* ── Welcome / Onboarding modal ── */

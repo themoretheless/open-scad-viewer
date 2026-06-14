@@ -24,10 +24,21 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
 }
 
 @fragment fn fs(v: V) -> @location(0) vec4f {
-  // Clipping plane
-  if (sc.clip.y > 0.5 && v.w.y < sc.clip.x) { discard; }
+  // Multi-axis clipping plane
+  if (sc.clip.y > 0.5) {
+    let clipAxis = i32(sc.clip.z);
+    var clipCoord = v.w.y;
+    if (clipAxis == 0) { clipCoord = v.w.x; }
+    else if (clipAxis == 2) { clipCoord = v.w.z; }
+    if (clipCoord < sc.clip.x) { discard; }
+  }
 
-  let N = normalize(v.n);
+  // Flat or smooth shading
+  var N = normalize(v.n);
+  if (sc._pad0.x > 0.5) {
+    N = normalize(cross(dpdx(v.w), dpdy(v.w)));
+  }
+
   let L = normalize(sc.light.xyz);
   let V2 = normalize(sc.eye.xyz - v.w);
   let H = normalize(L + V2);
@@ -83,6 +94,10 @@ export class WebGPURenderer {
   private sceneBG!: GPUBindGroup
   private depth!: GPUTexture
 
+  /* MSAA textures (4x) */
+  private msaaColorTex!: GPUTexture
+  private msaaDepthTex!: GPUTexture
+
   private meshes: GMesh[] = []
   private lastRawMeshes: MeshData[] = []
   private gridVB: GPUBuffer | null = null
@@ -104,6 +119,17 @@ export class WebGPURenderer {
   private wireframeVC = 0
   wireframe = false
 
+  /* edge overlay (CAD-style) */
+  private edgeVB: GPUBuffer | null = null
+  private edgeVC = 0
+  showEdges = false
+
+  /* render mode */
+  renderMode: 'solid' | 'solid+edges' | 'wireframe' | 'xray' = 'solid'
+
+  /* flat shading */
+  flatShading = false
+
   /* grid toggle */
   showGrid = true
 
@@ -115,7 +141,12 @@ export class WebGPURenderer {
 
   /* clipping plane */
   clipEnabled = false
-  clipY = 0
+  clipAxis = 1 // 0=X, 1=Y, 2=Z
+  private clipValue = 0
+
+  /** @deprecated Use clipValue via setClipValue(). Kept for backward compat. */
+  get clipY(): number { return this.clipValue }
+  set clipY(v: number) { this.clipValue = v }
 
   /* fog */
   fogEnabled = false
@@ -223,6 +254,7 @@ export class WebGPURenderer {
       fragment: { module: meshMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: ds,
+      multisample: { count: 4 },
     })
 
     this.meshPipeT = this.dev.createRenderPipeline({
@@ -237,6 +269,7 @@ export class WebGPURenderer {
       }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: { ...ds, depthWriteEnabled: false },
+      multisample: { count: 4 },
     })
 
     const lineMod = this.dev.createShaderModule({ code: LINE_WGSL })
@@ -260,6 +293,7 @@ export class WebGPURenderer {
       }] },
       primitive: { topology: 'line-list' },
       depthStencil: ds,
+      multisample: { count: 4 },
     })
   }
 
@@ -365,16 +399,24 @@ export class WebGPURenderer {
       this.dev.queue.writeBuffer(ub, 0, transpose(m.transform))
       const nm = transpose(invert(m.transform))
       this.dev.queue.writeBuffer(ub, 64, transpose(nm))
-      this.dev.queue.writeBuffer(ub, 128, new Float32Array(m.color))
+
+      // If in xray mode, override alpha to 0.3
+      const color = this.renderMode === 'xray'
+        ? [m.color[0], m.color[1], m.color[2], 0.3]
+        : m.color
+      this.dev.queue.writeBuffer(ub, 128, new Float32Array(color))
+
       const bg = this.dev.createBindGroup({
         layout: this.objBGL,
         entries: [{ binding: 0, resource: { buffer: ub } }],
       })
-      this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp: m.color[3] < 0.99 })
+      const transp = this.renderMode === 'xray' ? true : m.color[3] < 0.99
+      this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp })
     }
     this.computeBounds(meshes)
     this.autoFit(meshes)
     if (this.wireframe) this.buildWireframeBuffer()
+    if (this.showEdges) this.buildEdgeBuffer()
   }
 
   private computeBounds(meshes: MeshData[]) {
@@ -432,6 +474,17 @@ export class WebGPURenderer {
       this.canvas.width = w; this.canvas.height = h
       this.depth?.destroy()
       this.depth = this.dev.createTexture({ size: [w, h], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT })
+      // MSAA textures
+      this.msaaColorTex?.destroy()
+      this.msaaColorTex = this.dev.createTexture({
+        size: [w, h], format: this.fmt,
+        sampleCount: 4, usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      })
+      this.msaaDepthTex?.destroy()
+      this.msaaDepthTex = this.dev.createTexture({
+        size: [w, h], format: 'depth24plus',
+        sampleCount: 4, usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      })
     }
   }
 
@@ -439,6 +492,23 @@ export class WebGPURenderer {
   private lastVP: Mat4 = new Float32Array(16)
   private lastW = 1
   private lastH = 1
+
+  /** Fill a 48-float scene-data array with current camera/lighting/clip state. */
+  private fillSceneData(sd: Float32Array, cx: number, cy: number, cz: number) {
+    sd.set([cx, cy, cz, 1], 16)
+    const lp = this.getLightingValues()
+    sd.set(lp.light, 20)
+    sd.set(lp.ambient, 24)
+    // Clipping plane: [clipValue, enabled, axis, 0]
+    sd.set([this.clipValue, this.clipEnabled ? 1.0 : 0.0, this.clipAxis, 0], 28)
+    // Fog
+    const fogNear = this.dist * 0.5
+    const fogFar = this.dist * 3.0
+    sd.set([fogNear, fogFar, this.fogEnabled ? 1.0 : 0.0, 0], 32)
+    sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
+    // Flat shading flag in _pad0.x
+    sd[40] = this.flatShading ? 1.0 : 0.0
+  }
 
   private render() {
     this.resize()
@@ -462,29 +532,23 @@ export class WebGPURenderer {
     const vp = transpose(vpMat)
     const sd = new Float32Array(48)
     sd.set(vp, 0)
-    sd.set([cx,cy,cz,1], 16)
-    // Lighting (use preset values)
-    const lp = this.getLightingValues()
-    sd.set(lp.light, 20)
-    sd.set(lp.ambient, 24)
-    // Clipping plane
-    sd.set([this.clipY, this.clipEnabled ? 1.0 : 0.0, 0, 0], 28)
-    // Fog
-    const fogNear = this.dist * 0.5
-    const fogFar = this.dist * 3.0
-    sd.set([fogNear, fogFar, this.fogEnabled ? 1.0 : 0.0, 0], 32)
-    sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
+    this.fillSceneData(sd, cx, cy, cz)
     this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
+
+    const msaaView = this.msaaColorTex.createView()
+    const msaaDepthView = this.msaaDepthTex.createView()
+    const resolveView = this.ctx.getCurrentTexture().createView()
 
     const enc = this.dev.createCommandEncoder()
     const pass = enc.beginRenderPass({
       colorAttachments: [{
-        view: this.ctx.getCurrentTexture().createView(),
+        view: msaaView,
+        resolveTarget: resolveView,
         clearValue: { r: this.clearR * this.clearA, g: this.clearG * this.clearA, b: this.clearB * this.clearA, a: this.clearA },
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
-        view: this.depth.createView(),
+        view: msaaDepthView,
         depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
       },
     })
@@ -503,24 +567,48 @@ export class WebGPURenderer {
       pass.draw(this.plateVC)
     }
 
-    pass.setPipeline(this.meshPipe)
-    pass.setBindGroup(0, this.sceneBG)
-    for (const g of this.meshes) {
-      if (g.transp) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
+    // Render mode dispatch
+    if (this.renderMode === 'wireframe') {
+      // wireframe only — skip solid meshes
+    } else if (this.renderMode === 'xray') {
+      // xray: render ALL meshes with meshPipeT (alpha already set to 0.3 in UB)
+      pass.setPipeline(this.meshPipeT)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+    } else {
+      // solid / solid+edges: normal opaque then transparent
+      pass.setPipeline(this.meshPipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+
+      pass.setPipeline(this.meshPipeT)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (!g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
     }
 
-    pass.setPipeline(this.meshPipeT)
-    pass.setBindGroup(0, this.sceneBG)
-    for (const g of this.meshes) {
-      if (!g.transp) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
+    /* edge overlay (CAD-style) */
+    if (this.showEdges && this.edgeVB && this.edgeVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.edgeVB)
+      pass.draw(this.edgeVC)
     }
 
     /* wireframe edge overlay */
@@ -534,14 +622,15 @@ export class WebGPURenderer {
     pass.end()
 
     // Reflection pass - render mirrored meshes with low alpha
-    if (this.showReflection && this.meshes.length > 0) {
+    if (this.showReflection && this.meshes.length > 0 && this.renderMode !== 'wireframe') {
       const reflPass = enc.beginRenderPass({
         colorAttachments: [{
-          view: this.ctx.getCurrentTexture().createView(),
+          view: msaaView,
+          resolveTarget: resolveView,
           loadOp: 'load', storeOp: 'store',
         }],
         depthStencilAttachment: {
-          view: this.depth.createView(),
+          view: msaaDepthView,
           depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
         },
       })
@@ -552,7 +641,7 @@ export class WebGPURenderer {
 
       for (let mi = 0; mi < this.meshes.length; mi++) {
         const g = this.meshes[mi]
-        if (g.transp) continue
+        if (g.transp && this.renderMode !== 'xray') continue
         const m = this.lastRawMeshes[mi]
         if (!m) continue
 
@@ -638,7 +727,7 @@ export class WebGPURenderer {
 
   private onDown = (e: PointerEvent) => {
     this.drag = true; this.pan = e.button === 2 || e.shiftKey
-    // Ctrl (without Shift) during an orbit drag = snap yaw/pitch to 15° steps.
+    // Ctrl (without Shift) during an orbit drag = snap yaw/pitch to 15 deg steps.
     this.snapOrbit = !this.pan && e.ctrlKey
     this.mx = e.clientX; this.my = e.clientY
     this.canvas.setPointerCapture(e.pointerId)
@@ -657,7 +746,7 @@ export class WebGPURenderer {
       this.yaw -= dx * 0.005
       this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.005))
       if (this.snapOrbit) {
-        // Snap yaw & pitch to 15° (PI/12) increments while dragging.
+        // Snap yaw & pitch to 15 deg (PI/12) increments while dragging.
         const step = Math.PI / 12
         this.yaw = Math.round(this.yaw / step) * step
         this.pitch = Math.max(-1.5, Math.min(1.5, Math.round(this.pitch / step) * step))
@@ -784,11 +873,6 @@ export class WebGPURenderer {
    * axis: '+x' | '-x' | '+y' | '-y' | '+z' | '-z'
    */
   snapToAxis(axis: string) {
-    // yaw/pitch are spherical angles where the eye is positioned at:
-    //   x = tx + d*cos(pitch)*sin(yaw)
-    //   y = ty + d*sin(pitch)
-    //   z = tz + d*cos(pitch)*cos(yaw)
-    // Looking down +X means the eye sits on +X looking toward origin.
     const HALF = Math.PI / 2
     switch (axis) {
       case '+x': this.animateTo(HALF, 0); break
@@ -850,10 +934,8 @@ export class WebGPURenderer {
     }
   }
 
-  /** Public wrapper for autoFit — re-fits camera to current meshes' bounding box. */
+  /** Public wrapper for autoFit -- re-fits camera to current meshes' bounding box. */
   autoFitAll() {
-    // Rebuild the bounding box from existing GPU meshes isn't practical,
-    // so we store the last raw MeshData set for re-fitting.
     if (this.lastRawMeshes && this.lastRawMeshes.length) {
       this.autoFit(this.lastRawMeshes)
     }
@@ -875,7 +957,7 @@ export class WebGPURenderer {
   }
 
   /**
-   * Take a screenshot at scale× the current backing-store resolution.
+   * Take a screenshot at scale x the current backing-store resolution.
    * Temporarily resizes the canvas backing store + depth texture, renders one
    * frame, captures via toBlob, then restores the original size and re-renders.
    */
@@ -884,23 +966,37 @@ export class WebGPURenderer {
     const origW = this.canvas.width
     const origH = this.canvas.height
     const origDepth = this.depth
+    const origMsaaColor = this.msaaColorTex
+    const origMsaaDepth = this.msaaDepthTex
 
     const w = Math.max(1, Math.round(origW * scale))
     const h = Math.max(1, Math.round(origH * scale))
     this.canvas.width = w
     this.canvas.height = h
     this.depth = this.dev.createTexture({ size: [w, h], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT })
+    this.msaaColorTex = this.dev.createTexture({
+      size: [w, h], format: this.fmt,
+      sampleCount: 4, usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    })
+    this.msaaDepthTex = this.dev.createTexture({
+      size: [w, h], format: 'depth24plus',
+      sampleCount: 4, usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    })
 
     // Render directly with the scaled buffers (bypass resize(), which would
     // snap the canvas back to its CSS size).
     this.renderScaled(w, h)
 
     const restore = () => {
-      // Restore original backing store + depth, then force a normal re-render.
+      // Restore original backing store + depth + MSAA, then force a normal re-render.
       this.canvas.width = origW
       this.canvas.height = origH
       this.depth?.destroy()
+      this.msaaColorTex?.destroy()
+      this.msaaDepthTex?.destroy()
       this.depth = origDepth
+      this.msaaColorTex = origMsaaColor
+      this.msaaDepthTex = origMsaaDepth
       this.render()
     }
 
@@ -936,26 +1032,23 @@ export class WebGPURenderer {
     const vp = transpose(vpMat)
     const sd = new Float32Array(48)
     sd.set(vp, 0)
-    sd.set([cx, cy, cz, 1], 16)
-    const lp = this.getLightingValues()
-    sd.set(lp.light, 20)
-    sd.set(lp.ambient, 24)
-    sd.set([this.clipY, this.clipEnabled ? 1.0 : 0.0, 0, 0], 28)
-    const fogNear = this.dist * 0.5
-    const fogFar = this.dist * 3.0
-    sd.set([fogNear, fogFar, this.fogEnabled ? 1.0 : 0.0, 0], 32)
-    sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
+    this.fillSceneData(sd, cx, cy, cz)
     this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
+
+    const msaaView = this.msaaColorTex.createView()
+    const msaaDepthView = this.msaaDepthTex.createView()
+    const resolveView = this.ctx.getCurrentTexture().createView()
 
     const enc = this.dev.createCommandEncoder()
     const pass = enc.beginRenderPass({
       colorAttachments: [{
-        view: this.ctx.getCurrentTexture().createView(),
+        view: msaaView,
+        resolveTarget: resolveView,
         clearValue: { r: this.clearR * this.clearA, g: this.clearG * this.clearA, b: this.clearB * this.clearA, a: this.clearA },
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
-        view: this.depth.createView(),
+        view: msaaDepthView,
         depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
       },
     })
@@ -973,24 +1066,47 @@ export class WebGPURenderer {
       pass.draw(this.plateVC)
     }
 
-    pass.setPipeline(this.meshPipe)
-    pass.setBindGroup(0, this.sceneBG)
-    for (const g of this.meshes) {
-      if (g.transp) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
+    // Render mode dispatch (same logic as render())
+    if (this.renderMode === 'wireframe') {
+      // wireframe only
+    } else if (this.renderMode === 'xray') {
+      pass.setPipeline(this.meshPipeT)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+    } else {
+      pass.setPipeline(this.meshPipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+      pass.setPipeline(this.meshPipeT)
+      pass.setBindGroup(0, this.sceneBG)
+      for (const g of this.meshes) {
+        if (!g.transp) continue
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
     }
-    pass.setPipeline(this.meshPipeT)
-    pass.setBindGroup(0, this.sceneBG)
-    for (const g of this.meshes) {
-      if (!g.transp) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
+
+    /* edge overlay */
+    if (this.showEdges && this.edgeVB && this.edgeVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.edgeVB)
+      pass.draw(this.edgeVC)
     }
+
     if (this.wireframe && this.wireframeVB && this.wireframeVC > 0) {
       pass.setPipeline(this.linePipe)
       pass.setBindGroup(0, this.sceneBG)
@@ -1024,6 +1140,13 @@ export class WebGPURenderer {
     this.wireframe = !this.wireframe
     if (this.wireframe) this.buildWireframeBuffer()
     return this.wireframe
+  }
+
+  /** Toggle CAD-style edge overlay on/off. */
+  toggleEdges(): boolean {
+    this.showEdges = !this.showEdges
+    if (this.showEdges) this.buildEdgeBuffer()
+    return this.showEdges
   }
 
   /** Toggle grid floor on/off. */
@@ -1100,9 +1223,19 @@ export class WebGPURenderer {
     this.clipEnabled = v
   }
 
-  /** Set clipping plane Y value. */
+  /** Set clipping plane Y value. Kept for backward compat. */
   setClipY(y: number) {
-    this.clipY = y
+    this.clipValue = y
+  }
+
+  /** Set clipping plane value on the current axis. */
+  setClipValue(v: number) {
+    this.clipValue = v
+  }
+
+  /** Set the clipping plane axis (0=X, 1=Y, 2=Z). */
+  setClipAxis(axis: number) {
+    this.clipAxis = Math.max(0, Math.min(2, Math.round(axis)))
   }
 
   /** Toggle fog on/off. */
@@ -1137,9 +1270,76 @@ export class WebGPURenderer {
     return this.showReflection
   }
 
-  /** Get bounds for clipping plane range. */
-  getClipRange(): { min: number; max: number } {
-    return { min: this.boundsMin[1] - 5, max: this.boundsMax[1] + 5 }
+  /** Get bounds for clipping plane range on the current (or specified) axis. */
+  getClipRange(axis?: number): { min: number; max: number } {
+    const a = axis !== undefined ? axis : this.clipAxis
+    return { min: this.boundsMin[a] - 5, max: this.boundsMax[a] + 5 }
+  }
+
+  /** Set render mode: 'solid', 'solid+edges', 'wireframe', 'xray'. */
+  setRenderMode(mode: string) {
+    const m = mode as typeof this.renderMode
+    if (m === this.renderMode) return
+    const prevMode = this.renderMode
+    this.renderMode = m
+
+    switch (m) {
+      case 'solid':
+        this.wireframe = false
+        this.showEdges = false
+        break
+      case 'solid+edges':
+        this.wireframe = false
+        this.showEdges = true
+        this.buildEdgeBuffer()
+        break
+      case 'wireframe':
+        this.wireframe = true
+        this.showEdges = false
+        this.buildWireframeBuffer()
+        break
+      case 'xray':
+        this.wireframe = false
+        this.showEdges = true
+        this.buildEdgeBuffer()
+        break
+    }
+
+    // Handle xray alpha transitions
+    if (m === 'xray' && prevMode !== 'xray') {
+      // Entering xray: set all mesh colors to alpha 0.3
+      for (let i = 0; i < this.meshes.length; i++) {
+        const g = this.meshes[i]
+        const raw = this.lastRawMeshes[i]
+        if (!raw) continue
+        this.dev.queue.writeBuffer(g.ub, 128, new Float32Array([raw.color[0], raw.color[1], raw.color[2], 0.3]))
+        g.transp = true
+      }
+    } else if (m !== 'xray' && prevMode === 'xray') {
+      // Leaving xray: restore original alphas
+      for (let i = 0; i < this.meshes.length; i++) {
+        const g = this.meshes[i]
+        const raw = this.lastRawMeshes[i]
+        if (!raw) continue
+        this.dev.queue.writeBuffer(g.ub, 128, new Float32Array(raw.color))
+        g.transp = raw.color[3] < 0.99
+      }
+    }
+  }
+
+  /** Get current render mode. */
+  getRenderMode(): string {
+    return this.renderMode
+  }
+
+  /** Set flat shading on or off. */
+  setFlatShading(v: boolean) {
+    this.flatShading = v
+  }
+
+  /** Check whether flat shading is enabled. */
+  isFlatShading(): boolean {
+    return this.flatShading
   }
 
   /** Build a line-list vertex buffer with edges from the current meshes. */
@@ -1193,6 +1393,59 @@ export class WebGPURenderer {
     this.dev.queue.writeBuffer(this.wireframeVB, 0, new Float32Array(d))
   }
 
+  /** Build a deduplicated edge buffer with dark CAD-style edges. */
+  private buildEdgeBuffer() {
+    this.edgeVB?.destroy()
+    this.edgeVB = null
+    this.edgeVC = 0
+    if (!this.lastRawMeshes.length) return
+
+    const edgeColor: [number, number, number, number] = [0.1, 0.1, 0.1, 0.6]
+    const seen = new Set<string>()
+    const d: number[] = []
+
+    for (const m of this.lastRawMeshes) {
+      const verts = m.vertices
+      const idx = m.indices
+      const t = m.transform
+
+      const transformedPos = (vi: number): [number, number, number] => {
+        const x = verts[vi * 6], y = verts[vi * 6 + 1], z = verts[vi * 6 + 2]
+        return [
+          t[0]*x + t[1]*y + t[2]*z + t[3],
+          t[4]*x + t[5]*y + t[6]*z + t[7],
+          t[8]*x + t[9]*y + t[10]*z + t[11],
+        ]
+      }
+
+      for (let i = 0; i < idx.length; i += 3) {
+        const tri = [idx[i], idx[i + 1], idx[i + 2]]
+        const edges: [number, number][] = [
+          [tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]],
+        ]
+        for (const [a, b] of edges) {
+          const lo = Math.min(a, b)
+          const hi = Math.max(a, b)
+          const key = `${lo},${hi}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          const pa = transformedPos(a)
+          const pb = transformedPos(b)
+          d.push(pa[0], pa[1], pa[2], ...edgeColor)
+          d.push(pb[0], pb[1], pb[2], ...edgeColor)
+        }
+      }
+    }
+    if (!d.length) return
+
+    this.edgeVC = d.length / 7
+    this.edgeVB = this.dev.createBuffer({
+      size: d.length * 4,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    })
+    this.dev.queue.writeBuffer(this.edgeVB, 0, new Float32Array(d))
+  }
+
   destroy() {
     this.dead = true
     cancelAnimationFrame(this.raf)
@@ -1210,6 +1463,9 @@ export class WebGPURenderer {
     this.gridVB?.destroy()
     this.plateVB?.destroy()
     this.wireframeVB?.destroy()
+    this.edgeVB?.destroy()
+    this.msaaColorTex?.destroy()
+    this.msaaDepthTex?.destroy()
     this.depth?.destroy()
     this.sceneUB?.destroy()
     this.reflUB?.destroy()
