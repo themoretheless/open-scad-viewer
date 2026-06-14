@@ -137,6 +137,7 @@ export interface ASTNode {
   args: Record<string, any>
   children: ASTNode[]
   pos: number
+  endPos: number
   /** For module definitions: parameter info */
   params?: { name: string; defaultVal: any }[]
 }
@@ -205,14 +206,14 @@ class Parser {
       } else {
         this.match(TT.Semi)
       }
-      return { type: 'call', name: 'module', args: { __name: modName }, children, pos: p, params }
+      return { type: 'call', name: 'module', args: { __name: modName }, children, pos: p, endPos: this.peek().p, params }
     }
 
     /* ── function definition (skip) ── */
     if (name === 'function') {
       this.skipExpr()
       this.match(TT.Semi)
-      return { type: 'call', name: 'function', args: {}, children: [], pos: p }
+      return { type: 'call', name: 'function', args: {}, children: [], pos: p, endPos: this.peek().p }
     }
 
     const args: Record<string, any> = {}
@@ -222,7 +223,7 @@ class Parser {
       this.adv()
       const val = this.parseExpr()
       this.match(TT.Semi)
-      return { type: 'call', name: '__assign', args: { __varName: name, __varValue: val }, children: [], pos: p }
+      return { type: 'call', name: '__assign', args: { __varName: name, __varValue: val }, children: [], pos: p, endPos: this.peek().p }
     }
 
     if (this.match(TT.LParen)) {
@@ -242,7 +243,7 @@ class Parser {
     } else {
       this.match(TT.Semi)
     }
-    return { type: 'call', name, args, children, pos: p }
+    return { type: 'call', name, args, children, pos: p, endPos: this.peek().p }
   }
 
   private parseArgs(args: Record<string, any>) {
