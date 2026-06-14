@@ -448,6 +448,41 @@ const L: Record<string, Record<string, string>> = {
     presetVSCode: 'VS Code',
     presetSublime: 'Sublime',
     presetEmacs: 'Emacs',
+    // Example gallery
+    exampleGallery: 'Галерея примеров',
+    exampleGallerySearch: 'Поиск примеров...',
+    loadExample: 'Загрузить',
+    cmdExampleGallery: 'Галерея примеров',
+    ariaExampleGallery: 'Галерея примеров',
+    // Snippets
+    snippets: 'Сниппеты',
+    cmdInsertSnippet: 'Вставить сниппет',
+    snippetCenteredCube: 'Центрированный куб',
+    snippetCylinderHole: 'Цилиндр с отверстием',
+    snippetRoundedBox: 'Скруглённый куб',
+    snippetArrayPattern: 'Массив объектов',
+    snippetParametricModule: 'Параметрический модуль',
+    snippetThreadedInsert: 'Резьбовая вставка',
+    // Code statistics
+    codeStats: 'Статистика кода',
+    codeLines: 'Строк',
+    codeChars: 'Символов',
+    codeWords: 'Слов',
+    codeModules: 'Модулей',
+    codeForLoops: 'Циклов for',
+    codeNestingDepth: 'Глубина вложенности',
+    // Camera info
+    cameraInfo: 'Камера',
+    cameraYaw: 'Поворот',
+    cameraPitch: 'Наклон',
+    cameraDist: 'Расстояние',
+    cameraTarget: 'Цель',
+    showCameraInfo: 'Показать камеру',
+    // Export dropdown
+    exportDropdown: 'Экспорт',
+    exportScad: 'Экспорт .scad',
+    // Responsive
+    resetView: 'Сбросить вид',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -802,6 +837,41 @@ const L: Record<string, Record<string, string>> = {
     presetVSCode: 'VS Code',
     presetSublime: 'Sublime',
     presetEmacs: 'Emacs',
+    // Example gallery
+    exampleGallery: 'Example Gallery',
+    exampleGallerySearch: 'Search examples...',
+    loadExample: 'Load',
+    cmdExampleGallery: 'Example Gallery',
+    ariaExampleGallery: 'Example gallery',
+    // Snippets
+    snippets: 'Snippets',
+    cmdInsertSnippet: 'Insert Snippet',
+    snippetCenteredCube: 'Centered Cube',
+    snippetCylinderHole: 'Cylinder with Hole',
+    snippetRoundedBox: 'Rounded Box',
+    snippetArrayPattern: 'Array Pattern',
+    snippetParametricModule: 'Parametric Module',
+    snippetThreadedInsert: 'Threaded Insert',
+    // Code statistics
+    codeStats: 'Code Stats',
+    codeLines: 'Lines',
+    codeChars: 'Chars',
+    codeWords: 'Words',
+    codeModules: 'Modules',
+    codeForLoops: 'For loops',
+    codeNestingDepth: 'Nesting depth',
+    // Camera info
+    cameraInfo: 'Camera',
+    cameraYaw: 'Yaw',
+    cameraPitch: 'Pitch',
+    cameraDist: 'Distance',
+    cameraTarget: 'Target',
+    showCameraInfo: 'Show Camera',
+    // Export dropdown
+    exportDropdown: 'Export',
+    exportScad: 'Export .scad',
+    // Responsive
+    resetView: 'Reset View',
   },
 }
 
@@ -3194,6 +3264,14 @@ function onDocClick(e: MouseEvent) {
   if (colorPickerVisible.value && !target.closest('.color-picker-popup') && !target.closest('.color-swatch')) {
     closeColorPicker()
   }
+  // Close export dropdown on outside click
+  if (showExportDropdown.value && !target.closest('.export-dropdown-wrapper')) {
+    closeExportDropdown()
+  }
+  // Close snippet panel on outside click
+  if (showSnippetPanel.value && !target.closest('.snippet-panel-wrapper')) {
+    showSnippetPanel.value = false
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -3265,8 +3343,11 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (showPreferences.value) { showPreferences.value = false; return }
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
+    if (showExampleGallery.value) { closeExampleGallery(); return }
+    if (showSnippetPanel.value) { showSnippetPanel.value = false; return }
     if (acVisible.value) { acVisible.value = false; return }
     if (showRecent.value) { showRecent.value = false; return }
+    if (showExportDropdown.value) { showExportDropdown.value = false; return }
     if (isFullscreen.value) { isFullscreen.value = false }
   }
 }
@@ -4226,6 +4307,14 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'splitEditor', label: () => t('splitEditor'), shortcut: 'Ctrl+\\', action: () => toggleSplitMode() },
   { id: 'history', label: () => t('cmdToggleHistory'), action: () => { showHistory.value = !showHistory.value } },
   { id: 'simpleMode', label: () => t('modeToggle') + ': ' + (simpleMode.value ? t('advancedMode') : t('simpleMode')), action: () => { simpleMode.value = !simpleMode.value } },
+  { id: 'exampleGallery', label: () => t('cmdExampleGallery'), action: () => openExampleGallery() },
+  { id: 'insertSnippet:centeredCube', label: () => 'Insert: ' + t('snippetCenteredCube'), action: () => insertSnippet(SNIPPETS[0]) },
+  { id: 'insertSnippet:cylinderHole', label: () => 'Insert: ' + t('snippetCylinderHole'), action: () => insertSnippet(SNIPPETS[1]) },
+  { id: 'insertSnippet:roundedBox', label: () => 'Insert: ' + t('snippetRoundedBox'), action: () => insertSnippet(SNIPPETS[2]) },
+  { id: 'insertSnippet:arrayPattern', label: () => 'Insert: ' + t('snippetArrayPattern'), action: () => insertSnippet(SNIPPETS[3]) },
+  { id: 'insertSnippet:parametricModule', label: () => 'Insert: ' + t('snippetParametricModule'), action: () => insertSnippet(SNIPPETS[4]) },
+  { id: 'insertSnippet:threadedInsert', label: () => 'Insert: ' + t('snippetThreadedInsert'), action: () => insertSnippet(SNIPPETS[5]) },
+  { id: 'cameraInfo', label: () => t('showCameraInfo'), action: () => toggleCameraInfo() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -4849,6 +4938,171 @@ function onCanvasDrop(e: DragEvent) {
     reader.readAsText(file)
   }
 }
+
+/* ── Feature: Example Gallery Modal ── */
+const showExampleGallery = ref(false)
+const exampleGallerySearch = ref('')
+
+interface ExampleCard {
+  key: string
+  nameKey: string
+  tipKey: string
+}
+
+const EXAMPLE_CARDS: ExampleCard[] = [
+  { key: 'basic', nameKey: 'basic', tipKey: 'basicTip' },
+  { key: 'csg', nameKey: 'csg', tipKey: 'csgTip' },
+  { key: 'house', nameKey: 'house', tipKey: 'houseTip' },
+  { key: 'tower', nameKey: 'tower', tipKey: 'towerTip' },
+  { key: 'paramGear', nameKey: 'paramGear', tipKey: 'paramGearTip' },
+  { key: 'staircase', nameKey: 'staircase', tipKey: 'staircaseTip' },
+  { key: 'paramVase', nameKey: 'paramVase', tipKey: 'paramVaseTip' },
+  { key: 'gear', nameKey: 'gear', tipKey: 'gearTip' },
+  { key: 'vase', nameKey: 'vase', tipKey: 'vaseTip' },
+  { key: 'chess', nameKey: 'chess', tipKey: 'chessTip' },
+]
+
+function getExamplePreview(key: string): string {
+  const ex = EXAMPLES[key]
+  if (!ex) return ''
+  return ex.split('\n').slice(0, 3).join('\n')
+}
+
+const filteredExamples = computed(() => {
+  const q = exampleGallerySearch.value.toLowerCase().trim()
+  if (!q) return EXAMPLE_CARDS
+  return EXAMPLE_CARDS.filter(card => {
+    const name = t(card.nameKey).toLowerCase()
+    const tip = t(card.tipKey).toLowerCase()
+    return name.includes(q) || tip.includes(q) || card.key.toLowerCase().includes(q)
+  })
+})
+
+function openExampleGallery() {
+  showExampleGallery.value = true
+  exampleGallerySearch.value = ''
+}
+
+function closeExampleGallery() {
+  showExampleGallery.value = false
+  exampleGallerySearch.value = ''
+}
+
+function loadExampleFromGallery(key: string) {
+  loadExample(key)
+  closeExampleGallery()
+}
+
+/* ── Feature: Template Snippets ── */
+const showSnippetPanel = ref(false)
+
+interface Snippet {
+  id: string
+  nameKey: string
+  code: string
+}
+
+const SNIPPETS: Snippet[] = [
+  { id: 'centeredCube', nameKey: 'snippetCenteredCube', code: 'cube([10,10,10], center=true);' },
+  { id: 'cylinderHole', nameKey: 'snippetCylinderHole', code: 'difference() {\n    cylinder(h=10, r=15, $fn=64);\n    cylinder(h=12, r=10, $fn=64, center=true);\n}' },
+  { id: 'roundedBox', nameKey: 'snippetRoundedBox', code: 'minkowski() {\n    cube([20,20,10]);\n    sphere(r=2, $fn=16);\n}' },
+  { id: 'arrayPattern', nameKey: 'snippetArrayPattern', code: 'for(i=[0:5])\n    translate([i*12, 0, 0])\n        cube(10);' },
+  { id: 'parametricModule', nameKey: 'snippetParametricModule', code: 'module box(w=10, h=5, d=3) {\n    cube([w,h,d], center=true);\n}' },
+  { id: 'threadedInsert', nameKey: 'snippetThreadedInsert', code: 'difference() {\n    cylinder(h=10, r=8, $fn=32);\n    translate([0,0,-1])\n        cylinder(h=12, r=5, $fn=32);\n}' },
+]
+
+function insertSnippet(snippet: Snippet) {
+  const el = textareaRef.value
+  if (!el) return
+  pushUndoSnapshot()
+  const pos = el.selectionStart
+  const before = code.value.substring(0, pos)
+  const after = code.value.substring(el.selectionEnd)
+  code.value = before + snippet.code + after
+  showSnippetPanel.value = false
+  nextTick(() => {
+    const newPos = pos + snippet.code.length
+    el.selectionStart = el.selectionEnd = newPos
+    el.focus()
+  })
+}
+
+/* ── Feature: Code Statistics ── */
+interface CodeStats {
+  lines: number
+  chars: number
+  words: number
+  modules: number
+  forLoops: number
+  nestingDepth: number
+}
+
+const codeStatsData = ref<CodeStats>({ lines: 0, chars: 0, words: 0, modules: 0, forLoops: 0, nestingDepth: 0 })
+let codeStatsDebounce: ReturnType<typeof setTimeout> | null = null
+
+function computeCodeStats(src: string): CodeStats {
+  const lines = src.split('\n').length
+  const chars = src.length
+  const words = src.split(/\s+/).filter(w => w.length > 0).length
+  const modules = (src.match(/\bmodule\s+\w+/g) || []).length
+  const forLoops = (src.match(/\bfor\s*\(/g) || []).length
+  let maxDepth = 0
+  let depth = 0
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === '{') { depth++; if (depth > maxDepth) maxDepth = depth }
+    else if (src[i] === '}') { depth = Math.max(0, depth - 1) }
+  }
+  return { lines, chars, words, modules, forLoops, nestingDepth: maxDepth }
+}
+
+watch(code, (v) => {
+  if (codeStatsDebounce) clearTimeout(codeStatsDebounce)
+  codeStatsDebounce = setTimeout(() => {
+    codeStatsData.value = computeCodeStats(v)
+  }, 300)
+}, { immediate: true })
+
+/* ── Feature: Viewport Camera Info ── */
+const showCameraInfo = ref(false)
+const cameraInfoData = ref({ yaw: 0, pitch: 0, dist: 0, tx: 0, ty: 0, tz: 0 })
+let cameraInfoInterval: ReturnType<typeof setInterval> | null = null
+
+function toggleCameraInfo() {
+  showCameraInfo.value = !showCameraInfo.value
+  if (showCameraInfo.value && !cameraInfoInterval) {
+    cameraInfoInterval = setInterval(() => {
+      if (!renderer) return
+      cameraInfoData.value = {
+        yaw: (renderer.yaw * 180 / Math.PI),
+        pitch: (renderer.pitch * 180 / Math.PI),
+        dist: renderer.dist,
+        tx: renderer.tx,
+        ty: renderer.ty,
+        tz: renderer.tz,
+      }
+    }, 100)
+  } else if (!showCameraInfo.value && cameraInfoInterval) {
+    clearInterval(cameraInfoInterval)
+    cameraInfoInterval = null
+  }
+}
+
+// Clean up camera info interval
+onUnmounted(() => {
+  if (cameraInfoInterval) clearInterval(cameraInfoInterval)
+  if (codeStatsDebounce) clearTimeout(codeStatsDebounce)
+})
+
+/* ── Feature: Export All Formats Dropdown (toolbar) ── */
+const showExportDropdown = ref(false)
+
+function toggleExportDropdown() {
+  showExportDropdown.value = !showExportDropdown.value
+}
+
+function closeExportDropdown() {
+  showExportDropdown.value = false
+}
 </script>
 
 <script lang="ts">
@@ -5345,6 +5599,37 @@ translate([0, 0, 39])
         </div>
       </div>
 
+      <!-- Example Gallery Modal -->
+      <div v-if="showExampleGallery" class="modal-backdrop" @click.self="closeExampleGallery">
+        <div class="modal-box example-gallery-modal" role="dialog" aria-modal="true" :aria-label="t('ariaExampleGallery')">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('exampleGallery') }}</span>
+            <button class="modal-close" @click="closeExampleGallery" :aria-label="t('ariaCloseModal')">&times;</button>
+          </div>
+          <div class="modal-body">
+            <input
+              class="example-gallery-search"
+              v-model="exampleGallerySearch"
+              :placeholder="t('exampleGallerySearch')"
+              autofocus
+            />
+            <div class="example-gallery-grid">
+              <div
+                v-for="card in filteredExamples"
+                :key="card.key"
+                class="example-card"
+                @click="loadExampleFromGallery(card.key)"
+              >
+                <div class="example-card-name">{{ t(card.nameKey) }}</div>
+                <div class="example-card-desc">{{ t(card.tipKey) }}</div>
+                <pre class="example-card-code"><code>{{ getExamplePreview(card.key) }}</code></pre>
+                <button class="btn btn-sm example-card-load">{{ t('loadExample') }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Welcome / Onboarding modal -->
       <div v-if="showWelcome" class="modal-backdrop" @click.self="dismissWelcome">
         <div class="modal-box welcome-modal" role="dialog" aria-modal="true" :aria-label="t('ariaWelcomeDialog')">
@@ -5509,18 +5794,58 @@ translate([0, 0, 39])
             </svg>
             {{ t('splitEditor') }}
           </button>
+          <!-- Snippets button -->
+          <div class="snippet-panel-wrapper" v-show="!simpleMode" @click.stop>
+            <button class="btn btn-sm" :class="{ 'btn-active': showSnippetPanel }" @click="showSnippetPanel = !showSnippetPanel" :title="t('snippets')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+                <path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/>
+              </svg>
+              {{ t('snippets') }}
+            </button>
+            <div v-if="showSnippetPanel" class="snippet-dropdown">
+              <button
+                v-for="s in SNIPPETS"
+                :key="s.id"
+                class="snippet-item"
+                @click="insertSnippet(s)"
+              >
+                <span class="snippet-name">{{ t(s.nameKey) }}</span>
+                <code class="snippet-preview">{{ s.code.substring(0, 40) }}{{ s.code.length > 40 ? '...' : '' }}</code>
+              </button>
+            </div>
+          </div>
+          <!-- Export All Formats dropdown -->
+          <div class="export-dropdown-wrapper" @click.stop>
+            <button class="btn btn-sm" @click="toggleExportDropdown" :title="t('exportDropdown')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {{ t('exportDropdown') }}
+              <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" style="margin-left:3px;vertical-align:0px;"><path d="M2 4l4 4 4-4z"/></svg>
+            </button>
+            <div v-if="showExportDropdown" class="export-dropdown">
+              <button class="export-dd-item" @click="saveFile(); closeExportDropdown()">{{ t('exportScad') }}</button>
+              <div class="export-dd-sep"></div>
+              <button class="export-dd-item" @click="doExportSTL(); closeExportDropdown()">{{ t('exportStl') }}</button>
+              <button class="export-dd-item" @click="doExportOBJ(); closeExportDropdown()">{{ t('exportObj') }}</button>
+              <button class="export-dd-item" @click="doExport3MF(); closeExportDropdown()">{{ t('export3mf') }}</button>
+              <div class="export-dd-sep"></div>
+              <button class="export-dd-item" @click="exportPng(1); closeExportDropdown()">{{ t('exportPng') }} (1x)</button>
+              <button class="export-dd-item" @click="exportPng(2); closeExportDropdown()">{{ t('exportPng') }} (2x)</button>
+              <button class="export-dd-item" @click="exportPng(4); closeExportDropdown()">{{ t('exportPng') }} (4x)</button>
+              <div class="export-dd-sep"></div>
+              <button class="export-dd-item" @click="copyCanvasToClipboard(); closeExportDropdown()">{{ t('copyImage') }}</button>
+              <button class="export-dd-item" @click="shareLink(); closeExportDropdown()">{{ t('share') }}</button>
+            </div>
+          </div>
           <span class="spacer" />
-          <span class="ex-label">{{ t('examples') }}:</span>
-          <button class="btn btn-sm example-btn" @click="loadExample('basic')" :data-tooltip="t('basicTip')">{{ t('basic') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('csg')" :data-tooltip="t('csgTip')">{{ t('csg') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('house')" :data-tooltip="t('houseTip')">{{ t('house') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('tower')" :data-tooltip="t('towerTip')">{{ t('tower') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('gear')" :data-tooltip="t('gearTip')">{{ t('gear') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('vase')" :data-tooltip="t('vaseTip')">{{ t('vase') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('chess')" :data-tooltip="t('chessTip')">{{ t('chess') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('paramGear')" :data-tooltip="t('paramGearTip')">{{ t('paramGear') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('staircase')" :data-tooltip="t('staircaseTip')">{{ t('staircase') }}</button>
-          <button class="btn btn-sm example-btn" @click="loadExample('paramVase')" :data-tooltip="t('paramVaseTip')">{{ t('paramVase') }}</button>
+          <!-- Examples gallery button (replaces inline example buttons) -->
+          <button class="btn btn-sm" @click="openExampleGallery" :title="t('exampleGallery')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            {{ t('examples') }}
+          </button>
         </div>
 
         <!-- Parameters panel -->
@@ -5890,6 +6215,26 @@ translate([0, 0, 39])
               <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 6h18"/><path d="M3 12h15a3 3 0 1 1 0 6h-4"/><path d="m16 16-2 2 2 2"/><path d="M3 18h7"/>
               </svg>
+            </div>
+          </template>
+          <!-- Code Stats -->
+          <template v-if="!simpleMode">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-codestats" :title="t('codeStats')">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/>
+              </svg>
+              <span class="stat-val">{{ codeStatsData.lines }}{{ t('codeLines').charAt(0).toLowerCase() }} {{ codeStatsData.modules }}{{ t('codeModules').charAt(0).toLowerCase() }} {{ t('codeNestingDepth').charAt(0).toLowerCase() }}{{ codeStatsData.nestingDepth }}</span>
+            </div>
+          </template>
+          <!-- Camera Info toggle -->
+          <template v-if="!simpleMode">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-camera-toggle" :title="t('showCameraInfo')" @click="toggleCameraInfo" style="cursor:pointer;">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span class="stat-val" :style="{ color: showCameraInfo ? 'var(--accent)' : '' }">{{ t('cameraInfo') }}</span>
             </div>
           </template>
           <span class="diff-note">{{ t('diff_note') }}</span>
@@ -6355,6 +6700,36 @@ translate([0, 0, 39])
             <span class="anim-dur-unit">s</span>
           </label>
         </div>
+
+        <!-- Camera Info Overlay (bottom-left) -->
+        <transition name="overlay-fade">
+        <div v-if="showCameraInfo" class="camera-info-overlay">
+          <div class="camera-info-title">{{ t('cameraInfo') }}</div>
+          <div class="camera-info-row">
+            <span class="camera-info-key">{{ t('cameraYaw') }}</span>
+            <span class="camera-info-val">{{ cameraInfoData.yaw.toFixed(1) }}&deg;</span>
+          </div>
+          <div class="camera-info-row">
+            <span class="camera-info-key">{{ t('cameraPitch') }}</span>
+            <span class="camera-info-val">{{ cameraInfoData.pitch.toFixed(1) }}&deg;</span>
+          </div>
+          <div class="camera-info-row">
+            <span class="camera-info-key">{{ t('cameraDist') }}</span>
+            <span class="camera-info-val">{{ cameraInfoData.dist.toFixed(1) }}</span>
+          </div>
+          <div class="camera-info-row">
+            <span class="camera-info-key">{{ t('cameraTarget') }}</span>
+            <span class="camera-info-val">{{ cameraInfoData.tx.toFixed(1) }}, {{ cameraInfoData.ty.toFixed(1) }}, {{ cameraInfoData.tz.toFixed(1) }}</span>
+          </div>
+        </div>
+        </transition>
+
+        <!-- Reset View FAB for mobile -->
+        <button class="mobile-reset-fab" @click="setView('reset')" :title="t('resetView')" :aria-label="t('resetView')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+        </button>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
@@ -8939,5 +9314,265 @@ textarea.code:focus-visible {
 .history-restore-btn {
   font-size: 10px;
   padding: 1px 8px;
+}
+
+/* ── Example Gallery Modal ── */
+.example-gallery-modal {
+  max-width: 700px;
+  width: 90vw;
+}
+.example-gallery-search {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: var(--fz-sm);
+  margin-bottom: 12px;
+  outline: none;
+}
+.example-gallery-search:focus {
+  border-color: var(--accent);
+}
+.example-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.example-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.example-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.example-card-name {
+  font-weight: 700;
+  font-size: var(--fz-sm);
+  color: var(--text);
+}
+.example-card-desc {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+.example-card-code {
+  font-family: var(--editor-font-family, monospace);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  background: rgba(0,0,0,.15);
+  padding: 4px 6px;
+  border-radius: 3px;
+  margin: 4px 0;
+  overflow: hidden;
+  white-space: pre;
+  max-height: 3.2em;
+  line-height: 1.4;
+}
+.example-card-load {
+  align-self: flex-end;
+  font-size: 0.68rem;
+  padding: 2px 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.example-card:hover .example-card-load {
+  opacity: 1;
+}
+
+/* ── Snippet Dropdown ── */
+.snippet-panel-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.snippet-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  z-index: 100;
+  min-width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  animation: ctx-menu-in 0.1s ease;
+}
+.snippet-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.snippet-item:last-child { border-bottom: none; }
+.snippet-item:hover {
+  background: var(--hover);
+}
+.snippet-name {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.snippet-preview {
+  font-family: var(--editor-font-family, monospace);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Export Dropdown (toolbar) ── */
+.export-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.export-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  z-index: 100;
+  min-width: 180px;
+  animation: ctx-menu-in 0.1s ease;
+}
+.export-dd-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.export-dd-item:hover {
+  background: var(--hover);
+}
+.export-dd-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+/* ── Camera Info Overlay ── */
+.camera-info-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 10px;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-family: var(--editor-font-family, monospace);
+  color: rgba(255,255,255,.85);
+  z-index: 20;
+  min-width: 160px;
+  pointer-events: none;
+  animation: ctx-menu-in 0.12s ease;
+}
+.camera-info-title {
+  font-weight: 700;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.camera-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 1px 0;
+}
+.camera-info-key {
+  color: rgba(255,255,255,.5);
+}
+.camera-info-val {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mobile Reset View FAB ── */
+.mobile-reset-fab {
+  display: none;
+  position: absolute;
+  bottom: 50px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  cursor: pointer;
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Responsive: touch / mobile enhancements ── */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-reset-fab {
+    display: flex;
+  }
+  .vp-zoom-controls .zoom-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  .vp-toolbar .vp-menu-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .vp-dropdown {
+    font-size: 0.82rem;
+  }
+  .vp-dd-item {
+    padding: 8px 14px;
+  }
+  /* Hide text on dropdown menus, keep icons */
+  .canvas-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .mobile-reset-fab {
+    display: flex;
+  }
+  .vp-zoom-controls .zoom-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
 }
 </style>
