@@ -696,6 +696,32 @@ export class WebGPURenderer {
     this.pitch = pitch
   }
 
+  /** Get current camera yaw/pitch (for the orientation gizmo). */
+  getOrientation(): { yaw: number; pitch: number } {
+    return { yaw: this.yaw, pitch: this.pitch }
+  }
+
+  /**
+   * Smoothly snap the camera to look straight down a principal axis.
+   * axis: '+x' | '-x' | '+y' | '-y' | '+z' | '-z'
+   */
+  snapToAxis(axis: string) {
+    // yaw/pitch are spherical angles where the eye is positioned at:
+    //   x = tx + d*cos(pitch)*sin(yaw)
+    //   y = ty + d*sin(pitch)
+    //   z = tz + d*cos(pitch)*cos(yaw)
+    // Looking down +X means the eye sits on +X looking toward origin.
+    const HALF = Math.PI / 2
+    switch (axis) {
+      case '+x': this.animateTo(HALF, 0); break
+      case '-x': this.animateTo(-HALF, 0); break
+      case '+y': this.animateTo(0, HALF); break
+      case '-y': this.animateTo(0, -HALF); break
+      case '+z': this.animateTo(0, 0); break
+      case '-z': this.animateTo(Math.PI, 0); break
+    }
+  }
+
   /** Smoothly animate camera to a new position using easeInOutCubic. */
   animateTo(
     targetYaw: number,

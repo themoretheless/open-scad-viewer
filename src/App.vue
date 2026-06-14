@@ -217,6 +217,21 @@ const L: Record<string, Record<string, string>> = {
     sc_wasd: 'Камера: вперёд/назад/орбита',
     sc_shiftWasd: 'Панорамирование камеры',
     sc_qe: 'Камера: наклон вверх/вниз',
+    initWebGPU: 'Инициализация WebGPU…',
+    gizmoTip: 'Кликните по оси, чтобы посмотреть вдоль неё',
+    ctxResetView: 'Сбросить вид',
+    ctxFitScreen: 'Вписать в экран',
+    ctxScreenshot: 'Скриншот',
+    ctxCopyImage: 'Копировать изображение',
+    ctxToggleWireframe: 'Переключить каркас',
+    ctxToggleGrid: 'Переключить сетку',
+    ctxExportStl: 'Экспорт STL',
+    statMeshes: 'Меши',
+    statTriangles: 'Треуг.',
+    statVertices: 'Вершины',
+    statFps: 'FPS',
+    statRender: 'Рендер',
+    statSize: 'Размер',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -356,6 +371,21 @@ const L: Record<string, Record<string, string>> = {
     sc_wasd: 'Camera: forward/back/orbit',
     sc_shiftWasd: 'Camera pan',
     sc_qe: 'Camera: pitch up/down',
+    initWebGPU: 'Initializing WebGPU…',
+    gizmoTip: 'Click an axis to look down it',
+    ctxResetView: 'Reset View',
+    ctxFitScreen: 'Fit to Screen',
+    ctxScreenshot: 'Screenshot',
+    ctxCopyImage: 'Copy Image',
+    ctxToggleWireframe: 'Toggle Wireframe',
+    ctxToggleGrid: 'Toggle Grid',
+    ctxExportStl: 'Export STL',
+    statMeshes: 'Meshes',
+    statTriangles: 'Tris',
+    statVertices: 'Vertices',
+    statFps: 'FPS',
+    statRender: 'Render',
+    statSize: 'Size',
   },
 }
 
@@ -371,6 +401,8 @@ onMounted(() => {
     activeThemeId.value = saved === 'light' ? 'default-light' : 'default-dark'
   }
   applyTheme()
+  // Trigger the first-load fade-in on the next frame.
+  requestAnimationFrame(() => { appLoaded.value = true })
 })
 
 function applyTheme() {
@@ -521,6 +553,13 @@ const isOrthographic = ref(false)
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
 let lastParsedMeshes: MeshData[] = []
+
+/* ── WebGPU initialization / loading state ── */
+const rendererReady = ref(false)
+const initFailed = ref(false)
+
+/* ── App first-load fade-in ── */
+const appLoaded = ref(false)
 
 /* ── Drag & drop state ── */
 const isDragOver = ref(false)
@@ -1316,6 +1355,24 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
       const word = src.slice(i, j)
       if (KEYWORDS.has(word)) {
         result.push(`<span class="hl-keyword">${esc(word)}</span>`)
+        // Inline color swatch for color(...) calls
+        if (word === 'color') {
+          // Look ahead past optional whitespace for the opening paren.
+          let k = j
+          while (k < len && (src[k] === ' ' || src[k] === '\t')) k++
+          if (src[k] === '(') {
+            let a = k + 1
+            while (a < len && (src[a] === ' ' || src[a] === '\t')) a++
+            const css = colorArgToCss(src.slice(a, Math.min(a + 60, len)))
+            if (css) {
+              // Emit the whitespace + paren we consumed, then the swatch.
+              result.push(esc(src.slice(j, k + 1)))
+              result.push(`<span class="color-swatch" style="background:${css}"></span>`)
+              i = k + 1
+              continue
+            }
+          }
+        }
       } else if (BOOLEANS.has(word)) {
         result.push(`<span class="hl-boolean">${esc(word)}</span>`)
       } else {
@@ -1703,6 +1760,208 @@ function updateAxisLabels() {
   axisLabelRAF = requestAnimationFrame(updateAxisLabels)
 }
 
+/* ── Orientation Cube / Navigation Gizmo ── */
+interface GizmoAxis {
+  id: string        // '+x' | '-x' | '+y' | '-y' | '+z' | '-z'
+  x: number         // projected screen x within the gizmo box
+  y: number         // projected screen y within the gizmo box
+  z: number         // camera-space depth (for painter sort)
+  color: string
+  label: string
+  positive: boolean
+}
+
+const GIZMO_SIZE = 78               // px box for the gizmo
+const GIZMO_R = 26                  // axis projection radius
+const gizmoAxes = ref<GizmoAxis[]>([])
+let gizmoRAF = 0
+let gizmoPollAccum = 0
+let gizmoLastTime = 0
+
+// Static axis definitions in world space (unit vectors)
+const GIZMO_DEFS: { id: string; v: [number, number, number]; color: string; label: string; positive: boolean }[] = [
+  { id: '+x', v: [1, 0, 0],  color: '#e05555', label: 'X', positive: true },
+  { id: '-x', v: [-1, 0, 0], color: '#e05555', label: '', positive: false },
+  { id: '+y', v: [0, 1, 0],  color: '#44cc55', label: 'Y', positive: true },
+  { id: '-y', v: [0, -1, 0], color: '#44cc55', label: '', positive: false },
+  { id: '+z', v: [0, 0, 1],  color: '#4488ee', label: 'Z', positive: true },
+  { id: '-z', v: [0, 0, -1], color: '#4488ee', label: '', positive: false },
+]
+
+function computeGizmo(yaw: number, pitch: number) {
+  // Camera basis derived from the renderer's spherical orbit.
+  // Eye direction (from target to eye):
+  const ex = Math.cos(pitch) * Math.sin(yaw)
+  const ey = Math.sin(pitch)
+  const ez = Math.cos(pitch) * Math.cos(yaw)
+  // Camera forward = -eye (looking toward origin)
+  const fx = -ex, fy = -ey, fz = -ez
+  // World up
+  const upx = 0, upy = 1, upz = 0
+  // right = normalize(cross(forward, up))  (screen X)
+  let rx = fy * upz - fz * upy
+  let ry = fz * upx - fx * upz
+  let rz = fx * upy - fy * upx
+  let rl = Math.hypot(rx, ry, rz) || 1
+  rx /= rl; ry /= rl; rz /= rl
+  // trueUp = cross(right, forward)  (screen Y, pointing up)
+  const ux = ry * fz - rz * fy
+  const uy = rz * fx - rx * fz
+  const uz = rx * fy - ry * fx
+
+  const cx = GIZMO_SIZE / 2
+  const cy = GIZMO_SIZE / 2
+  const result: GizmoAxis[] = []
+  for (const def of GIZMO_DEFS) {
+    const [vx, vy, vz] = def.v
+    // Project onto camera basis. screenX uses right, screenY uses up (inverted for CSS),
+    // depth uses forward (larger = farther away from camera).
+    const sx = vx * rx + vy * ry + vz * rz
+    const sy = vx * ux + vy * uy + vz * uz
+    const depth = vx * fx + vy * fy + vz * fz
+    result.push({
+      id: def.id,
+      x: cx + sx * GIZMO_R,
+      y: cy - sy * GIZMO_R,
+      z: depth,
+      color: def.color,
+      label: def.label,
+      positive: def.positive,
+    })
+  }
+  // Painter's sort: farther first so near dots render on top.
+  result.sort((a, b) => a.z - b.z)
+  gizmoAxes.value = result
+}
+
+function updateGizmo() {
+  if (!renderer) return
+  const now = performance.now()
+  if (gizmoLastTime === 0) gizmoLastTime = now
+  gizmoPollAccum += now - gizmoLastTime
+  gizmoLastTime = now
+  // Poll roughly every 50ms to keep it in sync without thrashing reactivity.
+  if (gizmoPollAccum >= 50) {
+    gizmoPollAccum = 0
+    const o = renderer.getOrientation()
+    computeGizmo(o.yaw, o.pitch)
+  }
+  gizmoRAF = requestAnimationFrame(updateGizmo)
+}
+
+function snapGizmoAxis(axis: string) {
+  if (!renderer) return
+  renderer.snapToAxis(axis)
+}
+
+/* ── Right-click Context Menu in Viewport ── */
+const showContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+// Track whether a pan/orbit drag occurred between pointerdown and contextmenu
+let canvasPointerDownX = 0
+let canvasPointerDownY = 0
+let canvasDidDrag = false
+
+function onCanvasPointerDown(e: PointerEvent) {
+  canvasPointerDownX = e.clientX
+  canvasPointerDownY = e.clientY
+  canvasDidDrag = false
+}
+
+function onCanvasPointerMove(e: PointerEvent) {
+  if (e.buttons === 0) return
+  const dx = e.clientX - canvasPointerDownX
+  const dy = e.clientY - canvasPointerDownY
+  // Treat anything beyond a small threshold as a drag (pan/orbit)
+  if (dx * dx + dy * dy > 25) canvasDidDrag = true
+}
+
+function onCanvasContextMenu(e: MouseEvent) {
+  e.preventDefault()
+  // Suppress the menu if the user was panning/orbiting (drag with right button)
+  if (canvasDidDrag) { canvasDidDrag = false; return }
+  const panel = (e.currentTarget as HTMLElement).closest('.canvas-panel') as HTMLElement | null
+  const rect = panel ? panel.getBoundingClientRect() : (e.currentTarget as HTMLElement).getBoundingClientRect()
+  // Position relative to the canvas panel, clamped so it stays in view.
+  const menuW = 200, menuH = 280
+  let mx = e.clientX - rect.left
+  let my = e.clientY - rect.top
+  if (mx + menuW > rect.width) mx = rect.width - menuW - 4
+  if (my + menuH > rect.height) my = Math.max(4, rect.height - menuH - 4)
+  contextMenuX.value = Math.max(4, mx)
+  contextMenuY.value = Math.max(4, my)
+  showContextMenu.value = true
+}
+
+function onCloseContextMenu() {
+  showContextMenu.value = false
+}
+
+interface ContextMenuItem {
+  id: string
+  label: () => string
+  icon: string   // path data for a 24x24 stroke SVG
+  action: () => void
+}
+
+const contextMenuItems: ContextMenuItem[] = [
+  { id: 'reset', label: () => t('ctxResetView'), icon: 'M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8 M3 3v5h5', action: () => setView('reset') },
+  { id: 'fit', label: () => t('ctxFitScreen'), icon: 'M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7', action: () => { renderer?.autoFitAll() } },
+  { id: 'screenshot', label: () => t('ctxScreenshot'), icon: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', action: () => takeScreenshot() },
+  { id: 'copyImage', label: () => t('ctxCopyImage'), icon: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1', action: () => copyCanvasToClipboard() },
+  { id: 'wireframe', label: () => t('ctxToggleWireframe'), icon: 'M12 2 2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5', action: () => toggleWireframe() },
+  { id: 'grid', label: () => t('ctxToggleGrid'), icon: 'M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18', action: () => toggleGrid() },
+  { id: 'exportStl', label: () => t('ctxExportStl'), icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3', action: () => doExportSTL() },
+]
+
+function runContextMenuItem(item: ContextMenuItem) {
+  showContextMenu.value = false
+  nextTick(() => item.action())
+}
+
+/* ── Inline Color Swatches in Editor ── */
+// Map of named CSS colors → hex (subset commonly used in OpenSCAD)
+const COLOR_NAMES: Record<string, string> = {
+  red: '#ff0000', green: '#008000', blue: '#0000ff', yellow: '#ffff00',
+  cyan: '#00ffff', magenta: '#ff00ff', white: '#ffffff', black: '#000000',
+  gray: '#808080', grey: '#808080', orange: '#ffa500', purple: '#800080',
+  pink: '#ffc0cb', brown: '#a52a2a', lime: '#00ff00', navy: '#000080',
+  teal: '#008080', olive: '#808000', maroon: '#800000', silver: '#c0c0c0',
+  gold: '#ffd700', indigo: '#4b0082', violet: '#ee82ee', salmon: '#fa8072',
+  khaki: '#f0e68c', coral: '#ff7f50', turquoise: '#40e0d0', tan: '#d2b48c',
+  beige: '#f5f5dc', ivory: '#fffff0', crimson: '#dc143c', chocolate: '#d2691e',
+  tomato: '#ff6347', orchid: '#da70d6', plum: '#dda0dd', azure: '#f0ffff',
+  aqua: '#00ffff', fuchsia: '#ff00ff', transparent: '#00000000',
+}
+
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n))
+}
+
+// Convert an OpenSCAD color() argument to a CSS color string, or null if unknown.
+function colorArgToCss(arg: string): string | null {
+  arg = arg.trim()
+  // Named color in quotes: "red"
+  const nameMatch = arg.match(/^"([^"]+)"/)
+  if (nameMatch) {
+    const name = nameMatch[1].toLowerCase()
+    // Hex string like "#ff0000"
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(name)) return name
+    return COLOR_NAMES[name] ?? null
+  }
+  // RGB(A) array: [r, g, b] or [r, g, b, a] with 0..1 floats
+  const arrMatch = arg.match(/^\[\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*(?:,\s*([0-9.]+)\s*)?\]/)
+  if (arrMatch) {
+    const r = Math.round(clamp01(parseFloat(arrMatch[1])) * 255)
+    const g = Math.round(clamp01(parseFloat(arrMatch[2])) * 255)
+    const b = Math.round(clamp01(parseFloat(arrMatch[3])) * 255)
+    const a = arrMatch[4] !== undefined ? clamp01(parseFloat(arrMatch[4])) : 1
+    return `rgba(${r}, ${g}, ${b}, ${a})`
+  }
+  return null
+}
+
 /* ── Close recent dropdown on outside click ── */
 function onDocClick(e: MouseEvent) {
   const target = e.target as HTMLElement
@@ -1755,6 +2014,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
   // Escape to close modal or exit fullscreen
   if (e.key === 'Escape') {
+    if (showContextMenu.value) { showContextMenu.value = false; return }
     if (showCommandPalette.value) { closeCommandPalette(); return }
     if (showGoToLine.value) { closeGoToLine(); return }
     if (showPreferences.value) { showPreferences.value = false; return }
@@ -1769,17 +2029,27 @@ function onGlobalKeydown(e: KeyboardEvent) {
 onMounted(async () => {
   document.addEventListener('keydown', onGlobalKeydown)
   document.addEventListener('click', onDocClick)
+  document.addEventListener('click', onCloseContextMenu)
   loadRecentFiles()
   loadFromHash()
 
   if (!canvasRef.value) return
   renderer = new WebGPURenderer()
-  const ok = await renderer.init(canvasRef.value)
-  if (!ok) { gpuOk.value = false; return }
+  let ok = false
+  try {
+    ok = await renderer.init(canvasRef.value)
+  } catch {
+    ok = false
+  }
+  if (!ok) { gpuOk.value = false; initFailed.value = true; rendererReady.value = true; return }
+  rendererReady.value = true
   doRender()
 
   // Start axis label updates
   updateAxisLabels()
+
+  // Start orientation gizmo polling
+  updateGizmo()
 
   // Stats polling
   statsInterval = setInterval(() => {
@@ -1798,6 +2068,8 @@ onUnmounted(() => {
   if (minimapDebounce) clearTimeout(minimapDebounce)
   if (statsInterval) clearInterval(statsInterval)
   if (axisLabelRAF) cancelAnimationFrame(axisLabelRAF)
+  if (gizmoRAF) cancelAnimationFrame(gizmoRAF)
+  document.removeEventListener('click', onCloseContextMenu)
   renderer?.destroy(); renderer = null
 })
 
@@ -2607,7 +2879,7 @@ translate([0, 0, 39])
 </script>
 
 <template>
-  <div class="app" :class="isDark ? 'dark' : 'light'">
+  <div class="app" :class="[isDark ? 'dark' : 'light', { 'app-loaded': appLoaded }]">
     <nav class="topbar">
       <div class="topbar-left">
         <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2879,22 +3151,24 @@ translate([0, 0, 39])
         </div>
 
         <!-- Parameters panel -->
-        <div v-if="showParameters" class="params-panel">
-          <div v-if="extractedParams.length === 0" class="params-empty">{{ t('noParameters') }}</div>
-          <div v-for="p in extractedParams" :key="p.name" class="param-row">
-            <span class="param-name">{{ p.name }}</span>
-            <input
-              type="range"
-              class="param-slider"
-              :min="p.min"
-              :max="p.max"
-              :step="p.step"
-              :value="p.value"
-              @input="onParamChange(p, parseFloat(($event.target as HTMLInputElement).value))"
-            />
-            <span class="param-value">{{ p.value }}</span>
+        <transition name="panel-slide">
+          <div v-if="showParameters" class="params-panel">
+            <div v-if="extractedParams.length === 0" class="params-empty">{{ t('noParameters') }}</div>
+            <div v-for="p in extractedParams" :key="p.name" class="param-row">
+              <span class="param-name">{{ p.name }}</span>
+              <input
+                type="range"
+                class="param-slider"
+                :min="p.min"
+                :max="p.max"
+                :step="p.step"
+                :value="p.value"
+                @input="onParamChange(p, parseFloat(($event.target as HTMLInputElement).value))"
+              />
+              <span class="param-value">{{ p.value }}</span>
+            </div>
           </div>
-        </div>
+        </transition>
 
         <!-- Tab bar -->
         <div class="tab-bar">
@@ -2931,6 +3205,7 @@ translate([0, 0, 39])
         </div>
 
         <!-- Find & Replace panel -->
+        <transition name="panel-slide">
         <div v-if="showFind" class="find-panel">
           <div class="find-row">
             <input
@@ -2964,6 +3239,7 @@ translate([0, 0, 39])
             <button class="find-btn find-btn-text" @click="doReplaceAll">{{ t('replaceAll') }}</button>
           </div>
         </div>
+        </transition>
 
         <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize }">
           <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
@@ -3024,6 +3300,7 @@ translate([0, 0, 39])
         </button>
 
         <!-- Console panel -->
+        <transition name="console-slide">
         <div v-if="showConsole" class="console-panel" :style="{ height: consolePanelHeight + 'px' }">
           <div class="console-drag-handle" @mousedown="onConsoleDragStart"></div>
           <div class="console-header">
@@ -3046,20 +3323,75 @@ translate([0, 0, 39])
             <div v-if="!consoleEntries.length" class="console-empty">--</div>
           </div>
         </div>
+        </transition>
 
-        <div v-if="error" class="error">{{ error }}</div>
+        <transition name="panel-slide">
+          <div v-if="error" class="error">{{ error }}</div>
+        </transition>
 
         <div class="stats">
-          {{ t('meshes') }}: {{ meshCount }} &middot;
-          {{ t('triangles') }}: {{ triCount }} &middot;
-          {{ t('vertices') }}: {{ vertexCount }}
-          <span v-if="renderTime > 0" class="render-time">&middot; {{ t('renderTime') }}: {{ renderTime }}ms</span>
-          <span class="stat-fps">&middot; {{ t('fps') }}: {{ fpsVal }}</span>
-          <span v-if="boundsSize[0] > 0 || boundsSize[1] > 0 || boundsSize[2] > 0" class="stat-size">
-            &middot; {{ t('size') }}: {{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }}
-          </span>
-          <span v-if="selectionInfo" class="stat-selection">&middot; {{ selectionInfo }}</span>
-          <span v-if="wordWrap" class="stat-wordwrap">&middot; {{ t('wordWrap') }}</span>
+          <div class="stat-seg" :title="t('statMeshes')">
+            <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+            <span class="stat-val">{{ meshCount }}</span>
+          </div>
+          <span class="stat-div"></span>
+          <div class="stat-seg" :title="t('statTriangles')">
+            <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3 22 20 2 20 12 3z"/>
+            </svg>
+            <span class="stat-val">{{ triCount }}</span>
+          </div>
+          <span class="stat-div"></span>
+          <div class="stat-seg" :title="t('statVertices')">
+            <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5 5 19 5 12 19 5 5z"/>
+            </svg>
+            <span class="stat-val">{{ vertexCount }}</span>
+          </div>
+          <template v-if="renderTime > 0">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-render" :title="t('statRender')">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+              </svg>
+              <span class="stat-val">{{ renderTime }}ms</span>
+            </div>
+          </template>
+          <span class="stat-div"></span>
+          <div class="stat-seg stat-fps" :title="t('statFps')">
+            <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            <span class="stat-val">{{ fpsVal }}</span>
+          </div>
+          <template v-if="boundsSize[0] > 0 || boundsSize[1] > 0 || boundsSize[2] > 0">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-size" :title="t('statSize')">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+              </svg>
+              <span class="stat-val">{{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }}</span>
+            </div>
+          </template>
+          <template v-if="selectionInfo">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-selection">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h6v2H6v4H4z"/><path d="M20 20h-6v-2h4v-4h2z"/>
+              </svg>
+              <span class="stat-val">{{ selectionInfo }}</span>
+            </div>
+          </template>
+          <template v-if="wordWrap">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-wordwrap" :title="t('wordWrap')">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"/><path d="M3 12h15a3 3 0 1 1 0 6h-4"/><path d="m16 16-2 2 2 2"/><path d="M3 18h7"/>
+              </svg>
+            </div>
+          </template>
           <span class="diff-note">{{ t('diff_note') }}</span>
         </div>
       </div>
@@ -3068,7 +3400,81 @@ translate([0, 0, 39])
 
       <div class="canvas-panel">
         <div v-if="canvasGradient" class="canvas-gradient-bg" :style="{ background: canvasGradient }"></div>
-        <canvas ref="canvasRef" class="gpu-canvas" :class="{ 'canvas-transparent': !!canvasGradient }" tabindex="0" @keydown="handleCanvasKeydown" />
+        <canvas
+          ref="canvasRef"
+          class="gpu-canvas"
+          :class="{ 'canvas-transparent': !!canvasGradient }"
+          tabindex="0"
+          @keydown="handleCanvasKeydown"
+          @pointerdown="onCanvasPointerDown"
+          @pointermove="onCanvasPointerMove"
+          @contextmenu="onCanvasContextMenu"
+        />
+
+        <!-- WebGPU loading overlay -->
+        <div v-if="!rendererReady" class="webgpu-loading">
+          <div class="webgpu-spinner"></div>
+          <span class="webgpu-loading-text">{{ t('initWebGPU') }}</span>
+        </div>
+
+        <!-- Orientation cube / navigation gizmo -->
+        <div class="nav-gizmo" :title="t('gizmoTip')" :style="{ width: GIZMO_SIZE + 'px', height: GIZMO_SIZE + 'px' }">
+          <svg class="nav-gizmo-svg" :viewBox="`0 0 ${GIZMO_SIZE} ${GIZMO_SIZE}`" :width="GIZMO_SIZE" :height="GIZMO_SIZE">
+            <!-- axis lines from center -->
+            <g v-for="ax in gizmoAxes" :key="ax.id + '-l'">
+              <line
+                v-if="ax.positive"
+                :x1="GIZMO_SIZE / 2" :y1="GIZMO_SIZE / 2"
+                :x2="ax.x" :y2="ax.y"
+                :stroke="ax.color"
+                stroke-width="2"
+                stroke-linecap="round"
+                :opacity="ax.z < 0 ? 0.95 : 0.45"
+              />
+            </g>
+            <!-- axis end dots (clickable) -->
+            <g v-for="ax in gizmoAxes" :key="ax.id + '-d'" class="gizmo-axis" @click="snapGizmoAxis(ax.id)">
+              <circle
+                :cx="ax.x" :cy="ax.y"
+                :r="ax.positive ? 8.5 : 5"
+                :fill="ax.positive ? ax.color : 'transparent'"
+                :stroke="ax.color"
+                stroke-width="1.5"
+                :opacity="ax.z < 0 ? 1 : 0.5"
+                class="gizmo-dot"
+              />
+              <text
+                v-if="ax.label"
+                :x="ax.x" :y="ax.y"
+                text-anchor="middle"
+                dominant-baseline="central"
+                class="gizmo-text"
+                :opacity="ax.z < 0 ? 1 : 0.6"
+              >{{ ax.label }}</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Right-click context menu -->
+        <div
+          v-if="showContextMenu"
+          class="ctx-menu"
+          :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+          @click.stop
+          @contextmenu.prevent
+        >
+          <button
+            v-for="item in contextMenuItems"
+            :key="item.id"
+            class="ctx-menu-item"
+            @click="runContextMenuItem(item)"
+          >
+            <svg class="ctx-menu-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="item.icon" />
+            </svg>
+            <span>{{ item.label() }}</span>
+          </button>
+        </div>
 
         <div class="view-buttons">
           <button class="view-btn" @click="setView('top')" :title="t('top')">{{ t('top') }}</button>
@@ -3199,6 +3605,7 @@ translate([0, 0, 39])
         >Z</span>
 
         <!-- Object Tree Panel (overlay left of canvas) -->
+        <transition name="overlay-fade">
         <div v-if="showObjectTree" class="object-tree-panel">
           <div class="object-tree-header">
             <span class="object-tree-title">{{ t('objectTree') }}</span>
@@ -3225,6 +3632,7 @@ translate([0, 0, 39])
             <div v-if="!flatTree.length" class="object-tree-empty">--</div>
           </div>
         </div>
+        </transition>
 
         <!-- Animation Timeline -->
         <div class="anim-timeline">
@@ -4584,6 +4992,270 @@ html, body, #app {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+/* ════════════════════════════════════════════════════
+   POLISH BATCH: gizmo, loading, context menu, status bar,
+   color swatches, micro-interactions, scrollbars
+   ════════════════════════════════════════════════════ */
+
+/* ── App first-load fade-in ── */
+.app {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.app.app-loaded {
+  opacity: 1;
+}
+
+/* ── Feature 1: Orientation cube / navigation gizmo ── */
+.nav-gizmo {
+  position: absolute;
+  top: 10px;
+  right: 64px; /* offset left of the view-buttons column so they don't collide */
+  z-index: 11;
+  border-radius: 50%;
+  background: rgba(30, 30, 34, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.nav-gizmo:hover {
+  background: rgba(30, 30, 34, 0.72);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+[data-theme="light"] .nav-gizmo {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .nav-gizmo:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+.nav-gizmo-svg { display: block; overflow: visible; }
+.gizmo-axis { cursor: pointer; }
+.gizmo-dot { transition: r 0.1s ease, filter 0.1s ease; }
+.gizmo-axis:hover .gizmo-dot {
+  filter: brightness(1.35) drop-shadow(0 0 3px currentColor);
+  r: 10;
+}
+.gizmo-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  fill: #fff;
+  pointer-events: none;
+}
+
+/* ── Feature 2: WebGPU loading overlay ── */
+.webgpu-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--canvas-bg);
+  animation: fade-in 0.2s ease;
+}
+.webgpu-spinner {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid rgba(128, 128, 128, 0.25);
+  border-top-color: var(--accent);
+  animation: gizmo-spin 0.8s linear infinite;
+}
+.webgpu-loading-text {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+@keyframes gizmo-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Feature 3: Right-click context menu ── */
+.ctx-menu {
+  position: absolute;
+  z-index: 1000;
+  min-width: 190px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  animation: ctx-menu-in 0.12s ease;
+}
+@keyframes ctx-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-3px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.ctx-menu-item:hover { background: var(--hover); }
+.ctx-menu-item:active { transform: scale(0.985); }
+.ctx-menu-ico { flex-shrink: 0; color: var(--text-dim); }
+.ctx-menu-item:hover .ctx-menu-ico { color: var(--accent); }
+
+/* ── Feature 4: Status bar redesign (segmented) ── */
+.stats {
+  padding: 5px 12px;
+}
+.stat-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.stat-ico {
+  color: var(--text-dim);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.stat-val {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text);
+}
+.stat-div {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.stat-render .stat-ico { color: var(--accent); }
+.stat-render .stat-val { color: var(--accent); }
+.stat-fps .stat-ico { color: var(--hl-special); }
+.stat-fps .stat-val { color: var(--hl-special); }
+.stat-selection .stat-ico { color: var(--accent); }
+.stat-selection .stat-val { color: var(--accent); }
+.stat-wordwrap .stat-ico { color: var(--hl-special); }
+
+/* ── Feature 5: Inline color swatches in editor ── */
+/* The swatch is rendered with zero layout width so the highlight layer stays
+   character-aligned with the textarea underneath. The visible box is drawn via
+   an absolutely-positioned pseudo-element that does not consume horizontal space. */
+:deep(.color-swatch) {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+:deep(.color-swatch)::before {
+  content: '';
+  position: absolute;
+  /* Sit over the trailing edge of the "(" so the color argument stays readable. */
+  left: -0.55em;
+  top: 0.18em;
+  width: 0.72em;
+  height: 0.72em;
+  background: inherit;
+  border-radius: 2px;
+  border: 1px solid rgba(128, 128, 128, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+
+/* ── Feature 6: Micro-interactions ── */
+/* Slide/fade transitions for collapsible panels */
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+  overflow: hidden;
+}
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.panel-slide-enter-to,
+.panel-slide-leave-from {
+  max-height: 420px;
+  opacity: 1;
+}
+
+/* Overlay panel fade/scale (object tree, console height stays manual) */
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+}
+
+/* Console slide (height is set inline, so only fade + slide-up) */
+.console-slide-enter-active,
+.console-slide-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.console-slide-enter-from,
+.console-slide-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+/* Subtle active press states for buttons */
+.btn:active,
+.tb-btn:active,
+.view-btn:active,
+.find-btn:active,
+.console-toggle-btn:active,
+.console-clear-btn:active,
+.tab-add:active,
+.anim-play-btn:active {
+  transform: scale(0.95);
+}
+.btn, .tb-btn, .view-btn, .find-btn {
+  transition: background 0.12s, border-color 0.12s, transform 0.08s ease;
+}
+
+/* ── Themed custom scrollbars ── */
+:deep(*)::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+:deep(*)::-webkit-scrollbar-track {
+  background: transparent;
+}
+:deep(*)::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+:deep(*)::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+  background-clip: padding-box;
+}
+:deep(*)::-webkit-scrollbar-corner { background: transparent; }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
