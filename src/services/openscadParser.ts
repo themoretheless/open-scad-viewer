@@ -72,11 +72,12 @@ function tokenize(src: string): Token[] {
 
 /* ── AST ──────────────────────────────────────────── */
 
-interface ASTNode {
+export interface ASTNode {
   type: 'call'
   name: string
   args: Record<string, any>
   children: ASTNode[]
+  pos: number
 }
 
 /* ── Parser ───────────────────────────────────────── */
@@ -110,14 +111,16 @@ class Parser {
   }
 
   private call(): ASTNode {
-    const name = this.expect(TT.Ident).v
+    const nameTok = this.expect(TT.Ident)
+    const name = nameTok.v
+    const p = nameTok.p
     const args: Record<string, any> = {}
 
     if (this.peek().t === TT.Eq && name !== 'module' && name !== 'function') {
       this.adv()
       this.skipExpr()
       this.match(TT.Semi)
-      return { type: 'call', name: '__assign', args: {}, children: [] }
+      return { type: 'call', name: '__assign', args: {}, children: [], pos: p }
     }
 
     if (this.match(TT.LParen)) {
@@ -137,7 +140,7 @@ class Parser {
     } else {
       this.match(TT.Semi)
     }
-    return { type: 'call', name, args, children }
+    return { type: 'call', name, args, children, pos: p }
   }
 
   private parseArgs(args: Record<string, any>) {
@@ -433,6 +436,20 @@ function cssColor(name: string): [number,number,number,number] {
 }
 
 /* ── Public API ───────────────────────────────────── */
+
+export interface ParseResult {
+  meshes: MeshData[]
+  ast: ASTNode[]
+}
+
+export function parseOpenSCADWithAST(source: string): ParseResult {
+  cIdx = 0
+  const tokens = tokenize(source)
+  const parser = new Parser(tokens)
+  const ast = parser.parseAll()
+  const meshes = evalNodes(ast, identity(), null)
+  return { meshes, ast }
+}
 
 export function parseOpenSCAD(source: string): MeshData[] {
   cIdx = 0

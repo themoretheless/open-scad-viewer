@@ -666,6 +666,24 @@ export class WebGPURenderer {
     }, 'image/png')
   }
 
+  /** Copy the current canvas to clipboard as PNG. Returns true on success. */
+  async copyToClipboard(): Promise<boolean> {
+    this.render()
+    return new Promise((resolve) => {
+      this.canvas.toBlob(async (blob) => {
+        if (!blob) { resolve(false); return }
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ])
+          resolve(true)
+        } catch {
+          resolve(false)
+        }
+      }, 'image/png')
+    })
+  }
+
   /** Toggle wireframe edge overlay on/off. */
   toggleWireframe(): boolean {
     this.wireframe = !this.wireframe

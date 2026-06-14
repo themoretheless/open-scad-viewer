@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { parseOpenSCAD } from './services/openscadParser'
-import type { MeshData } from './services/openscadParser'
+import { parseOpenSCADWithAST } from './services/openscadParser'
+import type { MeshData, ASTNode } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
 
@@ -138,6 +138,20 @@ const L: Record<string, Record<string, string>> = {
     zoomOut: 'Отдалить',
     format: 'Формат',
     themeSelector: 'Тема оформления',
+    preferences: 'Настройки',
+    fontSize: 'Размер шрифта',
+    tabSize: 'Размер табуляции',
+    autoRenderDelay: 'Задержка авто-рендера',
+    showMinimapPref: 'Миникарта',
+    showLineNumbers: 'Номера строк',
+    console: 'Консоль',
+    consoleClear: 'Очистить',
+    copyImage: 'Копировать',
+    copiedImage: 'Скопировано!',
+    objectTree: 'Дерево объектов',
+    parsedNodes: 'Разобрано {n} узлов',
+    generatedMeshes: 'Создано {m} мешей, {t} треугольников за {ms}мс',
+    sc_commentToggle: 'Закомментировать/раскомментировать',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -199,6 +213,20 @@ const L: Record<string, Record<string, string>> = {
     zoomOut: 'Zoom Out',
     format: 'Format',
     themeSelector: 'Editor Theme',
+    preferences: 'Preferences',
+    fontSize: 'Font Size',
+    tabSize: 'Tab Size',
+    autoRenderDelay: 'Auto-render Delay',
+    showMinimapPref: 'Minimap',
+    showLineNumbers: 'Line Numbers',
+    console: 'Console',
+    consoleClear: 'Clear',
+    copyImage: 'Copy',
+    copiedImage: 'Copied!',
+    objectTree: 'Object Tree',
+    parsedNodes: 'Parsed {n} nodes',
+    generatedMeshes: 'Generated {m} meshes, {t} triangles in {ms}ms',
+    sc_commentToggle: 'Toggle comment',
   },
 }
 
@@ -1372,11 +1400,12 @@ function doRender() {
   errorLine.value = -1
   try {
     const t0 = performance.now()
-    const meshes = parseOpenSCAD(code.value)
+    const result = parseOpenSCADWithAST(code.value)
+    const meshes = result.meshes
     const t1 = performance.now()
     renderTime.value = Math.round(t1 - t0)
     meshCount.value = meshes.length
-    triCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
+    triCount.value = meshes.reduce((s: number, m: MeshData) => s + m.indices.length / 3, 0)
     lastParsedMeshes = meshes
     renderer.setMeshes(meshes)
   } catch (e: any) {
