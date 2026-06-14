@@ -287,6 +287,102 @@ function makeCylinder(h: number, r1: number, r2: number, center: boolean, fn: nu
   return { v, ix }
 }
 
+function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
+  const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by)
+  const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy)
+  const d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay)
+  const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0)
+  const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0)
+  return !(hasNeg && hasPos)
+}
+
+function earClip(pts: number[][]): number[] {
+  const n = pts.length
+  if (n < 3) return []
+  if (n === 3) return [0, 1, 2]
+
+  // Determine winding order (positive = CCW)
+  let area = 0
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    area += (pts[i][0] ?? 0) * (pts[j][1] ?? 0)
+    area -= (pts[j][0] ?? 0) * (pts[i][1] ?? 0)
+  }
+  const ccw = area > 0
+
+  const remaining = Array.from({ length: n }, (_, i) => i)
+  const tris: number[] = []
+
+  let attempts = 0
+  while (remaining.length > 2 && attempts < remaining.length * 2) {
+    let found = false
+    for (let i = 0; i < remaining.length; i++) {
+      const prev = remaining[(i - 1 + remaining.length) % remaining.length]
+      const cur = remaining[i]
+      const next = remaining[(i + 1) % remaining.length]
+
+      const ax = pts[prev][0] ?? 0, ay = pts[prev][1] ?? 0
+      const bx = pts[cur][0] ?? 0, by = pts[cur][1] ?? 0
+      const cx = pts[next][0] ?? 0, cy = pts[next][1] ?? 0
+
+      // Cross product to check if ear is convex
+      const cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+      const isConvex = ccw ? cross > 0 : cross < 0
+      if (!isConvex) continue
+
+      // Check no other point is inside this triangle
+      let hasInside = false
+      for (const idx of remaining) {
+        if (idx === prev || idx === cur || idx === next) continue
+        const px = pts[idx][0] ?? 0, py = pts[idx][1] ?? 0
+        if (pointInTriangle(px, py, ax, ay, bx, by, cx, cy)) {
+          hasInside = true
+          break
+        }
+      }
+      if (hasInside) continue
+
+      tris.push(prev, cur, next)
+      remaining.splice(i, 1)
+      found = true
+      attempts = 0
+      break
+    }
+    if (!found) attempts++
+  }
+
+  return tris
+}
+
+function makePolygon(points: number[][]) {
+  if (points.length < 3) return { v: [] as number[], ix: [] as number[] }
+  const h = 0.01
+  const v: number[] = []
+  const ix: number[] = []
+
+  // Triangulate using ear clipping
+  const indices = earClip(points)
+
+  // Top face (z = h)
+  for (const p of points) {
+    v.push(p[0] ?? 0, p[1] ?? 0, h, 0, 0, 1)
+  }
+  for (let i = 0; i < indices.length; i += 3) {
+    ix.push(indices[i], indices[i+1], indices[i+2])
+  }
+
+  // Bottom face (z = 0)
+  const bOff = points.length
+  for (const p of points) {
+    v.push(p[0] ?? 0, p[1] ?? 0, 0, 0, 0, -1)
+  }
+  for (let i = 0; i < indices.length; i += 3) {
+    ix.push(bOff + indices[i], bOff + indices[i+2], bOff + indices[i+1])
+  }
+
+  return { v, ix }
+}
+
 /* ── Evaluator ────────────────────────────────────── */
 
 const PALETTE: [number,number,number,number][] = [
@@ -400,6 +496,14 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         return evalNodes(ch, multiply(mat, tf), col)
       }
       return evalNodes(ch, tf, col)
+    }
+    case 'polygon': {
+      const pts = arg(a, 'points', 0, [])
+      if (Array.isArray(pts) && pts.length >= 3 && pts.every((p: any) => Array.isArray(p))) {
+        const { v, ix } = makePolygon(pts)
+        return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+      }
+      return []
     }
     case 'hull': case 'minkowski': case 'linear_extrude': case 'rotate_extrude':
     case 'projection': case 'import': case 'render': case 'group':
