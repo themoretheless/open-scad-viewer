@@ -73,6 +73,17 @@ const EDITOR_THEMES: EditorTheme[] = [
       '--hl-boolean': '#d08770', '--hl-special': '#8fbcbb',
     },
   },
+  {
+    id: 'high-contrast', name: { ru: 'Высокий контраст', en: 'High Contrast' }, dark: true,
+    vars: {
+      '--bg': '#000000', '--surface': '#000000', '--border': '#ffffff',
+      '--text': '#ffffff', '--text-dim': '#cfcfcf', '--accent': '#ffff00',
+      '--hover': '#1a1a1a', '--canvas-bg': '#000000',
+      '--hl-comment': '#9adcff', '--hl-keyword': '#00ffff',
+      '--hl-number': '#ffd000', '--hl-string': '#00ff7f',
+      '--hl-boolean': '#ff79ff', '--hl-special': '#ffff00',
+    },
+  },
 ]
 
 const activeThemeId = ref(localStorage.getItem('scad-editor-theme') || 'default-dark')
@@ -232,6 +243,26 @@ const L: Record<string, Record<string, string>> = {
     statFps: 'FPS',
     statRender: 'Рендер',
     statSize: 'Размер',
+    resetPrefs: 'Сбросить настройки',
+    prefsReset: 'Настройки сброшены',
+    undo: 'Отменить',
+    tabClosed: 'Вкладка закрыта',
+    tabRestored: 'Вкладка восстановлена',
+    // Accessibility (aria) labels
+    ariaHelp: 'Горячие клавиши',
+    ariaPreferences: 'Настройки',
+    ariaToggleLang: 'Переключить язык',
+    ariaThemeSelector: 'Выбор темы',
+    ariaCloseModal: 'Закрыть',
+    ariaShortcutsDialog: 'Горячие клавиши',
+    ariaPreferencesDialog: 'Настройки',
+    ariaCommandPaletteDialog: 'Палитра команд',
+    ariaGoToLineDialog: 'Перейти к строке',
+    ariaGizmo: 'Навигационный куб',
+    ariaConsole: 'Переключить консоль',
+    ariaMinimap: 'Переключить миникарту',
+    ariaNewTab: 'Новая вкладка',
+    ariaAnimPlay: 'Играть/пауза анимации',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -386,6 +417,26 @@ const L: Record<string, Record<string, string>> = {
     statFps: 'FPS',
     statRender: 'Render',
     statSize: 'Size',
+    resetPrefs: 'Reset to defaults',
+    prefsReset: 'Preferences reset',
+    undo: 'Undo',
+    tabClosed: 'Tab closed',
+    tabRestored: 'Tab restored',
+    // Accessibility (aria) labels
+    ariaHelp: 'Keyboard shortcuts',
+    ariaPreferences: 'Preferences',
+    ariaToggleLang: 'Toggle language',
+    ariaThemeSelector: 'Select theme',
+    ariaCloseModal: 'Close',
+    ariaShortcutsDialog: 'Keyboard shortcuts',
+    ariaPreferencesDialog: 'Preferences',
+    ariaCommandPaletteDialog: 'Command palette',
+    ariaGoToLineDialog: 'Go to line',
+    ariaGizmo: 'Navigation cube',
+    ariaConsole: 'Toggle console',
+    ariaMinimap: 'Toggle minimap',
+    ariaNewTab: 'New tab',
+    ariaAnimPlay: 'Play/pause animation',
   },
 }
 
@@ -501,11 +552,32 @@ function closeTab(id: string) {
   if (tabs.value.length <= 1) return
   const idx = tabs.value.findIndex(tb => tb.id === id)
   if (idx === -1) return
+  // Snapshot the closed tab (id, name, code, position) so it can be restored.
+  const closedTab: EditorTab = { ...tabs.value[idx] }
+  const closedIndex = idx
   tabs.value.splice(idx, 1)
   if (activeTabId.value === id) {
     activeTabId.value = tabs.value[Math.min(idx, tabs.value.length - 1)].id
   }
   saveTabs()
+  // Offer an Undo action via the toast/snackbar (auto-dismiss ~5s).
+  addToast(t('tabClosed') + ': ' + closedTab.name, 'info', {
+    actionLabel: t('undo'),
+    duration: 5000,
+    action: () => restoreClosedTab(closedTab, closedIndex),
+  })
+}
+
+function restoreClosedTab(tab: EditorTab, index: number) {
+  // Avoid id collision if a new tab happened to reuse the slot.
+  if (tabs.value.some(tb => tb.id === tab.id)) {
+    tab = { ...tab, id: generateTabId() }
+  }
+  const insertAt = Math.max(0, Math.min(index, tabs.value.length))
+  tabs.value.splice(insertAt, 0, tab)
+  activeTabId.value = tab.id
+  saveTabs()
+  addToast(t('tabRestored') + ': ' + tab.name, 'success')
 }
 
 const editingTabId = ref<string | null>(null)
@@ -572,15 +644,35 @@ const boundsSize = ref<[number, number, number]>([0, 0, 0])
 let statsInterval: ReturnType<typeof setInterval> | null = null
 
 /* ── Preferences ── */
+const PREF_DEFAULTS = {
+  fontSize: 13,
+  tabSize: 4,
+  autoRenderDelay: 400,
+  showMinimap: true,
+  showLineNumbers: true,
+}
 const showPreferences = ref(false)
-const prefFontSize = ref(parseInt(localStorage.getItem('scad-pref-fontSize') || '13'))
-const prefTabSize = ref(parseInt(localStorage.getItem('scad-pref-tabSize') || '4'))
-const prefAutoRenderDelay = ref(parseInt(localStorage.getItem('scad-pref-autoRenderDelay') || '400'))
+const prefFontSize = ref(parseInt(localStorage.getItem('scad-pref-fontSize') || String(PREF_DEFAULTS.fontSize)))
+const prefTabSize = ref(parseInt(localStorage.getItem('scad-pref-tabSize') || String(PREF_DEFAULTS.tabSize)))
+const prefAutoRenderDelay = ref(parseInt(localStorage.getItem('scad-pref-autoRenderDelay') || String(PREF_DEFAULTS.autoRenderDelay)))
 const prefShowMinimap = ref(localStorage.getItem('scad-pref-showMinimap') !== 'false')
 const prefShowLineNumbers = ref(localStorage.getItem('scad-pref-showLineNumbers') !== 'false')
 
 function savePref(key: string, val: string) {
   localStorage.setItem(`scad-pref-${key}`, val)
+}
+
+function resetPreferences() {
+  prefFontSize.value = PREF_DEFAULTS.fontSize
+  prefTabSize.value = PREF_DEFAULTS.tabSize
+  prefAutoRenderDelay.value = PREF_DEFAULTS.autoRenderDelay
+  prefShowMinimap.value = PREF_DEFAULTS.showMinimap
+  prefShowLineNumbers.value = PREF_DEFAULTS.showLineNumbers
+  // Clear the related localStorage keys (the watchers above will re-persist the defaults)
+  for (const key of ['fontSize', 'tabSize', 'autoRenderDelay', 'showMinimap', 'showLineNumbers']) {
+    localStorage.removeItem(`scad-pref-${key}`)
+  }
+  addToast(t('prefsReset'), 'success')
 }
 
 watch(prefFontSize, v => { savePref('fontSize', String(v)) })
@@ -813,16 +905,32 @@ interface Toast {
   id: number
   message: string
   type: 'success' | 'info' | 'error'
+  actionLabel?: string
+  action?: () => void
 }
 let toastIdCounter = 0
 const toasts = ref<Toast[]>([])
 
-function addToast(message: string, type: 'success' | 'info' | 'error' = 'info') {
+function dismissToast(id: number) {
+  toasts.value = toasts.value.filter(tst => tst.id !== id)
+}
+
+function addToast(
+  message: string,
+  type: 'success' | 'info' | 'error' = 'info',
+  options?: { actionLabel?: string; action?: () => void; duration?: number },
+) {
   const id = toastIdCounter++
-  toasts.value.push({ id, message, type })
+  toasts.value.push({ id, message, type, actionLabel: options?.actionLabel, action: options?.action })
+  const duration = options?.duration ?? 3000
   setTimeout(() => {
-    toasts.value = toasts.value.filter(t => t.id !== id)
-  }, 3000)
+    dismissToast(id)
+  }, duration)
+}
+
+function runToastAction(toast: Toast) {
+  toast.action?.()
+  dismissToast(toast.id)
 }
 
 /* ── STL Export ── */
@@ -2143,6 +2251,179 @@ function loadExample(name: string) {
   }
 }
 
+/* ── Editor text-edit helpers (preserve native undo where possible) ──
+ * insertEditorText replaces the current selection (or inserts at the caret)
+ * with `text`, then places the caret `selOffset` chars from the insertion
+ * start (defaults to end of inserted text). It prefers
+ * document.execCommand('insertText') because that keeps the textarea's native
+ * undo stack working; if that fails it falls back to a manual value splice. */
+function insertEditorText(el: HTMLTextAreaElement, text: string, selOffset?: number) {
+  const start = el.selectionStart
+  let ok = false
+  try {
+    ok = document.execCommand('insertText', false, text)
+  } catch {
+    ok = false
+  }
+  if (!ok) {
+    // Manual splice fallback (loses native undo for this edit only).
+    const end = el.selectionEnd
+    el.value = el.value.substring(0, start) + text + el.value.substring(end)
+  }
+  // Keep the Vue model in sync with the DOM value.
+  code.value = el.value
+  const caret = start + (selOffset !== undefined ? selOffset : text.length)
+  nextTick(() => { el.selectionStart = el.selectionEnd = caret })
+}
+
+// Wrap the current selection with open/close, leaving the selection intact.
+function wrapEditorSelection(el: HTMLTextAreaElement, open: string, close: string) {
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const selected = el.value.substring(start, end)
+  let ok = false
+  try {
+    ok = document.execCommand('insertText', false, open + selected + close)
+  } catch {
+    ok = false
+  }
+  if (!ok) {
+    el.value = el.value.substring(0, start) + open + selected + close + el.value.substring(end)
+  }
+  code.value = el.value
+  // Re-select the original content (now offset by one for the opening char).
+  nextTick(() => {
+    el.selectionStart = start + open.length
+    el.selectionEnd = start + open.length + selected.length
+  })
+}
+
+const AUTO_CLOSE_PAIRS: Record<string, string> = { '(': ')', '[': ']', '{': '}' }
+const AUTO_CLOSE_CLOSERS = new Set([')', ']', '}'])
+
+/* Feature 1: auto-close brackets & quotes. Returns true if the key was handled. */
+function handleAutoClose(e: KeyboardEvent, el: HTMLTextAreaElement): boolean {
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const hasSel = start !== end
+  const src = el.value
+  const key = e.key
+
+  // Opening bracket: insert matching pair (or wrap selection).
+  if (AUTO_CLOSE_PAIRS[key]) {
+    e.preventDefault()
+    if (hasSel) {
+      wrapEditorSelection(el, key, AUTO_CLOSE_PAIRS[key])
+    } else {
+      insertEditorText(el, key + AUTO_CLOSE_PAIRS[key], 1)
+    }
+    return true
+  }
+
+  // Quote: wrap selection, or insert a matching pair, or skip over an existing one.
+  if (key === '"') {
+    e.preventDefault()
+    if (hasSel) {
+      wrapEditorSelection(el, '"', '"')
+    } else if (src[start] === '"') {
+      // Cursor sits just before a closing quote → step over it.
+      nextTick(() => { el.selectionStart = el.selectionEnd = start + 1 })
+    } else {
+      insertEditorText(el, '""', 1)
+    }
+    return true
+  }
+
+  // Closing bracket: if the same closer is already next, just step over it.
+  if (AUTO_CLOSE_CLOSERS.has(key) && !hasSel && src[start] === key) {
+    e.preventDefault()
+    nextTick(() => { el.selectionStart = el.selectionEnd = start + 1 })
+    return true
+  }
+
+  // Backspace: delete a matched empty pair (e.g. cursor between "()" or "\"\"").
+  if (key === 'Backspace' && !hasSel && start > 0) {
+    const prev = src[start - 1]
+    const next = src[start]
+    const isEmptyPair =
+      (AUTO_CLOSE_PAIRS[prev] && AUTO_CLOSE_PAIRS[prev] === next) ||
+      (prev === '"' && next === '"')
+    if (isEmptyPair) {
+      e.preventDefault()
+      // Select both chars then delete to keep native undo coherent.
+      el.selectionStart = start - 1
+      el.selectionEnd = start + 1
+      insertEditorText(el, '', 0)
+      return true
+    }
+  }
+
+  return false
+}
+
+/* Feature 2: auto-indent on Enter (and brace expansion). */
+function handleAutoIndent(e: KeyboardEvent, el: HTMLTextAreaElement): boolean {
+  if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const src = el.value
+  // Leading whitespace of the current line.
+  const lineStart = src.lastIndexOf('\n', start - 1) + 1
+  const curLine = src.substring(lineStart, start)
+  const indentMatch = curLine.match(/^[ \t]*/)
+  const baseIndent = indentMatch ? indentMatch[0] : ''
+  const unit = ' '.repeat(prefTabSize.value)
+  const prevChar = start > 0 ? src[start - 1] : ''
+  const nextChar = src[end] ?? ''
+
+  if (prevChar === '{' && nextChar === '}') {
+    // Expand braces: blank indented line in the middle, "}" back to base indent.
+    e.preventDefault()
+    insertEditorText(el, '\n' + baseIndent + unit + '\n' + baseIndent,
+      1 + baseIndent.length + unit.length)
+    return true
+  }
+  if (prevChar === '{') {
+    // Open brace with nothing after → add one indent level.
+    e.preventDefault()
+    insertEditorText(el, '\n' + baseIndent + unit)
+    return true
+  }
+  if (baseIndent.length > 0) {
+    // Plain newline that preserves the current indentation.
+    e.preventDefault()
+    insertEditorText(el, '\n' + baseIndent)
+    return true
+  }
+  return false
+}
+
+/* Feature 3: smart Home key — toggle between first non-whitespace and column 0. */
+function handleSmartHome(e: KeyboardEvent, el: HTMLTextAreaElement): boolean {
+  if (e.key !== 'Home' || e.ctrlKey || e.metaKey || e.altKey) return false
+  e.preventDefault()
+  const pos = el.selectionStart
+  const src = el.value
+  const lineStart = src.lastIndexOf('\n', pos - 1) + 1
+  let firstNonWs = lineStart
+  while (firstNonWs < src.length && (src[firstNonWs] === ' ' || src[firstNonWs] === '\t')) {
+    firstNonWs++
+  }
+  // If a newline starts the line (empty line) keep firstNonWs at lineStart.
+  if (src[lineStart] === '\n') firstNonWs = lineStart
+  const target = pos === firstNonWs ? lineStart : firstNonWs
+  if (e.shiftKey) {
+    // Extend selection from the existing anchor (selectionEnd is the moving edge
+    // for forward selections; use a direction-aware anchor).
+    const anchor = el.selectionStart === pos ? el.selectionEnd : el.selectionStart
+    el.selectionStart = Math.min(anchor, target)
+    el.selectionEnd = Math.max(anchor, target)
+  } else {
+    el.selectionStart = el.selectionEnd = target
+  }
+  return true
+}
+
 function handleKey(e: KeyboardEvent) {
   // Autocomplete navigation
   if (acVisible.value) {
@@ -2176,6 +2457,20 @@ function handleKey(e: KeyboardEvent) {
     toggleComment()
     return
   }
+
+  const editorEl = e.target as HTMLTextAreaElement
+
+  // Feature 3: Smart Home key (must run before any indentation handlers).
+  if (handleSmartHome(e, editorEl)) return
+
+  // Feature 1: Auto-close brackets/quotes & smart backspace.
+  // Skip when a modifier (besides Shift) is held so shortcuts keep working.
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (handleAutoClose(e, editorEl)) return
+  }
+
+  // Feature 2: Auto-indent on Enter.
+  if (handleAutoIndent(e, editorEl)) return
 
   if (e.key === 'Tab' && !acVisible.value) {
     e.preventDefault()
@@ -2888,16 +3183,16 @@ translate([0, 0, 39])
         <span class="brand">{{ t('title') }}</span>
       </div>
       <div class="topbar-right">
-        <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')">?</button>
-        <button class="tb-btn tb-btn-gear" @click="showPreferences = !showPreferences" :title="t('preferences')">
+        <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
+        <button class="tb-btn tb-btn-gear" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
         </button>
-        <button class="tb-btn" @click="toggleLang">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
+        <button class="tb-btn" @click="toggleLang" :aria-label="t('ariaToggleLang')">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
         <!-- Theme selector dropdown -->
         <div class="theme-selector-wrapper">
-          <button class="tb-btn" @click.stop="showThemeDropdown = !showThemeDropdown" :title="t('themeSelector')">
+          <button class="tb-btn" @click.stop="showThemeDropdown = !showThemeDropdown" :title="t('themeSelector')" :aria-label="t('ariaThemeSelector')">
             {{ isDark ? '&#9790;' : '&#9788;' }}
             <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" style="margin-left:3px;vertical-align:0px;"><path d="M2 4l4 4 4-4z"/></svg>
           </button>
@@ -2921,10 +3216,10 @@ translate([0, 0, 39])
     <!-- Shortcuts modal -->
     <Teleport to="body">
       <div v-if="showShortcuts" class="modal-backdrop" @click.self="showShortcuts = false">
-        <div class="modal-box">
+        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('ariaShortcutsDialog')">
           <div class="modal-header">
             <span class="modal-title">{{ t('shortcutsTitle') }}</span>
-            <button class="modal-close" @click="showShortcuts = false">&times;</button>
+            <button class="modal-close" @click="showShortcuts = false" :aria-label="t('ariaCloseModal')">&times;</button>
           </div>
           <div class="modal-body">
             <div class="shortcut-row"><kbd>Ctrl+Enter</kbd><span>{{ t('sc_render') }}</span></div>
@@ -2947,7 +3242,7 @@ translate([0, 0, 39])
 
       <!-- Command Palette -->
       <div v-if="showCommandPalette" class="command-palette-backdrop" @click.self="closeCommandPalette">
-        <div class="command-palette">
+        <div class="command-palette" role="dialog" aria-modal="true" :aria-label="t('ariaCommandPaletteDialog')">
           <div class="command-palette-input-wrapper">
             <svg class="command-palette-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -2979,7 +3274,7 @@ translate([0, 0, 39])
 
       <!-- Go to Line dialog -->
       <div v-if="showGoToLine" class="go-to-line-backdrop" @click.self="closeGoToLine">
-        <div class="go-to-line-box">
+        <div class="go-to-line-box" role="dialog" aria-modal="true" :aria-label="t('ariaGoToLineDialog')">
           <input
             ref="goToLineInputRef"
             class="go-to-line-input"
@@ -2995,10 +3290,10 @@ translate([0, 0, 39])
 
       <!-- Preferences modal -->
       <div v-if="showPreferences" class="modal-backdrop" @click.self="showPreferences = false">
-        <div class="modal-box pref-modal">
+        <div class="modal-box pref-modal" role="dialog" aria-modal="true" :aria-label="t('ariaPreferencesDialog')">
           <div class="modal-header">
             <span class="modal-title">{{ t('preferences') }}</span>
-            <button class="modal-close" @click="showPreferences = false">&times;</button>
+            <button class="modal-close" @click="showPreferences = false" :aria-label="t('ariaCloseModal')">&times;</button>
           </div>
           <div class="modal-body">
             <div class="pref-row">
@@ -3034,6 +3329,9 @@ translate([0, 0, 39])
                 <input type="checkbox" v-model="prefShowLineNumbers" class="pref-checkbox" />
               </div>
             </div>
+            <div class="pref-footer">
+              <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -3068,25 +3366,25 @@ translate([0, 0, 39])
           <label class="auto-check">
             <input type="checkbox" v-model="autoRender" /> {{ t('auto') }}
           </label>
-          <button class="btn btn-sm btn-icon" @click="openFile" :title="t('open')">
+          <button class="btn btn-sm btn-icon" @click="openFile" :title="t('open')" :aria-label="t('open')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
             </svg>
           </button>
-          <button class="btn btn-sm btn-icon" @click="saveFile" :title="t('save')">
+          <button class="btn btn-sm btn-icon" @click="saveFile" :title="t('save')" :aria-label="t('save')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
           </button>
           <!-- STL Export button -->
-          <button class="btn btn-sm btn-icon" @click="doExportSTL" :title="t('exportStl')">
+          <button class="btn btn-sm btn-icon" @click="doExportSTL" :title="t('exportStl')" :aria-label="t('exportStl')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               <rect x="14" y="1" width="8" height="6" rx="1" fill="currentColor" opacity="0.3"/>
             </svg>
           </button>
           <!-- OBJ Export button -->
-          <button class="btn btn-sm btn-icon" @click="doExportOBJ" :title="t('exportObj')">
+          <button class="btn btn-sm btn-icon" @click="doExportOBJ" :title="t('exportObj')" :aria-label="t('exportObj')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               <rect x="14" y="1" width="8" height="6" rx="1" fill="currentColor" opacity="0.15"/>
@@ -3198,10 +3496,11 @@ translate([0, 0, 39])
                 class="tab-close"
                 @click.stop="closeTab(tab.id)"
                 :title="t('closeTab')"
+                :aria-label="t('closeTab')"
               >&times;</button>
             </template>
           </div>
-          <button class="tab-add" @click="addTab" :title="t('newTab')">+</button>
+          <button class="tab-add" @click="addTab" :title="t('newTab')" :aria-label="t('ariaNewTab')">+</button>
         </div>
 
         <!-- Find & Replace panel -->
@@ -3284,7 +3583,7 @@ translate([0, 0, 39])
             />
           </div>
           <!-- Minimap toggle -->
-          <button class="minimap-toggle" @click="toggleMinimap" :title="t('minimap')" :class="{ active: showMinimap }">
+          <button class="minimap-toggle" @click="toggleMinimap" :title="t('minimap')" :aria-label="t('ariaMinimap')" :class="{ active: showMinimap }">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="7" height="18" rx="1"/><line x1="14" y1="5" x2="21" y2="5"/><line x1="14" y1="9" x2="21" y2="9"/><line x1="14" y1="13" x2="19" y2="13"/><line x1="14" y1="17" x2="20" y2="17"/>
             </svg>
@@ -3292,7 +3591,7 @@ translate([0, 0, 39])
         </div>
 
         <!-- Console toggle button -->
-        <button class="console-toggle-btn" @click="showConsole = !showConsole" :class="{ active: showConsole }">
+        <button class="console-toggle-btn" @click="showConsole = !showConsole" :aria-label="t('ariaConsole')" :class="{ active: showConsole }">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
           </svg>
@@ -3418,7 +3717,7 @@ translate([0, 0, 39])
         </div>
 
         <!-- Orientation cube / navigation gizmo -->
-        <div class="nav-gizmo" :title="t('gizmoTip')" :style="{ width: GIZMO_SIZE + 'px', height: GIZMO_SIZE + 'px' }">
+        <div class="nav-gizmo" :title="t('gizmoTip')" role="group" :aria-label="t('ariaGizmo')" :style="{ width: GIZMO_SIZE + 'px', height: GIZMO_SIZE + 'px' }">
           <svg class="nav-gizmo-svg" :viewBox="`0 0 ${GIZMO_SIZE} ${GIZMO_SIZE}`" :width="GIZMO_SIZE" :height="GIZMO_SIZE">
             <!-- axis lines from center -->
             <g v-for="ax in gizmoAxes" :key="ax.id + '-l'">
@@ -3482,7 +3781,7 @@ translate([0, 0, 39])
           <button class="view-btn" @click="setView('right')" :title="t('right')">{{ t('right') }}</button>
           <button class="view-btn" @click="setView('iso')" :title="t('iso')">{{ t('iso') }}</button>
           <button class="view-btn" @click="setView('reset')" :title="t('reset')">{{ t('reset') }}</button>
-          <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')">
+          <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')" :aria-label="t('screenshot')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
               <circle cx="12" cy="13" r="4"/>
@@ -3490,7 +3789,7 @@ translate([0, 0, 39])
           </button>
           <!-- Copy as Image -->
           <div class="copy-image-wrapper">
-            <button class="view-btn view-btn-icon" @click="copyCanvasToClipboard" :title="t('copyImage')">
+            <button class="view-btn view-btn-icon" @click="copyCanvasToClipboard" :title="t('copyImage')" :aria-label="t('copyImage')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
               </svg>
@@ -3498,22 +3797,22 @@ translate([0, 0, 39])
             <span v-if="showCopiedImage" class="copied-tooltip">{{ t('copiedImage') }}</span>
           </div>
           <div class="view-separator"></div>
-          <button class="view-btn view-btn-toggle" :class="{ active: showWireframe }" @click="toggleWireframe" :title="t('wireframe')">
+          <button class="view-btn view-btn-toggle" :class="{ active: showWireframe }" @click="toggleWireframe" :title="t('wireframe')" :aria-label="t('wireframe')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
             </svg>
           </button>
-          <button class="view-btn view-btn-toggle" :class="{ active: showGrid }" @click="toggleGrid" :title="t('grid')">
+          <button class="view-btn view-btn-toggle" :class="{ active: showGrid }" @click="toggleGrid" :title="t('grid')" :aria-label="t('grid')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
             </svg>
           </button>
-          <button class="view-btn view-btn-toggle" :class="{ active: isAutoRotate }" @click="toggleAutoRotate" :title="t('autoRotate')">
+          <button class="view-btn view-btn-toggle" :class="{ active: isAutoRotate }" @click="toggleAutoRotate" :title="t('autoRotate')" :aria-label="t('autoRotate')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
             </svg>
           </button>
-          <button class="view-btn view-btn-toggle" :class="{ active: isFullscreen }" @click="toggleFullscreen" :title="t('fullscreen')">
+          <button class="view-btn view-btn-toggle" :class="{ active: isFullscreen }" @click="toggleFullscreen" :title="t('fullscreen')" :aria-label="t('fullscreen')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path v-if="!isFullscreen" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
               <path v-else d="M4 14h3a2 2 0 012 2v3m4-5h3a2 2 0 002-2V9m-9 0V6a2 2 0 012-2h3m4 5V6a2 2 0 00-2-2h-3"/>
@@ -3526,8 +3825,8 @@ translate([0, 0, 39])
           </button>
           <!-- Zoom controls -->
           <div class="zoom-row">
-            <button class="view-btn zoom-btn" @click="doZoomIn" :title="t('zoomIn')">+</button>
-            <button class="view-btn zoom-btn" @click="doZoomOut" :title="t('zoomOut')">&minus;</button>
+            <button class="view-btn zoom-btn" @click="doZoomIn" :title="t('zoomIn')" :aria-label="t('zoomIn')">+</button>
+            <button class="view-btn zoom-btn" @click="doZoomOut" :title="t('zoomOut')" :aria-label="t('zoomOut')">&minus;</button>
           </div>
           <div class="view-separator"></div>
           <!-- Background color swatches -->
@@ -3557,7 +3856,7 @@ translate([0, 0, 39])
           </div>
           <div class="view-separator"></div>
           <!-- Clipping plane -->
-          <button class="view-btn view-btn-toggle" :class="{ active: clipEnabled }" @click="toggleClip" :title="t('clipPlane')">
+          <button class="view-btn view-btn-toggle" :class="{ active: clipEnabled }" @click="toggleClip" :title="t('clipPlane')" :aria-label="t('clipPlane')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
             </svg>
@@ -3571,14 +3870,14 @@ translate([0, 0, 39])
             {{ t('fog') }}
           </button>
           <!-- Reflection -->
-          <button class="view-btn view-btn-toggle" :class="{ active: reflectionEnabled }" @click="toggleReflection" :title="t('reflection')">
+          <button class="view-btn view-btn-toggle" :class="{ active: reflectionEnabled }" @click="toggleReflection" :title="t('reflection')" :aria-label="t('reflection')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M2 12h20"/><path d="M6 8l6-6 6 6"/><path d="M6 16l6 6 6-6"/>
             </svg>
           </button>
           <div class="view-separator"></div>
           <!-- Object Tree toggle -->
-          <button class="view-btn view-btn-toggle" :class="{ active: showObjectTree }" @click="showObjectTree = !showObjectTree" :title="t('objectTree')">
+          <button class="view-btn view-btn-toggle" :class="{ active: showObjectTree }" @click="showObjectTree = !showObjectTree" :title="t('objectTree')" :aria-label="t('objectTree')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="3" y1="6" x2="3" y2="6"/><line x1="8" y1="6" x2="21" y2="6"/>
               <line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="21" y2="12"/>
@@ -3636,7 +3935,7 @@ translate([0, 0, 39])
 
         <!-- Animation Timeline -->
         <div class="anim-timeline">
-          <button class="anim-play-btn" @click="toggleAnimation" :title="animPlaying ? t('animPause') : t('animPlay')">
+          <button class="anim-play-btn" @click="toggleAnimation" :title="animPlaying ? t('animPause') : t('animPlay')" :aria-label="t('ariaAnimPlay')">
             <svg v-if="!animPlaying" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
             <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="6" height="18"/><rect x="14" y="3" width="6" height="18"/></svg>
           </button>
@@ -3682,6 +3981,11 @@ translate([0, 0, 39])
           <span class="toast-icon" v-else-if="toast.type === 'error'">&#10006;</span>
           <span class="toast-icon" v-else>&#9432;</span>
           <span class="toast-msg">{{ toast.message }}</span>
+          <button
+            v-if="toast.actionLabel"
+            class="toast-action"
+            @click="runToastAction(toast)"
+          >{{ toast.actionLabel }}</button>
         </div>
       </transition-group>
     </div>
@@ -3706,6 +4010,26 @@ translate([0, 0, 39])
   --hl-string: #6ec87a;
   --hl-boolean: #c678dd;
   --hl-special: #56c8d8;
+
+  /* ── Design tokens (shared design-system scales) ──
+   * Consolidated spacing / radius / font-size scales. These are theme-agnostic
+   * (independent of light/dark) and are applied in prominent components
+   * (toolbar, buttons, panels, modals, toasts) to keep spacing consistent.
+   * Groundwork: not every rule is refactored to use them yet. */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 24px;
+
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 14px;
+
+  --fz-xs: 0.72rem;
+  --fz-sm: 0.8rem;
+  --fz-md: 0.95rem;
 }
 
 [data-theme="light"] {
@@ -3745,6 +4069,38 @@ html, body, #app {
   background: var(--bg);
   color: var(--text);
 }
+
+/* ── Accessibility: keyboard focus ring ──
+ * :focus-visible (not :focus) so the ring shows only for keyboard navigation,
+ * never on plain mouse clicks. Applies globally to interactive elements,
+ * including teleported modals (palette, prefs, go-to-line). */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+.tab-item:focus-visible,
+.theme-option:focus-visible,
+.command-palette-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Suppress the default outline only when focus-visible is NOT in play
+   (i.e. mouse focus), so the focus ring above remains the single source. */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+/* The code editor textarea keeps its seamless (outline-free) appearance —
+   it overlays the highlight layer and is the editor's default focus target. */
+textarea.code:focus-visible {
+  outline: none;
+}
 </style>
 
 <style scoped>
@@ -3763,8 +4119,8 @@ html, body, #app {
 .brand { font-weight: 700; font-size: 0.95rem; }
 .theme-label { font-size: 0.78rem; color: var(--text-dim); }
 .tb-btn {
-  padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.8rem;
+  padding: var(--sp-2) 10px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer; font-size: var(--fz-sm);
 }
 .tb-btn:hover { background: var(--hover); }
 
@@ -3796,12 +4152,12 @@ html, body, #app {
 }
 
 .toolbar {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4);
   border-bottom: 1px solid var(--border); flex-wrap: wrap;
 }
 .btn {
-  padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.8rem;
+  padding: 5px var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer; font-size: var(--fz-sm);
   transition: background 0.12s;
 }
 .btn:hover { background: var(--hover); }
@@ -4062,7 +4418,7 @@ html, body, #app {
 .modal-box {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   min-width: 320px; max-width: 440px;
   box-shadow: 0 12px 40px rgba(0,0,0,.4);
   overflow: hidden;
@@ -4436,6 +4792,20 @@ html, body, #app {
 }
 .pref-radio input { accent-color: var(--accent); cursor: pointer; }
 .pref-checkbox { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
+.pref-footer {
+  display: flex; justify-content: flex-end;
+  padding-top: var(--sp-4);
+  margin-top: var(--sp-2);
+  border-top: 1px solid rgba(128,128,128,.12);
+}
+.pref-reset-btn {
+  color: var(--danger);
+  border-color: rgba(231,76,60,.4);
+}
+.pref-reset-btn:hover {
+  background: rgba(231,76,60,.12);
+  border-color: var(--danger);
+}
 
 /* ── Console panel ── */
 .console-toggle-btn {
@@ -4918,6 +5288,22 @@ html, body, #app {
 .toast-msg {
   flex: 1;
   line-height: 1.3;
+}
+.toast-action {
+  flex-shrink: 0;
+  margin-left: var(--sp-3);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: var(--fz-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 .toast-success {
   background: rgba(46, 160, 67, 0.9);
