@@ -539,6 +539,28 @@ translate([0, 0, 35])
               <circle cx="12" cy="13" r="4"/>
             </svg>
           </button>
+          <div class="view-separator"></div>
+          <button class="view-btn view-btn-toggle" :class="{ active: showWireframe }" @click="toggleWireframe" :title="t('wireframe')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+          </button>
+          <button class="view-btn view-btn-toggle" :class="{ active: showGrid }" @click="toggleGrid" :title="t('grid')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+          </button>
+          <button class="view-btn view-btn-toggle" :class="{ active: isAutoRotate }" @click="toggleAutoRotate" :title="t('autoRotate')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+          <button class="view-btn view-btn-toggle" :class="{ active: isFullscreen }" @click="toggleFullscreen" :title="t('fullscreen')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path v-if="!isFullscreen" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+              <path v-else d="M4 14h3a2 2 0 012 2v3m4-5h3a2 2 0 002-2V9m-9 0V6a2 2 0 012-2h3m4 5V6a2 2 0 00-2-2h-3"/>
+            </svg>
+          </button>
         </div>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
@@ -798,6 +820,36 @@ html, body, #app {
 .view-btn-icon {
   display: flex; align-items: center; justify-content: center;
   padding: 5px 10px;
+}
+.view-btn-toggle {
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px 10px;
+}
+.view-btn-toggle.active {
+  background: rgba(74,158,255,.35);
+  border-color: rgba(74,158,255,.6);
+  color: #fff;
+}
+[data-theme="light"] .view-btn-toggle.active {
+  background: rgba(43,125,233,.25);
+  border-color: rgba(43,125,233,.5);
+  color: var(--accent);
+}
+.view-separator {
+  height: 1px;
+  background: rgba(255,255,255,.12);
+  margin: 2px 4px;
+}
+[data-theme="light"] .view-separator {
+  background: rgba(0,0,0,.1);
+}
+
+/* ── Error line highlight in gutter ── */
+:deep(.line-error) {
+  background: rgba(231,76,60,.35);
+  color: #ff6b5a;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 @media (max-width: 800px) {
