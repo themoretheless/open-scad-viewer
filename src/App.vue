@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { parseOpenSCAD } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 
@@ -17,6 +17,9 @@ const L: Record<string, Record<string, string>> = {
     noGpu: 'WebGPU не поддерживается. Используйте Chrome 113+ / Edge 113+ / Firefox Nightly.',
     theme: 'Тема',
     diff_note: 'difference() — вычитаемые тела показаны полупрозрачным красным',
+    renderTime: 'Рендер',
+    top: 'Свр', front: 'Фрн', right: 'Прв', iso: 'Изо', reset: 'Сбр',
+    screenshot: 'Скриншот',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -28,6 +31,9 @@ const L: Record<string, Record<string, string>> = {
     noGpu: 'WebGPU not supported. Use Chrome 113+ / Edge 113+ / Firefox Nightly.',
     theme: 'Theme',
     diff_note: 'difference() — subtracted bodies shown as translucent red',
+    renderTime: 'Render',
+    top: 'Top', front: 'Front', right: 'Right', iso: 'Iso', reset: 'Reset',
+    screenshot: 'Screenshot',
   },
 }
 
@@ -55,9 +61,194 @@ const meshCount = ref(0)
 const triCount = ref(0)
 const gpuOk = ref(true)
 const autoRender = ref(true)
+const renderTime = ref(0)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
+
+/* ── Resizable split pane ── */
+const editorWidth = ref(parseInt(localStorage.getItem('scad-editor-width') || '420'))
+const isDraggingDivider = ref(false)
+
+function onDividerDown(e: MouseEvent) {
+  e.preventDefault()
+  isDraggingDivider.value = true
+  document.addEventListener('mousemove', onDividerMove)
+  document.addEventListener('mouseup', onDividerUp)
+}
+function onDividerMove(e: MouseEvent) {
+  if (!isDraggingDivider.value) return
+  const newW = Math.max(240, Math.min(window.innerWidth * 0.6, e.clientX))
+  editorWidth.value = newW
+}
+function onDividerUp() {
+  isDraggingDivider.value = false
+  localStorage.setItem('scad-editor-width', String(editorWidth.value | 0))
+  document.removeEventListener('mousemove', onDividerMove)
+  document.removeEventListener('mouseup', onDividerUp)
+}
+
+/* ── Syntax highlighting ── */
+const KEYWORDS = new Set([
+  'cube','sphere','cylinder','translate','rotate','scale','color',
+  'difference','union','intersection','mirror','module','function',
+  'if','else','for','let'
+])
+const BOOLEANS = new Set(['true','false'])
+const SPECIALS = new Set(['$fn','$fa','$fs'])
+
+function highlightCode(src: string): string {
+  // Escape HTML first, then apply highlighting via regex
+  // We must process the raw source, not HTML-escaped, then escape each segment
+  const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  const result: string[] = []
+  let i = 0
+  const len = src.length
+
+  while (i < len) {
+    // Block comments
+    if (src[i] === '/' && src[i+1] === '*') {
+      let end = src.indexOf('*/', i + 2)
+      if (end === -1) end = len - 2
+      const cmt = src.slice(i, end + 2)
+      result.push(`<span class="hl-comment">${esc(cmt)}</span>`)
+      i = end + 2
+      continue
+    }
+    // Line comments
+    if (src[i] === '/' && src[i+1] === '/') {
+      let end = src.indexOf('\n', i)
+      if (end === -1) end = len
+      const cmt = src.slice(i, end)
+      result.push(`<span class="hl-comment">${esc(cmt)}</span>`)
+      i = end
+      continue
+    }
+    // Strings
+    if (src[i] === '"') {
+      let j = i + 1
+      while (j < len && src[j] !== '"') {
+        if (src[j] === '\\') j++
+        j++
+      }
+      const str = src.slice(i, j + 1)
+      result.push(`<span class="hl-string">${esc(str)}</span>`)
+      i = j + 1
+      continue
+    }
+    // Special variables ($fn, $fa, $fs)
+    if (src[i] === '$') {
+      let j = i + 1
+      while (j < len && /[a-zA-Z0-9_]/.test(src[j])) j++
+      const word = src.slice(i, j)
+      if (SPECIALS.has(word)) {
+        result.push(`<span class="hl-special">${esc(word)}</span>`)
+      } else {
+        result.push(esc(word))
+      }
+      i = j
+      continue
+    }
+    // Numbers
+    if (/[0-9]/.test(src[i]) || (src[i] === '.' && i + 1 < len && /[0-9]/.test(src[i+1]))) {
+      let j = i
+      while (j < len && /[0-9.]/.test(src[j])) j++
+      // handle exponent
+      if (j < len && (src[j] === 'e' || src[j] === 'E')) {
+        j++
+        if (j < len && (src[j] === '+' || src[j] === '-')) j++
+        while (j < len && /[0-9]/.test(src[j])) j++
+      }
+      result.push(`<span class="hl-number">${esc(src.slice(i, j))}</span>`)
+      i = j
+      continue
+    }
+    // Identifiers / keywords
+    if (/[a-zA-Z_]/.test(src[i])) {
+      let j = i
+      while (j < len && /[a-zA-Z0-9_]/.test(src[j])) j++
+      const word = src.slice(i, j)
+      if (KEYWORDS.has(word)) {
+        result.push(`<span class="hl-keyword">${esc(word)}</span>`)
+      } else if (BOOLEANS.has(word)) {
+        result.push(`<span class="hl-boolean">${esc(word)}</span>`)
+      } else {
+        result.push(esc(word))
+      }
+      i = j
+      continue
+    }
+    // Newlines (preserve them)
+    if (src[i] === '\n') {
+      result.push('\n')
+      i++
+      continue
+    }
+    // Everything else
+    result.push(esc(src[i]))
+    i++
+  }
+  // Always end with a newline so the overlay matches textarea height
+  return result.join('') + '\n'
+}
+
+const highlightedCode = computed(() => highlightCode(code.value))
+
+/* ── Line numbers ── */
+const lineCount = computed(() => code.value.split('\n').length)
+const lineNumbers = computed(() => {
+  const n = lineCount.value
+  const nums: string[] = []
+  for (let i = 1; i <= n; i++) nums.push(String(i))
+  return nums.join('\n')
+})
+
+/* ── Sync scroll ── */
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const highlightRef = ref<HTMLElement | null>(null)
+const lineNumRef = ref<HTMLElement | null>(null)
+
+function syncScroll() {
+  const ta = textareaRef.value
+  if (!ta) return
+  if (highlightRef.value) {
+    highlightRef.value.scrollTop = ta.scrollTop
+    highlightRef.value.scrollLeft = ta.scrollLeft
+  }
+  if (lineNumRef.value) {
+    lineNumRef.value.scrollTop = ta.scrollTop
+  }
+}
+
+/* ── View presets ── */
+function setView(name: string) {
+  if (!renderer) return
+  switch (name) {
+    case 'top':
+      renderer.setCamera(0, Math.PI / 2)
+      break
+    case 'front':
+      renderer.setCamera(0, 0)
+      break
+    case 'right':
+      renderer.setCamera(Math.PI / 2, 0)
+      break
+    case 'iso':
+      renderer.setCamera(0.6, 0.4)
+      break
+    case 'reset':
+      renderer.autoFitAll()
+      renderer.setCamera(0.6, 0.4)
+      break
+  }
+}
+
+/* ── Screenshot ── */
+function takeScreenshot() {
+  if (!renderer) return
+  renderer.screenshot()
+}
 
 onMounted(async () => {
   if (!canvasRef.value) return
@@ -83,7 +274,10 @@ function doRender() {
   if (!renderer) return
   error.value = ''
   try {
+    const t0 = performance.now()
     const meshes = parseOpenSCAD(code.value)
+    const t1 = performance.now()
+    renderTime.value = Math.round(t1 - t0)
     meshCount.value = meshes.length
     triCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
     renderer.setMeshes(meshes)
@@ -230,8 +424,8 @@ translate([0, 0, 35])
 
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
-    <div v-else class="main">
-      <div class="editor-panel">
+    <div v-else class="main" :class="{ dragging: isDraggingDivider }">
+      <div class="editor-panel" :style="{ width: editorWidth + 'px' }">
         <div class="toolbar">
           <button class="btn btn-primary" @click="doRender" title="Ctrl+Enter">
             {{ t('render') }}
@@ -247,27 +441,53 @@ translate([0, 0, 35])
           <button class="btn btn-sm" @click="loadExample('tower')">{{ t('tower') }}</button>
         </div>
 
-        <textarea
-          class="code"
-          v-model="code"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          @keydown="handleKey"
-        />
+        <div class="code-editor">
+          <pre class="line-numbers" ref="lineNumRef" aria-hidden="true">{{ lineNumbers }}</pre>
+          <div class="code-area">
+            <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
+            <textarea
+              ref="textareaRef"
+              class="code"
+              v-model="code"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              @keydown="handleKey"
+              @scroll="syncScroll"
+            />
+          </div>
+        </div>
 
         <div v-if="error" class="error">{{ error }}</div>
 
         <div class="stats">
           {{ t('meshes') }}: {{ meshCount }} &middot;
           {{ t('triangles') }}: {{ triCount }}
+          <span v-if="renderTime > 0" class="render-time">&middot; {{ t('renderTime') }}: {{ renderTime }}ms</span>
           <span class="diff-note">{{ t('diff_note') }}</span>
         </div>
       </div>
 
+      <div class="divider" @mousedown="onDividerDown"></div>
+
       <div class="canvas-panel">
         <canvas ref="canvasRef" class="gpu-canvas" />
+
+        <div class="view-buttons">
+          <button class="view-btn" @click="setView('top')" :title="t('top')">{{ t('top') }}</button>
+          <button class="view-btn" @click="setView('front')" :title="t('front')">{{ t('front') }}</button>
+          <button class="view-btn" @click="setView('right')" :title="t('right')">{{ t('right') }}</button>
+          <button class="view-btn" @click="setView('iso')" :title="t('iso')">{{ t('iso') }}</button>
+          <button class="view-btn" @click="setView('reset')" :title="t('reset')">{{ t('reset') }}</button>
+          <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </button>
+        </div>
+
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
     </div>
@@ -285,6 +505,13 @@ translate([0, 0, 35])
   --hover: #28282e;
   --danger: #e74c3c;
   --canvas-bg: #18181c;
+
+  --hl-comment: #6a6a7a;
+  --hl-keyword: #5c9eff;
+  --hl-number: #d19a66;
+  --hl-string: #6ec87a;
+  --hl-boolean: #c678dd;
+  --hl-special: #56c8d8;
 }
 
 [data-theme="light"] {
@@ -296,9 +523,27 @@ translate([0, 0, 35])
   --accent: #2b7de9;
   --hover: #eaeaee;
   --canvas-bg: #e8e8ec;
+
+  --hl-comment: #999;
+  --hl-keyword: #1a6dd4;
+  --hl-number: #c5600a;
+  --hl-string: #2a8c3a;
+  --hl-boolean: #9040b0;
+  --hl-special: #1a8a99;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+[data-theme="light"] .view-btn {
+  background: rgba(255,255,255,.75);
+  border-color: rgba(0,0,0,.12);
+  color: rgba(0,0,0,.7);
+}
+[data-theme="light"] .view-btn:hover {
+  background: rgba(43,125,233,.2);
+  border-color: rgba(43,125,233,.4);
+  color: var(--accent);
+}
 
 html, body, #app {
   height: 100%;
@@ -335,13 +580,26 @@ html, body, #app {
 }
 
 .main { flex: 1; display: flex; gap: 0; overflow: hidden; }
+.main.dragging { cursor: col-resize; user-select: none; }
 
 .editor-panel {
-  width: 420px; min-width: 280px; max-width: 50vw;
+  min-width: 240px; max-width: 60vw;
   display: flex; flex-direction: column;
-  border-right: 1px solid var(--border);
   background: var(--surface);
+  flex-shrink: 0;
 }
+
+.divider {
+  width: 5px; cursor: col-resize;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+}
+.divider:hover, .main.dragging .divider {
+  background: var(--accent);
+}
+
 .toolbar {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   border-bottom: 1px solid var(--border); flex-wrap: wrap;
@@ -364,14 +622,73 @@ html, body, #app {
 .spacer { flex: 1; }
 .ex-label { font-size: 0.72rem; color: var(--text-dim); }
 
+/* ── Code editor with syntax highlight + line numbers ── */
+
+.code-editor {
+  flex: 1; display: flex; overflow: hidden; position: relative;
+  background: var(--bg);
+}
+
+.line-numbers {
+  width: 44px; flex-shrink: 0;
+  padding: 12px 8px 12px 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  font-size: 0.82rem; line-height: 1.55;
+  text-align: right; color: var(--text-dim);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  user-select: none;
+  white-space: pre;
+}
+
+.code-area {
+  flex: 1; position: relative; overflow: hidden;
+}
+
+.highlight-layer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  padding: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  font-size: 0.82rem; line-height: 1.55;
+  color: var(--text);
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+  tab-size: 4;
+  margin: 0;
+}
+.highlight-layer code {
+  font-family: inherit; font-size: inherit; line-height: inherit;
+  tab-size: inherit;
+}
+
 .code {
-  flex: 1; resize: none;
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  resize: none;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
   font-size: 0.82rem; line-height: 1.55;
   padding: 12px; border: none; outline: none;
-  background: var(--bg); color: var(--text);
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
   tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+  z-index: 1;
 }
+.code::selection {
+  background: rgba(74, 158, 255, 0.25);
+}
+
+/* Syntax highlighting colors */
+:deep(.hl-comment) { color: var(--hl-comment); font-style: italic; }
+:deep(.hl-keyword) { color: var(--hl-keyword); }
+:deep(.hl-number) { color: var(--hl-number); }
+:deep(.hl-string) { color: var(--hl-string); }
+:deep(.hl-boolean) { color: var(--hl-boolean); }
+:deep(.hl-special) { color: var(--hl-special); }
 
 .error {
   padding: 8px 12px; margin: 6px 10px;
@@ -384,7 +701,9 @@ html, body, #app {
   padding: 6px 12px; font-size: 0.72rem; color: var(--text-dim);
   border-top: 1px solid var(--border);
   display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
 }
+.render-time { color: var(--accent); }
 .diff-note { margin-left: auto; font-style: italic; opacity: 0.7; }
 
 .canvas-panel {
@@ -397,9 +716,41 @@ html, body, #app {
   white-space: nowrap;
 }
 
+/* ── View preset buttons ── */
+.view-buttons {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 10;
+}
+.view-btn {
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(30,30,34,.7);
+  color: rgba(255,255,255,.8);
+  font-size: 0.68rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.12s, border-color 0.12s;
+  text-align: center;
+  min-width: 44px;
+  line-height: 1.4;
+}
+.view-btn:hover {
+  background: rgba(74,158,255,.3);
+  border-color: rgba(74,158,255,.5);
+  color: #fff;
+}
+.view-btn-icon {
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px 10px;
+}
+
 @media (max-width: 800px) {
   .main { flex-direction: column; }
-  .editor-panel { width: 100%; max-width: 100%; height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+  .editor-panel { width: 100% !important; max-width: 100% !important; height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+  .divider { display: none; }
   .canvas-panel { height: 60vh; }
 }
 </style>
