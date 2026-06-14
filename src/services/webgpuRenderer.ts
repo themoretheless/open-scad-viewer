@@ -88,6 +88,13 @@ export class WebGPURenderer {
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
 
+  /* build plate (print bed) outline */
+  private plateVB: GPUBuffer | null = null
+  private plateVC = 0
+  showBuildPlate = false
+  buildPlateX = 220
+  buildPlateZ = 220
+
   /* reusable reflection uniform buffer + bind group */
   private reflUB!: GPUBuffer
   private reflBG!: GPUBindGroup
@@ -158,6 +165,7 @@ export class WebGPURenderer {
   private raf = 0
   private dead = false
   private drag = false; private pan = false
+  private snapOrbit = false
   private mx = 0; private my = 0
 
   /* ── Touch state ── */
@@ -288,6 +296,59 @@ export class WebGPURenderer {
     this.gridVC = d.length / 7
     this.gridVB = this.dev.createBuffer({ size: d.length * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     this.dev.queue.writeBuffer(this.gridVB, 0, new Float32Array(d))
+  }
+
+  /**
+   * Configure & (re)build the print bed outline. Draws a rectangle on the
+   * ground plane (Y=0) of size x*z centered on the origin, plus a few border
+   * ticks. Uses the existing LINE pipeline (pos(3)+color(4), stride 28).
+   */
+  setBuildPlate(enabled: boolean, x?: number, z?: number) {
+    this.showBuildPlate = enabled
+    if (x !== undefined && x > 0) this.buildPlateX = x
+    if (z !== undefined && z > 0) this.buildPlateZ = z
+    this.buildPlateBuffer()
+  }
+
+  private buildPlateBuffer() {
+    this.plateVB?.destroy()
+    this.plateVB = null
+    this.plateVC = 0
+    if (!this.showBuildPlate) return
+
+    const hx = this.buildPlateX / 2
+    const hz = this.buildPlateZ / 2
+    const d: number[] = []
+    const main = [0.30, 0.62, 1.0, 0.9]   // bed outline (accent blue)
+    const tick = [0.30, 0.62, 1.0, 0.45]  // border ticks
+
+    // Rectangle outline (4 edges).
+    const corners: [number, number][] = [
+      [-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz],
+    ]
+    for (let i = 0; i < 4; i++) {
+      const a = corners[i], b = corners[(i + 1) % 4]
+      d.push(a[0], 0.02, a[1], ...main)
+      d.push(b[0], 0.02, b[1], ...main)
+    }
+
+    // Border ticks every 10mm along each edge, pointing slightly inward.
+    const tickLen = Math.max(2, Math.min(hx, hz) * 0.04)
+    const tickStep = 10
+    for (let x = -hx + tickStep; x < hx; x += tickStep) {
+      // bottom & top edges
+      d.push(x, 0.02, -hz, ...tick); d.push(x, 0.02, -hz + tickLen, ...tick)
+      d.push(x, 0.02, hz, ...tick);  d.push(x, 0.02, hz - tickLen, ...tick)
+    }
+    for (let z = -hz + tickStep; z < hz; z += tickStep) {
+      // left & right edges
+      d.push(-hx, 0.02, z, ...tick); d.push(-hx + tickLen, 0.02, z, ...tick)
+      d.push(hx, 0.02, z, ...tick);  d.push(hx - tickLen, 0.02, z, ...tick)
+    }
+
+    this.plateVC = d.length / 7
+    this.plateVB = this.dev.createBuffer({ size: d.length * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    this.dev.queue.writeBuffer(this.plateVB, 0, new Float32Array(d))
   }
 
   setMeshes(meshes: MeshData[]) {
@@ -435,6 +496,13 @@ export class WebGPURenderer {
       pass.draw(this.gridVC)
     }
 
+    if (this.showBuildPlate && this.plateVB && this.plateVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.plateVB)
+      pass.draw(this.plateVC)
+    }
+
     pass.setPipeline(this.meshPipe)
     pass.setBindGroup(0, this.sceneBG)
     for (const g of this.meshes) {
@@ -570,6 +638,8 @@ export class WebGPURenderer {
 
   private onDown = (e: PointerEvent) => {
     this.drag = true; this.pan = e.button === 2 || e.shiftKey
+    // Ctrl (without Shift) during an orbit drag = snap yaw/pitch to 15° steps.
+    this.snapOrbit = !this.pan && e.ctrlKey
     this.mx = e.clientX; this.my = e.clientY
     this.canvas.setPointerCapture(e.pointerId)
   }
@@ -577,6 +647,8 @@ export class WebGPURenderer {
     if (!this.drag) return
     const dx = e.clientX - this.mx, dy = e.clientY - this.my
     this.mx = e.clientX; this.my = e.clientY
+    // Allow toggling Ctrl mid-drag for orbit snapping.
+    if (!this.pan) this.snapOrbit = e.ctrlKey
     if (this.pan) {
       const sp = this.dist * 0.002
       const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw)
@@ -584,9 +656,15 @@ export class WebGPURenderer {
     } else {
       this.yaw -= dx * 0.005
       this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.005))
+      if (this.snapOrbit) {
+        // Snap yaw & pitch to 15° (PI/12) increments while dragging.
+        const step = Math.PI / 12
+        this.yaw = Math.round(this.yaw / step) * step
+        this.pitch = Math.max(-1.5, Math.min(1.5, Math.round(this.pitch / step) * step))
+      }
     }
   }
-  private onUp = (e: PointerEvent) => { this.drag = false; this.canvas.releasePointerCapture(e.pointerId) }
+  private onUp = (e: PointerEvent) => { this.drag = false; this.snapOrbit = false; this.canvas.releasePointerCapture(e.pointerId) }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
     this.dist = Math.max(1, Math.min(50000, this.dist * (1 + e.deltaY * 0.001)))
@@ -796,6 +874,133 @@ export class WebGPURenderer {
     }, 'image/png')
   }
 
+  /**
+   * Take a screenshot at scale× the current backing-store resolution.
+   * Temporarily resizes the canvas backing store + depth texture, renders one
+   * frame, captures via toBlob, then restores the original size and re-renders.
+   */
+  screenshotScaled(scale: number) {
+    if (scale <= 1) { this.screenshot(); return }
+    const origW = this.canvas.width
+    const origH = this.canvas.height
+    const origDepth = this.depth
+
+    const w = Math.max(1, Math.round(origW * scale))
+    const h = Math.max(1, Math.round(origH * scale))
+    this.canvas.width = w
+    this.canvas.height = h
+    this.depth = this.dev.createTexture({ size: [w, h], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT })
+
+    // Render directly with the scaled buffers (bypass resize(), which would
+    // snap the canvas back to its CSS size).
+    this.renderScaled(w, h)
+
+    const restore = () => {
+      // Restore original backing store + depth, then force a normal re-render.
+      this.canvas.width = origW
+      this.canvas.height = origH
+      this.depth?.destroy()
+      this.depth = origDepth
+      this.render()
+    }
+
+    this.canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `model@${scale}x.png`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+      restore()
+    }, 'image/png')
+  }
+
+  /** Render a single frame using explicit pixel dimensions (for scaled capture). */
+  private renderScaled(w: number, h: number) {
+    const asp = w / h
+    const cx = this.tx + this.dist * Math.cos(this.pitch) * Math.sin(this.yaw)
+    const cy = this.ty + this.dist * Math.sin(this.pitch)
+    const cz = this.tz + this.dist * Math.cos(this.pitch) * Math.cos(this.yaw)
+    const view = lookAt([cx, cy, cz], [this.tx, this.ty, this.tz], [0, 1, 0])
+    let proj: Mat4
+    if (this.orthographic) {
+      const halfH = this.dist * Math.tan(Math.PI / 8)
+      const halfW = halfH * asp
+      proj = ortho(-halfW, halfW, -halfH, halfH, 0.1, this.dist * 10)
+    } else {
+      proj = perspective(Math.PI / 4, asp, 0.1, this.dist * 10)
+    }
+    const vpMat = multiply(proj, view)
+    const vp = transpose(vpMat)
+    const sd = new Float32Array(48)
+    sd.set(vp, 0)
+    sd.set([cx, cy, cz, 1], 16)
+    const lp = this.getLightingValues()
+    sd.set(lp.light, 20)
+    sd.set(lp.ambient, 24)
+    sd.set([this.clipY, this.clipEnabled ? 1.0 : 0.0, 0, 0], 28)
+    const fogNear = this.dist * 0.5
+    const fogFar = this.dist * 3.0
+    sd.set([fogNear, fogFar, this.fogEnabled ? 1.0 : 0.0, 0], 32)
+    sd.set([this.clearR, this.clearG, this.clearB, 1], 36)
+    this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
+
+    const enc = this.dev.createCommandEncoder()
+    const pass = enc.beginRenderPass({
+      colorAttachments: [{
+        view: this.ctx.getCurrentTexture().createView(),
+        clearValue: { r: this.clearR * this.clearA, g: this.clearG * this.clearA, b: this.clearB * this.clearA, a: this.clearA },
+        loadOp: 'clear', storeOp: 'store',
+      }],
+      depthStencilAttachment: {
+        view: this.depth.createView(),
+        depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+      },
+    })
+
+    if (this.showGrid && this.gridVB) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.gridVB)
+      pass.draw(this.gridVC)
+    }
+    if (this.showBuildPlate && this.plateVB && this.plateVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.plateVB)
+      pass.draw(this.plateVC)
+    }
+
+    pass.setPipeline(this.meshPipe)
+    pass.setBindGroup(0, this.sceneBG)
+    for (const g of this.meshes) {
+      if (g.transp) continue
+      pass.setBindGroup(1, g.bg)
+      pass.setVertexBuffer(0, g.vb)
+      pass.setIndexBuffer(g.ib, 'uint32')
+      pass.drawIndexed(g.ic)
+    }
+    pass.setPipeline(this.meshPipeT)
+    pass.setBindGroup(0, this.sceneBG)
+    for (const g of this.meshes) {
+      if (!g.transp) continue
+      pass.setBindGroup(1, g.bg)
+      pass.setVertexBuffer(0, g.vb)
+      pass.setIndexBuffer(g.ib, 'uint32')
+      pass.drawIndexed(g.ic)
+    }
+    if (this.wireframe && this.wireframeVB && this.wireframeVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.wireframeVB)
+      pass.draw(this.wireframeVC)
+    }
+    pass.end()
+    this.dev.queue.submit([enc.finish()])
+  }
+
   /** Copy the current canvas to clipboard as PNG. Returns true on success. */
   async copyToClipboard(): Promise<boolean> {
     this.render()
@@ -1003,6 +1208,7 @@ export class WebGPURenderer {
     for (const g of this.meshes) { g.vb.destroy(); g.ib.destroy(); g.ub.destroy() }
     this.meshes = []
     this.gridVB?.destroy()
+    this.plateVB?.destroy()
     this.wireframeVB?.destroy()
     this.depth?.destroy()
     this.sceneUB?.destroy()

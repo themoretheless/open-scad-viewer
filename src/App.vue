@@ -96,7 +96,7 @@ const L: Record<string, Record<string, string>> = {
     render: 'Рендер', auto: 'Авто', examples: 'Примеры',
     basic: 'Базовый', csg: 'CSG', house: 'Домик', tower: 'Башня',
     meshes: 'Объектов', triangles: 'Треугольников',
-    hint: 'ЛКМ: вращение · ПКМ/Shift: перемещение · колёсико: зум · Ctrl+Enter: рендер',
+    hint: 'ЛКМ: вращение · Ctrl+ЛКМ: привязка 15° · ПКМ/Shift: перемещение · колёсико: зум · Ctrl+Enter: рендер',
     noGpu: 'WebGPU не поддерживается. Используйте Chrome 113+ / Edge 113+ / Firefox Nightly.',
     theme: 'Тема',
     diff_note: 'difference() — вычитаемые тела показаны полупрозрачным красным',
@@ -263,6 +263,40 @@ const L: Record<string, Record<string, string>> = {
     ariaMinimap: 'Переключить миникарту',
     ariaNewTab: 'Новая вкладка',
     ariaAnimPlay: 'Играть/пауза анимации',
+    // Welcome / onboarding
+    welcomeTitle: 'OpenSCAD 3D Просмотрщик',
+    welcomeTagline: 'Пишите OpenSCAD и смотрите результат в реальном времени с рендерингом через WebGPU.',
+    welcomeFeat1: 'Редактирование OpenSCAD в реальном времени',
+    welcomeFeat2: 'Быстрый 3D-рендеринг на WebGPU',
+    welcomeFeat3: 'Экспорт в STL / OBJ',
+    welcomeFeat4: 'Темы оформления и горячие клавиши',
+    welcomeStart: 'Начать',
+    showWelcome: 'Показать приветствие',
+    cmdShowWelcome: 'Показать приветствие',
+    ariaWelcomeDialog: 'Добро пожаловать',
+    // Empty state
+    emptyState: 'Пока нет геометрии — напишите OpenSCAD или загрузите пример',
+    // Build plate
+    buildPlate: 'Стол печати',
+    buildPlateX: 'X',
+    buildPlateZ: 'Z',
+    // Statistics
+    statistics: 'Статистика',
+    statsTriangles: 'Треугольники',
+    statsVertices: 'Вершины',
+    statsVolume: 'Объём',
+    statsSurfaceArea: 'Площадь поверхности',
+    statsBoundingBox: 'Габариты',
+    cmdStatistics: 'Статистика модели',
+    ariaStatistics: 'Статистика модели',
+    sc_buildPlate: 'Стол печати (15° привязка: Ctrl+вращение)',
+    sc_orbitSnap: 'Привязка вращения к 15°',
+    // PNG export scale
+    exportPng: 'Экспорт PNG',
+    pngScale: 'Масштаб',
+    cmdExportPng2x: 'Экспорт PNG (2×)',
+    cmdExportPng4x: 'Экспорт PNG (4×)',
+    ariaPngScale: 'Масштаб PNG',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -270,7 +304,7 @@ const L: Record<string, Record<string, string>> = {
     render: 'Render', auto: 'Auto', examples: 'Examples',
     basic: 'Basic', csg: 'CSG', house: 'House', tower: 'Tower',
     meshes: 'Meshes', triangles: 'Triangles',
-    hint: 'LMB: rotate · RMB/Shift: pan · wheel: zoom · Ctrl+Enter: render',
+    hint: 'LMB: rotate · Ctrl+LMB: 15° snap · RMB/Shift: pan · wheel: zoom · Ctrl+Enter: render',
     noGpu: 'WebGPU not supported. Use Chrome 113+ / Edge 113+ / Firefox Nightly.',
     theme: 'Theme',
     diff_note: 'difference() — subtracted bodies shown as translucent red',
@@ -437,6 +471,40 @@ const L: Record<string, Record<string, string>> = {
     ariaMinimap: 'Toggle minimap',
     ariaNewTab: 'New tab',
     ariaAnimPlay: 'Play/pause animation',
+    // Welcome / onboarding
+    welcomeTitle: 'OpenSCAD 3D Viewer',
+    welcomeTagline: 'Write OpenSCAD and see it rendered in real time with WebGPU.',
+    welcomeFeat1: 'Real-time OpenSCAD editing',
+    welcomeFeat2: 'Fast WebGPU 3D rendering',
+    welcomeFeat3: 'Export to STL / OBJ',
+    welcomeFeat4: 'Editor themes & keyboard shortcuts',
+    welcomeStart: 'Get Started',
+    showWelcome: 'Show Welcome',
+    cmdShowWelcome: 'Show Welcome',
+    ariaWelcomeDialog: 'Welcome',
+    // Empty state
+    emptyState: 'No geometry yet — write some OpenSCAD or load an example',
+    // Build plate
+    buildPlate: 'Build Plate',
+    buildPlateX: 'X',
+    buildPlateZ: 'Z',
+    // Statistics
+    statistics: 'Statistics',
+    statsTriangles: 'Triangles',
+    statsVertices: 'Vertices',
+    statsVolume: 'Volume',
+    statsSurfaceArea: 'Surface Area',
+    statsBoundingBox: 'Bounding Box',
+    cmdStatistics: 'Model Statistics',
+    ariaStatistics: 'Model statistics',
+    sc_buildPlate: 'Build plate (15° snap: Ctrl+orbit)',
+    sc_orbitSnap: 'Snap orbit to 15°',
+    // PNG export scale
+    exportPng: 'Export PNG',
+    pngScale: 'Scale',
+    cmdExportPng2x: 'Export PNG (2×)',
+    cmdExportPng4x: 'Export PNG (4×)',
+    ariaPngScale: 'PNG scale',
   },
 }
 
@@ -632,6 +700,18 @@ const initFailed = ref(false)
 
 /* ── App first-load fade-in ── */
 const appLoaded = ref(false)
+
+/* ── Feature: First-run Welcome / Onboarding ── */
+const showWelcome = ref(!localStorage.getItem('scad-onboarded'))
+
+function dismissWelcome() {
+  showWelcome.value = false
+  localStorage.setItem('scad-onboarded', '1')
+}
+
+function openWelcome() {
+  showWelcome.value = true
+}
 
 /* ── Drag & drop state ── */
 const isDragOver = ref(false)
@@ -2151,6 +2231,8 @@ onMounted(async () => {
   }
   if (!ok) { gpuOk.value = false; initFailed.value = true; rendererReady.value = true; return }
   rendererReady.value = true
+  // Restore persisted build-plate setting.
+  applyBuildPlate()
   doRender()
 
   // Start axis label updates
@@ -2707,6 +2789,8 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'fullscreen', label: () => t('cmdToggleFullscreen'), action: () => toggleFullscreen() },
   { id: 'ortho', label: () => t('cmdToggleOrtho'), action: () => toggleProjection() },
   { id: 'screenshot', label: () => t('cmdTakeScreenshot'), action: () => takeScreenshot() },
+  { id: 'exportPng2x', label: () => t('cmdExportPng2x'), action: () => exportPng(2) },
+  { id: 'exportPng4x', label: () => t('cmdExportPng4x'), action: () => exportPng(4) },
   { id: 'copyImage', label: () => t('cmdCopyImage'), action: () => copyCanvasToClipboard() },
   { id: 'exportStl', label: () => t('cmdExportSTL'), action: () => doExportSTL() },
   { id: 'exportObj', label: () => t('cmdExportOBJ'), action: () => doExportOBJ() },
@@ -2725,6 +2809,9 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'console', label: () => t('cmdToggleConsole'), action: () => { showConsole.value = !showConsole.value } },
   { id: 'objectTree', label: () => t('cmdToggleObjectTree'), action: () => { showObjectTree.value = !showObjectTree.value } },
   { id: 'newTab', label: () => t('cmdNewTab'), action: () => addTab() },
+  { id: 'statistics', label: () => t('cmdStatistics'), action: () => toggleStatistics() },
+  { id: 'buildPlate', label: () => t('buildPlate'), action: () => toggleBuildPlate() },
+  { id: 'showWelcome', label: () => t('cmdShowWelcome'), action: () => openWelcome() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -2938,6 +3025,111 @@ const reflectionEnabled = ref(false)
 function toggleReflection() {
   reflectionEnabled.value = !reflectionEnabled.value
   renderer?.setReflection(reflectionEnabled.value)
+}
+
+/* ── Feature 3: Build Plate / Print Bed ── */
+const buildPlateEnabled = ref(localStorage.getItem('scad-buildplate') === 'true')
+const buildPlateX = ref(parseInt(localStorage.getItem('scad-buildplate-x') || '220') || 220)
+const buildPlateZ = ref(parseInt(localStorage.getItem('scad-buildplate-z') || '220') || 220)
+
+function applyBuildPlate() {
+  renderer?.setBuildPlate(buildPlateEnabled.value, buildPlateX.value, buildPlateZ.value)
+}
+
+function toggleBuildPlate() {
+  buildPlateEnabled.value = !buildPlateEnabled.value
+  localStorage.setItem('scad-buildplate', String(buildPlateEnabled.value))
+  applyBuildPlate()
+}
+
+function onBuildPlateDimChange() {
+  if (buildPlateX.value < 1) buildPlateX.value = 1
+  if (buildPlateZ.value < 1) buildPlateZ.value = 1
+  localStorage.setItem('scad-buildplate-x', String(buildPlateX.value | 0))
+  localStorage.setItem('scad-buildplate-z', String(buildPlateZ.value | 0))
+  applyBuildPlate()
+}
+
+/* ── Feature 4: Model Statistics ── */
+const showStatistics = ref(false)
+const statsVolume = ref(0)
+const statsSurfaceArea = ref(0)
+
+function computeStatistics() {
+  let vol = 0
+  let area = 0
+  for (const m of lastParsedMeshes) {
+    // Skip transparent / subtracted (difference red) bodies so they don't
+    // inflate the numbers.
+    if (m.color[3] < 0.99) continue
+    const v = m.vertices       // interleaved pos(3) + normal(3)
+    const idx = m.indices
+    const tf = m.transform     // Mat4 (Float32Array, row-major 16)
+
+    // Apply the mesh transform to a vertex position (index into v / 6).
+    const wx = (vi: number) => {
+      const x = v[vi * 6], y = v[vi * 6 + 1], z = v[vi * 6 + 2]
+      return [
+        tf[0] * x + tf[1] * y + tf[2] * z + tf[3],
+        tf[4] * x + tf[5] * y + tf[6] * z + tf[7],
+        tf[8] * x + tf[9] * y + tf[10] * z + tf[11],
+      ] as [number, number, number]
+    }
+
+    let meshVol = 0
+    for (let i = 0; i < idx.length; i += 3) {
+      const v0 = wx(idx[i]), v1 = wx(idx[i + 1]), v2 = wx(idx[i + 2])
+      // Signed tetrahedron volume: dot(v0, cross(v1, v2)) / 6
+      const cx = v1[1] * v2[2] - v1[2] * v2[1]
+      const cy = v1[2] * v2[0] - v1[0] * v2[2]
+      const cz = v1[0] * v2[1] - v1[1] * v2[0]
+      meshVol += (v0[0] * cx + v0[1] * cy + v0[2] * cz) / 6
+
+      // Triangle area: 0.5 * |cross(v1-v0, v2-v0)|
+      const e1x = v1[0] - v0[0], e1y = v1[1] - v0[1], e1z = v1[2] - v0[2]
+      const e2x = v2[0] - v0[0], e2y = v2[1] - v0[1], e2z = v2[2] - v0[2]
+      const ax = e1y * e2z - e1z * e2y
+      const ay = e1z * e2x - e1x * e2z
+      const az = e1x * e2y - e1y * e2x
+      area += 0.5 * Math.sqrt(ax * ax + ay * ay + az * az)
+    }
+    vol += Math.abs(meshVol)
+  }
+  statsVolume.value = vol
+  statsSurfaceArea.value = area
+}
+
+function formatNumber(n: number, decimals = 1): string {
+  return n.toLocaleString(lang.value === 'ru' ? 'ru-RU' : 'en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}
+
+function toggleStatistics() {
+  showStatistics.value = !showStatistics.value
+  if (showStatistics.value) computeStatistics()
+}
+
+// Recompute stats when geometry changes (only while the panel is open).
+watch([meshCount, triCount], () => {
+  if (showStatistics.value) computeStatistics()
+})
+
+/* ── Feature 5: Custom-Resolution PNG Export ── */
+const pngScale = ref(parseInt(localStorage.getItem('scad-png-scale') || '1') || 1)
+
+function exportPng(scale: number) {
+  if (!renderer) return
+  pngScale.value = scale
+  localStorage.setItem('scad-png-scale', String(scale))
+  if (scale <= 1) {
+    renderer.screenshot()
+    addToast(t('screenshot'), 'success')
+  } else {
+    renderer.screenshotScaled(scale)
+    addToast(t('exportPng') + ' ' + scale + '×', 'success')
+  }
 }
 </script>
 
@@ -3234,6 +3426,7 @@ translate([0, 0, 39])
             <div class="shortcut-row"><kbd>W / A / S / D</kbd><span>{{ t('sc_wasd') }}</span></div>
             <div class="shortcut-row"><kbd>Q / E</kbd><span>{{ t('sc_qe') }}</span></div>
             <div class="shortcut-row"><kbd>Shift+W/A/S/D</kbd><span>{{ t('sc_shiftWasd') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+{{ lang === 'ru' ? 'ЛКМ' : 'LMB' }}</kbd><span>{{ t('sc_orbitSnap') }}</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
           </div>
@@ -3332,6 +3525,43 @@ translate([0, 0, 39])
             <div class="pref-footer">
               <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome / Onboarding modal -->
+      <div v-if="showWelcome" class="modal-backdrop" @click.self="dismissWelcome">
+        <div class="modal-box welcome-modal" role="dialog" aria-modal="true" :aria-label="t('ariaWelcomeDialog')">
+          <div class="modal-header">
+            <span class="modal-title">
+              <svg class="welcome-logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+              </svg>
+              {{ t('welcomeTitle') }}
+            </span>
+            <button class="modal-close" @click="dismissWelcome" :aria-label="t('ariaCloseModal')">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="welcome-tagline">{{ t('welcomeTagline') }}</p>
+            <ul class="welcome-list">
+              <li class="welcome-item">
+                <svg class="welcome-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>{{ t('welcomeFeat1') }}</span>
+              </li>
+              <li class="welcome-item">
+                <svg class="welcome-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>{{ t('welcomeFeat2') }}</span>
+              </li>
+              <li class="welcome-item">
+                <svg class="welcome-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>{{ t('welcomeFeat3') }}</span>
+              </li>
+              <li class="welcome-item">
+                <svg class="welcome-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>{{ t('welcomeFeat4') }}</span>
+              </li>
+            </ul>
+            <button class="btn btn-primary welcome-start-btn" @click="dismissWelcome">{{ t('welcomeStart') }}</button>
           </div>
         </div>
       </div>
@@ -3716,6 +3946,14 @@ translate([0, 0, 39])
           <span class="webgpu-loading-text">{{ t('initWebGPU') }}</span>
         </div>
 
+        <!-- Empty state (no geometry & no error) -->
+        <div v-if="rendererReady && meshCount === 0 && !error" class="empty-state">
+          <svg class="empty-state-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span class="empty-state-text">{{ t('emptyState') }}</span>
+        </div>
+
         <!-- Orientation cube / navigation gizmo -->
         <div class="nav-gizmo" :title="t('gizmoTip')" role="group" :aria-label="t('ariaGizmo')" :style="{ width: GIZMO_SIZE + 'px', height: GIZMO_SIZE + 'px' }">
           <svg class="nav-gizmo-svg" :viewBox="`0 0 ${GIZMO_SIZE} ${GIZMO_SIZE}`" :width="GIZMO_SIZE" :height="GIZMO_SIZE">
@@ -3781,12 +4019,26 @@ translate([0, 0, 39])
           <button class="view-btn" @click="setView('right')" :title="t('right')">{{ t('right') }}</button>
           <button class="view-btn" @click="setView('iso')" :title="t('iso')">{{ t('iso') }}</button>
           <button class="view-btn" @click="setView('reset')" :title="t('reset')">{{ t('reset') }}</button>
-          <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')" :aria-label="t('screenshot')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </button>
+          <div class="screenshot-row">
+            <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')" :aria-label="t('screenshot')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </button>
+            <!-- PNG export scale selector -->
+            <select
+              class="png-scale-select"
+              :value="pngScale"
+              :title="t('exportPng')"
+              :aria-label="t('ariaPngScale')"
+              @change="exportPng(parseInt(($event.target as HTMLSelectElement).value))"
+            >
+              <option value="1">1×</option>
+              <option value="2">2×</option>
+              <option value="4">4×</option>
+            </select>
+          </div>
           <!-- Copy as Image -->
           <div class="copy-image-wrapper">
             <button class="view-btn view-btn-icon" @click="copyCanvasToClipboard" :title="t('copyImage')" :aria-label="t('copyImage')">
@@ -3807,6 +4059,22 @@ translate([0, 0, 39])
               <rect x="3" y="3" width="18" height="18"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
             </svg>
           </button>
+          <!-- Build plate / print bed -->
+          <button class="view-btn view-btn-toggle" :class="{ active: buildPlateEnabled }" @click="toggleBuildPlate" :title="t('buildPlate')" :aria-label="t('buildPlate')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="1"/><path d="M2 7l4-4h12l4 4"/>
+            </svg>
+          </button>
+          <div v-if="buildPlateEnabled" class="bed-dims-row">
+            <label class="bed-dim">
+              <span class="bed-dim-label">{{ t('buildPlateX') }}</span>
+              <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateX" @change="onBuildPlateDimChange" />
+            </label>
+            <label class="bed-dim">
+              <span class="bed-dim-label">{{ t('buildPlateZ') }}</span>
+              <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateZ" @change="onBuildPlateDimChange" />
+            </label>
+          </div>
           <button class="view-btn view-btn-toggle" :class="{ active: isAutoRotate }" @click="toggleAutoRotate" :title="t('autoRotate')" :aria-label="t('autoRotate')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
@@ -3884,6 +4152,12 @@ translate([0, 0, 39])
               <line x1="7" y1="18" x2="7" y2="18"/><line x1="12" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
+          <!-- Statistics toggle -->
+          <button class="view-btn view-btn-toggle" :class="{ active: showStatistics }" @click="toggleStatistics" :title="t('statistics')" :aria-label="t('ariaStatistics')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+          </button>
         </div>
 
         <!-- Axis labels -->
@@ -3929,6 +4203,38 @@ translate([0, 0, 39])
               <span v-if="getNodeSummary(item.node)" class="tree-summary">{{ getNodeSummary(item.node) }}</span>
             </div>
             <div v-if="!flatTree.length" class="object-tree-empty">--</div>
+          </div>
+        </div>
+        </transition>
+
+        <!-- Statistics Panel (overlay) -->
+        <transition name="overlay-fade">
+        <div v-if="showStatistics" class="stats-panel" role="region" :aria-label="t('ariaStatistics')">
+          <div class="stats-panel-header">
+            <span class="stats-panel-title">{{ t('statistics') }}</span>
+            <button class="stats-panel-close" @click="showStatistics = false" :aria-label="t('ariaCloseModal')">&times;</button>
+          </div>
+          <div class="stats-panel-body">
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('statsTriangles') }}</span>
+              <span class="stats-panel-val">{{ triCount.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') }}</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('statsVertices') }}</span>
+              <span class="stats-panel-val">{{ vertexCount.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') }}</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('statsVolume') }}</span>
+              <span class="stats-panel-val">{{ formatNumber(statsVolume) }} mm³</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('statsSurfaceArea') }}</span>
+              <span class="stats-panel-val">{{ formatNumber(statsSurfaceArea) }} mm²</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('statsBoundingBox') }}</span>
+              <span class="stats-panel-val">{{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }} mm</span>
+            </div>
           </div>
         </div>
         </transition>
@@ -5171,6 +5477,147 @@ textarea.code:focus-visible {
 }
 [data-theme="light"] .clip-value {
   color: rgba(0,0,0,.5);
+}
+
+/* ── Welcome / Onboarding modal ── */
+.welcome-modal { max-width: 460px; }
+.welcome-modal .modal-title { display: flex; align-items: center; gap: 8px; }
+.welcome-logo { color: var(--accent); flex-shrink: 0; }
+.welcome-tagline {
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+.welcome-list {
+  list-style: none;
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 18px;
+}
+.welcome-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.86rem; color: var(--text);
+}
+.welcome-check { color: var(--accent); flex-shrink: 0; }
+.welcome-start-btn {
+  width: 100%;
+  padding: 9px 0;
+  font-size: 0.9rem;
+}
+
+/* ── Empty state overlay ── */
+.empty-state {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 5;
+  text-align: center;
+  padding: 0 24px;
+}
+.empty-state-icon { color: rgba(255,255,255,.22); }
+.empty-state-text {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,.4);
+  max-width: 280px;
+  line-height: 1.4;
+}
+[data-theme="light"] .empty-state-icon { color: rgba(0,0,0,.18); }
+[data-theme="light"] .empty-state-text { color: rgba(0,0,0,.4); }
+
+/* ── PNG export scale selector ── */
+.screenshot-row { display: flex; align-items: center; gap: 4px; }
+.png-scale-select {
+  background: rgba(30,30,34,.7);
+  color: rgba(255,255,255,.8);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  font-size: 0.62rem;
+  padding: 3px 4px;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(6px);
+}
+.png-scale-select:focus { border-color: rgba(74,158,255,.5); }
+[data-theme="light"] .png-scale-select {
+  background: rgba(255,255,255,.75);
+  color: rgba(0,0,0,.7);
+  border-color: rgba(0,0,0,.12);
+}
+
+/* ── Build plate dimension inputs ── */
+.bed-dims-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 4px;
+}
+.bed-dim { display: flex; align-items: center; gap: 3px; }
+.bed-dim-label {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,.5);
+}
+[data-theme="light"] .bed-dim-label { color: rgba(0,0,0,.45); }
+.bed-dim-input {
+  width: 42px;
+  background: rgba(30,30,34,.7);
+  color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  font-size: 0.62rem;
+  padding: 2px 4px;
+  outline: none;
+  backdrop-filter: blur(6px);
+}
+.bed-dim-input:focus { border-color: rgba(74,158,255,.5); }
+[data-theme="light"] .bed-dim-input {
+  background: rgba(255,255,255,.75);
+  color: rgba(0,0,0,.75);
+  border-color: rgba(0,0,0,.12);
+}
+
+/* ── Statistics panel (overlay) ── */
+.stats-panel {
+  position: absolute; top: 10px; left: 10px;
+  width: 230px;
+  background: rgba(30,30,34,.85);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
+  backdrop-filter: blur(10px);
+  z-index: 12;
+  overflow: hidden;
+}
+[data-theme="light"] .stats-panel {
+  background: rgba(255,255,255,.9);
+  border-color: rgba(0,0,0,.1);
+}
+.stats-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(128,128,128,.18);
+}
+.stats-panel-title {
+  font-size: 0.78rem; font-weight: 700; color: var(--text);
+}
+.stats-panel-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0 2px;
+}
+.stats-panel-close:hover { color: var(--text); }
+.stats-panel-body { padding: 6px 12px 10px; }
+.stats-panel-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 0.74rem;
+  border-bottom: 1px solid rgba(128,128,128,.1);
+}
+.stats-panel-row:last-child { border-bottom: none; }
+.stats-panel-key { color: var(--text-dim); }
+.stats-panel-val {
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  text-align: right;
 }
 
 /* ── Animation Timeline ── */
