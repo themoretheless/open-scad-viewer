@@ -195,9 +195,20 @@ export class WebGPURenderer {
 
   private raf = 0
   private dead = false
+  private dirty = true
   private drag = false; private pan = false
   private snapOrbit = false
   private mx = 0; private my = 0
+
+  /* ── Resize observer ── */
+  private resizeObserver: ResizeObserver | null = null
+  private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  /* ── Device lost callback ── */
+  onDeviceLost: ((reason: string) => void) | null = null
+
+  /* ── Adapter info cache ── */
+  private adapterInfoCache: GPUAdapterInfo | null = null
 
   /* ── Touch state ── */
   private touchIds: number[] = []
@@ -214,16 +225,34 @@ export class WebGPURenderer {
     if (!navigator.gpu) return false
     const adapter = await navigator.gpu.requestAdapter()
     if (!adapter) return false
+
+    // Cache adapter info for perf panel
+    try {
+      this.adapterInfoCache = adapter.info
+    } catch {
+      this.adapterInfoCache = null
+    }
+
     this.dev = await adapter.requestDevice()
     this.ctx = canvas.getContext('webgpu') as GPUCanvasContext
     this.fmt = navigator.gpu.getPreferredCanvasFormat()
     this.ctx.configure({ device: this.dev, format: this.fmt, alphaMode: 'premultiplied' })
+
+    // Handle device lost
+    this.dev.lost.then((info) => {
+      console.error('[WebGPU] Device lost:', info.reason, info.message)
+      if (!this.dead && this.onDeviceLost) {
+        this.onDeviceLost(info.reason + (info.message ? ': ' + info.message : ''))
+      }
+    })
 
     this.buildPipelines()
     this.buildSceneUB()
     this.buildGrid()
     this.resize()
     this.bindInput()
+    this.setupResizeObserver()
+    this.dirty = true
     this.loop()
     return true
   }
@@ -342,6 +371,7 @@ export class WebGPURenderer {
     if (x !== undefined && x > 0) this.buildPlateX = x
     if (z !== undefined && z > 0) this.buildPlateZ = z
     this.buildPlateBuffer()
+    this.requestRender()
   }
 
   private buildPlateBuffer() {
@@ -417,6 +447,7 @@ export class WebGPURenderer {
     this.autoFit(meshes)
     if (this.wireframe) this.buildWireframeBuffer()
     if (this.showEdges) this.buildEdgeBuffer()
+    this.requestRender()
   }
 
   private computeBounds(meshes: MeshData[]) {
@@ -704,25 +735,61 @@ export class WebGPURenderer {
     if (t >= 1) this.animating = false
   }
 
+  /** Mark the scene as needing a repaint. Schedules exactly one rAF. */
+  requestRender() {
+    if (this.dead) return
+    this.dirty = true
+    if (!this.raf) {
+      this.raf = requestAnimationFrame(this.loop)
+    }
+  }
+
+  private setupResizeObserver() {
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.resizeDebounceTimer) clearTimeout(this.resizeDebounceTimer)
+      this.resizeDebounceTimer = setTimeout(() => {
+        this.resize()
+        this.requestRender()
+      }, 100)
+    })
+    this.resizeObserver.observe(this.canvas)
+  }
+
   private loop = () => {
     if (this.dead) return
+    this.raf = 0
     const now = performance.now()
 
-    // FPS tracking
-    if (this.lastFrameTime > 0) {
-      this.frameTimes.push(now - this.lastFrameTime)
-      if (this.frameTimes.length > 60) this.frameTimes.shift()
-      const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
-      this.currentFPS = avg > 0 ? Math.round(1000 / avg) : 0
-    }
-    this.lastFrameTime = now
-
     // Camera animation
+    const wasAnimating = this.animating
     this.updateAnimation(now)
+    if (this.animating || wasAnimating) this.dirty = true
 
-    if (this.autoRotate && !this.animating) this.yaw += 0.005
-    this.render()
-    this.raf = requestAnimationFrame(this.loop)
+    // Auto-rotate
+    if (this.autoRotate && !this.animating) {
+      this.yaw += 0.005
+      this.dirty = true
+    }
+
+    // Only render if something changed
+    if (this.dirty) {
+      this.dirty = false
+      this.render()
+
+      // FPS tracking — measure time between actual renders
+      if (this.lastFrameTime > 0) {
+        this.frameTimes.push(now - this.lastFrameTime)
+        if (this.frameTimes.length > 60) this.frameTimes.shift()
+        const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
+        this.currentFPS = avg > 0 ? Math.round(1000 / avg) : 0
+      }
+      this.lastFrameTime = now
+    }
+
+    // Keep the loop running while auto-rotate or animating; otherwise stop
+    if (this.autoRotate || this.animating) {
+      this.raf = requestAnimationFrame(this.loop)
+    }
   }
 
   private onDown = (e: PointerEvent) => {
@@ -731,6 +798,7 @@ export class WebGPURenderer {
     this.snapOrbit = !this.pan && e.ctrlKey
     this.mx = e.clientX; this.my = e.clientY
     this.canvas.setPointerCapture(e.pointerId)
+    this.requestRender()
   }
   private onMove = (e: PointerEvent) => {
     if (!this.drag) return
@@ -752,11 +820,13 @@ export class WebGPURenderer {
         this.pitch = Math.max(-1.5, Math.min(1.5, Math.round(this.pitch / step) * step))
       }
     }
+    this.requestRender()
   }
   private onUp = (e: PointerEvent) => { this.drag = false; this.snapOrbit = false; this.canvas.releasePointerCapture(e.pointerId) }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
     this.dist = Math.max(1, Math.min(50000, this.dist * (1 + e.deltaY * 0.001)))
+    this.requestRender()
   }
   private noCtx = (e: Event) => e.preventDefault()
 
@@ -788,6 +858,7 @@ export class WebGPURenderer {
       this.lastTouchX = this.touchStartMidX
       this.lastTouchY = this.touchStartMidY
     }
+    this.requestRender()
   }
 
   private onTouchMove = (e: TouchEvent) => {
@@ -826,6 +897,7 @@ export class WebGPURenderer {
       this.tz += panDx * sinY * sp
       this.ty += panDy * sp
     }
+    this.requestRender()
   }
 
   private onTouchEnd = (e: TouchEvent) => {
@@ -861,6 +933,7 @@ export class WebGPURenderer {
   setCamera(yaw: number, pitch: number) {
     this.yaw = yaw
     this.pitch = pitch
+    this.requestRender()
   }
 
   /** Get current camera yaw/pitch (for the orientation gizmo). */
@@ -909,6 +982,7 @@ export class WebGPURenderer {
 
     this.animStartTime = performance.now()
     this.animating = true
+    this.requestRender()
   }
 
   /** Get current FPS value. */
@@ -938,6 +1012,7 @@ export class WebGPURenderer {
   autoFitAll() {
     if (this.lastRawMeshes && this.lastRawMeshes.length) {
       this.autoFit(this.lastRawMeshes)
+      this.requestRender()
     }
   }
 
@@ -1139,6 +1214,7 @@ export class WebGPURenderer {
   toggleWireframe(): boolean {
     this.wireframe = !this.wireframe
     if (this.wireframe) this.buildWireframeBuffer()
+    this.requestRender()
     return this.wireframe
   }
 
@@ -1146,24 +1222,28 @@ export class WebGPURenderer {
   toggleEdges(): boolean {
     this.showEdges = !this.showEdges
     if (this.showEdges) this.buildEdgeBuffer()
+    this.requestRender()
     return this.showEdges
   }
 
   /** Toggle grid floor on/off. */
   toggleGrid(): boolean {
     this.showGrid = !this.showGrid
+    this.requestRender()
     return this.showGrid
   }
 
   /** Toggle auto-rotate turntable on/off. */
   toggleAutoRotate(): boolean {
     this.autoRotate = !this.autoRotate
+    if (this.autoRotate) this.requestRender()
     return this.autoRotate
   }
 
   /** Toggle between perspective and orthographic projection. */
   toggleProjection(): boolean {
     this.orthographic = !this.orthographic
+    this.requestRender()
     return this.orthographic
   }
 
@@ -1205,48 +1285,57 @@ export class WebGPURenderer {
     this.clearG = g
     this.clearB = b
     this.clearA = a
+    this.requestRender()
   }
 
   /** Set a lighting preset. */
   setLighting(preset: string) {
     this.lightingPreset = preset
+    this.requestRender()
   }
 
   /** Toggle clipping plane on/off. */
   toggleClip(): boolean {
     this.clipEnabled = !this.clipEnabled
+    this.requestRender()
     return this.clipEnabled
   }
 
   /** Set clipping plane enabled state. */
   setClipEnabled(v: boolean) {
     this.clipEnabled = v
+    this.requestRender()
   }
 
   /** Set clipping plane Y value. Kept for backward compat. */
   setClipY(y: number) {
     this.clipValue = y
+    this.requestRender()
   }
 
   /** Set clipping plane value on the current axis. */
   setClipValue(v: number) {
     this.clipValue = v
+    this.requestRender()
   }
 
   /** Set the clipping plane axis (0=X, 1=Y, 2=Z). */
   setClipAxis(axis: number) {
     this.clipAxis = Math.max(0, Math.min(2, Math.round(axis)))
+    this.requestRender()
   }
 
   /** Toggle fog on/off. */
   toggleFog(): boolean {
     this.fogEnabled = !this.fogEnabled
+    this.requestRender()
     return this.fogEnabled
   }
 
   /** Set fog enabled state. */
   setFogEnabled(v: boolean) {
     this.fogEnabled = v
+    this.requestRender()
   }
 
   /** Check whether fog is enabled. */
@@ -1257,12 +1346,14 @@ export class WebGPURenderer {
   /** Toggle reflection on/off. */
   toggleReflection(): boolean {
     this.showReflection = !this.showReflection
+    this.requestRender()
     return this.showReflection
   }
 
   /** Set reflection enabled state. */
   setReflection(v: boolean) {
     this.showReflection = v
+    this.requestRender()
   }
 
   /** Check whether reflection is enabled. */
@@ -1325,6 +1416,7 @@ export class WebGPURenderer {
         g.transp = raw.color[3] < 0.99
       }
     }
+    this.requestRender()
   }
 
   /** Get current render mode. */
@@ -1335,6 +1427,7 @@ export class WebGPURenderer {
   /** Set flat shading on or off. */
   setFlatShading(v: boolean) {
     this.flatShading = v
+    this.requestRender()
   }
 
   /** Check whether flat shading is enabled. */
@@ -1446,9 +1539,41 @@ export class WebGPURenderer {
     this.dev.queue.writeBuffer(this.edgeVB, 0, new Float32Array(d))
   }
 
+  /** Get GPU adapter/device info for the performance panel. */
+  getDeviceInfo(): { adapter: string; description: string; vendor: string; architecture: string; maxBufferSize: number; maxTextureSize: number } {
+    const info = this.adapterInfoCache
+    return {
+      adapter: info?.device ?? 'unknown',
+      description: info?.description ?? '',
+      vendor: info?.vendor ?? 'unknown',
+      architecture: info?.architecture ?? '',
+      maxBufferSize: this.dev?.limits?.maxBufferSize ?? 0,
+      maxTextureSize: this.dev?.limits?.maxTextureDimension2D ?? 0,
+    }
+  }
+
+  /** Get buffer statistics for the performance panel. */
+  getBufferStats(): { totalVertexBytes: number; totalIndexBytes: number; meshCount: number; triangleCount: number } {
+    let totalVB = 0, totalIB = 0, triCount = 0
+    for (const m of this.lastRawMeshes) {
+      totalVB += m.vertices.byteLength
+      totalIB += m.indices.byteLength
+      triCount += m.indices.length / 3
+    }
+    return { totalVertexBytes: totalVB, totalIndexBytes: totalIB, meshCount: this.lastRawMeshes.length, triangleCount: triCount }
+  }
+
   destroy() {
     this.dead = true
-    cancelAnimationFrame(this.raf)
+    if (this.raf) cancelAnimationFrame(this.raf)
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
+    if (this.resizeDebounceTimer) {
+      clearTimeout(this.resizeDebounceTimer)
+      this.resizeDebounceTimer = null
+    }
     const c = this.canvas
     c.removeEventListener('pointerdown', this.onDown)
     c.removeEventListener('pointermove', this.onMove)

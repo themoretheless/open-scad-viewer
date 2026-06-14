@@ -366,6 +366,35 @@ const L: Record<string, Record<string, string>> = {
     // 3MF export
     export3mf: 'Экспорт 3MF',
     cmdExport3MF: 'Экспорт 3MF',
+    // Device lost
+    deviceLost: 'GPU устройство потеряно',
+    deviceLostMsg: 'Соединение с GPU потеряно. Попробуйте переинициализировать.',
+    reinitialize: 'Переинициализировать',
+    reinitSuccess: 'WebGPU переинициализирован',
+    reinitFailed: 'Не удалось переинициализировать WebGPU',
+    // Performance panel
+    perfPanel: 'Производительность',
+    perfParseTime: 'Разбор',
+    perfMeshGenTime: 'Генерация мешей',
+    perfGpuUploadTime: 'Загрузка на GPU',
+    perfTriangles: 'Треугольники',
+    perfVertices: 'Вершины',
+    perfVertexBuffer: 'Буфер вершин',
+    perfIndexBuffer: 'Буфер индексов',
+    perfGpuAdapter: 'GPU адаптер',
+    perfGpuVendor: 'Производитель',
+    perfMaxBuffer: 'Макс. буфер',
+    perfMaxTexture: 'Макс. текстура',
+    cmdPerfPanel: 'Панель производительности',
+    // Shortcuts categories
+    shortcatEditor: 'Редактор',
+    shortcatNavigation: 'Навигация',
+    shortcatView: 'Вид',
+    shortcatFile: 'Файлы',
+    printShortcuts: 'Печать',
+    // Undo/redo
+    sc_undo_custom: 'Отменить',
+    sc_redo: 'Повторить',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -638,6 +667,35 @@ const L: Record<string, Record<string, string>> = {
     // 3MF export
     export3mf: 'Export 3MF',
     cmdExport3MF: 'Export 3MF',
+    // Device lost
+    deviceLost: 'GPU Device Lost',
+    deviceLostMsg: 'GPU connection was lost. Try to reinitialize.',
+    reinitialize: 'Reinitialize',
+    reinitSuccess: 'WebGPU reinitialized',
+    reinitFailed: 'Failed to reinitialize WebGPU',
+    // Performance panel
+    perfPanel: 'Performance',
+    perfParseTime: 'Parse',
+    perfMeshGenTime: 'Mesh Gen',
+    perfGpuUploadTime: 'GPU Upload',
+    perfTriangles: 'Triangles',
+    perfVertices: 'Vertices',
+    perfVertexBuffer: 'Vertex Buffer',
+    perfIndexBuffer: 'Index Buffer',
+    perfGpuAdapter: 'GPU Adapter',
+    perfGpuVendor: 'Vendor',
+    perfMaxBuffer: 'Max Buffer',
+    perfMaxTexture: 'Max Texture',
+    cmdPerfPanel: 'Performance Panel',
+    // Shortcuts categories
+    shortcatEditor: 'Editor',
+    shortcatNavigation: 'Navigation',
+    shortcatView: 'View',
+    shortcatFile: 'File',
+    printShortcuts: 'Print',
+    // Undo/redo
+    sc_undo_custom: 'Undo',
+    sc_redo: 'Redo',
   },
 }
 
@@ -913,6 +971,109 @@ let lastParsedMeshes: MeshData[] = []
 /* ── WebGPU initialization / loading state ── */
 const rendererReady = ref(false)
 const initFailed = ref(false)
+const deviceLost = ref(false)
+
+/* ── Custom Undo/Redo Stack (Feature 4) ── */
+const UNDO_MAX = 100
+const undoStack = ref<string[]>([])
+const redoStack = ref<string[]>([])
+let undoDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+function pushUndoSnapshot(snapshot?: string) {
+  const snap = snapshot ?? code.value
+  const top = undoStack.value.length > 0 ? undoStack.value[undoStack.value.length - 1] : null
+  if (snap === top) return // no duplicate
+  undoStack.value.push(snap)
+  if (undoStack.value.length > UNDO_MAX) undoStack.value.shift()
+  redoStack.value = [] // clear redo on new edit
+}
+
+function pushUndoDebounced() {
+  if (undoDebounceTimer) clearTimeout(undoDebounceTimer)
+  undoDebounceTimer = setTimeout(() => {
+    pushUndoSnapshot()
+  }, 500)
+}
+
+function customUndo() {
+  if (!undoStack.value.length) return
+  // Push current state onto redo before reverting
+  redoStack.value.push(code.value)
+  const prev = undoStack.value.pop()!
+  // Temporarily disable the watcher-driven undo push
+  suppressUndoPush = true
+  code.value = prev
+  nextTick(() => { suppressUndoPush = false })
+}
+
+function customRedo() {
+  if (!redoStack.value.length) return
+  // Push current state onto undo before redoing
+  undoStack.value.push(code.value)
+  const next = redoStack.value.pop()!
+  suppressUndoPush = true
+  code.value = next
+  nextTick(() => { suppressUndoPush = false })
+}
+
+let suppressUndoPush = false
+
+/* ── Performance Panel (Feature 5) ── */
+const showPerfPanel = ref(false)
+const perfParseTime = ref(0)
+const perfMeshGenTime = ref(0)
+const perfGpuUploadTime = ref(0)
+
+const perfDeviceInfo = computed(() => {
+  if (!renderer) return { adapter: '', description: '', vendor: '', architecture: '', maxBufferSize: 0, maxTextureSize: 0 }
+  return renderer.getDeviceInfo()
+})
+
+const perfBufferStats = computed(() => {
+  // Touch reactive refs to ensure recomputation when meshes change
+  void triCount.value
+  void meshCount.value
+  if (!renderer) return { totalVertexBytes: 0, totalIndexBytes: 0, meshCount: 0, triangleCount: 0 }
+  return renderer.getBufferStats()
+})
+
+/* ── WebGPU Reinitialize (Device Lost Recovery) ── */
+async function reinitializeWebGPU() {
+  if (!canvasRef.value) return
+  // Destroy old renderer
+  try { renderer?.destroy() } catch { /* ignore cleanup errors */ }
+  renderer = null
+
+  renderer = new WebGPURenderer()
+  let ok = false
+  try {
+    ok = await renderer.init(canvasRef.value)
+  } catch {
+    ok = false
+  }
+  if (!ok) {
+    addToast(t('reinitFailed'), 'error')
+    addConsoleEntry('error', t('reinitFailed'))
+    return
+  }
+  deviceLost.value = false
+
+  // Re-attach device lost handler
+  renderer.onDeviceLost = (reason: string) => {
+    deviceLost.value = true
+    addConsoleEntry('error', t('deviceLost') + ': ' + reason)
+    addToast(t('deviceLostMsg'), 'error', {
+      actionLabel: t('reinitialize'),
+      duration: 10000,
+      action: () => reinitializeWebGPU(),
+    })
+  }
+
+  applyBuildPlate()
+  doRender()
+  addToast(t('reinitSuccess'), 'success')
+  addConsoleEntry('info', t('reinitSuccess'))
+}
 
 /* ── App first-load fade-in ── */
 const appLoaded = ref(false)
@@ -2238,6 +2399,7 @@ function openFile() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
+      pushUndoSnapshot() // snapshot before file open
       const content = reader.result as string
       code.value = content
       addToRecent(file.name.replace(/\.scad$/, ''), content)
@@ -2469,6 +2631,7 @@ function doZoomOut() {
 
 /* ── Code Formatter / Auto-indent ── */
 function formatCode() {
+  pushUndoSnapshot() // snapshot before format
   const src = code.value
   const lines = src.split('\n')
   const result: string[] = []
@@ -2866,8 +3029,23 @@ onMounted(async () => {
   }
   if (!ok) { gpuOk.value = false; initFailed.value = true; rendererReady.value = true; return }
   rendererReady.value = true
+  deviceLost.value = false
+
+  // Handle device lost
+  renderer.onDeviceLost = (reason: string) => {
+    deviceLost.value = true
+    addConsoleEntry('error', t('deviceLost') + ': ' + reason)
+    addToast(t('deviceLostMsg'), 'error', {
+      actionLabel: t('reinitialize'),
+      duration: 10000,
+      action: () => reinitializeWebGPU(),
+    })
+  }
+
   // Restore persisted build-plate setting.
   applyBuildPlate()
+  // Initialize undo stack with current code
+  pushUndoSnapshot(code.value)
   doRender()
 
   // Start axis label updates
@@ -2894,6 +3072,7 @@ onUnmounted(() => {
   if (statsInterval) clearInterval(statsInterval)
   if (axisLabelRAF) cancelAnimationFrame(axisLabelRAF)
   if (gizmoRAF) cancelAnimationFrame(gizmoRAF)
+  if (undoDebounceTimer) clearTimeout(undoDebounceTimer)
   document.removeEventListener('click', onCloseContextMenu)
   renderer?.destroy(); renderer = null
 })
@@ -2905,6 +3084,10 @@ watch(code, (v) => {
   computeFolds()
   // Also keep legacy key for backwards compat
   localStorage.setItem('scad-code', v)
+  // Push to undo stack (debounced) on code change from typing
+  if (!suppressUndoPush) {
+    pushUndoDebounced()
+  }
   if (!autoRender.value) return
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(doRender, prefAutoRenderDelay.value)
@@ -2934,12 +3117,18 @@ function doRender() {
     })
     const meshes = result.meshes
     astNodes.value = result.ast
-    const t1 = performance.now()
-    renderTime.value = Math.round(t1 - t0)
+    const tParsed = performance.now()
+    perfParseTime.value = Math.round(tParsed - t0)
     meshCount.value = meshes.length
     triCount.value = meshes.reduce((s: number, m: MeshData) => s + m.indices.length / 3, 0)
     lastParsedMeshes = meshes
+    const tMeshStart = performance.now()
     renderer.setMeshes(meshes)
+    const tMeshEnd = performance.now()
+    perfMeshGenTime.value = Math.round(tParsed - t0)
+    perfGpuUploadTime.value = Math.round(tMeshEnd - tMeshStart)
+    const t1 = performance.now()
+    renderTime.value = Math.round(t1 - t0)
     // Console log entries
     const nodeCount = countASTNodes(result.ast)
     addConsoleEntry('info', t('parsedNodes').replace('{n}', String(nodeCount)))
@@ -2995,6 +3184,7 @@ function countASTNodes(nodes: ASTNode[]): number {
 
 function loadExample(name: string) {
   if (EXAMPLES[name]) {
+    pushUndoSnapshot() // snapshot before example load
     code.value = EXAMPLES[name]
     addToRecent(name, EXAMPLES[name])
   }
@@ -3261,6 +3451,19 @@ function moveLineDown(el: HTMLTextAreaElement) {
 }
 
 function handleKey(e: KeyboardEvent) {
+  // Custom Undo: Ctrl+Z
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault()
+    customUndo()
+    return
+  }
+  // Custom Redo: Ctrl+Shift+Z or Ctrl+Y
+  if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+    e.preventDefault()
+    customRedo()
+    return
+  }
+
   // Autocomplete navigation
   if (acVisible.value) {
     if (e.key === 'ArrowDown') {
@@ -3454,7 +3657,10 @@ function handleCanvasKeydown(e: KeyboardEvent) {
   } else if (key === 'e' || key === 'у') {
     e.preventDefault()
     renderer.pitch = Math.max(-1.5, renderer.pitch - step)
+  } else {
+    return // No camera key was pressed, skip requestRender
   }
+  renderer.requestRender()
 }
 
 function handleKeyUp() {
@@ -3475,6 +3681,25 @@ watch(wordWrap, v => localStorage.setItem('scad-word-wrap', String(v)))
 
 function toggleWordWrap() {
   wordWrap.value = !wordWrap.value
+}
+
+/* ── Print Shortcuts ── */
+function printShortcuts() {
+  const el = document.querySelector('.shortcuts-scroll')
+  if (!el) return
+  const win = window.open('', '_blank', 'width=600,height=800')
+  if (!win) return
+  win.document.write(`<!DOCTYPE html><html><head><title>${t('shortcutsTitle')}</title><style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #222; }
+    h1 { font-size: 1.3rem; margin-bottom: 16px; }
+    .shortcut-category { font-weight: 700; font-size: 0.9rem; margin-top: 16px; margin-bottom: 6px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+    .shortcut-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.85rem; border-bottom: 1px solid #eee; }
+    kbd { background: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 1px 6px; font-size: 0.78rem; font-family: monospace; }
+    @media print { body { padding: 0; } }
+  </style></head><body><h1>${t('shortcutsTitle')}</h1>${el.innerHTML}</body></html>`)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print() }, 300)
 }
 
 /* ── Feature: Selection Info ── */
@@ -3712,6 +3937,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'buildPlate', label: () => t('buildPlate'), action: () => toggleBuildPlate() },
   { id: 'showWelcome', label: () => t('cmdShowWelcome'), action: () => openWelcome() },
   { id: 'importStl', label: () => t('cmdImportSTL'), action: () => openImportSTL() },
+  { id: 'perfPanel', label: () => t('cmdPerfPanel'), action: () => { showPerfPanel.value = !showPerfPanel.value } },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -4543,33 +4769,44 @@ translate([0, 0, 39])
     <!-- Shortcuts modal -->
     <Teleport to="body">
       <div v-if="showShortcuts" class="modal-backdrop" @click.self="showShortcuts = false">
-        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('ariaShortcutsDialog')">
+        <div class="modal-box shortcuts-modal" role="dialog" aria-modal="true" :aria-label="t('ariaShortcutsDialog')">
           <div class="modal-header">
             <span class="modal-title">{{ t('shortcutsTitle') }}</span>
-            <button class="modal-close" @click="showShortcuts = false" :aria-label="t('ariaCloseModal')">&times;</button>
+            <div class="modal-header-actions">
+              <button class="btn btn-sm shortcuts-print-btn" @click="printShortcuts">{{ t('printShortcuts') }}</button>
+              <button class="modal-close" @click="showShortcuts = false" :aria-label="t('ariaCloseModal')">&times;</button>
+            </div>
           </div>
-          <div class="modal-body">
+          <div class="modal-body shortcuts-scroll">
+            <div class="shortcut-category">{{ t('shortcatEditor') }}</div>
             <div class="shortcut-row"><kbd>Ctrl+Enter</kbd><span>{{ t('sc_render') }}</span></div>
             <div class="shortcut-row"><kbd>Tab</kbd><span>{{ t('sc_indent') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>{{ t('sc_undo') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>{{ t('sc_undo_custom') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+Z / Ctrl+Y</kbd><span>{{ t('sc_redo') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_findOnly') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+H</kbd><span>{{ t('sc_findReplace') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+/</kbd><span>{{ t('sc_commentToggle') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
-            <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+D</kbd><span>{{ t('sc_duplicateLine') }}</span></div>
             <div class="shortcut-row"><kbd>Alt+Up</kbd><span>{{ t('sc_moveLineUp') }}</span></div>
             <div class="shortcut-row"><kbd>Alt+Down</kbd><span>{{ t('sc_moveLineDown') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+Tab</kbd><span>{{ t('sc_nextTab') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+Shift+Tab</kbd><span>{{ t('sc_prevTab') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+W</kbd><span>{{ t('sc_closeTab') }}</span></div>
+            <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
+
+            <div class="shortcut-category">{{ t('shortcatNavigation') }}</div>
             <div class="shortcut-row"><kbd>W / A / S / D</kbd><span>{{ t('sc_wasd') }}</span></div>
             <div class="shortcut-row"><kbd>Q / E</kbd><span>{{ t('sc_qe') }}</span></div>
             <div class="shortcut-row"><kbd>Shift+W/A/S/D</kbd><span>{{ t('sc_shiftWasd') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+{{ lang === 'ru' ? 'ЛКМ' : 'LMB' }}</kbd><span>{{ t('sc_orbitSnap') }}</span></div>
+
+            <div class="shortcut-category">{{ t('shortcatView') }}</div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
+
+            <div class="shortcut-category">{{ t('shortcatFile') }}</div>
+            <div class="shortcut-row"><kbd>Ctrl+Tab</kbd><span>{{ t('sc_nextTab') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+Tab</kbd><span>{{ t('sc_prevTab') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+W</kbd><span>{{ t('sc_closeTab') }}</span></div>
           </div>
         </div>
       </div>
@@ -5368,6 +5605,10 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="showStatistics">&#10003;</span>
                 {{ t('statistics') }}
               </button>
+              <button class="vp-dd-item" @click="showPerfPanel = !showPerfPanel; closeAllMenus()">
+                <span class="vp-dd-check" v-if="showPerfPanel">&#10003;</span>
+                {{ t('perfPanel') }}
+              </button>
             </div>
             </transition>
           </div>
@@ -5486,6 +5727,44 @@ translate([0, 0, 39])
           </div>
         </div>
         </transition>
+
+        <!-- Performance Panel (Feature 5) -->
+        <transition name="overlay-fade">
+        <div v-if="showPerfPanel" class="perf-panel" role="region">
+          <div class="perf-panel-header">
+            <span class="perf-panel-title">{{ t('perfPanel') }}</span>
+            <button class="perf-panel-close" @click="showPerfPanel = false">&times;</button>
+          </div>
+          <div class="perf-panel-body">
+            <div class="perf-section-title">Timing</div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfParseTime') }}</span><span class="perf-val">{{ perfParseTime }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfGpuUploadTime') }}</span><span class="perf-val">{{ perfGpuUploadTime }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('statRender') }}</span><span class="perf-val">{{ renderTime }}ms</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('statFps') }}</span><span class="perf-val">{{ fpsVal }}</span></div>
+            <div class="perf-section-title">Geometry</div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfTriangles') }}</span><span class="perf-val">{{ triCount.toLocaleString() }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfVertices') }}</span><span class="perf-val">{{ vertexCount.toLocaleString() }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfVertexBuffer') }}</span><span class="perf-val">{{ perfBufferStats.totalVertexBytes ? (perfBufferStats.totalVertexBytes / 1024).toFixed(1) + ' KB' : '0' }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfIndexBuffer') }}</span><span class="perf-val">{{ perfBufferStats.totalIndexBytes ? (perfBufferStats.totalIndexBytes / 1024).toFixed(1) + ' KB' : '0' }}</span></div>
+            <div class="perf-section-title">GPU</div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfGpuAdapter') }}</span><span class="perf-val perf-val-sm">{{ perfDeviceInfo.adapter || 'N/A' }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfGpuVendor') }}</span><span class="perf-val perf-val-sm">{{ perfDeviceInfo.vendor || 'N/A' }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfMaxBuffer') }}</span><span class="perf-val">{{ perfDeviceInfo.maxBufferSize ? (perfDeviceInfo.maxBufferSize / (1024*1024)).toFixed(0) + ' MB' : 'N/A' }}</span></div>
+            <div class="perf-row"><span class="perf-key">{{ t('perfMaxTexture') }}</span><span class="perf-val">{{ perfDeviceInfo.maxTextureSize || 'N/A' }}px</span></div>
+          </div>
+        </div>
+        </transition>
+
+        <!-- Device Lost overlay (Feature 3) -->
+        <div v-if="deviceLost" class="device-lost-overlay">
+          <div class="device-lost-content">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p class="device-lost-msg">{{ t('deviceLostMsg') }}</p>
+            <button class="btn btn-primary" @click="reinitializeWebGPU">{{ t('reinitialize') }}</button>
+          </div>
+        </div>
 
         <!-- Animation Timeline -->
         <div class="anim-timeline">
@@ -7789,5 +8068,145 @@ textarea.code:focus-visible {
   .editor-panel { width: 100% !important; max-width: 100% !important; height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
   .divider { display: none; }
   .canvas-panel { height: 60vh; }
+}
+
+/* ── Performance Panel ── */
+.perf-panel {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  z-index: 50;
+  font-size: var(--fz-xs);
+  animation: ctx-menu-in 0.12s ease;
+}
+.perf-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.perf-panel-title {
+  font-weight: 600;
+  font-size: var(--fz-sm);
+}
+.perf-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.perf-panel-close:hover { color: var(--text); }
+.perf-panel-body {
+  padding: 6px 10px 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.perf-section-title {
+  font-weight: 700;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.perf-section-title:first-child { margin-top: 2px; }
+.perf-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
+}
+.perf-key {
+  color: var(--text-dim);
+}
+.perf-val {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.perf-val-sm {
+  font-size: 0.68rem;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Device Lost Overlay ── */
+.device-lost-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.65);
+  z-index: 100;
+  animation: fade-in 0.2s ease;
+}
+.device-lost-content {
+  text-align: center;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  color: var(--text);
+}
+.device-lost-content svg {
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+.device-lost-msg {
+  margin-bottom: 16px;
+  font-size: var(--fz-sm);
+  color: var(--text-dim);
+}
+
+/* ── Shortcuts modal improvements ── */
+.shortcuts-modal {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.shortcuts-modal .modal-header {
+  flex-shrink: 0;
+}
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shortcuts-print-btn {
+  font-size: 0.72rem;
+  padding: 2px 10px;
+}
+.shortcuts-scroll {
+  overflow-y: auto;
+  max-height: 60vh;
+  flex: 1;
+}
+.shortcut-category {
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-top: 14px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.shortcut-category:first-child {
+  margin-top: 4px;
 }
 </style>
