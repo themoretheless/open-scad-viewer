@@ -1234,7 +1234,36 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
   return result.join('') + '\n'
 }
 
-const highlightedCode = computed(() => highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value))
+function addIndentGuides(html: string, tabSize: number): string {
+  const lines = html.split('\n')
+  const result: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    // Count leading spaces in the raw text (ignoring HTML tags)
+    const plain = line.replace(/<[^>]*>/g, '')
+    let spaces = 0
+    for (let j = 0; j < plain.length; j++) {
+      if (plain[j] === ' ') spaces++
+      else break
+    }
+    if (spaces >= tabSize) {
+      const guideCount = Math.floor(spaces / tabSize)
+      let guideHtml = ''
+      for (let g = 0; g < guideCount; g++) {
+        guideHtml += `<span class="indent-guide" style="left:${g * tabSize}ch"></span>`
+      }
+      result.push(`<span class="indent-line">${guideHtml}</span>${line}`)
+    } else {
+      result.push(line)
+    }
+  }
+  return result.join('\n')
+}
+
+const highlightedCode = computed(() => {
+  const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value)
+  return addIndentGuides(raw, prefTabSize.value)
+})
 
 /* ── Line numbers ── */
 const lineCount = computed(() => code.value.split('\n').length)
@@ -2001,14 +2030,23 @@ function executeCommand(cmd: PaletteCommand) {
   nextTick(() => cmd.action())
 }
 
+function scrollCommandIntoView() {
+  nextTick(() => {
+    const el = document.querySelector('.command-palette-item.active')
+    if (el) el.scrollIntoView({ block: 'nearest' })
+  })
+}
+
 function handleCommandPaletteKeydown(e: KeyboardEvent) {
   const cmds = filteredCommands.value
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     commandSelectedIndex.value = (commandSelectedIndex.value + 1) % cmds.length
+    scrollCommandIntoView()
   } else if (e.key === 'ArrowUp') {
     e.preventDefault()
     commandSelectedIndex.value = (commandSelectedIndex.value - 1 + cmds.length) % cmds.length
+    scrollCommandIntoView()
   } else if (e.key === 'Enter') {
     e.preventDefault()
     if (cmds.length > 0) {
@@ -2229,9 +2267,60 @@ translate([0, 0, 35])
             <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_findOnly') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+H</kbd><span>{{ t('sc_findReplace') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+/</kbd><span>{{ t('sc_commentToggle') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
+            <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Command Palette -->
+      <div v-if="showCommandPalette" class="command-palette-backdrop" @click.self="closeCommandPalette">
+        <div class="command-palette">
+          <div class="command-palette-input-wrapper">
+            <svg class="command-palette-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              ref="commandSearchInputRef"
+              class="command-palette-input"
+              v-model="commandSearch"
+              :placeholder="t('commandPalette')"
+              @keydown="handleCommandPaletteKeydown"
+            />
+          </div>
+          <div class="command-palette-list" v-if="filteredCommands.length">
+            <div
+              v-for="(cmd, idx) in filteredCommands"
+              :key="cmd.id"
+              class="command-palette-item"
+              :class="{ active: idx === commandSelectedIndex }"
+              @click="executeCommand(cmd)"
+              @mouseenter="commandSelectedIndex = idx"
+            >
+              <span class="command-palette-label">{{ cmd.label() }}</span>
+              <kbd v-if="cmd.shortcut" class="command-palette-shortcut">{{ cmd.shortcut }}</kbd>
+            </div>
+          </div>
+          <div v-else class="command-palette-empty">{{ t('noMatches') }}</div>
+        </div>
+      </div>
+
+      <!-- Go to Line dialog -->
+      <div v-if="showGoToLine" class="go-to-line-backdrop" @click.self="closeGoToLine">
+        <div class="go-to-line-box">
+          <input
+            ref="goToLineInputRef"
+            class="go-to-line-input"
+            v-model="goToLineText"
+            :placeholder="t('goToLinePlaceholder').replace('{n}', String(lineCount))"
+            @keydown="handleGoToLineKeydown"
+            type="number"
+            min="1"
+            :max="lineCount"
+          />
         </div>
       </div>
 
@@ -2443,7 +2532,7 @@ translate([0, 0, 35])
           </div>
         </div>
 
-        <div class="code-editor" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize }">
+        <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize }">
           <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
           <div class="code-area">
             <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
@@ -2536,6 +2625,8 @@ translate([0, 0, 35])
           <span v-if="boundsSize[0] > 0 || boundsSize[1] > 0 || boundsSize[2] > 0" class="stat-size">
             &middot; {{ t('size') }}: {{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }}
           </span>
+          <span v-if="selectionInfo" class="stat-selection">&middot; {{ selectionInfo }}</span>
+          <span v-if="wordWrap" class="stat-wordwrap">&middot; {{ t('wordWrap') }}</span>
           <span class="diff-note">{{ t('diff_note') }}</span>
         </div>
       </div>
@@ -2666,6 +2757,37 @@ translate([0, 0, 35])
             </div>
             <div v-if="!flatTree.length" class="object-tree-empty">--</div>
           </div>
+        </div>
+
+        <!-- Animation Timeline -->
+        <div class="anim-timeline">
+          <button class="anim-play-btn" @click="toggleAnimation" :title="animPlaying ? t('animPause') : t('animPlay')">
+            <svg v-if="!animPlaying" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="6" height="18"/><rect x="14" y="3" width="6" height="18"/></svg>
+          </button>
+          <span class="anim-label">$t</span>
+          <input
+            type="range"
+            class="anim-slider"
+            min="0"
+            max="1"
+            step="0.001"
+            :value="animT"
+            @input="onAnimSliderInput"
+          />
+          <span class="anim-value">{{ animT.toFixed(3) }}</span>
+          <label class="anim-dur-label">
+            <span class="anim-dur-text">{{ t('animDuration') }}:</span>
+            <input
+              type="number"
+              class="anim-dur-input"
+              v-model.number="animDuration"
+              min="0.5"
+              max="60"
+              step="0.5"
+            />
+            <span class="anim-dur-unit">s</span>
+          </label>
         </div>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
@@ -3553,6 +3675,224 @@ html, body, #app {
 .tree-name { color: var(--hl-keyword); font-weight: 500; }
 .tree-summary { color: var(--text-dim); margin-left: 4px; font-size: 0.65rem; }
 .object-tree-empty { padding: 12px; color: var(--text-dim); text-align: center; font-size: 0.7rem; }
+
+/* ── Command Palette ── */
+.command-palette-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 15vh;
+  z-index: 10000;
+  backdrop-filter: blur(6px);
+}
+.command-palette {
+  width: 480px; max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.45);
+  overflow: hidden;
+}
+.command-palette-input-wrapper {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.command-palette-icon {
+  flex-shrink: 0; color: var(--text-dim);
+}
+.command-palette-input {
+  flex: 1; border: none; outline: none;
+  background: transparent; color: var(--text);
+  font-size: 0.88rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.command-palette-input::placeholder { color: var(--text-dim); }
+.command-palette-list {
+  max-height: 320px; overflow-y: auto;
+  padding: 4px 0;
+}
+.command-palette-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text);
+  transition: background 0.08s;
+}
+.command-palette-item:hover,
+.command-palette-item.active {
+  background: rgba(74,158,255,.15);
+}
+.command-palette-label { flex: 1; }
+.command-palette-shortcut {
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-left: 12px;
+  white-space: nowrap;
+}
+.command-palette-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* ── Go to Line ── */
+.go-to-line-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.3);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 15vh;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+.go-to-line-box {
+  width: 320px; max-width: 85vw;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.4);
+  padding: 6px;
+  overflow: hidden;
+}
+.go-to-line-input {
+  width: 100%;
+  border: none; outline: none;
+  background: transparent; color: var(--text);
+  font-size: 0.88rem;
+  padding: 8px 10px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  -moz-appearance: textfield;
+}
+.go-to-line-input::-webkit-inner-spin-button,
+.go-to-line-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.go-to-line-input::placeholder { color: var(--text-dim); }
+
+/* ── Word Wrap ── */
+.word-wrap-on .code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+}
+.word-wrap-on .highlight-layer {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Selection Info ── */
+.stat-selection {
+  color: var(--accent);
+  font-weight: 500;
+}
+.stat-wordwrap {
+  color: var(--hl-special);
+}
+
+/* ── Indent Guides ── */
+:deep(.indent-line) {
+  position: relative;
+}
+:deep(.indent-guide) {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--border);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── Animation Timeline ── */
+.anim-timeline {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(30,30,34,.78);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  white-space: nowrap;
+}
+[data-theme="light"] .anim-timeline {
+  background: rgba(255,255,255,.78);
+  border-color: rgba(0,0,0,.12);
+}
+.anim-play-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  transition: background 0.12s;
+  padding: 0;
+}
+.anim-play-btn:hover {
+  background: rgba(74,158,255,.2);
+}
+.anim-label {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--hl-special);
+  font-weight: 600;
+}
+.anim-slider {
+  width: 140px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 4px;
+}
+.anim-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text);
+  min-width: 40px;
+  text-align: right;
+}
+.anim-dur-label {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 0.66rem;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+.anim-dur-text {
+  white-space: nowrap;
+}
+.anim-dur-input {
+  width: 36px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.66rem;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.anim-dur-input::-webkit-inner-spin-button,
+.anim-dur-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.anim-dur-unit {
+  font-size: 0.66rem;
+  color: var(--text-dim);
+}
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
