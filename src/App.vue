@@ -20,6 +20,9 @@ const L: Record<string, Record<string, string>> = {
     renderTime: 'Рендер',
     top: 'Свр', front: 'Фрн', right: 'Прв', iso: 'Изо', reset: 'Сбр',
     screenshot: 'Скриншот',
+    wireframe: 'Каркас', grid: 'Сетка', fullscreen: 'Полный экран',
+    autoRotate: 'Вращение',
+    errorAtLine: 'Ошибка в строке',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -34,6 +37,9 @@ const L: Record<string, Record<string, string>> = {
     renderTime: 'Render',
     top: 'Top', front: 'Front', right: 'Right', iso: 'Iso', reset: 'Reset',
     screenshot: 'Screenshot',
+    wireframe: 'Wire', grid: 'Grid', fullscreen: 'Fullscreen',
+    autoRotate: 'Rotate',
+    errorAtLine: 'Error at line',
   },
 }
 
@@ -57,11 +63,16 @@ function toggleTheme() { isDark.value = !isDark.value; applyTheme() }
 const code = ref(localStorage.getItem('scad-code') || EXAMPLES.basic)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const error = ref('')
+const errorLine = ref(-1)
 const meshCount = ref(0)
 const triCount = ref(0)
 const gpuOk = ref(true)
 const autoRender = ref(true)
 const renderTime = ref(0)
+const isFullscreen = ref(false)
+const showWireframe = ref(false)
+const showGrid = ref(true)
+const isAutoRotate = ref(false)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
@@ -199,8 +210,15 @@ const highlightedCode = computed(() => highlightCode(code.value))
 const lineCount = computed(() => code.value.split('\n').length)
 const lineNumbers = computed(() => {
   const n = lineCount.value
+  const errL = errorLine.value
   const nums: string[] = []
-  for (let i = 1; i <= n; i++) nums.push(String(i))
+  for (let i = 1; i <= n; i++) {
+    if (i === errL) {
+      nums.push(`<span class="line-error">${i}</span>`)
+    } else {
+      nums.push(String(i))
+    }
+  }
   return nums.join('\n')
 })
 
@@ -250,6 +268,29 @@ function takeScreenshot() {
   renderer.screenshot()
 }
 
+/* ── Toggle wireframe ── */
+function toggleWireframe() {
+  if (!renderer) return
+  showWireframe.value = renderer.toggleWireframe()
+}
+
+/* ── Toggle grid ── */
+function toggleGrid() {
+  if (!renderer) return
+  showGrid.value = renderer.toggleGrid()
+}
+
+/* ── Toggle fullscreen canvas ── */
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+}
+
+/* ── Toggle auto-rotate ── */
+function toggleAutoRotate() {
+  if (!renderer) return
+  isAutoRotate.value = renderer.toggleAutoRotate()
+}
+
 onMounted(async () => {
   if (!canvasRef.value) return
   renderer = new WebGPURenderer()
@@ -273,6 +314,7 @@ watch(code, (v) => {
 function doRender() {
   if (!renderer) return
   error.value = ''
+  errorLine.value = -1
   try {
     const t0 = performance.now()
     const meshes = parseOpenSCAD(code.value)
@@ -282,7 +324,18 @@ function doRender() {
     triCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
     renderer.setMeshes(meshes)
   } catch (e: any) {
-    error.value = e.message || String(e)
+    let msg = e.message || String(e)
+    // Try to extract position from error like "@123"
+    const posMatch = msg.match(/@(\d+)/)
+    if (posMatch) {
+      const pos = parseInt(posMatch[1])
+      // Calculate line number from character position
+      const prefix = code.value.substring(0, pos)
+      const line = prefix.split('\n').length
+      errorLine.value = line
+      msg = `${t('errorAtLine')} ${line}: ${msg}`
+    }
+    error.value = msg
   }
 }
 
@@ -424,8 +477,8 @@ translate([0, 0, 35])
 
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
-    <div v-else class="main" :class="{ dragging: isDraggingDivider }">
-      <div class="editor-panel" :style="{ width: editorWidth + 'px' }">
+    <div v-else class="main" :class="{ dragging: isDraggingDivider, fullscreen: isFullscreen }">
+      <div class="editor-panel" :style="{ width: editorWidth + 'px' }" v-show="!isFullscreen">
         <div class="toolbar">
           <button class="btn btn-primary" @click="doRender" title="Ctrl+Enter">
             {{ t('render') }}
@@ -442,7 +495,7 @@ translate([0, 0, 35])
         </div>
 
         <div class="code-editor">
-          <pre class="line-numbers" ref="lineNumRef" aria-hidden="true">{{ lineNumbers }}</pre>
+          <pre class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
           <div class="code-area">
             <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
             <textarea
@@ -469,7 +522,7 @@ translate([0, 0, 35])
         </div>
       </div>
 
-      <div class="divider" @mousedown="onDividerDown"></div>
+      <div class="divider" v-show="!isFullscreen" @mousedown="onDividerDown"></div>
 
       <div class="canvas-panel">
         <canvas ref="canvasRef" class="gpu-canvas" />

@@ -77,6 +77,17 @@ export class WebGPURenderer {
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
 
+  /* wireframe overlay */
+  private wireframeVB: GPUBuffer | null = null
+  private wireframeVC = 0
+  wireframe = false
+
+  /* grid toggle */
+  showGrid = true
+
+  /* auto-rotate */
+  autoRotate = false
+
   yaw = 0.6; pitch = 0.4; dist = 50
   tx = 0; ty = 0; tz = 0
 
@@ -221,6 +232,7 @@ export class WebGPURenderer {
       this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp: m.color[3] < 0.99 })
     }
     this.autoFit(meshes)
+    if (this.wireframe) this.buildWireframeBuffer()
   }
 
   private autoFit(meshes: MeshData[]) {
@@ -283,7 +295,7 @@ export class WebGPURenderer {
       },
     })
 
-    if (this.gridVB) {
+    if (this.showGrid && this.gridVB) {
       pass.setPipeline(this.linePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.gridVB)
@@ -310,12 +322,21 @@ export class WebGPURenderer {
       pass.drawIndexed(g.ic)
     }
 
+    /* wireframe edge overlay */
+    if (this.wireframe && this.wireframeVB && this.wireframeVC > 0) {
+      pass.setPipeline(this.linePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.wireframeVB)
+      pass.draw(this.wireframeVC)
+    }
+
     pass.end()
     this.dev.queue.submit([enc.finish()])
   }
 
   private loop = () => {
     if (this.dead) return
+    if (this.autoRotate) this.yaw += 0.005
     this.render()
     this.raf = requestAnimationFrame(this.loop)
   }
@@ -384,6 +405,76 @@ export class WebGPURenderer {
     }, 'image/png')
   }
 
+  /** Toggle wireframe edge overlay on/off. */
+  toggleWireframe(): boolean {
+    this.wireframe = !this.wireframe
+    if (this.wireframe) this.buildWireframeBuffer()
+    return this.wireframe
+  }
+
+  /** Toggle grid floor on/off. */
+  toggleGrid(): boolean {
+    this.showGrid = !this.showGrid
+    return this.showGrid
+  }
+
+  /** Toggle auto-rotate turntable on/off. */
+  toggleAutoRotate(): boolean {
+    this.autoRotate = !this.autoRotate
+    return this.autoRotate
+  }
+
+  /** Build a line-list vertex buffer with edges from the current meshes. */
+  private buildWireframeBuffer() {
+    this.wireframeVB?.destroy()
+    this.wireframeVB = null
+    this.wireframeVC = 0
+    if (!this.lastRawMeshes.length) return
+
+    // 7 floats per vertex: pos(3) + color(4)
+    const d: number[] = []
+    const edgeColor = [0.9, 0.9, 1.0, 0.35]
+
+    for (const m of this.lastRawMeshes) {
+      const verts = m.vertices  // interleaved pos(3) + normal(3)
+      const idx = m.indices
+      const t = m.transform
+
+      // Transform positions by the mesh transform
+      const transformedPos = (vi: number): [number, number, number] => {
+        const x = verts[vi * 6], y = verts[vi * 6 + 1], z = verts[vi * 6 + 2]
+        return [
+          t[0]*x + t[1]*y + t[2]*z + t[3],
+          t[4]*x + t[5]*y + t[6]*z + t[7],
+          t[8]*x + t[9]*y + t[10]*z + t[11],
+        ]
+      }
+
+      // Each triangle ABC -> edges AB, BC, CA
+      for (let i = 0; i < idx.length; i += 3) {
+        const a = idx[i], b = idx[i + 1], c = idx[i + 2]
+        const pa = transformedPos(a), pb = transformedPos(b), pc = transformedPos(c)
+        // AB
+        d.push(pa[0], pa[1], pa[2], ...edgeColor)
+        d.push(pb[0], pb[1], pb[2], ...edgeColor)
+        // BC
+        d.push(pb[0], pb[1], pb[2], ...edgeColor)
+        d.push(pc[0], pc[1], pc[2], ...edgeColor)
+        // CA
+        d.push(pc[0], pc[1], pc[2], ...edgeColor)
+        d.push(pa[0], pa[1], pa[2], ...edgeColor)
+      }
+    }
+    if (!d.length) return
+
+    this.wireframeVC = d.length / 7
+    this.wireframeVB = this.dev.createBuffer({
+      size: d.length * 4,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    })
+    this.dev.queue.writeBuffer(this.wireframeVB, 0, new Float32Array(d))
+  }
+
   destroy() {
     this.dead = true
     cancelAnimationFrame(this.raf)
@@ -396,6 +487,7 @@ export class WebGPURenderer {
     for (const g of this.meshes) { g.vb.destroy(); g.ib.destroy(); g.ub.destroy() }
     this.meshes = []
     this.gridVB?.destroy()
+    this.wireframeVB?.destroy()
     this.depth?.destroy()
     this.sceneUB?.destroy()
     this.dev.destroy()
