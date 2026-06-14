@@ -481,37 +481,28 @@ export class WebGPURenderer {
       reflPass.setPipeline(this.meshPipeT)
       reflPass.setBindGroup(0, this.sceneBG)
 
-      for (const m of this.lastRawMeshes) {
-        // Create mirrored transform (flip Y)
-        const mt = new Float32Array(16)
-        mt.set(m.transform)
-        // Negate Y row: indices 4,5,6,7
-        mt[4] = -mt[4]; mt[5] = -mt[5]; mt[6] = -mt[6]; mt[7] = -mt[7]
+      for (let mi = 0; mi < this.meshes.length; mi++) {
+        const g = this.meshes[mi]
+        if (g.transp) continue
+        const m = this.lastRawMeshes[mi]
+        if (!m) continue
 
-        const reflUB = this.dev.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-        this.dev.queue.writeBuffer(reflUB, 0, transpose(mt))
-        const nm = transpose(invert(mt))
-        this.dev.queue.writeBuffer(reflUB, 64, transpose(nm))
-        // Use original color but with very low alpha
-        const reflColor = new Float32Array([m.color[0] * 0.5, m.color[1] * 0.5, m.color[2] * 0.5, 0.15])
-        this.dev.queue.writeBuffer(reflUB, 128, reflColor)
-
-        const reflBG = this.dev.createBindGroup({
-          layout: this.objBGL,
-          entries: [{ binding: 0, resource: { buffer: reflUB } }],
-        })
-
-        // Find the corresponding GPU mesh to get vb and ib
-        const idx = this.lastRawMeshes.indexOf(m)
-        if (idx >= 0 && idx < this.meshes.length) {
-          reflPass.setBindGroup(1, reflBG)
-          reflPass.setVertexBuffer(0, this.meshes[idx].vb)
-          reflPass.setIndexBuffer(this.meshes[idx].ib, 'uint32')
-          reflPass.drawIndexed(this.meshes[idx].ic)
-        }
-
-        // Schedule cleanup
-        setTimeout(() => { reflUB.destroy() }, 0)
+        // Mirror the model matrix: scale Y by -1
+        const mirrorY: Mat4 = new Float32Array([
+          1, 0, 0, 0,
+          0,-1, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1,
+        ])
+        const mirroredModel = multiply(mirrorY, m.transform)
+        const mirroredNormal = transpose(invert(mirroredModel))
+        this.dev.queue.writeBuffer(this.reflUB, 0, transpose(mirroredModel))
+        this.dev.queue.writeBuffer(this.reflUB, 64, transpose(mirroredNormal))
+        this.dev.queue.writeBuffer(this.reflUB, 128, new Float32Array([m.color[0], m.color[1], m.color[2], 0.15]))
+        reflPass.setBindGroup(1, this.reflBG)
+        reflPass.setVertexBuffer(0, g.vb)
+        reflPass.setIndexBuffer(g.ib, 'uint32')
+        reflPass.drawIndexed(g.ic)
       }
 
       reflPass.end()
@@ -987,6 +978,7 @@ export class WebGPURenderer {
     this.wireframeVB?.destroy()
     this.depth?.destroy()
     this.sceneUB?.destroy()
+    this.reflUB?.destroy()
     this.dev.destroy()
   }
 }

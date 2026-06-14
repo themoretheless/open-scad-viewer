@@ -161,6 +161,17 @@ const L: Record<string, Record<string, string>> = {
     animPlay: 'Играть',
     animPause: 'Пауза',
     animDuration: 'Длительность',
+    parameters: 'Параметры',
+    noParameters: 'Нет числовых переменных',
+    lighting: 'Освещение',
+    lightDefault: 'Обычное',
+    lightStudio: 'Студия',
+    lightOutdoor: 'Улица',
+    lightDramatic: 'Драма',
+    lightSoft: 'Мягкое',
+    clipPlane: 'Сечение',
+    fog: 'Туман',
+    reflection: 'Отражение',
     sc_commandPalette: 'Палитра команд',
     sc_goToLine: 'Перейти к строке',
     sc_wordWrap: 'Перенос строк',
@@ -271,6 +282,17 @@ const L: Record<string, Record<string, string>> = {
     animPlay: 'Play',
     animPause: 'Pause',
     animDuration: 'Duration',
+    parameters: 'Parameters',
+    noParameters: 'No numeric variables',
+    lighting: 'Lighting',
+    lightDefault: 'Default',
+    lightStudio: 'Studio',
+    lightOutdoor: 'Outdoor',
+    lightDramatic: 'Dramatic',
+    lightSoft: 'Soft',
+    clipPlane: 'Clip Plane',
+    fog: 'Fog',
+    reflection: 'Reflection',
     sc_commandPalette: 'Command Palette',
     sc_goToLine: 'Go to Line',
     sc_wordWrap: 'Word Wrap',
@@ -2106,6 +2128,109 @@ function onAnimSliderInput(e: Event) {
 onUnmounted(() => {
   if (animRAF) cancelAnimationFrame(animRAF)
 })
+
+/* ── Feature: Parameterizer ── */
+interface ParamVar {
+  name: string
+  value: number
+  min: number
+  max: number
+  step: number
+}
+
+const showParameters = ref(false)
+const extractedParams = ref<ParamVar[]>([])
+
+function extractParameters() {
+  const src = code.value
+  const lines = src.split('\n')
+  const params: ParamVar[] = []
+  const re = /^\s*(\w+)\s*=\s*(-?\d+\.?\d*)\s*;/
+  for (const line of lines) {
+    const m = line.match(re)
+    if (m) {
+      const name = m[1]
+      const val = parseFloat(m[2])
+      let min: number, max: number, step: number
+      if (val === 0) {
+        min = -100; max = 100; step = 1
+      } else {
+        min = val * 0.1
+        max = val * 3
+        if (min > max) { const tmp = min; min = max; max = tmp }
+        step = Math.abs(val) >= 10 ? 1 : 0.1
+      }
+      params.push({ name, value: val, min, max, step })
+    }
+  }
+  extractedParams.value = params
+}
+
+function onParamChange(param: ParamVar, newVal: number) {
+  param.value = newVal
+  // Update the code: find the line with this variable and replace the value
+  const src = code.value
+  const re = new RegExp(`^(\\s*${param.name}\\s*=\\s*)(-?\\d+\\.?\\d*)(\\s*;)`, 'm')
+  const updated = src.replace(re, `$1${newVal}$3`)
+  if (updated !== src) {
+    code.value = updated
+  }
+}
+
+// Extract parameters when code changes (debounced via existing code watcher)
+watch(code, () => {
+  if (showParameters.value) {
+    extractParameters()
+  }
+})
+
+watch(showParameters, (v) => {
+  if (v) extractParameters()
+})
+
+/* ── Feature: Lighting Presets ── */
+const activeLighting = ref('default')
+
+function setLighting(preset: string) {
+  activeLighting.value = preset
+  renderer?.setLighting(preset)
+}
+
+/* ── Feature: Clipping Plane ── */
+const clipEnabled = ref(false)
+const clipY = ref(0)
+
+function toggleClip() {
+  clipEnabled.value = !clipEnabled.value
+  renderer?.setClipEnabled(clipEnabled.value)
+}
+
+function onClipYChange(e: Event) {
+  const val = parseFloat((e.target as HTMLInputElement).value)
+  clipY.value = val
+  renderer?.setClipY(val)
+}
+
+const clipRange = computed(() => {
+  if (!renderer) return { min: -50, max: 50 }
+  return renderer.getClipRange()
+})
+
+/* ── Feature: Fog ── */
+const fogEnabled = ref(false)
+
+function toggleFog() {
+  fogEnabled.value = !fogEnabled.value
+  renderer?.setFogEnabled(fogEnabled.value)
+}
+
+/* ── Feature: Reflection ── */
+const reflectionEnabled = ref(false)
+
+function toggleReflection() {
+  reflectionEnabled.value = !reflectionEnabled.value
+  renderer?.setReflection(reflectionEnabled.value)
+}
 </script>
 
 <script lang="ts">
@@ -2455,12 +2580,38 @@ translate([0, 0, 35])
               </div>
             </div>
           </div>
+          <!-- Parameters toggle -->
+          <button class="btn btn-sm" :class="{ 'btn-active': showParameters }" @click="showParameters = !showParameters" :title="t('parameters')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+            {{ t('parameters') }}
+          </button>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
           <button class="btn btn-sm" @click="loadExample('basic')">{{ t('basic') }}</button>
           <button class="btn btn-sm" @click="loadExample('csg')">{{ t('csg') }}</button>
           <button class="btn btn-sm" @click="loadExample('house')">{{ t('house') }}</button>
           <button class="btn btn-sm" @click="loadExample('tower')">{{ t('tower') }}</button>
+        </div>
+
+        <!-- Parameters panel -->
+        <div v-if="showParameters" class="params-panel">
+          <div v-if="extractedParams.length === 0" class="params-empty">{{ t('noParameters') }}</div>
+          <div v-for="p in extractedParams" :key="p.name" class="param-row">
+            <span class="param-name">{{ p.name }}</span>
+            <input
+              type="range"
+              class="param-slider"
+              :min="p.min"
+              :max="p.max"
+              :step="p.step"
+              :value="p.value"
+              @input="onParamChange(p, parseFloat(($event.target as HTMLInputElement).value))"
+            />
+            <span class="param-value">{{ p.value }}</span>
+          </div>
         </div>
 
         <!-- Tab bar -->
@@ -2703,6 +2854,39 @@ translate([0, 0, 35])
               @click="setBgColor(idx)"
             />
           </div>
+          <div class="view-separator"></div>
+          <!-- Lighting preset selector -->
+          <div class="lighting-row">
+            <span class="bg-label">{{ t('lighting') }}</span>
+            <select class="lighting-select" :value="activeLighting" @change="setLighting(($event.target as HTMLSelectElement).value)">
+              <option value="default">{{ t('lightDefault') }}</option>
+              <option value="studio">{{ t('lightStudio') }}</option>
+              <option value="outdoor">{{ t('lightOutdoor') }}</option>
+              <option value="dramatic">{{ t('lightDramatic') }}</option>
+              <option value="soft">{{ t('lightSoft') }}</option>
+            </select>
+          </div>
+          <div class="view-separator"></div>
+          <!-- Clipping plane -->
+          <button class="view-btn view-btn-toggle" :class="{ active: clipEnabled }" @click="toggleClip" :title="t('clipPlane')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
+            </svg>
+          </button>
+          <div v-if="clipEnabled" class="clip-slider-row">
+            <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
+            <span class="clip-value">{{ clipY.toFixed(1) }}</span>
+          </div>
+          <!-- Fog -->
+          <button class="view-btn view-btn-toggle" :class="{ active: fogEnabled }" @click="toggleFog" :title="t('fog')">
+            {{ t('fog') }}
+          </button>
+          <!-- Reflection -->
+          <button class="view-btn view-btn-toggle" :class="{ active: reflectionEnabled }" @click="toggleReflection" :title="t('reflection')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12h20"/><path d="M6 8l6-6 6 6"/><path d="M6 16l6 6 6-6"/>
+            </svg>
+          </button>
           <div class="view-separator"></div>
           <!-- Object Tree toggle -->
           <button class="view-btn view-btn-toggle" :class="{ active: showObjectTree }" @click="showObjectTree = !showObjectTree" :title="t('objectTree')">
@@ -3809,6 +3993,106 @@ html, body, #app {
   border-left: 1px solid var(--border);
   opacity: 0.4;
   pointer-events: none;
+}
+
+/* ── Parameters panel ── */
+.params-panel {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.params-empty {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 8px;
+}
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.param-name {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--hl-keyword);
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.param-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 4px;
+}
+.param-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--hl-number);
+  min-width: 50px;
+  text-align: right;
+}
+.btn-active {
+  background: rgba(74,158,255,.2) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Lighting preset selector ── */
+.lighting-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+}
+.lighting-select {
+  background: rgba(30,30,34,.7);
+  color: rgba(255,255,255,.8);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(6px);
+}
+.lighting-select:focus {
+  border-color: rgba(74,158,255,.5);
+}
+[data-theme="light"] .lighting-select {
+  background: rgba(255,255,255,.75);
+  color: rgba(0,0,0,.7);
+  border-color: rgba(0,0,0,.12);
+}
+
+/* ── Clipping plane slider ── */
+.clip-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+}
+.clip-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 4px;
+}
+.clip-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.62rem;
+  color: rgba(255,255,255,.6);
+  min-width: 30px;
+  text-align: right;
+}
+[data-theme="light"] .clip-value {
+  color: rgba(0,0,0,.5);
 }
 
 /* ── Animation Timeline ── */
