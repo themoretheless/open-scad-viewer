@@ -216,6 +216,20 @@ class Parser {
       return { type: 'call', name: 'function', args: {}, children: [], pos: p, endPos: this.peek().p }
     }
 
+    /* ── use / include ── */
+    if (name === 'use' || name === 'include') {
+      let fileName = ''
+      if (this.peek().t === TT.Lt) {
+        this.adv() // consume '<'
+        while (this.peek().t !== TT.Gt && this.peek().t !== TT.Eof) {
+          fileName += this.adv().v
+        }
+        this.match(TT.Gt)
+      }
+      this.match(TT.Semi)
+      return { type: 'call', name, args: { __fileName: fileName }, children: [], pos: p, endPos: this.peek().p }
+    }
+
     const args: Record<string, any> = {}
 
     /* ── variable assignment ── */
@@ -440,8 +454,19 @@ class Parser {
 
   private parseVec(): any {
     this.expect(TT.LBracket)
+    // Check for list comprehension: [for ...]
+    if (this.peek().t === TT.Ident && this.peek().v === 'for') {
+      return this.parseListComprehension()
+    }
     const vals: any[] = []
     while (this.peek().t !== TT.RBracket && this.peek().t !== TT.Eof) {
+      if (this.peek().t === TT.Ident && this.peek().v === 'each') {
+        this.adv() // consume 'each'
+        const inner = this.parseExpr()
+        vals.push({ __each: true, value: inner })
+        this.match(TT.Comma)
+        continue
+      }
       vals.push(this.parseExpr())
       // Check for colon -> range syntax [start:end] or [start:step:end]
       if (this.peek().t === TT.Colon) {
@@ -462,6 +487,19 @@ class Parser {
     }
     this.expect(TT.RBracket)
     return vals
+  }
+
+  private parseListComprehension(): any {
+    // We already consumed '[', and peek is 'for'
+    this.adv() // consume 'for'
+    this.expect(TT.LParen)
+    const varName = this.expect(TT.Ident).v
+    this.expect(TT.Eq)
+    const iterVal = this.parseExpr()
+    this.expect(TT.RParen)
+    const body = this.parseExpr()
+    this.expect(TT.RBracket)
+    return { __listComp: true, varName, iterVal, body }
   }
 
   private skipExpr() {
@@ -695,6 +733,23 @@ function evalExprNode(val: any, vars: Record<string, number>): any {
     }
     case 'call': {
       const c = val as ExprCall
+      // Special handling for len() which works on arrays
+      if (c.name === 'len') {
+        const argVal = evalExprNode(c.args[0], vars)
+        if (Array.isArray(argVal)) return argVal.length
+        if (typeof argVal === 'string') return argVal.length
+        return 0
+      }
+      // Special handling for concat() which merges arrays
+      if (c.name === 'concat') {
+        const result: any[] = []
+        for (const a of c.args) {
+          const ev = evalExprNode(a, vars)
+          if (Array.isArray(ev)) result.push(...ev)
+          else result.push(ev)
+        }
+        return result
+      }
       const fn = MATH_FUNCS[c.name]
       if (fn) {
         const args = c.args.map(a => {
@@ -742,6 +797,7 @@ const PALETTE: [number,number,number,number][] = [
   [0.76,0.56,0.96,1],[0.56,0.86,0.36,1],
 ]
 let cIdx = 0
+let _resolveFile: ((name: string) => string | null) | null = null
 function nextC(): [number,number,number,number] { return PALETTE[(cIdx++) % PALETTE.length] }
 
 function arg(a: Record<string,any>, name: string, pos: number, def: any): any {
@@ -752,9 +808,43 @@ function arg(a: Record<string,any>, name: string, pos: number, def: any): any {
 function resolveArg(val: any, vars: Record<string, number>): any {
   if (isExpr(val)) return evalExprNode(val, vars)
   if (typeof val === 'string' && val in vars) return vars[val]
-  if (Array.isArray(val)) return val.map(v => resolveArg(v, vars))
+  if (Array.isArray(val)) {
+    const result: any[] = []
+    for (const v of val) {
+      const resolved = resolveArg(v, vars)
+      if (resolved && typeof resolved === 'object' && resolved.__each) {
+        const inner = resolved.value
+        if (Array.isArray(inner)) {
+          result.push(...inner)
+        } else {
+          result.push(inner)
+        }
+      } else {
+        result.push(resolved)
+      }
+    }
+    return result
+  }
   if (val && typeof val === 'object' && val.__range) {
     return { __range: true, start: resolveArg(val.start, vars), step: resolveArg(val.step, vars), end: resolveArg(val.end, vars) }
+  }
+  if (val && typeof val === 'object' && val.__listComp) {
+    const iterResolved = resolveArg(val.iterVal, vars)
+    let iterValues: any[] = []
+    if (iterResolved && typeof iterResolved === 'object' && iterResolved.__range) {
+      iterValues = expandRange(iterResolved)
+    } else if (Array.isArray(iterResolved)) {
+      iterValues = iterResolved
+    }
+    const result: any[] = []
+    for (const iv of iterValues) {
+      const newVars = { ...vars, [val.varName]: typeof iv === 'number' ? iv : 0 }
+      result.push(resolveArg(val.body, newVars))
+    }
+    return result
+  }
+  if (val && typeof val === 'object' && val.__each) {
+    return { __each: true, value: resolveArg(val.value, vars) }
   }
   return val
 }
@@ -1349,6 +1439,45 @@ function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number
       continue
     }
 
+    // Handle use/include
+    if (n.name === 'use' || n.name === 'include') {
+      const fileName = n.args.__fileName as string
+      if (fileName && _resolveFile) {
+        const fileSrc = _resolveFile(fileName)
+        if (fileSrc) {
+          try {
+            const tokens = tokenize(fileSrc)
+            const parser = new Parser(tokens)
+            const fileAst = parser.parseAll()
+            if (n.name === 'include') {
+              // include: evaluate everything (modules + geometry)
+              out.push(...evalNodes(fileAst, tf, col, vars, modules, echos, callerChildren))
+            } else {
+              // use: only import module definitions (no geometry)
+              for (const fn of fileAst) {
+                if (fn.name === 'module') {
+                  const modName = fn.args.__name as string
+                  if (modName) {
+                    modules.set(modName, {
+                      params: fn.params || [],
+                      children: fn.children,
+                    })
+                  }
+                }
+              }
+            }
+          } catch (e: any) {
+            echos.push('ERROR: ' + (e.message || String(e)))
+          }
+        } else {
+          echos.push('ERROR: File not found: ' + fileName)
+        }
+      } else if (fileName && !_resolveFile) {
+        echos.push('WARNING: use/include not supported in single-file mode: ' + fileName)
+      }
+      continue
+    }
+
     if (n.name === 'else') {
       // Only evaluate else children if the previous if was false
       if (!lastIfResult) {
@@ -1675,6 +1804,17 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         transform: tf,
       }]
     }
+    case 'assert': {
+      const cond = arg(a, '_0', 0, true)
+      const message = arg(a, '_1', 1, arg(a, 'message', -1, 'Assertion failed'))
+      if (!evalCondition(cond)) {
+        const msg = typeof message === 'string' ? message : 'Assertion failed'
+        echos.push('ASSERT: ' + msg)
+      }
+      // assert can have children (pass-through)
+      if (ch.length > 0) return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
+      return []
+    }
     case 'minkowski': case 'projection': case 'import': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     case 'module': case 'function': case '__assign':
@@ -1741,8 +1881,9 @@ export interface ParseResult {
   errors: string[]
 }
 
-export function parseOpenSCADWithAST(source: string): ParseResult {
+export function parseOpenSCADWithAST(source: string, resolveFile?: (name: string) => string | null): ParseResult {
   cIdx = 0
+  _resolveFile = resolveFile || null
   const echos: string[] = []
   const errors: string[] = []
   let ast: ASTNode[] = []
@@ -1764,6 +1905,7 @@ export function parseOpenSCADWithAST(source: string): ParseResult {
 
 export function parseOpenSCAD(source: string): MeshData[] {
   cIdx = 0
+  _resolveFile = null
   const tokens = tokenize(source)
   const parser = new Parser(tokens)
   const ast = parser.parseAll()

@@ -347,6 +347,11 @@ const L: Record<string, Record<string, string>> = {
     breadcrumbScope: 'Область',
     // Error recovery
     partialRender: 'Частичный рендер с ошибками',
+    // Code folding / Color picker / use-include
+    codeFolding: 'Сворачивание кода',
+    colorPicker: 'Палитра цветов',
+    useInclude: 'use/include между вкладками',
+    assertFailed: 'Ошибка assert',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -601,6 +606,11 @@ const L: Record<string, Record<string, string>> = {
     breadcrumbScope: 'Scope',
     // Error recovery
     partialRender: 'Partial render with errors',
+    // Code folding / Color picker / use-include
+    codeFolding: 'Code Folding',
+    colorPicker: 'Color Picker',
+    useInclude: 'use/include across tabs',
+    assertFailed: 'Assert failed',
   },
 }
 
@@ -855,6 +865,17 @@ const showWireframe = ref(false)
 const showGrid = ref(true)
 const isAutoRotate = ref(false)
 const isOrthographic = ref(false)
+
+/* ── Code Folding ── */
+const foldedLines = ref<Set<number>>(new Set())
+const foldRanges = ref<Map<number, number>>(new Map()) // startLine -> endLine
+
+/* ── Color Picker ── */
+const colorPickerVisible = ref(false)
+const colorPickerX = ref(0)
+const colorPickerY = ref(0)
+const colorPickerValue = ref('#ffffff')
+let colorPickerMatch: { start: number; end: number } | null = null
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
@@ -1299,6 +1320,7 @@ const MINIMAP_KEYWORDS = new Set([
   'difference','union','intersection','mirror','module','function',
   'if','else','for','let','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','each','echo','assert',
+  'use','include',
 ])
 
 function getLineType(line: string): string {
@@ -1422,7 +1444,8 @@ const AUTOCOMPLETE_KEYWORDS = [
   'cube','sphere','cylinder','polygon','translate','rotate','scale','mirror','color',
   'difference','union','intersection','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','module','function','for','if','else',
-  'let','each','echo','assert','$fn','$fa','$fs','true','false','undef','PI',
+  'let','each','echo','assert','use','include',
+  '$fn','$fa','$fs','true','false','undef','PI',
 ]
 
 const acVisible = ref(false)
@@ -1602,6 +1625,9 @@ const OPENSCAD_DOCS: Record<string, DocEntry> = {
   hull: { sig: 'hull() { ... }', desc: { ru: 'Выпуклая оболочка', en: 'Creates convex hull of children' } },
   minkowski: { sig: 'minkowski() { ... }', desc: { ru: 'Сумма Минковского', en: 'Minkowski sum of children' } },
   rotate_extrude: { sig: 'rotate_extrude(angle, $fn)', desc: { ru: 'Вращательная экструзия', en: 'Rotates a 2D shape around Z axis' } },
+  assert: { sig: 'assert(condition, message)', desc: { ru: 'Проверка условия, ошибка если ложь', en: 'Checks condition, logs error if false' } },
+  use: { sig: 'use <filename>', desc: { ru: 'Импорт модулей из другого файла/вкладки', en: 'Import modules from another file/tab' } },
+  include: { sig: 'include <filename>', desc: { ru: 'Включение кода из другого файла/вкладки', en: 'Include code from another file/tab' } },
 }
 
 const hoverDocVisible = ref(false)
@@ -1691,6 +1717,7 @@ const KEYWORDS = new Set([
   'difference','union','intersection','mirror','module','function',
   'if','else','for','let','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','each','echo','assert',
+  'use','include',
 ])
 const BOOLEANS = new Set(['true','false','undef'])
 const SPECIALS = new Set(['$fn','$fa','$fs'])
@@ -1942,7 +1969,20 @@ function addIndentGuides(html: string, tabSize: number): string {
 
 const highlightedCode = computed(() => {
   const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value, errorCharPos.value, occurrencePositions.value)
-  return addIndentGuides(raw, prefTabSize.value)
+  const withIndent = addIndentGuides(raw, prefTabSize.value)
+  // Apply code folding: hide folded lines, add placeholder
+  if (foldedLines.value.size === 0) return withIndent
+  const lines = withIndent.split('\n')
+  const result: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    if (isLineHidden(i)) continue
+    result.push(lines[i])
+    if (foldedLines.value.has(i)) {
+      // Append fold placeholder on same line
+      result[result.length - 1] += '<span class="fold-placeholder"> ... </span>'
+    }
+  }
+  return result.join('\n')
 })
 
 /* ── Line numbers ── */
@@ -1952,10 +1992,17 @@ const lineNumbers = computed(() => {
   const errL = errorLine.value
   const nums: string[] = []
   for (let i = 1; i <= n; i++) {
+    if (isLineHidden(i - 1)) continue
+    const foldable = isFoldable(i - 1)
+    const folded = foldedLines.value.has(i - 1)
+    let prefix = ''
+    if (foldable) {
+      prefix = `<span class="fold-marker" data-line="${i - 1}">${folded ? '▶' : '▼'}</span>`
+    }
     if (i === errL) {
-      nums.push(`<span class="line-error">${i}</span>`)
+      nums.push(`${prefix}<span class="line-error">${i}</span>`)
     } else {
-      nums.push(String(i))
+      nums.push(`${prefix}${i}`)
     }
   }
   return nums.join('\n')
@@ -1981,6 +2028,167 @@ function syncScroll() {
     if (minimapDebounce) clearTimeout(minimapDebounce)
     minimapDebounce = setTimeout(renderMinimap, 50)
   }
+}
+
+/* ── Code Folding functions ── */
+function computeFolds() {
+  const src = code.value
+  const lines = src.split('\n')
+  const ranges = new Map<number, number>()
+  const stack: number[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    let inStr = false
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j]
+      if (ch === '"' && (j === 0 || line[j - 1] !== '\\')) { inStr = !inStr; continue }
+      if (inStr) continue
+      if (ch === '/' && j + 1 < line.length && line[j + 1] === '/') break // rest is comment
+      if (ch === '{') {
+        stack.push(i)
+      } else if (ch === '}') {
+        if (stack.length > 0) {
+          const start = stack.pop()!
+          if (i > start) {
+            ranges.set(start, i)
+          }
+        }
+      }
+    }
+  }
+  foldRanges.value = ranges
+  // Remove stale folds
+  const newFolded = new Set<number>()
+  for (const s of foldedLines.value) {
+    if (ranges.has(s)) newFolded.add(s)
+  }
+  foldedLines.value = newFolded
+}
+
+function toggleFold(lineIdx: number) {
+  const newSet = new Set(foldedLines.value)
+  if (newSet.has(lineIdx)) {
+    newSet.delete(lineIdx)
+  } else {
+    newSet.add(lineIdx)
+  }
+  foldedLines.value = newSet
+}
+
+function isFoldable(lineIdx: number): boolean {
+  return foldRanges.value.has(lineIdx)
+}
+
+function isLineHidden(lineIdx: number): boolean {
+  for (const startLine of foldedLines.value) {
+    const endLine = foldRanges.value.get(startLine)
+    if (endLine !== undefined && lineIdx > startLine && lineIdx <= endLine) {
+      return true
+    }
+  }
+  return false
+}
+
+function onLineNumClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.classList.contains('fold-marker')) {
+    const lineIdx = parseInt(target.dataset.line || '-1')
+    if (lineIdx >= 0) {
+      toggleFold(lineIdx)
+    }
+  }
+}
+
+/* ── Color Picker functions ── */
+function onHighlightClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  const swatchEl = target.classList.contains('color-swatch') ? target : target.closest('.color-swatch') as HTMLElement | null
+  if (!swatchEl) return
+  e.preventDefault()
+  e.stopPropagation()
+  const src = code.value
+  const colorCalls = findColorCalls(src)
+  if (colorCalls.length === 0) return
+  const codeArea = swatchEl.closest('.code-area')
+  const rect = codeArea ? codeArea.getBoundingClientRect() : { left: 0, top: 0 }
+  colorPickerX.value = e.clientX - rect.left + 10
+  colorPickerY.value = e.clientY - rect.top + 10
+  const bg = swatchEl.style.background
+  colorPickerValue.value = cssToHex(bg) || '#808080'
+  const allSwatches = (swatchEl.closest('.highlight-layer') || document).querySelectorAll('.color-swatch')
+  let swatchIndex = -1
+  allSwatches.forEach((s, i) => { if (s === swatchEl) swatchIndex = i })
+  if (swatchIndex >= 0 && swatchIndex < colorCalls.length) {
+    colorPickerMatch = colorCalls[swatchIndex]
+  } else if (colorCalls.length === 1) {
+    colorPickerMatch = colorCalls[0]
+  } else {
+    colorPickerMatch = null
+  }
+  colorPickerVisible.value = true
+}
+
+function findColorCalls(src: string): { start: number; end: number }[] {
+  const results: { start: number; end: number }[] = []
+  const re = /\bcolor\s*\(/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(src)) !== null) {
+    const parenStart = m.index + m[0].length
+    let depth = 1
+    let i = parenStart
+    while (i < src.length && depth > 0) {
+      if (src[i] === '(') depth++
+      if (src[i] === ')') depth--
+      i++
+    }
+    const argStart = parenStart
+    let argEnd = i - 1
+    let d = 0
+    for (let j = argStart; j < argEnd; j++) {
+      if (src[j] === '(' || src[j] === '[') d++
+      if (src[j] === ')' || src[j] === ']') d--
+      if (src[j] === ',' && d === 0) { argEnd = j; break }
+    }
+    results.push({ start: argStart, end: argEnd })
+  }
+  return results
+}
+
+function cssToHex(css: string): string | null {
+  if (!css) return null
+  const rgbaMatch = css.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  if (rgbaMatch) {
+    const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
+    const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
+    const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+    return '#' + r + g + b
+  }
+  if (css.startsWith('#')) return css
+  const name = css.trim().toLowerCase()
+  return COLOR_NAMES[name] || null
+}
+
+function onColorPickerChange(e: Event) {
+  const newColor = (e.target as HTMLInputElement).value
+  if (!colorPickerMatch) return
+  const src = code.value
+  const oldArg = src.substring(colorPickerMatch.start, colorPickerMatch.end).trim()
+  let replacement: string
+  if (oldArg.startsWith('[')) {
+    const r = parseInt(newColor.substring(1, 3), 16) / 255
+    const g = parseInt(newColor.substring(3, 5), 16) / 255
+    const b = parseInt(newColor.substring(5, 7), 16) / 255
+    replacement = `[${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)}]`
+  } else {
+    replacement = '"' + newColor + '"'
+  }
+  code.value = src.substring(0, colorPickerMatch.start) + replacement + src.substring(colorPickerMatch.end)
+  colorPickerMatch = { start: colorPickerMatch.start, end: colorPickerMatch.start + replacement.length }
+}
+
+function closeColorPicker() {
+  colorPickerVisible.value = false
+  colorPickerMatch = null
 }
 
 /* ── File Import / Export ── */
@@ -2506,6 +2714,10 @@ function onDocClick(e: MouseEvent) {
   if (hamburgerOpen.value && !target.closest('.hamburger-wrapper')) {
     hamburgerOpen.value = false
   }
+  // Close color picker on outside click
+  if (colorPickerVisible.value && !target.closest('.color-picker-popup') && !target.closest('.color-swatch')) {
+    closeColorPicker()
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -2581,6 +2793,7 @@ onMounted(async () => {
   document.addEventListener('click', onCloseContextMenu)
   loadRecentFiles()
   loadFromHash()
+  computeFolds()
 
   // Dynamic favicon: isometric 3D cube SVG
   {
@@ -2646,6 +2859,8 @@ onUnmounted(() => {
 watch(code, (v) => {
   // Save tabs
   saveTabs()
+  // Recompute fold ranges
+  computeFolds()
   // Also keep legacy key for backwards compat
   localStorage.setItem('scad-code', v)
   if (!autoRender.value) return
@@ -2667,7 +2882,14 @@ function doRender() {
     const t0 = performance.now()
     // Inject $t animation variable
     const codeWithT = code.value.replace(/\$t\b/g, String(animT.value))
-    const result = parseOpenSCADWithAST(codeWithT)
+    const result = parseOpenSCADWithAST(codeWithT, (name: string) => {
+      const baseName = name.replace(/\.scad$/, '')
+      const tab = tabs.value.find(tb => {
+        const tabBase = tb.name.replace(/\.scad$/, '')
+        return tabBase === baseName || tabBase === name || tb.name === name
+      })
+      return tab ? tab.code : null
+    })
     const meshes = result.meshes
     astNodes.value = result.ast
     const t1 = performance.now()
@@ -4662,9 +4884,9 @@ translate([0, 0, 39])
         </transition>
 
         <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize, '--editor-font-family': prefFontFamily + ', monospace' }">
-          <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
+          <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers" @click="onLineNumClick"></pre>
           <div class="code-area">
-            <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
+            <pre class="highlight-layer" ref="highlightRef" aria-hidden="true" @click="onHighlightClick"><code v-html="highlightedCode"></code></pre>
             <textarea
               ref="textareaRef"
               class="code"
@@ -4688,6 +4910,21 @@ translate([0, 0, 39])
             >
               <div class="hover-doc-sig">{{ hoverDocContent.sig }}</div>
               <div class="hover-doc-desc">{{ hoverDocContent.desc }}</div>
+            </div>
+            <!-- Color picker popup -->
+            <div
+              v-if="colorPickerVisible"
+              class="color-picker-popup"
+              :style="{ top: colorPickerY + 'px', left: colorPickerX + 'px' }"
+              @click.stop
+            >
+              <input
+                type="color"
+                :value="colorPickerValue"
+                @input="onColorPickerChange"
+                class="color-picker-input"
+              />
+              <button class="color-picker-close" @click="closeColorPicker">&times;</button>
             </div>
             <!-- Autocomplete popup -->
             <div
@@ -6965,6 +7202,8 @@ textarea.code:focus-visible {
   width: 0;
   height: 0;
   overflow: visible;
+  z-index: 10;
+  pointer-events: auto;
 }
 :deep(.color-swatch)::before {
   content: '';
@@ -6978,6 +7217,70 @@ textarea.code:focus-visible {
   border-radius: 2px;
   border: 1px solid rgba(128, 128, 128, 0.55);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* ── Code Folding ── */
+:deep(.fold-marker) {
+  cursor: pointer;
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7em;
+  vertical-align: middle;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+:deep(.fold-marker):hover {
+  opacity: 1;
+  color: var(--accent);
+}
+:deep(.fold-placeholder) {
+  background: var(--hover);
+  color: var(--text-dim);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-left: 4px;
+  font-size: 0.85em;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+/* ── Color Picker ── */
+.color-picker-popup {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.color-picker-input {
+  width: 40px;
+  height: 28px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+.color-picker-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.color-picker-close:hover {
+  color: var(--text);
 }
 
 /* ── Feature 6: Micro-interactions ── */
