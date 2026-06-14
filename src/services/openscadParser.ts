@@ -832,6 +832,50 @@ function makePolygon(points: number[][]) {
   return { v, ix }
 }
 
+function makeSurface(data: number[][]): { v: number[]; ix: number[] } {
+  const rows = data.length
+  if (rows < 2) return { v: [], ix: [] }
+  const cols = data[0].length
+  if (cols < 2) return { v: [], ix: [] }
+
+  const v: number[] = []
+  const ix: number[] = []
+
+  // Generate vertices with normals
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const z = typeof data[y][x] === 'number' ? data[y][x] : 0
+      // Compute normal via finite differences
+      const zL = x > 0 ? (typeof data[y][x - 1] === 'number' ? data[y][x - 1] : z) : z
+      const zR = x < cols - 1 ? (typeof data[y][x + 1] === 'number' ? data[y][x + 1] : z) : z
+      const zD = y > 0 ? (typeof data[y - 1][x] === 'number' ? data[y - 1][x] : z) : z
+      const zU = y < rows - 1 ? (typeof data[y + 1][x] === 'number' ? data[y + 1][x] : z) : z
+      const dx = (zR - zL) / (x > 0 && x < cols - 1 ? 2 : 1)
+      const dy = (zU - zD) / (y > 0 && y < rows - 1 ? 2 : 1)
+      // Normal = cross product of tangent vectors
+      // tangent_x = (1, 0, dx), tangent_y = (0, 1, dy)
+      // normal = (-dx, -dy, 1) normalized
+      const len = Math.sqrt(dx * dx + dy * dy + 1)
+      const nx = -dx / len, ny = -dy / len, nz = 1 / len
+      v.push(x, y, z, nx, ny, nz)
+    }
+  }
+
+  // Generate triangles - two per cell
+  for (let y = 0; y < rows - 1; y++) {
+    for (let x = 0; x < cols - 1; x++) {
+      const i00 = y * cols + x
+      const i10 = y * cols + (x + 1)
+      const i01 = (y + 1) * cols + x
+      const i11 = (y + 1) * cols + (x + 1)
+      ix.push(i00, i10, i11)
+      ix.push(i00, i11, i01)
+    }
+  }
+
+  return { v, ix }
+}
+
 /* ── Expression evaluator ─────────────────────────── */
 
 function evalComparison(op: string, left: any, right: any): boolean {
@@ -2132,7 +2176,37 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (ch.length > 0) return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
       return []
     }
-    case 'minkowski': case 'projection': case 'import': case 'render': case 'group':
+    case 'surface': {
+      const data = arg(a, 'data', 0, undefined)
+      const center = arg(a, 'center', -1, false) === true
+      const file = arg(a, 'file', -1, undefined)
+      if (file && typeof file === 'string') {
+        echos.push('WARNING: surface(file=) not supported in web viewer, use surface(data=[[...],...]) instead')
+        return []
+      }
+      if (!Array.isArray(data) || data.length < 2) return []
+      // Validate 2D array
+      for (const row of data) {
+        if (!Array.isArray(row)) return []
+      }
+      const { v, ix } = makeSurface(data)
+      if (!v.length) return []
+      let surfTf = tf
+      if (center) {
+        const rows = data.length
+        const cols = data[0].length
+        surfTf = translate(tf, [-(cols - 1) / 2, -(rows - 1) / 2, 0])
+      }
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: surfTf }]
+    }
+    case 'import': {
+      const file = arg(a, 'file', 0, '')
+      if (typeof file === 'string' && file) {
+        echos.push('WARNING: import("' + file + '") not supported in web viewer')
+      }
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
+    }
+    case 'minkowski': case 'projection': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     case 'module': case 'function': case '__assign':
       return []

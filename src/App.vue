@@ -404,6 +404,29 @@ const L: Record<string, Record<string, string>> = {
     noChanges: 'Нет изменений',
     unsaved: 'Не сохранено',
     cmdToggleDiff: 'Переключить изменения',
+    // Split editor
+    splitEditor: 'Разделить редактор',
+    splitEditorTip: 'Разделить редактор на два панели',
+    rightPaneTab: 'Вкладка правой панели',
+    // Version history
+    history: 'История',
+    historyTitle: 'История изменений',
+    historyEmpty: 'Нет сохранённых версий',
+    historyRestore: 'Восстановить',
+    historyPreview: 'Просмотр',
+    historyEntry: '{n} символов',
+    cmdToggleHistory: 'Переключить историю',
+    ariaHistory: 'История изменений',
+    // Progressive disclosure
+    simpleMode: 'Простой',
+    advancedMode: 'Расширенный',
+    modeToggle: 'Режим интерфейса',
+    // Shortcut presets
+    shortcutPreset: 'Набор клавиш',
+    presetDefault: 'По умолчанию',
+    presetVSCode: 'VS Code',
+    presetSublime: 'Sublime',
+    presetEmacs: 'Emacs',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -714,6 +737,29 @@ const L: Record<string, Record<string, string>> = {
     noChanges: 'No changes',
     unsaved: 'Unsaved',
     cmdToggleDiff: 'Toggle Changes',
+    // Split editor
+    splitEditor: 'Split Editor',
+    splitEditorTip: 'Split editor into two panes',
+    rightPaneTab: 'Right pane tab',
+    // Version history
+    history: 'History',
+    historyTitle: 'Version History',
+    historyEmpty: 'No saved versions',
+    historyRestore: 'Restore',
+    historyPreview: 'Preview',
+    historyEntry: '{n} chars',
+    cmdToggleHistory: 'Toggle History',
+    ariaHistory: 'Version history',
+    // Progressive disclosure
+    simpleMode: 'Simple',
+    advancedMode: 'Advanced',
+    modeToggle: 'UI Mode',
+    // Shortcut presets
+    shortcutPreset: 'Key Preset',
+    presetDefault: 'Default',
+    presetVSCode: 'VS Code',
+    presetSublime: 'Sublime',
+    presetEmacs: 'Emacs',
   },
 }
 
@@ -1155,10 +1201,14 @@ function resetPreferences() {
   prefShowMinimap.value = PREF_DEFAULTS.showMinimap
   prefShowLineNumbers.value = PREF_DEFAULTS.showLineNumbers
   prefFontFamily.value = 'JetBrains Mono'
+  shortcutPreset.value = 'default'
+  simpleMode.value = false
   // Clear the related localStorage keys (the watchers above will re-persist the defaults)
   for (const key of ['fontSize', 'tabSize', 'autoRenderDelay', 'showMinimap', 'showLineNumbers', 'fontFamily']) {
     localStorage.removeItem(`scad-pref-${key}`)
   }
+  localStorage.removeItem('scad-shortcut-preset')
+  localStorage.removeItem('scad-simple-mode')
   addToast(t('prefsReset'), 'success')
 }
 
@@ -1172,6 +1222,132 @@ watch(prefShowMinimap, v => {
 })
 watch(prefShowLineNumbers, v => { savePref('showLineNumbers', String(v)) })
 watch(prefFontFamily, v => { savePref('fontFamily', v) })
+
+/* ── Progressive Disclosure (Simple/Advanced Mode) ── */
+const simpleMode = ref(localStorage.getItem('scad-simple-mode') === 'true')
+watch(simpleMode, v => { localStorage.setItem('scad-simple-mode', String(v)) })
+
+/* ── Split Editor ── */
+const splitMode = ref(false)
+const rightTabId = ref('')
+const rightScrollTop = ref(0)
+
+function toggleSplitMode() {
+  splitMode.value = !splitMode.value
+  if (splitMode.value && !rightTabId.value) {
+    // Default right pane to a different tab if available, else same
+    const otherTab = tabs.value.find(tb => tb.id !== activeTabId.value)
+    rightTabId.value = otherTab ? otherTab.id : activeTabId.value
+  }
+}
+
+const rightTab = computed(() => {
+  if (!rightTabId.value) return null
+  return tabs.value.find(tb => tb.id === rightTabId.value) || null
+})
+
+const rightCode = computed(() => rightTab.value?.code ?? '')
+
+function onRightPaneInput(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  if (rightTab.value) {
+    rightTab.value.code = target.value
+    saveTabs()
+  }
+}
+
+function onRightPaneScroll(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  rightScrollTop.value = target.scrollTop
+}
+
+/* ── Version History ── */
+interface TabHistoryEntry {
+  timestamp: number
+  code: string
+}
+
+const showHistory = ref(false)
+const MAX_HISTORY_ENTRIES = 20
+const HISTORY_STORAGE_KEY = 'scad-tab-history'
+
+function loadHistories(): Record<string, TabHistoryEntry[]> {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return {}
+}
+
+function saveHistories(h: Record<string, TabHistoryEntry[]>) {
+  try {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(h))
+  } catch { /* quota exceeded - trim old entries */ }
+}
+
+function addHistorySnapshot(tabId: string, codeVal: string) {
+  const all = loadHistories()
+  const entries = all[tabId] || []
+  // Don't save if same as last entry
+  if (entries.length > 0 && entries[entries.length - 1].code === codeVal) return
+  entries.push({ timestamp: Date.now(), code: codeVal })
+  // Keep max entries
+  while (entries.length > MAX_HISTORY_ENTRIES) entries.shift()
+  all[tabId] = entries
+  saveHistories(all)
+}
+
+const currentTabHistory = computed(() => {
+  const all = loadHistories()
+  return (all[activeTabId.value] || []).slice().reverse()
+})
+
+function restoreHistoryEntry(entry: TabHistoryEntry) {
+  code.value = entry.code
+  showHistory.value = false
+}
+
+function formatHistoryTime(ts: number): string {
+  const diff = Date.now() - ts
+  if (diff < 60000) return t('justNow')
+  if (diff < 3600000) return t('minutesAgo').replace('{n}', String(Math.floor(diff / 60000)))
+  if (diff < 86400000) return t('hoursAgo').replace('{n}', String(Math.floor(diff / 3600000)))
+  return t('daysAgo').replace('{n}', String(Math.floor(diff / 86400000)))
+}
+
+// Debounced history save
+let historyDebounce: ReturnType<typeof setTimeout> | null = null
+
+/* ── Shortcut Presets ── */
+type ShortcutPreset = 'default' | 'vscode' | 'sublime' | 'emacs'
+const shortcutPreset = ref<ShortcutPreset>((localStorage.getItem('scad-shortcut-preset') as ShortcutPreset) || 'default')
+watch(shortcutPreset, v => { localStorage.setItem('scad-shortcut-preset', v) })
+
+interface KeyBinding {
+  render: string
+  format: string
+  fullscreen: string
+  commandPalette: string
+}
+
+const SHORTCUT_PRESETS: Record<ShortcutPreset, KeyBinding> = {
+  default: { render: 'Ctrl+Enter', format: 'Ctrl+Shift+F', fullscreen: 'F11', commandPalette: 'Ctrl+Shift+P' },
+  vscode: { render: 'Ctrl+Enter', format: 'Shift+Alt+F', fullscreen: 'F11', commandPalette: 'Ctrl+Shift+P' },
+  sublime: { render: 'Ctrl+Enter', format: 'Ctrl+Shift+F', fullscreen: 'F11', commandPalette: 'Ctrl+Shift+P' },
+  emacs: { render: 'Ctrl+Enter', format: 'Ctrl+Shift+F', fullscreen: 'F11', commandPalette: 'Alt+X' },
+}
+
+function matchesBinding(e: KeyboardEvent, binding: string): boolean {
+  const parts = binding.toLowerCase().split('+')
+  const needCtrl = parts.includes('ctrl')
+  const needShift = parts.includes('shift')
+  const needAlt = parts.includes('alt')
+  const key = parts.filter(p => p !== 'ctrl' && p !== 'shift' && p !== 'alt')[0] || ''
+  return (e.ctrlKey || e.metaKey) === needCtrl &&
+         e.shiftKey === needShift &&
+         e.altKey === needAlt &&
+         e.key.toLowerCase() === key
+}
 
 /* ── Console / Log Panel ── */
 interface ConsoleEntry {
@@ -2964,11 +3140,18 @@ function onDocClick(e: MouseEvent) {
 
 /* ── Global keyboard handler ── */
 function onGlobalKeydown(e: KeyboardEvent) {
-  // Ctrl+Shift+P or F1: Command Palette
-  if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P')) {
+  const bindings = SHORTCUT_PRESETS[shortcutPreset.value]
+  // Ctrl+Shift+P or F1 or preset command palette: Command Palette
+  if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') || matchesBinding(e, bindings.commandPalette)) {
     e.preventDefault()
     if (showCommandPalette.value) closeCommandPalette()
     else openCommandPalette()
+    return
+  }
+  // Ctrl+\ : Toggle split editor
+  if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+    e.preventDefault()
+    toggleSplitMode()
     return
   }
   // Ctrl+G: Go to Line
@@ -3020,6 +3203,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (showContextMenu.value) { showContextMenu.value = false; return }
     if (showCommandPalette.value) { closeCommandPalette(); return }
     if (showGoToLine.value) { closeGoToLine(); return }
+    if (showHistory.value) { showHistory.value = false; return }
     if (showPreferences.value) { showPreferences.value = false; return }
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
@@ -3133,6 +3317,11 @@ watch(code, (v) => {
     if (minimapDebounce) clearTimeout(minimapDebounce)
     minimapDebounce = setTimeout(renderMinimap, 300)
   }
+  // Debounce history snapshot
+  if (historyDebounce) clearTimeout(historyDebounce)
+  historyDebounce = setTimeout(() => {
+    addHistorySnapshot(activeTabId.value, v)
+  }, 3000)
 })
 
 function doRender() {
@@ -3976,6 +4165,9 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'showWelcome', label: () => t('cmdShowWelcome'), action: () => openWelcome() },
   { id: 'importStl', label: () => t('cmdImportSTL'), action: () => openImportSTL() },
   { id: 'perfPanel', label: () => t('cmdPerfPanel'), action: () => { showPerfPanel.value = !showPerfPanel.value } },
+  { id: 'splitEditor', label: () => t('splitEditor'), shortcut: 'Ctrl+\\', action: () => toggleSplitMode() },
+  { id: 'history', label: () => t('cmdToggleHistory'), action: () => { showHistory.value = !showHistory.value } },
+  { id: 'simpleMode', label: () => t('modeToggle') + ': ' + (simpleMode.value ? t('advancedMode') : t('simpleMode')), action: () => { simpleMode.value = !simpleMode.value } },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -4873,6 +5065,10 @@ translate([0, 0, 39])
             </div>
           </div>
         </div>
+        <!-- Mode toggle: Simple / Advanced -->
+        <button class="tb-btn topbar-collapsible" @click="simpleMode = !simpleMode" :title="t('modeToggle')">
+          {{ simpleMode ? t('simpleMode') : t('advancedMode') }}
+        </button>
         <!-- Collapsible buttons: hidden on small screens, shown in hamburger -->
         <button class="tb-btn tb-btn-help topbar-collapsible" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
         <button class="tb-btn tb-btn-gear topbar-collapsible" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
@@ -5037,6 +5233,24 @@ translate([0, 0, 39])
                 </select>
               </div>
             </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('modeToggle') }}</label>
+              <div class="pref-control pref-radio-group">
+                <label class="pref-radio"><input type="radio" :value="false" v-model="simpleMode" /> {{ t('advancedMode') }}</label>
+                <label class="pref-radio"><input type="radio" :value="true" v-model="simpleMode" /> {{ t('simpleMode') }}</label>
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('shortcutPreset') }}</label>
+              <div class="pref-control">
+                <select class="pref-select" v-model="shortcutPreset">
+                  <option value="default">{{ t('presetDefault') }}</option>
+                  <option value="vscode">{{ t('presetVSCode') }}</option>
+                  <option value="sublime">{{ t('presetSublime') }}</option>
+                  <option value="emacs">{{ t('presetEmacs') }}</option>
+                </select>
+              </div>
+            </div>
             <div class="pref-footer">
               <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
             </div>
@@ -5136,7 +5350,7 @@ translate([0, 0, 39])
             </svg>
           </button>
           <!-- Share button -->
-          <div class="share-wrapper">
+          <div class="share-wrapper" v-show="!simpleMode">
             <button class="btn btn-sm" @click="shareLink" :title="t('share')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -5147,14 +5361,14 @@ translate([0, 0, 39])
             <span v-if="showCopied" class="copied-tooltip">{{ t('copied') }}</span>
           </div>
           <!-- Format button -->
-          <button class="btn btn-sm" @click="formatCode" :title="t('format')">
+          <button class="btn btn-sm" v-show="!simpleMode" @click="formatCode" :title="t('format')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="21" y2="12"/><line x1="5" y1="18" x2="21" y2="18"/>
             </svg>
             {{ t('format') }}
           </button>
           <!-- Recent dropdown -->
-          <div class="recent-wrapper">
+          <div class="recent-wrapper" v-show="!simpleMode">
             <button class="btn btn-sm" @click.stop="showRecent = !showRecent">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -5175,7 +5389,7 @@ translate([0, 0, 39])
             </div>
           </div>
           <!-- Parameters toggle -->
-          <button class="btn btn-sm" :class="{ 'btn-active': showParameters }" @click="showParameters = !showParameters" :title="t('parameters')">
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': showParameters }" @click="showParameters = !showParameters" :title="t('parameters')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
               <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
               <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
@@ -5183,17 +5397,31 @@ translate([0, 0, 39])
             {{ t('parameters') }}
           </button>
           <!-- Diff toggle -->
-          <button class="btn btn-sm" :class="{ 'btn-active': showDiff }" @click="showDiff = !showDiff" :title="t('cmdToggleDiff')">
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': showDiff }" @click="showDiff = !showDiff" :title="t('cmdToggleDiff')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
               <path d="M12 3v18"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/>
             </svg>
             {{ t('showChanges') }}
           </button>
-          <span v-if="showDiff" class="diff-summary">
+          <span v-if="showDiff && !simpleMode" class="diff-summary">
             <span class="diff-stat diff-stat-added">+{{ diffStats.added }}</span>
             <span class="diff-stat diff-stat-removed">-{{ diffStats.removed }}</span>
             <span class="diff-stat diff-stat-modified">~{{ diffStats.modified }}</span>
           </span>
+          <!-- History toggle -->
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': showHistory }" @click="showHistory = !showHistory" :title="t('cmdToggleHistory')" :aria-label="t('ariaHistory')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {{ t('history') }}
+          </button>
+          <!-- Split editor toggle -->
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': splitMode }" @click="toggleSplitMode" :title="t('splitEditorTip')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>
+            </svg>
+            {{ t('splitEditor') }}
+          </button>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
           <button class="btn btn-sm example-btn" @click="loadExample('basic')" :data-tooltip="t('basicTip')">{{ t('basic') }}</button>
@@ -5350,6 +5578,7 @@ translate([0, 0, 39])
         </div>
         </transition>
 
+        <div class="editor-split-container" :class="{ 'split-active': splitMode }">
         <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize, '--editor-font-family': prefFontFamily + ', monospace' }">
           <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers" @click="onLineNumClick"></pre>
           <div class="code-area">
@@ -5426,8 +5655,57 @@ translate([0, 0, 39])
           </button>
         </div>
 
+        <!-- Split editor right pane -->
+        <div v-if="splitMode" class="split-editor-pane">
+          <div class="split-pane-header">
+            <select class="split-pane-select" v-model="rightTabId">
+              <option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ tab.name }}</option>
+            </select>
+          </div>
+          <div class="code-editor split-code-editor" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize, '--editor-font-family': prefFontFamily + ', monospace' }">
+            <div class="code-area">
+              <textarea
+                class="code"
+                :value="rightCode"
+                @input="onRightPaneInput"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                @scroll="onRightPaneScroll"
+              />
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- History panel -->
+        <transition name="panel-slide">
+          <div v-if="showHistory" class="history-panel" role="region" :aria-label="t('ariaHistory')">
+            <div class="history-header">
+              <span class="history-title">{{ t('historyTitle') }}</span>
+              <button class="history-close" @click="showHistory = false">&times;</button>
+            </div>
+            <div class="history-body">
+              <div v-if="currentTabHistory.length === 0" class="history-empty">{{ t('historyEmpty') }}</div>
+              <div
+                v-for="(entry, idx) in currentTabHistory"
+                :key="entry.timestamp"
+                class="history-entry"
+              >
+                <div class="history-entry-info">
+                  <span class="history-entry-time">{{ formatHistoryTime(entry.timestamp) }}</span>
+                  <span class="history-entry-size">{{ t('historyEntry').replace('{n}', String(entry.code.length)) }}</span>
+                </div>
+                <div class="history-entry-preview">{{ entry.code.substring(0, 80) }}{{ entry.code.length > 80 ? '...' : '' }}</div>
+                <button class="btn btn-sm history-restore-btn" @click="restoreHistoryEntry(entry)">{{ t('historyRestore') }}</button>
+              </div>
+            </div>
+          </div>
+        </transition>
+
         <!-- Console toggle button -->
-        <button class="console-toggle-btn" @click="showConsole = !showConsole" :aria-label="t('ariaConsole')" :class="{ active: showConsole }">
+        <button class="console-toggle-btn" v-show="!simpleMode" @click="showConsole = !showConsole" :aria-label="t('ariaConsole')" :class="{ active: showConsole }">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
           </svg>
@@ -5436,7 +5714,7 @@ translate([0, 0, 39])
 
         <!-- Console panel -->
         <transition name="console-slide">
-        <div v-if="showConsole" class="console-panel" :style="{ height: consolePanelHeight + 'px' }">
+        <div v-if="showConsole && !simpleMode" class="console-panel" :style="{ height: consolePanelHeight + 'px' }">
           <div class="console-drag-handle" @mousedown="onConsoleDragStart"></div>
           <div class="console-header">
             <span class="console-title">{{ t('console') }}</span>
@@ -5708,20 +5986,20 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="showGrid">&#10003;</span>
                 {{ t('grid') }}
               </button>
-              <button class="vp-dd-item" @click="toggleReflection(); closeAllMenus()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleReflection(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="reflectionEnabled">&#10003;</span>
                 {{ t('reflection') }}
               </button>
-              <button class="vp-dd-item" @click="toggleFog(); closeAllMenus()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleFog(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="fogEnabled">&#10003;</span>
                 {{ t('fog') }}
               </button>
-              <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="toggleClip()">
+              <div class="vp-dd-sep" v-show="!simpleMode"></div>
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleClip()">
                 <span class="vp-dd-check" v-if="clipEnabled">&#10003;</span>
                 {{ t('clipPlane') }}
               </button>
-              <div v-if="clipEnabled" class="vp-dd-slider-row">
+              <div v-if="clipEnabled && !simpleMode" class="vp-dd-slider-row">
                 <select class="clip-axis-select" :value="clipAxis" @change="onClipAxisChange">
                   <option :value="0">X</option>
                   <option :value="1">Y</option>
@@ -5744,7 +6022,7 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="isAutoRotate">&#10003;</span>
                 {{ t('autoRotate') }}
               </button>
-              <button class="vp-dd-item" @click="toggleBuildPlate()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleBuildPlate()">
                 <span class="vp-dd-check" v-if="buildPlateEnabled">&#10003;</span>
                 {{ t('buildPlate') }}
               </button>
@@ -5759,15 +6037,15 @@ translate([0, 0, 39])
                 </label>
               </div>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="showObjectTree = !showObjectTree; closeAllMenus()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="showObjectTree = !showObjectTree; closeAllMenus()">
                 <span class="vp-dd-check" v-if="showObjectTree">&#10003;</span>
                 {{ t('objectTree') }}
               </button>
-              <button class="vp-dd-item" @click="toggleStatistics(); closeAllMenus()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleStatistics(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="showStatistics">&#10003;</span>
                 {{ t('statistics') }}
               </button>
-              <button class="vp-dd-item" @click="showPerfPanel = !showPerfPanel; closeAllMenus()">
+              <button class="vp-dd-item" v-show="!simpleMode" @click="showPerfPanel = !showPerfPanel; closeAllMenus()">
                 <span class="vp-dd-check" v-if="showPerfPanel">&#10003;</span>
                 {{ t('perfPanel') }}
               </button>
@@ -8418,5 +8696,129 @@ textarea.code:focus-visible {
 }
 .shortcut-category:first-child {
   margin-top: 4px;
+}
+
+/* ── Split Editor Container ── */
+.editor-split-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.editor-split-container.split-active {
+  flex-direction: row;
+}
+.editor-split-container.split-active > .code-editor {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+/* ── Split Editor ── */
+.split-editor-pane {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.split-pane-header {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.split-pane-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  width: 100%;
+}
+.split-code-editor {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.split-code-editor .code-area {
+  height: 100%;
+}
+.split-code-editor .code {
+  height: 100%;
+}
+
+/* ── History Panel ── */
+.history-panel {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  max-height: 200px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.history-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+}
+.history-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+.history-close:hover { color: var(--text); }
+.history-body {
+  padding: 4px 8px;
+}
+.history-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 8px 0;
+  text-align: center;
+}
+.history-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.history-entry:last-child { border-bottom: none; }
+.history-entry-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.history-entry-time { font-weight: 600; }
+.history-entry-size { opacity: 0.7; }
+.history-entry-preview {
+  font-size: 11px;
+  color: var(--text);
+  font-family: var(--editor-font-family, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+.history-restore-btn {
+  font-size: 10px;
+  padding: 1px 8px;
 }
 </style>
