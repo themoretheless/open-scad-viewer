@@ -90,6 +90,9 @@ const EDITOR_THEMES: EditorTheme[] = [
 const activeThemeId = ref(localStorage.getItem('scad-editor-theme') || 'default-dark')
 const showThemeDropdown = ref(false)
 
+/* ── Responsive hamburger menu ── */
+const hamburgerOpen = ref(false)
+
 const L: Record<string, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD 3D Просмотрщик',
@@ -329,6 +332,10 @@ const L: Record<string, Record<string, string>> = {
     fontFamily: 'Шрифт редактора',
     // Hover docs
     hoverDocs: 'Подсказки при наведении',
+    // Occurrence highlighting
+    occurrences: 'Совпадений',
+    // Responsive topbar
+    menu: 'Меню',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -568,6 +575,10 @@ const L: Record<string, Record<string, string>> = {
     fontFamily: 'Editor Font',
     // Hover docs
     hoverDocs: 'Hover Tooltips',
+    // Occurrence highlighting
+    occurrences: 'Occurrences',
+    // Responsive topbar
+    menu: 'Menu',
   },
 }
 
@@ -1662,13 +1673,19 @@ const KEYWORDS = new Set([
 const BOOLEANS = new Set(['true','false','undef'])
 const SPECIALS = new Set(['$fn','$fa','$fs'])
 
-function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start: number; end: number }[], fActiveIdx: number, errPos: number): string {
+function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start: number; end: number }[], fActiveIdx: number, errPos: number, occMatches: { start: number; end: number }[] = []): string {
   const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 
   // Build a set of find-match ranges for quick lookup
   const findSet = new Map<number, { end: number; active: boolean }>()
   for (let fi = 0; fi < fMatches.length; fi++) {
     findSet.set(fMatches[fi].start, { end: fMatches[fi].end, active: fi === fActiveIdx })
+  }
+
+  // Build a set of occurrence-highlight ranges
+  const occSet = new Map<number, number>()
+  for (const om of occMatches) {
+    occSet.set(om.start, om.end)
   }
 
   const result: string[] = []
@@ -1682,6 +1699,10 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
   let findMatchEnd = 0
   let findMatchActive = false
 
+  // Track occurrence highlights
+  let inOccMatch = false
+  let occMatchEnd = 0
+
   while (i < len) {
     // Check if we enter a find-match range
     const fm = findSet.get(i)
@@ -1692,10 +1713,24 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
       result.push(`<span class="${findMatchActive ? 'find-match-active' : 'find-match'}">`)
     }
 
+    // Check if we enter an occurrence-match range
+    const om = occSet.get(i)
+    if (om && !inOccMatch && !inFindMatch) {
+      inOccMatch = true
+      occMatchEnd = om
+      result.push('<span class="occ-match">')
+    }
+
     // Close find-match if we passed the end
     if (inFindMatch && i >= findMatchEnd) {
       result.push('</span>')
       inFindMatch = false
+    }
+
+    // Close occurrence-match if we passed the end
+    if (inOccMatch && i >= occMatchEnd) {
+      result.push('</span>')
+      inOccMatch = false
     }
 
     // Block comments
@@ -1803,8 +1838,9 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
     result.push(esc(src[i]))
     i++
   }
-  // Close any dangling find-match span
+  // Close any dangling find-match or occurrence-match span
   if (inFindMatch) result.push('</span>')
+  if (inOccMatch) result.push('</span>')
 
   // Insert error underline at error position
   if (errPos >= 0 && errPos < len) {
@@ -1883,7 +1919,7 @@ function addIndentGuides(html: string, tabSize: number): string {
 }
 
 const highlightedCode = computed(() => {
-  const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value, errorCharPos.value)
+  const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value, errorCharPos.value, occurrencePositions.value)
   return addIndentGuides(raw, prefTabSize.value)
 })
 
@@ -2444,6 +2480,10 @@ function onDocClick(e: MouseEvent) {
   if (showTabContextMenu.value && !target.closest('.tab-ctx-menu')) {
     closeTabContextMenu()
   }
+  // Close hamburger menu on outside click
+  if (hamburgerOpen.value && !target.closest('.hamburger-wrapper')) {
+    hamburgerOpen.value = false
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -2519,6 +2559,25 @@ onMounted(async () => {
   document.addEventListener('click', onCloseContextMenu)
   loadRecentFiles()
   loadFromHash()
+
+  // Dynamic favicon: isometric 3D cube SVG
+  {
+    const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="#1e1e22" stroke="#4a9eff" stroke-width="1.5"/>
+      <polygon points="16,2 30,10 16,18 2,10" fill="#4a9eff" opacity="0.35"/>
+      <polygon points="16,18 30,10 30,22 16,30" fill="#4a9eff" opacity="0.2"/>
+      <polygon points="16,18 2,10 2,22 16,30" fill="#4a9eff" opacity="0.5"/>
+    </svg>`
+    const faviconUrl = 'data:image/svg+xml,' + encodeURIComponent(svgFavicon)
+    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+    link.type = 'image/svg+xml'
+    link.href = faviconUrl
+  }
 
   if (!canvasRef.value) return
   renderer = new WebGPURenderer()
@@ -3124,8 +3183,66 @@ function updateSelectionInfo() {
   selectionInfo.value = t('selChars').replace('{x}', String(chars)).replace('{y}', String(lines))
 }
 
+/* ── Feature: Occurrence Highlighting ── */
+const occurrenceWord = ref('')
+const occurrencePositions = ref<{ start: number; end: number }[]>([])
+
+function updateOccurrenceHighlight() {
+  const el = textareaRef.value
+  if (!el) { occurrenceWord.value = ''; occurrencePositions.value = []; return }
+  const s = el.selectionStart
+  const e = el.selectionEnd
+  const src = code.value
+
+  // Only highlight when exactly a word is selected (or double-click selects a word)
+  if (s === e) {
+    occurrenceWord.value = ''
+    occurrencePositions.value = []
+    return
+  }
+
+  const selected = src.substring(s, e)
+  // Must be a single "word" (alphanumeric + underscores, no spaces)
+  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(selected)) {
+    occurrenceWord.value = ''
+    occurrencePositions.value = []
+    return
+  }
+
+  // Check word boundaries
+  if (s > 0 && /[a-zA-Z0-9_$]/.test(src[s - 1])) {
+    occurrenceWord.value = ''; occurrencePositions.value = []; return
+  }
+  if (e < src.length && /[a-zA-Z0-9_$]/.test(src[e])) {
+    occurrenceWord.value = ''; occurrencePositions.value = []; return
+  }
+
+  occurrenceWord.value = selected
+
+  // Find all occurrences with word boundary
+  const positions: { start: number; end: number }[] = []
+  const wordLen = selected.length
+  let idx = 0
+  while (idx <= src.length - wordLen) {
+    const pos = src.indexOf(selected, idx)
+    if (pos === -1) break
+    // Check word boundaries
+    const before = pos > 0 ? src[pos - 1] : ' '
+    const after = pos + wordLen < src.length ? src[pos + wordLen] : ' '
+    if (!/[a-zA-Z0-9_$]/.test(before) && !/[a-zA-Z0-9_$]/.test(after)) {
+      // Skip the occurrence that is currently selected
+      if (pos !== s) {
+        positions.push({ start: pos, end: pos + wordLen })
+      }
+    }
+    idx = pos + 1
+  }
+  occurrencePositions.value = positions
+}
+
 function onSelectionChange() {
   updateSelectionInfo()
+  updateOccurrenceHighlight()
 }
 
 onMounted(() => {
@@ -3941,15 +4058,10 @@ translate([0, 0, 39])
         <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
         </svg>
-        <span class="brand">{{ t('title') }}</span>
+        <span class="brand topbar-brand-text">{{ t('title') }}</span>
       </div>
       <div class="topbar-right">
-        <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
-        <button class="tb-btn tb-btn-gear" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-          </svg>
-        </button>
+        <!-- Always visible: Render-relevant & essential controls -->
         <button class="tb-btn" @click="toggleLang" :aria-label="t('ariaToggleLang')">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
         <!-- Theme selector dropdown -->
         <div class="theme-selector-wrapper">
@@ -3969,6 +4081,25 @@ translate([0, 0, 39])
               <span class="theme-option-name">{{ theme.name[lang] }}</span>
               <span v-if="theme.id === activeThemeId" class="theme-check">&#10003;</span>
             </div>
+          </div>
+        </div>
+        <!-- Collapsible buttons: hidden on small screens, shown in hamburger -->
+        <button class="tb-btn tb-btn-help topbar-collapsible" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
+        <button class="tb-btn tb-btn-gear topbar-collapsible" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+        <!-- Hamburger button: visible only on small screens -->
+        <div class="hamburger-wrapper">
+          <button class="tb-btn hamburger-btn" @click.stop="hamburgerOpen = !hamburgerOpen" :title="t('menu')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div v-if="hamburgerOpen" class="hamburger-dropdown" @click="hamburgerOpen = false">
+            <button class="hamburger-item" @click="showShortcuts = true">{{ t('shortcuts') }}</button>
+            <button class="hamburger-item" @click="showPreferences = !showPreferences">{{ t('preferences') }}</button>
           </div>
         </div>
       </div>
@@ -5533,6 +5664,11 @@ textarea.code:focus-visible {
   border-radius: 2px;
   outline: 1px solid rgba(255, 165, 0, 0.6);
 }
+:deep(.occ-match) {
+  background: rgba(74, 158, 255, 0.18);
+  border-radius: 2px;
+  outline: 1px solid rgba(74, 158, 255, 0.35);
+}
 
 /* ── Status bar extras ── */
 .stat-fps { color: var(--hl-special); }
@@ -7016,6 +7152,45 @@ textarea.code:focus-visible {
   outline: none;
 }
 .pref-select:focus { border-color: var(--accent); }
+
+/* ── Hamburger menu (hidden on large screens) ── */
+.hamburger-wrapper { display: none; position: relative; }
+.hamburger-btn { padding: 4px 8px; }
+.hamburger-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  z-index: 200;
+  animation: ctx-menu-in 0.12s ease;
+}
+.hamburger-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.hamburger-item:hover { background: var(--hover); }
+
+@media (max-width: 600px) {
+  .topbar-brand-text { display: none; }
+  .topbar-collapsible { display: none !important; }
+  .hamburger-wrapper { display: block; }
+}
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }

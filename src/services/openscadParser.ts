@@ -184,11 +184,27 @@ class Parser {
     this.adv(); return 0
   }
 
-  private parseVec(): any[] {
+  private parseVec(): any {
     this.expect(TT.LBracket)
     const vals: any[] = []
     while (this.peek().t !== TT.RBracket && this.peek().t !== TT.Eof) {
-      vals.push(this.parseValue()); this.match(TT.Comma)
+      vals.push(this.parseValue())
+      // Check for colon → range syntax [start:end] or [start:step:end]
+      if (this.peek().t === TT.Colon) {
+        this.adv() // consume ':'
+        const second = this.parseValue()
+        if (this.peek().t === TT.Colon) {
+          this.adv() // consume second ':'
+          const third = this.parseValue()
+          // [start : step : end]
+          this.match(TT.RBracket)
+          return { __range: true, start: vals[0], step: second, end: third }
+        }
+        // [start : end]
+        this.match(TT.RBracket)
+        return { __range: true, start: vals[0], step: 1, end: second }
+      }
+      this.match(TT.Comma)
     }
     this.expect(TT.RBracket)
     return vals
@@ -397,14 +413,81 @@ function arg(a: Record<string,any>, name: string, pos: number, def: any): any {
   return a[name] ?? a[`_${pos}`] ?? def
 }
 
-function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null): MeshData[] {
-  const out: MeshData[] = []
-  for (const n of nodes) out.push(...evalNode(n, tf, col))
+/** Resolve a parsed arg value: if it's a string matching a variable name, substitute. Also evaluate simple arithmetic expressions. */
+function resolveArg(val: any, vars: Record<string, number>): any {
+  if (typeof val === 'string' && val in vars) return vars[val]
+  if (Array.isArray(val)) return val.map(v => resolveArg(v, vars))
+  if (val && typeof val === 'object' && val.__range) {
+    return { __range: true, start: resolveArg(val.start, vars), step: resolveArg(val.step, vars), end: resolveArg(val.end, vars) }
+  }
+  return val
+}
+
+/** Resolve all args in a Record through variable substitution */
+function resolveArgs(a: Record<string, any>, vars: Record<string, number>): Record<string, any> {
+  if (Object.keys(vars).length === 0) return a
+  const out: Record<string, any> = {}
+  for (const [k, v] of Object.entries(a)) out[k] = resolveArg(v, vars)
   return out
 }
 
-function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|null): MeshData[] {
-  const { name: nm, args: a, children: ch } = node
+/** Expand a range object into an array of numbers */
+function expandRange(r: any): number[] {
+  if (!r || typeof r !== 'object' || !r.__range) return []
+  const start = typeof r.start === 'number' ? r.start : 0
+  const step = typeof r.step === 'number' ? r.step : 1
+  const end = typeof r.end === 'number' ? r.end : 0
+  if (step === 0) return []
+  const result: number[] = []
+  if (step > 0) {
+    for (let i = start; i <= end + 1e-9; i += step) { result.push(i); if (result.length > 10000) break }
+  } else {
+    for (let i = start; i >= end - 1e-9; i += step) { result.push(i); if (result.length > 10000) break }
+  }
+  return result
+}
+
+/** Evaluate a simple numeric condition for if() */
+function evalCondition(val: any): boolean {
+  if (typeof val === 'boolean') return val
+  if (typeof val === 'number') return val !== 0
+  if (val === undefined || val === null) return false
+  if (val === 'true') return true
+  if (val === 'false') return false
+  if (val === 'undef') return false
+  return !!val
+}
+
+function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}): MeshData[] {
+  const out: MeshData[] = []
+  let lastIfResult = false
+  for (let ni = 0; ni < nodes.length; ni++) {
+    const n = nodes[ni]
+    if (n.name === 'else') {
+      // Only evaluate else children if the previous if was false
+      if (!lastIfResult) {
+        out.push(...evalNodes(n.children, tf, col, vars))
+      }
+      continue
+    }
+    if (n.name === 'if') {
+      const ra = resolveArgs(n.args, vars)
+      const cond = arg(ra, '_0', 0, 0)
+      lastIfResult = evalCondition(cond)
+      if (lastIfResult) {
+        out.push(...evalNodes(n.children, tf, col, vars))
+      }
+      continue
+    }
+    lastIfResult = false
+    out.push(...evalNode(n, tf, col, vars))
+  }
+  return out
+}
+
+function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}): MeshData[] {
+  const { name: nm, args: rawArgs, children: ch } = node
+  const a = resolveArgs(rawArgs, vars)
 
   switch (nm) {
     case 'cube': {
@@ -445,10 +528,57 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (!v.length) return []
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
+    case 'for': {
+      // for(i = [0:5]) or for(i = [0:2:10]) or for(i = [1,3,7])
+      // Find the loop variable name and its range/list from args
+      const out: MeshData[] = []
+      // Named args: e.g. { i: range_or_list }
+      for (const [varName, rawVal] of Object.entries(a)) {
+        if (varName.startsWith('_')) continue // skip positional
+        const val = rawVal
+        let iterValues: number[] = []
+        if (val && typeof val === 'object' && val.__range) {
+          iterValues = expandRange(val)
+        } else if (Array.isArray(val)) {
+          iterValues = val.filter((v): v is number => typeof v === 'number')
+        } else if (typeof val === 'number') {
+          iterValues = [val]
+        }
+        for (const iterVal of iterValues) {
+          const newVars = { ...vars, [varName]: iterVal }
+          out.push(...evalNodes(ch, tf, col, newVars))
+        }
+        return out // only support one loop variable per for()
+      }
+      // Fallback: if no named arg, try positional
+      return evalNodes(ch, tf, col, vars)
+    }
+    case 'let': {
+      // let(x = 10, y = 20) { ... }
+      const newVars = { ...vars }
+      for (const [k, v] of Object.entries(a)) {
+        if (k.startsWith('_')) continue
+        if (typeof v === 'number') newVars[k] = v
+        else if (typeof v === 'string' && v in vars) newVars[k] = vars[v]
+      }
+      return evalNodes(ch, tf, col, newVars)
+    }
+    case 'if': {
+      // Handled in evalNodes for proper if/else chaining
+      const cond = arg(a, '_0', 0, 0)
+      if (evalCondition(cond)) {
+        return evalNodes(ch, tf, col, vars)
+      }
+      return []
+    }
+    case 'else': {
+      // Handled in evalNodes; standalone else should just render children
+      return evalNodes(ch, tf, col, vars)
+    }
     case 'translate': {
       const raw = arg(a,'v',0,[0,0,0])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??0, raw[1]??0, raw[2]??0] : [0,0,0]
-      return evalNodes(ch, translate(tf, vec), col)
+      return evalNodes(ch, translate(tf, vec), col, vars)
     }
     case 'rotate': {
       const av = arg(a,'a',0,0), vv = arg(a,'v',1,undefined)
@@ -461,20 +591,20 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       } else if (typeof av === 'number') {
         nt = rotateZ(nt, av * Math.PI / 180)
       }
-      return evalNodes(ch, nt, col)
+      return evalNodes(ch, nt, col, vars)
     }
     case 'scale': {
       const raw = arg(a,'v',0,[1,1,1])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??1,raw[1]??1,raw[2]??1] : [raw,raw,raw]
-      return evalNodes(ch, scale(tf, vec), col)
+      return evalNodes(ch, scale(tf, vec), col, vars)
     }
     case 'mirror': {
       const raw = arg(a,'v',0,[1,0,0])
       if (Array.isArray(raw)) {
         const sv: Vec3 = [raw[0]?-1:1, raw[1]?-1:1, raw[2]?-1:1]
-        return evalNodes(ch, scale(tf, sv), col)
+        return evalNodes(ch, scale(tf, sv), col, vars)
       }
-      return evalNodes(ch, tf, col)
+      return evalNodes(ch, tf, col, vars)
     }
     case 'color': {
       const c = arg(a,'c',0,arg(a,'_0',0,[0.5,0.5,0.5]))
@@ -482,35 +612,35 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (Array.isArray(c)) nc = [c[0]??0.5, c[1]??0.5, c[2]??0.5, c[3]??1]
       else if (typeof c === 'string') nc = cssColor(c)
       else nc = [0.5,0.5,0.5,1]
-      return evalNodes(ch, tf, nc)
+      return evalNodes(ch, tf, nc, vars)
     }
     case 'union':
-      return evalNodes(ch, tf, col)
+      return evalNodes(ch, tf, col, vars)
     case 'difference': {
       const out: MeshData[] = []
-      if (ch.length > 0) out.push(...evalNode(ch[0], tf, col))
+      if (ch.length > 0) out.push(...evalNode(ch[0], tf, col, vars))
       for (let i = 1; i < ch.length; i++)
-        out.push(...evalNode(ch[i], tf, [0.9, 0.15, 0.15, 0.35]))
+        out.push(...evalNode(ch[i], tf, [0.9, 0.15, 0.15, 0.35], vars))
       return out
     }
     case 'intersection':
-      return evalNodes(ch, tf, col ? [col[0],col[1],col[2],0.55] : null)
+      return evalNodes(ch, tf, col ? [col[0],col[1],col[2],0.55] : null, vars)
     case 'multmatrix': {
       const m = arg(a,'m',0,undefined)
       if (Array.isArray(m) && m.length >= 4) {
         const mat = new Float32Array(16)
         for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) mat[r*4+c] = m[r]?.[c] ?? (r===c?1:0)
-        return evalNodes(ch, multiply(mat, tf), col)
+        return evalNodes(ch, multiply(mat, tf), col, vars)
       }
-      return evalNodes(ch, tf, col)
+      return evalNodes(ch, tf, col, vars)
     }
     case 'hull': case 'minkowski': case 'linear_extrude': case 'rotate_extrude':
     case 'projection': case 'import': case 'render': case 'group':
-      return evalNodes(ch, tf, col)
+      return evalNodes(ch, tf, col, vars)
     case 'module': case 'function': case '__assign':
       return []
     default:
-      return evalNodes(ch, tf, col)
+      return evalNodes(ch, tf, col, vars)
   }
 }
 
