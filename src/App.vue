@@ -403,6 +403,198 @@ const vertexCount = ref(0)
 const boundsSize = ref<[number, number, number]>([0, 0, 0])
 let statsInterval: ReturnType<typeof setInterval> | null = null
 
+/* ── Preferences ── */
+const showPreferences = ref(false)
+const prefFontSize = ref(parseInt(localStorage.getItem('scad-pref-fontSize') || '13'))
+const prefTabSize = ref(parseInt(localStorage.getItem('scad-pref-tabSize') || '4'))
+const prefAutoRenderDelay = ref(parseInt(localStorage.getItem('scad-pref-autoRenderDelay') || '400'))
+const prefShowMinimap = ref(localStorage.getItem('scad-pref-showMinimap') !== 'false')
+const prefShowLineNumbers = ref(localStorage.getItem('scad-pref-showLineNumbers') !== 'false')
+
+function savePref(key: string, val: string) {
+  localStorage.setItem(`scad-pref-${key}`, val)
+}
+
+watch(prefFontSize, v => { savePref('fontSize', String(v)) })
+watch(prefTabSize, v => { savePref('tabSize', String(v)) })
+watch(prefAutoRenderDelay, v => { savePref('autoRenderDelay', String(v)) })
+watch(prefShowMinimap, v => {
+  savePref('showMinimap', String(v))
+  showMinimap.value = v
+  if (v) nextTick(renderMinimap)
+})
+watch(prefShowLineNumbers, v => { savePref('showLineNumbers', String(v)) })
+
+/* ── Console / Log Panel ── */
+interface ConsoleEntry {
+  id: number
+  type: 'info' | 'warn' | 'error'
+  message: string
+  timestamp: Date
+}
+let consoleIdCounter = 0
+const showConsole = ref(false)
+const consoleEntries = ref<ConsoleEntry[]>([])
+const consoleRef = ref<HTMLElement | null>(null)
+const consolePanelHeight = ref(parseInt(localStorage.getItem('scad-console-height') || '150'))
+const consoleDragging = ref(false)
+
+function addConsoleEntry(type: 'info' | 'warn' | 'error', message: string) {
+  consoleEntries.value.push({ id: consoleIdCounter++, type, message, timestamp: new Date() })
+  if (consoleEntries.value.length > 50) {
+    consoleEntries.value = consoleEntries.value.slice(-50)
+  }
+  nextTick(() => {
+    if (consoleRef.value) {
+      consoleRef.value.scrollTop = consoleRef.value.scrollHeight
+    }
+  })
+}
+
+function clearConsole() {
+  consoleEntries.value = []
+}
+
+function onConsoleDragStart(e: MouseEvent) {
+  e.preventDefault()
+  consoleDragging.value = true
+  const startY = e.clientY
+  const startH = consolePanelHeight.value
+  function onMove(ev: MouseEvent) {
+    consolePanelHeight.value = Math.max(80, Math.min(400, startH - (ev.clientY - startY)))
+  }
+  function onUp() {
+    consoleDragging.value = false
+    localStorage.setItem('scad-console-height', String(consolePanelHeight.value))
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+function formatConsoleTime(d: Date): string {
+  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+/* ── Copy as Image ── */
+const showCopiedImage = ref(false)
+
+async function copyCanvasToClipboard() {
+  if (!renderer) return
+  const ok = await renderer.copyToClipboard()
+  if (ok) {
+    showCopiedImage.value = true
+    setTimeout(() => { showCopiedImage.value = false }, 1500)
+  } else {
+    // Fallback to download
+    takeScreenshot()
+  }
+}
+
+/* ── Object Tree Panel ── */
+const showObjectTree = ref(false)
+const astNodes = ref<ASTNode[]>([])
+const expandedNodes = ref<Set<number>>(new Set())
+
+function toggleTreeNode(pos: number) {
+  if (expandedNodes.value.has(pos)) {
+    expandedNodes.value.delete(pos)
+  } else {
+    expandedNodes.value.add(pos)
+  }
+  // Force reactivity
+  expandedNodes.value = new Set(expandedNodes.value)
+}
+
+function scrollEditorToLine(pos: number) {
+  const el = textareaRef.value
+  if (!el) return
+  const textBefore = code.value.substring(0, pos)
+  const lineNum = textBefore.split('\n').length
+  const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
+  el.scrollTop = Math.max(0, (lineNum - 3) * lineHeight)
+  // Also place cursor there
+  const lineStart = code.value.lastIndexOf('\n', pos - 1) + 1
+  const lineEnd = code.value.indexOf('\n', pos)
+  el.focus()
+  el.setSelectionRange(lineStart, lineEnd === -1 ? code.value.length : lineEnd)
+  syncScroll()
+}
+
+function getNodeSummary(node: ASTNode): string {
+  const a = node.args
+  switch (node.name) {
+    case 'cube': {
+      const size = a.size ?? a._0 ?? 1
+      if (Array.isArray(size)) return `[${size.join(',')}]`
+      return `${size}`
+    }
+    case 'sphere': {
+      const r = a.r ?? a._0 ?? a.d ? `d=${a.d}` : '1'
+      return `r=${r}`
+    }
+    case 'cylinder': {
+      const h = a.h ?? a._0 ?? 1
+      return `h=${h}`
+    }
+    case 'translate': {
+      const v = a.v ?? a._0 ?? [0,0,0]
+      if (Array.isArray(v)) return `[${v.join(',')}]`
+      return ''
+    }
+    case 'rotate': {
+      const v = a.a ?? a._0 ?? 0
+      if (Array.isArray(v)) return `[${v.join(',')}]`
+      return `${v}`
+    }
+    case 'scale': {
+      const v = a.v ?? a._0 ?? [1,1,1]
+      if (Array.isArray(v)) return `[${v.join(',')}]`
+      return `${v}`
+    }
+    case 'color': {
+      const c = a.c ?? a._0 ?? ''
+      if (Array.isArray(c)) return `[${c.map((x: number) => typeof x === 'number' ? x.toFixed(2) : x).join(',')}]`
+      return String(c)
+    }
+    default:
+      return ''
+  }
+}
+
+function getNodeIcon(name: string): string {
+  const icons: Record<string, string> = {
+    cube: '□', sphere: '○', cylinder: '▭',
+    translate: '→', rotate: '↻', scale: '⤢',
+    color: '●', mirror: '↔', difference: '−',
+    union: '∪', intersection: '∩',
+  }
+  return icons[name] || '▸'
+}
+
+interface FlatTreeNode {
+  node: ASTNode
+  depth: number
+  hasChildren: boolean
+}
+
+const flatTree = computed(() => {
+  const result: FlatTreeNode[] = []
+  function walk(nodes: ASTNode[], depth: number) {
+    for (const n of nodes) {
+      if (n.name === '__assign') continue
+      const hasChildren = n.children.length > 0
+      result.push({ node: n, depth, hasChildren })
+      if (hasChildren && expandedNodes.value.has(n.pos)) {
+        walk(n.children, depth + 1)
+      }
+    }
+  }
+  walk(astNodes.value, 0)
+  return result
+})
+
 /* ── Find & Replace ── */
 const showFind = ref(false)
 const showReplace = ref(false)
@@ -522,7 +714,7 @@ function formatRelativeTime(ts: number): string {
 }
 
 /* ── Code Minimap ── */
-const showMinimap = ref(false)
+const showMinimap = ref(localStorage.getItem('scad-pref-showMinimap') !== 'false')
 const minimapCanvasRef = ref<HTMLCanvasElement | null>(null)
 let minimapDebounce: ReturnType<typeof setTimeout> | null = null
 const minimapDragging = ref(false)
@@ -646,6 +838,7 @@ function onMinimapMouseUp() {
 
 function toggleMinimap() {
   showMinimap.value = !showMinimap.value
+  prefShowMinimap.value = showMinimap.value
   if (showMinimap.value) nextTick(renderMinimap)
 }
 
@@ -1244,7 +1437,7 @@ function formatCode() {
   const lines = src.split('\n')
   const result: string[] = []
   let indent = 0
-  const INDENT = '    '
+  const INDENT = ' '.repeat(prefTabSize.value)
 
   for (const raw of lines) {
     const trimmed = raw.trim()
@@ -1336,6 +1529,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
   // Escape to close modal or exit fullscreen
   if (e.key === 'Escape') {
+    if (showPreferences.value) { showPreferences.value = false; return }
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
     if (acVisible.value) { acVisible.value = false; return }
@@ -1386,7 +1580,7 @@ watch(code, (v) => {
   localStorage.setItem('scad-code', v)
   if (!autoRender.value) return
   if (debounce) clearTimeout(debounce)
-  debounce = setTimeout(doRender, 400)
+  debounce = setTimeout(doRender, prefAutoRenderDelay.value)
   // Debounce minimap render
   if (showMinimap.value) {
     if (minimapDebounce) clearTimeout(minimapDebounce)
@@ -1402,12 +1596,20 @@ function doRender() {
     const t0 = performance.now()
     const result = parseOpenSCADWithAST(code.value)
     const meshes = result.meshes
+    astNodes.value = result.ast
     const t1 = performance.now()
     renderTime.value = Math.round(t1 - t0)
     meshCount.value = meshes.length
     triCount.value = meshes.reduce((s: number, m: MeshData) => s + m.indices.length / 3, 0)
     lastParsedMeshes = meshes
     renderer.setMeshes(meshes)
+    // Console log entries
+    const nodeCount = countASTNodes(result.ast)
+    addConsoleEntry('info', t('parsedNodes').replace('{n}', String(nodeCount)))
+    addConsoleEntry('info', t('generatedMeshes')
+      .replace('{m}', String(meshes.length))
+      .replace('{t}', String(triCount.value))
+      .replace('{ms}', String(renderTime.value)))
   } catch (e: any) {
     let msg = e.message || String(e)
     const posMatch = msg.match(/@(\d+)/)
@@ -1419,7 +1621,17 @@ function doRender() {
       msg = `${t('errorAtLine')} ${line}: ${msg}`
     }
     error.value = msg
+    addConsoleEntry('error', msg)
   }
+}
+
+function countASTNodes(nodes: ASTNode[]): number {
+  let count = 0
+  for (const n of nodes) {
+    count++
+    count += countASTNodes(n.children)
+  }
+  return count
 }
 
 function loadExample(name: string) {
@@ -1456,14 +1668,84 @@ function handleKey(e: KeyboardEvent) {
     }
   }
 
+  // Comment toggle: Ctrl+/
+  if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+    e.preventDefault()
+    toggleComment()
+    return
+  }
+
   if (e.key === 'Tab' && !acVisible.value) {
     e.preventDefault()
     const el = e.target as HTMLTextAreaElement
     const s = el.selectionStart, end = el.selectionEnd
-    code.value = code.value.substring(0, s) + '    ' + code.value.substring(end)
-    requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 4 })
+    const indent = ' '.repeat(prefTabSize.value)
+    code.value = code.value.substring(0, s) + indent + code.value.substring(end)
+    requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + prefTabSize.value })
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRender() }
+}
+
+function toggleComment() {
+  const el = textareaRef.value
+  if (!el) return
+  const src = code.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+
+  // Find the lines covered by selection
+  const lineStartIdx = src.lastIndexOf('\n', selStart - 1) + 1
+  let lineEndIdx = src.indexOf('\n', selEnd)
+  if (lineEndIdx === -1) lineEndIdx = src.length
+
+  const block = src.substring(lineStartIdx, lineEndIdx)
+  const lines = block.split('\n')
+
+  // Determine if we should comment or uncomment
+  // If all non-empty lines start with //, uncomment; otherwise comment
+  const nonEmpty = lines.filter(l => l.trim().length > 0)
+  const allCommented = nonEmpty.length > 0 && nonEmpty.every(l => l.trimStart().startsWith('//'))
+
+  let newLines: string[]
+  let cursorDelta = 0
+
+  if (allCommented) {
+    // Uncomment: remove first occurrence of '// ' or '//'
+    newLines = lines.map(l => {
+      if (l.trimStart().startsWith('// ')) {
+        const idx = l.indexOf('// ')
+        return l.substring(0, idx) + l.substring(idx + 3)
+      } else if (l.trimStart().startsWith('//')) {
+        const idx = l.indexOf('//')
+        return l.substring(0, idx) + l.substring(idx + 2)
+      }
+      return l
+    })
+    // Cursor delta for first line
+    const firstLine = lines[0]
+    if (firstLine.trimStart().startsWith('// ')) cursorDelta = -3
+    else if (firstLine.trimStart().startsWith('//')) cursorDelta = -2
+  } else {
+    // Comment: add '// ' at the beginning of each line
+    newLines = lines.map(l => {
+      if (l.trim().length === 0) return l // keep empty lines as-is
+      return '// ' + l
+    })
+    cursorDelta = lines[0].trim().length === 0 ? 0 : 3
+  }
+
+  const newBlock = newLines.join('\n')
+  code.value = src.substring(0, lineStartIdx) + newBlock + src.substring(lineEndIdx)
+
+  // Restore cursor / selection
+  nextTick(() => {
+    const newSelStart = Math.max(lineStartIdx, selStart + cursorDelta)
+    const lengthDiff = newBlock.length - block.length
+    const newSelEnd = selEnd + lengthDiff
+    el.selectionStart = newSelStart
+    el.selectionEnd = Math.max(newSelStart, newSelEnd)
+    el.focus()
+  })
 }
 
 function handleKeyUp() {
@@ -1592,6 +1874,11 @@ translate([0, 0, 35])
       </div>
       <div class="topbar-right">
         <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')">?</button>
+        <button class="tb-btn tb-btn-gear" @click="showPreferences = !showPreferences" :title="t('preferences')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
         <button class="tb-btn" @click="toggleLang">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
         <!-- Theme selector dropdown -->
         <div class="theme-selector-wrapper">
@@ -1630,8 +1917,54 @@ translate([0, 0, 35])
             <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>{{ t('sc_undo') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_findOnly') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+H</kbd><span>{{ t('sc_findReplace') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+/</kbd><span>{{ t('sc_commentToggle') }}</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preferences modal -->
+      <div v-if="showPreferences" class="modal-backdrop" @click.self="showPreferences = false">
+        <div class="modal-box pref-modal">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('preferences') }}</span>
+            <button class="modal-close" @click="showPreferences = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="pref-row">
+              <label class="pref-label">{{ t('fontSize') }}</label>
+              <div class="pref-control">
+                <input type="range" min="10" max="20" v-model.number="prefFontSize" class="pref-slider" />
+                <span class="pref-value">{{ prefFontSize }}px</span>
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('tabSize') }}</label>
+              <div class="pref-control pref-radio-group">
+                <label class="pref-radio"><input type="radio" :value="2" v-model.number="prefTabSize" /> 2</label>
+                <label class="pref-radio"><input type="radio" :value="4" v-model.number="prefTabSize" /> 4</label>
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('autoRenderDelay') }}</label>
+              <div class="pref-control">
+                <input type="range" min="100" max="2000" step="50" v-model.number="prefAutoRenderDelay" class="pref-slider" />
+                <span class="pref-value">{{ prefAutoRenderDelay }}ms</span>
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('showMinimapPref') }}</label>
+              <div class="pref-control">
+                <input type="checkbox" v-model="prefShowMinimap" class="pref-checkbox" />
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('showLineNumbers') }}</label>
+              <div class="pref-control">
+                <input type="checkbox" v-model="prefShowLineNumbers" class="pref-checkbox" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1799,8 +2132,8 @@ translate([0, 0, 35])
           </div>
         </div>
 
-        <div class="code-editor">
-          <pre class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
+        <div class="code-editor" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize }">
+          <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
           <div class="code-area">
             <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
             <textarea
@@ -1849,6 +2182,38 @@ translate([0, 0, 35])
           </button>
         </div>
 
+        <!-- Console toggle button -->
+        <button class="console-toggle-btn" @click="showConsole = !showConsole" :class="{ active: showConsole }">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+          <span>{{ t('console') }}</span>
+        </button>
+
+        <!-- Console panel -->
+        <div v-if="showConsole" class="console-panel" :style="{ height: consolePanelHeight + 'px' }">
+          <div class="console-drag-handle" @mousedown="onConsoleDragStart"></div>
+          <div class="console-header">
+            <span class="console-title">{{ t('console') }}</span>
+            <button class="console-clear-btn" @click="clearConsole">{{ t('consoleClear') }}</button>
+          </div>
+          <div class="console-entries" ref="consoleRef">
+            <div
+              v-for="entry in consoleEntries"
+              :key="entry.id"
+              class="console-entry"
+              :class="'console-' + entry.type"
+            >
+              <span class="console-time">{{ formatConsoleTime(entry.timestamp) }}</span>
+              <span class="console-icon" v-if="entry.type === 'info'">&#9432;</span>
+              <span class="console-icon" v-else-if="entry.type === 'warn'">&#9888;</span>
+              <span class="console-icon" v-else>&#10006;</span>
+              <span class="console-msg">{{ entry.message }}</span>
+            </div>
+            <div v-if="!consoleEntries.length" class="console-empty">--</div>
+          </div>
+        </div>
+
         <div v-if="error" class="error">{{ error }}</div>
 
         <div class="stats">
@@ -1881,6 +2246,15 @@ translate([0, 0, 35])
               <circle cx="12" cy="13" r="4"/>
             </svg>
           </button>
+          <!-- Copy as Image -->
+          <div class="copy-image-wrapper">
+            <button class="view-btn view-btn-icon" @click="copyCanvasToClipboard" :title="t('copyImage')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+            <span v-if="showCopiedImage" class="copied-tooltip">{{ t('copiedImage') }}</span>
+          </div>
           <div class="view-separator"></div>
           <button class="view-btn view-btn-toggle" :class="{ active: showWireframe }" @click="toggleWireframe" :title="t('wireframe')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1927,6 +2301,15 @@ translate([0, 0, 35])
               @click="setBgColor(idx)"
             />
           </div>
+          <div class="view-separator"></div>
+          <!-- Object Tree toggle -->
+          <button class="view-btn view-btn-toggle" :class="{ active: showObjectTree }" @click="showObjectTree = !showObjectTree" :title="t('objectTree')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="6" x2="3" y2="6"/><line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="21" y2="12"/>
+              <line x1="7" y1="18" x2="7" y2="18"/><line x1="12" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         <!-- Axis labels -->
@@ -1945,6 +2328,34 @@ translate([0, 0, 35])
           class="axis-label axis-label-z"
           :style="{ left: axisLabelZ.x + 'px', top: axisLabelZ.y + 'px' }"
         >Z</span>
+
+        <!-- Object Tree Panel (overlay left of canvas) -->
+        <div v-if="showObjectTree" class="object-tree-panel">
+          <div class="object-tree-header">
+            <span class="object-tree-title">{{ t('objectTree') }}</span>
+            <button class="object-tree-close" @click="showObjectTree = false">&times;</button>
+          </div>
+          <div class="object-tree-body">
+            <div
+              v-for="item in flatTree"
+              :key="item.node.pos"
+              class="tree-node"
+              :style="{ paddingLeft: (item.depth * 16 + 8) + 'px' }"
+              @click="scrollEditorToLine(item.node.pos)"
+            >
+              <span
+                v-if="item.hasChildren"
+                class="tree-toggle"
+                @click.stop="toggleTreeNode(item.node.pos)"
+              >{{ expandedNodes.has(item.node.pos) ? '&#9662;' : '&#9656;' }}</span>
+              <span v-else class="tree-toggle tree-leaf">&nbsp;</span>
+              <span class="tree-icon">{{ getNodeIcon(item.node.name) }}</span>
+              <span class="tree-name">{{ item.node.name }}</span>
+              <span v-if="getNodeSummary(item.node)" class="tree-summary">{{ getNodeSummary(item.node) }}</span>
+            </div>
+            <div v-if="!flatTree.length" class="object-tree-empty">--</div>
+          </div>
+        </div>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
@@ -2156,7 +2567,7 @@ html, body, #app {
   width: 44px; flex-shrink: 0;
   padding: 12px 8px 12px 4px;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
-  font-size: 0.82rem; line-height: 1.55;
+  font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   text-align: right; color: var(--text-dim);
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -2173,12 +2584,12 @@ html, body, #app {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   padding: 12px;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
-  font-size: 0.82rem; line-height: 1.55;
+  font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   color: var(--text);
   overflow: hidden;
   pointer-events: none;
   white-space: pre;
-  tab-size: 4;
+  tab-size: var(--editor-tab-size, 4);
   margin: 0;
 }
 .highlight-layer code {
@@ -2191,12 +2602,12 @@ html, body, #app {
   width: 100%; height: 100%;
   resize: none;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
-  font-size: 0.82rem; line-height: 1.55;
+  font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   padding: 12px; border: none; outline: none;
   background: transparent;
   color: transparent;
   caret-color: var(--text);
-  tab-size: 4;
+  tab-size: var(--editor-tab-size, 4);
   white-space: pre;
   overflow: auto;
   z-index: 1;
@@ -2666,6 +3077,171 @@ html, body, #app {
 .axis-label-x { color: #e05555; }
 .axis-label-y { color: #44cc55; }
 .axis-label-z { color: #4488ee; }
+
+/* ── Gear button ── */
+.tb-btn-gear {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 7px;
+}
+
+/* ── Preferences modal ── */
+.pref-modal { min-width: 360px; }
+.pref-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(128,128,128,.12);
+}
+.pref-row:last-child { border-bottom: none; }
+.pref-label { color: var(--text); font-weight: 500; }
+.pref-control { display: flex; align-items: center; gap: 8px; }
+.pref-slider {
+  width: 120px; cursor: pointer;
+  accent-color: var(--accent);
+}
+.pref-value {
+  font-size: 0.72rem; color: var(--text-dim);
+  min-width: 44px; text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pref-radio-group { display: flex; gap: 12px; }
+.pref-radio {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.8rem; color: var(--text); cursor: pointer;
+}
+.pref-radio input { accent-color: var(--accent); cursor: pointer; }
+.pref-checkbox { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
+
+/* ── Console panel ── */
+.console-toggle-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.console-toggle-btn:hover { color: var(--text); }
+.console-toggle-btn.active { color: var(--accent); border-color: var(--accent); }
+
+.console-panel {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.console-drag-handle {
+  height: 4px; cursor: ns-resize;
+  background: var(--border);
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.console-drag-handle:hover { background: var(--accent); }
+.console-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.console-title { font-size: 0.72rem; font-weight: 600; color: var(--text-dim); flex: 1; }
+.console-clear-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
+  font-size: 0.66rem; padding: 1px 8px; border-radius: 3px;
+  transition: color 0.1s;
+}
+.console-clear-btn:hover { color: var(--text); }
+.console-entries {
+  flex: 1; overflow-y: auto; padding: 4px 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+}
+.console-entry {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 2px 10px;
+  border-bottom: 1px solid rgba(128,128,128,.06);
+}
+.console-time { color: var(--text-dim); white-space: nowrap; opacity: 0.6; flex-shrink: 0; }
+.console-icon { flex-shrink: 0; font-size: 0.72rem; line-height: 1.3; }
+.console-info .console-icon { color: var(--accent); }
+.console-warn .console-icon { color: var(--hl-number); }
+.console-error .console-icon { color: var(--danger); }
+.console-msg { color: var(--text); word-break: break-word; line-height: 1.4; }
+.console-error .console-msg { color: var(--danger); }
+.console-warn .console-msg { color: var(--hl-number); }
+.console-empty { padding: 12px; color: var(--text-dim); text-align: center; font-size: 0.7rem; }
+
+/* ── Copy as Image ── */
+.copy-image-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.copy-image-wrapper .copied-tooltip {
+  top: auto;
+  left: auto;
+  right: 110%;
+  bottom: auto;
+  transform: none;
+  white-space: nowrap;
+}
+
+/* ── Object Tree Panel ── */
+.object-tree-panel {
+  position: absolute;
+  top: 10px; left: 10px;
+  width: 240px;
+  max-height: 60%;
+  background: rgba(30,30,34,.88);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column;
+  z-index: 10;
+  overflow: hidden;
+}
+[data-theme="light"] .object-tree-panel {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(0,0,0,.12);
+}
+.object-tree-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+[data-theme="light"] .object-tree-header {
+  border-bottom-color: rgba(0,0,0,.08);
+}
+.object-tree-title { font-size: 0.72rem; font-weight: 600; color: var(--text-dim); }
+.object-tree-close {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 1rem; line-height: 1; padding: 0 2px;
+}
+.object-tree-close:hover { color: var(--text); }
+.object-tree-body {
+  flex: 1; overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  padding: 4px 0;
+}
+.tree-node {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+  border-radius: 4px;
+  margin: 0 4px;
+}
+.tree-node:hover { background: rgba(74,158,255,.15); }
+.tree-toggle {
+  width: 12px; text-align: center; cursor: pointer;
+  color: var(--text-dim); flex-shrink: 0; font-size: 0.65rem;
+}
+.tree-leaf { visibility: hidden; }
+.tree-icon { color: var(--accent); flex-shrink: 0; font-size: 0.72rem; }
+.tree-name { color: var(--hl-keyword); font-weight: 500; }
+.tree-summary { color: var(--text-dim); margin-left: 4px; font-size: 0.65rem; }
+.object-tree-empty { padding: 12px; color: var(--text-dim); text-align: center; font-size: 0.7rem; }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
