@@ -88,6 +88,11 @@ export class WebGPURenderer {
   /* auto-rotate */
   autoRotate = false
 
+  /* clear color (viewport background) */
+  private clearR = 0.09
+  private clearG = 0.09
+  private clearB = 0.11
+
   yaw = 0.6; pitch = 0.4; dist = 50
   tx = 0; ty = 0; tz = 0
 
@@ -95,6 +100,16 @@ export class WebGPURenderer {
   private dead = false
   private drag = false; private pan = false
   private mx = 0; private my = 0
+
+  /* ── Touch state ── */
+  private touchIds: number[] = []
+  private touchStartDist = 0
+  private touchStartMidX = 0
+  private touchStartMidY = 0
+  private touchStartDist0 = 0
+  private touchMode: 'none' | 'rotate' | 'pinch' = 'none'
+  private lastTouchX = 0
+  private lastTouchY = 0
 
   async init(canvas: HTMLCanvasElement): Promise<boolean> {
     this.canvas = canvas
@@ -286,7 +301,7 @@ export class WebGPURenderer {
     const pass = enc.beginRenderPass({
       colorAttachments: [{
         view: this.ctx.getCurrentTexture().createView(),
-        clearValue: { r: 0.09, g: 0.09, b: 0.11, a: 1 },
+        clearValue: { r: this.clearR, g: this.clearG, b: this.clearB, a: 1 },
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
@@ -366,6 +381,89 @@ export class WebGPURenderer {
   }
   private noCtx = (e: Event) => e.preventDefault()
 
+  /* ── Touch handlers ── */
+  private getTouchById(touches: TouchList, id: number): Touch | null {
+    for (let i = 0; i < touches.length; i++) {
+      if (touches[i].identifier === id) return touches[i]
+    }
+    return null
+  }
+
+  private onTouchStart = (e: TouchEvent) => {
+    e.preventDefault()
+    const touches = e.touches
+    if (touches.length === 1) {
+      this.touchMode = 'rotate'
+      this.lastTouchX = touches[0].clientX
+      this.lastTouchY = touches[0].clientY
+      this.touchIds = [touches[0].identifier]
+    } else if (touches.length >= 2) {
+      this.touchMode = 'pinch'
+      this.touchIds = [touches[0].identifier, touches[1].identifier]
+      const dx = touches[1].clientX - touches[0].clientX
+      const dy = touches[1].clientY - touches[0].clientY
+      this.touchStartDist = Math.sqrt(dx * dx + dy * dy)
+      this.touchStartDist0 = this.dist
+      this.touchStartMidX = (touches[0].clientX + touches[1].clientX) / 2
+      this.touchStartMidY = (touches[0].clientY + touches[1].clientY) / 2
+      this.lastTouchX = this.touchStartMidX
+      this.lastTouchY = this.touchStartMidY
+    }
+  }
+
+  private onTouchMove = (e: TouchEvent) => {
+    e.preventDefault()
+    const touches = e.touches
+    if (this.touchMode === 'rotate' && touches.length === 1) {
+      const t = touches[0]
+      const dx = t.clientX - this.lastTouchX
+      const dy = t.clientY - this.lastTouchY
+      this.lastTouchX = t.clientX
+      this.lastTouchY = t.clientY
+      this.yaw -= dx * 0.005
+      this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.005))
+    } else if (this.touchMode === 'pinch' && touches.length >= 2) {
+      const t0 = this.getTouchById(touches, this.touchIds[0])
+      const t1 = this.getTouchById(touches, this.touchIds[1])
+      if (!t0 || !t1) return
+
+      // Pinch zoom
+      const dx = t1.clientX - t0.clientX
+      const dy = t1.clientY - t0.clientY
+      const curDist = Math.sqrt(dx * dx + dy * dy)
+      const ratio = this.touchStartDist / Math.max(curDist, 1)
+      this.dist = Math.max(1, Math.min(50000, this.touchStartDist0 * ratio))
+
+      // Two-finger pan
+      const midX = (t0.clientX + t1.clientX) / 2
+      const midY = (t0.clientY + t1.clientY) / 2
+      const panDx = midX - this.lastTouchX
+      const panDy = midY - this.lastTouchY
+      this.lastTouchX = midX
+      this.lastTouchY = midY
+      const sp = this.dist * 0.002
+      const cosY = Math.cos(this.yaw), sinY = Math.sin(this.yaw)
+      this.tx -= panDx * cosY * sp
+      this.tz += panDx * sinY * sp
+      this.ty += panDy * sp
+    }
+  }
+
+  private onTouchEnd = (e: TouchEvent) => {
+    e.preventDefault()
+    const touches = e.touches
+    if (touches.length === 0) {
+      this.touchMode = 'none'
+      this.touchIds = []
+    } else if (touches.length === 1) {
+      // Went from 2 fingers to 1, switch to rotate
+      this.touchMode = 'rotate'
+      this.lastTouchX = touches[0].clientX
+      this.lastTouchY = touches[0].clientY
+      this.touchIds = [touches[0].identifier]
+    }
+  }
+
   private bindInput() {
     const c = this.canvas
     c.addEventListener('pointerdown', this.onDown)
@@ -373,6 +471,11 @@ export class WebGPURenderer {
     c.addEventListener('pointerup', this.onUp)
     c.addEventListener('wheel', this.onWheel, { passive: false })
     c.addEventListener('contextmenu', this.noCtx)
+
+    // Touch events
+    c.addEventListener('touchstart', this.onTouchStart, { passive: false })
+    c.addEventListener('touchmove', this.onTouchMove, { passive: false })
+    c.addEventListener('touchend', this.onTouchEnd, { passive: false })
   }
 
   /** Set camera yaw and pitch directly (e.g. for view presets). */
@@ -422,6 +525,13 @@ export class WebGPURenderer {
   toggleAutoRotate(): boolean {
     this.autoRotate = !this.autoRotate
     return this.autoRotate
+  }
+
+  /** Set the viewport background (clear) color. r, g, b in 0-1 range. */
+  setClearColor(r: number, g: number, b: number) {
+    this.clearR = r
+    this.clearG = g
+    this.clearB = b
   }
 
   /** Build a line-list vertex buffer with edges from the current meshes. */
@@ -484,6 +594,9 @@ export class WebGPURenderer {
     c.removeEventListener('pointerup', this.onUp)
     c.removeEventListener('wheel', this.onWheel)
     c.removeEventListener('contextmenu', this.noCtx)
+    c.removeEventListener('touchstart', this.onTouchStart)
+    c.removeEventListener('touchmove', this.onTouchMove)
+    c.removeEventListener('touchend', this.onTouchEnd)
     for (const g of this.meshes) { g.vb.destroy(); g.ib.destroy(); g.ub.destroy() }
     this.meshes = []
     this.gridVB?.destroy()
