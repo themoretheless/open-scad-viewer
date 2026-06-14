@@ -826,6 +826,226 @@ function makeHelix(r: number, pitch: number, turns: number, fn: number) {
   return { v, ix }
 }
 
+function makeBezier(points: number[][], thickness: number, fn: number) {
+  const v: number[] = [], ix: number[] = []
+  const tubeR = thickness / 2
+  const tubeSegs = Math.max(6, Math.floor(fn / 4))
+
+  // Build cubic Bezier segments: points 0-3, 3-6, 6-9, ...
+  const segments: number[][][] = []
+  if (points.length <= 4) {
+    segments.push(points)
+  } else {
+    for (let i = 0; i + 3 < points.length; i += 3) {
+      segments.push(points.slice(i, i + 4))
+    }
+    // If remaining points didn't form a complete segment, last segment already covers them
+  }
+
+  // Evaluate composite Bezier curve at uniform t in [0, 1]
+  const totalSegs = segments.length
+  const ringSegs = fn
+  const curvePts: number[][] = []
+  for (let i = 0; i <= ringSegs; i++) {
+    const tGlobal = i / ringSegs
+    const segF = tGlobal * totalSegs
+    const segIdx = Math.min(Math.floor(segF), totalSegs - 1)
+    const t = segF - segIdx
+    const seg = segments[segIdx]
+    if (seg.length >= 4) {
+      // Cubic Bezier: B(t) = (1-t)^3*P0 + 3(1-t)^2*t*P1 + 3(1-t)*t^2*P2 + t^3*P3
+      const u = 1 - t
+      const u2 = u * u, u3 = u2 * u
+      const t2 = t * t, t3 = t2 * t
+      curvePts.push([
+        u3 * seg[0][0] + 3 * u2 * t * seg[1][0] + 3 * u * t2 * seg[2][0] + t3 * seg[3][0],
+        u3 * seg[0][1] + 3 * u2 * t * seg[1][1] + 3 * u * t2 * seg[2][1] + t3 * seg[3][1],
+        u3 * seg[0][2] + 3 * u2 * t * seg[1][2] + 3 * u * t2 * seg[2][2] + t3 * seg[3][2],
+      ])
+    } else if (seg.length === 3) {
+      // Quadratic Bezier
+      const u = 1 - t
+      curvePts.push([
+        u * u * seg[0][0] + 2 * u * t * seg[1][0] + t * t * seg[2][0],
+        u * u * seg[0][1] + 2 * u * t * seg[1][1] + t * t * seg[2][1],
+        u * u * seg[0][2] + 2 * u * t * seg[1][2] + t * t * seg[2][2],
+      ])
+    } else {
+      // Linear interpolation
+      const u = 1 - t
+      curvePts.push([
+        u * seg[0][0] + t * seg[seg.length - 1][0],
+        u * seg[0][1] + t * seg[seg.length - 1][1],
+        u * seg[0][2] + t * seg[seg.length - 1][2],
+      ])
+    }
+  }
+
+  // Generate tube using Frenet frame (same approach as makeHelix)
+  for (let i = 0; i <= ringSegs; i++) {
+    const cur = curvePts[i]
+    // Compute tangent via finite differences
+    let tx: number, ty: number, tz: number
+    if (i < ringSegs) {
+      const next = curvePts[i + 1]
+      tx = next[0] - cur[0]; ty = next[1] - cur[1]; tz = next[2] - cur[2]
+    } else {
+      const prev = curvePts[i - 1]
+      tx = cur[0] - prev[0]; ty = cur[1] - prev[1]; tz = cur[2] - prev[2]
+    }
+    const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1
+    const ttx = tx / tlen, tty = ty / tlen, ttz = tz / tlen
+    // Pick an arbitrary vector not parallel to tangent
+    let upx = 0, upy = 1, upz = 0
+    if (Math.abs(tty) > 0.9) { upx = 1; upy = 0; upz = 0 }
+    // binormal = tangent x up
+    let bx = tty * upz - ttz * upy
+    let by = ttz * upx - ttx * upz
+    let bz = ttx * upy - tty * upx
+    const blen = Math.sqrt(bx * bx + by * by + bz * bz) || 1
+    bx /= blen; by /= blen; bz /= blen
+    // normal = binormal x tangent
+    let nx = by * ttz - bz * tty
+    let ny = bz * ttx - bx * ttz
+    let nz = bx * tty - by * ttx
+    const nlen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+    nx /= nlen; ny /= nlen; nz /= nlen
+
+    for (let j = 0; j <= tubeSegs; j++) {
+      const phi = (2 * Math.PI * j) / tubeSegs
+      const cp = Math.cos(phi), sp = Math.sin(phi)
+      const px = cur[0] + tubeR * (cp * nx + sp * bx)
+      const py = cur[1] + tubeR * (cp * ny + sp * by)
+      const pz = cur[2] + tubeR * (cp * nz + sp * bz)
+      // Surface normal
+      const snx = cp * nx + sp * bx
+      const sny = cp * ny + sp * by
+      const snz = cp * nz + sp * bz
+      v.push(px, py, pz, snx, sny, snz)
+    }
+  }
+  for (let i = 0; i < ringSegs; i++) {
+    for (let j = 0; j < tubeSegs; j++) {
+      const a = i * (tubeSegs + 1) + j
+      const b = a + tubeSegs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+  return { v, ix }
+}
+
+function makeSweep(path: number[][], radius: number, fn: number) {
+  const v: number[] = [], ix: number[] = []
+  const tubeSegs = fn
+  const ringSegs = path.length - 1
+
+  // Compute tangents for each path point
+  const tangents: number[][] = []
+  for (let i = 0; i < path.length; i++) {
+    let tx: number, ty: number, tz: number
+    if (i < path.length - 1) {
+      tx = path[i + 1][0] - path[i][0]
+      ty = path[i + 1][1] - path[i][1]
+      tz = path[i + 1][2] - path[i][2]
+    } else {
+      // Last point: reuse previous tangent
+      tx = tangents[i - 1][0]; ty = tangents[i - 1][1]; tz = tangents[i - 1][2]
+    }
+    const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1
+    tangents.push([tx / tlen, ty / tlen, tz / tlen])
+  }
+
+  // Parallel transport frame
+  const normals: number[][] = []
+  const binormals: number[][] = []
+
+  // Initialize first frame
+  const t0 = tangents[0]
+  let upx = 0, upy = 1, upz = 0
+  if (Math.abs(t0[1]) > 0.9) { upx = 1; upy = 0; upz = 0 }
+  // binormal = tangent x up
+  let bx = t0[1] * upz - t0[2] * upy
+  let by = t0[2] * upx - t0[0] * upz
+  let bz = t0[0] * upy - t0[1] * upx
+  let blen = Math.sqrt(bx * bx + by * by + bz * bz) || 1
+  bx /= blen; by /= blen; bz /= blen
+  // normal = binormal x tangent
+  let nx = by * t0[2] - bz * t0[1]
+  let ny = bz * t0[0] - bx * t0[2]
+  let nz = bx * t0[1] - by * t0[0]
+  let nlen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+  nx /= nlen; ny /= nlen; nz /= nlen
+  normals.push([nx, ny, nz])
+  binormals.push([bx, by, bz])
+
+  // Propagate frame along path using parallel transport
+  for (let i = 1; i < path.length; i++) {
+    const tPrev = tangents[i - 1]
+    const tCur = tangents[i]
+    // Rotation axis = tPrev x tCur
+    const ax = tPrev[1] * tCur[2] - tPrev[2] * tCur[1]
+    const ay = tPrev[2] * tCur[0] - tPrev[0] * tCur[2]
+    const az = tPrev[0] * tCur[1] - tPrev[1] * tCur[0]
+    const alen = Math.sqrt(ax * ax + ay * ay + az * az)
+    if (alen < 1e-10) {
+      // Tangents are parallel, keep previous frame
+      normals.push([normals[i - 1][0], normals[i - 1][1], normals[i - 1][2]])
+      binormals.push([binormals[i - 1][0], binormals[i - 1][1], binormals[i - 1][2]])
+    } else {
+      // Rotate previous normal by angle between tangents around rotation axis
+      const dot = tPrev[0] * tCur[0] + tPrev[1] * tCur[1] + tPrev[2] * tCur[2]
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
+      const ux = ax / alen, uy = ay / alen, uz = az / alen
+      const cosA = Math.cos(angle), sinA = Math.sin(angle)
+      // Rodrigues' rotation formula on the previous normal
+      const pn = normals[i - 1]
+      const dotUN = ux * pn[0] + uy * pn[1] + uz * pn[2]
+      const crossX = uy * pn[2] - uz * pn[1]
+      const crossY = uz * pn[0] - ux * pn[2]
+      const crossZ = ux * pn[1] - uy * pn[0]
+      let rnx = pn[0] * cosA + crossX * sinA + ux * dotUN * (1 - cosA)
+      let rny = pn[1] * cosA + crossY * sinA + uy * dotUN * (1 - cosA)
+      let rnz = pn[2] * cosA + crossZ * sinA + uz * dotUN * (1 - cosA)
+      const rnlen = Math.sqrt(rnx * rnx + rny * rny + rnz * rnz) || 1
+      rnx /= rnlen; rny /= rnlen; rnz /= rnlen
+      normals.push([rnx, rny, rnz])
+      // binormal = tangent x normal
+      const rbx = tCur[1] * rnz - tCur[2] * rny
+      const rby = tCur[2] * rnx - tCur[0] * rnz
+      const rbz = tCur[0] * rny - tCur[1] * rnx
+      const rblen = Math.sqrt(rbx * rbx + rby * rby + rbz * rbz) || 1
+      binormals.push([rbx / rblen, rby / rblen, rbz / rblen])
+    }
+  }
+
+  // Generate tube vertices at each path point
+  for (let i = 0; i < path.length; i++) {
+    const cur = path[i]
+    const n = normals[i], b = binormals[i]
+    for (let j = 0; j <= tubeSegs; j++) {
+      const phi = (2 * Math.PI * j) / tubeSegs
+      const cp = Math.cos(phi), sp = Math.sin(phi)
+      const px = cur[0] + radius * (cp * n[0] + sp * b[0])
+      const py = cur[1] + radius * (cp * n[1] + sp * b[1])
+      const pz = cur[2] + radius * (cp * n[2] + sp * b[2])
+      // Surface normal
+      const snx = cp * n[0] + sp * b[0]
+      const sny = cp * n[1] + sp * b[1]
+      const snz = cp * n[2] + sp * b[2]
+      v.push(px, py, pz, snx, sny, snz)
+    }
+  }
+  // Connect rings with triangles
+  for (let i = 0; i < ringSegs; i++) {
+    for (let j = 0; j < tubeSegs; j++) {
+      const a = i * (tubeSegs + 1) + j
+      const b = a + tubeSegs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+  return { v, ix }
+}
+
 function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
   const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by)
   const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy)
@@ -2462,6 +2682,38 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
       const { v, ix } = makeHelix(r, pitch, turns, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'bezier': {
+      const pts = arg(a, 'points', 0, [[0,0,0],[10,10,0],[20,10,0],[30,0,0]])
+      const thickness = typeof arg(a, 'thickness', 1, 1) === 'number' ? arg(a, 'thickness', 1, 1) as number : 1
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const points = Array.isArray(pts) ? pts.map((p: any) => Array.isArray(p) ? [p[0]??0, p[1]??0, p[2]??0] : [0,0,0]) : [[0,0,0],[10,10,0],[20,10,0],[30,0,0]]
+      if (points.length < 2) return []
+      const { v, ix } = makeBezier(points, thickness, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'sweep': {
+      const pathRaw = arg(a, 'path', 0, [[0,0,0],[10,0,5],[20,0,0]])
+      const radius = typeof arg(a, 'r', 1, 1) === 'number' ? arg(a, 'r', 1, 1) as number : 1
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const path = Array.isArray(pathRaw) ? pathRaw.map((p: any) => Array.isArray(p) ? [p[0]??0, p[1]??0, p[2]??0] : [0,0,0]) : [[0,0,0],[10,0,5],[20,0,0]]
+      if (path.length < 2) return []
+      const { v, ix } = makeSweep(path, radius, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'grid': {
+      const xCount = typeof arg(a, 'x_count', 0, 3) === 'number' ? Math.max(1, Math.floor(arg(a, 'x_count', 0, 3) as number)) : 3
+      const yCount = typeof arg(a, 'y_count', 1, 3) === 'number' ? Math.max(1, Math.floor(arg(a, 'y_count', 1, 3) as number)) : 3
+      const xSpacing = typeof arg(a, 'x_spacing', 2, 10) === 'number' ? arg(a, 'x_spacing', 2, 10) as number : 10
+      const ySpacing = typeof arg(a, 'y_spacing', 3, 10) === 'number' ? arg(a, 'y_spacing', 3, 10) as number : 10
+      const out: MeshData[] = []
+      for (let yi = 0; yi < yCount; yi++) {
+        for (let xi = 0; xi < xCount; xi++) {
+          const offset: Vec3 = [xi * xSpacing, yi * ySpacing, 0]
+          out.push(...evalNodes(ch, translate(tf, offset), col, vars, modules, echos, callerChildren, annotations))
+        }
+      }
+      return out
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)

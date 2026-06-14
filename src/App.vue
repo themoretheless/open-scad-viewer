@@ -542,6 +542,13 @@ const L: Record<string, Record<string, string>> = {
     // Batch export
     exportAllTabs: 'Экспорт всех вкладок (ZIP)',
     cmdExportAllTabs: 'Экспорт всех вкладок',
+    colorPalette: 'Палитра цветов',
+    perfWarning: 'Модель сложная ({n} треугольников). Уменьшите $fn для ускорения.',
+    slowRenderHint: 'Рендер занял {ms}мс. Попробуйте уменьшить $fn.',
+    fastPreview: 'Быстрый просмотр',
+    fastPreviewOn: 'Быстрый просмотр включён ($fn уменьшен вдвое)',
+    fastPreviewOff: 'Быстрый просмотр выключен',
+    cmdToggleFastPreview: 'Переключить быстрый просмотр',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -989,6 +996,13 @@ const L: Record<string, Record<string, string>> = {
     // Batch export
     exportAllTabs: 'Export All Tabs (ZIP)',
     cmdExportAllTabs: 'Export All Tabs',
+    colorPalette: 'Color Palette',
+    perfWarning: 'Complex model ({n} triangles). Reduce $fn for better performance.',
+    slowRenderHint: 'Render took {ms}ms. Try reducing $fn.',
+    fastPreview: 'Fast Preview',
+    fastPreviewOn: 'Fast preview ON ($fn halved)',
+    fastPreviewOff: 'Fast preview OFF',
+    cmdToggleFastPreview: 'Toggle Fast Preview',
   },
 }
 
@@ -1278,6 +1292,8 @@ const colorPickerX = ref(0)
 const colorPickerY = ref(0)
 const colorPickerValue = ref('#ffffff')
 let colorPickerMatch: { start: number; end: number } | null = null
+
+const fastPreviewMode = ref(false)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
@@ -3046,6 +3062,23 @@ function onColorPickerChange(e: Event) {
 function closeColorPicker() {
   colorPickerVisible.value = false
   colorPickerMatch = null
+}
+
+const colorPaletteItems: Record<string, string> = {
+  red: '#ff0000', green: '#008000', blue: '#0000ff', yellow: '#ffff00',
+  cyan: '#00ffff', magenta: '#ff00ff', white: '#ffffff', black: '#000000',
+  orange: '#ffa500', gray: '#808080', pink: '#ffc0cb', purple: '#800080',
+  brown: '#a52a2a', lime: '#00ff00', navy: '#000080', teal: '#008080',
+  maroon: '#800000', olive: '#808000', silver: '#c0c0c0', aqua: '#00ffff',
+}
+
+function insertColorName(name: string) {
+  if (!colorPickerMatch) return
+  const { start, end } = colorPickerMatch
+  const replacement = `"${name}"`
+  const val = code.value
+  code.value = val.substring(0, start) + replacement + val.substring(end)
+  closeColorPicker()
 }
 
 /* ── File Import / Export ── */
@@ -5238,16 +5271,88 @@ function toggleViewMenu() {
   const was = viewMenuOpen.value
   closeAllMenus()
   viewMenuOpen.value = !was
+  if (!was) nextTick(() => focusFirstMenuItem('view'))
 }
 function toggleRenderMenu() {
   const was = renderMenuOpen.value
   closeAllMenus()
   renderMenuOpen.value = !was
+  if (!was) nextTick(() => focusFirstMenuItem('render'))
 }
 function toggleExportMenu() {
   const was = exportMenuOpen.value
   closeAllMenus()
   exportMenuOpen.value = !was
+  if (!was) nextTick(() => focusFirstMenuItem('export'))
+}
+
+function focusFirstMenuItem(_menuId: string) {
+  const dropdown = document.querySelector('.vp-dropdown[role="menu"]') as HTMLElement | null
+  if (!dropdown) return
+  const first = dropdown.querySelector('[role="menuitem"]') as HTMLElement | null
+  if (first) first.focus()
+}
+
+function onMenuKeydown(e: KeyboardEvent, _menuId: string) {
+  const dropdown = (e.currentTarget as HTMLElement)
+  const items = Array.from(dropdown.querySelectorAll('[role="menuitem"]:not([style*="display: none"]):not([hidden])')) as HTMLElement[]
+  if (!items.length) return
+
+  const currentIndex = items.indexOf(document.activeElement as HTMLElement)
+
+  switch (e.key) {
+    case 'ArrowDown': {
+      e.preventDefault()
+      const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+      items[next].focus()
+      break
+    }
+    case 'ArrowUp': {
+      e.preventDefault()
+      const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+      items[prev].focus()
+      break
+    }
+    case 'Home': {
+      e.preventDefault()
+      items[0].focus()
+      break
+    }
+    case 'End': {
+      e.preventDefault()
+      items[items.length - 1].focus()
+      break
+    }
+    case 'Enter':
+    case ' ': {
+      e.preventDefault()
+      if (document.activeElement && items.includes(document.activeElement as HTMLElement)) {
+        (document.activeElement as HTMLElement).click()
+      }
+      break
+    }
+    case 'Escape': {
+      e.preventDefault()
+      closeAllMenus()
+      break
+    }
+    default: {
+      // Type-ahead: jump to first item starting with typed letter
+      if (e.key.length === 1) {
+        const letter = e.key.toLowerCase()
+        const match = items.find((item, idx) => {
+          if (idx <= currentIndex) return false
+          const text = item.textContent?.trim().toLowerCase() || ''
+          return text.startsWith(letter)
+        }) || items.find(item => {
+          const text = item.textContent?.trim().toLowerCase() || ''
+          return text.startsWith(letter)
+        })
+        if (match) match.focus()
+      }
+      break
+    }
+  }
 }
 
 /* ── Camera Bookmarks ── */
@@ -6686,13 +6791,25 @@ translate([0, 0, 39])
               :style="{ top: colorPickerY + 'px', left: colorPickerX + 'px' }"
               @click.stop
             >
-              <input
-                type="color"
-                :value="colorPickerValue"
-                @input="onColorPickerChange"
-                class="color-picker-input"
-              />
-              <button class="color-picker-close" @click="closeColorPicker">&times;</button>
+              <div class="color-palette-grid">
+                <button
+                  v-for="(hex, name) in colorPaletteItems"
+                  :key="name"
+                  class="color-palette-swatch"
+                  :style="{ background: hex }"
+                  :title="name"
+                  @click="insertColorName(name as string)"
+                />
+              </div>
+              <div class="color-picker-row">
+                <input
+                  type="color"
+                  :value="colorPickerValue"
+                  @input="onColorPickerChange"
+                  class="color-picker-input"
+                />
+                <button class="color-picker-close" @click="closeColorPicker">&times;</button>
+              </div>
             </div>
             <!-- Autocomplete popup -->
             <div
@@ -7051,32 +7168,32 @@ translate([0, 0, 39])
         <div class="vp-toolbar">
           <!-- View menu -->
           <div class="vp-menu-wrapper" @click.stop>
-            <button class="vp-menu-btn" @click="toggleViewMenu" :title="t('menuView')" :aria-label="t('menuView')">
+            <button class="vp-menu-btn" @click="toggleViewMenu" :title="t('menuView')" :aria-label="t('menuView')" aria-haspopup="true" :aria-expanded="viewMenuOpen">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
             <transition name="vp-dropdown">
-            <div v-if="viewMenuOpen" class="vp-dropdown">
-              <button class="vp-dd-item" @click="setView('top'); closeAllMenus()">{{ t('top') }}</button>
-              <button class="vp-dd-item" @click="setView('front'); closeAllMenus()">{{ t('front') }}</button>
-              <button class="vp-dd-item" @click="setView('right'); closeAllMenus()">{{ t('right') }}</button>
-              <button class="vp-dd-item" @click="setView('iso'); closeAllMenus()">{{ t('iso') }}</button>
-              <button class="vp-dd-item" @click="setView('reset'); closeAllMenus()">{{ t('reset') }}</button>
+            <div v-if="viewMenuOpen" class="vp-dropdown" role="menu" @keydown="onMenuKeydown($event, 'view')">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="setView('top'); closeAllMenus()">{{ t('top') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="setView('front'); closeAllMenus()">{{ t('front') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="setView('right'); closeAllMenus()">{{ t('right') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="setView('iso'); closeAllMenus()">{{ t('iso') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="setView('reset'); closeAllMenus()">{{ t('reset') }}</button>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="toggleProjection(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleProjection(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="isOrthographic">&#10003;</span>
                 {{ t('ortho') }}
               </button>
-              <button class="vp-dd-item" @click="toggleFullscreen(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleFullscreen(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="isFullscreen">&#10003;</span>
                 {{ t('fullscreen') }}
               </button>
-              <button class="vp-dd-item" @click="toggleMeasureMode(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleMeasureMode(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="measureMode">&#10003;</span>
                 {{ t('measureMode') }}
               </button>
-              <button class="vp-dd-item" @click="toggleGhostMode(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleGhostMode(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="ghostMode">&#10003;</span>
                 {{ t('ghostCompare') }}
               </button>
@@ -7097,7 +7214,7 @@ translate([0, 0, 39])
               <div class="vp-dd-label">{{ t('bookmarks') }}</div>
               <div v-if="!cameraBookmarks.length" class="vp-dd-empty">{{ t('noBookmarks') }}</div>
               <div v-for="bk in cameraBookmarks" :key="bk.id" class="vp-dd-bookmark" :class="{ 'has-thumb': !!bk.thumbnail }">
-                <button class="vp-dd-item vp-dd-bk-name" @click="restoreBookmark(bk); closeAllMenus()">{{ bk.name }}</button>
+                <button class="vp-dd-item vp-dd-bk-name" role="menuitem" tabindex="-1" @click="restoreBookmark(bk); closeAllMenus()">{{ bk.name }}</button>
                 <button class="vp-dd-bk-del" @click.stop="deleteBookmark(bk.id)" :title="t('deleteBookmark')">&times;</button>
                 <div v-if="bk.thumbnail" class="bk-thumb-popup">
                   <img :src="bk.thumbnail" class="bk-thumb-img" :alt="bk.name" />
@@ -7109,14 +7226,14 @@ translate([0, 0, 39])
 
           <!-- Render menu -->
           <div class="vp-menu-wrapper" @click.stop>
-            <button class="vp-menu-btn" @click="toggleRenderMenu" :title="t('menuRender')" :aria-label="t('menuRender')">
+            <button class="vp-menu-btn" @click="toggleRenderMenu" :title="t('menuRender')" :aria-label="t('menuRender')" aria-haspopup="true" :aria-expanded="renderMenuOpen">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                 <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
               </svg>
             </button>
             <transition name="vp-dropdown">
-            <div v-if="renderMenuOpen" class="vp-dropdown">
+            <div v-if="renderMenuOpen" class="vp-dropdown" role="menu" @keydown="onMenuKeydown($event, 'render')">
               <div class="vp-dd-label">{{ t('renderMode') }}</div>
               <select class="lighting-select vp-dd-select" :value="activeRenderMode" @change="setRenderMode(($event.target as HTMLSelectElement).value)">
                 <option value="solid">{{ t('modeSolid') }}</option>
@@ -7125,36 +7242,36 @@ translate([0, 0, 39])
                 <option value="xray">{{ t('modeXray') }}</option>
               </select>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="toggleFlatShading()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleFlatShading()">
                 <span class="vp-dd-check" v-if="flatShadingEnabled">&#10003;</span>
                 {{ t('flatShading') }}
               </button>
-              <button class="vp-dd-item" @click="toggleGrid(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleGrid(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="showGrid">&#10003;</span>
                 {{ t('grid') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleReflection(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleReflection(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="reflectionEnabled">&#10003;</span>
                 {{ t('reflection') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleFog(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleFog(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="fogEnabled">&#10003;</span>
                 {{ t('fog') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleSSAO(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleSSAO(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="ssaoEnabled">&#10003;</span>
                 {{ t('ssao') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleOutline(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleOutline(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="outlineEnabled">&#10003;</span>
                 {{ t('outline') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleNormalSmoothing(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleNormalSmoothing(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="smoothNormalsEnabled">&#10003;</span>
                 {{ t('smoothNormals') }}
               </button>
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleClip()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleClip()">
                 <span class="vp-dd-check" v-if="clipEnabled">&#10003;</span>
                 {{ t('clipPlane') }}
               </button>
@@ -7196,11 +7313,11 @@ translate([0, 0, 39])
                 <option value="neutral">{{ t('skyNeutral') }}</option>
               </select>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="toggleAutoRotate(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleAutoRotate(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="isAutoRotate">&#10003;</span>
                 {{ t('autoRotate') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleBuildPlate()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleBuildPlate()">
                 <span class="vp-dd-check" v-if="buildPlateEnabled">&#10003;</span>
                 {{ t('buildPlate') }}
               </button>
@@ -7215,15 +7332,15 @@ translate([0, 0, 39])
                 </label>
               </div>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="showObjectTree = !showObjectTree; closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="showObjectTree = !showObjectTree; closeAllMenus()">
                 <span class="vp-dd-check" v-if="showObjectTree">&#10003;</span>
                 {{ t('objectTree') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="toggleStatistics(); closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleStatistics(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="showStatistics">&#10003;</span>
                 {{ t('statistics') }}
               </button>
-              <button class="vp-dd-item" v-show="!simpleMode" @click="showPerfPanel = !showPerfPanel; closeAllMenus()">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="showPerfPanel = !showPerfPanel; closeAllMenus()">
                 <span class="vp-dd-check" v-if="showPerfPanel">&#10003;</span>
                 {{ t('perfPanel') }}
               </button>
@@ -7233,27 +7350,27 @@ translate([0, 0, 39])
 
           <!-- Export menu -->
           <div class="vp-menu-wrapper" @click.stop>
-            <button class="vp-menu-btn" @click="toggleExportMenu" :title="t('menuExport')" :aria-label="t('menuExport')">
+            <button class="vp-menu-btn" @click="toggleExportMenu" :title="t('menuExport')" :aria-label="t('menuExport')" aria-haspopup="true" :aria-expanded="exportMenuOpen">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
             </button>
             <transition name="vp-dropdown">
-            <div v-if="exportMenuOpen" class="vp-dropdown">
-              <button class="vp-dd-item" @click="exportPng(1); closeAllMenus()">{{ t('screenshot') }} (1×)</button>
-              <button class="vp-dd-item" @click="exportPng(2); closeAllMenus()">{{ t('screenshot') }} (2×)</button>
-              <button class="vp-dd-item" @click="exportPng(4); closeAllMenus()">{{ t('screenshot') }} (4×)</button>
-              <button class="vp-dd-item" @click="copyCanvasToClipboard(); closeAllMenus()">{{ t('copyImage') }}</button>
+            <div v-if="exportMenuOpen" class="vp-dropdown" role="menu" @keydown="onMenuKeydown($event, 'export')">
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="exportPng(1); closeAllMenus()">{{ t('screenshot') }} (1×)</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="exportPng(2); closeAllMenus()">{{ t('screenshot') }} (2×)</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="exportPng(4); closeAllMenus()">{{ t('screenshot') }} (4×)</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="copyCanvasToClipboard(); closeAllMenus()">{{ t('copyImage') }}</button>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="doExportSTL(); closeAllMenus()">{{ t('exportStl') }}</button>
-              <button class="vp-dd-item" @click="doExportOBJ(); closeAllMenus()">{{ t('exportObj') }}</button>
-              <button class="vp-dd-item" @click="doExport3MF(); closeAllMenus()">{{ t('export3mf') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="doExportSTL(); closeAllMenus()">{{ t('exportStl') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="doExportOBJ(); closeAllMenus()">{{ t('exportObj') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="doExport3MF(); closeAllMenus()">{{ t('export3mf') }}</button>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="doExportAllTabs(); closeAllMenus()">{{ t('exportAllTabs') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="doExportAllTabs(); closeAllMenus()">{{ t('exportAllTabs') }}</button>
               <div class="vp-dd-sep"></div>
-              <button class="vp-dd-item" @click="printCode(); closeAllMenus()">{{ t('printCode') }}</button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="printCode(); closeAllMenus()">{{ t('printCode') }}</button>
             </div>
             </transition>
           </div>
