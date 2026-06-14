@@ -152,6 +152,41 @@ const L: Record<string, Record<string, string>> = {
     parsedNodes: 'Разобрано {n} узлов',
     generatedMeshes: 'Создано {m} мешей, {t} треугольников за {ms}мс',
     sc_commentToggle: 'Закомментировать/раскомментировать',
+    commandPalette: 'Палитра команд',
+    goToLine: 'Перейти к строке',
+    goToLinePlaceholder: 'Перейти к строке (1-{n})',
+    wordWrap: 'Перенос строк',
+    selChars: 'Выд: {x} симв, {y} строк',
+    animationTimeline: 'Анимация',
+    animPlay: 'Играть',
+    animPause: 'Пауза',
+    animDuration: 'Длительность',
+    sc_commandPalette: 'Палитра команд',
+    sc_goToLine: 'Перейти к строке',
+    sc_wordWrap: 'Перенос строк',
+    cmdRender: 'Рендер',
+    cmdFormatCode: 'Форматировать код',
+    cmdToggleWireframe: 'Переключить каркас',
+    cmdToggleGrid: 'Переключить сетку',
+    cmdToggleAutoRotate: 'Переключить авто-вращение',
+    cmdToggleFullscreen: 'Переключить полный экран',
+    cmdToggleOrtho: 'Переключить проекцию',
+    cmdTakeScreenshot: 'Сделать скриншот',
+    cmdCopyImage: 'Копировать как изображение',
+    cmdExportSTL: 'Экспорт STL',
+    cmdOpenFile: 'Открыть файл',
+    cmdSaveFile: 'Сохранить файл',
+    cmdShare: 'Поделиться ссылкой',
+    cmdToggleTheme: 'Переключить тему',
+    cmdToggleLang: 'Переключить язык',
+    cmdShowShortcuts: 'Показать горячие клавиши',
+    cmdPreferences: 'Настройки',
+    cmdToggleWordWrap: 'Переключить перенос строк',
+    cmdGoToLine: 'Перейти к строке',
+    cmdToggleMinimap: 'Переключить миникарту',
+    cmdToggleConsole: 'Переключить консоль',
+    cmdToggleObjectTree: 'Переключить дерево объектов',
+    cmdNewTab: 'Новая вкладка',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -227,6 +262,41 @@ const L: Record<string, Record<string, string>> = {
     parsedNodes: 'Parsed {n} nodes',
     generatedMeshes: 'Generated {m} meshes, {t} triangles in {ms}ms',
     sc_commentToggle: 'Toggle comment',
+    commandPalette: 'Command Palette',
+    goToLine: 'Go to Line',
+    goToLinePlaceholder: 'Go to line (1-{n})',
+    wordWrap: 'Word Wrap',
+    selChars: 'Sel: {x} chars, {y} lines',
+    animationTimeline: 'Animation',
+    animPlay: 'Play',
+    animPause: 'Pause',
+    animDuration: 'Duration',
+    sc_commandPalette: 'Command Palette',
+    sc_goToLine: 'Go to Line',
+    sc_wordWrap: 'Word Wrap',
+    cmdRender: 'Render',
+    cmdFormatCode: 'Format Code',
+    cmdToggleWireframe: 'Toggle Wireframe',
+    cmdToggleGrid: 'Toggle Grid',
+    cmdToggleAutoRotate: 'Toggle Auto-rotate',
+    cmdToggleFullscreen: 'Toggle Fullscreen',
+    cmdToggleOrtho: 'Toggle Ortho',
+    cmdTakeScreenshot: 'Take Screenshot',
+    cmdCopyImage: 'Copy as Image',
+    cmdExportSTL: 'Export STL',
+    cmdOpenFile: 'Open File',
+    cmdSaveFile: 'Save File',
+    cmdShare: 'Share Link',
+    cmdToggleTheme: 'Toggle Theme',
+    cmdToggleLang: 'Toggle Language',
+    cmdShowShortcuts: 'Show Shortcuts',
+    cmdPreferences: 'Preferences',
+    cmdToggleWordWrap: 'Toggle Word Wrap',
+    cmdGoToLine: 'Go to Line',
+    cmdToggleMinimap: 'Toggle Minimap',
+    cmdToggleConsole: 'Toggle Console',
+    cmdToggleObjectTree: 'Toggle Object Tree',
+    cmdNewTab: 'New Tab',
   },
 }
 
@@ -1510,6 +1580,26 @@ function onDocClick(e: MouseEvent) {
 
 /* ── Global keyboard handler ── */
 function onGlobalKeydown(e: KeyboardEvent) {
+  // Ctrl+Shift+P or F1: Command Palette
+  if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P')) {
+    e.preventDefault()
+    if (showCommandPalette.value) closeCommandPalette()
+    else openCommandPalette()
+    return
+  }
+  // Ctrl+G: Go to Line
+  if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+    e.preventDefault()
+    if (showGoToLine.value) closeGoToLine()
+    else openGoToLine()
+    return
+  }
+  // Alt+Z: Toggle Word Wrap
+  if (e.altKey && e.key === 'z') {
+    e.preventDefault()
+    toggleWordWrap()
+    return
+  }
   // "?" to open shortcuts (only when not typing in textarea)
   if (e.key === '?' && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLInputElement)) {
     e.preventDefault()
@@ -1529,6 +1619,8 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
   // Escape to close modal or exit fullscreen
   if (e.key === 'Escape') {
+    if (showCommandPalette.value) { closeCommandPalette(); return }
+    if (showGoToLine.value) { closeGoToLine(); return }
     if (showPreferences.value) { showPreferences.value = false; return }
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
@@ -1594,7 +1686,9 @@ function doRender() {
   errorLine.value = -1
   try {
     const t0 = performance.now()
-    const result = parseOpenSCADWithAST(code.value)
+    // Inject $t animation variable
+    const codeWithT = code.value.replace(/\$t\b/g, String(animT.value))
+    const result = parseOpenSCADWithAST(codeWithT)
     const meshes = result.meshes
     astNodes.value = result.ast
     const t1 = performance.now()
@@ -1757,6 +1851,223 @@ function handleClick() {
   updateBracketMatch()
   dismissAutocomplete()
 }
+
+/* ── Feature: Word Wrap Toggle ── */
+const wordWrap = ref(localStorage.getItem('scad-word-wrap') === 'true')
+watch(wordWrap, v => localStorage.setItem('scad-word-wrap', String(v)))
+
+function toggleWordWrap() {
+  wordWrap.value = !wordWrap.value
+}
+
+/* ── Feature: Selection Info ── */
+const selectionInfo = ref('')
+
+function updateSelectionInfo() {
+  const el = textareaRef.value
+  if (!el) { selectionInfo.value = ''; return }
+  const s = el.selectionStart
+  const e = el.selectionEnd
+  if (s === e) { selectionInfo.value = ''; return }
+  const selected = code.value.substring(s, e)
+  const chars = selected.length
+  const lines = selected.split('\n').length
+  selectionInfo.value = t('selChars').replace('{x}', String(chars)).replace('{y}', String(lines))
+}
+
+function onSelectionChange() {
+  updateSelectionInfo()
+}
+
+onMounted(() => {
+  document.addEventListener('selectionchange', onSelectionChange)
+})
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', onSelectionChange)
+})
+
+/* ── Feature: Go to Line (Ctrl+G) ── */
+const showGoToLine = ref(false)
+const goToLineText = ref('')
+const goToLineInputRef = ref<HTMLInputElement | null>(null)
+
+function openGoToLine() {
+  showGoToLine.value = true
+  goToLineText.value = ''
+  nextTick(() => goToLineInputRef.value?.focus())
+}
+
+function closeGoToLine() {
+  showGoToLine.value = false
+  goToLineText.value = ''
+}
+
+function executeGoToLine() {
+  const lineNum = parseInt(goToLineText.value)
+  if (isNaN(lineNum) || lineNum < 1) { closeGoToLine(); return }
+  const el = textareaRef.value
+  if (!el) { closeGoToLine(); return }
+  const lines = code.value.split('\n')
+  const targetLine = Math.min(lineNum, lines.length)
+  // Calculate character offset for the target line
+  let charOffset = 0
+  for (let i = 0; i < targetLine - 1; i++) {
+    charOffset += lines[i].length + 1 // +1 for \n
+  }
+  const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
+  el.scrollTop = Math.max(0, (targetLine - 3) * lineHeight)
+  el.focus()
+  el.setSelectionRange(charOffset, charOffset + (lines[targetLine - 1]?.length || 0))
+  syncScroll()
+  closeGoToLine()
+}
+
+function handleGoToLineKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') { e.preventDefault(); executeGoToLine() }
+  if (e.key === 'Escape') { e.preventDefault(); closeGoToLine() }
+}
+
+/* ── Feature: Command Palette (Ctrl+Shift+P / F1) ── */
+const showCommandPalette = ref(false)
+const commandSearch = ref('')
+const commandSelectedIndex = ref(0)
+const commandSearchInputRef = ref<HTMLInputElement | null>(null)
+
+interface PaletteCommand {
+  id: string
+  label: () => string
+  shortcut?: string
+  action: () => void
+}
+
+const paletteCommands: PaletteCommand[] = [
+  { id: 'render', label: () => t('cmdRender'), shortcut: 'Ctrl+Enter', action: () => doRender() },
+  { id: 'format', label: () => t('cmdFormatCode'), action: () => formatCode() },
+  { id: 'wireframe', label: () => t('cmdToggleWireframe'), action: () => toggleWireframe() },
+  { id: 'grid', label: () => t('cmdToggleGrid'), action: () => toggleGrid() },
+  { id: 'autoRotate', label: () => t('cmdToggleAutoRotate'), action: () => toggleAutoRotate() },
+  { id: 'fullscreen', label: () => t('cmdToggleFullscreen'), action: () => toggleFullscreen() },
+  { id: 'ortho', label: () => t('cmdToggleOrtho'), action: () => toggleProjection() },
+  { id: 'screenshot', label: () => t('cmdTakeScreenshot'), action: () => takeScreenshot() },
+  { id: 'copyImage', label: () => t('cmdCopyImage'), action: () => copyCanvasToClipboard() },
+  { id: 'exportStl', label: () => t('cmdExportSTL'), action: () => doExportSTL() },
+  { id: 'openFile', label: () => t('cmdOpenFile'), shortcut: 'Ctrl+O', action: () => openFile() },
+  { id: 'saveFile', label: () => t('cmdSaveFile'), shortcut: 'Ctrl+S', action: () => saveFile() },
+  { id: 'share', label: () => t('cmdShare'), action: () => shareLink() },
+  { id: 'toggleTheme', label: () => t('cmdToggleTheme'), action: () => toggleTheme() },
+  { id: 'toggleLang', label: () => t('cmdToggleLang'), action: () => toggleLang() },
+  { id: 'shortcuts', label: () => t('cmdShowShortcuts'), shortcut: '?', action: () => { showShortcuts.value = true } },
+  { id: 'preferences', label: () => t('cmdPreferences'), action: () => { showPreferences.value = true } },
+  { id: 'wordWrap', label: () => t('cmdToggleWordWrap'), shortcut: 'Alt+Z', action: () => toggleWordWrap() },
+  { id: 'goToLine', label: () => t('cmdGoToLine'), shortcut: 'Ctrl+G', action: () => openGoToLine() },
+  { id: 'find', label: () => t('sc_findOnly'), shortcut: 'Ctrl+F', action: () => openFindReplace(false) },
+  { id: 'findReplace', label: () => t('sc_findReplace'), shortcut: 'Ctrl+H', action: () => openFindReplace(true) },
+  { id: 'minimap', label: () => t('cmdToggleMinimap'), action: () => toggleMinimap() },
+  { id: 'console', label: () => t('cmdToggleConsole'), action: () => { showConsole.value = !showConsole.value } },
+  { id: 'objectTree', label: () => t('cmdToggleObjectTree'), action: () => { showObjectTree.value = !showObjectTree.value } },
+  { id: 'newTab', label: () => t('cmdNewTab'), action: () => addTab() },
+]
+
+function fuzzyMatch(needle: string, haystack: string): boolean {
+  needle = needle.toLowerCase()
+  haystack = haystack.toLowerCase()
+  let ni = 0
+  for (let hi = 0; hi < haystack.length && ni < needle.length; hi++) {
+    if (haystack[hi] === needle[ni]) ni++
+  }
+  return ni === needle.length
+}
+
+const filteredCommands = computed(() => {
+  const q = commandSearch.value.trim()
+  if (!q) return paletteCommands
+  return paletteCommands.filter(cmd => fuzzyMatch(q, cmd.label()))
+})
+
+function openCommandPalette() {
+  showCommandPalette.value = true
+  commandSearch.value = ''
+  commandSelectedIndex.value = 0
+  nextTick(() => commandSearchInputRef.value?.focus())
+}
+
+function closeCommandPalette() {
+  showCommandPalette.value = false
+  commandSearch.value = ''
+}
+
+function executeCommand(cmd: PaletteCommand) {
+  closeCommandPalette()
+  nextTick(() => cmd.action())
+}
+
+function handleCommandPaletteKeydown(e: KeyboardEvent) {
+  const cmds = filteredCommands.value
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    commandSelectedIndex.value = (commandSelectedIndex.value + 1) % cmds.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    commandSelectedIndex.value = (commandSelectedIndex.value - 1 + cmds.length) % cmds.length
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (cmds.length > 0) {
+      executeCommand(cmds[commandSelectedIndex.value])
+    }
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closeCommandPalette()
+  }
+}
+
+watch(commandSearch, () => {
+  commandSelectedIndex.value = 0
+})
+
+/* ── Feature: Animation Timeline ($t variable) ── */
+const animT = ref(0)
+const animPlaying = ref(false)
+const animDuration = ref(5)
+let animStartTime = 0
+let animRAF = 0
+
+function startAnimation() {
+  animPlaying.value = true
+  animStartTime = performance.now() - (animT.value * animDuration.value * 1000)
+  animLoop()
+}
+
+function stopAnimation() {
+  animPlaying.value = false
+  if (animRAF) { cancelAnimationFrame(animRAF); animRAF = 0 }
+}
+
+function toggleAnimation() {
+  if (animPlaying.value) stopAnimation()
+  else startAnimation()
+}
+
+function animLoop() {
+  if (!animPlaying.value) return
+  const elapsed = performance.now() - animStartTime
+  const dur = animDuration.value * 1000
+  animT.value = (elapsed % dur) / dur
+  doRender()
+  animRAF = requestAnimationFrame(animLoop)
+}
+
+function onAnimSliderInput(e: Event) {
+  const val = parseFloat((e.target as HTMLInputElement).value)
+  animT.value = val
+  if (animPlaying.value) {
+    animStartTime = performance.now() - (val * animDuration.value * 1000)
+  }
+  doRender()
+}
+
+onUnmounted(() => {
+  if (animRAF) cancelAnimationFrame(animRAF)
+})
 </script>
 
 <script lang="ts">
