@@ -59,6 +59,21 @@ export function perspective(fov: number, aspect: number, near: number, far: numb
   return m
 }
 
+export function ortho(left: number, right: number, bottom: number, top: number, near: number, far: number): Mat4 {
+  const m = new Float32Array(16)
+  const lr = 1 / (left - right)
+  const bt = 1 / (bottom - top)
+  const nf = 1 / (near - far)
+  m[0] = -2 * lr
+  m[5] = -2 * bt
+  m[10] = 2 * nf
+  m[3] = (left + right) * lr
+  m[7] = (top + bottom) * bt
+  m[11] = (far + near) * nf
+  m[15] = 1
+  return m
+}
+
 export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
   const zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]
   let len = 1 / Math.sqrt(zx * zx + zy * zy + zz * zz)

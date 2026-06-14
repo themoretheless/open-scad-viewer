@@ -2,7 +2,7 @@
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
-  perspective, lookAt, transpose, invert, multiply, type Mat4,
+  perspective, ortho, lookAt, transpose, invert, multiply, type Mat4,
 } from './math3d'
 import type { MeshData } from './openscadParser'
 
@@ -87,6 +87,9 @@ export class WebGPURenderer {
 
   /* auto-rotate */
   autoRotate = false
+
+  /* orthographic projection */
+  orthographic = false
 
   /* clear color (viewport background) */
   private clearR = 0.09
@@ -336,6 +339,11 @@ export class WebGPURenderer {
     }
   }
 
+  /* cached view-projection for screen projection */
+  private lastVP: Mat4 = new Float32Array(16)
+  private lastW = 1
+  private lastH = 1
+
   private render() {
     this.resize()
     const w = this.canvas.width, h = this.canvas.height, asp = w / h
@@ -343,8 +351,19 @@ export class WebGPURenderer {
     const cy = this.ty + this.dist * Math.sin(this.pitch)
     const cz = this.tz + this.dist * Math.cos(this.pitch) * Math.cos(this.yaw)
     const view = lookAt([cx,cy,cz], [this.tx,this.ty,this.tz], [0,1,0])
-    const proj = perspective(Math.PI / 4, asp, 0.1, this.dist * 10)
-    const vp = transpose(multiply(proj, view))
+    let proj: Mat4
+    if (this.orthographic) {
+      const halfH = this.dist * Math.tan(Math.PI / 8)
+      const halfW = halfH * asp
+      proj = ortho(-halfW, halfW, -halfH, halfH, 0.1, this.dist * 10)
+    } else {
+      proj = perspective(Math.PI / 4, asp, 0.1, this.dist * 10)
+    }
+    const vpMat = multiply(proj, view)
+    this.lastVP = vpMat
+    this.lastW = w
+    this.lastH = h
+    const vp = transpose(vpMat)
     const sd = new Float32Array(28)
     sd.set(vp, 0)
     sd.set([cx,cy,cz,1], 16)
@@ -664,6 +683,44 @@ export class WebGPURenderer {
   toggleAutoRotate(): boolean {
     this.autoRotate = !this.autoRotate
     return this.autoRotate
+  }
+
+  /** Toggle between perspective and orthographic projection. */
+  toggleProjection(): boolean {
+    this.orthographic = !this.orthographic
+    return this.orthographic
+  }
+
+  /** Zoom in by reducing dist by 20%, animated. */
+  zoomIn() {
+    const targetDist = Math.max(1, this.dist * 0.8)
+    this.animateTo(this.yaw, this.pitch, targetDist)
+  }
+
+  /** Zoom out by increasing dist by 20%, animated. */
+  zoomOut() {
+    const targetDist = Math.min(50000, this.dist * 1.2)
+    this.animateTo(this.yaw, this.pitch, targetDist)
+  }
+
+  /** Project a 3D world point to 2D screen coordinates (CSS pixels relative to canvas). */
+  getScreenPosition(worldX: number, worldY: number, worldZ: number): { x: number; y: number; behind: boolean } {
+    const vp = this.lastVP
+    // Multiply: clip = VP * [worldX, worldY, worldZ, 1]
+    const cx = vp[0] * worldX + vp[1] * worldY + vp[2] * worldZ + vp[3]
+    const cy = vp[4] * worldX + vp[5] * worldY + vp[6] * worldZ + vp[7]
+    // const cz = vp[8] * worldX + vp[9] * worldY + vp[10] * worldZ + vp[11]
+    const cw = vp[12] * worldX + vp[13] * worldY + vp[14] * worldZ + vp[15]
+
+    const behind = cw <= 0
+    const ndcX = cx / (Math.abs(cw) < 1e-6 ? 1e-6 : cw)
+    const ndcY = cy / (Math.abs(cw) < 1e-6 ? 1e-6 : cw)
+
+    const dpr = devicePixelRatio || 1
+    const screenX = ((ndcX + 1) / 2) * (this.lastW / dpr)
+    const screenY = ((1 - ndcY) / 2) * (this.lastH / dpr)
+
+    return { x: screenX, y: screenY, behind }
   }
 
   /** Set the viewport background (clear) color. r, g, b in 0-1 range. */

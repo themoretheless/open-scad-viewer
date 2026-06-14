@@ -8,6 +8,75 @@ import { exportSTL } from './services/stlExport'
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
 
+/* ── Editor Themes ── */
+interface EditorTheme {
+  id: string
+  name: { ru: string; en: string }
+  dark: boolean
+  vars: Record<string, string>
+}
+
+const EDITOR_THEMES: EditorTheme[] = [
+  {
+    id: 'default-dark', name: { ru: 'Тёмная', en: 'Default Dark' }, dark: true,
+    vars: {
+      '--bg': '#141416', '--surface': '#1e1e22', '--border': '#2e2e34',
+      '--text': '#e4e4e8', '--text-dim': '#888', '--accent': '#4a9eff',
+      '--hover': '#28282e', '--canvas-bg': '#18181c',
+      '--hl-comment': '#6a6a7a', '--hl-keyword': '#5c9eff',
+      '--hl-number': '#d19a66', '--hl-string': '#6ec87a',
+      '--hl-boolean': '#c678dd', '--hl-special': '#56c8d8',
+    },
+  },
+  {
+    id: 'default-light', name: { ru: 'Светлая', en: 'Default Light' }, dark: false,
+    vars: {
+      '--bg': '#f4f4f6', '--surface': '#fff', '--border': '#d4d4da',
+      '--text': '#1a1a1e', '--text-dim': '#777', '--accent': '#2b7de9',
+      '--hover': '#eaeaee', '--canvas-bg': '#e8e8ec',
+      '--hl-comment': '#999', '--hl-keyword': '#1a6dd4',
+      '--hl-number': '#c5600a', '--hl-string': '#2a8c3a',
+      '--hl-boolean': '#9040b0', '--hl-special': '#1a8a99',
+    },
+  },
+  {
+    id: 'monokai', name: { ru: 'Monokai', en: 'Monokai' }, dark: true,
+    vars: {
+      '--bg': '#272822', '--surface': '#2e2e28', '--border': '#49483e',
+      '--text': '#f8f8f2', '--text-dim': '#75715e', '--accent': '#a6e22e',
+      '--hover': '#3e3d32', '--canvas-bg': '#1e1f1c',
+      '--hl-comment': '#75715e', '--hl-keyword': '#f92672',
+      '--hl-number': '#ae81ff', '--hl-string': '#e6db74',
+      '--hl-boolean': '#ae81ff', '--hl-special': '#66d9ef',
+    },
+  },
+  {
+    id: 'solarized', name: { ru: 'Solarized', en: 'Solarized' }, dark: true,
+    vars: {
+      '--bg': '#002b36', '--surface': '#073642', '--border': '#586e75',
+      '--text': '#839496', '--text-dim': '#657b83', '--accent': '#268bd2',
+      '--hover': '#094959', '--canvas-bg': '#001e27',
+      '--hl-comment': '#586e75', '--hl-keyword': '#859900',
+      '--hl-number': '#d33682', '--hl-string': '#2aa198',
+      '--hl-boolean': '#cb4b16', '--hl-special': '#6c71c4',
+    },
+  },
+  {
+    id: 'nord', name: { ru: 'Nord', en: 'Nord' }, dark: true,
+    vars: {
+      '--bg': '#2e3440', '--surface': '#3b4252', '--border': '#4c566a',
+      '--text': '#d8dee9', '--text-dim': '#8690a3', '--accent': '#88c0d0',
+      '--hover': '#434c5e', '--canvas-bg': '#242933',
+      '--hl-comment': '#616e88', '--hl-keyword': '#81a1c1',
+      '--hl-number': '#b48ead', '--hl-string': '#a3be8c',
+      '--hl-boolean': '#d08770', '--hl-special': '#8fbcbb',
+    },
+  },
+]
+
+const activeThemeId = ref(localStorage.getItem('scad-editor-theme') || 'default-dark')
+const showThemeDropdown = ref(false)
+
 const L: Record<string, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD 3D Просмотрщик',
@@ -63,6 +132,12 @@ const L: Record<string, Record<string, string>> = {
     minutesAgo: '{n} мин. назад',
     hoursAgo: '{n} ч. назад',
     daysAgo: '{n} дн. назад',
+    persp: 'Перс',
+    ortho: 'Орто',
+    zoomIn: 'Приблизить',
+    zoomOut: 'Отдалить',
+    format: 'Формат',
+    themeSelector: 'Тема оформления',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -118,6 +193,12 @@ const L: Record<string, Record<string, string>> = {
     minutesAgo: '{n}m ago',
     hoursAgo: '{n}h ago',
     daysAgo: '{n}d ago',
+    persp: 'Persp',
+    ortho: 'Ortho',
+    zoomIn: 'Zoom In',
+    zoomOut: 'Zoom Out',
+    format: 'Format',
+    themeSelector: 'Editor Theme',
   },
 }
 
@@ -125,16 +206,45 @@ const t = (k: string) => L[lang.value]?.[k] ?? k
 const toggleLang = () => { lang.value = lang.value === 'ru' ? 'en' : 'ru'; localStorage.setItem('scad-lang', lang.value) }
 
 onMounted(() => {
-  const saved = localStorage.getItem('scad-theme')
-  isDark.value = saved !== 'light'
+  const savedThemeId = localStorage.getItem('scad-editor-theme')
+  if (savedThemeId) {
+    activeThemeId.value = savedThemeId
+  } else {
+    const saved = localStorage.getItem('scad-theme')
+    activeThemeId.value = saved === 'light' ? 'default-light' : 'default-dark'
+  }
   applyTheme()
 })
 
 function applyTheme() {
-  document.documentElement.setAttribute('data-theme', isDark.value ? '' : 'light')
-  localStorage.setItem('scad-theme', isDark.value ? 'dark' : 'light')
+  const theme = EDITOR_THEMES.find(th => th.id === activeThemeId.value) || EDITOR_THEMES[0]
+  isDark.value = theme.dark
+  document.documentElement.setAttribute('data-theme', theme.dark ? '' : 'light')
+  // Apply CSS variables from theme
+  const root = document.documentElement
+  for (const [key, val] of Object.entries(theme.vars)) {
+    root.style.setProperty(key, val)
+  }
+  localStorage.setItem('scad-editor-theme', theme.id)
+  localStorage.setItem('scad-theme', theme.dark ? 'dark' : 'light')
 }
-function toggleTheme() { isDark.value = !isDark.value; applyTheme() }
+
+function selectTheme(id: string) {
+  activeThemeId.value = id
+  applyTheme()
+  showThemeDropdown.value = false
+}
+
+function toggleTheme() {
+  // Simple toggle: switch between first dark and first light
+  const curTheme = EDITOR_THEMES.find(th => th.id === activeThemeId.value) || EDITOR_THEMES[0]
+  if (curTheme.dark) {
+    activeThemeId.value = 'default-light'
+  } else {
+    activeThemeId.value = 'default-dark'
+  }
+  applyTheme()
+}
 
 /* ── Multi-tab Editor ── */
 
@@ -249,6 +359,7 @@ const isFullscreen = ref(false)
 const showWireframe = ref(false)
 const showGrid = ref(true)
 const isAutoRotate = ref(false)
+const isOrthographic = ref(false)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
@@ -1081,6 +1192,88 @@ function toggleFullscreen() {
 function toggleAutoRotate() {
   if (!renderer) return
   isAutoRotate.value = renderer.toggleAutoRotate()
+}
+
+/* ── Orthographic toggle ── */
+function toggleProjection() {
+  if (!renderer) return
+  isOrthographic.value = renderer.toggleProjection()
+}
+
+/* ── Zoom controls ── */
+function doZoomIn() {
+  if (!renderer) return
+  renderer.zoomIn()
+}
+function doZoomOut() {
+  if (!renderer) return
+  renderer.zoomOut()
+}
+
+/* ── Code Formatter / Auto-indent ── */
+function formatCode() {
+  const src = code.value
+  const lines = src.split('\n')
+  const result: string[] = []
+  let indent = 0
+  const INDENT = '    '
+
+  for (const raw of lines) {
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      result.push('')
+      continue
+    }
+
+    // Count closing braces at start of line to decrease indent first
+    let leadingCloses = 0
+    for (const ch of trimmed) {
+      if (ch === '}' || ch === ')' || ch === ']') leadingCloses++
+      else break
+    }
+    indent = Math.max(0, indent - leadingCloses)
+
+    result.push(INDENT.repeat(indent) + trimmed)
+
+    // Count net brace changes for next line
+    let opens = 0
+    let closes = 0
+    let inStr = false
+    let inLineComment = false
+    for (let i = 0; i < trimmed.length; i++) {
+      const ch = trimmed[i]
+      if (inLineComment) break
+      if (ch === '"' && (i === 0 || trimmed[i - 1] !== '\\')) { inStr = !inStr; continue }
+      if (inStr) continue
+      if (ch === '/' && i + 1 < trimmed.length && trimmed[i + 1] === '/') { inLineComment = true; break }
+      if (ch === '{' || ch === '(' || ch === '[') opens++
+      if (ch === '}' || ch === ')' || ch === ']') closes++
+    }
+    // We already subtracted leadingCloses from indent above,
+    // so add all opens and subtract remaining closes (closes minus leadingCloses)
+    indent += opens - (closes - leadingCloses)
+    indent = Math.max(0, indent)
+  }
+
+  code.value = result.join('\n')
+}
+
+/* ── Axis Labels ── */
+const axisLabelX = ref({ x: 0, y: 0, visible: false })
+const axisLabelY = ref({ x: 0, y: 0, visible: false })
+const axisLabelZ = ref({ x: 0, y: 0, visible: false })
+let axisLabelRAF = 0
+
+function updateAxisLabels() {
+  if (!renderer) return
+  const len = 210 // axis line length (matches grid gs=200, a bit past end)
+  const px = renderer.getScreenPosition(len, 0, 0)
+  const py = renderer.getScreenPosition(0, len, 0)
+  const pz = renderer.getScreenPosition(0, 0, len)
+  axisLabelX.value = { x: px.x, y: px.y, visible: !px.behind }
+  axisLabelY.value = { x: py.x, y: py.y, visible: !py.behind }
+  axisLabelZ.value = { x: pz.x, y: pz.y, visible: !pz.behind }
+  axisLabelRAF = requestAnimationFrame(updateAxisLabels)
 }
 
 /* ── Close recent dropdown on outside click ── */
