@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { parseOpenSCAD } from './services/openscadParser'
+import type { MeshData } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
+import { exportSTL } from './services/stlExport'
 
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
@@ -48,6 +50,19 @@ const L: Record<string, Record<string, string>> = {
     size: 'Размер',
     sc_findReplace: 'Найти и заменить',
     sc_findOnly: 'Найти',
+    exportStl: 'Экспорт STL',
+    share: 'Поделиться',
+    copied: 'Скопировано!',
+    recent: 'Недавние',
+    noRecent: 'Нет недавних файлов',
+    newTab: 'Новая вкладка',
+    closeTab: 'Закрыть вкладку',
+    minimap: 'Миникарта',
+    untitled: 'Без имени',
+    justNow: 'только что',
+    minutesAgo: '{n} мин. назад',
+    hoursAgo: '{n} ч. назад',
+    daysAgo: '{n} дн. назад',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -90,6 +105,19 @@ const L: Record<string, Record<string, string>> = {
     size: 'Size',
     sc_findReplace: 'Find & Replace',
     sc_findOnly: 'Find',
+    exportStl: 'Export STL',
+    share: 'Share',
+    copied: 'Copied!',
+    recent: 'Recent',
+    noRecent: 'No recent files',
+    newTab: 'New tab',
+    closeTab: 'Close tab',
+    minimap: 'Minimap',
+    untitled: 'Untitled',
+    justNow: 'just now',
+    minutesAgo: '{n}m ago',
+    hoursAgo: '{n}h ago',
+    daysAgo: '{n}d ago',
   },
 }
 
@@ -108,9 +136,107 @@ function applyTheme() {
 }
 function toggleTheme() { isDark.value = !isDark.value; applyTheme() }
 
+/* ── Multi-tab Editor ── */
+
+interface EditorTab {
+  id: string
+  name: string
+  code: string
+}
+
+function generateTabId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+}
+
+function loadTabsFromStorage(): EditorTab[] {
+  try {
+    const raw = localStorage.getItem('scad-tabs')
+    if (raw) {
+      const parsed = JSON.parse(raw) as EditorTab[]
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch { /* ignore */ }
+  // Migrate from old single-code storage
+  const oldCode = localStorage.getItem('scad-code')
+  return [{ id: generateTabId(), name: t('untitled') + ' 1', code: oldCode || EXAMPLES.basic }]
+}
+
+const tabs = ref<EditorTab[]>(loadTabsFromStorage())
+const activeTabId = ref(localStorage.getItem('scad-active-tab') || tabs.value[0].id)
+
+// Ensure activeTabId points to a valid tab
+if (!tabs.value.find(tb => tb.id === activeTabId.value)) {
+  activeTabId.value = tabs.value[0].id
+}
+
+const activeTab = computed(() => tabs.value.find(tb => tb.id === activeTabId.value) || tabs.value[0])
+
+const code = computed({
+  get: () => activeTab.value.code,
+  set: (v: string) => { activeTab.value.code = v },
+})
+
+function saveTabs() {
+  localStorage.setItem('scad-tabs', JSON.stringify(tabs.value))
+  localStorage.setItem('scad-active-tab', activeTabId.value)
+}
+
+function switchTab(id: string) {
+  activeTabId.value = id
+  saveTabs()
+  nextTick(() => {
+    syncScroll()
+    renderMinimap()
+  })
+}
+
+function addTab() {
+  const idx = tabs.value.length + 1
+  const tab: EditorTab = { id: generateTabId(), name: `${t('untitled')} ${idx}`, code: '' }
+  tabs.value.push(tab)
+  activeTabId.value = tab.id
+  saveTabs()
+}
+
+function closeTab(id: string) {
+  if (tabs.value.length <= 1) return
+  const idx = tabs.value.findIndex(tb => tb.id === id)
+  if (idx === -1) return
+  tabs.value.splice(idx, 1)
+  if (activeTabId.value === id) {
+    activeTabId.value = tabs.value[Math.min(idx, tabs.value.length - 1)].id
+  }
+  saveTabs()
+}
+
+const editingTabId = ref<string | null>(null)
+const editingTabName = ref('')
+const tabNameInputRef = ref<HTMLInputElement | null>(null)
+
+function startRenameTab(id: string) {
+  const tab = tabs.value.find(tb => tb.id === id)
+  if (!tab) return
+  editingTabId.value = id
+  editingTabName.value = tab.name
+  nextTick(() => tabNameInputRef.value?.select())
+}
+
+function finishRenameTab() {
+  if (!editingTabId.value) return
+  const tab = tabs.value.find(tb => tb.id === editingTabId.value)
+  if (tab && editingTabName.value.trim()) {
+    tab.name = editingTabName.value.trim()
+  }
+  editingTabId.value = null
+  saveTabs()
+}
+
+function cancelRenameTab() {
+  editingTabId.value = null
+}
+
 /* ── Editor + Renderer ── */
 
-const code = ref(localStorage.getItem('scad-code') || EXAMPLES.basic)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const error = ref('')
 const errorLine = ref(-1)
@@ -126,6 +252,7 @@ const isAutoRotate = ref(false)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
+let lastParsedMeshes: MeshData[] = []
 
 /* ── Drag & drop state ── */
 const isDragOver = ref(false)
@@ -162,6 +289,225 @@ function setBgColor(index: number) {
   activeBg.value = index
   const c = bgColors[index]
   renderer?.setClearColor(c.r, c.g, c.b)
+}
+
+/* ── STL Export ── */
+function doExportSTL() {
+  if (!lastParsedMeshes.length) return
+  const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
+  exportSTL(lastParsedMeshes, `${tabName}.stl`)
+}
+
+/* ── Share Link ── */
+const showCopied = ref(false)
+
+function shareLink() {
+  const encoded = btoa(encodeURIComponent(code.value))
+  const url = window.location.origin + window.location.pathname + '#code=' + encoded
+  navigator.clipboard.writeText(url).then(() => {
+    showCopied.value = true
+    setTimeout(() => { showCopied.value = false }, 1500)
+  }).catch(() => {
+    // Fallback: manual copy
+    const ta = document.createElement('textarea')
+    ta.value = url
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    showCopied.value = true
+    setTimeout(() => { showCopied.value = false }, 1500)
+  })
+}
+
+function loadFromHash() {
+  const hash = window.location.hash
+  if (hash.startsWith('#code=')) {
+    try {
+      const encoded = hash.slice(6)
+      const decoded = decodeURIComponent(atob(encoded))
+      code.value = decoded
+      // Clear hash after loading
+      history.replaceState(null, '', window.location.pathname)
+    } catch { /* ignore invalid hash */ }
+  }
+}
+
+/* ── Recent Files History ── */
+interface RecentEntry {
+  name: string
+  code: string
+  timestamp: number
+}
+
+const recentFiles = ref<RecentEntry[]>([])
+const showRecent = ref(false)
+
+function loadRecentFiles() {
+  try {
+    const raw = localStorage.getItem('scad-recent')
+    if (raw) {
+      recentFiles.value = JSON.parse(raw) as RecentEntry[]
+    }
+  } catch { /* ignore */ }
+}
+
+function saveRecentFiles() {
+  localStorage.setItem('scad-recent', JSON.stringify(recentFiles.value))
+}
+
+function addToRecent(name: string, codeStr: string) {
+  // Remove duplicate
+  recentFiles.value = recentFiles.value.filter(r => r.code !== codeStr)
+  // Add to front
+  recentFiles.value.unshift({ name, code: codeStr, timestamp: Date.now() })
+  // Keep max 10
+  if (recentFiles.value.length > 10) recentFiles.value = recentFiles.value.slice(0, 10)
+  saveRecentFiles()
+}
+
+function loadRecent(entry: RecentEntry) {
+  code.value = entry.code
+  showRecent.value = false
+}
+
+function formatRelativeTime(ts: number): string {
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 1) return t('justNow')
+  if (mins < 60) return t('minutesAgo').replace('{n}', String(mins))
+  if (hours < 24) return t('hoursAgo').replace('{n}', String(hours))
+  return t('daysAgo').replace('{n}', String(days))
+}
+
+/* ── Code Minimap ── */
+const showMinimap = ref(false)
+const minimapCanvasRef = ref<HTMLCanvasElement | null>(null)
+let minimapDebounce: ReturnType<typeof setTimeout> | null = null
+const minimapDragging = ref(false)
+
+const MINIMAP_KEYWORDS = new Set([
+  'cube','sphere','cylinder','translate','rotate','scale','color',
+  'difference','union','intersection','mirror','module','function',
+  'if','else','for','let','linear_extrude','rotate_extrude',
+  'hull','minkowski','multmatrix','each','echo','assert',
+])
+
+function getLineType(line: string): string {
+  const trimmed = line.trim()
+  if (!trimmed) return 'empty'
+  if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) return 'comment'
+  if (trimmed.includes('"')) return 'string'
+  // Check for keyword at start
+  const wordMatch = trimmed.match(/^([a-zA-Z_]\w*)/)
+  if (wordMatch && MINIMAP_KEYWORDS.has(wordMatch[1])) return 'keyword'
+  // Check for numbers
+  if (/^\d/.test(trimmed) || /[=:]\s*\d/.test(trimmed)) return 'number'
+  return 'code'
+}
+
+function renderMinimap() {
+  const canvas = minimapCanvasRef.value
+  if (!canvas || !showMinimap.value) return
+  const ctx2d = canvas.getContext('2d')
+  if (!ctx2d) return
+
+  const lines = code.value.split('\n')
+  const dpr = window.devicePixelRatio || 1
+  const lineH = 2 * dpr
+  const canvasW = 60 * dpr
+  const canvasH = canvas.clientHeight * dpr
+  canvas.width = canvasW
+  canvas.height = canvasH
+
+  ctx2d.clearRect(0, 0, canvasW, canvasH)
+
+  // Background
+  ctx2d.fillStyle = isDark.value ? 'rgba(20,20,24,0.6)' : 'rgba(240,240,244,0.6)'
+  ctx2d.fillRect(0, 0, canvasW, canvasH)
+
+  const colorMap: Record<string, string> = {
+    keyword: '#5c9eff',
+    comment: '#6a6a7a',
+    string: '#6ec87a',
+    number: '#d19a66',
+    code: isDark.value ? 'rgba(228,228,232,0.4)' : 'rgba(26,26,30,0.4)',
+    empty: 'transparent',
+  }
+
+  // Draw lines
+  const maxVisibleLines = Math.floor(canvasH / lineH)
+  const totalLines = lines.length
+  const scale = totalLines > maxVisibleLines ? maxVisibleLines / totalLines : 1
+
+  for (let i = 0; i < totalLines; i++) {
+    const lineType = getLineType(lines[i])
+    if (lineType === 'empty') continue
+    ctx2d.fillStyle = colorMap[lineType] || colorMap.code
+    const y = i * lineH * scale
+    const lineLen = Math.min(lines[i].length, 50)
+    const w = (lineLen / 50) * canvasW * 0.85
+    ctx2d.fillRect(2 * dpr, y, Math.max(w, 2 * dpr), Math.max(lineH * scale, 1))
+  }
+
+  // Draw viewport indicator
+  const textarea = textareaRef.value
+  if (textarea) {
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20
+    const scrollTop = textarea.scrollTop
+    const viewH = textarea.clientHeight
+    const firstLine = Math.floor(scrollTop / lineHeight)
+    const visibleLines = Math.ceil(viewH / lineHeight)
+
+    const vpY = firstLine * lineH * scale
+    const vpH = Math.max(visibleLines * lineH * scale, 10 * dpr)
+
+    ctx2d.fillStyle = isDark.value ? 'rgba(74,158,255,0.12)' : 'rgba(43,125,233,0.12)'
+    ctx2d.fillRect(0, vpY, canvasW, vpH)
+    ctx2d.strokeStyle = isDark.value ? 'rgba(74,158,255,0.35)' : 'rgba(43,125,233,0.35)'
+    ctx2d.lineWidth = dpr
+    ctx2d.strokeRect(0.5, vpY + 0.5, canvasW - 1, vpH - 1)
+  }
+}
+
+function minimapScrollTo(e: MouseEvent) {
+  const canvas = minimapCanvasRef.value
+  const textarea = textareaRef.value
+  if (!canvas || !textarea) return
+
+  const rect = canvas.getBoundingClientRect()
+  const y = e.clientY - rect.top
+  const ratio = y / rect.height
+  const lines = code.value.split('\n').length
+  const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20
+  const totalH = lines * lineHeight
+  textarea.scrollTop = ratio * totalH - textarea.clientHeight / 2
+  syncScroll()
+  renderMinimap()
+}
+
+function onMinimapMouseDown(e: MouseEvent) {
+  minimapDragging.value = true
+  minimapScrollTo(e)
+  document.addEventListener('mousemove', onMinimapMouseMove)
+  document.addEventListener('mouseup', onMinimapMouseUp)
+}
+
+function onMinimapMouseMove(e: MouseEvent) {
+  if (minimapDragging.value) minimapScrollTo(e)
+}
+
+function onMinimapMouseUp() {
+  minimapDragging.value = false
+  document.removeEventListener('mousemove', onMinimapMouseMove)
+  document.removeEventListener('mouseup', onMinimapMouseUp)
+}
+
+function toggleMinimap() {
+  showMinimap.value = !showMinimap.value
+  if (showMinimap.value) nextTick(renderMinimap)
 }
 
 /* ── Autocomplete ── */
@@ -519,6 +865,11 @@ function syncScroll() {
   if (lineNumRef.value) {
     lineNumRef.value.scrollTop = ta.scrollTop
   }
+  // Debounce minimap update on scroll
+  if (showMinimap.value) {
+    if (minimapDebounce) clearTimeout(minimapDebounce)
+    minimapDebounce = setTimeout(renderMinimap, 50)
+  }
 }
 
 /* ── File Import / Export ── */
@@ -530,7 +881,11 @@ function openFile() {
     const file = input.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => { code.value = reader.result as string }
+    reader.onload = () => {
+      const content = reader.result as string
+      code.value = content
+      addToRecent(file.name.replace(/\.scad$/, ''), content)
+    }
     reader.readAsText(file)
   }
   input.click()
@@ -541,9 +896,10 @@ function saveFile() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'model.scad'
+  a.download = (activeTab.value.name || 'model') + '.scad'
   a.click()
   URL.revokeObjectURL(url)
+  addToRecent(activeTab.value.name, code.value)
 }
 
 function onEditorDragEnter(e: DragEvent) {
@@ -566,7 +922,11 @@ function onEditorDrop(e: DragEvent) {
   const file = e.dataTransfer?.files?.[0]
   if (!file || !file.name.endsWith('.scad')) return
   const reader = new FileReader()
-  reader.onload = () => { code.value = reader.result as string }
+  reader.onload = () => {
+    const content = reader.result as string
+    code.value = content
+    addToRecent(file.name.replace(/\.scad$/, ''), content)
+  }
   reader.readAsText(file)
 }
 
@@ -649,12 +1009,6 @@ function doReplaceAll() {
   const lowerSrc = code.value.toLowerCase()
   const lowerNeedle = findText.value.toLowerCase()
   let result = ''
-  let lastIdx = 0
-  for (const match of findMatches.value) {
-    // Re-find matches from scratch to handle shifting
-    break
-  }
-  // Simple approach: replace all case-insensitive
   let pos = 0
   const src = code.value
   const needle = findText.value
@@ -729,6 +1083,14 @@ function toggleAutoRotate() {
   isAutoRotate.value = renderer.toggleAutoRotate()
 }
 
+/* ── Close recent dropdown on outside click ── */
+function onDocClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (showRecent.value && !target.closest('.recent-wrapper')) {
+    showRecent.value = false
+  }
+}
+
 /* ── Global keyboard handler ── */
 function onGlobalKeydown(e: KeyboardEvent) {
   // "?" to open shortcuts (only when not typing in textarea)
@@ -753,12 +1115,17 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
     if (acVisible.value) { acVisible.value = false; return }
+    if (showRecent.value) { showRecent.value = false; return }
     if (isFullscreen.value) { isFullscreen.value = false }
   }
 }
 
 onMounted(async () => {
   document.addEventListener('keydown', onGlobalKeydown)
+  document.addEventListener('click', onDocClick)
+  loadRecentFiles()
+  loadFromHash()
+
   if (!canvasRef.value) return
   renderer = new WebGPURenderer()
   const ok = await renderer.init(canvasRef.value)
@@ -777,16 +1144,26 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
+  document.removeEventListener('click', onDocClick)
   if (debounce) clearTimeout(debounce)
+  if (minimapDebounce) clearTimeout(minimapDebounce)
   if (statsInterval) clearInterval(statsInterval)
   renderer?.destroy(); renderer = null
 })
 
 watch(code, (v) => {
+  // Save tabs
+  saveTabs()
+  // Also keep legacy key for backwards compat
   localStorage.setItem('scad-code', v)
   if (!autoRender.value) return
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(doRender, 400)
+  // Debounce minimap render
+  if (showMinimap.value) {
+    if (minimapDebounce) clearTimeout(minimapDebounce)
+    minimapDebounce = setTimeout(renderMinimap, 300)
+  }
 })
 
 function doRender() {
@@ -800,6 +1177,7 @@ function doRender() {
     renderTime.value = Math.round(t1 - t0)
     meshCount.value = meshes.length
     triCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
+    lastParsedMeshes = meshes
     renderer.setMeshes(meshes)
   } catch (e: any) {
     let msg = e.message || String(e)
@@ -816,7 +1194,10 @@ function doRender() {
 }
 
 function loadExample(name: string) {
-  if (EXAMPLES[name]) code.value = EXAMPLES[name]
+  if (EXAMPLES[name]) {
+    code.value = EXAMPLES[name]
+    addToRecent(name, EXAMPLES[name])
+  }
 }
 
 function handleKey(e: KeyboardEvent) {
@@ -1048,12 +1429,85 @@ translate([0, 0, 35])
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
           </button>
+          <!-- STL Export button -->
+          <button class="btn btn-sm btn-icon" @click="doExportSTL" :title="t('exportStl')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              <rect x="14" y="1" width="8" height="6" rx="1" fill="currentColor" opacity="0.3"/>
+            </svg>
+          </button>
+          <!-- Share button -->
+          <div class="share-wrapper">
+            <button class="btn btn-sm" @click="shareLink" :title="t('share')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              {{ t('share') }}
+            </button>
+            <span v-if="showCopied" class="copied-tooltip">{{ t('copied') }}</span>
+          </div>
+          <!-- Recent dropdown -->
+          <div class="recent-wrapper">
+            <button class="btn btn-sm" @click.stop="showRecent = !showRecent">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {{ t('recent') }}
+            </button>
+            <div v-if="showRecent" class="recent-dropdown">
+              <div v-if="!recentFiles.length" class="recent-empty">{{ t('noRecent') }}</div>
+              <div
+                v-for="entry in recentFiles"
+                :key="entry.timestamp"
+                class="recent-item"
+                @click="loadRecent(entry)"
+              >
+                <span class="recent-name">{{ entry.name }}</span>
+                <span class="recent-time">{{ formatRelativeTime(entry.timestamp) }}</span>
+              </div>
+            </div>
+          </div>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
           <button class="btn btn-sm" @click="loadExample('basic')">{{ t('basic') }}</button>
           <button class="btn btn-sm" @click="loadExample('csg')">{{ t('csg') }}</button>
           <button class="btn btn-sm" @click="loadExample('house')">{{ t('house') }}</button>
           <button class="btn btn-sm" @click="loadExample('tower')">{{ t('tower') }}</button>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar">
+          <div
+            v-for="tab in tabs"
+            :key="tab.id"
+            class="tab-item"
+            :class="{ active: tab.id === activeTabId }"
+            @click="switchTab(tab.id)"
+            @dblclick.stop="startRenameTab(tab.id)"
+          >
+            <template v-if="editingTabId === tab.id">
+              <input
+                ref="tabNameInputRef"
+                class="tab-name-input"
+                v-model="editingTabName"
+                @blur="finishRenameTab"
+                @keydown.enter.prevent="finishRenameTab"
+                @keydown.escape.prevent="cancelRenameTab"
+                @click.stop
+              />
+            </template>
+            <template v-else>
+              <span class="tab-name">{{ tab.name }}</span>
+              <button
+                v-if="tabs.length > 1"
+                class="tab-close"
+                @click.stop="closeTab(tab.id)"
+                :title="t('closeTab')"
+              >&times;</button>
+            </template>
+          </div>
+          <button class="tab-add" @click="addTab" :title="t('newTab')">+</button>
         </div>
 
         <!-- Find & Replace panel -->
@@ -1125,6 +1579,20 @@ translate([0, 0, 35])
               </div>
             </div>
           </div>
+          <!-- Minimap -->
+          <div v-if="showMinimap" class="minimap-container">
+            <canvas
+              ref="minimapCanvasRef"
+              class="minimap-canvas"
+              @mousedown="onMinimapMouseDown"
+            />
+          </div>
+          <!-- Minimap toggle -->
+          <button class="minimap-toggle" @click="toggleMinimap" :title="t('minimap')" :class="{ active: showMinimap }">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="18" rx="1"/><line x1="14" y1="5" x2="21" y2="5"/><line x1="14" y1="9" x2="21" y2="9"/><line x1="14" y1="13" x2="19" y2="13"/><line x1="14" y1="17" x2="20" y2="17"/>
+            </svg>
+          </button>
         </div>
 
         <div v-if="error" class="error">{{ error }}</div>
@@ -1331,6 +1799,70 @@ html, body, #app {
 }
 .spacer { flex: 1; }
 .ex-label { font-size: 0.72rem; color: var(--text-dim); }
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex; align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  height: 30px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 12px;
+  height: 100%;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+}
+.tab-item:hover { background: var(--hover); color: var(--text); }
+.tab-item.active {
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 2px solid var(--accent);
+}
+
+.tab-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+.tab-name-input {
+  width: 80px;
+  font-size: 0.72rem;
+  padding: 1px 4px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  outline: none;
+}
+
+.tab-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 0.85rem; cursor: pointer; padding: 0 2px;
+  line-height: 1; opacity: 0;
+  transition: opacity 0.1s;
+}
+.tab-item:hover .tab-close,
+.tab-item.active .tab-close { opacity: 1; }
+.tab-close:hover { color: var(--danger); }
+
+.tab-add {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1rem; cursor: pointer; padding: 0 10px;
+  height: 100%; display: flex; align-items: center;
+  transition: color 0.1s;
+}
+.tab-add:hover { color: var(--accent); }
 
 /* ── Code editor with syntax highlight + line numbers ── */
 
@@ -1689,6 +2221,101 @@ html, body, #app {
 /* ── Status bar extras ── */
 .stat-fps { color: var(--hl-special); }
 .stat-size { color: var(--text-dim); }
+
+/* ── Share button wrapper ── */
+.share-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.copied-tooltip {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fadeInUp 0.2s ease;
+  z-index: 100;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Recent dropdown ── */
+.recent-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.recent-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 200;
+}
+.recent-empty {
+  padding: 12px 16px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+.recent-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  border-bottom: 1px solid rgba(128,128,128,.08);
+  transition: background 0.1s;
+}
+.recent-item:last-child { border-bottom: none; }
+.recent-item:hover { background: var(--hover); }
+.recent-name { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+.recent-time { color: var(--text-dim); font-size: 0.68rem; white-space: nowrap; margin-left: 10px; }
+
+/* ── Minimap ── */
+.minimap-container {
+  width: 60px;
+  flex-shrink: 0;
+  position: relative;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+}
+.minimap-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.minimap-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 4px;
+  cursor: pointer;
+  color: var(--text-dim);
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.1s, border-color 0.1s;
+  opacity: 0.6;
+}
+.minimap-toggle:hover { opacity: 1; color: var(--text); }
+.minimap-toggle.active { opacity: 1; color: var(--accent); border-color: var(--accent); }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
