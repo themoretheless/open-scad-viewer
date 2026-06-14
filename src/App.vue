@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { parseOpenSCAD } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 
@@ -23,6 +23,16 @@ const L: Record<string, Record<string, string>> = {
     wireframe: 'Каркас', grid: 'Сетка', fullscreen: 'Полный экран',
     autoRotate: 'Вращение',
     errorAtLine: 'Ошибка в строке',
+    shortcuts: 'Горячие клавиши',
+    shortcutsTitle: 'Горячие клавиши',
+    close: 'Закрыть',
+    bgColor: 'Фон',
+    sc_render: 'Рендер',
+    sc_indent: 'Отступ',
+    sc_undo: 'Отменить (браузер)',
+    sc_find: 'Поиск (браузер)',
+    sc_shortcuts: 'Показать горячие клавиши',
+    sc_close: 'Закрыть модальное / выйти из полноэкранного',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -40,6 +50,16 @@ const L: Record<string, Record<string, string>> = {
     wireframe: 'Wire', grid: 'Grid', fullscreen: 'Fullscreen',
     autoRotate: 'Rotate',
     errorAtLine: 'Error at line',
+    shortcuts: 'Shortcuts',
+    shortcutsTitle: 'Keyboard Shortcuts',
+    close: 'Close',
+    bgColor: 'BG',
+    sc_render: 'Render',
+    sc_indent: 'Indent',
+    sc_undo: 'Undo (browser native)',
+    sc_find: 'Find (browser native)',
+    sc_shortcuts: 'Show shortcuts',
+    sc_close: 'Close modal / exit fullscreen',
   },
 }
 
@@ -77,6 +97,186 @@ const isAutoRotate = ref(false)
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
 
+/* ── Shortcuts modal ── */
+const showShortcuts = ref(false)
+
+/* ── Viewport background color ── */
+const bgColors = [
+  { name: 'Dark',  hex: '#18181c', r: 0.09, g: 0.09, b: 0.11 },
+  { name: 'Light', hex: '#e8e8ec', r: 0.91, g: 0.91, b: 0.93 },
+  { name: 'Blue',  hex: '#1a2332', r: 0.10, g: 0.14, b: 0.20 },
+  { name: 'Green', hex: '#1a2a1e', r: 0.10, g: 0.16, b: 0.12 },
+]
+const activeBg = ref(0)
+
+function setBgColor(index: number) {
+  activeBg.value = index
+  const c = bgColors[index]
+  renderer?.setClearColor(c.r, c.g, c.b)
+}
+
+/* ── Autocomplete ── */
+const AUTOCOMPLETE_KEYWORDS = [
+  'cube','sphere','cylinder','translate','rotate','scale','mirror','color',
+  'difference','union','intersection','linear_extrude','rotate_extrude',
+  'hull','minkowski','multmatrix','module','function','for','if','else',
+  'let','each','echo','assert','$fn','$fa','$fs','true','false','undef','PI',
+]
+
+const acVisible = ref(false)
+const acItems = ref<string[]>([])
+const acIndex = ref(0)
+const acTop = ref(0)
+const acLeft = ref(0)
+let acPrefix = ''
+let acStart = 0
+
+function getWordAtCursor(el: HTMLTextAreaElement): { word: string; start: number } {
+  const pos = el.selectionStart
+  const text = el.value
+  let start = pos
+  while (start > 0 && /[a-zA-Z0-9_$]/.test(text[start - 1])) start--
+  return { word: text.slice(start, pos), start }
+}
+
+function updateAutocomplete() {
+  const el = textareaRef.value
+  if (!el) return
+  const { word, start } = getWordAtCursor(el)
+  if (word.length < 1) { acVisible.value = false; return }
+
+  const lower = word.toLowerCase()
+  const matches = AUTOCOMPLETE_KEYWORDS.filter(k => k.toLowerCase().startsWith(lower) && k.toLowerCase() !== lower)
+  if (!matches.length) { acVisible.value = false; return }
+
+  acPrefix = word
+  acStart = start
+  acItems.value = matches.slice(0, 6)
+  acIndex.value = 0
+
+  // Position the popup near the cursor
+  const pos = getCaretCoordinates(el)
+  acTop.value = pos.top
+  acLeft.value = pos.left
+  acVisible.value = true
+}
+
+function getCaretCoordinates(el: HTMLTextAreaElement): { top: number; left: number } {
+  // Create a mirror div to measure cursor position
+  const div = document.createElement('div')
+  const style = window.getComputedStyle(el)
+  const props = [
+    'fontFamily','fontSize','fontWeight','letterSpacing','lineHeight',
+    'paddingTop','paddingLeft','paddingRight','paddingBottom',
+    'borderTopWidth','borderLeftWidth','borderRightWidth','borderBottomWidth',
+    'whiteSpace','wordWrap','tabSize',
+  ]
+  div.style.position = 'absolute'
+  div.style.visibility = 'hidden'
+  div.style.whiteSpace = 'pre'
+  div.style.overflow = 'hidden'
+  for (const p of props) {
+    (div.style as any)[p] = style.getPropertyValue(p.replace(/([A-Z])/g, '-$1').toLowerCase())
+  }
+  div.style.width = el.clientWidth + 'px'
+  div.style.height = 'auto'
+
+  const text = el.value.substring(0, el.selectionStart)
+  const textNode = document.createTextNode(text)
+  const span = document.createElement('span')
+  span.textContent = '|'
+  div.appendChild(textNode)
+  div.appendChild(span)
+  document.body.appendChild(div)
+
+  const rect = el.getBoundingClientRect()
+  const codeArea = el.closest('.code-area')
+  const codeAreaRect = codeArea ? codeArea.getBoundingClientRect() : rect
+  const top = span.offsetTop - el.scrollTop + rect.top - codeAreaRect.top + parseInt(style.lineHeight || '20')
+  const left = span.offsetLeft - el.scrollLeft + rect.left - codeAreaRect.left
+
+  document.body.removeChild(div)
+  return { top: Math.max(0, top), left: Math.max(0, left) }
+}
+
+function acceptAutocomplete() {
+  const el = textareaRef.value
+  if (!el || !acVisible.value || !acItems.value.length) return
+  const item = acItems.value[acIndex.value]
+  const before = code.value.substring(0, acStart)
+  const after = code.value.substring(acStart + acPrefix.length)
+  code.value = before + item + after
+  acVisible.value = false
+  nextTick(() => {
+    const pos = acStart + item.length
+    el.selectionStart = el.selectionEnd = pos
+    el.focus()
+  })
+}
+
+function dismissAutocomplete() {
+  acVisible.value = false
+}
+
+/* ── Bracket matching ── */
+const bracketMatchA = ref(-1)
+const bracketMatchB = ref(-1)
+
+const BRACKET_PAIRS: Record<string, string> = {
+  '(': ')', ')': '(',
+  '[': ']', ']': '[',
+  '{': '}', '}': '{',
+}
+const OPEN_BRACKETS = new Set(['(', '[', '{'])
+const CLOSE_BRACKETS = new Set([')', ']', '}'])
+
+function findMatchingBracket(src: string, pos: number): number {
+  const ch = src[pos]
+  if (!ch || !BRACKET_PAIRS[ch]) return -1
+
+  if (OPEN_BRACKETS.has(ch)) {
+    // Search forward
+    const target = BRACKET_PAIRS[ch]
+    let depth = 1
+    for (let i = pos + 1; i < src.length; i++) {
+      if (src[i] === ch) depth++
+      else if (src[i] === target) { depth--; if (depth === 0) return i }
+    }
+  } else if (CLOSE_BRACKETS.has(ch)) {
+    // Search backward
+    const target = BRACKET_PAIRS[ch]
+    let depth = 1
+    for (let i = pos - 1; i >= 0; i--) {
+      if (src[i] === ch) depth++
+      else if (src[i] === target) { depth--; if (depth === 0) return i }
+    }
+  }
+  return -1
+}
+
+function updateBracketMatch() {
+  const el = textareaRef.value
+  if (!el) { bracketMatchA.value = -1; bracketMatchB.value = -1; return }
+  const pos = el.selectionStart
+  const src = code.value
+
+  // Check character at cursor position and cursor-1
+  let matchPos = -1
+  let bracketPos = -1
+
+  if (pos < src.length && BRACKET_PAIRS[src[pos]]) {
+    bracketPos = pos
+    matchPos = findMatchingBracket(src, pos)
+  }
+  if (matchPos === -1 && pos > 0 && BRACKET_PAIRS[src[pos - 1]]) {
+    bracketPos = pos - 1
+    matchPos = findMatchingBracket(src, pos - 1)
+  }
+
+  bracketMatchA.value = bracketPos !== -1 && matchPos !== -1 ? bracketPos : -1
+  bracketMatchB.value = matchPos
+}
+
 /* ── Resizable split pane ── */
 const editorWidth = ref(parseInt(localStorage.getItem('scad-editor-width') || '420'))
 const isDraggingDivider = ref(false)
@@ -99,23 +299,24 @@ function onDividerUp() {
   document.removeEventListener('mouseup', onDividerUp)
 }
 
-/* ── Syntax highlighting ── */
+/* ── Syntax highlighting with bracket matching ── */
 const KEYWORDS = new Set([
   'cube','sphere','cylinder','translate','rotate','scale','color',
   'difference','union','intersection','mirror','module','function',
-  'if','else','for','let'
+  'if','else','for','let','linear_extrude','rotate_extrude',
+  'hull','minkowski','multmatrix','each','echo','assert',
 ])
-const BOOLEANS = new Set(['true','false'])
+const BOOLEANS = new Set(['true','false','undef'])
 const SPECIALS = new Set(['$fn','$fa','$fs'])
 
-function highlightCode(src: string): string {
-  // Escape HTML first, then apply highlighting via regex
-  // We must process the raw source, not HTML-escaped, then escape each segment
+function highlightCode(src: string, bmA: number, bmB: number): string {
   const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 
   const result: string[] = []
   let i = 0
   const len = src.length
+
+  const isBracketMatch = (pos: number) => pos === bmA || pos === bmB
 
   while (i < len) {
     // Block comments
@@ -148,6 +349,12 @@ function highlightCode(src: string): string {
       i = j + 1
       continue
     }
+    // Bracket match highlight
+    if (isBracketMatch(i)) {
+      result.push(`<span class="bracket-match">${esc(src[i])}</span>`)
+      i++
+      continue
+    }
     // Special variables ($fn, $fa, $fs)
     if (src[i] === '$') {
       let j = i + 1
@@ -165,7 +372,6 @@ function highlightCode(src: string): string {
     if (/[0-9]/.test(src[i]) || (src[i] === '.' && i + 1 < len && /[0-9]/.test(src[i+1]))) {
       let j = i
       while (j < len && /[0-9.]/.test(src[j])) j++
-      // handle exponent
       if (j < len && (src[j] === 'e' || src[j] === 'E')) {
         j++
         if (j < len && (src[j] === '+' || src[j] === '-')) j++
@@ -200,11 +406,10 @@ function highlightCode(src: string): string {
     result.push(esc(src[i]))
     i++
   }
-  // Always end with a newline so the overlay matches textarea height
   return result.join('') + '\n'
 }
 
-const highlightedCode = computed(() => highlightCode(code.value))
+const highlightedCode = computed(() => highlightCode(code.value, bracketMatchA.value, bracketMatchB.value))
 
 /* ── Line numbers ── */
 const lineCount = computed(() => code.value.split('\n').length)
@@ -291,7 +496,23 @@ function toggleAutoRotate() {
   isAutoRotate.value = renderer.toggleAutoRotate()
 }
 
+/* ── Global keyboard handler ── */
+function onGlobalKeydown(e: KeyboardEvent) {
+  // "?" to open shortcuts (only when not typing in textarea)
+  if (e.key === '?' && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLInputElement)) {
+    e.preventDefault()
+    showShortcuts.value = true
+  }
+  // Escape to close modal or exit fullscreen
+  if (e.key === 'Escape') {
+    if (showShortcuts.value) { showShortcuts.value = false; return }
+    if (acVisible.value) { acVisible.value = false; return }
+    if (isFullscreen.value) { isFullscreen.value = false }
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', onGlobalKeydown)
   if (!canvasRef.value) return
   renderer = new WebGPURenderer()
   const ok = await renderer.init(canvasRef.value)
@@ -300,6 +521,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onGlobalKeydown)
   if (debounce) clearTimeout(debounce)
   renderer?.destroy(); renderer = null
 })
@@ -325,11 +547,9 @@ function doRender() {
     renderer.setMeshes(meshes)
   } catch (e: any) {
     let msg = e.message || String(e)
-    // Try to extract position from error like "@123"
     const posMatch = msg.match(/@(\d+)/)
     if (posMatch) {
       const pos = parseInt(posMatch[1])
-      // Calculate line number from character position
       const prefix = code.value.substring(0, pos)
       const line = prefix.split('\n').length
       errorLine.value = line
@@ -344,7 +564,33 @@ function loadExample(name: string) {
 }
 
 function handleKey(e: KeyboardEvent) {
-  if (e.key === 'Tab') {
+  // Autocomplete navigation
+  if (acVisible.value) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      acIndex.value = (acIndex.value + 1) % acItems.value.length
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      acIndex.value = (acIndex.value - 1 + acItems.value.length) % acItems.value.length
+      return
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      if (acItems.value.length) {
+        e.preventDefault()
+        acceptAutocomplete()
+        return
+      }
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      dismissAutocomplete()
+      return
+    }
+  }
+
+  if (e.key === 'Tab' && !acVisible.value) {
     e.preventDefault()
     const el = e.target as HTMLTextAreaElement
     const s = el.selectionStart, end = el.selectionEnd
@@ -352,6 +598,16 @@ function handleKey(e: KeyboardEvent) {
     requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 4 })
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRender() }
+}
+
+function handleKeyUp() {
+  updateAutocomplete()
+  updateBracketMatch()
+}
+
+function handleClick() {
+  updateBracketMatch()
+  dismissAutocomplete()
 }
 </script>
 
@@ -469,11 +725,32 @@ translate([0, 0, 35])
         <span class="brand">{{ t('title') }}</span>
       </div>
       <div class="topbar-right">
+        <button class="tb-btn tb-btn-help" @click="showShortcuts = true" :title="t('shortcuts')">?</button>
         <button class="tb-btn" @click="toggleLang">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
         <span class="theme-label">{{ t('theme') }}</span>
         <button class="tb-btn" @click="toggleTheme">{{ isDark ? '&#9790;' : '&#9788;' }}</button>
       </div>
     </nav>
+
+    <!-- Shortcuts modal -->
+    <Teleport to="body">
+      <div v-if="showShortcuts" class="modal-backdrop" @click.self="showShortcuts = false">
+        <div class="modal-box">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('shortcutsTitle') }}</span>
+            <button class="modal-close" @click="showShortcuts = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="shortcut-row"><kbd>Ctrl+Enter</kbd><span>{{ t('sc_render') }}</span></div>
+            <div class="shortcut-row"><kbd>Tab</kbd><span>{{ t('sc_indent') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>{{ t('sc_undo') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_find') }}</span></div>
+            <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
+            <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
@@ -507,8 +784,26 @@ translate([0, 0, 35])
               autocorrect="off"
               autocapitalize="off"
               @keydown="handleKey"
+              @keyup="handleKeyUp"
+              @click="handleClick"
               @scroll="syncScroll"
             />
+            <!-- Autocomplete popup -->
+            <div
+              v-if="acVisible && acItems.length"
+              class="ac-popup"
+              :style="{ top: acTop + 'px', left: acLeft + 'px' }"
+            >
+              <div
+                v-for="(item, idx) in acItems"
+                :key="item"
+                class="ac-item"
+                :class="{ active: idx === acIndex }"
+                @mousedown.prevent="acIndex = idx; acceptAutocomplete()"
+              >
+                {{ item }}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -561,6 +856,20 @@ translate([0, 0, 35])
               <path v-else d="M4 14h3a2 2 0 012 2v3m4-5h3a2 2 0 002-2V9m-9 0V6a2 2 0 012-2h3m4 5V6a2 2 0 00-2-2h-3"/>
             </svg>
           </button>
+          <div class="view-separator"></div>
+          <!-- Background color swatches -->
+          <div class="bg-color-row">
+            <span class="bg-label">{{ t('bgColor') }}</span>
+            <button
+              v-for="(c, idx) in bgColors"
+              :key="c.hex"
+              class="bg-swatch"
+              :class="{ active: idx === activeBg }"
+              :style="{ background: c.hex }"
+              :title="c.name"
+              @click="setBgColor(idx)"
+            />
+          </div>
         </div>
 
         <div class="canvas-hint">{{ t('hint') }}</div>
@@ -764,6 +1073,11 @@ html, body, #app {
 :deep(.hl-string) { color: var(--hl-string); }
 :deep(.hl-boolean) { color: var(--hl-boolean); }
 :deep(.hl-special) { color: var(--hl-special); }
+:deep(.bracket-match) {
+  background: rgba(74, 158, 255, 0.18);
+  border-radius: 2px;
+  outline: 1px solid rgba(74, 158, 255, 0.35);
+}
 
 .error {
   padding: 8px 12px; margin: 6px 10px;
@@ -850,6 +1164,126 @@ html, body, #app {
   color: #ff6b5a;
   border-radius: 2px;
   padding: 0 2px;
+}
+
+/* ── Help button in topbar ── */
+.tb-btn-help {
+  font-weight: 700;
+  font-size: 0.85rem;
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* ── Shortcuts modal ── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-width: 320px; max-width: 440px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-weight: 700; font-size: 0.95rem; }
+.modal-close {
+  background: none; border: none; color: var(--text-dim); font-size: 1.4rem;
+  cursor: pointer; line-height: 1; padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 14px 18px; }
+.shortcut-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(128,128,128,.12);
+}
+.shortcut-row:last-child { border-bottom: none; }
+.shortcut-row kbd {
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+.shortcut-row span { color: var(--text-dim); font-size: 0.8rem; }
+
+/* ── Autocomplete popup ── */
+.ac-popup {
+  position: absolute;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  min-width: 150px;
+  max-width: 240px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.ac-item {
+  padding: 5px 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ac-item:hover, .ac-item.active {
+  background: rgba(74,158,255,.2);
+  color: var(--accent);
+}
+
+/* ── Background color swatches ── */
+.bg-color-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 4px;
+}
+.bg-label {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,.5);
+  margin-right: 2px;
+}
+[data-theme="light"] .bg-label {
+  color: rgba(0,0,0,.45);
+}
+.bg-swatch {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.15);
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s;
+  padding: 0;
+}
+.bg-swatch:hover {
+  border-color: rgba(74,158,255,.5);
+  transform: scale(1.15);
+}
+.bg-swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+[data-theme="light"] .bg-swatch {
+  border-color: rgba(0,0,0,.15);
+}
+[data-theme="light"] .bg-swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 @media (max-width: 800px) {
