@@ -33,6 +33,21 @@ const L: Record<string, Record<string, string>> = {
     sc_find: 'Поиск (браузер)',
     sc_shortcuts: 'Показать горячие клавиши',
     sc_close: 'Закрыть модальное / выйти из полноэкранного',
+    open: 'Открыть',
+    save: 'Сохранить',
+    dropHint: 'Перетащите файл .scad сюда',
+    find: 'Найти',
+    replace: 'Заменить',
+    replaceAll: 'Заменить все',
+    next: 'Далее',
+    prev: 'Назад',
+    matchCount: '{x} из {y}',
+    noMatches: 'Нет совпадений',
+    fps: 'FPS',
+    vertices: 'Вершин',
+    size: 'Размер',
+    sc_findReplace: 'Найти и заменить',
+    sc_findOnly: 'Найти',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -60,6 +75,21 @@ const L: Record<string, Record<string, string>> = {
     sc_find: 'Find (browser native)',
     sc_shortcuts: 'Show shortcuts',
     sc_close: 'Close modal / exit fullscreen',
+    open: 'Open',
+    save: 'Save',
+    dropHint: 'Drop .scad file here',
+    find: 'Find',
+    replace: 'Replace',
+    replaceAll: 'Replace All',
+    next: 'Next',
+    prev: 'Prev',
+    matchCount: '{x} of {y}',
+    noMatches: 'No matches',
+    fps: 'FPS',
+    vertices: 'Vertices',
+    size: 'Size',
+    sc_findReplace: 'Find & Replace',
+    sc_findOnly: 'Find',
   },
 }
 
@@ -96,6 +126,25 @@ const isAutoRotate = ref(false)
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
+
+/* ── Drag & drop state ── */
+const isDragOver = ref(false)
+let dragCounter = 0
+
+/* ── Stats polling ── */
+const fpsVal = ref(0)
+const vertexCount = ref(0)
+const boundsSize = ref<[number, number, number]>([0, 0, 0])
+let statsInterval: ReturnType<typeof setInterval> | null = null
+
+/* ── Find & Replace ── */
+const showFind = ref(false)
+const showReplace = ref(false)
+const findText = ref('')
+const replaceText = ref('')
+const findMatchIndex = ref(-1)
+const findMatches = ref<{ start: number; end: number }[]>([])
+const findInputRef = ref<HTMLInputElement | null>(null)
 
 /* ── Shortcuts modal ── */
 const showShortcuts = ref(false)
@@ -309,8 +358,14 @@ const KEYWORDS = new Set([
 const BOOLEANS = new Set(['true','false','undef'])
 const SPECIALS = new Set(['$fn','$fa','$fs'])
 
-function highlightCode(src: string, bmA: number, bmB: number): string {
+function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start: number; end: number }[], fActiveIdx: number): string {
   const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  // Build a set of find-match ranges for quick lookup
+  const findSet = new Map<number, { end: number; active: boolean }>()
+  for (let fi = 0; fi < fMatches.length; fi++) {
+    findSet.set(fMatches[fi].start, { end: fMatches[fi].end, active: fi === fActiveIdx })
+  }
 
   const result: string[] = []
   let i = 0
@@ -318,7 +373,27 @@ function highlightCode(src: string, bmA: number, bmB: number): string {
 
   const isBracketMatch = (pos: number) => pos === bmA || pos === bmB
 
+  // Track if we are inside a find-match highlight span
+  let inFindMatch = false
+  let findMatchEnd = 0
+  let findMatchActive = false
+
   while (i < len) {
+    // Check if we enter a find-match range
+    const fm = findSet.get(i)
+    if (fm && !inFindMatch) {
+      inFindMatch = true
+      findMatchEnd = fm.end
+      findMatchActive = fm.active
+      result.push(`<span class="${findMatchActive ? 'find-match-active' : 'find-match'}">`)
+    }
+
+    // Close find-match if we passed the end
+    if (inFindMatch && i >= findMatchEnd) {
+      result.push('</span>')
+      inFindMatch = false
+    }
+
     // Block comments
     if (src[i] === '/' && src[i+1] === '*') {
       let end = src.indexOf('*/', i + 2)
@@ -406,10 +481,12 @@ function highlightCode(src: string, bmA: number, bmB: number): string {
     result.push(esc(src[i]))
     i++
   }
+  // Close any dangling find-match span
+  if (inFindMatch) result.push('</span>')
   return result.join('') + '\n'
 }
 
-const highlightedCode = computed(() => highlightCode(code.value, bracketMatchA.value, bracketMatchB.value))
+const highlightedCode = computed(() => highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value))
 
 /* ── Line numbers ── */
 const lineCount = computed(() => code.value.split('\n').length)
@@ -444,25 +521,181 @@ function syncScroll() {
   }
 }
 
-/* ── View presets ── */
+/* ── File Import / Export ── */
+function openFile() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.scad'
+  input.onchange = () => {
+    const file = input.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => { code.value = reader.result as string }
+    reader.readAsText(file)
+  }
+  input.click()
+}
+
+function saveFile() {
+  const blob = new Blob([code.value], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'model.scad'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function onEditorDragEnter(e: DragEvent) {
+  e.preventDefault()
+  dragCounter++
+  isDragOver.value = true
+}
+function onEditorDragOver(e: DragEvent) {
+  e.preventDefault()
+}
+function onEditorDragLeave(e: DragEvent) {
+  e.preventDefault()
+  dragCounter--
+  if (dragCounter <= 0) { dragCounter = 0; isDragOver.value = false }
+}
+function onEditorDrop(e: DragEvent) {
+  e.preventDefault()
+  dragCounter = 0
+  isDragOver.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file || !file.name.endsWith('.scad')) return
+  const reader = new FileReader()
+  reader.onload = () => { code.value = reader.result as string }
+  reader.readAsText(file)
+}
+
+/* ── Find & Replace ── */
+function openFindReplace(replaceMode: boolean) {
+  showFind.value = true
+  showReplace.value = replaceMode
+  nextTick(() => findInputRef.value?.focus())
+  updateFindMatches()
+}
+
+function closeFindReplace() {
+  showFind.value = false
+  showReplace.value = false
+  findText.value = ''
+  replaceText.value = ''
+  findMatches.value = []
+  findMatchIndex.value = -1
+}
+
+function updateFindMatches() {
+  if (!findText.value) { findMatches.value = []; findMatchIndex.value = -1; return }
+  const src = code.value
+  const needle = findText.value
+  const matches: { start: number; end: number }[] = []
+  let pos = 0
+  const lowerSrc = src.toLowerCase()
+  const lowerNeedle = needle.toLowerCase()
+  while (pos < src.length) {
+    const idx = lowerSrc.indexOf(lowerNeedle, pos)
+    if (idx === -1) break
+    matches.push({ start: idx, end: idx + needle.length })
+    pos = idx + 1
+  }
+  findMatches.value = matches
+  if (matches.length > 0) {
+    if (findMatchIndex.value < 0 || findMatchIndex.value >= matches.length) findMatchIndex.value = 0
+  } else {
+    findMatchIndex.value = -1
+  }
+}
+
+watch(findText, updateFindMatches)
+
+function findNext() {
+  if (!findMatches.value.length) return
+  findMatchIndex.value = (findMatchIndex.value + 1) % findMatches.value.length
+  scrollToMatch()
+}
+
+function findPrev() {
+  if (!findMatches.value.length) return
+  findMatchIndex.value = (findMatchIndex.value - 1 + findMatches.value.length) % findMatches.value.length
+  scrollToMatch()
+}
+
+function scrollToMatch() {
+  const el = textareaRef.value
+  if (!el || findMatchIndex.value < 0) return
+  const match = findMatches.value[findMatchIndex.value]
+  if (!match) return
+  el.focus()
+  el.setSelectionRange(match.start, match.end)
+  // Scroll the textarea so the match is visible
+  const textBefore = code.value.substring(0, match.start)
+  const lineNum = textBefore.split('\n').length
+  const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
+  el.scrollTop = Math.max(0, (lineNum - 3) * lineHeight)
+}
+
+function doReplace() {
+  if (findMatchIndex.value < 0 || !findMatches.value.length) return
+  const match = findMatches.value[findMatchIndex.value]
+  code.value = code.value.substring(0, match.start) + replaceText.value + code.value.substring(match.end)
+  updateFindMatches()
+}
+
+function doReplaceAll() {
+  if (!findText.value || !findMatches.value.length) return
+  const lowerSrc = code.value.toLowerCase()
+  const lowerNeedle = findText.value.toLowerCase()
+  let result = ''
+  let lastIdx = 0
+  for (const match of findMatches.value) {
+    // Re-find matches from scratch to handle shifting
+    break
+  }
+  // Simple approach: replace all case-insensitive
+  let pos = 0
+  const src = code.value
+  const needle = findText.value
+  while (pos < src.length) {
+    const idx = lowerSrc.indexOf(lowerNeedle, pos)
+    if (idx === -1) { result += src.substring(pos); break }
+    result += src.substring(pos, idx) + replaceText.value
+    pos = idx + needle.length
+  }
+  code.value = result
+  updateFindMatches()
+}
+
+function handleFindKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') { e.preventDefault(); findNext() }
+  if (e.key === 'Escape') { e.preventDefault(); closeFindReplace() }
+}
+
+function handleReplaceKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') { e.preventDefault(); closeFindReplace() }
+}
+
+/* ── View presets (animated) ── */
 function setView(name: string) {
   if (!renderer) return
   switch (name) {
     case 'top':
-      renderer.setCamera(0, Math.PI / 2)
+      renderer.animateTo(0, Math.PI / 2)
       break
     case 'front':
-      renderer.setCamera(0, 0)
+      renderer.animateTo(0, 0)
       break
     case 'right':
-      renderer.setCamera(Math.PI / 2, 0)
+      renderer.animateTo(Math.PI / 2, 0)
       break
     case 'iso':
-      renderer.setCamera(0.6, 0.4)
+      renderer.animateTo(0.6, 0.4)
       break
     case 'reset':
       renderer.autoFitAll()
-      renderer.setCamera(0.6, 0.4)
+      renderer.animateTo(0.6, 0.4)
       break
   }
 }
@@ -503,8 +736,21 @@ function onGlobalKeydown(e: KeyboardEvent) {
     e.preventDefault()
     showShortcuts.value = true
   }
+  // Ctrl+H to open find & replace
+  if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+    e.preventDefault()
+    openFindReplace(true)
+    return
+  }
+  // Ctrl+F to open find-only
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault()
+    openFindReplace(false)
+    return
+  }
   // Escape to close modal or exit fullscreen
   if (e.key === 'Escape') {
+    if (showFind.value) { closeFindReplace(); return }
     if (showShortcuts.value) { showShortcuts.value = false; return }
     if (acVisible.value) { acVisible.value = false; return }
     if (isFullscreen.value) { isFullscreen.value = false }
@@ -518,11 +764,21 @@ onMounted(async () => {
   const ok = await renderer.init(canvasRef.value)
   if (!ok) { gpuOk.value = false; return }
   doRender()
+
+  // Stats polling
+  statsInterval = setInterval(() => {
+    if (!renderer) return
+    fpsVal.value = renderer.getFPS()
+    vertexCount.value = renderer.getVertexCount()
+    const bounds = renderer.getBounds()
+    boundsSize.value = bounds.size
+  }, 500)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   if (debounce) clearTimeout(debounce)
+  if (statsInterval) clearInterval(statsInterval)
   renderer?.destroy(); renderer = null
 })
 
@@ -744,7 +1000,8 @@ translate([0, 0, 35])
             <div class="shortcut-row"><kbd>Ctrl+Enter</kbd><span>{{ t('sc_render') }}</span></div>
             <div class="shortcut-row"><kbd>Tab</kbd><span>{{ t('sc_indent') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>{{ t('sc_undo') }}</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_find') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>{{ t('sc_findOnly') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+H</kbd><span>{{ t('sc_findReplace') }}</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
           </div>
@@ -755,7 +1012,25 @@ translate([0, 0, 35])
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
     <div v-else class="main" :class="{ dragging: isDraggingDivider, fullscreen: isFullscreen }">
-      <div class="editor-panel" :style="{ width: editorWidth + 'px' }" v-show="!isFullscreen">
+      <div
+        class="editor-panel"
+        :style="{ width: editorWidth + 'px' }"
+        v-show="!isFullscreen"
+        @dragenter="onEditorDragEnter"
+        @dragover="onEditorDragOver"
+        @dragleave="onEditorDragLeave"
+        @drop="onEditorDrop"
+      >
+        <!-- Drag overlay -->
+        <div v-if="isDragOver" class="drag-overlay">
+          <div class="drag-overlay-content">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/>
+            </svg>
+            <span>{{ t('dropHint') }}</span>
+          </div>
+        </div>
+
         <div class="toolbar">
           <button class="btn btn-primary" @click="doRender" title="Ctrl+Enter">
             {{ t('render') }}
@@ -763,12 +1038,57 @@ translate([0, 0, 35])
           <label class="auto-check">
             <input type="checkbox" v-model="autoRender" /> {{ t('auto') }}
           </label>
+          <button class="btn btn-sm btn-icon" @click="openFile" :title="t('open')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+            </svg>
+          </button>
+          <button class="btn btn-sm btn-icon" @click="saveFile" :title="t('save')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
           <button class="btn btn-sm" @click="loadExample('basic')">{{ t('basic') }}</button>
           <button class="btn btn-sm" @click="loadExample('csg')">{{ t('csg') }}</button>
           <button class="btn btn-sm" @click="loadExample('house')">{{ t('house') }}</button>
           <button class="btn btn-sm" @click="loadExample('tower')">{{ t('tower') }}</button>
+        </div>
+
+        <!-- Find & Replace panel -->
+        <div v-if="showFind" class="find-panel">
+          <div class="find-row">
+            <input
+              ref="findInputRef"
+              class="find-input"
+              v-model="findText"
+              :placeholder="t('find')"
+              @keydown="handleFindKeydown"
+            />
+            <span class="find-count" v-if="findText">
+              {{ findMatches.length > 0
+                ? t('matchCount').replace('{x}', String(findMatchIndex + 1)).replace('{y}', String(findMatches.length))
+                : t('noMatches') }}
+            </span>
+            <button class="find-btn" @click="findPrev" :title="t('prev')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
+            <button class="find-btn" @click="findNext" :title="t('next')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button class="find-btn find-close" @click="closeFindReplace">&times;</button>
+          </div>
+          <div v-if="showReplace" class="find-row">
+            <input
+              class="find-input"
+              v-model="replaceText"
+              :placeholder="t('replace')"
+              @keydown="handleReplaceKeydown"
+            />
+            <button class="find-btn find-btn-text" @click="doReplace">{{ t('replace') }}</button>
+            <button class="find-btn find-btn-text" @click="doReplaceAll">{{ t('replaceAll') }}</button>
+          </div>
         </div>
 
         <div class="code-editor">
@@ -811,8 +1131,13 @@ translate([0, 0, 35])
 
         <div class="stats">
           {{ t('meshes') }}: {{ meshCount }} &middot;
-          {{ t('triangles') }}: {{ triCount }}
+          {{ t('triangles') }}: {{ triCount }} &middot;
+          {{ t('vertices') }}: {{ vertexCount }}
           <span v-if="renderTime > 0" class="render-time">&middot; {{ t('renderTime') }}: {{ renderTime }}ms</span>
+          <span class="stat-fps">&middot; {{ t('fps') }}: {{ fpsVal }}</span>
+          <span v-if="boundsSize[0] > 0 || boundsSize[1] > 0 || boundsSize[2] > 0" class="stat-size">
+            &middot; {{ t('size') }}: {{ boundsSize[0].toFixed(1) }}&times;{{ boundsSize[1].toFixed(1) }}&times;{{ boundsSize[2].toFixed(1) }}
+          </span>
           <span class="diff-note">{{ t('diff_note') }}</span>
         </div>
       </div>
@@ -971,6 +1296,7 @@ html, body, #app {
   display: flex; flex-direction: column;
   background: var(--surface);
   flex-shrink: 0;
+  position: relative;
 }
 
 .divider {
@@ -1285,6 +1611,84 @@ html, body, #app {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
+
+/* ── Drag & drop overlay ── */
+.drag-overlay {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(74, 158, 255, 0.08);
+  border: 2.5px dashed var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.drag-overlay-content {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  color: var(--accent);
+  font-size: 0.85rem; font-weight: 600;
+}
+.drag-overlay-content svg { opacity: 0.7; }
+
+/* ── Open / Save icon buttons in toolbar ── */
+.btn-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 7px;
+}
+
+/* ── Find & Replace panel ── */
+.find-panel {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 10px;
+  display: flex; flex-direction: column; gap: 5px;
+  flex-shrink: 0;
+}
+.find-row {
+  display: flex; align-items: center; gap: 5px;
+}
+.find-input {
+  flex: 1; min-width: 0;
+  padding: 4px 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  outline: none;
+}
+.find-input:focus {
+  border-color: var(--accent);
+}
+.find-count {
+  font-size: 0.7rem; color: var(--text-dim); white-space: nowrap;
+  min-width: 50px; text-align: center;
+}
+.find-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); border-radius: 4px; cursor: pointer;
+  padding: 3px 6px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+}
+.find-btn:hover { background: var(--hover); }
+.find-btn-text { padding: 3px 8px; font-size: 0.7rem; }
+.find-close {
+  font-size: 1rem; line-height: 1; padding: 2px 6px;
+}
+
+/* ── Find match highlights ── */
+:deep(.find-match) {
+  background: rgba(255, 210, 0, 0.28);
+  border-radius: 2px;
+}
+:deep(.find-match-active) {
+  background: rgba(255, 165, 0, 0.45);
+  border-radius: 2px;
+  outline: 1px solid rgba(255, 165, 0, 0.6);
+}
+
+/* ── Status bar extras ── */
+.stat-fps { color: var(--hl-special); }
+.stat-size { color: var(--text-dim); }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }

@@ -96,6 +96,33 @@ export class WebGPURenderer {
   yaw = 0.6; pitch = 0.4; dist = 50
   tx = 0; ty = 0; tz = 0
 
+  /* ── Camera animation state ── */
+  private animating = false
+  private animStartTime = 0
+  private animDuration = 300 // ms
+  private animStartYaw = 0
+  private animStartPitch = 0
+  private animStartDist = 0
+  private animStartTx = 0
+  private animStartTy = 0
+  private animStartTz = 0
+  private animTargetYaw = 0
+  private animTargetPitch = 0
+  private animTargetDist = 0
+  private animTargetTx = 0
+  private animTargetTy = 0
+  private animTargetTz = 0
+
+  /* ── FPS tracking ── */
+  private frameTimes: number[] = []
+  private lastFrameTime = 0
+  private currentFPS = 0
+
+  /* ── Bounding box cache ── */
+  private boundsMin: [number, number, number] = [0, 0, 0]
+  private boundsMax: [number, number, number] = [0, 0, 0]
+  private totalVertexCount = 0
+
   private raf = 0
   private dead = false
   private drag = false; private pan = false
@@ -246,8 +273,36 @@ export class WebGPURenderer {
       })
       this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp: m.color[3] < 0.99 })
     }
+    this.computeBounds(meshes)
     this.autoFit(meshes)
     if (this.wireframe) this.buildWireframeBuffer()
+  }
+
+  private computeBounds(meshes: MeshData[]) {
+    let mnx = Infinity, mny = Infinity, mnz = Infinity
+    let mxx = -Infinity, mxy = -Infinity, mxz = -Infinity
+    let totalVerts = 0
+    for (const m of meshes) {
+      const t = m.transform
+      totalVerts += m.vertices.length / 6
+      for (let i = 0; i < m.vertices.length; i += 6) {
+        const x = m.vertices[i], y = m.vertices[i + 1], z = m.vertices[i + 2]
+        const px = t[0] * x + t[1] * y + t[2] * z + t[3]
+        const py = t[4] * x + t[5] * y + t[6] * z + t[7]
+        const pz = t[8] * x + t[9] * y + t[10] * z + t[11]
+        mnx = Math.min(mnx, px); mxx = Math.max(mxx, px)
+        mny = Math.min(mny, py); mxy = Math.max(mxy, py)
+        mnz = Math.min(mnz, pz); mxz = Math.max(mxz, pz)
+      }
+    }
+    if (!meshes.length) {
+      this.boundsMin = [0, 0, 0]
+      this.boundsMax = [0, 0, 0]
+    } else {
+      this.boundsMin = [mnx, mny, mnz]
+      this.boundsMax = [mxx, mxy, mxz]
+    }
+    this.totalVertexCount = totalVerts
   }
 
   private autoFit(meshes: MeshData[]) {
@@ -349,9 +404,43 @@ export class WebGPURenderer {
     this.dev.queue.submit([enc.finish()])
   }
 
+  private easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  }
+
+  private updateAnimation(now: number) {
+    if (!this.animating) return
+    const elapsed = now - this.animStartTime
+    const t = Math.min(elapsed / this.animDuration, 1)
+    const e = this.easeInOutCubic(t)
+
+    this.yaw = this.animStartYaw + (this.animTargetYaw - this.animStartYaw) * e
+    this.pitch = this.animStartPitch + (this.animTargetPitch - this.animStartPitch) * e
+    this.dist = this.animStartDist + (this.animTargetDist - this.animStartDist) * e
+    this.tx = this.animStartTx + (this.animTargetTx - this.animStartTx) * e
+    this.ty = this.animStartTy + (this.animTargetTy - this.animStartTy) * e
+    this.tz = this.animStartTz + (this.animTargetTz - this.animStartTz) * e
+
+    if (t >= 1) this.animating = false
+  }
+
   private loop = () => {
     if (this.dead) return
-    if (this.autoRotate) this.yaw += 0.005
+    const now = performance.now()
+
+    // FPS tracking
+    if (this.lastFrameTime > 0) {
+      this.frameTimes.push(now - this.lastFrameTime)
+      if (this.frameTimes.length > 60) this.frameTimes.shift()
+      const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
+      this.currentFPS = avg > 0 ? Math.round(1000 / avg) : 0
+    }
+    this.lastFrameTime = now
+
+    // Camera animation
+    this.updateAnimation(now)
+
+    if (this.autoRotate && !this.animating) this.yaw += 0.005
     this.render()
     this.raf = requestAnimationFrame(this.loop)
   }
@@ -482,6 +571,56 @@ export class WebGPURenderer {
   setCamera(yaw: number, pitch: number) {
     this.yaw = yaw
     this.pitch = pitch
+  }
+
+  /** Smoothly animate camera to a new position using easeInOutCubic. */
+  animateTo(
+    targetYaw: number,
+    targetPitch: number,
+    targetDist?: number,
+    targetTx?: number,
+    targetTy?: number,
+    targetTz?: number,
+  ) {
+    this.animStartYaw = this.yaw
+    this.animStartPitch = this.pitch
+    this.animStartDist = this.dist
+    this.animStartTx = this.tx
+    this.animStartTy = this.ty
+    this.animStartTz = this.tz
+
+    this.animTargetYaw = targetYaw
+    this.animTargetPitch = targetPitch
+    this.animTargetDist = targetDist ?? this.dist
+    this.animTargetTx = targetTx ?? this.tx
+    this.animTargetTy = targetTy ?? this.ty
+    this.animTargetTz = targetTz ?? this.tz
+
+    this.animStartTime = performance.now()
+    this.animating = true
+  }
+
+  /** Get current FPS value. */
+  getFPS(): number {
+    return this.currentFPS
+  }
+
+  /** Get total vertex count across all meshes. */
+  getVertexCount(): number {
+    return this.totalVertexCount
+  }
+
+  /** Get scene bounding box info. */
+  getBounds(): { min: [number, number, number]; max: [number, number, number]; size: [number, number, number] } {
+    return {
+      min: [...this.boundsMin],
+      max: [...this.boundsMax],
+      size: [
+        this.boundsMax[0] - this.boundsMin[0],
+        this.boundsMax[1] - this.boundsMin[1],
+        this.boundsMax[2] - this.boundsMin[2],
+      ],
+    }
   }
 
   /** Public wrapper for autoFit — re-fits camera to current meshes' bounding box. */
