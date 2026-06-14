@@ -438,6 +438,13 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const { v, ix } = makeCylinder(h, r1!, r2!, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
+    case 'polygon': {
+      const pts = arg(a, 'points', 0, [])
+      if (!Array.isArray(pts)) return []
+      const { v, ix } = makePolygon(pts)
+      if (!v.length) return []
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
     case 'translate': {
       const raw = arg(a,'v',0,[0,0,0])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??0, raw[1]??0, raw[2]??0] : [0,0,0]
@@ -496,14 +503,6 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         return evalNodes(ch, multiply(mat, tf), col)
       }
       return evalNodes(ch, tf, col)
-    }
-    case 'polygon': {
-      const pts = arg(a, 'points', 0, [])
-      if (Array.isArray(pts) && pts.length >= 3 && pts.every((p: any) => Array.isArray(p))) {
-        const { v, ix } = makePolygon(pts)
-        return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
-      }
-      return []
     }
     case 'hull': case 'minkowski': case 'linear_extrude': case 'rotate_extrude':
     case 'projection': case 'import': case 'render': case 'group':

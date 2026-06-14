@@ -5,6 +5,7 @@ import type { MeshData, ASTNode } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
 import { exportOBJ } from './services/objExport'
+import { parseSTL } from './services/stlImport'
 
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
@@ -297,6 +298,21 @@ const L: Record<string, Record<string, string>> = {
     cmdExportPng2x: 'Экспорт PNG (2×)',
     cmdExportPng4x: 'Экспорт PNG (4×)',
     ariaPngScale: 'Масштаб PNG',
+    // Viewport menus
+    menuView: 'Вид',
+    menuRender: 'Рендер',
+    menuExport: 'Экспорт',
+    // Camera bookmarks
+    bookmarks: 'Закладки',
+    saveBookmark: 'Сохранить позицию',
+    noBookmarks: 'Нет закладок',
+    deleteBookmark: 'Удалить',
+    bookmarkSaved: 'Позиция сохранена',
+    // STL import
+    importStl: 'Импорт STL',
+    importStlDrop: 'Перетащите .stl файл сюда',
+    importedStl: 'Импортировано',
+    cmdImportSTL: 'Импорт STL',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -505,6 +521,21 @@ const L: Record<string, Record<string, string>> = {
     cmdExportPng2x: 'Export PNG (2×)',
     cmdExportPng4x: 'Export PNG (4×)',
     ariaPngScale: 'PNG scale',
+    // Viewport menus
+    menuView: 'View',
+    menuRender: 'Render',
+    menuExport: 'Export',
+    // Camera bookmarks
+    bookmarks: 'Bookmarks',
+    saveBookmark: 'Save Position',
+    noBookmarks: 'No bookmarks',
+    deleteBookmark: 'Delete',
+    bookmarkSaved: 'Position saved',
+    // STL import
+    importStl: 'Import STL',
+    importStlDrop: 'Drop .stl file here',
+    importedStl: 'Imported',
+    cmdImportSTL: 'Import STL',
   },
 }
 
@@ -906,7 +937,7 @@ function getNodeSummary(node: ASTNode): string {
 
 function getNodeIcon(name: string): string {
   const icons: Record<string, string> = {
-    cube: '□', sphere: '○', cylinder: '▭',
+    cube: '□', sphere: '○', cylinder: '▭', polygon: '△',
     translate: '→', rotate: '↻', scale: '⤢',
     color: '●', mirror: '↔', difference: '−',
     union: '∪', intersection: '∩',
@@ -1122,7 +1153,7 @@ let minimapDebounce: ReturnType<typeof setTimeout> | null = null
 const minimapDragging = ref(false)
 
 const MINIMAP_KEYWORDS = new Set([
-  'cube','sphere','cylinder','translate','rotate','scale','color',
+  'cube','sphere','cylinder','polygon','translate','rotate','scale','color',
   'difference','union','intersection','mirror','module','function',
   'if','else','for','let','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','each','echo','assert',
@@ -1246,7 +1277,7 @@ function toggleMinimap() {
 
 /* ── Autocomplete ── */
 const AUTOCOMPLETE_KEYWORDS = [
-  'cube','sphere','cylinder','translate','rotate','scale','mirror','color',
+  'cube','sphere','cylinder','polygon','translate','rotate','scale','mirror','color',
   'difference','union','intersection','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','module','function','for','if','else',
   'let','each','echo','assert','$fn','$fa','$fs','true','false','undef','PI',
@@ -1430,7 +1461,7 @@ function onDividerUp() {
 
 /* ── Syntax highlighting with bracket matching ── */
 const KEYWORDS = new Set([
-  'cube','sphere','cylinder','translate','rotate','scale','color',
+  'cube','sphere','cylinder','polygon','translate','rotate','scale','color',
   'difference','union','intersection','mirror','module','function',
   'if','else','for','let','linear_extrude','rotate_extrude',
   'hull','minkowski','multmatrix','each','echo','assert',
@@ -1702,7 +1733,12 @@ function onEditorDrop(e: DragEvent) {
   dragCounter = 0
   isDragOver.value = false
   const file = e.dataTransfer?.files?.[0]
-  if (!file || !file.name.endsWith('.scad')) return
+  if (!file) return
+  if (file.name.toLowerCase().endsWith('.stl')) {
+    importSTLFile(file)
+    return
+  }
+  if (!file.name.endsWith('.scad')) return
   const reader = new FileReader()
   reader.onload = () => {
     const content = reader.result as string
@@ -2159,6 +2195,10 @@ function onDocClick(e: MouseEvent) {
   if (showThemeDropdown.value && !target.closest('.theme-selector-wrapper')) {
     showThemeDropdown.value = false
   }
+  // Close viewport menus on outside click
+  if ((viewMenuOpen.value || renderMenuOpen.value || exportMenuOpen.value) && !target.closest('.vp-menu-wrapper')) {
+    closeAllMenus()
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -2202,6 +2242,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
   // Escape to close modal or exit fullscreen
   if (e.key === 'Escape') {
+    if (viewMenuOpen.value || renderMenuOpen.value || exportMenuOpen.value) { closeAllMenus(); return }
     if (showContextMenu.value) { showContextMenu.value = false; return }
     if (showCommandPalette.value) { closeCommandPalette(); return }
     if (showGoToLine.value) { closeGoToLine(); return }
@@ -2812,6 +2853,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'statistics', label: () => t('cmdStatistics'), action: () => toggleStatistics() },
   { id: 'buildPlate', label: () => t('buildPlate'), action: () => toggleBuildPlate() },
   { id: 'showWelcome', label: () => t('cmdShowWelcome'), action: () => openWelcome() },
+  { id: 'importStl', label: () => t('cmdImportSTL'), action: () => openImportSTL() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -3129,6 +3171,165 @@ function exportPng(scale: number) {
   } else {
     renderer.screenshotScaled(scale)
     addToast(t('exportPng') + ' ' + scale + '×', 'success')
+  }
+}
+
+/* ── Viewport Dropdown Menus ── */
+const viewMenuOpen = ref(false)
+const renderMenuOpen = ref(false)
+const exportMenuOpen = ref(false)
+
+function closeAllMenus() {
+  viewMenuOpen.value = false
+  renderMenuOpen.value = false
+  exportMenuOpen.value = false
+}
+
+function toggleViewMenu() {
+  const was = viewMenuOpen.value
+  closeAllMenus()
+  viewMenuOpen.value = !was
+}
+function toggleRenderMenu() {
+  const was = renderMenuOpen.value
+  closeAllMenus()
+  renderMenuOpen.value = !was
+}
+function toggleExportMenu() {
+  const was = exportMenuOpen.value
+  closeAllMenus()
+  exportMenuOpen.value = !was
+}
+
+/* ── Camera Bookmarks ── */
+interface CameraBookmark {
+  id: string
+  name: string
+  yaw: number
+  pitch: number
+  dist: number
+  tx: number
+  ty: number
+  tz: number
+}
+
+function loadBookmarks(): CameraBookmark[] {
+  try {
+    const raw = localStorage.getItem('scad-bookmarks')
+    if (raw) return JSON.parse(raw) as CameraBookmark[]
+  } catch { /* ignore */ }
+  return []
+}
+
+const cameraBookmarks = ref<CameraBookmark[]>(loadBookmarks())
+
+function saveBookmarksToStorage() {
+  localStorage.setItem('scad-bookmarks', JSON.stringify(cameraBookmarks.value))
+}
+
+function saveCameraBookmark() {
+  if (!renderer) return
+  const bk: CameraBookmark = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+    name: `Cam ${cameraBookmarks.value.length + 1}`,
+    yaw: renderer.yaw,
+    pitch: renderer.pitch,
+    dist: renderer.dist,
+    tx: renderer.tx,
+    ty: renderer.ty,
+    tz: renderer.tz,
+  }
+  cameraBookmarks.value.push(bk)
+  if (cameraBookmarks.value.length > 10) {
+    cameraBookmarks.value = cameraBookmarks.value.slice(-10)
+  }
+  saveBookmarksToStorage()
+  addToast(t('bookmarkSaved'), 'success')
+}
+
+function restoreBookmark(bk: CameraBookmark) {
+  if (!renderer) return
+  renderer.yaw = bk.yaw
+  renderer.pitch = bk.pitch
+  renderer.dist = bk.dist
+  renderer.tx = bk.tx
+  renderer.ty = bk.ty
+  renderer.tz = bk.tz
+}
+
+function deleteBookmark(id: string) {
+  cameraBookmarks.value = cameraBookmarks.value.filter(b => b.id !== id)
+  saveBookmarksToStorage()
+}
+
+/* ── STL Import ── */
+function openImportSTL() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.stl'
+  input.onchange = () => {
+    const file = input.files?.[0]
+    if (!file) return
+    importSTLFile(file)
+  }
+  input.click()
+}
+
+function importSTLFile(file: File) {
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const buffer = reader.result as ArrayBuffer
+      const meshes = parseSTL(buffer)
+      if (!renderer) return
+      lastParsedMeshes = meshes
+      meshCount.value = meshes.length
+      triCount.value = meshes.reduce((s: number, m: MeshData) => s + m.indices.length / 3, 0)
+      renderer.setMeshes(meshes)
+      renderer.autoFitAll()
+      addToast(t('importedStl') + ': ' + file.name, 'success')
+      addConsoleEntry('info', t('importedStl') + ': ' + file.name + ' (' + triCount.value + ' triangles)')
+    } catch (e: any) {
+      addToast(e.message || String(e), 'error')
+      addConsoleEntry('error', e.message || String(e))
+    }
+  }
+  reader.readAsArrayBuffer(file)
+}
+
+/* ── Canvas drag-and-drop for STL ── */
+const isCanvasDragOver = ref(false)
+let canvasDragCounter = 0
+
+function onCanvasDragEnter(e: DragEvent) {
+  e.preventDefault()
+  canvasDragCounter++
+  isCanvasDragOver.value = true
+}
+function onCanvasDragOver(e: DragEvent) {
+  e.preventDefault()
+}
+function onCanvasDragLeave(e: DragEvent) {
+  e.preventDefault()
+  canvasDragCounter--
+  if (canvasDragCounter <= 0) { canvasDragCounter = 0; isCanvasDragOver.value = false }
+}
+function onCanvasDrop(e: DragEvent) {
+  e.preventDefault()
+  canvasDragCounter = 0
+  isCanvasDragOver.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file) return
+  if (file.name.toLowerCase().endsWith('.stl')) {
+    importSTLFile(file)
+  } else if (file.name.toLowerCase().endsWith('.scad')) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const content = reader.result as string
+      code.value = content
+      addToRecent(file.name.replace(/\.scad$/, ''), content)
+    }
+    reader.readAsText(file)
   }
 }
 </script>
@@ -3938,7 +4139,21 @@ translate([0, 0, 39])
           @pointerdown="onCanvasPointerDown"
           @pointermove="onCanvasPointerMove"
           @contextmenu="onCanvasContextMenu"
+          @dragenter="onCanvasDragEnter"
+          @dragover="onCanvasDragOver"
+          @dragleave="onCanvasDragLeave"
+          @drop="onCanvasDrop"
         />
+
+        <!-- STL drag-and-drop overlay on canvas -->
+        <div v-if="isCanvasDragOver" class="canvas-drop-overlay">
+          <div class="canvas-drop-content">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>{{ t('importStlDrop') }}</span>
+          </div>
+        </div>
 
         <!-- WebGPU loading overlay -->
         <div v-if="!rendererReady" class="webgpu-loading">
@@ -4013,149 +4228,162 @@ translate([0, 0, 39])
           </button>
         </div>
 
-        <div class="view-buttons">
-          <button class="view-btn" @click="setView('top')" :title="t('top')">{{ t('top') }}</button>
-          <button class="view-btn" @click="setView('front')" :title="t('front')">{{ t('front') }}</button>
-          <button class="view-btn" @click="setView('right')" :title="t('right')">{{ t('right') }}</button>
-          <button class="view-btn" @click="setView('iso')" :title="t('iso')">{{ t('iso') }}</button>
-          <button class="view-btn" @click="setView('reset')" :title="t('reset')">{{ t('reset') }}</button>
-          <div class="screenshot-row">
-            <button class="view-btn view-btn-icon" @click="takeScreenshot" :title="t('screenshot')" :aria-label="t('screenshot')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                <circle cx="12" cy="13" r="4"/>
+        <!-- ── Viewport toolbar: 3 dropdown menus ── -->
+        <div class="vp-toolbar">
+          <!-- View menu -->
+          <div class="vp-menu-wrapper" @click.stop>
+            <button class="vp-menu-btn" @click="toggleViewMenu" :title="t('menuView')" :aria-label="t('menuView')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
-            <!-- PNG export scale selector -->
-            <select
-              class="png-scale-select"
-              :value="pngScale"
-              :title="t('exportPng')"
-              :aria-label="t('ariaPngScale')"
-              @change="exportPng(parseInt(($event.target as HTMLSelectElement).value))"
-            >
-              <option value="1">1×</option>
-              <option value="2">2×</option>
-              <option value="4">4×</option>
-            </select>
+            <transition name="vp-dropdown">
+            <div v-if="viewMenuOpen" class="vp-dropdown">
+              <button class="vp-dd-item" @click="setView('top'); closeAllMenus()">{{ t('top') }}</button>
+              <button class="vp-dd-item" @click="setView('front'); closeAllMenus()">{{ t('front') }}</button>
+              <button class="vp-dd-item" @click="setView('right'); closeAllMenus()">{{ t('right') }}</button>
+              <button class="vp-dd-item" @click="setView('iso'); closeAllMenus()">{{ t('iso') }}</button>
+              <button class="vp-dd-item" @click="setView('reset'); closeAllMenus()">{{ t('reset') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="toggleProjection(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="isOrthographic">&#10003;</span>
+                {{ t('ortho') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleFullscreen(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="isFullscreen">&#10003;</span>
+                {{ t('fullscreen') }}
+              </button>
+              <div class="vp-dd-sep"></div>
+              <div class="vp-dd-label">{{ t('bgColor') }}</div>
+              <div class="vp-dd-swatches">
+                <button
+                  v-for="(c, idx) in bgColors"
+                  :key="idx"
+                  class="bg-swatch"
+                  :class="{ active: idx === activeBg }"
+                  :style="{ background: c.gradient || c.hex }"
+                  :title="c.nameKey ? t(c.nameKey) : c.name"
+                  @click="setBgColor(idx)"
+                />
+              </div>
+              <div class="vp-dd-sep"></div>
+              <div class="vp-dd-label">{{ t('bookmarks') }}</div>
+              <div v-if="!cameraBookmarks.length" class="vp-dd-empty">{{ t('noBookmarks') }}</div>
+              <div v-for="bk in cameraBookmarks" :key="bk.id" class="vp-dd-bookmark">
+                <button class="vp-dd-item vp-dd-bk-name" @click="restoreBookmark(bk); closeAllMenus()">{{ bk.name }}</button>
+                <button class="vp-dd-bk-del" @click.stop="deleteBookmark(bk.id)" :title="t('deleteBookmark')">&times;</button>
+              </div>
+            </div>
+            </transition>
           </div>
-          <!-- Copy as Image -->
-          <div class="copy-image-wrapper">
-            <button class="view-btn view-btn-icon" @click="copyCanvasToClipboard" :title="t('copyImage')" :aria-label="t('copyImage')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+
+          <!-- Render menu -->
+          <div class="vp-menu-wrapper" @click.stop>
+            <button class="vp-menu-btn" @click="toggleRenderMenu" :title="t('menuRender')" :aria-label="t('menuRender')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
               </svg>
             </button>
-            <span v-if="showCopiedImage" class="copied-tooltip">{{ t('copiedImage') }}</span>
+            <transition name="vp-dropdown">
+            <div v-if="renderMenuOpen" class="vp-dropdown">
+              <button class="vp-dd-item" @click="toggleWireframe(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="showWireframe">&#10003;</span>
+                {{ t('wireframe') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleGrid(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="showGrid">&#10003;</span>
+                {{ t('grid') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleReflection(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="reflectionEnabled">&#10003;</span>
+                {{ t('reflection') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleFog(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="fogEnabled">&#10003;</span>
+                {{ t('fog') }}
+              </button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="toggleClip()">
+                <span class="vp-dd-check" v-if="clipEnabled">&#10003;</span>
+                {{ t('clipPlane') }}
+              </button>
+              <div v-if="clipEnabled" class="vp-dd-slider-row">
+                <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
+                <span class="clip-value">{{ clipY.toFixed(1) }}</span>
+              </div>
+              <div class="vp-dd-sep"></div>
+              <div class="vp-dd-label">{{ t('lighting') }}</div>
+              <select class="lighting-select vp-dd-select" :value="activeLighting" @change="setLighting(($event.target as HTMLSelectElement).value)">
+                <option value="default">{{ t('lightDefault') }}</option>
+                <option value="studio">{{ t('lightStudio') }}</option>
+                <option value="outdoor">{{ t('lightOutdoor') }}</option>
+                <option value="dramatic">{{ t('lightDramatic') }}</option>
+                <option value="soft">{{ t('lightSoft') }}</option>
+              </select>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="toggleAutoRotate(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="isAutoRotate">&#10003;</span>
+                {{ t('autoRotate') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleBuildPlate()">
+                <span class="vp-dd-check" v-if="buildPlateEnabled">&#10003;</span>
+                {{ t('buildPlate') }}
+              </button>
+              <div v-if="buildPlateEnabled" class="vp-dd-dims">
+                <label class="bed-dim">
+                  <span class="bed-dim-label">{{ t('buildPlateX') }}</span>
+                  <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateX" @change="onBuildPlateDimChange" />
+                </label>
+                <label class="bed-dim">
+                  <span class="bed-dim-label">{{ t('buildPlateZ') }}</span>
+                  <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateZ" @change="onBuildPlateDimChange" />
+                </label>
+              </div>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="showObjectTree = !showObjectTree; closeAllMenus()">
+                <span class="vp-dd-check" v-if="showObjectTree">&#10003;</span>
+                {{ t('objectTree') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleStatistics(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="showStatistics">&#10003;</span>
+                {{ t('statistics') }}
+              </button>
+            </div>
+            </transition>
           </div>
-          <div class="view-separator"></div>
-          <button class="view-btn view-btn-toggle" :class="{ active: showWireframe }" @click="toggleWireframe" :title="t('wireframe')" :aria-label="t('wireframe')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-            </svg>
-          </button>
-          <button class="view-btn view-btn-toggle" :class="{ active: showGrid }" @click="toggleGrid" :title="t('grid')" :aria-label="t('grid')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
-            </svg>
-          </button>
-          <!-- Build plate / print bed -->
-          <button class="view-btn view-btn-toggle" :class="{ active: buildPlateEnabled }" @click="toggleBuildPlate" :title="t('buildPlate')" :aria-label="t('buildPlate')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="1"/><path d="M2 7l4-4h12l4 4"/>
-            </svg>
-          </button>
-          <div v-if="buildPlateEnabled" class="bed-dims-row">
-            <label class="bed-dim">
-              <span class="bed-dim-label">{{ t('buildPlateX') }}</span>
-              <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateX" @change="onBuildPlateDimChange" />
-            </label>
-            <label class="bed-dim">
-              <span class="bed-dim-label">{{ t('buildPlateZ') }}</span>
-              <input type="number" class="bed-dim-input" min="1" step="10" v-model.number="buildPlateZ" @change="onBuildPlateDimChange" />
-            </label>
+
+          <!-- Export menu -->
+          <div class="vp-menu-wrapper" @click.stop>
+            <button class="vp-menu-btn" @click="toggleExportMenu" :title="t('menuExport')" :aria-label="t('menuExport')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <transition name="vp-dropdown">
+            <div v-if="exportMenuOpen" class="vp-dropdown">
+              <button class="vp-dd-item" @click="exportPng(1); closeAllMenus()">{{ t('screenshot') }} (1×)</button>
+              <button class="vp-dd-item" @click="exportPng(2); closeAllMenus()">{{ t('screenshot') }} (2×)</button>
+              <button class="vp-dd-item" @click="exportPng(4); closeAllMenus()">{{ t('screenshot') }} (4×)</button>
+              <button class="vp-dd-item" @click="copyCanvasToClipboard(); closeAllMenus()">{{ t('copyImage') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="doExportSTL(); closeAllMenus()">{{ t('exportStl') }}</button>
+              <button class="vp-dd-item" @click="doExportOBJ(); closeAllMenus()">{{ t('exportObj') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
+            </div>
+            </transition>
           </div>
-          <button class="view-btn view-btn-toggle" :class="{ active: isAutoRotate }" @click="toggleAutoRotate" :title="t('autoRotate')" :aria-label="t('autoRotate')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-            </svg>
-          </button>
-          <button class="view-btn view-btn-toggle" :class="{ active: isFullscreen }" @click="toggleFullscreen" :title="t('fullscreen')" :aria-label="t('fullscreen')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path v-if="!isFullscreen" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-              <path v-else d="M4 14h3a2 2 0 012 2v3m4-5h3a2 2 0 002-2V9m-9 0V6a2 2 0 012-2h3m4 5V6a2 2 0 00-2-2h-3"/>
-            </svg>
-          </button>
-          <div class="view-separator"></div>
-          <!-- Orthographic toggle -->
-          <button class="view-btn view-btn-toggle" :class="{ active: isOrthographic }" @click="toggleProjection" :title="isOrthographic ? t('persp') : t('ortho')">
-            {{ isOrthographic ? t('ortho') : t('persp') }}
-          </button>
-          <!-- Zoom controls -->
-          <div class="zoom-row">
-            <button class="view-btn zoom-btn" @click="doZoomIn" :title="t('zoomIn')" :aria-label="t('zoomIn')">+</button>
-            <button class="view-btn zoom-btn" @click="doZoomOut" :title="t('zoomOut')" :aria-label="t('zoomOut')">&minus;</button>
-          </div>
-          <div class="view-separator"></div>
-          <!-- Background color swatches -->
-          <div class="bg-color-row">
-            <span class="bg-label">{{ t('bgColor') }}</span>
-            <button
-              v-for="(c, idx) in bgColors"
-              :key="idx"
-              class="bg-swatch"
-              :class="{ active: idx === activeBg }"
-              :style="{ background: c.gradient || c.hex }"
-              :title="c.nameKey ? t(c.nameKey) : c.name"
-              @click="setBgColor(idx)"
-            />
-          </div>
-          <div class="view-separator"></div>
-          <!-- Lighting preset selector -->
-          <div class="lighting-row">
-            <span class="bg-label">{{ t('lighting') }}</span>
-            <select class="lighting-select" :value="activeLighting" @change="setLighting(($event.target as HTMLSelectElement).value)">
-              <option value="default">{{ t('lightDefault') }}</option>
-              <option value="studio">{{ t('lightStudio') }}</option>
-              <option value="outdoor">{{ t('lightOutdoor') }}</option>
-              <option value="dramatic">{{ t('lightDramatic') }}</option>
-              <option value="soft">{{ t('lightSoft') }}</option>
-            </select>
-          </div>
-          <div class="view-separator"></div>
-          <!-- Clipping plane -->
-          <button class="view-btn view-btn-toggle" :class="{ active: clipEnabled }" @click="toggleClip" :title="t('clipPlane')" :aria-label="t('clipPlane')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
-            </svg>
-          </button>
-          <div v-if="clipEnabled" class="clip-slider-row">
-            <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
-            <span class="clip-value">{{ clipY.toFixed(1) }}</span>
-          </div>
-          <!-- Fog -->
-          <button class="view-btn view-btn-toggle" :class="{ active: fogEnabled }" @click="toggleFog" :title="t('fog')">
-            {{ t('fog') }}
-          </button>
-          <!-- Reflection -->
-          <button class="view-btn view-btn-toggle" :class="{ active: reflectionEnabled }" @click="toggleReflection" :title="t('reflection')" :aria-label="t('reflection')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 12h20"/><path d="M6 8l6-6 6 6"/><path d="M6 16l6 6 6-6"/>
-            </svg>
-          </button>
-          <div class="view-separator"></div>
-          <!-- Object Tree toggle -->
-          <button class="view-btn view-btn-toggle" :class="{ active: showObjectTree }" @click="showObjectTree = !showObjectTree" :title="t('objectTree')" :aria-label="t('objectTree')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="6" x2="3" y2="6"/><line x1="8" y1="6" x2="21" y2="6"/>
-              <line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="21" y2="12"/>
-              <line x1="7" y1="18" x2="7" y2="18"/><line x1="12" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-          <!-- Statistics toggle -->
-          <button class="view-btn view-btn-toggle" :class="{ active: showStatistics }" @click="toggleStatistics" :title="t('statistics')" :aria-label="t('ariaStatistics')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </div>
+
+        <!-- Zoom controls (kept as direct overlays) -->
+        <div class="vp-zoom-controls">
+          <button class="view-btn zoom-btn" @click="doZoomIn" :title="t('zoomIn')" :aria-label="t('zoomIn')">+</button>
+          <button class="view-btn zoom-btn" @click="doZoomOut" :title="t('zoomOut')" :aria-label="t('zoomOut')">&minus;</button>
+          <!-- Save camera bookmark -->
+          <button class="view-btn zoom-btn vp-bookmark-btn" @click="saveCameraBookmark" :title="t('saveBookmark')" :aria-label="t('saveBookmark')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
           </button>
         </div>
@@ -4642,12 +4870,7 @@ textarea.code:focus-visible {
   white-space: nowrap;
 }
 
-/* ── View preset buttons ── */
-.view-buttons {
-  position: absolute; top: 10px; right: 10px;
-  display: flex; flex-direction: column; gap: 4px;
-  z-index: 10;
-}
+/* ── View preset buttons (base styles reused by zoom) ── */
 .view-btn {
   padding: 3px 10px;
   border-radius: 10px;
@@ -5844,7 +6067,7 @@ textarea.code:focus-visible {
 .nav-gizmo {
   position: absolute;
   top: 10px;
-  right: 64px; /* offset left of the view-buttons column so they don't collide */
+  right: 130px; /* offset left of the viewport toolbar menus */
   z-index: 11;
   border-radius: 50%;
   background: rgba(30, 30, 34, 0.55);
@@ -6089,6 +6312,208 @@ textarea.code:focus-visible {
   background-clip: padding-box;
 }
 :deep(*)::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── Viewport toolbar (3 dropdown menus) ── */
+.vp-toolbar {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; gap: 4px;
+  z-index: 15;
+}
+.vp-menu-wrapper {
+  position: relative;
+}
+.vp-menu-btn {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(30,30,34,.7);
+  color: rgba(255,255,255,.8);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+}
+.vp-menu-btn:hover {
+  background: rgba(74,158,255,.3);
+  border-color: rgba(74,158,255,.5);
+  color: #fff;
+}
+[data-theme="light"] .vp-menu-btn {
+  background: rgba(255,255,255,.75);
+  border-color: rgba(0,0,0,.12);
+  color: rgba(0,0,0,.7);
+}
+[data-theme="light"] .vp-menu-btn:hover {
+  background: rgba(43,125,233,.2);
+  border-color: rgba(43,125,233,.4);
+  color: var(--accent);
+}
+
+.vp-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 190px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 5px;
+  background: rgba(30,30,34,.92);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+[data-theme="light"] .vp-dropdown {
+  background: rgba(255,255,255,.94);
+  border-color: rgba(0,0,0,.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+}
+.vp-dropdown-enter-active {
+  animation: vp-dd-in 0.14s ease;
+}
+.vp-dropdown-leave-active {
+  animation: vp-dd-out 0.1s ease forwards;
+}
+@keyframes vp-dd-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes vp-dd-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+
+.vp-dd-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,.85);
+  font-size: 0.76rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.vp-dd-item:hover { background: rgba(74,158,255,.2); }
+[data-theme="light"] .vp-dd-item { color: var(--text); }
+[data-theme="light"] .vp-dd-item:hover { background: rgba(43,125,233,.12); }
+
+.vp-dd-check {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 14px;
+  text-align: center;
+}
+
+.vp-dd-sep {
+  height: 1px;
+  background: rgba(255,255,255,.1);
+  margin: 3px 6px;
+}
+[data-theme="light"] .vp-dd-sep {
+  background: rgba(0,0,0,.08);
+}
+
+.vp-dd-label {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,.4);
+  padding: 4px 10px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+[data-theme="light"] .vp-dd-label {
+  color: rgba(0,0,0,.4);
+}
+
+.vp-dd-swatches {
+  display: flex; gap: 4px; padding: 4px 10px 2px;
+  flex-wrap: wrap;
+}
+
+.vp-dd-select {
+  margin: 4px 10px;
+  width: calc(100% - 20px);
+}
+
+.vp-dd-slider-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 10px;
+}
+
+.vp-dd-dims {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+}
+
+.vp-dd-empty {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,.35);
+  padding: 4px 10px;
+  font-style: italic;
+}
+[data-theme="light"] .vp-dd-empty { color: rgba(0,0,0,.35); }
+
+.vp-dd-bookmark {
+  display: flex; align-items: center;
+}
+.vp-dd-bk-name {
+  flex: 1;
+}
+.vp-dd-bk-del {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,.35);
+  font-size: 0.9rem; line-height: 1; padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.1s, background 0.1s;
+}
+.vp-dd-bk-del:hover {
+  color: var(--danger);
+  background: rgba(231,76,60,.15);
+}
+[data-theme="light"] .vp-dd-bk-del { color: rgba(0,0,0,.3); }
+
+/* ── Zoom controls (standalone overlay) ── */
+.vp-zoom-controls {
+  position: absolute;
+  bottom: 60px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+.vp-bookmark-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px 8px;
+}
+.vp-bookmark-btn:hover {
+  color: #ffd700;
+  border-color: rgba(255,215,0,.5);
+}
+
+/* ── Canvas drop overlay for STL import ── */
+.canvas-drop-overlay {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(74, 158, 255, 0.1);
+  border: 2.5px dashed var(--accent);
+  border-radius: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.canvas-drop-content {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--accent);
+  font-size: 0.82rem; font-weight: 600;
+}
+.canvas-drop-content svg { opacity: 0.7; }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
