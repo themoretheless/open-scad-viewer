@@ -336,6 +336,17 @@ const L: Record<string, Record<string, string>> = {
     occurrences: 'Совпадений',
     // Responsive topbar
     menu: 'Меню',
+    // Advanced examples
+    staircase: 'Лестница',
+    paramVase: 'Парам. ваза',
+    paramGear: 'Парам. шестерня',
+    staircaseTip: 'Винтовая лестница',
+    paramVaseTip: 'Параметрическая ваза (модуль + цикл)',
+    paramGearTip: 'Параметрическая шестерня (модуль + цикл)',
+    // Breadcrumbs
+    breadcrumbScope: 'Область',
+    // Error recovery
+    partialRender: 'Частичный рендер с ошибками',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -579,6 +590,17 @@ const L: Record<string, Record<string, string>> = {
     occurrences: 'Occurrences',
     // Responsive topbar
     menu: 'Menu',
+    // Advanced examples
+    staircase: 'Staircase',
+    paramVase: 'Param Vase',
+    paramGear: 'Param Gear',
+    staircaseTip: 'Spiral staircase',
+    paramVaseTip: 'Parametric vase (module + loop)',
+    paramGearTip: 'Parametric gear (module + loop)',
+    // Breadcrumbs
+    breadcrumbScope: 'Scope',
+    // Error recovery
+    partialRender: 'Partial render with errors',
   },
 }
 
@@ -2661,6 +2683,27 @@ function doRender() {
       .replace('{m}', String(meshes.length))
       .replace('{t}', String(triCount.value))
       .replace('{ms}', String(renderTime.value)))
+    // Log echo messages
+    for (const echoMsg of result.echos) {
+      addConsoleEntry('info', echoMsg)
+    }
+    // Show partial errors from error recovery
+    for (const errMsg of result.errors) {
+      let msg = errMsg
+      const posMatch = msg.match(/@(\d+)/)
+      if (posMatch) {
+        const pos = parseInt(posMatch[1])
+        const prefix = code.value.substring(0, pos)
+        const line = prefix.split('\n').length
+        errorLine.value = line
+        errorCharPos.value = pos
+        msg = `${t('errorAtLine')} ${line}: ${msg}`
+      }
+      error.value = msg
+      addConsoleEntry('error', msg)
+    }
+    // Update breadcrumbs after parse
+    updateBreadcrumbs()
   } catch (e: any) {
     let msg = e.message || String(e)
     const posMatch = msg.match(/@(\d+)/)
@@ -3153,11 +3196,13 @@ function handleCanvasKeydown(e: KeyboardEvent) {
 function handleKeyUp() {
   updateAutocomplete()
   updateBracketMatch()
+  updateBreadcrumbs()
 }
 
 function handleClick() {
   updateBracketMatch()
   dismissAutocomplete()
+  updateBreadcrumbs()
 }
 
 /* ── Feature: Word Wrap Toggle ── */
@@ -3181,6 +3226,69 @@ function updateSelectionInfo() {
   const chars = selected.length
   const lines = selected.split('\n').length
   selectionInfo.value = t('selChars').replace('{x}', String(chars)).replace('{y}', String(lines))
+}
+
+/* ── Feature: Editor Breadcrumbs ── */
+interface BreadcrumbItem {
+  label: string
+  pos: number
+  endPos: number
+}
+const breadcrumbs = ref<BreadcrumbItem[]>([])
+
+function updateBreadcrumbs() {
+  const el = textareaRef.value
+  if (!el) { breadcrumbs.value = []; return }
+  const cursorPos = el.selectionStart
+  const ast = astNodes.value
+  if (!ast || ast.length === 0) { breadcrumbs.value = []; return }
+  const path: BreadcrumbItem[] = []
+  findBreadcrumbPath(ast, cursorPos, path)
+  breadcrumbs.value = path
+}
+
+function findBreadcrumbPath(nodes: ASTNode[], cursorPos: number, path: BreadcrumbItem[]): boolean {
+  for (const node of nodes) {
+    if (cursorPos >= node.pos && cursorPos <= node.endPos) {
+      // Skip internal-only node types
+      if (node.name === '__assign' || node.name === 'function') {
+        continue
+      }
+      let label = node.name
+      if (node.name === 'module') {
+        label = 'module ' + (node.args.__name || '')
+      } else {
+        // Add key args hint
+        const hints: string[] = []
+        for (const [k, v] of Object.entries(node.args)) {
+          if (k.startsWith('_')) continue
+          if (typeof v === 'number') hints.push(`${k}=${v}`)
+          if (hints.length >= 2) break
+        }
+        if (hints.length) label += '(' + hints.join(', ') + ')'
+        else label += '()'
+      }
+      path.push({ label, pos: node.pos, endPos: node.endPos })
+      if (node.children.length > 0) {
+        findBreadcrumbPath(node.children, cursorPos, path)
+      }
+      return true
+    }
+  }
+  return false
+}
+
+function onBreadcrumbClick(item: BreadcrumbItem) {
+  const el = textareaRef.value
+  if (!el) return
+  el.focus()
+  el.selectionStart = item.pos
+  el.selectionEnd = item.endPos
+  // Scroll the textarea so the selection is visible
+  const textBefore = code.value.substring(0, item.pos)
+  const lineNum = textBefore.split('\n').length
+  const lineHeight = prefFontSize.value * 1.5
+  el.scrollTop = Math.max(0, (lineNum - 3) * lineHeight)
 }
 
 /* ── Feature: Occurrence Highlighting ── */
@@ -4008,6 +4116,43 @@ color([0.5, 0.25, 0.25])
 cylinder(h = 1, r = 16, $fn = 32);
 `,
 
+  paramGear: `// Parametric Gear using module + for + math
+module gear(teeth=12, r=20, h=5) {
+  cylinder(h=h, r=r*0.7, $fn=teeth*2);
+  for(i=[0:teeth-1])
+    rotate([0,0,i*360/teeth])
+      translate([r*0.85, 0, 0])
+        cylinder(h=h, r=r*0.15, $fn=6);
+}
+gear(teeth=16, r=25);
+`,
+
+  staircase: `// Spiral Staircase using for + translate + rotate
+for(i=[0:15]) {
+  rotate([0,0,i*22.5])
+    translate([15,0,i*2])
+      cube([12,4,1.5]);
+}
+// Central column
+cylinder(h=35, r=3, $fn=24);
+// Railing posts
+for(i=[0:15])
+  rotate([0,0,i*22.5])
+    translate([26,0,i*2])
+      cylinder(h=3, r=0.5, $fn=8);
+`,
+
+  paramVase: `// Parametric Vase using module + for + math
+module vase_ring(z, r) {
+  translate([0,0,z])
+    cylinder(h=1.5, r1=r, r2=r, $fn=32);
+}
+for(i=[0:20]) {
+  r = 8 + sin(i*18)*4;
+  vase_ring(z=i*1.5, r=r);
+}
+`,
+
   chess: `// Simplified chess pawn piece
 
 // Base
@@ -4390,6 +4535,9 @@ translate([0, 0, 39])
           <button class="btn btn-sm example-btn" @click="loadExample('gear')" :data-tooltip="t('gearTip')">{{ t('gear') }}</button>
           <button class="btn btn-sm example-btn" @click="loadExample('vase')" :data-tooltip="t('vaseTip')">{{ t('vase') }}</button>
           <button class="btn btn-sm example-btn" @click="loadExample('chess')" :data-tooltip="t('chessTip')">{{ t('chess') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('paramGear')" :data-tooltip="t('paramGearTip')">{{ t('paramGear') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('staircase')" :data-tooltip="t('staircaseTip')">{{ t('staircase') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('paramVase')" :data-tooltip="t('paramVaseTip')">{{ t('paramVase') }}</button>
         </div>
 
         <!-- Parameters panel -->
@@ -4467,6 +4615,14 @@ translate([0, 0, 39])
             <button class="tab-ctx-item" @click="closeOtherTabs(tabContextMenuId)">{{ t('closeOtherTabs') }}</button>
           </div>
         </Teleport>
+
+        <!-- Breadcrumb bar -->
+        <div v-if="breadcrumbs.length > 0" class="breadcrumb-bar">
+          <template v-for="(crumb, idx) in breadcrumbs" :key="idx">
+            <span v-if="idx > 0" class="breadcrumb-sep">&rsaquo;</span>
+            <span class="breadcrumb-item" @click="onBreadcrumbClick(crumb)" :title="crumb.label">{{ crumb.label }}</span>
+          </template>
+        </div>
 
         <!-- Find & Replace panel -->
         <transition name="panel-slide">
@@ -5611,6 +5767,43 @@ textarea.code:focus-visible {
 .btn-icon {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 4px 7px;
+}
+
+/* ── Breadcrumb bar ── */
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  min-height: 22px;
+}
+.breadcrumb-bar::-webkit-scrollbar { display: none; }
+.breadcrumb-item {
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s, color 0.15s;
+}
+.breadcrumb-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.breadcrumb-sep {
+  color: var(--text-dim);
+  opacity: 0.5;
+  font-size: 13px;
+  user-select: none;
+  padding: 0 1px;
 }
 
 /* ── Find & Replace panel ── */

@@ -1317,11 +1317,12 @@ function convexHull3D(points: Vec3[]): { v: number[]; ix: number[] } {
 
 /* ── Main evaluator ───────────────────────────────── */
 
-function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map()): MeshData[] {
+function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[]): MeshData[] {
   const out: MeshData[] = []
   let lastIfResult = false
   for (let ni = 0; ni < nodes.length; ni++) {
     const n = nodes[ni]
+    try {
 
     // Handle variable assignments
     if (n.name === '__assign') {
@@ -1351,7 +1352,7 @@ function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number
     if (n.name === 'else') {
       // Only evaluate else children if the previous if was false
       if (!lastIfResult) {
-        out.push(...evalNodes(n.children, tf, col, vars, modules))
+        out.push(...evalNodes(n.children, tf, col, vars, modules, echos, callerChildren))
       }
       continue
     }
@@ -1360,21 +1361,48 @@ function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number
       const cond = arg(ra, '_0', 0, 0)
       lastIfResult = evalCondition(cond)
       if (lastIfResult) {
-        out.push(...evalNodes(n.children, tf, col, vars, modules))
+        out.push(...evalNodes(n.children, tf, col, vars, modules, echos, callerChildren))
       }
       continue
     }
     lastIfResult = false
-    out.push(...evalNode(n, tf, col, vars, modules))
+    out.push(...evalNode(n, tf, col, vars, modules, echos, callerChildren))
+
+    } catch (_skipErr) {
+      // Error recovery: skip this node and continue with the rest
+      continue
+    }
   }
   return out
 }
 
-function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map()): MeshData[] {
+function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[]): MeshData[] {
   const { name: nm, args: rawArgs, children: ch } = node
   const a = resolveArgs(rawArgs, vars)
 
   switch (nm) {
+    case 'echo': {
+      // Collect echo output, do not generate mesh
+      const parts: string[] = []
+      for (const [k, v] of Object.entries(a)) {
+        if (k.startsWith('_')) {
+          parts.push(typeof v === 'string' ? `"${v}"` : String(v))
+        } else {
+          parts.push(`${k} = ${typeof v === 'string' ? `"${v}"` : String(v)}`)
+        }
+      }
+      echos.push('ECHO: ' + parts.join(', '))
+      // echo can have children (pass-through)
+      if (ch.length > 0) return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
+      return []
+    }
+    case 'children': {
+      // Evaluate caller's children if available
+      if (callerChildren && callerChildren.length > 0) {
+        return evalNodes(callerChildren, tf, col, vars, modules, echos)
+      }
+      return []
+    }
     case 'cube': {
       const size = arg(a,'size',0,1)
       const center = arg(a,'center',1,false) === true
@@ -1459,11 +1487,11 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         }
         for (const iterVal of iterValues) {
           const newVars = { ...vars, [varName]: iterVal }
-          out.push(...evalNodes(ch, tf, col, newVars, modules))
+          out.push(...evalNodes(ch, tf, col, newVars, modules, echos, callerChildren))
         }
         return out // only support one loop variable per for()
       }
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
     case 'let': {
       const newVars = { ...vars }
@@ -1472,22 +1500,22 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         if (typeof v === 'number') newVars[k] = v
         else if (typeof v === 'string' && v in vars) newVars[k] = vars[v]
       }
-      return evalNodes(ch, tf, col, newVars, modules)
+      return evalNodes(ch, tf, col, newVars, modules, echos, callerChildren)
     }
     case 'if': {
       const cond = arg(a, '_0', 0, 0)
       if (evalCondition(cond)) {
-        return evalNodes(ch, tf, col, vars, modules)
+        return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
       }
       return []
     }
     case 'else': {
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
     case 'translate': {
       const raw = arg(a,'v',0,[0,0,0])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??0, raw[1]??0, raw[2]??0] : [0,0,0]
-      return evalNodes(ch, translate(tf, vec), col, vars, modules)
+      return evalNodes(ch, translate(tf, vec), col, vars, modules, echos, callerChildren)
     }
     case 'rotate': {
       const av = arg(a,'a',0,0), vv = arg(a,'v',1,undefined)
@@ -1500,20 +1528,20 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       } else if (typeof av === 'number') {
         nt = rotateZ(nt, av * Math.PI / 180)
       }
-      return evalNodes(ch, nt, col, vars, modules)
+      return evalNodes(ch, nt, col, vars, modules, echos, callerChildren)
     }
     case 'scale': {
       const raw = arg(a,'v',0,[1,1,1])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??1,raw[1]??1,raw[2]??1] : [raw,raw,raw]
-      return evalNodes(ch, scale(tf, vec), col, vars, modules)
+      return evalNodes(ch, scale(tf, vec), col, vars, modules, echos, callerChildren)
     }
     case 'mirror': {
       const raw = arg(a,'v',0,[1,0,0])
       if (Array.isArray(raw)) {
         const sv: Vec3 = [raw[0]?-1:1, raw[1]?-1:1, raw[2]?-1:1]
-        return evalNodes(ch, scale(tf, sv), col, vars, modules)
+        return evalNodes(ch, scale(tf, sv), col, vars, modules, echos, callerChildren)
       }
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
     case 'color': {
       const c = arg(a,'c',0,arg(a,'_0',0,[0.5,0.5,0.5]))
@@ -1521,27 +1549,27 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (Array.isArray(c)) nc = [c[0]??0.5, c[1]??0.5, c[2]??0.5, c[3]??1]
       else if (typeof c === 'string') nc = cssColor(c)
       else nc = [0.5,0.5,0.5,1]
-      return evalNodes(ch, tf, nc, vars, modules)
+      return evalNodes(ch, tf, nc, vars, modules, echos, callerChildren)
     }
     case 'union':
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     case 'difference': {
       const out: MeshData[] = []
-      if (ch.length > 0) out.push(...evalNode(ch[0], tf, col, vars, modules))
+      if (ch.length > 0) out.push(...evalNode(ch[0], tf, col, vars, modules, echos, callerChildren))
       for (let i = 1; i < ch.length; i++)
-        out.push(...evalNode(ch[i], tf, [0.9, 0.15, 0.15, 0.35], vars, modules))
+        out.push(...evalNode(ch[i], tf, [0.9, 0.15, 0.15, 0.35], vars, modules, echos, callerChildren))
       return out
     }
     case 'intersection':
-      return evalNodes(ch, tf, col ? [col[0],col[1],col[2],0.55] : null, vars, modules)
+      return evalNodes(ch, tf, col ? [col[0],col[1],col[2],0.55] : null, vars, modules, echos, callerChildren)
     case 'multmatrix': {
       const m = arg(a,'m',0,undefined)
       if (Array.isArray(m) && m.length >= 4) {
         const mat = new Float32Array(16)
         for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) mat[r*4+c] = m[r]?.[c] ?? (r===c?1:0)
-        return evalNodes(ch, multiply(mat, tf), col, vars, modules)
+        return evalNodes(ch, multiply(mat, tf), col, vars, modules, echos, callerChildren)
       }
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
     case 'linear_extrude': {
       const height = typeof arg(a, 'height', 0, 10) === 'number' ? arg(a, 'height', 0, 10) as number : 10
@@ -1549,7 +1577,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const slices = typeof arg(a, 'slices', -1, 1) === 'number' ? arg(a, 'slices', -1, 1) as number : 1
 
       // Evaluate children to get flat meshes
-      const childMeshes = evalNodes(ch, identity(), null, vars, modules)
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren)
 
       if (childMeshes.length === 0) return []
 
@@ -1578,7 +1606,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const angle = typeof arg(a, 'angle', -1, 360) === 'number' ? arg(a, 'angle', -1, 360) as number : 360
 
       // Evaluate children to get flat meshes
-      const childMeshes = evalNodes(ch, identity(), null, vars, modules)
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren)
 
       if (childMeshes.length === 0) return []
 
@@ -1614,7 +1642,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     }
     case 'hull': {
       // Compute convex hull of all children vertices
-      const childMeshes = evalNodes(ch, identity(), null, vars, modules)
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren)
 
       if (childMeshes.length === 0) return []
 
@@ -1648,7 +1676,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       }]
     }
     case 'minkowski': case 'projection': case 'import': case 'render': case 'group':
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     case 'module': case 'function': case '__assign':
       return []
     default: {
@@ -1670,11 +1698,12 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
           }
         }
 
-        return evalNodes(mod.children, tf, col, modVars, modules)
+        // Pass the caller's children (the node's children) as callerChildren for children() support
+        return evalNodes(mod.children, tf, col, modVars, modules, echos, ch.length > 0 ? ch : callerChildren)
       }
 
       // Unknown: evaluate children as pass-through
-      return evalNodes(ch, tf, col, vars, modules)
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
     }
   }
 }
@@ -1708,15 +1737,29 @@ function cssColor(name: string): [number,number,number,number] {
 export interface ParseResult {
   meshes: MeshData[]
   ast: ASTNode[]
+  echos: string[]
+  errors: string[]
 }
 
 export function parseOpenSCADWithAST(source: string): ParseResult {
   cIdx = 0
-  const tokens = tokenize(source)
-  const parser = new Parser(tokens)
-  const ast = parser.parseAll()
-  const meshes = evalNodes(ast, identity(), null)
-  return { meshes, ast }
+  const echos: string[] = []
+  const errors: string[] = []
+  let ast: ASTNode[] = []
+  let meshes: MeshData[] = []
+  try {
+    const tokens = tokenize(source)
+    const parser = new Parser(tokens)
+    ast = parser.parseAll()
+  } catch (e: any) {
+    errors.push(e.message || String(e))
+  }
+  try {
+    meshes = evalNodes(ast, identity(), null, {}, new Map(), echos)
+  } catch (e: any) {
+    errors.push(e.message || String(e))
+  }
+  return { meshes, ast, echos, errors }
 }
 
 export function parseOpenSCAD(source: string): MeshData[] {
@@ -1724,5 +1767,5 @@ export function parseOpenSCAD(source: string): MeshData[] {
   const tokens = tokenize(source)
   const parser = new Parser(tokens)
   const ast = parser.parseAll()
-  return evalNodes(ast, identity(), null)
+  return evalNodes(ast, identity(), null, {}, new Map(), [])
 }
