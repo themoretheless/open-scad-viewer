@@ -313,6 +313,22 @@ const L: Record<string, Record<string, string>> = {
     importStlDrop: 'Перетащите .stl файл сюда',
     importedStl: 'Импортировано',
     cmdImportSTL: 'Импорт STL',
+    // Duplicate line / Move line
+    sc_duplicateLine: 'Дублировать строку / выделение',
+    sc_moveLineUp: 'Переместить строку вверх',
+    sc_moveLineDown: 'Переместить строку вниз',
+    // Tab navigation
+    sc_nextTab: 'Следующая вкладка',
+    sc_prevTab: 'Предыдущая вкладка',
+    sc_closeTab: 'Закрыть вкладку',
+    // Pin tab
+    pinTab: 'Закрепить',
+    unpinTab: 'Открепить',
+    closeOtherTabs: 'Закрыть остальные',
+    // Font selector
+    fontFamily: 'Шрифт редактора',
+    // Hover docs
+    hoverDocs: 'Подсказки при наведении',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -536,6 +552,22 @@ const L: Record<string, Record<string, string>> = {
     importStlDrop: 'Drop .stl file here',
     importedStl: 'Imported',
     cmdImportSTL: 'Import STL',
+    // Duplicate line / Move line
+    sc_duplicateLine: 'Duplicate line / selection',
+    sc_moveLineUp: 'Move line up',
+    sc_moveLineDown: 'Move line down',
+    // Tab navigation
+    sc_nextTab: 'Next tab',
+    sc_prevTab: 'Previous tab',
+    sc_closeTab: 'Close tab',
+    // Pin tab
+    pinTab: 'Pin',
+    unpinTab: 'Unpin',
+    closeOtherTabs: 'Close Others',
+    // Font selector
+    fontFamily: 'Editor Font',
+    // Hover docs
+    hoverDocs: 'Hover Tooltips',
   },
 }
 
@@ -591,6 +623,7 @@ interface EditorTab {
   id: string
   name: string
   code: string
+  pinned?: boolean
 }
 
 function generateTabId(): string {
@@ -649,6 +682,8 @@ function addTab() {
 
 function closeTab(id: string) {
   if (tabs.value.length <= 1) return
+  const target = tabs.value.find(tb => tb.id === id)
+  if (target?.pinned) return // pinned tabs cannot be closed
   const idx = tabs.value.findIndex(tb => tb.id === id)
   if (idx === -1) return
   // Snapshot the closed tab (id, name, code, position) so it can be restored.
@@ -705,11 +740,78 @@ function cancelRenameTab() {
   editingTabId.value = null
 }
 
+/* ── Sorted tabs (pinned first) ── */
+const sortedTabs = computed(() => {
+  const pinned = tabs.value.filter(tb => tb.pinned)
+  const unpinned = tabs.value.filter(tb => !tb.pinned)
+  return [...pinned, ...unpinned]
+})
+
+/* ── Tab context menu ── */
+const showTabContextMenu = ref(false)
+const tabContextMenuX = ref(0)
+const tabContextMenuY = ref(0)
+const tabContextMenuId = ref('')
+
+function onTabContextMenu(e: MouseEvent, tabId: string) {
+  e.preventDefault()
+  tabContextMenuId.value = tabId
+  tabContextMenuX.value = e.clientX
+  tabContextMenuY.value = e.clientY
+  showTabContextMenu.value = true
+}
+
+function closeTabContextMenu() {
+  showTabContextMenu.value = false
+}
+
+function togglePinTab(id: string) {
+  const tab = tabs.value.find(tb => tb.id === id)
+  if (tab) {
+    tab.pinned = !tab.pinned
+    saveTabs()
+  }
+  closeTabContextMenu()
+}
+
+function closeOtherTabs(id: string) {
+  const keep = tabs.value.filter(tb => tb.id === id || tb.pinned)
+  if (keep.length === 0) return
+  tabs.value = keep
+  if (!tabs.value.find(tb => tb.id === activeTabId.value)) {
+    activeTabId.value = tabs.value[0].id
+  }
+  saveTabs()
+  closeTabContextMenu()
+}
+
+/* ── Keyboard tab navigation ── */
+function switchToNextTab() {
+  const sorted = sortedTabs.value
+  const idx = sorted.findIndex(tb => tb.id === activeTabId.value)
+  const next = sorted[(idx + 1) % sorted.length]
+  if (next) switchTab(next.id)
+}
+
+function switchToPrevTab() {
+  const sorted = sortedTabs.value
+  const idx = sorted.findIndex(tb => tb.id === activeTabId.value)
+  const prev = sorted[(idx - 1 + sorted.length) % sorted.length]
+  if (prev) switchTab(prev.id)
+}
+
+function closeCurrentTab() {
+  const tab = tabs.value.find(tb => tb.id === activeTabId.value)
+  if (tab && tab.pinned) return
+  closeTab(activeTabId.value)
+}
+
 /* ── Editor + Renderer ── */
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const error = ref('')
 const errorLine = ref(-1)
+const errorCharPos = ref(-1)
 const meshCount = ref(0)
 const triCount = ref(0)
 const gpuOk = ref(true)
@@ -769,6 +871,11 @@ const prefAutoRenderDelay = ref(parseInt(localStorage.getItem('scad-pref-autoRen
 const prefShowMinimap = ref(localStorage.getItem('scad-pref-showMinimap') !== 'false')
 const prefShowLineNumbers = ref(localStorage.getItem('scad-pref-showLineNumbers') !== 'false')
 
+const FONT_OPTIONS = [
+  'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', 'Monaco', 'monospace',
+]
+const prefFontFamily = ref(localStorage.getItem('scad-pref-fontFamily') || 'JetBrains Mono')
+
 function savePref(key: string, val: string) {
   localStorage.setItem(`scad-pref-${key}`, val)
 }
@@ -779,8 +886,9 @@ function resetPreferences() {
   prefAutoRenderDelay.value = PREF_DEFAULTS.autoRenderDelay
   prefShowMinimap.value = PREF_DEFAULTS.showMinimap
   prefShowLineNumbers.value = PREF_DEFAULTS.showLineNumbers
+  prefFontFamily.value = 'JetBrains Mono'
   // Clear the related localStorage keys (the watchers above will re-persist the defaults)
-  for (const key of ['fontSize', 'tabSize', 'autoRenderDelay', 'showMinimap', 'showLineNumbers']) {
+  for (const key of ['fontSize', 'tabSize', 'autoRenderDelay', 'showMinimap', 'showLineNumbers', 'fontFamily']) {
     localStorage.removeItem(`scad-pref-${key}`)
   }
   addToast(t('prefsReset'), 'success')
@@ -795,6 +903,7 @@ watch(prefShowMinimap, v => {
   if (v) nextTick(renderMinimap)
 })
 watch(prefShowLineNumbers, v => { savePref('showLineNumbers', String(v)) })
+watch(prefFontFamily, v => { savePref('fontFamily', v) })
 
 /* ── Console / Log Panel ── */
 interface ConsoleEntry {
@@ -885,7 +994,7 @@ function scrollEditorToLine(pos: number) {
   const textBefore = code.value.substring(0, pos)
   const lineNum = textBefore.split('\n').length
   const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
-  el.scrollTop = Math.max(0, (lineNum - 3) * lineHeight)
+  el.scrollTo({ top: Math.max(0, (lineNum - 3) * lineHeight), behavior: 'smooth' })
   // Also place cursor there
   const lineStart = code.value.lastIndexOf('\n', pos - 1) + 1
   const lineEnd = code.value.indexOf('\n', pos)
@@ -1437,6 +1546,90 @@ function updateBracketMatch() {
   bracketMatchB.value = matchPos
 }
 
+/* ── Hover Documentation Tooltips ── */
+interface DocEntry {
+  sig: string
+  desc: { ru: string; en: string }
+}
+
+const OPENSCAD_DOCS: Record<string, DocEntry> = {
+  cube: { sig: 'cube(size, center)', desc: { ru: 'Прямоугольный параллелепипед', en: 'Creates a rectangular box' } },
+  sphere: { sig: 'sphere(r|d, $fn)', desc: { ru: 'Сфера', en: 'Creates a sphere' } },
+  cylinder: { sig: 'cylinder(h, r|r1/r2, center, $fn)', desc: { ru: 'Цилиндр или конус', en: 'Creates a cylinder or cone' } },
+  translate: { sig: 'translate([x, y, z])', desc: { ru: 'Перемещение объекта', en: 'Moves child objects' } },
+  rotate: { sig: 'rotate([x, y, z]) or rotate(a, v)', desc: { ru: 'Поворот объекта', en: 'Rotates child objects' } },
+  scale: { sig: 'scale([x, y, z])', desc: { ru: 'Масштабирование объекта', en: 'Scales child objects' } },
+  color: { sig: 'color(c, alpha) or color([r,g,b,a])', desc: { ru: 'Цвет объекта', en: 'Sets the color of child objects' } },
+  difference: { sig: 'difference() { ... }', desc: { ru: 'Вычитание: первый минус остальные', en: 'Subtracts subsequent children from the first' } },
+  union: { sig: 'union() { ... }', desc: { ru: 'Объединение объектов', en: 'Combines all child objects' } },
+  intersection: { sig: 'intersection() { ... }', desc: { ru: 'Пересечение объектов', en: 'Keeps only the overlap of children' } },
+  linear_extrude: { sig: 'linear_extrude(height, twist, slices, $fn)', desc: { ru: 'Линейная экструзия 2D-формы', en: 'Extrudes a 2D shape along Z axis' } },
+  polygon: { sig: 'polygon(points, paths)', desc: { ru: '2D-многоугольник', en: 'Creates a 2D polygon' } },
+  mirror: { sig: 'mirror([x, y, z])', desc: { ru: 'Зеркальное отражение', en: 'Mirrors child objects' } },
+  hull: { sig: 'hull() { ... }', desc: { ru: 'Выпуклая оболочка', en: 'Creates convex hull of children' } },
+  minkowski: { sig: 'minkowski() { ... }', desc: { ru: 'Сумма Минковского', en: 'Minkowski sum of children' } },
+  rotate_extrude: { sig: 'rotate_extrude(angle, $fn)', desc: { ru: 'Вращательная экструзия', en: 'Rotates a 2D shape around Z axis' } },
+}
+
+const hoverDocVisible = ref(false)
+const hoverDocContent = ref({ sig: '', desc: '' })
+const hoverDocX = ref(0)
+const hoverDocY = ref(0)
+let hoverDocTimeout: ReturnType<typeof setTimeout> | null = null
+
+function onEditorMouseMove(e: MouseEvent) {
+  const el = textareaRef.value
+  if (!el) return
+
+  // Clear any previous auto-hide
+  if (hoverDocTimeout) clearTimeout(hoverDocTimeout)
+
+  // Calculate approximate character position from mouse coordinates
+  const rect = el.getBoundingClientRect()
+  const style = getComputedStyle(el)
+  const lineHeight = parseFloat(style.lineHeight) || 20
+  const fontSize = parseFloat(style.fontSize) || 13
+  const charWidth = fontSize * 0.6 // approximate monospace char width
+  const paddingTop = parseFloat(style.paddingTop) || 12
+  const paddingLeft = parseFloat(style.paddingLeft) || 12
+
+  const relX = e.clientX - rect.left - paddingLeft + el.scrollLeft
+  const relY = e.clientY - rect.top - paddingTop + el.scrollTop
+
+  const lineIdx = Math.floor(relY / lineHeight)
+  const colIdx = Math.floor(relX / charWidth)
+
+  const lines = code.value.split('\n')
+  if (lineIdx < 0 || lineIdx >= lines.length) { hoverDocVisible.value = false; return }
+  const line = lines[lineIdx]
+  if (colIdx < 0 || colIdx >= line.length) { hoverDocVisible.value = false; return }
+
+  // Extract word at position
+  let wordStart = colIdx
+  let wordEnd = colIdx
+  while (wordStart > 0 && /[a-zA-Z_]/.test(line[wordStart - 1])) wordStart--
+  while (wordEnd < line.length && /[a-zA-Z_]/.test(line[wordEnd])) wordEnd++
+  const word = line.substring(wordStart, wordEnd)
+
+  const doc = OPENSCAD_DOCS[word]
+  if (!doc) { hoverDocVisible.value = false; return }
+
+  hoverDocContent.value = { sig: doc.sig, desc: doc.desc[lang.value] || doc.desc.en }
+  const codeArea = el.closest('.code-area')
+  const codeAreaRect = codeArea ? codeArea.getBoundingClientRect() : rect
+  hoverDocX.value = e.clientX - codeAreaRect.left + 8
+  hoverDocY.value = e.clientY - codeAreaRect.top - 40
+  hoverDocVisible.value = true
+
+  // Auto-hide after 3 seconds
+  hoverDocTimeout = setTimeout(() => { hoverDocVisible.value = false }, 3000)
+}
+
+function onEditorMouseLeave() {
+  hoverDocVisible.value = false
+  if (hoverDocTimeout) { clearTimeout(hoverDocTimeout); hoverDocTimeout = null }
+}
+
 /* ── Resizable split pane ── */
 const editorWidth = ref(parseInt(localStorage.getItem('scad-editor-width') || '420'))
 const isDraggingDivider = ref(false)
@@ -1469,7 +1662,7 @@ const KEYWORDS = new Set([
 const BOOLEANS = new Set(['true','false','undef'])
 const SPECIALS = new Set(['$fn','$fa','$fs'])
 
-function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start: number; end: number }[], fActiveIdx: number): string {
+function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start: number; end: number }[], fActiveIdx: number, errPos: number): string {
   const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 
   // Build a set of find-match ranges for quick lookup
@@ -1612,6 +1805,54 @@ function highlightCode(src: string, bmA: number, bmB: number, fMatches: { start:
   }
   // Close any dangling find-match span
   if (inFindMatch) result.push('</span>')
+
+  // Insert error underline at error position
+  if (errPos >= 0 && errPos < len) {
+    // Find the word or ~10 chars around the error position
+    let errEnd = errPos
+    if (/[a-zA-Z_0-9]/.test(src[errPos])) {
+      while (errEnd < len && /[a-zA-Z_0-9]/.test(src[errEnd])) errEnd++
+    } else {
+      errEnd = Math.min(errPos + 10, len)
+    }
+    // We need to place the underline in the result. Count characters in src
+    // to find where in the HTML result the error position falls.
+    // Build a simple char-to-result-index map.
+    let html = result.join('')
+    let srcIdx = 0
+    let htmlIdx = 0
+    const htmlLen = html.length
+
+    // Walk the HTML, skipping tags, to find where srcIdx == errPos
+    let insertStart = -1
+    let insertEnd = -1
+    while (htmlIdx < htmlLen && srcIdx <= errEnd) {
+      if (srcIdx === errPos && insertStart === -1) insertStart = htmlIdx
+      if (srcIdx === errEnd) { insertEnd = htmlIdx; break }
+      if (html[htmlIdx] === '<') {
+        // Skip HTML tag
+        while (htmlIdx < htmlLen && html[htmlIdx] !== '>') htmlIdx++
+        htmlIdx++ // skip '>'
+      } else if (html[htmlIdx] === '&') {
+        // HTML entity counts as 1 src char
+        while (htmlIdx < htmlLen && html[htmlIdx] !== ';') htmlIdx++
+        htmlIdx++
+        srcIdx++
+      } else {
+        htmlIdx++
+        srcIdx++
+      }
+    }
+    if (insertEnd === -1) insertEnd = htmlIdx
+    if (insertStart >= 0 && insertEnd > insertStart) {
+      const before = html.substring(0, insertStart)
+      const errContent = html.substring(insertStart, insertEnd)
+      const after = html.substring(insertEnd)
+      html = before + '<span class="error-squiggly">' + errContent + '</span>' + after
+    }
+    return html + '\n'
+  }
+
   return result.join('') + '\n'
 }
 
@@ -1642,7 +1883,7 @@ function addIndentGuides(html: string, tabSize: number): string {
 }
 
 const highlightedCode = computed(() => {
-  const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value)
+  const raw = highlightCode(code.value, bracketMatchA.value, bracketMatchB.value, findMatches.value, findMatchIndex.value, errorCharPos.value)
   return addIndentGuides(raw, prefTabSize.value)
 })
 
@@ -1812,7 +2053,7 @@ function scrollToMatch() {
   const textBefore = code.value.substring(0, match.start)
   const lineNum = textBefore.split('\n').length
   const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
-  el.scrollTop = Math.max(0, (lineNum - 3) * lineHeight)
+  el.scrollTo({ top: Math.max(0, (lineNum - 3) * lineHeight), behavior: 'smooth' })
 }
 
 function doReplace() {
@@ -2199,6 +2440,10 @@ function onDocClick(e: MouseEvent) {
   if ((viewMenuOpen.value || renderMenuOpen.value || exportMenuOpen.value) && !target.closest('.vp-menu-wrapper')) {
     closeAllMenus()
   }
+  // Close tab context menu on outside click
+  if (showTabContextMenu.value && !target.closest('.tab-ctx-menu')) {
+    closeTabContextMenu()
+  }
 }
 
 /* ── Global keyboard handler ── */
@@ -2221,6 +2466,19 @@ function onGlobalKeydown(e: KeyboardEvent) {
   if (e.altKey && e.key === 'z') {
     e.preventDefault()
     toggleWordWrap()
+    return
+  }
+  // Ctrl+Tab / Ctrl+Shift+Tab: switch tabs
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+    e.preventDefault()
+    if (e.shiftKey) switchToPrevTab()
+    else switchToNextTab()
+    return
+  }
+  // Ctrl+W: close current tab
+  if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+    e.preventDefault()
+    closeCurrentTab()
     return
   }
   // "?" to open shortcuts (only when not typing in textarea)
@@ -2323,6 +2581,7 @@ function doRender() {
   if (!renderer) return
   error.value = ''
   errorLine.value = -1
+  errorCharPos.value = -1
   try {
     const t0 = performance.now()
     // Inject $t animation variable
@@ -2351,6 +2610,7 @@ function doRender() {
       const prefix = code.value.substring(0, pos)
       const line = prefix.split('\n').length
       errorLine.value = line
+      errorCharPos.value = pos
       msg = `${t('errorAtLine')} ${line}: ${msg}`
     }
     error.value = msg
@@ -2547,6 +2807,93 @@ function handleSmartHome(e: KeyboardEvent, el: HTMLTextAreaElement): boolean {
   return true
 }
 
+/* ── Feature: Duplicate Line (Ctrl+D) ── */
+function duplicateLine(el: HTMLTextAreaElement) {
+  const src = el.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+
+  if (selStart === selEnd) {
+    // No selection: duplicate the current line
+    const lineStart = src.lastIndexOf('\n', selStart - 1) + 1
+    let lineEnd = src.indexOf('\n', selStart)
+    if (lineEnd === -1) lineEnd = src.length
+    const lineText = src.substring(lineStart, lineEnd)
+    // Insert a newline + copy of the line after the current line end
+    el.selectionStart = el.selectionEnd = lineEnd
+    insertEditorText(el, '\n' + lineText)
+  } else {
+    // With selection: duplicate selected text right after the selection
+    const selected = src.substring(selStart, selEnd)
+    el.selectionStart = el.selectionEnd = selEnd
+    insertEditorText(el, selected)
+  }
+}
+
+/* ── Feature: Move Line Up/Down (Alt+Up / Alt+Down) ── */
+function moveLineUp(el: HTMLTextAreaElement) {
+  const src = el.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+
+  // Find the range of selected lines
+  const firstLineStart = src.lastIndexOf('\n', selStart - 1) + 1
+  let lastLineEnd = src.indexOf('\n', selEnd - (selEnd > selStart && src[selEnd - 1] === '\n' ? 1 : 0))
+  if (lastLineEnd === -1) lastLineEnd = src.length
+
+  // Can't move up if already at the first line
+  if (firstLineStart === 0) return
+
+  // The line above
+  const prevLineStart = src.lastIndexOf('\n', firstLineStart - 2) + 1
+  const prevLine = src.substring(prevLineStart, firstLineStart - 1)
+  const selectedBlock = src.substring(firstLineStart, lastLineEnd)
+
+  // Build new content: selectedBlock \n prevLine
+  const newContent = selectedBlock + '\n' + prevLine
+  el.value = src.substring(0, prevLineStart) + newContent + src.substring(lastLineEnd)
+  code.value = el.value
+
+  // Restore cursor position: shift up by (prevLine.length + 1)
+  const shift = prevLine.length + 1
+  nextTick(() => {
+    el.selectionStart = selStart - shift
+    el.selectionEnd = selEnd - shift
+  })
+}
+
+function moveLineDown(el: HTMLTextAreaElement) {
+  const src = el.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+
+  // Find the range of selected lines
+  const firstLineStart = src.lastIndexOf('\n', selStart - 1) + 1
+  let lastLineEnd = src.indexOf('\n', selEnd - (selEnd > selStart && src[selEnd - 1] === '\n' ? 1 : 0))
+  if (lastLineEnd === -1) lastLineEnd = src.length
+
+  // Can't move down if already at the last line
+  if (lastLineEnd >= src.length) return
+
+  // The line below
+  let nextLineEnd = src.indexOf('\n', lastLineEnd + 1)
+  if (nextLineEnd === -1) nextLineEnd = src.length
+  const nextLine = src.substring(lastLineEnd + 1, nextLineEnd)
+  const selectedBlock = src.substring(firstLineStart, lastLineEnd)
+
+  // Build new content: nextLine \n selectedBlock
+  const newContent = nextLine + '\n' + selectedBlock
+  el.value = src.substring(0, firstLineStart) + newContent + src.substring(nextLineEnd)
+  code.value = el.value
+
+  // Restore cursor position: shift down by (nextLine.length + 1)
+  const shift = nextLine.length + 1
+  nextTick(() => {
+    el.selectionStart = selStart + shift
+    el.selectionEnd = selEnd + shift
+  })
+}
+
 function handleKey(e: KeyboardEvent) {
   // Autocomplete navigation
   if (acVisible.value) {
@@ -2582,6 +2929,27 @@ function handleKey(e: KeyboardEvent) {
   }
 
   const editorEl = e.target as HTMLTextAreaElement
+
+  // Duplicate line: Ctrl+D
+  if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+    e.preventDefault()
+    duplicateLine(editorEl)
+    return
+  }
+
+  // Move line up/down: Alt+Up / Alt+Down
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      moveLineUp(editorEl)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      moveLineDown(editorEl)
+      return
+    }
+  }
 
   // Feature 3: Smart Home key (must run before any indentation handlers).
   if (handleSmartHome(e, editorEl)) return
@@ -2796,7 +3164,7 @@ function executeGoToLine() {
     charOffset += lines[i].length + 1 // +1 for \n
   }
   const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
-  el.scrollTop = Math.max(0, (targetLine - 3) * lineHeight)
+  el.scrollTo({ top: Math.max(0, (targetLine - 3) * lineHeight), behavior: 'smooth' })
   el.focus()
   el.setSelectionRange(charOffset, charOffset + (lines[targetLine - 1]?.length || 0))
   syncScroll()
@@ -3624,6 +3992,12 @@ translate([0, 0, 39])
             <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
             <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+D</kbd><span>{{ t('sc_duplicateLine') }}</span></div>
+            <div class="shortcut-row"><kbd>Alt+Up</kbd><span>{{ t('sc_moveLineUp') }}</span></div>
+            <div class="shortcut-row"><kbd>Alt+Down</kbd><span>{{ t('sc_moveLineDown') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Tab</kbd><span>{{ t('sc_nextTab') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+Tab</kbd><span>{{ t('sc_prevTab') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+W</kbd><span>{{ t('sc_closeTab') }}</span></div>
             <div class="shortcut-row"><kbd>W / A / S / D</kbd><span>{{ t('sc_wasd') }}</span></div>
             <div class="shortcut-row"><kbd>Q / E</kbd><span>{{ t('sc_qe') }}</span></div>
             <div class="shortcut-row"><kbd>Shift+W/A/S/D</kbd><span>{{ t('sc_shiftWasd') }}</span></div>
@@ -3721,6 +4095,14 @@ translate([0, 0, 39])
               <label class="pref-label">{{ t('showLineNumbers') }}</label>
               <div class="pref-control">
                 <input type="checkbox" v-model="prefShowLineNumbers" class="pref-checkbox" />
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('fontFamily') }}</label>
+              <div class="pref-control">
+                <select class="pref-select" v-model="prefFontFamily">
+                  <option v-for="font in FONT_OPTIONS" :key="font" :value="font" :style="{ fontFamily: font + ', monospace' }">{{ font }}</option>
+                </select>
               </div>
             </div>
             <div class="pref-footer">
@@ -3902,12 +4284,13 @@ translate([0, 0, 39])
         <!-- Tab bar -->
         <div class="tab-bar">
           <div
-            v-for="tab in tabs"
+            v-for="tab in sortedTabs"
             :key="tab.id"
             class="tab-item"
-            :class="{ active: tab.id === activeTabId }"
+            :class="{ active: tab.id === activeTabId, pinned: tab.pinned }"
             @click="switchTab(tab.id)"
             @dblclick.stop="startRenameTab(tab.id)"
+            @contextmenu.prevent="onTabContextMenu($event, tab.id)"
           >
             <template v-if="editingTabId === tab.id">
               <input
@@ -3921,9 +4304,12 @@ translate([0, 0, 39])
               />
             </template>
             <template v-else>
+              <svg v-if="tab.pinned" class="tab-pin-icon" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M16 2l-4 4-6 1-3 3 5 5-6 7 7-6 5 5 3-3 1-6 4-4z"/>
+              </svg>
               <span class="tab-name">{{ tab.name }}</span>
               <button
-                v-if="tabs.length > 1"
+                v-if="tabs.length > 1 && !tab.pinned"
                 class="tab-close"
                 @click.stop="closeTab(tab.id)"
                 :title="t('closeTab')"
@@ -3933,6 +4319,23 @@ translate([0, 0, 39])
           </div>
           <button class="tab-add" @click="addTab" :title="t('newTab')" :aria-label="t('ariaNewTab')">+</button>
         </div>
+
+        <!-- Tab context menu -->
+        <Teleport to="body">
+          <div
+            v-if="showTabContextMenu"
+            class="tab-ctx-menu"
+            :style="{ left: tabContextMenuX + 'px', top: tabContextMenuY + 'px' }"
+            @click.stop
+            @contextmenu.prevent
+          >
+            <button class="tab-ctx-item" @click="togglePinTab(tabContextMenuId)">
+              {{ tabs.find(tb => tb.id === tabContextMenuId)?.pinned ? t('unpinTab') : t('pinTab') }}
+            </button>
+            <button class="tab-ctx-item" @click="closeTab(tabContextMenuId); closeTabContextMenu()">{{ t('closeTab') }}</button>
+            <button class="tab-ctx-item" @click="closeOtherTabs(tabContextMenuId)">{{ t('closeOtherTabs') }}</button>
+          </div>
+        </Teleport>
 
         <!-- Find & Replace panel -->
         <transition name="panel-slide">
@@ -3971,7 +4374,7 @@ translate([0, 0, 39])
         </div>
         </transition>
 
-        <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize }">
+        <div class="code-editor" :class="{ 'word-wrap-on': wordWrap }" :style="{ '--editor-font-size': prefFontSize + 'px', '--editor-tab-size': prefTabSize, '--editor-font-family': prefFontFamily + ', monospace' }">
           <pre v-if="prefShowLineNumbers" class="line-numbers" ref="lineNumRef" aria-hidden="true" v-html="lineNumbers"></pre>
           <div class="code-area">
             <pre class="highlight-layer" ref="highlightRef" aria-hidden="true"><code v-html="highlightedCode"></code></pre>
@@ -3987,7 +4390,18 @@ translate([0, 0, 39])
               @keyup="handleKeyUp"
               @click="handleClick"
               @scroll="syncScroll"
+              @mousemove="onEditorMouseMove"
+              @mouseleave="onEditorMouseLeave"
             />
+            <!-- Hover documentation tooltip -->
+            <div
+              v-if="hoverDocVisible"
+              class="hover-doc-tooltip"
+              :style="{ top: hoverDocY + 'px', left: hoverDocX + 'px' }"
+            >
+              <div class="hover-doc-sig">{{ hoverDocContent.sig }}</div>
+              <div class="hover-doc-desc">{{ hoverDocContent.desc }}</div>
+            </div>
             <!-- Autocomplete popup -->
             <div
               v-if="acVisible && acItems.length"
@@ -4781,7 +5195,7 @@ textarea.code:focus-visible {
 .line-numbers {
   width: 44px; flex-shrink: 0;
   padding: 12px 8px 12px 4px;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  font-family: var(--editor-font-family, 'JetBrains Mono', monospace);
   font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   text-align: right; color: var(--text-dim);
   background: var(--surface);
@@ -4798,7 +5212,7 @@ textarea.code:focus-visible {
 .highlight-layer {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   padding: 12px;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  font-family: var(--editor-font-family, 'JetBrains Mono', monospace);
   font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   color: var(--text);
   overflow: hidden;
@@ -4816,7 +5230,7 @@ textarea.code:focus-visible {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
   resize: none;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  font-family: var(--editor-font-family, 'JetBrains Mono', monospace);
   font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
   padding: 12px; border: none; outline: none;
   background: transparent;
@@ -6514,6 +6928,94 @@ textarea.code:focus-visible {
   font-size: 0.82rem; font-weight: 600;
 }
 .canvas-drop-content svg { opacity: 0.7; }
+
+/* ── Pin Tab ── */
+.tab-pin-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-right: 2px;
+  opacity: 0.75;
+}
+.tab-item.pinned { border-left: 2px solid var(--accent); }
+
+/* ── Tab context menu ── */
+.tab-ctx-menu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  animation: ctx-menu-in 0.12s ease;
+}
+.tab-ctx-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.76rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tab-ctx-item:hover { background: var(--hover); }
+
+/* ── Hover documentation tooltip ── */
+.hover-doc-tooltip {
+  position: absolute;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  pointer-events: none;
+  max-width: 320px;
+  white-space: nowrap;
+  animation: fade-in 0.12s ease;
+}
+.hover-doc-sig {
+  font-family: var(--editor-font-family, 'JetBrains Mono', monospace);
+  font-size: 0.76rem;
+  color: var(--hl-keyword);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.hover-doc-desc {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+/* ── Error squiggly underline ── */
+:deep(.error-squiggly) {
+  text-decoration: wavy underline var(--danger);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+/* ── Smooth scrolling for editor ── */
+.code {
+  scroll-behavior: smooth;
+}
+
+/* ── Preferences: font select ── */
+.pref-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  outline: none;
+}
+.pref-select:focus { border-color: var(--accent); }
 
 @media (max-width: 800px) {
   .main { flex-direction: column; }
