@@ -738,18 +738,35 @@ const findInputRef = ref<HTMLInputElement | null>(null)
 const showShortcuts = ref(false)
 
 /* ── Viewport background color ── */
-const bgColors = [
+interface BgPreset {
+  name: string
+  nameKey?: string
+  hex: string
+  r: number; g: number; b: number
+  gradient?: string
+}
+const bgColors: BgPreset[] = [
   { name: 'Dark',  hex: '#18181c', r: 0.09, g: 0.09, b: 0.11 },
   { name: 'Light', hex: '#e8e8ec', r: 0.91, g: 0.91, b: 0.93 },
   { name: 'Blue',  hex: '#1a2332', r: 0.10, g: 0.14, b: 0.20 },
   { name: 'Green', hex: '#1a2a1e', r: 0.10, g: 0.16, b: 0.12 },
+  { name: 'Dark Grad', nameKey: 'bgGradDark', hex: 'linear-gradient(to top, #0a0a0e, #1e1e28)', r: 0.06, g: 0.06, b: 0.07, gradient: 'linear-gradient(to top, #0a0a0e, #1e1e28)' },
+  { name: 'Blue Grad', nameKey: 'bgGradBlue', hex: 'linear-gradient(to top, #0a1628, #2a4a6e)', r: 0.04, g: 0.09, b: 0.16, gradient: 'linear-gradient(to top, #0a1628, #2a4a6e)' },
+  { name: 'Sunset', nameKey: 'bgGradSunset', hex: 'linear-gradient(to top, #1a1040, #d46830)', r: 0.10, g: 0.06, b: 0.25, gradient: 'linear-gradient(to top, #1a1040, #d46830)' },
 ]
 const activeBg = ref(0)
+const canvasGradient = ref('')
 
 function setBgColor(index: number) {
   activeBg.value = index
   const c = bgColors[index]
-  renderer?.setClearColor(c.r, c.g, c.b)
+  if (c.gradient) {
+    renderer?.setClearColor(0, 0, 0, 0)
+    canvasGradient.value = c.gradient
+  } else {
+    renderer?.setClearColor(c.r, c.g, c.b, 1)
+    canvasGradient.value = ''
+  }
 }
 
 /* ── Toast Notifications ── */
@@ -1961,6 +1978,61 @@ function toggleComment() {
   })
 }
 
+/* ── WASD Camera Controls ── */
+function handleCanvasKeydown(e: KeyboardEvent) {
+  if (!renderer) return
+  const key = e.key.toLowerCase()
+  const shift = e.shiftKey
+  const step = 0.05
+  const distStep = renderer.dist * 0.05
+  const panStep = renderer.dist * 0.02
+
+  if (key === 'w' || key === 'ц') {
+    e.preventDefault()
+    if (shift) {
+      // Pan forward (into screen along view direction)
+      const cy = Math.cos(renderer.yaw), sy = Math.sin(renderer.yaw)
+      renderer.tx += sy * panStep
+      renderer.tz += cy * panStep
+    } else {
+      renderer.dist = Math.max(1, renderer.dist - distStep)
+    }
+  } else if (key === 's' || key === 'ы') {
+    e.preventDefault()
+    if (shift) {
+      const cy = Math.cos(renderer.yaw), sy = Math.sin(renderer.yaw)
+      renderer.tx -= sy * panStep
+      renderer.tz -= cy * panStep
+    } else {
+      renderer.dist = Math.min(50000, renderer.dist + distStep)
+    }
+  } else if (key === 'a' || key === 'ф') {
+    e.preventDefault()
+    if (shift) {
+      const cy = Math.cos(renderer.yaw), sy = Math.sin(renderer.yaw)
+      renderer.tx += cy * panStep
+      renderer.tz -= sy * panStep
+    } else {
+      renderer.yaw += step
+    }
+  } else if (key === 'd' || key === 'в') {
+    e.preventDefault()
+    if (shift) {
+      const cy = Math.cos(renderer.yaw), sy = Math.sin(renderer.yaw)
+      renderer.tx -= cy * panStep
+      renderer.tz += sy * panStep
+    } else {
+      renderer.yaw -= step
+    }
+  } else if (key === 'q' || key === 'й') {
+    e.preventDefault()
+    renderer.pitch = Math.min(1.5, renderer.pitch + step)
+  } else if (key === 'e' || key === 'у') {
+    e.preventDefault()
+    renderer.pitch = Math.max(-1.5, renderer.pitch - step)
+  }
+}
+
 function handleKeyUp() {
   updateAutocomplete()
   updateBracketMatch()
@@ -2070,6 +2142,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'screenshot', label: () => t('cmdTakeScreenshot'), action: () => takeScreenshot() },
   { id: 'copyImage', label: () => t('cmdCopyImage'), action: () => copyCanvasToClipboard() },
   { id: 'exportStl', label: () => t('cmdExportSTL'), action: () => doExportSTL() },
+  { id: 'exportObj', label: () => t('cmdExportOBJ'), action: () => doExportOBJ() },
   { id: 'openFile', label: () => t('cmdOpenFile'), shortcut: 'Ctrl+O', action: () => openFile() },
   { id: 'saveFile', label: () => t('cmdSaveFile'), shortcut: 'Ctrl+S', action: () => saveFile() },
   { id: 'share', label: () => t('cmdShare'), action: () => shareLink() },
@@ -2402,6 +2475,134 @@ color([0.6, 0.55, 0.65])
 translate([0, 0, 35])
     cylinder(h = 1.5, r = 12, $fn = 8);
 `,
+
+  gear: `// Gear with rectangular teeth
+// Outer ring with evenly spaced teeth
+
+color([0.6, 0.6, 0.7])
+difference() {
+    // Main gear body
+    cylinder(h = 6, r = 25, $fn = 48);
+
+    // Center hole
+    translate([0, 0, -1])
+        cylinder(h = 8, r = 8, $fn = 32);
+
+    // Lightening holes around center
+    translate([16, 0, -1])
+        cylinder(h = 8, r = 4, $fn = 16);
+    translate([-16, 0, -1])
+        cylinder(h = 8, r = 4, $fn = 16);
+    translate([0, 16, -1])
+        cylinder(h = 8, r = 4, $fn = 16);
+    translate([0, -16, -1])
+        cylinder(h = 8, r = 4, $fn = 16);
+}
+
+// Teeth around the perimeter
+color([0.65, 0.65, 0.75])
+difference() {
+    cylinder(h = 6, r = 30, $fn = 24);
+    translate([0, 0, -1])
+        cylinder(h = 8, r = 25, $fn = 48);
+}
+
+// Hub
+color([0.5, 0.5, 0.6])
+translate([0, 0, 3])
+    cylinder(h = 4, r = 10, $fn = 32);
+
+// Axle
+color([0.4, 0.4, 0.5])
+translate([0, 0, -2])
+    cylinder(h = 12, r = 3, $fn = 16);
+`,
+
+  vase: `// Decorative vase using stacked rings
+// Varying radii create a curved profile
+
+color([0.7, 0.3, 0.35])
+difference() {
+    // Outer shell - stacked cylinders
+    union() {
+        // Base
+        cylinder(h = 3, r1 = 14, r2 = 12, $fn = 32);
+        // Lower body
+        translate([0, 0, 3])
+            cylinder(h = 10, r1 = 12, r2 = 18, $fn = 32);
+        // Belly
+        translate([0, 0, 13])
+            cylinder(h = 10, r1 = 18, r2 = 16, $fn = 32);
+        // Upper body
+        translate([0, 0, 23])
+            cylinder(h = 10, r1 = 16, r2 = 10, $fn = 32);
+        // Neck
+        translate([0, 0, 33])
+            cylinder(h = 8, r1 = 10, r2 = 12, $fn = 32);
+        // Rim
+        translate([0, 0, 41])
+            cylinder(h = 2, r1 = 12, r2 = 13, $fn = 32);
+    }
+
+    // Hollow inside
+    translate([0, 0, 3])
+        cylinder(h = 42, r1 = 10, r2 = 11, $fn = 32);
+}
+
+// Decorative rings
+color([0.8, 0.4, 0.3])
+translate([0, 0, 13])
+    cylinder(h = 1.5, r = 18.5, $fn = 32);
+
+color([0.8, 0.4, 0.3])
+translate([0, 0, 33])
+    cylinder(h = 1.5, r = 10.5, $fn = 32);
+
+// Base plate
+color([0.5, 0.25, 0.25])
+cylinder(h = 1, r = 16, $fn = 32);
+`,
+
+  chess: `// Simplified chess pawn piece
+
+// Base
+color([0.85, 0.8, 0.7])
+cylinder(h = 3, r1 = 14, r2 = 12, $fn = 32);
+
+// Base ring
+color([0.8, 0.75, 0.65])
+translate([0, 0, 3])
+    cylinder(h = 2, r1 = 12, r2 = 10, $fn = 32);
+
+// Lower column
+color([0.85, 0.8, 0.7])
+translate([0, 0, 5])
+    cylinder(h = 12, r1 = 10, r2 = 6, $fn = 32);
+
+// Collar
+color([0.8, 0.75, 0.65])
+translate([0, 0, 17])
+    cylinder(h = 2, r1 = 7, r2 = 7.5, $fn = 32);
+
+color([0.8, 0.75, 0.65])
+translate([0, 0, 19])
+    cylinder(h = 2, r1 = 7.5, r2 = 6, $fn = 32);
+
+// Upper column (neck)
+color([0.85, 0.8, 0.7])
+translate([0, 0, 21])
+    cylinder(h = 8, r1 = 6, r2 = 5, $fn = 32);
+
+// Head (sphere)
+color([0.9, 0.85, 0.75])
+translate([0, 0, 33])
+    sphere(r = 7, $fn = 32);
+
+// Top nub
+color([0.85, 0.8, 0.7])
+translate([0, 0, 39])
+    sphere(r = 3, $fn = 24);
+`,
 }
 </script>
 
@@ -2463,6 +2664,9 @@ translate([0, 0, 35])
             <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
             <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
+            <div class="shortcut-row"><kbd>W / A / S / D</kbd><span>{{ t('sc_wasd') }}</span></div>
+            <div class="shortcut-row"><kbd>Q / E</kbd><span>{{ t('sc_qe') }}</span></div>
+            <div class="shortcut-row"><kbd>Shift+W/A/S/D</kbd><span>{{ t('sc_shiftWasd') }}</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>{{ t('sc_shortcuts') }}</span></div>
             <div class="shortcut-row"><kbd>Escape</kbd><span>{{ t('sc_close') }}</span></div>
           </div>
@@ -2609,6 +2813,13 @@ translate([0, 0, 35])
               <rect x="14" y="1" width="8" height="6" rx="1" fill="currentColor" opacity="0.3"/>
             </svg>
           </button>
+          <!-- OBJ Export button -->
+          <button class="btn btn-sm btn-icon" @click="doExportOBJ" :title="t('exportObj')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              <rect x="14" y="1" width="8" height="6" rx="1" fill="currentColor" opacity="0.15"/>
+            </svg>
+          </button>
           <!-- Share button -->
           <div class="share-wrapper">
             <button class="btn btn-sm" @click="shareLink" :title="t('share')">
@@ -2658,10 +2869,13 @@ translate([0, 0, 35])
           </button>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
-          <button class="btn btn-sm" @click="loadExample('basic')">{{ t('basic') }}</button>
-          <button class="btn btn-sm" @click="loadExample('csg')">{{ t('csg') }}</button>
-          <button class="btn btn-sm" @click="loadExample('house')">{{ t('house') }}</button>
-          <button class="btn btn-sm" @click="loadExample('tower')">{{ t('tower') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('basic')" :data-tooltip="t('basicTip')">{{ t('basic') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('csg')" :data-tooltip="t('csgTip')">{{ t('csg') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('house')" :data-tooltip="t('houseTip')">{{ t('house') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('tower')" :data-tooltip="t('towerTip')">{{ t('tower') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('gear')" :data-tooltip="t('gearTip')">{{ t('gear') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('vase')" :data-tooltip="t('vaseTip')">{{ t('vase') }}</button>
+          <button class="btn btn-sm example-btn" @click="loadExample('chess')" :data-tooltip="t('chessTip')">{{ t('chess') }}</button>
         </div>
 
         <!-- Parameters panel -->
@@ -2853,7 +3067,8 @@ translate([0, 0, 35])
       <div class="divider" v-show="!isFullscreen" @mousedown="onDividerDown"></div>
 
       <div class="canvas-panel">
-        <canvas ref="canvasRef" class="gpu-canvas" />
+        <div v-if="canvasGradient" class="canvas-gradient-bg" :style="{ background: canvasGradient }"></div>
+        <canvas ref="canvasRef" class="gpu-canvas" :class="{ 'canvas-transparent': !!canvasGradient }" tabindex="0" @keydown="handleCanvasKeydown" />
 
         <div class="view-buttons">
           <button class="view-btn" @click="setView('top')" :title="t('top')">{{ t('top') }}</button>
@@ -2914,11 +3129,11 @@ translate([0, 0, 35])
             <span class="bg-label">{{ t('bgColor') }}</span>
             <button
               v-for="(c, idx) in bgColors"
-              :key="c.hex"
+              :key="idx"
               class="bg-swatch"
               :class="{ active: idx === activeBg }"
-              :style="{ background: c.hex }"
-              :title="c.name"
+              :style="{ background: c.gradient || c.hex }"
+              :title="c.nameKey ? t(c.nameKey) : c.name"
               @click="setBgColor(idx)"
             />
           </div>
@@ -3044,6 +3259,23 @@ translate([0, 0, 35])
 
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="toast-item"
+          :class="'toast-' + toast.type"
+        >
+          <span class="toast-icon" v-if="toast.type === 'success'">&#10003;</span>
+          <span class="toast-icon" v-else-if="toast.type === 'error'">&#10006;</span>
+          <span class="toast-icon" v-else>&#9432;</span>
+          <span class="toast-msg">{{ toast.message }}</span>
+        </div>
+      </transition-group>
     </div>
   </div>
 </template>
@@ -4244,6 +4476,113 @@ html, body, #app {
 .anim-dur-unit {
   font-size: 0.66rem;
   color: var(--text-dim);
+}
+
+/* ── Toast Notifications ── */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 20000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  min-width: 180px;
+  max-width: 320px;
+}
+.toast-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.toast-msg {
+  flex: 1;
+  line-height: 1.3;
+}
+.toast-success {
+  background: rgba(46, 160, 67, 0.9);
+  color: #fff;
+  border: 1px solid rgba(46, 160, 67, 0.6);
+}
+.toast-info {
+  background: rgba(74, 158, 255, 0.9);
+  color: #fff;
+  border: 1px solid rgba(74, 158, 255, 0.6);
+}
+.toast-error {
+  background: rgba(231, 76, 60, 0.9);
+  color: #fff;
+  border: 1px solid rgba(231, 76, 60, 0.6);
+}
+/* Toast enter/leave animations */
+.toast-enter-active {
+  animation: toast-slide-in 0.3s ease-out;
+}
+.toast-leave-active {
+  animation: toast-fade-out 0.3s ease-in forwards;
+}
+@keyframes toast-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes toast-fade-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(40px); opacity: 0; }
+}
+
+/* ── Example Button Tooltips ── */
+.example-btn {
+  position: relative;
+}
+.example-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 300;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+.example-btn:hover::after {
+  opacity: 1;
+}
+
+/* ── Canvas Gradient Background ── */
+.canvas-gradient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.canvas-transparent {
+  background: transparent !important;
+}
+.gpu-canvas:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 @media (max-width: 800px) {

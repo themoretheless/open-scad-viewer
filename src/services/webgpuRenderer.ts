@@ -123,6 +123,7 @@ export class WebGPURenderer {
   private clearR = 0.09
   private clearG = 0.09
   private clearB = 0.11
+  private clearA = 1
 
   yaw = 0.6; pitch = 0.4; dist = 50
   tx = 0; ty = 0; tz = 0
@@ -418,7 +419,7 @@ export class WebGPURenderer {
     const pass = enc.beginRenderPass({
       colorAttachments: [{
         view: this.ctx.getCurrentTexture().createView(),
-        clearValue: { r: this.clearR, g: this.clearG, b: this.clearB, a: 1 },
+        clearValue: { r: this.clearR * this.clearA, g: this.clearG * this.clearA, b: this.clearB * this.clearA, a: this.clearA },
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
@@ -845,10 +846,11 @@ export class WebGPURenderer {
   }
 
   /** Set the viewport background (clear) color. r, g, b in 0-1 range. */
-  setClearColor(r: number, g: number, b: number) {
+  setClearColor(r: number, g: number, b: number, a = 1) {
     this.clearR = r
     this.clearG = g
     this.clearB = b
+    this.clearA = a
   }
 
   /** Set a lighting preset. */
