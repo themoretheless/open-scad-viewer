@@ -1072,6 +1072,37 @@ export class WebGPURenderer {
     return { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
   }
 
+  /** Unproject screen coordinates to a world-space ray using inverse VP matrix. */
+  unproject(screenX: number, screenY: number): { origin: [number,number,number]; direction: [number,number,number] } {
+    const invVP = invert(this.lastVP)
+    // Convert screen coords to NDC
+    const ndcX = (screenX / this.lastW) * 2 - 1
+    const ndcY = 1 - (screenY / this.lastH) * 2  // flip Y
+
+    // Unproject near point (NDC z = -1) and far point (NDC z = 1)
+    function unproj4(nx: number, ny: number, nz: number, m: Float32Array): [number,number,number] {
+      const x = m[0]*nx + m[1]*ny + m[2]*nz + m[3]
+      const y = m[4]*nx + m[5]*ny + m[6]*nz + m[7]
+      const z = m[8]*nx + m[9]*ny + m[10]*nz + m[11]
+      const w = m[12]*nx + m[13]*ny + m[14]*nz + m[15]
+      const iw = w !== 0 ? 1/w : 1
+      return [x*iw, y*iw, z*iw]
+    }
+
+    const near = unproj4(ndcX, ndcY, -1, invVP)
+    const far = unproj4(ndcX, ndcY, 1, invVP)
+
+    const dx = far[0] - near[0]
+    const dy = far[1] - near[1]
+    const dz = far[2] - near[2]
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1
+
+    return {
+      origin: near,
+      direction: [dx/len, dy/len, dz/len],
+    }
+  }
+
   /**
    * Smoothly snap the camera to look straight down a principal axis.
    * axis: '+x' | '-x' | '+y' | '-y' | '+z' | '-z'

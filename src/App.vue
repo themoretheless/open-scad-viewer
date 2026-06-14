@@ -496,6 +496,23 @@ const L: Record<string, Record<string, string>> = {
     refSpecialVars: 'Специальные переменные',
     refControlFlow: 'Управление потоком',
     refOther: 'Прочее',
+    // Measurement tool
+    measureMode: 'Измерение',
+    measureClear: 'Очистить',
+    measureDistance: 'Расстояние',
+    cmdToggleMeasure: 'Переключить измерение',
+    measureHint: 'Кликните две точки для измерения расстояния',
+    // Ghost comparison
+    ghostCompare: 'Призрак',
+    ghostTab: 'Вкладка-призрак',
+    cmdToggleGhost: 'Переключить призрак',
+    noOtherTabs: 'Нет других вкладок',
+    // What's New
+    whatsNew: 'Что нового',
+    whatsNewTitle: 'Что нового',
+    // Print Code
+    printCode: 'Печать кода',
+    cmdPrintCode: 'Печать кода',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -898,6 +915,23 @@ const L: Record<string, Record<string, string>> = {
     refSpecialVars: 'Special Variables',
     refControlFlow: 'Control Flow',
     refOther: 'Other',
+    // Measurement tool
+    measureMode: 'Measure',
+    measureClear: 'Clear',
+    measureDistance: 'Distance',
+    cmdToggleMeasure: 'Toggle Measure',
+    measureHint: 'Click two points to measure distance',
+    // Ghost comparison
+    ghostCompare: 'Ghost',
+    ghostTab: 'Ghost Tab',
+    cmdToggleGhost: 'Toggle Ghost',
+    noOtherTabs: 'No other tabs',
+    // What's New
+    whatsNew: "What's New",
+    whatsNewTitle: "What's New",
+    // Print Code
+    printCode: 'Print Code',
+    cmdPrintCode: 'Print Code',
   },
 }
 
@@ -1773,6 +1807,198 @@ function doExport3MF() {
   const tabName = activeTab.value.name.replace(/[^a-zA-Z0-9_-]/g, '_') || 'model'
   export3MF(lastParsedMeshes, `${tabName}.3mf`)
   addToast(t('export3mf') + ': ' + tabName + '.3mf', 'success')
+}
+
+/* ── Feature: Measurement Tool ── */
+const measureMode = ref(false)
+const measurePoint1 = ref<{x:number;y:number;z:number}|null>(null)
+const measurePoint2 = ref<{x:number;y:number;z:number}|null>(null)
+
+const measureDistance = computed(() => {
+  if (!measurePoint1.value || !measurePoint2.value) return null
+  const dx = measurePoint2.value.x - measurePoint1.value.x
+  const dy = measurePoint2.value.y - measurePoint1.value.y
+  const dz = measurePoint2.value.z - measurePoint1.value.z
+  return Math.sqrt(dx*dx + dy*dy + dz*dz)
+})
+
+const measureLabelPos = computed(() => {
+  if (!measurePoint1.value || !measurePoint2.value || !renderer) return null
+  // Midpoint in 3D - we just center the label on canvas
+  return { x: '50%', y: '50%' }
+})
+
+function toggleMeasureMode() {
+  measureMode.value = !measureMode.value
+  if (!measureMode.value) {
+    measurePoint1.value = null
+    measurePoint2.value = null
+  }
+}
+
+function clearMeasurement() {
+  measurePoint1.value = null
+  measurePoint2.value = null
+}
+
+function onMeasureClick(e: PointerEvent) {
+  if (!measureMode.value || !renderer || !canvasRef.value) return
+  // Only handle left-click that wasn't a drag
+  if (canvasDidDrag) return
+
+  const rect = canvasRef.value.getBoundingClientRect()
+  const sx = (e.clientX - rect.left) * window.devicePixelRatio
+  const sy = (e.clientY - rect.top) * window.devicePixelRatio
+
+  const ray = renderer.unproject(sx, sy)
+  // Intersect with Y=0 plane (ground plane)
+  // ray.origin + t * ray.direction, solve for y=0: t = -origin.y / direction.y
+  if (Math.abs(ray.direction[1]) < 1e-8) return // parallel to ground
+  const tHit = -ray.origin[1] / ray.direction[1]
+  if (tHit < 0) return // behind camera
+  const hitX = ray.origin[0] + tHit * ray.direction[0]
+  const hitY = 0
+  const hitZ = ray.origin[2] + tHit * ray.direction[2]
+
+  if (!measurePoint1.value) {
+    measurePoint1.value = { x: hitX, y: hitY, z: hitZ }
+  } else if (!measurePoint2.value) {
+    measurePoint2.value = { x: hitX, y: hitY, z: hitZ }
+  } else {
+    // Reset: start new measurement
+    measurePoint1.value = { x: hitX, y: hitY, z: hitZ }
+    measurePoint2.value = null
+  }
+}
+
+/* ── Feature: Ghost Comparison ── */
+const ghostMode = ref(false)
+const ghostTabId = ref('')
+
+function toggleGhostMode() {
+  ghostMode.value = !ghostMode.value
+  if (ghostMode.value) {
+    // Select first other tab as default ghost
+    const otherTab = tabs.value.find(tb => tb.id !== activeTabId.value)
+    if (otherTab) {
+      ghostTabId.value = otherTab.id
+      updateGhostMeshes()
+    } else {
+      ghostMode.value = false
+      addToast(t('noOtherTabs'), 'info')
+    }
+  } else {
+    // Remove ghost meshes
+    if (renderer) {
+      doRender() // re-render without ghost
+    }
+  }
+}
+
+function updateGhostMeshes() {
+  if (!ghostMode.value || !renderer || !ghostTabId.value) return
+  const ghostTab = tabs.value.find(tb => tb.id === ghostTabId.value)
+  if (!ghostTab) return
+
+  // Parse ghost tab
+  const ghostResult = parseOpenSCADWithAST(ghostTab.code, (name: string) => {
+    const baseName = name.replace(/\.scad$/, '')
+    const tab = tabs.value.find(tb => {
+      const tabBase = tb.name.replace(/\.scad$/, '')
+      return tabBase === baseName || tabBase === name || tb.name === name
+    })
+    return tab ? tab.code : null
+  })
+
+  // Tint ghost meshes: set alpha=0.2 and a blue tint
+  const ghostMeshes = ghostResult.meshes.map(m => ({
+    ...m,
+    color: [0.3, 0.5, 1.0, 0.2] as [number, number, number, number],
+  }))
+
+  // Merge current meshes with ghost meshes
+  const currentMeshes = [...lastParsedMeshes, ...ghostMeshes]
+  renderer.setMeshes(currentMeshes)
+}
+
+/* ── Feature: Notification Badge for Updates ── */
+const APP_VERSION = 7 // Increment when adding major features
+const hasNewFeatures = ref(false)
+
+function checkVersionBadge() {
+  const lastSeen = parseInt(localStorage.getItem('scad-last-version') || '0')
+  hasNewFeatures.value = lastSeen < APP_VERSION
+}
+
+function dismissNewFeatures() {
+  localStorage.setItem('scad-last-version', String(APP_VERSION))
+  hasNewFeatures.value = false
+}
+
+// Check on load
+checkVersionBadge()
+
+const WHATS_NEW_ITEMS = [
+  { version: 7, items: {
+    ru: ['Инструмент измерения расстояний', 'Режим призрака для сравнения моделей', 'Примитив torus()', 'Примитив helix()', 'Печать кода'],
+    en: ['Distance measurement tool', 'Ghost mode for model comparison', 'torus() primitive', 'helix() primitive', 'Print code'],
+  }},
+  { version: 6, items: {
+    ru: ['Галерея примеров', 'Сниппеты', 'Статистика кода'],
+    en: ['Example gallery', 'Snippets', 'Code statistics'],
+  }},
+]
+
+/* ── Feature: Print Code ── */
+function printCode() {
+  const codeText = code.value
+  const tabName = activeTab.value.name
+  const now = new Date().toLocaleString()
+  // Syntax highlight: simple token-based coloring
+  const highlighted = codeText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/(\/\/.*)$/gm, '<span style="color:#6a6a7a;font-style:italic">$1</span>')
+    .replace(/\b(module|function|if|else|for|let|use|include|union|difference|intersection|linear_extrude|rotate_extrude|hull|minkowski|render|echo|assert|projection|import)\b/g, '<span style="color:#1a6dd4;font-weight:600">$1</span>')
+    .replace(/\b(cube|sphere|cylinder|polygon|circle|square|text|polyhedron|surface|offset|torus|helix|color|translate|rotate|scale|mirror|resize|multmatrix)\b/g, '<span style="color:#1a8a99;font-weight:600">$1</span>')
+    .replace(/\b(\d+\.?\d*([eE][+-]?\d+)?)\b/g, '<span style="color:#c5600a">$1</span>')
+    .replace(/\b(true|false)\b/g, '<span style="color:#9040b0">$1</span>')
+    .replace(/"([^"]*)"/g, '<span style="color:#2a8c3a">"$1"</span>')
+
+  const lines = highlighted.split('\n')
+  const lineNumbered = lines.map((line, i) =>
+    `<tr><td style="color:#999;text-align:right;padding-right:12px;user-select:none;min-width:30px">${i + 1}</td><td style="white-space:pre-wrap;word-break:break-all">${line || ' '}</td></tr>`
+  ).join('\n')
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>${tabName} - OpenSCAD</title>
+  <style>
+    body { font-family: 'Courier New', monospace; font-size: 11pt; margin: 20px; }
+    h2 { font-family: sans-serif; margin-bottom: 4px; }
+    .meta { color: #777; font-family: sans-serif; font-size: 9pt; margin-bottom: 16px; }
+    table { border-collapse: collapse; width: 100%; }
+    td { vertical-align: top; padding: 1px 4px; font-size: 10pt; line-height: 1.4; }
+    @media print {
+      body { margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <h2>${tabName}</h2>
+  <div class="meta">${now}</div>
+  <table>${lineNumbered}</table>
+  <script>window.print();<\/script>
+</body>
+</html>`
+
+  const w = window.open('', '_blank')
+  if (w) {
+    w.document.write(html)
+    w.document.close()
+  }
 }
 
 /* ── Share Link ── */
@@ -3183,6 +3409,12 @@ function onCanvasPointerMove(e: PointerEvent) {
   if (dx * dx + dy * dy > 25) canvasDidDrag = true
 }
 
+function onCanvasPointerUp(e: PointerEvent) {
+  if (measureMode.value && !canvasDidDrag && e.button === 0) {
+    onMeasureClick(e)
+  }
+}
+
 function onCanvasContextMenu(e: MouseEvent) {
   e.preventDefault()
   // Suppress the menu if the user was panning/orbiting (drag with right button)
@@ -3378,6 +3610,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (acVisible.value) { acVisible.value = false; return }
     if (showRecent.value) { showRecent.value = false; return }
     if (showExportDropdown.value) { showExportDropdown.value = false; return }
+    if (measureMode.value) { measureMode.value = false; clearMeasurement(); return }
     if (isFullscreen.value) { isFullscreen.value = false }
   }
 }
@@ -3552,6 +3785,10 @@ function doRender() {
     }
     // Update breadcrumbs after parse
     updateBreadcrumbs()
+    // Update ghost meshes if ghost mode is active
+    if (ghostMode.value) {
+      nextTick(() => updateGhostMeshes())
+    }
   } catch (e: any) {
     let msg = e.message || String(e)
     const posMatch = msg.match(/@(\d+)/)
@@ -4346,6 +4583,9 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'insertSnippet:threadedInsert', label: () => 'Insert: ' + t('snippetThreadedInsert'), action: () => insertSnippet(SNIPPETS[5]) },
   { id: 'cameraInfo', label: () => t('showCameraInfo'), action: () => toggleCameraInfo() },
   { id: 'scadReference', label: () => t('cmdScadReference'), action: () => toggleScadReference() },
+  { id: 'measureTool', label: () => t('cmdToggleMeasure'), action: () => toggleMeasureMode() },
+  { id: 'ghostCompare', label: () => t('cmdToggleGhost'), action: () => toggleGhostMode() },
+  { id: 'printCode', label: () => t('cmdPrintCode'), action: () => printCode() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -5534,7 +5774,7 @@ translate([0, 0, 39])
             <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
           </svg>
         </button>
-        <button class="tb-btn tb-btn-help topbar-collapsible" @click="showShortcuts = true" :title="t('shortcuts')" :aria-label="t('ariaHelp')">?</button>
+        <button class="tb-btn tb-btn-help topbar-collapsible" :class="{ 'has-badge': hasNewFeatures }" @click="if (hasNewFeatures) { openWelcome(); dismissNewFeatures() } else { showShortcuts = true }" :title="hasNewFeatures ? t('whatsNew') : t('shortcuts')" :aria-label="t('ariaHelp')">?<span v-if="hasNewFeatures" class="notif-badge"></span></button>
         <button class="tb-btn tb-btn-gear topbar-collapsible" @click="showPreferences = !showPreferences" :title="t('preferences')" :aria-label="t('ariaPreferences')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -5806,7 +6046,17 @@ translate([0, 0, 39])
                 <span>{{ t('welcomeFeat4') }}</span>
               </li>
             </ul>
-            <button class="btn btn-primary welcome-start-btn" @click="dismissWelcome">{{ t('welcomeStart') }}</button>
+            <button class="btn btn-primary welcome-start-btn" @click="dismissWelcome(); dismissNewFeatures()">{{ t('welcomeStart') }}</button>
+            <!-- What's New section -->
+            <div class="whats-new-section">
+              <h3 class="whats-new-title">{{ t('whatsNewTitle') }}</h3>
+              <div v-for="release in WHATS_NEW_ITEMS" :key="release.version" class="whats-new-release">
+                <div class="whats-new-version">v{{ release.version }}</div>
+                <ul class="whats-new-list">
+                  <li v-for="(item, idx) in release.items[lang]" :key="idx">{{ item }}</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -5980,6 +6230,8 @@ translate([0, 0, 39])
               <div class="export-dd-sep"></div>
               <button class="export-dd-item" @click="copyCanvasToClipboard(); closeExportDropdown()">{{ t('copyImage') }}</button>
               <button class="export-dd-item" @click="shareLink(); closeExportDropdown()">{{ t('share') }}</button>
+              <div class="export-dd-sep"></div>
+              <button class="export-dd-item" @click="printCode(); closeExportDropdown()">{{ t('printCode') }}</button>
             </div>
           </div>
           <span class="spacer" />
@@ -6398,6 +6650,7 @@ translate([0, 0, 39])
           @keydown="handleCanvasKeydown"
           @pointerdown="onCanvasPointerDown"
           @pointermove="onCanvasPointerMove"
+          @pointerup="onCanvasPointerUp"
           @contextmenu="onCanvasContextMenu"
           @dragenter="onCanvasDragEnter"
           @dragover="onCanvasDragOver"
@@ -6427,6 +6680,29 @@ translate([0, 0, 39])
             <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
           </svg>
           <span class="empty-state-text">{{ t('emptyState') }}</span>
+        </div>
+
+        <!-- Measurement overlay -->
+        <div v-if="measureMode" class="measure-overlay">
+          <div class="measure-hint" v-if="!measurePoint1">{{ t('measureHint') }}</div>
+          <div class="measure-result" v-if="measureDistance !== null">
+            <span class="measure-dist">{{ measureDistance.toFixed(2) }} mm</span>
+            <button class="measure-clear-btn" @click="clearMeasurement" :title="t('measureClear')">&times;</button>
+          </div>
+          <div class="measure-badge" v-if="measureMode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12h20"/><path d="M2 12l4-4m-4 4l4 4"/><path d="M22 12l-4-4m4 4l-4 4"/>
+            </svg>
+            {{ t('measureMode') }}
+          </div>
+        </div>
+
+        <!-- Ghost tab selector (shown when ghost mode is active) -->
+        <div v-if="ghostMode" class="ghost-controls">
+          <label class="ghost-label">{{ t('ghostTab') }}:</label>
+          <select class="ghost-select" v-model="ghostTabId" @change="updateGhostMeshes()">
+            <option v-for="tab in tabs.filter(tb => tb.id !== activeTabId)" :key="tab.id" :value="tab.id">{{ tab.name }}</option>
+          </select>
         </div>
 
         <!-- Orientation cube / navigation gizmo -->
@@ -6512,6 +6788,14 @@ translate([0, 0, 39])
               <button class="vp-dd-item" @click="toggleFullscreen(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="isFullscreen">&#10003;</span>
                 {{ t('fullscreen') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleMeasureMode(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="measureMode">&#10003;</span>
+                {{ t('measureMode') }}
+              </button>
+              <button class="vp-dd-item" @click="toggleGhostMode(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="ghostMode">&#10003;</span>
+                {{ t('ghostCompare') }}
               </button>
               <div class="vp-dd-sep"></div>
               <div class="vp-dd-label">{{ t('bgColor') }}</div>
@@ -6680,6 +6964,8 @@ translate([0, 0, 39])
               <button class="vp-dd-item" @click="doExport3MF(); closeAllMenus()">{{ t('export3mf') }}</button>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="printCode(); closeAllMenus()">{{ t('printCode') }}</button>
             </div>
             </transition>
           </div>
@@ -9777,5 +10063,143 @@ textarea.code:focus-visible {
     height: 38px;
     font-size: 1.1rem;
   }
+}
+
+/* ── Measurement Tool ── */
+.measure-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+.measure-hint {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.measure-result {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  color: #4af;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+.measure-clear-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.measure-clear-btn:hover {
+  color: #fff;
+}
+.measure-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent, #4a9eff);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+/* ── Ghost Controls ── */
+.ghost-controls {
+  position: absolute;
+  bottom: 42px;
+  right: 8px;
+  background: var(--surface, #1e1e22);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 15;
+  font-size: 11px;
+  color: var(--text-dim, #888);
+}
+.ghost-label {
+  white-space: nowrap;
+}
+.ghost-select {
+  background: var(--bg, #141416);
+  color: var(--text, #e4e4e8);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* ── Notification Badge ── */
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f44;
+  pointer-events: none;
+}
+.tb-btn.has-badge {
+  position: relative;
+}
+
+/* ── What's New ── */
+.whats-new-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border, #2e2e34);
+  padding-top: 12px;
+}
+.whats-new-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text, #e4e4e8);
+}
+.whats-new-release {
+  margin-bottom: 8px;
+}
+.whats-new-version {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent, #4a9eff);
+  margin-bottom: 2px;
+}
+.whats-new-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-dim, #888);
+  line-height: 1.5;
+}
+.whats-new-list li {
+  margin: 1px 0;
 }
 </style>

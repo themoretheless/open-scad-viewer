@@ -736,6 +736,96 @@ function makeCylinder(h: number, r1: number, r2: number, center: boolean, fn: nu
   return { v, ix }
 }
 
+function makeTorus(r1: number, r2: number, fn: number) {
+  const v: number[] = [], ix: number[] = []
+  const ringSegs = fn
+  const tubeSegs = Math.max(8, Math.floor(fn * r2 / r1))
+  for (let i = 0; i <= ringSegs; i++) {
+    const u = (2 * Math.PI * i) / ringSegs
+    const cu = Math.cos(u), su = Math.sin(u)
+    for (let j = 0; j <= tubeSegs; j++) {
+      const vv = (2 * Math.PI * j) / tubeSegs
+      const cv = Math.cos(vv), sv = Math.sin(vv)
+      const x = (r1 + r2 * cv) * cu
+      const y = r2 * sv
+      const z = (r1 + r2 * cv) * su
+      // Normal: direction from ring center to surface point
+      const nx = cv * cu
+      const ny = sv
+      const nz = cv * su
+      v.push(x, y, z, nx, ny, nz)
+    }
+  }
+  for (let i = 0; i < ringSegs; i++) {
+    for (let j = 0; j < tubeSegs; j++) {
+      const a = i * (tubeSegs + 1) + j
+      const b = a + tubeSegs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+  return { v, ix }
+}
+
+function makeHelix(r: number, pitch: number, turns: number, fn: number) {
+  const v: number[] = [], ix: number[] = []
+  const tubeR = pitch * 0.15 // tube radius = 15% of pitch
+  const totalHeight = pitch * turns
+  const ringSegs = Math.max(16, fn * turns)
+  const tubeSegs = Math.max(6, Math.floor(fn / 4))
+  for (let i = 0; i <= ringSegs; i++) {
+    const t = i / ringSegs
+    const angle = 2 * Math.PI * turns * t
+    const ca = Math.cos(angle), sa = Math.sin(angle)
+    // Center of tube at this point on helix
+    const cx = r * ca
+    const cy = totalHeight * t
+    const cz = r * sa
+    // Tangent to helix path
+    const tx = -r * sa * 2 * Math.PI * turns
+    const ty = totalHeight
+    const tz = r * ca * 2 * Math.PI * turns
+    const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1
+    const ttx = tx / tlen, tty = ty / tlen, ttz = tz / tlen
+    // Build local frame (normal, binormal)
+    // Pick an arbitrary vector not parallel to tangent
+    let upx = 0, upy = 1, upz = 0
+    if (Math.abs(tty) > 0.9) { upx = 1; upy = 0; upz = 0 }
+    // binormal = tangent x up
+    let bx = tty * upz - ttz * upy
+    let by = ttz * upx - ttx * upz
+    let bz = ttx * upy - tty * upx
+    const blen = Math.sqrt(bx * bx + by * by + bz * bz) || 1
+    bx /= blen; by /= blen; bz /= blen
+    // normal = binormal x tangent
+    let nx = by * ttz - bz * tty
+    let ny = bz * ttx - bx * ttz
+    let nz = bx * tty - by * ttx
+    const nlen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+    nx /= nlen; ny /= nlen; nz /= nlen
+
+    for (let j = 0; j <= tubeSegs; j++) {
+      const phi = (2 * Math.PI * j) / tubeSegs
+      const cp = Math.cos(phi), sp = Math.sin(phi)
+      const px = cx + tubeR * (cp * nx + sp * bx)
+      const py = cy + tubeR * (cp * ny + sp * by)
+      const pz = cz + tubeR * (cp * nz + sp * bz)
+      // Surface normal
+      const snx = cp * nx + sp * bx
+      const sny = cp * ny + sp * by
+      const snz = cp * nz + sp * bz
+      v.push(px, py, pz, snx, sny, snz)
+    }
+  }
+  for (let i = 0; i < ringSegs; i++) {
+    for (let j = 0; j < tubeSegs; j++) {
+      const a = i * (tubeSegs + 1) + j
+      const b = a + tubeSegs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+  return { v, ix }
+}
+
 function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
   const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by)
   const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy)
@@ -2342,6 +2432,21 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         }
       }
       return out.length > 0 ? out : evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
+    }
+    case 'torus': {
+      const r1 = typeof arg(a, 'r1', 0, 10) === 'number' ? arg(a, 'r1', 0, 10) as number : 10
+      const r2 = typeof arg(a, 'r2', 1, 3) === 'number' ? arg(a, 'r2', 1, 3) as number : 3
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeTorus(r1, r2, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'helix': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const pitch = typeof arg(a, 'pitch', 1, 5) === 'number' ? arg(a, 'pitch', 1, 5) as number : 5
+      const turns = typeof arg(a, 'turns', 2, 3) === 'number' ? arg(a, 'turns', 2, 3) as number : 3
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeHelix(r, pitch, turns, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren)
