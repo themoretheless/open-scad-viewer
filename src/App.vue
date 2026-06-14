@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { parseOpenSCADWithAST } from './services/openscadParser'
-import type { MeshData, ASTNode } from './services/openscadParser'
+import type { MeshData, ASTNode, Annotation } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
 import { exportOBJ } from './services/objExport'
 import { export3MF } from './services/threemfExport'
 import { parseSTL } from './services/stlImport'
+import { exportAllTabsAsZip } from './services/zipExport'
 
 const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
@@ -513,6 +514,34 @@ const L: Record<string, Record<string, string>> = {
     // Print Code
     printCode: 'Печать кода',
     cmdPrintCode: 'Печать кода',
+    // 3D Annotations
+    annotations: 'Аннотации',
+    annotationsHint: 'annotation("текст", [x,y,z])',
+    // Bookmark thumbnails
+    bookmarkThumbnail: 'Предпросмотр',
+    // More snippets
+    snippetHexGrid: 'Шестиугольная сетка',
+    snippetBevel: 'Фаска',
+    snippetSpring: 'Пружина',
+    snippetBoxWithLid: 'Коробка с крышкой',
+    snippetGearWheel: 'Зубчатое колесо',
+    // Watermark
+    watermark: 'Водяной знак',
+    watermarkText: 'Текст',
+    watermarkPosition: 'Позиция',
+    watermarkOpacity: 'Прозрачность',
+    wmTopLeft: 'Верх-лево',
+    wmTopRight: 'Верх-право',
+    wmBottomLeft: 'Низ-лево',
+    wmBottomRight: 'Низ-право',
+    // Session recovery
+    sessionRestore: 'Восстановить сессию?',
+    sessionRestoreMsg: 'Найдена предыдущая сессия. Восстановить?',
+    sessionRestoreYes: 'Восстановить',
+    sessionRestoreNo: 'Отклонить',
+    // Batch export
+    exportAllTabs: 'Экспорт всех вкладок (ZIP)',
+    cmdExportAllTabs: 'Экспорт всех вкладок',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -932,6 +961,34 @@ const L: Record<string, Record<string, string>> = {
     // Print Code
     printCode: 'Print Code',
     cmdPrintCode: 'Print Code',
+    // 3D Annotations
+    annotations: 'Annotations',
+    annotationsHint: 'annotation("text", [x,y,z])',
+    // Bookmark thumbnails
+    bookmarkThumbnail: 'Preview',
+    // More snippets
+    snippetHexGrid: 'Hexagonal Grid',
+    snippetBevel: 'Beveled Edge',
+    snippetSpring: 'Spring / Helix',
+    snippetBoxWithLid: 'Box with Lid',
+    snippetGearWheel: 'Gear Wheel',
+    // Watermark
+    watermark: 'Watermark',
+    watermarkText: 'Text',
+    watermarkPosition: 'Position',
+    watermarkOpacity: 'Opacity',
+    wmTopLeft: 'Top-left',
+    wmTopRight: 'Top-right',
+    wmBottomLeft: 'Bottom-left',
+    wmBottomRight: 'Bottom-right',
+    // Session recovery
+    sessionRestore: 'Restore session?',
+    sessionRestoreMsg: 'A previous session was found. Restore it?',
+    sessionRestoreYes: 'Restore',
+    sessionRestoreNo: 'Dismiss',
+    // Batch export
+    exportAllTabs: 'Export All Tabs (ZIP)',
+    cmdExportAllTabs: 'Export All Tabs',
   },
 }
 
@@ -1397,6 +1454,15 @@ function resetPreferences() {
   }
   localStorage.removeItem('scad-shortcut-preset')
   localStorage.removeItem('scad-simple-mode')
+  // Reset watermark
+  wmEnabled.value = false
+  wmText.value = ''
+  wmPosition.value = 'bottom-right'
+  wmOpacity.value = 0.15
+  localStorage.removeItem('scad-wm-enabled')
+  localStorage.removeItem('scad-wm-text')
+  localStorage.removeItem('scad-wm-position')
+  localStorage.removeItem('scad-wm-opacity')
   addToast(t('prefsReset'), 'success')
 }
 
@@ -3674,6 +3740,9 @@ onMounted(async () => {
   // Start axis label updates
   updateAxisLabels()
 
+  // Start 3D annotation updates
+  updateAnnotations()
+
   // Start orientation gizmo polling
   updateGizmo()
 
@@ -3685,6 +3754,12 @@ onMounted(async () => {
     const bounds = renderer.getBounds()
     boundsSize.value = bounds.size
   }, 500)
+
+  // Session auto-save every 30 seconds
+  sessionAutoSaveInterval = setInterval(saveSessionBackup, 30000)
+
+  // Check for session to restore (only if tabs match old storage - i.e. user might have lost data)
+  checkSessionRestore()
 })
 
 onUnmounted(() => {
@@ -3694,7 +3769,9 @@ onUnmounted(() => {
   if (minimapDebounce) clearTimeout(minimapDebounce)
   if (statsInterval) clearInterval(statsInterval)
   if (axisLabelRAF) cancelAnimationFrame(axisLabelRAF)
+  if (annotationRAF) cancelAnimationFrame(annotationRAF)
   if (gizmoRAF) cancelAnimationFrame(gizmoRAF)
+  if (sessionAutoSaveInterval) clearInterval(sessionAutoSaveInterval)
   if (undoDebounceTimer) clearTimeout(undoDebounceTimer)
   document.removeEventListener('click', onCloseContextMenu)
   renderer?.destroy(); renderer = null
@@ -3745,6 +3822,8 @@ function doRender() {
     })
     const meshes = result.meshes
     astNodes.value = result.ast
+    // Collect 3D annotations from parse result
+    parsedAnnotations.value = result.annotations || []
     const tParsed = performance.now()
     perfParseTime.value = Math.round(tParsed - t0)
     meshCount.value = meshes.length
@@ -4581,6 +4660,12 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'insertSnippet:arrayPattern', label: () => 'Insert: ' + t('snippetArrayPattern'), action: () => insertSnippet(SNIPPETS[3]) },
   { id: 'insertSnippet:parametricModule', label: () => 'Insert: ' + t('snippetParametricModule'), action: () => insertSnippet(SNIPPETS[4]) },
   { id: 'insertSnippet:threadedInsert', label: () => 'Insert: ' + t('snippetThreadedInsert'), action: () => insertSnippet(SNIPPETS[5]) },
+  { id: 'insertSnippet:hexGrid', label: () => 'Insert: ' + t('snippetHexGrid'), action: () => insertSnippet(SNIPPETS[6]) },
+  { id: 'insertSnippet:bevel', label: () => 'Insert: ' + t('snippetBevel'), action: () => insertSnippet(SNIPPETS[7]) },
+  { id: 'insertSnippet:spring', label: () => 'Insert: ' + t('snippetSpring'), action: () => insertSnippet(SNIPPETS[8]) },
+  { id: 'insertSnippet:boxWithLid', label: () => 'Insert: ' + t('snippetBoxWithLid'), action: () => insertSnippet(SNIPPETS[9]) },
+  { id: 'insertSnippet:gearWheel', label: () => 'Insert: ' + t('snippetGearWheel'), action: () => insertSnippet(SNIPPETS[10]) },
+  { id: 'exportAllTabs', label: () => t('cmdExportAllTabs'), action: () => doExportAllTabs() },
   { id: 'cameraInfo', label: () => t('showCameraInfo'), action: () => toggleCameraInfo() },
   { id: 'scadReference', label: () => t('cmdScadReference'), action: () => toggleScadReference() },
   { id: 'measureTool', label: () => t('cmdToggleMeasure'), action: () => toggleMeasureMode() },
@@ -5175,6 +5260,7 @@ interface CameraBookmark {
   tx: number
   ty: number
   tz: number
+  thumbnail?: string
 }
 
 function loadBookmarks(): CameraBookmark[] {
@@ -5193,6 +5279,7 @@ function saveBookmarksToStorage() {
 
 function saveCameraBookmark() {
   if (!renderer) return
+  const thumb = captureBookmarkThumbnail()
   const bk: CameraBookmark = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
     name: `Cam ${cameraBookmarks.value.length + 1}`,
@@ -5202,6 +5289,7 @@ function saveCameraBookmark() {
     tx: renderer.tx,
     ty: renderer.ty,
     tz: renderer.tz,
+    thumbnail: thumb,
   }
   cameraBookmarks.value.push(bk)
   if (cameraBookmarks.value.length > 10) {
@@ -5367,6 +5455,11 @@ const SNIPPETS: Snippet[] = [
   { id: 'arrayPattern', nameKey: 'snippetArrayPattern', code: 'for(i=[0:5])\n    translate([i*12, 0, 0])\n        cube(10);' },
   { id: 'parametricModule', nameKey: 'snippetParametricModule', code: 'module box(w=10, h=5, d=3) {\n    cube([w,h,d], center=true);\n}' },
   { id: 'threadedInsert', nameKey: 'snippetThreadedInsert', code: 'difference() {\n    cylinder(h=10, r=8, $fn=32);\n    translate([0,0,-1])\n        cylinder(h=12, r=5, $fn=32);\n}' },
+  { id: 'hexGrid', nameKey: 'snippetHexGrid', code: 'module hex(r=5, h=3) {\n    cylinder(r=r, h=h, $fn=6);\n}\nfor (row=[0:3])\n    for (col=[0:3])\n        translate([col*11 + (row%2)*5.5, row*9.5, 0])\n            hex();' },
+  { id: 'bevel', nameKey: 'snippetBevel', code: 'difference() {\n    cube([20,20,10]);\n    translate([20,0,-0.1])\n        rotate([0,0,45])\n            cube([4,4,10.2]);\n}' },
+  { id: 'spring', nameKey: 'snippetSpring', code: 'module spring(r=10, wire=2, turns=5, pitch=5) {\n    for (i=[0:turns*$fn-1]) {\n        a1 = i * 360 / $fn;\n        a2 = (i+1) * 360 / $fn;\n        hull() {\n            translate([r*cos(a1), r*sin(a1), i*pitch/$fn])\n                sphere(wire/2, $fn=8);\n            translate([r*cos(a2), r*sin(a2), (i+1)*pitch/$fn])\n                sphere(wire/2, $fn=8);\n        }\n    }\n}\nspring($fn=24);' },
+  { id: 'boxWithLid', nameKey: 'snippetBoxWithLid', code: '// Box with Lid\nw=30; d=20; h=15; wall=2;\n// Box\ndifference() {\n    cube([w, d, h]);\n    translate([wall, wall, wall])\n        cube([w-2*wall, d-2*wall, h]);\n}\n// Lid\ntranslate([0, 0, h+2])\n    cube([w, d, wall]);' },
+  { id: 'gearWheel', nameKey: 'snippetGearWheel', code: '// Simple Gear Wheel\nteeth=12; r=20; th=5;\nunion() {\n    cylinder(r=r-3, h=th, $fn=48);\n    for (i=[0:teeth-1])\n        rotate([0,0,i*360/teeth])\n            translate([r-2,0,0])\n                cylinder(r=2.5, h=th, $fn=6);\n}' },
 ]
 
 function insertSnippet(snippet: Snippet) {
@@ -5460,6 +5553,144 @@ function toggleExportDropdown() {
 
 function closeExportDropdown() {
   showExportDropdown.value = false
+}
+
+/* ── Feature: 3D Annotations ── */
+const parsedAnnotations = ref<Annotation[]>([])
+
+interface AnnotationScreenPos {
+  text: string
+  x: number
+  y: number
+  visible: boolean
+}
+
+const annotationScreenPositions = ref<AnnotationScreenPos[]>([])
+let annotationRAF = 0
+
+function updateAnnotations() {
+  if (!renderer || !parsedAnnotations.value.length) {
+    annotationScreenPositions.value = []
+    annotationRAF = requestAnimationFrame(updateAnnotations)
+    return
+  }
+  const positions: AnnotationScreenPos[] = []
+  for (const ann of parsedAnnotations.value) {
+    const sp = renderer.getScreenPosition(ann.position[0], ann.position[1], ann.position[2])
+    positions.push({
+      text: ann.text,
+      x: sp.x,
+      y: sp.y,
+      visible: !sp.behind,
+    })
+  }
+  annotationScreenPositions.value = positions
+  annotationRAF = requestAnimationFrame(updateAnnotations)
+}
+
+/* ── Feature: Bookmark Thumbnails ── */
+function captureBookmarkThumbnail(): string {
+  if (!renderer || !canvasRef.value) return ''
+  try {
+    renderer.requestRender()
+    const srcCanvas = canvasRef.value
+    const tmpCanvas = document.createElement('canvas')
+    tmpCanvas.width = 80
+    tmpCanvas.height = 60
+    const ctx = tmpCanvas.getContext('2d')
+    if (!ctx) return ''
+    ctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, 80, 60)
+    return tmpCanvas.toDataURL('image/png', 0.6)
+  } catch { return '' }
+}
+
+/* ── Feature: Viewport Watermark ── */
+const wmEnabled = ref(localStorage.getItem('scad-wm-enabled') === 'true')
+const wmText = ref(localStorage.getItem('scad-wm-text') || '')
+const wmPosition = ref(localStorage.getItem('scad-wm-position') || 'bottom-right')
+const wmOpacity = ref(parseFloat(localStorage.getItem('scad-wm-opacity') || '0.15'))
+
+watch(wmEnabled, v => localStorage.setItem('scad-wm-enabled', String(v)))
+watch(wmText, v => localStorage.setItem('scad-wm-text', v))
+watch(wmPosition, v => localStorage.setItem('scad-wm-position', v))
+watch(wmOpacity, v => localStorage.setItem('scad-wm-opacity', String(v)))
+
+const wmStyle = computed(() => {
+  const pos: Record<string, string> = {}
+  if (wmPosition.value.includes('top')) pos.top = '10px'
+  if (wmPosition.value.includes('bottom')) pos.bottom = '40px'
+  if (wmPosition.value.includes('left')) pos.left = '10px'
+  if (wmPosition.value.includes('right')) pos.right = '10px'
+  return { ...pos, opacity: wmOpacity.value }
+})
+
+/* ── Feature: Session Auto-Save / Recovery ── */
+const SESSION_KEY = 'scad-session-backup'
+const showSessionRestore = ref(false)
+let sessionAutoSaveInterval: ReturnType<typeof setInterval> | null = null
+
+interface SessionBackup {
+  tabs: EditorTab[]
+  activeTabId: string
+  timestamp: number
+}
+
+function saveSessionBackup() {
+  const backup: SessionBackup = {
+    tabs: tabs.value,
+    activeTabId: activeTabId.value,
+    timestamp: Date.now(),
+  }
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(backup))
+  } catch { /* quota exceeded – ignore */ }
+}
+
+function checkSessionRestore() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return
+    const backup = JSON.parse(raw) as SessionBackup
+    // Only show restore if backup is less than 24 hours old and differs from current tabs
+    const age = Date.now() - (backup.timestamp || 0)
+    if (age > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(SESSION_KEY)
+      return
+    }
+    // Check if backup differs from current state
+    const currentTabIds = tabs.value.map(tb => tb.id).join(',')
+    const backupTabIds = backup.tabs.map(tb => tb.id).join(',')
+    if (currentTabIds === backupTabIds) return
+    showSessionRestore.value = true
+  } catch { /* ignore */ }
+}
+
+function restoreSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return
+    const backup = JSON.parse(raw) as SessionBackup
+    if (backup.tabs && backup.tabs.length > 0) {
+      tabs.value = backup.tabs
+      activeTabId.value = backup.activeTabId || backup.tabs[0].id
+      saveTabs()
+      doRender()
+    }
+  } catch { /* ignore */ }
+  showSessionRestore.value = false
+  localStorage.removeItem(SESSION_KEY)
+}
+
+function dismissSessionRestore() {
+  showSessionRestore.value = false
+  localStorage.removeItem(SESSION_KEY)
+}
+
+/* ── Feature: Batch Export ── */
+function doExportAllTabs() {
+  if (tabs.value.length === 0) return
+  exportAllTabsAsZip(tabs.value.map(tb => ({ name: tb.name, code: tb.code })))
+  addToast(t('exportAllTabs'), 'success')
 }
 </script>
 
@@ -5976,6 +6207,36 @@ translate([0, 0, 39])
                 </select>
               </div>
             </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('watermark') }}</label>
+              <div class="pref-control">
+                <input type="checkbox" v-model="wmEnabled" class="pref-checkbox" />
+              </div>
+            </div>
+            <div v-if="wmEnabled" class="pref-row">
+              <label class="pref-label">{{ t('watermarkText') }}</label>
+              <div class="pref-control">
+                <input type="text" v-model="wmText" class="pref-text-input" placeholder="Project name..." />
+              </div>
+            </div>
+            <div v-if="wmEnabled" class="pref-row">
+              <label class="pref-label">{{ t('watermarkPosition') }}</label>
+              <div class="pref-control">
+                <select class="pref-select" v-model="wmPosition">
+                  <option value="top-left">{{ t('wmTopLeft') }}</option>
+                  <option value="top-right">{{ t('wmTopRight') }}</option>
+                  <option value="bottom-left">{{ t('wmBottomLeft') }}</option>
+                  <option value="bottom-right">{{ t('wmBottomRight') }}</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="wmEnabled" class="pref-row">
+              <label class="pref-label">{{ t('watermarkOpacity') }}</label>
+              <div class="pref-control">
+                <input type="range" min="0.05" max="0.5" step="0.05" v-model.number="wmOpacity" class="pref-slider" />
+                <span class="pref-value">{{ (wmOpacity * 100).toFixed(0) }}%</span>
+              </div>
+            </div>
             <div class="pref-footer">
               <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
             </div>
@@ -6230,6 +6491,9 @@ translate([0, 0, 39])
               <div class="export-dd-sep"></div>
               <button class="export-dd-item" @click="copyCanvasToClipboard(); closeExportDropdown()">{{ t('copyImage') }}</button>
               <button class="export-dd-item" @click="shareLink(); closeExportDropdown()">{{ t('share') }}</button>
+              <div class="export-dd-sep"></div>
+              <div class="export-dd-sep"></div>
+              <button class="export-dd-item" @click="doExportAllTabs(); closeExportDropdown()">{{ t('exportAllTabs') }}</button>
               <div class="export-dd-sep"></div>
               <button class="export-dd-item" @click="printCode(); closeExportDropdown()">{{ t('printCode') }}</button>
             </div>
@@ -6682,6 +6946,25 @@ translate([0, 0, 39])
           <span class="empty-state-text">{{ t('emptyState') }}</span>
         </div>
 
+        <!-- 3D Annotations -->
+        <div
+          v-for="(ann, idx) in annotationScreenPositions"
+          :key="'ann-' + idx"
+          v-show="ann.visible"
+          class="annotation-label"
+          :style="{ left: ann.x + 'px', top: ann.y + 'px' }"
+        >
+          <div class="annotation-pin"></div>
+          <div class="annotation-callout">{{ ann.text }}</div>
+        </div>
+
+        <!-- Viewport Watermark -->
+        <div
+          v-if="wmEnabled && wmText"
+          class="viewport-watermark"
+          :style="wmStyle"
+        >{{ wmText }}</div>
+
         <!-- Measurement overlay -->
         <div v-if="measureMode" class="measure-overlay">
           <div class="measure-hint" v-if="!measurePoint1">{{ t('measureHint') }}</div>
@@ -6813,9 +7096,12 @@ translate([0, 0, 39])
               <div class="vp-dd-sep"></div>
               <div class="vp-dd-label">{{ t('bookmarks') }}</div>
               <div v-if="!cameraBookmarks.length" class="vp-dd-empty">{{ t('noBookmarks') }}</div>
-              <div v-for="bk in cameraBookmarks" :key="bk.id" class="vp-dd-bookmark">
+              <div v-for="bk in cameraBookmarks" :key="bk.id" class="vp-dd-bookmark" :class="{ 'has-thumb': !!bk.thumbnail }">
                 <button class="vp-dd-item vp-dd-bk-name" @click="restoreBookmark(bk); closeAllMenus()">{{ bk.name }}</button>
                 <button class="vp-dd-bk-del" @click.stop="deleteBookmark(bk.id)" :title="t('deleteBookmark')">&times;</button>
+                <div v-if="bk.thumbnail" class="bk-thumb-popup">
+                  <img :src="bk.thumbnail" class="bk-thumb-img" :alt="bk.name" />
+                </div>
               </div>
             </div>
             </transition>
@@ -6964,6 +7250,8 @@ translate([0, 0, 39])
               <button class="vp-dd-item" @click="doExport3MF(); closeAllMenus()">{{ t('export3mf') }}</button>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="openImportSTL(); closeAllMenus()">{{ t('importStl') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" @click="doExportAllTabs(); closeAllMenus()">{{ t('exportAllTabs') }}</button>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" @click="printCode(); closeAllMenus()">{{ t('printCode') }}</button>
             </div>
@@ -7164,6 +7452,24 @@ translate([0, 0, 39])
         <div class="canvas-hint">{{ t('hint') }}</div>
       </div>
     </div>
+
+    <!-- Session Restore Dialog -->
+    <transition name="overlay-fade">
+    <div v-if="showSessionRestore" class="session-restore-overlay">
+      <div class="session-restore-dialog">
+        <div class="session-restore-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+        </div>
+        <p class="session-restore-msg">{{ t('sessionRestoreMsg') }}</p>
+        <div class="session-restore-actions">
+          <button class="btn btn-sm session-restore-yes" @click="restoreSession">{{ t('sessionRestoreYes') }}</button>
+          <button class="btn btn-sm session-restore-no" @click="dismissSessionRestore">{{ t('sessionRestoreNo') }}</button>
+        </div>
+      </div>
+    </div>
+    </transition>
 
     <!-- Toast Notifications -->
     <div class="toast-container">
@@ -10201,5 +10507,163 @@ textarea.code:focus-visible {
 }
 .whats-new-list li {
   margin: 1px 0;
+}
+
+/* ── 3D Annotations ── */
+.annotation-label {
+  position: absolute;
+  pointer-events: none;
+  z-index: 22;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.annotation-pin {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #4a9eff);
+  box-shadow: 0 0 6px rgba(74, 158, 255, 0.6);
+  margin-top: 2px;
+}
+.annotation-callout {
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  border: 1px solid rgba(74, 158, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+.annotation-callout::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(0, 0, 0, 0.82);
+}
+
+/* ── Bookmark Thumbnails ── */
+.vp-dd-bookmark {
+  position: relative;
+}
+.bk-thumb-popup {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 4px;
+  z-index: 100;
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  background: var(--bg, #141416);
+}
+.vp-dd-bookmark:hover .bk-thumb-popup {
+  display: block;
+}
+.bk-thumb-img {
+  width: 80px;
+  height: 60px;
+  display: block;
+}
+
+/* ── Viewport Watermark ── */
+.viewport-watermark {
+  position: absolute;
+  z-index: 5;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #e4e4e8);
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Session Restore Dialog ── */
+.session-restore-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+.session-restore-dialog {
+  background: var(--surface, #1e1e22);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 10px;
+  padding: 24px 28px;
+  text-align: center;
+  max-width: 340px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.session-restore-icon {
+  color: var(--accent, #4a9eff);
+  margin-bottom: 12px;
+}
+.session-restore-msg {
+  color: var(--text, #e4e4e8);
+  font-size: 13px;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+.session-restore-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.session-restore-yes {
+  background: var(--accent, #4a9eff) !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+.session-restore-yes:hover {
+  filter: brightness(1.1);
+}
+.session-restore-no {
+  background: var(--hover, #28282e) !important;
+  color: var(--text-dim, #888) !important;
+  border: 1px solid var(--border, #2e2e34) !important;
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+}
+.session-restore-no:hover {
+  background: var(--border, #2e2e34) !important;
+}
+
+/* ── Preferences text input ── */
+.pref-text-input {
+  background: var(--bg, #141416);
+  color: var(--text, #e4e4e8);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 160px;
+}
+.pref-text-input:focus {
+  outline: none;
+  border-color: var(--accent, #4a9eff);
 }
 </style>
