@@ -1067,6 +1067,11 @@ export class WebGPURenderer {
     return { yaw: this.yaw, pitch: this.pitch }
   }
 
+  /** Get full camera info (position, target, distance). */
+  getCameraInfo(): { yaw: number; pitch: number; dist: number; tx: number; ty: number; tz: number } {
+    return { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
+  }
+
   /**
    * Smoothly snap the camera to look straight down a principal axis.
    * axis: '+x' | '-x' | '+y' | '-y' | '+z' | '-z'
