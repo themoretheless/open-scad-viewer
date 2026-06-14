@@ -522,6 +522,147 @@ export interface MeshData {
   transform: Mat4
 }
 
+/* ── Bitmap font (5x7, ASCII 32-126) ─────────────── */
+
+const BITMAP_FONT: Record<string, number[]> = {
+  ' ': [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  '!': [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0],
+  '"': [0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  '#': [0,1,0,1,0, 1,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 1,1,1,1,1, 0,1,0,1,0],
+  '$': [0,0,1,0,0, 0,1,1,1,1, 1,0,1,0,0, 0,1,1,1,0, 0,0,1,0,1, 1,1,1,1,0, 0,0,1,0,0],
+  '%': [1,1,0,0,1, 1,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,0,0,0, 0,1,0,1,1, 1,0,0,1,1],
+  '&': [0,1,1,0,0, 1,0,0,1,0, 1,0,1,0,0, 0,1,0,0,0, 1,0,1,0,1, 1,0,0,1,0, 0,1,1,0,1],
+  "'": [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  '(': [0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0],
+  ')': [0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0],
+  '*': [0,0,0,0,0, 0,0,1,0,0, 1,0,1,0,1, 0,1,1,1,0, 1,0,1,0,1, 0,0,1,0,0, 0,0,0,0,0],
+  '+': [0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0],
+  ',': [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,1,0,0,0],
+  '-': [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  '.': [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0],
+  '/': [0,0,0,0,1, 0,0,0,1,0, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 0,1,0,0,0, 1,0,0,0,0],
+  '0': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,1,1, 1,0,1,0,1, 1,1,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '1': [0,0,1,0,0, 0,1,1,0,0, 1,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1],
+  '2': [0,1,1,1,0, 1,0,0,0,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1],
+  '3': [0,1,1,1,0, 1,0,0,0,1, 0,0,0,0,1, 0,0,1,1,0, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '4': [0,0,0,1,0, 0,0,1,1,0, 0,1,0,1,0, 1,0,0,1,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,0,1,0],
+  '5': [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 0,0,0,0,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '6': [0,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '7': [1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+  '8': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '9': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,0,0,0,1, 0,1,1,1,0],
+  ':': [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0],
+  ';': [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,1,0,0,0],
+  '<': [0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0],
+  '=': [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
+  '>': [0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0],
+  '?': [0,1,1,1,0, 1,0,0,0,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0],
+  '@': [0,1,1,1,0, 1,0,0,0,1, 1,0,1,1,1, 1,0,1,0,1, 1,0,1,1,1, 1,0,0,0,0, 0,1,1,1,0],
+  'A': [0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1],
+  'B': [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0],
+  'C': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,1, 0,1,1,1,0],
+  'D': [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0],
+  'E': [1,1,1,1,1, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1],
+  'F': [1,1,1,1,1, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0],
+  'G': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,0, 1,0,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  'H': [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+  'I': [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1],
+  'J': [0,0,1,1,1, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 1,0,0,1,0, 0,1,1,0,0],
+  'K': [1,0,0,0,1, 1,0,0,1,0, 1,0,1,0,0, 1,1,0,0,0, 1,0,1,0,0, 1,0,0,1,0, 1,0,0,0,1],
+  'L': [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1],
+  'M': [1,0,0,0,1, 1,1,0,1,1, 1,0,1,0,1, 1,0,1,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+  'N': [1,0,0,0,1, 1,1,0,0,1, 1,0,1,0,1, 1,0,0,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+  'O': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  'P': [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0],
+  'Q': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,1,0,1, 1,0,0,1,0, 0,1,1,0,1],
+  'R': [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0, 1,0,1,0,0, 1,0,0,1,0, 1,0,0,0,1],
+  'S': [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  'T': [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+  'U': [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  'V': [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,1,0,1,0, 0,0,1,0,0],
+  'W': [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,1,0,1, 1,0,1,0,1, 1,1,0,1,1, 1,0,0,0,1],
+  'X': [1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 1,0,0,0,1],
+  'Y': [1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+  'Z': [1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 1,1,1,1,1],
+  '[': [0,1,1,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,1,1,0],
+  '\\': [1,0,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,0,1],
+  ']': [0,1,1,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,1,1,1,0],
+  '^': [0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  '_': [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1],
+  '`': [0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  'a': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 0,1,1,1,1, 1,0,0,0,1, 0,1,1,1,1],
+  'b': [1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0],
+  'c': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,1, 0,1,1,1,0],
+  'd': [0,0,0,0,1, 0,0,0,0,1, 0,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1],
+  'e': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0],
+  'f': [0,0,1,1,0, 0,1,0,0,1, 0,1,0,0,0, 1,1,1,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0],
+  'g': [0,0,0,0,0, 0,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,1,1,1,0],
+  'h': [1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+  'i': [0,0,1,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0],
+  'j': [0,0,0,1,0, 0,0,0,0,0, 0,0,1,1,0, 0,0,0,1,0, 0,0,0,1,0, 1,0,0,1,0, 0,1,1,0,0],
+  'k': [1,0,0,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,1,0,0, 1,1,0,0,0, 1,0,1,0,0, 1,0,0,1,0],
+  'l': [0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0],
+  'm': [0,0,0,0,0, 0,0,0,0,0, 1,1,0,1,0, 1,0,1,0,1, 1,0,1,0,1, 1,0,1,0,1, 1,0,0,0,1],
+  'n': [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1],
+  'o': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  'p': [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0],
+  'q': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,0,0,0,1],
+  'r': [0,0,0,0,0, 0,0,0,0,0, 1,0,1,1,0, 1,1,0,0,1, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0],
+  's': [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0],
+  't': [0,1,0,0,0, 0,1,0,0,0, 1,1,1,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,1, 0,0,1,1,0],
+  'u': [0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,1,1, 0,1,1,0,1],
+  'v': [0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0],
+  'w': [0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,0,1,0,1, 1,0,1,0,1, 1,0,1,0,1, 0,1,0,1,0],
+  'x': [0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1],
+  'y': [0,0,0,0,0, 0,0,0,0,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,1,1,1,0],
+  'z': [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1],
+  '{': [0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,1,0],
+  '|': [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+  '}': [0,1,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,0,0,0],
+  '~': [0,0,0,0,0, 0,0,0,0,0, 0,1,0,0,0, 1,0,1,0,1, 0,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
+}
+
+function makeText(text: string, size: number, spacing: number): { v: number[]; ix: number[] } {
+  const v: number[] = []
+  const ix: number[] = []
+  const pixelSize = size / 7
+  let vertexOffset = 0
+  for (let ci = 0; ci < text.length; ci++) {
+    const ch = text[ci]
+    const bitmap = BITMAP_FONT[ch]
+    if (!bitmap) continue
+    const xOff = ci * (5 + spacing) * pixelSize
+    for (let row = 0; row < 7; row++) {
+      for (let col = 0; col < 5; col++) {
+        if (bitmap[row * 5 + col] === 0) continue
+        // Create a small cube for this pixel
+        const px = xOff + col * pixelSize
+        const py = (6 - row) * pixelSize // flip Y so top row is highest
+        const pz = 0
+        const ps = pixelSize
+        // 6 faces, 4 verts each, 6 floats per vert (pos + normal)
+        const faces: [number[],number[],number[],number[],number[]][] = [
+          [[px,py,pz+ps],[px+ps,py,pz+ps],[px+ps,py+ps,pz+ps],[px,py+ps,pz+ps],[0,0,1]],
+          [[px+ps,py,pz],[px,py,pz],[px,py+ps,pz],[px+ps,py+ps,pz],[0,0,-1]],
+          [[px,py+ps,pz],[px,py+ps,pz+ps],[px+ps,py+ps,pz+ps],[px+ps,py+ps,pz],[0,1,0]],
+          [[px,py,pz+ps],[px,py,pz],[px+ps,py,pz],[px+ps,py,pz+ps],[0,-1,0]],
+          [[px+ps,py,pz+ps],[px+ps,py,pz],[px+ps,py+ps,pz],[px+ps,py+ps,pz+ps],[1,0,0]],
+          [[px,py,pz],[px,py,pz+ps],[px,py+ps,pz+ps],[px,py+ps,pz],[-1,0,0]],
+        ]
+        for (const [a, b, c, d, n] of faces) {
+          v.push(a[0],a[1],a[2],n[0],n[1],n[2])
+          v.push(b[0],b[1],b[2],n[0],n[1],n[2])
+          v.push(c[0],c[1],c[2],n[0],n[1],n[2])
+          v.push(d[0],d[1],d[2],n[0],n[1],n[2])
+          ix.push(vertexOffset, vertexOffset+1, vertexOffset+2, vertexOffset, vertexOffset+2, vertexOffset+3)
+          vertexOffset += 4
+        }
+      }
+    }
+  }
+  return { v, ix }
+}
+
 /* ── Mesh generators ──────────────────────────────── */
 
 function makeCube(sx: number, sy: number, sz: number, center: boolean) {
@@ -740,15 +881,122 @@ function evalExprNode(val: any, vars: Record<string, number>): any {
         if (typeof argVal === 'string') return argVal.length
         return 0
       }
-      // Special handling for concat() which merges arrays
+      // Special handling for concat() which merges arrays or strings
       if (c.name === 'concat') {
+        const evaled = c.args.map(a => evalExprNode(a, vars))
+        // If any argument is a string, concatenate as strings
+        if (evaled.some(v => typeof v === 'string')) {
+          return evaled.map(v => {
+            if (typeof v === 'string') return v
+            if (typeof v === 'number') return String(v)
+            if (Array.isArray(v)) return '[' + v.join(',') + ']'
+            return String(v ?? '')
+          }).join('')
+        }
+        // Otherwise concat as arrays
         const result: any[] = []
-        for (const a of c.args) {
-          const ev = evalExprNode(a, vars)
+        for (const ev of evaled) {
           if (Array.isArray(ev)) result.push(...ev)
           else result.push(ev)
         }
         return result
+      }
+      // str() - convert to string and concatenate
+      if (c.name === 'str') {
+        const parts: string[] = []
+        for (const a of c.args) {
+          const ev = evalExprNode(a, vars)
+          if (typeof ev === 'number') parts.push(String(ev))
+          else if (typeof ev === 'string') parts.push(ev)
+          else if (typeof ev === 'boolean') parts.push(String(ev))
+          else if (Array.isArray(ev)) parts.push('[' + ev.join(',') + ']')
+          else parts.push(String(ev ?? 'undef'))
+        }
+        return parts.join('')
+      }
+      // chr() - character from ASCII code
+      if (c.name === 'chr') {
+        const code = evalExprNode(c.args[0], vars)
+        if (typeof code === 'number') return String.fromCharCode(Math.round(code))
+        return ''
+      }
+      // ord() - ASCII code from character
+      if (c.name === 'ord') {
+        const s = evalExprNode(c.args[0], vars)
+        if (typeof s === 'string' && s.length > 0) return s.charCodeAt(0)
+        return 0
+      }
+      // lookup() - linear interpolation table lookup
+      if (c.name === 'lookup') {
+        const key = evalExprNode(c.args[0], vars)
+        const table = evalExprNode(c.args[1], vars)
+        if (typeof key === 'number' && Array.isArray(table)) {
+          // Sort table by keys
+          const sorted = table
+            .filter(r => Array.isArray(r) && r.length >= 2)
+            .map(r => [typeof r[0] === 'number' ? r[0] : 0, typeof r[1] === 'number' ? r[1] : 0])
+            .sort((a, b) => a[0] - b[0])
+          if (sorted.length === 0) return 0
+          if (key <= sorted[0][0]) return sorted[0][1]
+          if (key >= sorted[sorted.length - 1][0]) return sorted[sorted.length - 1][1]
+          for (let i = 0; i < sorted.length - 1; i++) {
+            if (key >= sorted[i][0] && key <= sorted[i + 1][0]) {
+              const t = (key - sorted[i][0]) / (sorted[i + 1][0] - sorted[i][0])
+              return sorted[i][1] + t * (sorted[i + 1][1] - sorted[i][1])
+            }
+          }
+          return sorted[sorted.length - 1][1]
+        }
+        return 0
+      }
+      // cross() - cross product of two 3D vectors
+      if (c.name === 'cross') {
+        const v1 = evalExprNode(c.args[0], vars)
+        const v2 = evalExprNode(c.args[1], vars)
+        if (Array.isArray(v1) && Array.isArray(v2) && v1.length >= 3 && v2.length >= 3) {
+          const x1 = typeof v1[0] === 'number' ? v1[0] : 0
+          const y1 = typeof v1[1] === 'number' ? v1[1] : 0
+          const z1 = typeof v1[2] === 'number' ? v1[2] : 0
+          const x2 = typeof v2[0] === 'number' ? v2[0] : 0
+          const y2 = typeof v2[1] === 'number' ? v2[1] : 0
+          const z2 = typeof v2[2] === 'number' ? v2[2] : 0
+          return [y1*z2 - z1*y2, z1*x2 - x1*z2, x1*y2 - y1*x2]
+        }
+        return [0, 0, 0]
+      }
+      // norm() - vector magnitude
+      if (c.name === 'norm') {
+        const v = evalExprNode(c.args[0], vars)
+        if (Array.isArray(v)) {
+          let sum = 0
+          for (const x of v) sum += (typeof x === 'number' ? x : 0) ** 2
+          return Math.sqrt(sum)
+        }
+        if (typeof v === 'number') return Math.abs(v)
+        return 0
+      }
+      // rands() - generate random numbers as array
+      if (c.name === 'rands') {
+        const minv = evalExprNode(c.args[0], vars)
+        const maxv = evalExprNode(c.args[1], vars)
+        const count = evalExprNode(c.args[2], vars)
+        const seed = c.args.length > 3 ? evalExprNode(c.args[3], vars) : undefined
+        if (typeof minv === 'number' && typeof maxv === 'number' && typeof count === 'number') {
+          const result: number[] = []
+          // Simple seeded PRNG (if seed provided)
+          let rng: () => number
+          if (typeof seed === 'number') {
+            let s = seed
+            rng = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
+          } else {
+            rng = Math.random
+          }
+          for (let i = 0; i < Math.min(count, 1000); i++) {
+            result.push(minv + rng() * (maxv - minv))
+          }
+          return result
+        }
+        return []
       }
       const fn = MATH_FUNCS[c.name]
       if (fn) {
@@ -772,6 +1020,11 @@ function evalExprNode(val: any, vars: Record<string, number>): any {
 
       if (op === '<' || op === '>' || op === '<=' || op === '>=' || op === '==' || op === '!=') {
         return evalComparison(op, left, right)
+      }
+
+      // String concatenation if either side is a string
+      if (op === '+' && (typeof left === 'string' || typeof right === 'string')) {
+        return String(left) + String(right)
       }
 
       const l = typeof left === 'number' ? left : 0
@@ -807,7 +1060,9 @@ function arg(a: Record<string,any>, name: string, pos: number, def: any): any {
 /** Resolve a parsed arg value: evaluate expressions, substitute variables */
 function resolveArg(val: any, vars: Record<string, number>): any {
   if (isExpr(val)) return evalExprNode(val, vars)
-  if (typeof val === 'string' && val in vars) return vars[val]
+  // String literals should stay as strings and not be treated as variable references.
+  // Variable references come as ExprVar nodes (handled by isExpr above), not as plain strings.
+  if (typeof val === 'string') return val
   if (Array.isArray(val)) {
     const result: any[] = []
     for (const v of val) {
@@ -1600,6 +1855,15 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (!v.length) return []
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
+    case 'text': {
+      const txt = arg(a, 'text', 0, arg(a, '_0', 0, ''))
+      const textStr = typeof txt === 'string' ? txt : String(txt)
+      const size = typeof arg(a, 'size', 1, 10) === 'number' ? arg(a, 'size', 1, 10) as number : 10
+      const spacing = typeof arg(a, 'spacing', -1, 1) === 'number' ? arg(a, 'spacing', -1, 1) as number : 1
+      const { v, ix } = makeText(textStr, size, spacing)
+      if (!v.length) return []
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
     case 'for': {
       // for(i = [0:5]) or for(i = [0:2:10]) or for(i = [1,3,7])
       const out: MeshData[] = []
@@ -1627,7 +1891,6 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       for (const [k, v] of Object.entries(a)) {
         if (k.startsWith('_')) continue
         if (typeof v === 'number') newVars[k] = v
-        else if (typeof v === 'string' && v in vars) newVars[k] = vars[v]
       }
       return evalNodes(ch, tf, col, newVars, modules, echos, callerChildren)
     }
@@ -1663,6 +1926,60 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const raw = arg(a,'v',0,[1,1,1])
       const vec: Vec3 = Array.isArray(raw) ? [raw[0]??1,raw[1]??1,raw[2]??1] : [raw,raw,raw]
       return evalNodes(ch, scale(tf, vec), col, vars, modules, echos, callerChildren)
+    }
+    case 'resize': {
+      const newSize = arg(a, 'newsize', 0, arg(a, '_0', 0, [0,0,0]))
+      const autoVal = arg(a, 'auto', 1, false)
+      void autoVal
+
+      // Evaluate children first to get their meshes
+      const childMeshes = evalNodes(ch, identity(), col, vars, modules, echos, callerChildren)
+      if (childMeshes.length === 0) return []
+
+      // Compute bounding box of all children
+      let minX = Infinity, minY = Infinity, minZ = Infinity
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+      for (const mesh of childMeshes) {
+        const verts = mesh.vertices
+        const m = mesh.transform
+        const nv = verts.length / 6
+        for (let i = 0; i < nv; i++) {
+          const x = verts[i*6], y = verts[i*6+1], z = verts[i*6+2]
+          const tx = m[0]*x + m[1]*y + m[2]*z + m[3]
+          const ty = m[4]*x + m[5]*y + m[6]*z + m[7]
+          const tz = m[8]*x + m[9]*y + m[10]*z + m[11]
+          if (tx < minX) minX = tx; if (tx > maxX) maxX = tx
+          if (ty < minY) minY = ty; if (ty > maxY) maxY = ty
+          if (tz < minZ) minZ = tz; if (tz > maxZ) maxZ = tz
+        }
+      }
+
+      const curX = maxX - minX || 1
+      const curY = maxY - minY || 1
+      const curZ = maxZ - minZ || 1
+
+      const ns = Array.isArray(newSize) ? newSize : [0,0,0]
+      const nx = typeof ns[0] === 'number' ? ns[0] : 0
+      const ny = typeof ns[1] === 'number' ? ns[1] : 0
+      const nz = typeof ns[2] === 'number' ? ns[2] : 0
+
+      // Compute scale factors
+      let sx = nx > 0 ? nx / curX : 0
+      let sy = ny > 0 ? ny / curY : 0
+      let sz = nz > 0 ? nz / curZ : 0
+
+      // Handle auto-scaling for zero-valued axes (maintain aspect ratio)
+      const specified = [sx, sy, sz].filter(s => s > 0)
+      if (specified.length > 0) {
+        const refScale = specified[0]
+        if (sx === 0) sx = refScale
+        if (sy === 0) sy = refScale
+        if (sz === 0) sz = refScale
+      } else {
+        sx = sy = sz = 1
+      }
+
+      return evalNodes(ch, scale(tf, [sx, sy, sz]), col, vars, modules, echos, callerChildren)
     }
     case 'mirror': {
       const raw = arg(a,'v',0,[1,0,0])

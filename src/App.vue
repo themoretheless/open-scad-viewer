@@ -395,6 +395,15 @@ const L: Record<string, Record<string, string>> = {
     // Undo/redo
     sc_undo_custom: 'Отменить',
     sc_redo: 'Повторить',
+    // Diff mode
+    showChanges: 'Показать изменения',
+    savedState: 'Сохранённая версия',
+    linesAdded: 'Добавлено строк',
+    linesRemoved: 'Удалено строк',
+    linesModified: 'Изменено строк',
+    noChanges: 'Нет изменений',
+    unsaved: 'Не сохранено',
+    cmdToggleDiff: 'Переключить изменения',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -696,6 +705,15 @@ const L: Record<string, Record<string, string>> = {
     // Undo/redo
     sc_undo_custom: 'Undo',
     sc_redo: 'Redo',
+    // Diff mode
+    showChanges: 'Show Changes',
+    savedState: 'Saved State',
+    linesAdded: 'Lines added',
+    linesRemoved: 'Lines removed',
+    linesModified: 'Lines modified',
+    noChanges: 'No changes',
+    unsaved: 'Unsaved',
+    cmdToggleDiff: 'Toggle Changes',
   },
 }
 
@@ -752,6 +770,7 @@ interface EditorTab {
   name: string
   code: string
   pinned?: boolean
+  savedCode?: string
 }
 
 function generateTabId(): string {
@@ -768,10 +787,15 @@ function loadTabsFromStorage(): EditorTab[] {
   } catch { /* ignore */ }
   // Migrate from old single-code storage
   const oldCode = localStorage.getItem('scad-code')
-  return [{ id: generateTabId(), name: t('untitled') + ' 1', code: oldCode || EXAMPLES.basic }]
+  const initialCode = oldCode || EXAMPLES.basic
+  return [{ id: generateTabId(), name: t('untitled') + ' 1', code: initialCode, savedCode: initialCode }]
 }
 
 const tabs = ref<EditorTab[]>(loadTabsFromStorage())
+// Ensure all tabs have savedCode initialized (handles old localStorage format)
+for (const tb of tabs.value) {
+  if (tb.savedCode === undefined) tb.savedCode = tb.code
+}
 const activeTabId = ref(localStorage.getItem('scad-active-tab') || tabs.value[0].id)
 
 // Ensure activeTabId points to a valid tab
@@ -802,7 +826,7 @@ function switchTab(id: string) {
 
 function addTab() {
   const idx = tabs.value.length + 1
-  const tab: EditorTab = { id: generateTabId(), name: `${t('untitled')} ${idx}`, code: '' }
+  const tab: EditorTab = { id: generateTabId(), name: `${t('untitled')} ${idx}`, code: '', savedCode: '' }
   tabs.value.push(tab)
   activeTabId.value = tab.id
   saveTabs()
@@ -2189,6 +2213,7 @@ const lineNumbers = computed(() => {
   const n = lineCount.value
   const errL = errorLine.value
   const nums: string[] = []
+  const diffs = showDiff.value ? diffLines.value : null
   for (let i = 1; i <= n; i++) {
     if (isLineHidden(i - 1)) continue
     const foldable = isFoldable(i - 1)
@@ -2197,10 +2222,19 @@ const lineNumbers = computed(() => {
     if (foldable) {
       prefix = `<span class="fold-marker" data-line="${i - 1}">${folded ? '▶' : '▼'}</span>`
     }
+    // Diff indicator
+    let diffPrefix = ''
+    if (diffs) {
+      const dl = diffs.find(d => d.lineNum === i)
+      if (dl) {
+        if (dl.type === 'added') diffPrefix = '<span class="diff-indicator diff-ind-added"></span>'
+        else if (dl.type === 'modified') diffPrefix = '<span class="diff-indicator diff-ind-modified"></span>'
+      }
+    }
     if (i === errL) {
-      nums.push(`${prefix}<span class="line-error">${i}</span>`)
+      nums.push(`${diffPrefix}${prefix}<span class="line-error">${i}</span>`)
     } else {
-      nums.push(`${prefix}${i}`)
+      nums.push(`${diffPrefix}${prefix}${i}`)
     }
   }
   return nums.join('\n')
@@ -2402,6 +2436,7 @@ function openFile() {
       pushUndoSnapshot() // snapshot before file open
       const content = reader.result as string
       code.value = content
+      activeTab.value.savedCode = content
       addToRecent(file.name.replace(/\.scad$/, ''), content)
     }
     reader.readAsText(file)
@@ -2417,6 +2452,7 @@ function saveFile() {
   a.download = (activeTab.value.name || 'model') + '.scad'
   a.click()
   URL.revokeObjectURL(url)
+  activeTab.value.savedCode = code.value
   addToRecent(activeTab.value.name, code.value)
   addToast(t('save') + ': ' + (activeTab.value.name || 'model') + '.scad', 'success')
 }
@@ -2449,6 +2485,7 @@ function onEditorDrop(e: DragEvent) {
   reader.onload = () => {
     const content = reader.result as string
     code.value = content
+    activeTab.value.savedCode = content
     addToRecent(file.name.replace(/\.scad$/, ''), content)
   }
   reader.readAsText(file)
@@ -3186,6 +3223,7 @@ function loadExample(name: string) {
   if (EXAMPLES[name]) {
     pushUndoSnapshot() // snapshot before example load
     code.value = EXAMPLES[name]
+    activeTab.value.savedCode = EXAMPLES[name]
     addToRecent(name, EXAMPLES[name])
   }
 }
@@ -4053,10 +4091,12 @@ onUnmounted(() => {
 /* ── Feature: Parameterizer ── */
 interface ParamVar {
   name: string
-  value: number
+  value: number | string | boolean
   min: number
   max: number
   step: number
+  type: 'slider' | 'dropdown' | 'checkbox'
+  options?: string[]
 }
 
 const showParameters = ref(false)
@@ -4066,10 +4106,43 @@ function extractParameters() {
   const src = code.value
   const lines = src.split('\n')
   const params: ParamVar[] = []
-  const re = /^\s*(\w+)\s*=\s*(-?\d+\.?\d*)\s*;/
+  const reNumMeta = /^\s*(\w+)\s*=\s*(-?\d+\.?\d*)\s*;\s*\/\/\s*\[([^\]]*)\]/
+  const reStrMeta = /^\s*(\w+)\s*=\s*"([^"]*)"\s*;\s*\/\/\s*\[([^\]]*)\]/
+  const reBool = /^\s*(\w+)\s*=\s*(true|false)\s*;/
+  const reNumPlain = /^\s*(\w+)\s*=\s*(-?\d+\.?\d*)\s*;/
   for (const line of lines) {
-    const m = line.match(re)
-    if (m) {
+    let m: RegExpMatchArray | null
+    // Numeric with metadata: value = 20; // [5:50] or [5:1:50]
+    if ((m = line.match(reNumMeta))) {
+      const name = m[1]
+      const val = parseFloat(m[2])
+      const meta = m[3]
+      const parts = meta.split(':').map(s => s.trim())
+      let min: number, max: number, step: number
+      if (parts.length === 2) {
+        min = parseFloat(parts[0]); max = parseFloat(parts[1])
+        step = Math.abs(max - min) >= 10 ? 1 : 0.1
+      } else if (parts.length === 3) {
+        min = parseFloat(parts[0]); step = parseFloat(parts[1]); max = parseFloat(parts[2])
+      } else {
+        // Fallback: check if it's a comma-separated list (string options on a number?)
+        min = val * 0.1; max = val * 3; step = 1
+        if (min > max) { const tmp = min; min = max; max = tmp }
+      }
+      params.push({ name, value: val, min, max, step, type: 'slider' })
+    // String with options: shape = "round"; // [round, square, hex]
+    } else if ((m = line.match(reStrMeta))) {
+      const name = m[1]
+      const val = m[2]
+      const options = m[3].split(',').map(s => s.trim())
+      params.push({ name, value: val, min: 0, max: 0, step: 0, type: 'dropdown', options })
+    // Boolean: show_holes = true;
+    } else if ((m = line.match(reBool))) {
+      const name = m[1]
+      const val = m[2] === 'true'
+      params.push({ name, value: val, min: 0, max: 0, step: 0, type: 'checkbox' })
+    // Plain numeric (no metadata)
+    } else if ((m = line.match(reNumPlain))) {
       const name = m[1]
       const val = parseFloat(m[2])
       let min: number, max: number, step: number
@@ -4081,18 +4154,26 @@ function extractParameters() {
         if (min > max) { const tmp = min; min = max; max = tmp }
         step = Math.abs(val) >= 10 ? 1 : 0.1
       }
-      params.push({ name, value: val, min, max, step })
+      params.push({ name, value: val, min, max, step, type: 'slider' })
     }
   }
   extractedParams.value = params
 }
 
-function onParamChange(param: ParamVar, newVal: number) {
+function onParamChange(param: ParamVar, newVal: number | string | boolean) {
   param.value = newVal
-  // Update the code: find the line with this variable and replace the value
   const src = code.value
-  const re = new RegExp(`^(\\s*${param.name}\\s*=\\s*)(-?\\d+\\.?\\d*)(\\s*;)`, 'm')
-  const updated = src.replace(re, `$1${newVal}$3`)
+  let updated = src
+  if (param.type === 'slider') {
+    const re = new RegExp(`^(\\s*${param.name}\\s*=\\s*)(-?\\d+\\.?\\d*)(\\s*;)`, 'm')
+    updated = src.replace(re, `$1${newVal}$3`)
+  } else if (param.type === 'dropdown') {
+    const re = new RegExp(`^(\\s*${param.name}\\s*=\\s*")([^"]*)(")`, 'm')
+    updated = src.replace(re, `$1${newVal}$3`)
+  } else if (param.type === 'checkbox') {
+    const re = new RegExp(`^(\\s*${param.name}\\s*=\\s*)(true|false)(\\s*;)`, 'm')
+    updated = src.replace(re, `$1${newVal}$3`)
+  }
   if (updated !== src) {
     code.value = updated
   }
@@ -4107,6 +4188,54 @@ watch(code, () => {
 
 watch(showParameters, (v) => {
   if (v) extractParameters()
+})
+
+/* ── Feature: Diff Mode ── */
+const showDiff = ref(false)
+
+interface DiffLine {
+  type: 'same' | 'added' | 'removed' | 'modified'
+  lineNum: number
+  text: string
+}
+
+function computeDiff(oldText: string, newText: string): DiffLine[] {
+  const oldLines = oldText.split('\n')
+  const newLines = newText.split('\n')
+  const result: DiffLine[] = []
+  const maxLen = Math.max(oldLines.length, newLines.length)
+  for (let i = 0; i < maxLen; i++) {
+    if (i >= newLines.length) {
+      // Line existed in old but not in new → removed
+      result.push({ type: 'removed', lineNum: i + 1, text: oldLines[i] })
+    } else if (i >= oldLines.length) {
+      // Line exists in new but not in old → added
+      result.push({ type: 'added', lineNum: i + 1, text: newLines[i] })
+    } else if (oldLines[i] === newLines[i]) {
+      result.push({ type: 'same', lineNum: i + 1, text: newLines[i] })
+    } else {
+      result.push({ type: 'modified', lineNum: i + 1, text: newLines[i] })
+    }
+  }
+  return result
+}
+
+const diffLines = computed(() => {
+  const saved = activeTab.value.savedCode ?? ''
+  return computeDiff(saved, code.value)
+})
+
+const diffStats = computed(() => {
+  const lines = diffLines.value
+  return {
+    added: lines.filter(l => l.type === 'added').length,
+    removed: lines.filter(l => l.type === 'removed').length,
+    modified: lines.filter(l => l.type === 'modified').length,
+  }
+})
+
+const hasUnsavedChanges = computed(() => {
+  return activeTab.value.savedCode !== undefined && activeTab.value.savedCode !== code.value
 })
 
 /* ── Feature: Lighting Presets ── */
@@ -5053,6 +5182,18 @@ translate([0, 0, 39])
             </svg>
             {{ t('parameters') }}
           </button>
+          <!-- Diff toggle -->
+          <button class="btn btn-sm" :class="{ 'btn-active': showDiff }" @click="showDiff = !showDiff" :title="t('cmdToggleDiff')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <path d="M12 3v18"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/>
+            </svg>
+            {{ t('showChanges') }}
+          </button>
+          <span v-if="showDiff" class="diff-summary">
+            <span class="diff-stat diff-stat-added">+{{ diffStats.added }}</span>
+            <span class="diff-stat diff-stat-removed">-{{ diffStats.removed }}</span>
+            <span class="diff-stat diff-stat-modified">~{{ diffStats.modified }}</span>
+          </span>
           <span class="spacer" />
           <span class="ex-label">{{ t('examples') }}:</span>
           <button class="btn btn-sm example-btn" @click="loadExample('basic')" :data-tooltip="t('basicTip')">{{ t('basic') }}</button>
@@ -5073,16 +5214,36 @@ translate([0, 0, 39])
             <div v-if="extractedParams.length === 0" class="params-empty">{{ t('noParameters') }}</div>
             <div v-for="p in extractedParams" :key="p.name" class="param-row">
               <span class="param-name">{{ p.name }}</span>
-              <input
-                type="range"
-                class="param-slider"
-                :min="p.min"
-                :max="p.max"
-                :step="p.step"
-                :value="p.value"
-                @input="onParamChange(p, parseFloat(($event.target as HTMLInputElement).value))"
-              />
-              <span class="param-value">{{ p.value }}</span>
+              <template v-if="p.type === 'slider'">
+                <input
+                  type="range"
+                  class="param-slider"
+                  :min="p.min"
+                  :max="p.max"
+                  :step="p.step"
+                  :value="p.value"
+                  @input="onParamChange(p, parseFloat(($event.target as HTMLInputElement).value))"
+                />
+                <span class="param-value">{{ p.value }}</span>
+              </template>
+              <template v-else-if="p.type === 'dropdown'">
+                <select
+                  class="param-select"
+                  :value="p.value"
+                  @change="onParamChange(p, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="opt in p.options" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+              </template>
+              <template v-else-if="p.type === 'checkbox'">
+                <input
+                  type="checkbox"
+                  class="param-checkbox"
+                  :checked="p.value === true"
+                  @change="onParamChange(p, ($event.target as HTMLInputElement).checked)"
+                />
+                <span class="param-value">{{ p.value }}</span>
+              </template>
             </div>
           </div>
         </transition>
@@ -5114,6 +5275,7 @@ translate([0, 0, 39])
                 <path d="M16 2l-4 4-6 1-3 3 5 5-6 7 7-6 5 5 3-3 1-6 4-4z"/>
               </svg>
               <span class="tab-name">{{ tab.name }}</span>
+              <span v-if="tab.savedCode !== undefined && tab.savedCode !== tab.code" class="tab-unsaved" :title="t('unsaved')"></span>
               <button
                 v-if="tabs.length > 1 && !tab.pinned"
                 class="tab-close"
@@ -6985,6 +7147,54 @@ textarea.code:focus-visible {
   color: var(--hl-number);
   min-width: 50px;
   text-align: right;
+}
+.param-select {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.param-select:focus { border-color: var(--accent); outline: none; }
+.param-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+/* ── Diff mode indicators ── */
+.diff-indicator {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  margin-right: 2px;
+  vertical-align: text-bottom;
+}
+.diff-ind-added { background: #4caf50; }
+.diff-ind-modified { background: #ff9800; }
+.diff-summary {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  margin-left: 4px;
+}
+.diff-stat { padding: 1px 4px; border-radius: 3px; }
+.diff-stat-added { color: #4caf50; background: rgba(76,175,80,.12); }
+.diff-stat-removed { color: #f44336; background: rgba(244,67,54,.12); }
+.diff-stat-modified { color: #ff9800; background: rgba(255,152,0,.12); }
+.tab-unsaved {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 .btn-active {
   background: rgba(74,158,255,.2) !important;
