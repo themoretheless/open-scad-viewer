@@ -736,6 +736,118 @@ function makeCylinder(h: number, r1: number, r2: number, center: boolean, fn: nu
   return { v, ix }
 }
 
+function makePipe(h: number, r1: number, r2: number, center: boolean, fn: number) {
+  const v: number[] = [], ix: number[] = []
+  const z0 = center ? -h / 2 : 0, z1 = center ? h / 2 : h
+
+  // Outer wall
+  for (let i = 0; i <= fn; i++) {
+    const a = (2 * Math.PI * i) / fn, ca = Math.cos(a), sa = Math.sin(a)
+    v.push(r1*ca, r1*sa, z0, ca, sa, 0)
+    v.push(r1*ca, r1*sa, z1, ca, sa, 0)
+  }
+  for (let i = 0; i < fn; i++) {
+    const a = i * 2; ix.push(a, a+1, a+2, a+2, a+1, a+3)
+  }
+
+  // Inner wall (normals point inward)
+  const innerBase = v.length / 6
+  for (let i = 0; i <= fn; i++) {
+    const a = (2 * Math.PI * i) / fn, ca = Math.cos(a), sa = Math.sin(a)
+    v.push(r2*ca, r2*sa, z0, -ca, -sa, 0)
+    v.push(r2*ca, r2*sa, z1, -ca, -sa, 0)
+  }
+  for (let i = 0; i < fn; i++) {
+    const a = innerBase + i * 2; ix.push(a, a+2, a+1, a+1, a+2, a+3)
+  }
+
+  // Bottom ring cap (z0, normal pointing down)
+  const botBase = v.length / 6
+  for (let i = 0; i <= fn; i++) {
+    const a = (2 * Math.PI * i) / fn, ca = Math.cos(a), sa = Math.sin(a)
+    v.push(r1*ca, r1*sa, z0, 0, 0, -1)
+    v.push(r2*ca, r2*sa, z0, 0, 0, -1)
+  }
+  for (let i = 0; i < fn; i++) {
+    const a = botBase + i * 2
+    ix.push(a, a+2, a+1, a+1, a+2, a+3)
+  }
+
+  // Top ring cap (z1, normal pointing up)
+  const topBase = v.length / 6
+  for (let i = 0; i <= fn; i++) {
+    const a = (2 * Math.PI * i) / fn, ca = Math.cos(a), sa = Math.sin(a)
+    v.push(r1*ca, r1*sa, z1, 0, 0, 1)
+    v.push(r2*ca, r2*sa, z1, 0, 0, 1)
+  }
+  for (let i = 0; i < fn; i++) {
+    const a = topBase + i * 2
+    ix.push(a, a+1, a+2, a+2, a+1, a+3)
+  }
+
+  return { v, ix }
+}
+
+function makeWedge(sx: number, sy: number, sz: number) {
+  // Wedge: triangular prism along Y axis
+  // Bottom face is rectangle at z=0, top edge at z=sz
+  // Vertices:
+  //   0: (0,0,0)  1: (sx,0,0)  2: (sx,sy,0)  3: (0,sy,0)  -- bottom rectangle
+  //   4: (0,0,sz) 5: (0,sy,sz) -- top edge (x=0 side)
+  const v: number[] = []
+  const ix: number[] = []
+
+  // Front face (y=0): triangle 0,1,4
+  const nf = [0, -1, 0]
+  v.push(0,0,0, nf[0],nf[1],nf[2])
+  v.push(sx,0,0, nf[0],nf[1],nf[2])
+  v.push(0,0,sz, nf[0],nf[1],nf[2])
+  ix.push(0,1,2)
+
+  // Back face (y=sy): triangle 3,5,2
+  const nb = [0, 1, 0]
+  const bi = v.length / 6
+  v.push(0,sy,0, nb[0],nb[1],nb[2])
+  v.push(0,sy,sz, nb[0],nb[1],nb[2])
+  v.push(sx,sy,0, nb[0],nb[1],nb[2])
+  ix.push(bi, bi+1, bi+2)
+
+  // Bottom face (z=0): rectangle 0,3,2,1
+  const nd = [0, 0, -1]
+  const di = v.length / 6
+  v.push(0,0,0, nd[0],nd[1],nd[2])
+  v.push(0,sy,0, nd[0],nd[1],nd[2])
+  v.push(sx,sy,0, nd[0],nd[1],nd[2])
+  v.push(sx,0,0, nd[0],nd[1],nd[2])
+  ix.push(di, di+1, di+2, di, di+2, di+3)
+
+  // Left face (x=0): rectangle 0,4,5,3
+  const nl = [-1, 0, 0]
+  const li = v.length / 6
+  v.push(0,0,0, nl[0],nl[1],nl[2])
+  v.push(0,0,sz, nl[0],nl[1],nl[2])
+  v.push(0,sy,sz, nl[0],nl[1],nl[2])
+  v.push(0,sy,0, nl[0],nl[1],nl[2])
+  ix.push(li, li+1, li+2, li, li+2, li+3)
+
+  // Slope face: from (sx,0,0)-(sx,sy,0) up to (0,0,sz)-(0,sy,sz)
+  // Normal: cross product of edges
+  // The slope connects: (sx,0,0), (sx,sy,0), (0,sy,sz), (0,0,sz)
+  // Normal = normalize(cross((sx,sy,0)-(sx,0,0), (0,0,sz)-(sx,0,0)))
+  //        = normalize(cross((0,sy,0), (-sx,0,sz)))
+  //        = (sy*sz, 0, sy*sx) -> normalize -> (sz, 0, sx) / len
+  const sn = Math.sqrt(sz*sz + sx*sx)
+  const nsSlope = sn > 0 ? [sz/sn, 0, sx/sn] : [0, 0, 1]
+  const si2 = v.length / 6
+  v.push(sx,0,0, nsSlope[0],nsSlope[1],nsSlope[2])
+  v.push(sx,sy,0, nsSlope[0],nsSlope[1],nsSlope[2])
+  v.push(0,sy,sz, nsSlope[0],nsSlope[1],nsSlope[2])
+  v.push(0,0,sz, nsSlope[0],nsSlope[1],nsSlope[2])
+  ix.push(si2, si2+1, si2+2, si2, si2+2, si2+3)
+
+  return { v, ix }
+}
+
 function makeTorus(r1: number, r2: number, fn: number) {
   const v: number[] = [], ix: number[] = []
   const ringSegs = fn
@@ -2967,6 +3079,24 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const mergedV = [...sv, ...hv]
       const mergedIx = [...si, ...hi.map(idx => idx + shaftVertCount)]
       return [{ vertices: new Float32Array(mergedV), indices: new Uint32Array(mergedIx), color: col ?? nextC(), transform: tf }]
+    }
+    case 'pipe': {
+      const h = typeof arg(a, 'h', 0, 10) === 'number' ? arg(a, 'h', 0, 10) as number : 10
+      const r1 = typeof arg(a, 'r1', 1, 10) === 'number' ? arg(a, 'r1', 1, 10) as number : 10
+      const r2 = typeof arg(a, 'r2', 2, 8) === 'number' ? arg(a, 'r2', 2, 8) as number : 8
+      const center = arg(a, 'center', -1, false) === true
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makePipe(h, r1, r2, center, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'wedge': {
+      const size = arg(a, 'size', 0, [10, 10, 10])
+      let sx: number, sy: number, sz: number
+      if (Array.isArray(size)) { sx = typeof size[0] === 'number' ? size[0] : 10; sy = typeof size[1] === 'number' ? size[1] : 10; sz = typeof size[2] === 'number' ? size[2] : 10 }
+      else if (typeof size === 'number') { sx = sy = sz = size }
+      else { sx = sy = sz = 10 }
+      const { v, ix } = makeWedge(sx, sy, sz)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)

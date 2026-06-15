@@ -9,20 +9,20 @@ import { export3MF } from './services/threemfExport'
 import { parseSTL } from './services/stlImport'
 import { exportAllTabsAsZip } from './services/zipExport'
 
-const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
+const lang = ref<'ru'|'en'|'de'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
 
 /* ── Editor Themes ── */
 interface EditorTheme {
   id: string
-  name: { ru: string; en: string }
+  name: { ru: string; en: string; de: string }
   dark: boolean
   vars: Record<string, string>
 }
 
 const EDITOR_THEMES: EditorTheme[] = [
   {
-    id: 'default-dark', name: { ru: 'Тёмная', en: 'Default Dark' }, dark: true,
+    id: 'default-dark', name: { ru: 'Тёмная', en: 'Default Dark', de: 'Standard Dunkel' }, dark: true,
     vars: {
       '--bg': '#141416', '--surface': '#1e1e22', '--border': '#2e2e34',
       '--text': '#e4e4e8', '--text-dim': '#888', '--accent': '#4a9eff',
@@ -33,7 +33,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'default-light', name: { ru: 'Светлая', en: 'Default Light' }, dark: false,
+    id: 'default-light', name: { ru: 'Светлая', en: 'Default Light', de: 'Standard Hell' }, dark: false,
     vars: {
       '--bg': '#f4f4f6', '--surface': '#fff', '--border': '#d4d4da',
       '--text': '#1a1a1e', '--text-dim': '#777', '--accent': '#2b7de9',
@@ -44,7 +44,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'monokai', name: { ru: 'Monokai', en: 'Monokai' }, dark: true,
+    id: 'monokai', name: { ru: 'Monokai', en: 'Monokai', de: 'Monokai' }, dark: true,
     vars: {
       '--bg': '#272822', '--surface': '#2e2e28', '--border': '#49483e',
       '--text': '#f8f8f2', '--text-dim': '#75715e', '--accent': '#a6e22e',
@@ -55,7 +55,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'solarized', name: { ru: 'Solarized', en: 'Solarized' }, dark: true,
+    id: 'solarized', name: { ru: 'Solarized', en: 'Solarized', de: 'Solarized' }, dark: true,
     vars: {
       '--bg': '#002b36', '--surface': '#073642', '--border': '#586e75',
       '--text': '#839496', '--text-dim': '#657b83', '--accent': '#268bd2',
@@ -66,7 +66,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'nord', name: { ru: 'Nord', en: 'Nord' }, dark: true,
+    id: 'nord', name: { ru: 'Nord', en: 'Nord', de: 'Nord' }, dark: true,
     vars: {
       '--bg': '#2e3440', '--surface': '#3b4252', '--border': '#4c566a',
       '--text': '#d8dee9', '--text-dim': '#8690a3', '--accent': '#88c0d0',
@@ -77,7 +77,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'high-contrast', name: { ru: 'Высокий контраст', en: 'High Contrast' }, dark: true,
+    id: 'high-contrast', name: { ru: 'Высокий контраст', en: 'High Contrast', de: 'Hoher Kontrast' }, dark: true,
     vars: {
       '--bg': '#000000', '--surface': '#000000', '--border': '#ffffff',
       '--text': '#ffffff', '--text-dim': '#cfcfcf', '--accent': '#ffff00',
@@ -607,6 +607,16 @@ const L: Record<string, Record<string, string>> = {
     profileTime: 'Время',
     cmdToggleProfile: 'Переключить профилирование',
     noProfileData: 'Нет данных профилирования',
+    // New features (batch 32)
+    refSearch: 'Поиск по справочнику…',
+    complexity: 'Сложность',
+    complexitySimple: 'Простая',
+    complexityMedium: 'Средняя',
+    complexityComplex: 'Сложная',
+    compassN: 'С',
+    compassS: 'Ю',
+    compassE: 'В',
+    compassW: 'З',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -2897,7 +2907,7 @@ function onEditorMouseMove(e: MouseEvent) {
   const doc = OPENSCAD_DOCS[word]
   if (!doc) { hoverDocVisible.value = false; return }
 
-  hoverDocContent.value = { sig: doc.sig, desc: doc.desc[lang.value] || doc.desc.en }
+  hoverDocContent.value = { sig: doc.sig, desc: (doc.desc as any)[lang.value] || doc.desc.en }
   const codeArea = el.closest('.code-area')
   const codeAreaRect = codeArea ? codeArea.getBoundingClientRect() : rect
   hoverDocX.value = e.clientX - codeAreaRect.left + 8
@@ -5673,6 +5683,32 @@ function toggleScadReference() {
   showScadReference.value = !showScadReference.value
 }
 
+const refSearchQuery = ref('')
+
+const filteredRefSections = computed(() => {
+  const q = refSearchQuery.value.trim().toLowerCase()
+  if (!q) return SCAD_REF_SECTIONS
+  return SCAD_REF_SECTIONS
+    .map(section => ({
+      ...section,
+      entries: section.entries.filter(e =>
+        e.name.toLowerCase().includes(q) ||
+        e.sig.toLowerCase().includes(q) ||
+        e.desc[lang.value]?.toLowerCase().includes(q) ||
+        e.desc.en.toLowerCase().includes(q)
+      ),
+    }))
+    .filter(section => section.entries.length > 0)
+})
+
+function highlightMatch(text: string): string {
+  const q = refSearchQuery.value.trim()
+  if (!q) return text
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  return text.replace(regex, '<mark class="ref-highlight">$1</mark>')
+}
+
 /* ── Feature 5: Custom-Resolution PNG Export ── */
 const pngScale = ref(parseInt(localStorage.getItem('scad-png-scale') || '1') || 1)
 
@@ -6727,7 +6763,7 @@ translate([0, 0, 39])
               <div v-for="entry in section.entries" :key="entry.name" class="scad-ref-entry">
                 <div class="scad-ref-name">{{ entry.name }}</div>
                 <code class="scad-ref-sig">{{ entry.sig }}</code>
-                <div class="scad-ref-desc">{{ entry.desc[lang] || entry.desc.en }}</div>
+                <div class="scad-ref-desc">{{ (entry.desc as any)[lang] || entry.desc.en }}</div>
               </div>
             </div>
           </div>
@@ -6984,7 +7020,7 @@ translate([0, 0, 39])
               <div v-for="release in WHATS_NEW_ITEMS" :key="release.version" class="whats-new-release">
                 <div class="whats-new-version">v{{ release.version }}</div>
                 <ul class="whats-new-list">
-                  <li v-for="(item, idx) in release.items[lang]" :key="idx">{{ item }}</li>
+                  <li v-for="(item, idx) in (release.items as any)[lang] || release.items.en" :key="idx">{{ item }}</li>
                 </ul>
               </div>
             </div>
