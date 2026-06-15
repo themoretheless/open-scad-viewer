@@ -549,6 +549,41 @@ const L: Record<string, Record<string, string>> = {
     fastPreviewOn: 'Быстрый просмотр включён ($fn уменьшен вдвое)',
     fastPreviewOff: 'Быстрый просмотр выключен',
     cmdToggleFastPreview: 'Переключить быстрый просмотр',
+    // Ghost comparison stats
+    ghostStats: 'Сравнение моделей',
+    ghostDeltaTriangles: 'Δ Треугольники',
+    ghostDeltaVolume: 'Δ Объём',
+    ghostDeltaSize: 'Δ Размер',
+    // Presets
+    presets: 'Пресеты',
+    savePreset: 'Сохранить пресет',
+    loadPreset: 'Загрузить',
+    deletePreset: 'Удалить',
+    presetName: 'Имя пресета',
+    presetSaved: 'Пресет сохранён',
+    presetLoaded: 'Пресет загружен',
+    presetDeleted: 'Пресет удалён',
+    builtInPresets: 'Встроенные',
+    userPresets: 'Пользовательские',
+    presetCadPro: 'CAD профессионал',
+    presetPrintPreview: '3D печать',
+    presetPresentation: 'Презентация',
+    // Welcome Tour
+    tourStart: 'Интерактивный тур',
+    tourSkip: 'Пропустить',
+    tourNext: 'Далее',
+    tourPrev: 'Назад',
+    tourFinish: 'Готово',
+    tourStep1: 'Редактор — здесь вы пишете код OpenSCAD',
+    tourStep2: 'Кнопка рендера — нажмите для обновления 3D-вида',
+    tourStep3: 'Примеры — загрузите готовые модели',
+    tourStep4: '3D-вьюпорт — вращайте, масштабируйте, перемещайте модель',
+    tourStep5: 'Панель управления видом — режимы рендера и настройки',
+    tourStep6: 'Экспорт — сохраните модель в STL, OBJ или 3MF',
+    // Numpad navigation
+    sc_numpad: 'Numpad 1-9: Виды камеры',
+    sc_fitAll: 'F / Numpad.: Вместить всё',
+    sc_homeView: 'Home: Сбросить вид',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1003,6 +1038,41 @@ const L: Record<string, Record<string, string>> = {
     fastPreviewOn: 'Fast preview ON ($fn halved)',
     fastPreviewOff: 'Fast preview OFF',
     cmdToggleFastPreview: 'Toggle Fast Preview',
+    // Ghost comparison stats
+    ghostStats: 'Model Comparison',
+    ghostDeltaTriangles: 'Δ Triangles',
+    ghostDeltaVolume: 'Δ Volume',
+    ghostDeltaSize: 'Δ Size',
+    // Presets
+    presets: 'Presets',
+    savePreset: 'Save Preset',
+    loadPreset: 'Load',
+    deletePreset: 'Delete',
+    presetName: 'Preset Name',
+    presetSaved: 'Preset saved',
+    presetLoaded: 'Preset loaded',
+    presetDeleted: 'Preset deleted',
+    builtInPresets: 'Built-in',
+    userPresets: 'User Presets',
+    presetCadPro: 'CAD Professional',
+    presetPrintPreview: '3D Print Preview',
+    presetPresentation: 'Presentation',
+    // Welcome Tour
+    tourStart: 'Take a Tour',
+    tourSkip: 'Skip',
+    tourNext: 'Next',
+    tourPrev: 'Back',
+    tourFinish: 'Finish',
+    tourStep1: 'Editor — write your OpenSCAD code here',
+    tourStep2: 'Render button — click to update the 3D view',
+    tourStep3: 'Examples — load pre-made models',
+    tourStep4: '3D Viewport — rotate, zoom, and pan the model',
+    tourStep5: 'View controls — render modes and settings',
+    tourStep6: 'Export — save your model as STL, OBJ, or 3MF',
+    // Numpad navigation
+    sc_numpad: 'Numpad 1-9: Camera views',
+    sc_fitAll: 'F / Numpad.: Fit all',
+    sc_homeView: 'Home: Reset view',
   },
 }
 
@@ -1421,6 +1491,82 @@ function openWelcome() {
   showWelcome.value = true
 }
 
+/* ── Welcome Tour (Interactive) ── */
+const tourActive = ref(false)
+const tourStep = ref(0)
+const TOUR_STEPS = [
+  { target: '.editor-panel', key: 'tourStep1' },
+  { target: '.btn-primary', key: 'tourStep2' },
+  { target: '.btn-sm', key: 'tourStep3' },
+  { target: '.canvas-panel', key: 'tourStep4' },
+  { target: '.vp-toolbar', key: 'tourStep5' },
+  { target: '.export-dropdown-wrapper', key: 'tourStep6' },
+]
+
+const tourTooltipStyle = ref<Record<string, string>>({})
+
+function startTour() {
+  showWelcome.value = false
+  localStorage.setItem('scad-onboarded', '1')
+  tourActive.value = true
+  tourStep.value = 0
+  nextTick(positionTourTooltip)
+}
+
+function nextTourStep() {
+  if (tourStep.value < TOUR_STEPS.length - 1) {
+    tourStep.value++
+    nextTick(positionTourTooltip)
+  } else {
+    endTour()
+  }
+}
+
+function prevTourStep() {
+  if (tourStep.value > 0) {
+    tourStep.value--
+    nextTick(positionTourTooltip)
+  }
+}
+
+function endTour() {
+  tourActive.value = false
+  tourStep.value = 0
+}
+
+function positionTourTooltip() {
+  const step = TOUR_STEPS[tourStep.value]
+  if (!step) return
+  const el = document.querySelector(step.target)
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const top = rect.bottom + 12
+  const left = Math.max(10, rect.left + rect.width / 2 - 150)
+  tourTooltipStyle.value = {
+    position: 'fixed',
+    top: Math.min(top, window.innerHeight - 140) + 'px',
+    left: Math.min(left, window.innerWidth - 320) + 'px',
+    zIndex: '10001',
+  }
+}
+
+const tourSpotlightStyle = computed(() => {
+  if (!tourActive.value) return {} as Record<string, string>
+  const step = TOUR_STEPS[tourStep.value]
+  if (!step) return {} as Record<string, string>
+  const el = document.querySelector(step.target)
+  if (!el) return {} as Record<string, string>
+  const rect = el.getBoundingClientRect()
+  return {
+    position: 'fixed',
+    top: (rect.top - 6) + 'px',
+    left: (rect.left - 6) + 'px',
+    width: (rect.width + 12) + 'px',
+    height: (rect.height + 12) + 'px',
+    borderRadius: '8px',
+  }
+})
+
 /* ── Drag & drop state ── */
 const isDragOver = ref(false)
 let dragCounter = 0
@@ -1480,6 +1626,117 @@ function resetPreferences() {
   localStorage.removeItem('scad-wm-position')
   localStorage.removeItem('scad-wm-opacity')
   addToast(t('prefsReset'), 'success')
+}
+
+/* ── Export Preset Configurations ── */
+interface ViewerPreset {
+  name: string
+  themeId: string
+  lighting: string
+  renderMode: string
+  skyPreset: string
+  colorGrading: string
+  showGrid: boolean
+  flatShading: boolean
+  ssao: boolean
+  outline: boolean
+  smoothNormals: boolean
+  fontSize: number
+  tabSize: number
+}
+
+const BUILT_IN_PRESETS: Record<string, ViewerPreset> = {
+  cadPro: {
+    name: 'CAD Professional',
+    themeId: 'default-dark', lighting: 'studio', renderMode: 'solidEdges',
+    skyPreset: 'none', colorGrading: 'none', showGrid: true,
+    flatShading: true, ssao: true, outline: true, smoothNormals: false,
+    fontSize: 13, tabSize: 4,
+  },
+  printPreview: {
+    name: '3D Print Preview',
+    themeId: 'default-light', lighting: 'soft', renderMode: 'solid',
+    skyPreset: 'neutral', colorGrading: 'none', showGrid: true,
+    flatShading: false, ssao: false, outline: false, smoothNormals: true,
+    fontSize: 13, tabSize: 2,
+  },
+  presentation: {
+    name: 'Presentation',
+    themeId: 'nord', lighting: 'outdoor', renderMode: 'solid',
+    skyPreset: 'clearSky', colorGrading: 'vivid', showGrid: false,
+    flatShading: false, ssao: true, outline: true, smoothNormals: true,
+    fontSize: 14, tabSize: 4,
+  },
+}
+
+function loadUserPresets(): Record<string, ViewerPreset> {
+  try {
+    const raw = localStorage.getItem('scad-user-presets')
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return {}
+}
+
+const userPresets = ref<Record<string, ViewerPreset>>(loadUserPresets())
+const presetNameInput = ref('')
+
+function saveUserPresetsToStorage() {
+  localStorage.setItem('scad-user-presets', JSON.stringify(userPresets.value))
+}
+
+function captureCurrentPreset(): ViewerPreset {
+  return {
+    name: presetNameInput.value || 'Untitled',
+    themeId: activeThemeId.value,
+    lighting: activeLighting.value,
+    renderMode: activeRenderMode.value,
+    skyPreset: skyPreset.value,
+    colorGrading: colorGrading.value,
+    showGrid: showGrid.value,
+    flatShading: flatShadingEnabled.value,
+    ssao: ssaoEnabled.value,
+    outline: outlineEnabled.value,
+    smoothNormals: smoothNormalsEnabled.value,
+    fontSize: prefFontSize.value,
+    tabSize: prefTabSize.value,
+  }
+}
+
+function savePreset() {
+  const name = presetNameInput.value.trim()
+  if (!name) return
+  userPresets.value[name] = captureCurrentPreset()
+  saveUserPresetsToStorage()
+  presetNameInput.value = ''
+  addToast(t('presetSaved'), 'success')
+}
+
+function applyPreset(preset: ViewerPreset) {
+  selectTheme(preset.themeId)
+  activeLighting.value = preset.lighting
+  renderer?.setLighting(preset.lighting)
+  setRenderMode(preset.renderMode)
+  skyPreset.value = preset.skyPreset
+  colorGrading.value = preset.colorGrading
+  showGrid.value = preset.showGrid
+  flatShadingEnabled.value = preset.flatShading
+  ssaoEnabled.value = preset.ssao
+  outlineEnabled.value = preset.outline
+  smoothNormalsEnabled.value = preset.smoothNormals
+  prefFontSize.value = preset.fontSize
+  prefTabSize.value = preset.tabSize
+  if (renderer) {
+    renderer.showGrid = preset.showGrid
+    renderer.setRenderMode(preset.renderMode)
+    renderer.requestRender()
+  }
+  addToast(t('presetLoaded'), 'success')
+}
+
+function deleteUserPreset(name: string) {
+  delete userPresets.value[name]
+  saveUserPresetsToStorage()
+  addToast(t('presetDeleted'), 'info')
 }
 
 watch(prefFontSize, v => { savePref('fontSize', String(v)) })
@@ -1956,6 +2213,9 @@ function onMeasureClick(e: PointerEvent) {
 /* ── Feature: Ghost Comparison ── */
 const ghostMode = ref(false)
 const ghostTabId = ref('')
+const ghostTriCount = ref(0)
+const ghostVolume = ref(0)
+const ghostBoundsSize = ref<[number, number, number]>([0, 0, 0])
 
 function toggleGhostMode() {
   ghostMode.value = !ghostMode.value
@@ -2001,10 +2261,61 @@ function updateGhostMeshes() {
   // Merge current meshes with ghost meshes
   const currentMeshes = [...lastParsedMeshes, ...ghostMeshes]
   renderer.setMeshes(currentMeshes)
+  // Compute comparison statistics
+  computeGhostStats(ghostResult.meshes)
+}
+
+function computeGhostStats(meshes: MeshData[]) {
+  // Tri count
+  ghostTriCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
+  // Volume (same algorithm as computeStatistics)
+  let vol = 0
+  let minX = Infinity, minY = Infinity, minZ = Infinity
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+  for (const m of meshes) {
+    if (m.color[3] < 0.99) continue
+    const v = m.vertices
+    const idx = m.indices
+    const tf = m.transform
+    const wx = (vi: number) => {
+      const x = v[vi * 6], y = v[vi * 6 + 1], z = v[vi * 6 + 2]
+      return [
+        tf[0] * x + tf[1] * y + tf[2] * z + tf[3],
+        tf[4] * x + tf[5] * y + tf[6] * z + tf[7],
+        tf[8] * x + tf[9] * y + tf[10] * z + tf[11],
+      ] as [number, number, number]
+    }
+    let meshVol = 0
+    for (let i = 0; i < idx.length; i += 3) {
+      const v0 = wx(idx[i]), v1 = wx(idx[i + 1]), v2 = wx(idx[i + 2])
+      const cx = v1[1] * v2[2] - v1[2] * v2[1]
+      const cy = v1[2] * v2[0] - v1[0] * v2[2]
+      const cz = v1[0] * v2[1] - v1[1] * v2[0]
+      meshVol += (v0[0] * cx + v0[1] * cy + v0[2] * cz) / 6
+    }
+    vol += Math.abs(meshVol)
+    // Bounding box
+    for (let i = 0; i < v.length; i += 6) {
+      const px = tf[0] * v[i] + tf[1] * v[i+1] + tf[2] * v[i+2] + tf[3]
+      const py = tf[4] * v[i] + tf[5] * v[i+1] + tf[6] * v[i+2] + tf[7]
+      const pz = tf[8] * v[i] + tf[9] * v[i+1] + tf[10] * v[i+2] + tf[11]
+      if (px < minX) minX = px; if (px > maxX) maxX = px
+      if (py < minY) minY = py; if (py > maxY) maxY = py
+      if (pz < minZ) minZ = pz; if (pz > maxZ) maxZ = pz
+    }
+  }
+  ghostVolume.value = vol
+  ghostBoundsSize.value = [
+    maxX > minX ? maxX - minX : 0,
+    maxY > minY ? maxY - minY : 0,
+    maxZ > minZ ? maxZ - minZ : 0,
+  ]
+  // Also compute current model stats for comparison
+  computeStatistics()
 }
 
 /* ── Feature: Notification Badge for Updates ── */
-const APP_VERSION = 7 // Increment when adding major features
+const APP_VERSION = 8 // Increment when adding major features
 const hasNewFeatures = ref(false)
 
 function checkVersionBadge() {
@@ -2021,6 +2332,10 @@ function dismissNewFeatures() {
 checkVersionBadge()
 
 const WHATS_NEW_ITEMS = [
+  { version: 8, items: {
+    ru: ['Примитив star()', 'Примитив thread()', 'Сравнение моделей (призрак)', 'Пресеты конфигурации', 'Интерактивный тур', 'Навигация с клавиатуры (Numpad)'],
+    en: ['star() primitive', 'thread() primitive', 'Model comparison stats (ghost)', 'Configuration presets', 'Interactive tour', 'Keyboard viewport navigation (Numpad)'],
+  }},
   { version: 7, items: {
     ru: ['Инструмент измерения расстояний', 'Режим призрака для сравнения моделей', 'Примитив torus()', 'Примитив helix()', 'Печать кода'],
     en: ['Distance measurement tool', 'Ghost mode for model comparison', 'torus() primitive', 'helix() primitive', 'Print code'],
@@ -3064,21 +3379,28 @@ function closeColorPicker() {
   colorPickerMatch = null
 }
 
-const colorPaletteItems: Record<string, string> = {
-  red: '#ff0000', green: '#008000', blue: '#0000ff', yellow: '#ffff00',
-  cyan: '#00ffff', magenta: '#ff00ff', white: '#ffffff', black: '#000000',
-  orange: '#ffa500', gray: '#808080', pink: '#ffc0cb', purple: '#800080',
-  brown: '#a52a2a', lime: '#00ff00', navy: '#000080', teal: '#008080',
-  maroon: '#800000', olive: '#808000', silver: '#c0c0c0', aqua: '#00ffff',
-}
+const colorPaletteItems = computed(() => {
+  // Subset of most-used colors for the palette
+  const subset: Record<string, string> = {}
+  const keys = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta', 'white', 'black',
+    'orange', 'gray', 'pink', 'purple', 'brown', 'lime', 'navy', 'teal',
+    'gold', 'indigo', 'violet', 'salmon', 'coral', 'turquoise', 'crimson', 'chocolate']
+  for (const k of keys) {
+    if (COLOR_NAMES[k]) subset[k] = COLOR_NAMES[k]
+  }
+  return subset
+})
 
 function insertColorName(name: string) {
   if (!colorPickerMatch) return
-  const { start, end } = colorPickerMatch
-  const replacement = `"${name}"`
-  const val = code.value
-  code.value = val.substring(0, start) + replacement + val.substring(end)
-  closeColorPicker()
+  const src = code.value
+  const replacement = '"' + name + '"'
+  code.value = src.substring(0, colorPickerMatch.start) + replacement + src.substring(colorPickerMatch.end)
+  colorPickerMatch = { start: colorPickerMatch.start, end: colorPickerMatch.start + replacement.length }
+  // Update the native picker value too
+  if (COLOR_NAMES[name]) {
+    colorPickerValue.value = COLOR_NAMES[name]
+  }
 }
 
 /* ── File Import / Export ── */
@@ -3844,7 +4166,13 @@ function doRender() {
   try {
     const t0 = performance.now()
     // Inject $t animation variable
-    const codeWithT = code.value.replace(/\$t\b/g, String(animT.value))
+    let codeWithT = code.value.replace(/\$t\b/g, String(animT.value))
+    // Fast preview: halve all $fn values
+    if (fastPreviewMode.value) {
+      codeWithT = codeWithT.replace(/\$fn\s*=\s*(\d+)/g, (_m: string, n: string) => {
+        return '$fn=' + Math.max(6, Math.floor(parseInt(n) / 2))
+      })
+    }
     const result = parseOpenSCADWithAST(codeWithT, (name: string) => {
       const baseName = name.replace(/\.scad$/, '')
       const tab = tabs.value.find(tb => {
@@ -3869,6 +4197,17 @@ function doRender() {
     perfGpuUploadTime.value = Math.round(tMeshEnd - tMeshStart)
     const t1 = performance.now()
     renderTime.value = Math.round(t1 - t0)
+    // Adaptive quality warnings
+    if (triCount.value > 100000) {
+      addToast(t('perfWarning').replace('{n}', String(triCount.value)), 'info', { duration: 5000 })
+    }
+    if (renderTime.value > 500 && !fastPreviewMode.value) {
+      addToast(t('slowRenderHint').replace('{ms}', String(renderTime.value)), 'info', {
+        actionLabel: t('fastPreview'),
+        action: () => { toggleFastPreview() },
+        duration: 6000,
+      })
+    }
     // Console log entries
     const nodeCount = countASTNodes(result.ast)
     addConsoleEntry('info', t('parsedNodes').replace('{n}', String(nodeCount)))
@@ -3915,6 +4254,12 @@ function doRender() {
     error.value = msg
     addConsoleEntry('error', msg)
   }
+}
+
+function toggleFastPreview() {
+  fastPreviewMode.value = !fastPreviewMode.value
+  addToast(fastPreviewMode.value ? t('fastPreviewOn') : t('fastPreviewOff'), 'info')
+  doRender()
 }
 
 function countASTNodes(nodes: ASTNode[]): number {
@@ -4402,6 +4747,32 @@ function handleCanvasKeydown(e: KeyboardEvent) {
   } else if (key === 'e' || key === 'у') {
     e.preventDefault()
     renderer.pitch = Math.max(-1.5, renderer.pitch - step)
+  } else if (key === '1' && e.location === 3) {
+    e.preventDefault(); setView('front'); return
+  } else if (key === '3' && e.location === 3) {
+    e.preventDefault(); setView('right'); return
+  } else if (key === '7' && e.location === 3) {
+    e.preventDefault(); setView('top'); return
+  } else if (key === '5' && e.location === 3) {
+    e.preventDefault(); toggleProjection(); return
+  } else if (key === '0' && e.location === 3) {
+    e.preventDefault(); setView('reset'); return
+  } else if (key === '9' && e.location === 3) {
+    e.preventDefault(); renderer.animateTo(Math.PI, 0); return
+  } else if (key === '4' && e.location === 3) {
+    e.preventDefault(); renderer.animateTo(-Math.PI / 2, 0); return
+  } else if (key === '6' && e.location === 3) {
+    e.preventDefault(); renderer.animateTo(Math.PI / 2, 0); return
+  } else if (key === '8' && e.location === 3) {
+    e.preventDefault(); renderer.animateTo(0, -Math.PI / 2); return
+  } else if (key === '2' && e.location === 3) {
+    e.preventDefault(); renderer.animateTo(Math.PI, 0); return
+  } else if (key === '.' && e.location === 3) {
+    e.preventDefault(); renderer.autoFitAll(); return
+  } else if (key === 'f' || key === 'а') {
+    e.preventDefault(); renderer.autoFitAll(); return
+  } else if (key === 'home') {
+    e.preventDefault(); setView('reset'); return
   } else {
     return // No camera key was pressed, skip requestRender
   }
@@ -4654,6 +5025,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'wireframe', label: () => t('cmdToggleWireframe'), action: () => toggleWireframe() },
   { id: 'grid', label: () => t('cmdToggleGrid'), action: () => toggleGrid() },
   { id: 'autoRotate', label: () => t('cmdToggleAutoRotate'), action: () => toggleAutoRotate() },
+  { id: 'fastPreview', label: () => t('cmdToggleFastPreview'), action: () => toggleFastPreview() },
   { id: 'fullscreen', label: () => t('cmdToggleFullscreen'), action: () => toggleFullscreen() },
   { id: 'ortho', label: () => t('cmdToggleOrtho'), action: () => toggleProjection() },
   { id: 'screenshot', label: () => t('cmdTakeScreenshot'), action: () => takeScreenshot() },
@@ -4704,6 +5076,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'measureTool', label: () => t('cmdToggleMeasure'), action: () => toggleMeasureMode() },
   { id: 'ghostCompare', label: () => t('cmdToggleGhost'), action: () => toggleGhostMode() },
   { id: 'printCode', label: () => t('cmdPrintCode'), action: () => printCode() },
+  { id: 'tour', label: () => t('tourStart'), action: () => startTour() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -5172,6 +5545,8 @@ const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
     { name: 'polyhedron', sig: 'polyhedron(points, faces)', desc: { ru: 'Произвольный многогранник', en: 'Custom polyhedron from points and faces' } },
     { name: 'surface', sig: 'surface(data, center)', desc: { ru: 'Поверхность из 2D-массива высот', en: 'Surface from 2D height array' } },
     { name: 'text', sig: 'text(text, size, spacing)', desc: { ru: 'Объёмный текст', en: '3D text' } },
+    { name: 'star', sig: 'star(points, r1, r2, h, $fn)', desc: { ru: 'Звезда (экструдированная)', en: 'Extruded star shape' } },
+    { name: 'thread', sig: 'thread(d, pitch, length, $fn)', desc: { ru: 'Резьбовой цилиндр', en: 'Threaded cylinder' } },
   ]},
   { key: 'refPrimitives2D', entries: [
     { name: 'circle', sig: 'circle(r|d, $fn)', desc: { ru: 'Окружность', en: 'Circle' } },
@@ -6342,6 +6717,33 @@ translate([0, 0, 39])
                 <span class="pref-value">{{ (wmOpacity * 100).toFixed(0) }}%</span>
               </div>
             </div>
+            <!-- Presets Section -->
+            <div class="pref-section-divider"></div>
+            <div class="pref-section-title">{{ t('presets') }}</div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('builtInPresets') }}</label>
+              <div class="pref-control preset-btns">
+                <button class="btn btn-sm preset-btn" @click="applyPreset(BUILT_IN_PRESETS.cadPro)">{{ t('presetCadPro') }}</button>
+                <button class="btn btn-sm preset-btn" @click="applyPreset(BUILT_IN_PRESETS.printPreview)">{{ t('presetPrintPreview') }}</button>
+                <button class="btn btn-sm preset-btn" @click="applyPreset(BUILT_IN_PRESETS.presentation)">{{ t('presetPresentation') }}</button>
+              </div>
+            </div>
+            <div class="pref-row" v-if="Object.keys(userPresets).length > 0">
+              <label class="pref-label">{{ t('userPresets') }}</label>
+              <div class="pref-control preset-list">
+                <div v-for="(preset, name) in userPresets" :key="name" class="preset-item">
+                  <button class="btn btn-sm preset-btn" @click="applyPreset(preset)">{{ name }}</button>
+                  <button class="btn btn-sm preset-del-btn" @click="deleteUserPreset(name as string)">&times;</button>
+                </div>
+              </div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('savePreset') }}</label>
+              <div class="pref-control preset-save-row">
+                <input type="text" v-model="presetNameInput" class="pref-text-input" :placeholder="t('presetName')" @keydown.enter="savePreset" />
+                <button class="btn btn-sm btn-primary" @click="savePreset" :disabled="!presetNameInput.trim()">{{ t('savePreset') }}</button>
+              </div>
+            </div>
             <div class="pref-footer">
               <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
             </div>
@@ -6413,6 +6815,7 @@ translate([0, 0, 39])
               </li>
             </ul>
             <button class="btn btn-primary welcome-start-btn" @click="dismissWelcome(); dismissNewFeatures()">{{ t('welcomeStart') }}</button>
+            <button class="btn btn-sm welcome-tour-btn" @click="startTour(); dismissNewFeatures()">{{ t('tourStart') }}</button>
             <!-- What's New section -->
             <div class="whats-new-section">
               <h3 class="whats-new-title">{{ t('whatsNewTitle') }}</h3>
@@ -6423,6 +6826,21 @@ translate([0, 0, 39])
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Tour Overlay -->
+      <div v-if="tourActive" class="tour-overlay" @click.self="endTour">
+        <div class="tour-spotlight" :style="tourSpotlightStyle"></div>
+        <div class="tour-tooltip" :style="tourTooltipStyle">
+          <div class="tour-tooltip-step">{{ tourStep + 1 }} / {{ TOUR_STEPS.length }}</div>
+          <div class="tour-tooltip-text">{{ t(TOUR_STEPS[tourStep].key) }}</div>
+          <div class="tour-tooltip-actions">
+            <button v-if="tourStep > 0" class="btn btn-sm tour-btn" @click="prevTourStep">{{ t('tourPrev') }}</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-sm tour-btn" @click="endTour">{{ t('tourSkip') }}</button>
+            <button class="btn btn-sm btn-primary tour-btn" @click="nextTourStep">{{ tourStep < TOUR_STEPS.length - 1 ? t('tourNext') : t('tourFinish') }}</button>
           </div>
         </div>
       </div>
@@ -7317,6 +7735,10 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="isAutoRotate">&#10003;</span>
                 {{ t('autoRotate') }}
               </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleFastPreview()">
+                <span class="vp-dd-check" v-if="fastPreviewMode">&#10003;</span>
+                {{ t('fastPreview') }}
+              </button>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleBuildPlate()">
                 <span class="vp-dd-check" v-if="buildPlateEnabled">&#10003;</span>
                 {{ t('buildPlate') }}
@@ -7462,6 +7884,29 @@ translate([0, 0, 39])
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsBoundingBox') }}</span>
               <span class="stats-panel-val">{{ formatNumber(boundsSize[0]) }}&times;{{ formatNumber(boundsSize[1]) }}&times;{{ formatNumber(boundsSize[2]) }} mm</span>
+            </div>
+          </div>
+        </div>
+        </transition>
+
+        <!-- Ghost Comparison Stats Panel -->
+        <transition name="overlay-fade">
+        <div v-if="ghostMode" class="ghost-stats-panel" role="region">
+          <div class="stats-panel-header">
+            <span class="stats-panel-title">{{ t('ghostStats') }}</span>
+          </div>
+          <div class="stats-panel-body">
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('ghostDeltaTriangles') }}</span>
+              <span class="stats-panel-val" :class="{'ghost-stat-pos': triCount - ghostTriCount > 0, 'ghost-stat-neg': triCount - ghostTriCount < 0}">{{ (triCount - ghostTriCount) > 0 ? '+' : '' }}{{ fmtInt(triCount - ghostTriCount) }}</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('ghostDeltaVolume') }}</span>
+              <span class="stats-panel-val" :class="{'ghost-stat-pos': statsVolume - ghostVolume > 0, 'ghost-stat-neg': statsVolume - ghostVolume < 0}">{{ (statsVolume - ghostVolume) > 0 ? '+' : '' }}{{ formatNumber(statsVolume - ghostVolume) }} mm&sup3;</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('ghostDeltaSize') }}</span>
+              <span class="stats-panel-val">{{ formatNumber(boundsSize[0] - ghostBoundsSize[0]) }}&times;{{ formatNumber(boundsSize[1] - ghostBoundsSize[1]) }}&times;{{ formatNumber(boundsSize[2] - ghostBoundsSize[2]) }}</span>
             </div>
           </div>
         </div>
@@ -9464,7 +9909,7 @@ textarea.code:focus-visible {
   position: absolute;
   z-index: 50;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -9491,6 +9936,34 @@ textarea.code:focus-visible {
 }
 .color-picker-close:hover {
   color: var(--text);
+}
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  padding: 2px 0 4px;
+}
+.color-palette-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s;
+}
+.color-palette-swatch:hover {
+  transform: scale(1.25);
+  z-index: 1;
+  border-color: var(--accent);
+}
+[data-theme="light"] .color-palette-swatch {
+  border-color: rgba(0,0,0,.15);
+}
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ── Feature 6: Micro-interactions ── */
@@ -10782,5 +11255,127 @@ textarea.code:focus-visible {
 .pref-text-input:focus {
   outline: none;
   border-color: var(--accent, #4a9eff);
+}
+
+/* ── Ghost Comparison Statistics Panel ── */
+.ghost-stats-panel {
+  position: absolute; top: 10px; left: 250px;
+  width: 230px;
+  background: rgba(30,30,34,.85);
+  border: 1px solid rgba(74, 158, 255, 0.25);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
+  backdrop-filter: blur(10px);
+  z-index: 12;
+  overflow: hidden;
+}
+[data-theme="light"] .ghost-stats-panel {
+  background: rgba(255,255,255,.9);
+  border-color: rgba(74, 158, 255, 0.25);
+}
+.ghost-stat-pos { color: #4caf50 !important; }
+.ghost-stat-neg { color: #f44336 !important; }
+
+/* ── Preset Configurations ── */
+.pref-section-divider {
+  border-top: 1px solid var(--border, #2e2e34);
+  margin: 12px 0 8px;
+}
+.pref-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent, #4a9eff);
+  margin-bottom: 8px;
+}
+.preset-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.preset-btn {
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+}
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.preset-del-btn {
+  color: #f44 !important;
+  font-size: 14px !important;
+  padding: 2px 6px !important;
+  line-height: 1;
+}
+.preset-save-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Welcome Tour ── */
+.tour-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+.tour-spotlight {
+  position: fixed;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  border: 2px solid var(--accent, #4a9eff);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 10000;
+  transition: all 0.3s ease;
+}
+.tour-tooltip {
+  position: fixed;
+  width: 300px;
+  background: var(--surface, #1e1e22);
+  border: 1px solid var(--accent, #4a9eff);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 10001;
+  transition: all 0.3s ease;
+}
+.tour-tooltip-step {
+  font-size: 11px;
+  color: var(--accent, #4a9eff);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.tour-tooltip-text {
+  font-size: 13px;
+  color: var(--text, #e4e4e8);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.tour-tooltip-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tour-btn {
+  font-size: 12px !important;
+  padding: 4px 12px !important;
+}
+.welcome-tour-btn {
+  margin-top: 8px;
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--accent, #4a9eff);
+  border: 1px solid var(--accent, #4a9eff);
+}
+.welcome-tour-btn:hover {
+  background: rgba(74, 158, 255, 0.1);
 }
 </style>

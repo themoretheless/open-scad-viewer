@@ -1046,6 +1046,161 @@ function makeSweep(path: number[][], radius: number, fn: number) {
   return { v, ix }
 }
 
+function makeStar(points: number, r1: number, r2: number, h: number, _fn: number): { v: number[], ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const n2 = points * 2 // number of vertices around the star profile
+
+  // Build 2D star profile
+  const profile: number[][] = []
+  for (let i = 0; i < n2; i++) {
+    const angle = (i * Math.PI) / points
+    const r = (i % 2 === 0) ? r1 : r2
+    profile.push([r * Math.cos(angle), r * Math.sin(angle)])
+  }
+
+  // Bottom cap (z = 0), normal facing -Z
+  const baseBot = v.length / 6
+  for (let i = 0; i < n2; i++) {
+    v.push(profile[i][0], profile[i][1], 0, 0, 0, -1)
+  }
+  const botTris = earClip(profile)
+  // Reverse winding for bottom cap so normal faces -Z
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseBot + botTris[i], baseBot + botTris[i + 2], baseBot + botTris[i + 1])
+  }
+
+  // Top cap (z = h), normal facing +Z
+  const baseTop = v.length / 6
+  for (let i = 0; i < n2; i++) {
+    v.push(profile[i][0], profile[i][1], h, 0, 0, 1)
+  }
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseTop + botTris[i], baseTop + botTris[i + 1], baseTop + botTris[i + 2])
+  }
+
+  // Side walls
+  for (let i = 0; i < n2; i++) {
+    const i2 = (i + 1) % n2
+    const x0 = profile[i][0], y0 = profile[i][1]
+    const x1 = profile[i2][0], y1 = profile[i2][1]
+    // Edge direction
+    const ex = x1 - x0, ey = y1 - y0
+    // Outward normal (perpendicular to edge, in XY plane)
+    const len = Math.sqrt(ex * ex + ey * ey) || 1
+    const nx = ey / len, ny = -ex / len
+
+    const base = v.length / 6
+    v.push(x0, y0, 0, nx, ny, 0) // bottom-left
+    v.push(x1, y1, 0, nx, ny, 0) // bottom-right
+    v.push(x1, y1, h, nx, ny, 0) // top-right
+    v.push(x0, y0, h, nx, ny, 0) // top-left
+    ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+  }
+
+  return { v, ix }
+}
+
+function makeThread(d: number, pitch: number, length: number, fn: number): { v: number[], ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const baseR = d / 2
+  const threadDepth = pitch * 0.3
+  const zSlices = Math.ceil(length / pitch) * Math.max(1, Math.floor(fn / 4))
+  const segs = fn // segments around circumference
+
+  // Generate vertices
+  for (let zi = 0; zi <= zSlices; zi++) {
+    const z = (zi / zSlices) * length
+    for (let ti = 0; ti <= segs; ti++) {
+      const theta = (2 * Math.PI * ti) / segs
+      const sinVal = Math.sin(2 * Math.PI * (z / pitch - theta / (2 * Math.PI)))
+      const modulation = Math.max(0, sinVal)
+      const r = baseR - threadDepth * modulation
+
+      const x = r * Math.cos(theta)
+      const y = r * Math.sin(theta)
+
+      // Approximate normal by computing partial derivatives
+      // Radial direction gives the main normal component
+      const drdTheta = -threadDepth * Math.max(0, Math.cos(2 * Math.PI * (z / pitch - theta / (2 * Math.PI)))) * (sinVal > 0 ? 1 : 0) / (2 * Math.PI) * (2 * Math.PI) / (2 * Math.PI)
+      const nx0 = Math.cos(theta)
+      const ny0 = Math.sin(theta)
+      // For simplicity, use the radial normal adjusted slightly
+      // The tangent along theta: (-r*sin(theta) + drdTheta*cos(theta), r*cos(theta) + drdTheta*sin(theta), 0)
+      // The tangent along z: (drdz*cos(theta), drdz*sin(theta), 1)
+      // Normal = cross(tangent_theta, tangent_z)
+      const drdz_raw = -threadDepth * Math.cos(2 * Math.PI * (z / pitch - theta / (2 * Math.PI))) * (2 * Math.PI / pitch) * (sinVal > 0 ? 1 : 0)
+      const drdz = sinVal > 0 ? drdz_raw : 0
+
+      // tangent along theta
+      const ttx = -r * Math.sin(theta) + drdTheta * Math.cos(theta)
+      const tty = r * Math.cos(theta) + drdTheta * Math.sin(theta)
+      const ttz = 0
+      // tangent along z
+      const tzx = drdz * Math.cos(theta)
+      const tzy = drdz * Math.sin(theta)
+      const tzz = 1
+
+      // cross product: tangent_theta x tangent_z
+      let cnx = tty * tzz - ttz * tzy
+      let cny = ttz * tzx - ttx * tzz
+      let cnz = ttx * tzy - tty * tzx
+
+      const clen = Math.sqrt(cnx * cnx + cny * cny + cnz * cnz) || 1
+      cnx /= clen; cny /= clen; cnz /= clen
+
+      // Ensure normal points outward (dot with radial direction should be positive)
+      if (cnx * nx0 + cny * ny0 < 0) {
+        cnx = -cnx; cny = -cny; cnz = -cnz
+      }
+
+      v.push(x, y, z, cnx, cny, cnz)
+    }
+  }
+
+  // Generate indices
+  for (let zi = 0; zi < zSlices; zi++) {
+    for (let ti = 0; ti < segs; ti++) {
+      const a = zi * (segs + 1) + ti
+      const b = a + segs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // Bottom cap (z = 0)
+  const botCenter = v.length / 6
+  v.push(0, 0, 0, 0, 0, -1)
+  const botRing = v.length / 6
+  for (let ti = 0; ti < segs; ti++) {
+    const theta = (2 * Math.PI * ti) / segs
+    const sinVal = Math.sin(2 * Math.PI * (0 / pitch - theta / (2 * Math.PI)))
+    const modulation = Math.max(0, sinVal)
+    const r = baseR - threadDepth * modulation
+    v.push(r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, -1)
+  }
+  for (let ti = 0; ti < segs; ti++) {
+    const next = (ti + 1) % segs
+    ix.push(botCenter, botRing + next, botRing + ti)
+  }
+
+  // Top cap (z = length)
+  const topCenter = v.length / 6
+  v.push(0, 0, length, 0, 0, 1)
+  const topRing = v.length / 6
+  for (let ti = 0; ti < segs; ti++) {
+    const theta = (2 * Math.PI * ti) / segs
+    const sinVal = Math.sin(2 * Math.PI * (length / pitch - theta / (2 * Math.PI)))
+    const modulation = Math.max(0, sinVal)
+    const r = baseR - threadDepth * modulation
+    v.push(r * Math.cos(theta), r * Math.sin(theta), length, 0, 0, 1)
+  }
+  for (let ti = 0; ti < segs; ti++) {
+    const next = (ti + 1) % segs
+    ix.push(topCenter, topRing + ti, topRing + next)
+  }
+
+  return { v, ix }
+}
+
 function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
   const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by)
   const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy)
@@ -2714,6 +2869,23 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         }
       }
       return out
+    }
+    case 'star': {
+      const points = typeof arg(a, 'points', 0, 5) === 'number' ? Math.max(3, Math.floor(arg(a, 'points', 0, 5) as number)) : 5
+      const r1 = typeof arg(a, 'r1', 1, 15) === 'number' ? arg(a, 'r1', 1, 15) as number : 15
+      const r2 = typeof arg(a, 'r2', 2, 8) === 'number' ? arg(a, 'r2', 2, 8) as number : 8
+      const h = typeof arg(a, 'h', 3, 3) === 'number' ? arg(a, 'h', 3, 3) as number : 3
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeStar(points, r1, r2, h, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'thread': {
+      const d = typeof arg(a, 'd', 0, 10) === 'number' ? arg(a, 'd', 0, 10) as number : 10
+      const pitch = typeof arg(a, 'pitch', 1, 1.5) === 'number' ? arg(a, 'pitch', 1, 1.5) as number : 1.5
+      const length = typeof arg(a, 'length', 2, 20) === 'number' ? arg(a, 'length', 2, 20) as number : 20
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeThread(d, pitch, length, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
