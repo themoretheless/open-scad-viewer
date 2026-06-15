@@ -1560,6 +1560,10 @@ const PALETTE: [number,number,number,number][] = [
 ]
 let cIdx = 0
 let _resolveFile: ((name: string) => string | null) | null = null
+let _profiling = false
+let _profileEntries: ProfileEntry[] = []
+let _profileDepth = 0
+let _source = ''
 function nextC(): [number,number,number,number] { return PALETTE[(cIdx++) % PALETTE.length] }
 
 function arg(a: Record<string,any>, name: string, pos: number, def: any): any {
@@ -2296,7 +2300,18 @@ function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number
       continue
     }
     lastIfResult = false
-    out.push(...evalNode(n, tf, col, vars, modules, echos, callerChildren, annotations))
+    if (_profiling && _profileDepth === 0) {
+      _profileDepth++
+      const t0 = performance.now()
+      out.push(...evalNode(n, tf, col, vars, modules, echos, callerChildren, annotations))
+      const dt = performance.now() - t0
+      _profileDepth--
+      const beforePos = _source.substring(0, n.pos)
+      const lineNum = beforePos.split('\n').length
+      _profileEntries.push({ name: n.name, line: lineNum, timeMs: dt })
+    } else {
+      out.push(...evalNode(n, tf, col, vars, modules, echos, callerChildren, annotations))
+    }
 
     } catch (_skipErr) {
       // Error recovery: skip this node and continue with the rest
@@ -2887,6 +2902,72 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const { v, ix } = makeThread(d, pitch, length, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
+    case 'rounded_cube': {
+      const sizeRaw = arg(a, 'size', 0, [10, 10, 10])
+      let sx: number, sy: number, sz: number
+      if (Array.isArray(sizeRaw)) {
+        sx = typeof sizeRaw[0] === 'number' ? sizeRaw[0] : 10
+        sy = typeof sizeRaw[1] === 'number' ? sizeRaw[1] : 10
+        sz = typeof sizeRaw[2] === 'number' ? sizeRaw[2] : 10
+      } else if (typeof sizeRaw === 'number') {
+        sx = sy = sz = sizeRaw
+      } else {
+        sx = sy = sz = 10
+      }
+      const r = typeof arg(a, 'r', 1, 1) === 'number' ? arg(a, 'r', 1, 1) as number : 1
+      const center = !!arg(a, 'center', 2, false)
+      const fn = Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8)
+      const cr = Math.min(r, sx / 2, sy / 2, sz / 2)
+      // Place 8 small spheres at the inner corners
+      const innerX = sx - 2 * cr, innerY = sy - 2 * cr, innerZ = sz - 2 * cr
+      const ox = center ? -sx / 2 + cr : cr
+      const oy = center ? -sy / 2 + cr : cr
+      const oz = center ? -sz / 2 + cr : cr
+      const allPts: [number, number, number][] = []
+      for (let xi = 0; xi <= 1; xi++) {
+        for (let yi = 0; yi <= 1; yi++) {
+          for (let zi = 0; zi <= 1; zi++) {
+            const cx = ox + xi * innerX
+            const cy = oy + yi * innerY
+            const cz = oz + zi * innerZ
+            const { v: sv } = makeSphere(cr, fn)
+            const nv = sv.length / 6
+            for (let i = 0; i < nv; i++) {
+              allPts.push([sv[i * 6] + cx, sv[i * 6 + 1] + cy, sv[i * 6 + 2] + cz])
+            }
+          }
+        }
+      }
+      if (allPts.length === 0) return []
+      const { v, ix } = convexHull3D(allPts)
+      if (v.length === 0) return []
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'arrow': {
+      const length = typeof arg(a, 'length', 0, 20) === 'number' ? arg(a, 'length', 0, 20) as number : 20
+      const shaftR = typeof arg(a, 'shaft_r', 1, 1) === 'number' ? arg(a, 'shaft_r', 1, 1) as number : 1
+      const headR = typeof arg(a, 'head_r', 2, 3) === 'number' ? arg(a, 'head_r', 2, 3) as number : 3
+      const headLen = typeof arg(a, 'head_length', 3, 5) === 'number' ? arg(a, 'head_length', 3, 5) as number : 5
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const shaftLen = Math.max(0, length - headLen)
+      // Shaft: cylinder from z=0 to z=shaftLen
+      const shaft = makeCylinder(shaftLen, shaftR, shaftR, false, fn)
+      // Head: cone from z=shaftLen to z=length
+      const head = makeCylinder(headLen, headR, 0, false, fn)
+      // Offset head vertices by shaftLen on Z
+      const headVerts = head.v
+      const headNv = headVerts.length / 6
+      for (let i = 0; i < headNv; i++) {
+        headVerts[i * 6 + 2] += shaftLen  // z += shaftLen
+      }
+      // Merge meshes
+      const sv = shaft.v, si = shaft.ix
+      const hv = head.v, hi = head.ix
+      const shaftVertCount = sv.length / 6
+      const mergedV = [...sv, ...hv]
+      const mergedIx = [...si, ...hi.map(idx => idx + shaftVertCount)]
+      return [{ vertices: new Float32Array(mergedV), indices: new Uint32Array(mergedIx), color: col ?? nextC(), transform: tf }]
+    }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
     case 'module': case 'function': case '__assign':
@@ -2951,17 +3032,28 @@ export interface Annotation {
   position: [number, number, number]
 }
 
+export interface ProfileEntry {
+  name: string
+  line: number
+  timeMs: number
+}
+
 export interface ParseResult {
   meshes: MeshData[]
   ast: ASTNode[]
   echos: string[]
   errors: string[]
   annotations: Annotation[]
+  profileEntries?: ProfileEntry[]
 }
 
 export function parseOpenSCADWithAST(source: string, resolveFile?: (name: string) => string | null): ParseResult {
   cIdx = 0
   _resolveFile = resolveFile || null
+  _profiling = true
+  _profileEntries = []
+  _profileDepth = 0
+  _source = source
   const echos: string[] = []
   const errors: string[] = []
   const annotations: Annotation[] = []
@@ -2979,7 +3071,7 @@ export function parseOpenSCADWithAST(source: string, resolveFile?: (name: string
   } catch (e: any) {
     errors.push(e.message || String(e))
   }
-  return { meshes, ast, echos, errors, annotations }
+  return { meshes, ast, echos, errors, annotations, profileEntries: _profileEntries }
 }
 
 export function parseOpenSCAD(source: string): MeshData[] {

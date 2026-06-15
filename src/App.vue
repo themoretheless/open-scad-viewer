@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { parseOpenSCADWithAST } from './services/openscadParser'
-import type { MeshData, ASTNode, Annotation } from './services/openscadParser'
+import type { MeshData, ASTNode, Annotation, ProfileEntry } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
 import { exportOBJ } from './services/objExport'
@@ -584,6 +584,29 @@ const L: Record<string, Record<string, string>> = {
     sc_numpad: 'Numpad 1-9: Виды камеры',
     sc_fitAll: 'F / Numpad.: Вместить всё',
     sc_homeView: 'Home: Сбросить вид',
+    // Undo/Redo visualization
+    undoBtn: 'Отменить',
+    redoBtn: 'Повторить',
+    undoSteps: '{n} шагов отмены',
+    redoSteps: '{n} шагов повтора',
+    // Gutter decorations
+    gutterDecorations: 'Декорации строк',
+    // Snapshot gallery
+    snapshotBtn: 'Снимок',
+    snapshotGallery: 'Галерея снимков',
+    snapshotSaved: 'Снимок сохранён',
+    snapshotDeleted: 'Снимок удалён',
+    noSnapshots: 'Нет сохранённых снимков',
+    deleteSnapshot: 'Удалить',
+    cmdSnapshotGallery: 'Галерея снимков',
+    ariaSnapshotGallery: 'Галерея снимков',
+    // Code profiling
+    profilePanel: 'Профилирование',
+    profileNode: 'Узел',
+    profileLine: 'Строка',
+    profileTime: 'Время',
+    cmdToggleProfile: 'Переключить профилирование',
+    noProfileData: 'Нет данных профилирования',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1073,6 +1096,29 @@ const L: Record<string, Record<string, string>> = {
     sc_numpad: 'Numpad 1-9: Camera views',
     sc_fitAll: 'F / Numpad.: Fit all',
     sc_homeView: 'Home: Reset view',
+    // Undo/Redo visualization
+    undoBtn: 'Undo',
+    redoBtn: 'Redo',
+    undoSteps: '{n} undo steps',
+    redoSteps: '{n} redo steps',
+    // Gutter decorations
+    gutterDecorations: 'Gutter Decorations',
+    // Snapshot gallery
+    snapshotBtn: 'Snapshot',
+    snapshotGallery: 'Snapshot Gallery',
+    snapshotSaved: 'Snapshot saved',
+    snapshotDeleted: 'Snapshot deleted',
+    noSnapshots: 'No saved snapshots',
+    deleteSnapshot: 'Delete',
+    cmdSnapshotGallery: 'Snapshot Gallery',
+    ariaSnapshotGallery: 'Snapshot gallery',
+    // Code profiling
+    profilePanel: 'Profiling',
+    profileNode: 'Node',
+    profileLine: 'Line',
+    profileTime: 'Time',
+    cmdToggleProfile: 'Toggle Profiling',
+    noProfileData: 'No profile data',
   },
 }
 
@@ -3170,6 +3216,7 @@ const lineNumbers = computed(() => {
   const errL = errorLine.value
   const nums: string[] = []
   const diffs = showDiff.value ? diffLines.value : null
+  const codeLines = gutterDecorationsEnabled.value ? code.value.split('\n') : null
   for (let i = 1; i <= n; i++) {
     if (isLineHidden(i - 1)) continue
     const foldable = isFoldable(i - 1)
@@ -3187,10 +3234,15 @@ const lineNumbers = computed(() => {
         else if (dl.type === 'modified') diffPrefix = '<span class="diff-indicator diff-ind-modified"></span>'
       }
     }
+    // Gutter decoration icon
+    let gutterIcon = ''
+    if (codeLines && i - 1 < codeLines.length) {
+      gutterIcon = getGutterIcon(codeLines[i - 1])
+    }
     if (i === errL) {
-      nums.push(`${diffPrefix}${prefix}<span class="line-error">${i}</span>`)
+      nums.push(`${diffPrefix}${prefix}${gutterIcon}<span class="line-error">${i}</span>`)
     } else {
-      nums.push(`${diffPrefix}${prefix}${i}`)
+      nums.push(`${diffPrefix}${prefix}${gutterIcon}${i}`)
     }
   }
   return nums.join('\n')
@@ -4185,6 +4237,10 @@ function doRender() {
     astNodes.value = result.ast
     // Collect 3D annotations from parse result
     parsedAnnotations.value = result.annotations || []
+    // Collect profiling data
+    if (result.profileEntries) {
+      profileEntries.value = result.profileEntries
+    }
     const tParsed = performance.now()
     perfParseTime.value = Math.round(tParsed - t0)
     meshCount.value = meshes.length
@@ -5077,6 +5133,8 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'ghostCompare', label: () => t('cmdToggleGhost'), action: () => toggleGhostMode() },
   { id: 'printCode', label: () => t('cmdPrintCode'), action: () => printCode() },
   { id: 'tour', label: () => t('tourStart'), action: () => startTour() },
+  { id: 'snapshotGallery', label: () => t('cmdSnapshotGallery'), action: () => { showSnapshotGallery.value = !showSnapshotGallery.value } },
+  { id: 'profilePanel', label: () => t('cmdToggleProfile'), action: () => { showProfilePanel.value = !showProfilePanel.value } },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -6104,6 +6162,110 @@ const wmStyle = computed(() => {
   return { ...pos, opacity: wmOpacity.value }
 })
 
+/* ── Feature: Snapshot Gallery ── */
+interface Snapshot {
+  id: string
+  dataUrl: string
+  timestamp: number
+}
+const SNAPSHOT_MAX = 20
+const SNAPSHOT_KEY = 'scad-snapshots'
+const snapshots = ref<Snapshot[]>(loadSnapshots())
+const showSnapshotGallery = ref(false)
+const snapshotPreview = ref<string | null>(null)
+
+function loadSnapshots(): Snapshot[] {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as Snapshot[]
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch { /* ignore */ }
+  return []
+}
+
+function saveSnapshots() {
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshots.value))
+  } catch {
+    // localStorage full — remove oldest
+    if (snapshots.value.length > 1) {
+      snapshots.value.shift()
+      saveSnapshots()
+    }
+  }
+}
+
+function takeSnapshot() {
+  if (!renderer || !canvasRef.value) return
+  try {
+    renderer.requestRender()
+    const srcCanvas = canvasRef.value
+    const tmpCanvas = document.createElement('canvas')
+    tmpCanvas.width = 160
+    tmpCanvas.height = 120
+    const ctx = tmpCanvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, 160, 120)
+    const dataUrl = tmpCanvas.toDataURL('image/jpeg', 0.6)
+    const snap: Snapshot = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+      dataUrl,
+      timestamp: Date.now(),
+    }
+    snapshots.value.push(snap)
+    if (snapshots.value.length > SNAPSHOT_MAX) snapshots.value.shift()
+    saveSnapshots()
+    addToast(t('snapshotSaved'), 'success')
+  } catch { /* ignore */ }
+}
+
+function deleteSnapshot(id: string) {
+  snapshots.value = snapshots.value.filter(s => s.id !== id)
+  saveSnapshots()
+  addToast(t('snapshotDeleted'), 'info')
+}
+
+function formatSnapshotTime(ts: number): string {
+  return new Date(ts).toLocaleString()
+}
+
+/* ── Feature: Code Profiling ── */
+const showProfilePanel = ref(false)
+const profileEntries = ref<ProfileEntry[]>([])
+
+const sortedProfileEntries = computed(() => {
+  return [...profileEntries.value].sort((a, b) => b.timeMs - a.timeMs)
+})
+
+function jumpToProfileLine(line: number) {
+  const ta = textareaRef.value
+  if (!ta) return
+  const lines = code.value.split('\n')
+  let pos = 0
+  for (let i = 0; i < Math.min(line - 1, lines.length); i++) {
+    pos += lines[i].length + 1
+  }
+  ta.focus()
+  ta.setSelectionRange(pos, pos)
+  // Scroll to line
+  const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20
+  ta.scrollTop = (line - 5) * lineHeight
+}
+
+/* ── Feature: Gutter Decorations ── */
+const gutterDecorationsEnabled = ref(localStorage.getItem('scad-gutter-deco') !== 'false')
+watch(gutterDecorationsEnabled, v => localStorage.setItem('scad-gutter-deco', String(v)))
+
+function getGutterIcon(lineText: string): string {
+  const trimmed = lineText.trim()
+  if (/^(module|function)\s+\w+/.test(trimmed)) return '<span class="gutter-icon gutter-icon-module" title="module/function">&#9670;</span>'
+  if (/^\bfor\b\s*\(/.test(trimmed)) return '<span class="gutter-icon gutter-icon-loop" title="for loop">&#10227;</span>'
+  if (/^\bif\b\s*\(/.test(trimmed)) return '<span class="gutter-icon gutter-icon-cond" title="if">?</span>'
+  return ''
+}
+
 /* ── Feature: Session Auto-Save / Recovery ── */
 const SESSION_KEY = 'scad-session-backup'
 const showSessionRestore = ref(false)
@@ -6875,6 +7037,15 @@ translate([0, 0, 39])
           <label class="auto-check">
             <input type="checkbox" v-model="autoRender" /> {{ t('auto') }}
           </label>
+          <!-- Undo/Redo buttons -->
+          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !undoStack.length }" @click="customUndo" :title="t('undoBtn') + (undoStack.length ? ' (' + undoStack.length + ')' : '')" :aria-label="t('undoBtn')">
+            <span class="undo-redo-icon">&#8630;</span>
+            <span v-if="undoStack.length" class="undo-redo-badge">{{ undoStack.length }}</span>
+          </button>
+          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !redoStack.length }" @click="customRedo" :title="t('redoBtn') + (redoStack.length ? ' (' + redoStack.length + ')' : '')" :aria-label="t('redoBtn')">
+            <span class="undo-redo-icon">&#8631;</span>
+            <span v-if="redoStack.length" class="undo-redo-badge">{{ redoStack.length }}</span>
+          </button>
           <button class="btn btn-sm btn-icon" @click="openFile" :title="t('open')" :aria-label="t('open')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
@@ -6916,6 +7087,26 @@ translate([0, 0, 39])
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="21" y2="12"/><line x1="5" y1="18" x2="21" y2="18"/>
             </svg>
             {{ t('format') }}
+          </button>
+          <!-- Snapshot button -->
+          <button class="btn btn-sm" v-show="!simpleMode" @click="takeSnapshot" :title="t('snapshotBtn')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M3 9h2"/><path d="M19 9h2"/>
+            </svg>
+            {{ t('snapshotBtn') }}
+          </button>
+          <!-- Snapshot Gallery toggle -->
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': showSnapshotGallery }" @click="showSnapshotGallery = !showSnapshotGallery" :title="t('snapshotGallery')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/>
+            </svg>
+            {{ snapshots.length > 0 ? snapshots.length : '' }}
+          </button>
+          <!-- Profile toggle -->
+          <button class="btn btn-sm" v-show="!simpleMode" :class="{ 'btn-active': showProfilePanel }" @click="showProfilePanel = !showProfilePanel" :title="t('cmdToggleProfile')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+              <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>
+            </svg>
           </button>
           <!-- Recent dropdown -->
           <div class="recent-wrapper" v-show="!simpleMode">
@@ -7766,6 +7957,10 @@ translate([0, 0, 39])
                 <span class="vp-dd-check" v-if="showPerfPanel">&#10003;</span>
                 {{ t('perfPanel') }}
               </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="showProfilePanel = !showProfilePanel; closeAllMenus()">
+                <span class="vp-dd-check" v-if="showProfilePanel">&#10003;</span>
+                {{ t('profilePanel') }}
+              </button>
             </div>
             </transition>
           </div>
@@ -7938,6 +8133,63 @@ translate([0, 0, 39])
           </div>
         </div>
         </transition>
+
+        <!-- Snapshot Gallery panel -->
+        <div v-if="showSnapshotGallery" class="snapshot-gallery-panel" role="region" :aria-label="t('ariaSnapshotGallery')">
+          <div class="perf-panel-header">
+            <span class="perf-panel-title">{{ t('snapshotGallery') }}</span>
+            <button class="perf-panel-close" @click="showSnapshotGallery = false">&times;</button>
+          </div>
+          <div class="snapshot-gallery-body">
+            <div v-if="!snapshots.length" class="snapshot-empty">{{ t('noSnapshots') }}</div>
+            <div v-else class="snapshot-grid">
+              <div v-for="snap in [...snapshots].reverse()" :key="snap.id" class="snapshot-item">
+                <img :src="snap.dataUrl" class="snapshot-thumb" @click="snapshotPreview = snap.dataUrl" :alt="formatSnapshotTime(snap.timestamp)" />
+                <div class="snapshot-meta">
+                  <span class="snapshot-time">{{ formatSnapshotTime(snap.timestamp) }}</span>
+                  <button class="snapshot-del" @click="deleteSnapshot(snap.id)" :title="t('deleteSnapshot')">&times;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Snapshot Preview modal -->
+        <Teleport to="body">
+          <div v-if="snapshotPreview" class="modal-backdrop" @click.self="snapshotPreview = null">
+            <div class="snapshot-preview-modal">
+              <button class="modal-close snapshot-preview-close" @click="snapshotPreview = null">&times;</button>
+              <img :src="snapshotPreview" class="snapshot-preview-img" alt="Snapshot preview" />
+            </div>
+          </div>
+        </Teleport>
+
+        <!-- Profile panel -->
+        <div v-if="showProfilePanel" class="profile-panel" role="region">
+          <div class="perf-panel-header">
+            <span class="perf-panel-title">{{ t('profilePanel') }}</span>
+            <button class="perf-panel-close" @click="showProfilePanel = false">&times;</button>
+          </div>
+          <div class="profile-panel-body">
+            <div v-if="!sortedProfileEntries.length" class="snapshot-empty">{{ t('noProfileData') }}</div>
+            <table v-else class="profile-table">
+              <thead>
+                <tr>
+                  <th>{{ t('profileNode') }}</th>
+                  <th>{{ t('profileLine') }}</th>
+                  <th>{{ t('profileTime') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, idx) in sortedProfileEntries" :key="idx" class="profile-row" @click="jumpToProfileLine(entry.line)">
+                  <td class="profile-name">{{ entry.name }}</td>
+                  <td class="profile-line">{{ entry.line }}</td>
+                  <td class="profile-time" :class="{ 'profile-slow': entry.timeMs > 10 }">{{ entry.timeMs.toFixed(2) }}ms</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <!-- Device Lost overlay (Feature 3) -->
         <div v-if="deviceLost" class="device-lost-overlay">
@@ -8310,7 +8562,7 @@ textarea.code:focus-visible {
 }
 
 .line-numbers {
-  width: 44px; flex-shrink: 0;
+  width: 52px; flex-shrink: 0;
   padding: 12px 8px 12px 4px;
   font-family: var(--editor-font-family, 'JetBrains Mono', monospace);
   font-size: var(--editor-font-size, 0.82rem); line-height: 1.55;
@@ -11377,5 +11629,215 @@ textarea.code:focus-visible {
 }
 .welcome-tour-btn:hover {
   background: rgba(74, 158, 255, 0.1);
+}
+
+/* ── Undo/Redo buttons ── */
+.undo-redo-btn {
+  position: relative;
+  min-width: 28px;
+  padding: 2px 6px !important;
+}
+.undo-redo-btn.btn-disabled {
+  opacity: 0.35;
+  pointer-events: auto;
+  cursor: default;
+}
+.undo-redo-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.undo-redo-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--accent, #4a9eff);
+  color: #fff;
+  font-size: 9px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Gutter decorations ── */
+:deep(.gutter-icon) {
+  font-size: 9px;
+  margin-right: 2px;
+  opacity: 0.4;
+  vertical-align: baseline;
+}
+:deep(.gutter-icon-module) {
+  color: var(--hl-keyword, #5c9eff);
+}
+:deep(.gutter-icon-loop) {
+  color: var(--hl-special, #56c8d8);
+}
+:deep(.gutter-icon-cond) {
+  color: var(--hl-boolean, #c678dd);
+  font-weight: bold;
+  font-style: italic;
+}
+
+/* ── Snapshot Gallery ── */
+.snapshot-gallery-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 340px;
+  max-height: 400px;
+  background: var(--surface, #1e1e22);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 10px;
+  z-index: 20;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.snapshot-gallery-body {
+  padding: 8px;
+  overflow-y: auto;
+  max-height: 350px;
+}
+.snapshot-empty {
+  color: var(--text-dim, #888);
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+}
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.snapshot-item {
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg, #141416);
+}
+.snapshot-thumb {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.snapshot-thumb:hover {
+  opacity: 0.8;
+}
+.snapshot-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px;
+  font-size: 10px;
+  color: var(--text-dim, #888);
+}
+.snapshot-time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.snapshot-del {
+  background: none;
+  border: none;
+  color: #f44;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.snapshot-del:hover {
+  color: #ff6666;
+}
+.snapshot-preview-modal {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.snapshot-preview-close {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 1;
+  background: var(--surface, #1e1e22);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+.snapshot-preview-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ── Profile panel ── */
+.profile-panel {
+  position: absolute;
+  bottom: 50px;
+  left: 10px;
+  width: 350px;
+  max-height: 300px;
+  background: var(--surface, #1e1e22);
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 10px;
+  z-index: 20;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.profile-panel-body {
+  padding: 8px;
+  overflow-y: auto;
+  max-height: 260px;
+}
+.profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.profile-table th {
+  text-align: left;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border, #2e2e34);
+  color: var(--text-dim, #888);
+  font-weight: 500;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.profile-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.profile-row:hover {
+  background: var(--hover, #28282e);
+}
+.profile-row td {
+  padding: 3px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.profile-name {
+  color: var(--hl-keyword, #5c9eff);
+  font-family: var(--editor-font-family, monospace);
+}
+.profile-line {
+  color: var(--text-dim, #888);
+  text-align: center;
+}
+.profile-time {
+  text-align: right;
+  color: var(--text, #e4e4e8);
+  font-family: var(--editor-font-family, monospace);
+}
+.profile-slow {
+  color: #ff6b5a;
+  font-weight: 600;
 }
 </style>
