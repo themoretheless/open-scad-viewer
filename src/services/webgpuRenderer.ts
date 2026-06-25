@@ -587,10 +587,11 @@ export class WebGPURenderer {
       const transp = this.renderMode === 'xray' ? true : m.color[3] < 0.99
       this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp })
     }
+    this.meshVisibility = new Array(this.meshes.length).fill(true)
     this.computeBounds(meshes)
     this.autoFit(meshes)
     if (this.wireframe) this.buildWireframeBuffer()
-    if (this.showEdges) this.buildEdgeBuffer()
+    if (this.showEdges || this.renderMode === 'hidden-line') this.buildEdgeBuffer()
     this.requestRender()
   }
 
@@ -926,7 +927,60 @@ export class WebGPURenderer {
       reflPass.end()
     }
 
+    // Ground shadow pass - render flattened meshes as dark semi-transparent
+    if (this.showGroundShadow && this.meshes.length > 0 && this.renderMode !== 'wireframe') {
+      const shadowPass = enc.beginRenderPass({
+        colorAttachments: [{
+          view: msaaView,
+          resolveTarget: resolveView,
+          loadOp: 'load', storeOp: 'store',
+        }],
+        depthStencilAttachment: {
+          view: msaaDepthView,
+          depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+        },
+      })
+
+      shadowPass.setPipeline(this.meshPipeT)
+      shadowPass.setBindGroup(0, this.sceneBG)
+
+      for (let mi = 0; mi < this.meshes.length; mi++) {
+        if (this.meshVisibility[mi] === false) continue
+        const g = this.meshes[mi]
+        if (g.transp && this.renderMode !== 'xray') continue
+        const m = this.lastRawMeshes[mi]
+        if (!m) continue
+
+        // Flatten Y to ground (Y=0.01)
+        const flattenY: Mat4 = new Float32Array([
+          1, 0, 0, 0,
+          0, 0, 0, 0,
+          0, 0, 1, 0,
+          0, 0.01, 0, 1,
+        ])
+        const flatModel = multiply(flattenY, m.transform)
+        const flatNormal = transpose(invert(flatModel))
+        this.dev.queue.writeBuffer(this.reflUB, 0, transpose(flatModel))
+        this.dev.queue.writeBuffer(this.reflUB, 64, transpose(flatNormal))
+        this.dev.queue.writeBuffer(this.reflUB, 128, new Float32Array([0.0, 0.0, 0.0, 0.25]))
+        shadowPass.setBindGroup(1, this.reflBG)
+        shadowPass.setVertexBuffer(0, g.vb)
+        shadowPass.setIndexBuffer(g.ib, 'uint32')
+        shadowPass.drawIndexed(g.ic)
+      }
+
+      shadowPass.end()
+    }
+
     this.dev.queue.submit([enc.finish()])
+
+    // Restore original colors after hidden-line render
+    if (this.renderMode === 'hidden-line' && this.lastRawMeshes.length > 0) {
+      for (let i = 0; i < this.meshes.length && i < this.lastRawMeshes.length; i++) {
+        const raw = this.lastRawMeshes[i]
+        this.dev.queue.writeBuffer(this.meshes[i].ub, 128, new Float32Array(raw.color))
+      }
+    }
 
     // Restore original model matrices after exploded view
     if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
@@ -1948,6 +2002,58 @@ export class WebGPURenderer {
   /** Check whether toon shading is enabled. */
   isToonShading(): boolean {
     return this.toonShading
+  }
+
+  /** Toggle gooch shading on/off. */
+  toggleGoochShading(): boolean {
+    this.goochShading = !this.goochShading
+    this.requestRender()
+    return this.goochShading
+  }
+
+  /** Set gooch shading on or off. */
+  setGoochShading(v: boolean) {
+    this.goochShading = v
+    this.requestRender()
+  }
+
+  /** Check whether gooch shading is enabled. */
+  isGoochShading(): boolean {
+    return this.goochShading
+  }
+
+  /** Toggle ground shadow on/off. */
+  toggleGroundShadow(): boolean {
+    this.showGroundShadow = !this.showGroundShadow
+    this.requestRender()
+    return this.showGroundShadow
+  }
+
+  /** Set ground shadow on or off. */
+  setGroundShadow(v: boolean) {
+    this.showGroundShadow = v
+    this.requestRender()
+  }
+
+  /** Check whether ground shadow is enabled. */
+  isGroundShadowEnabled(): boolean {
+    return this.showGroundShadow
+  }
+
+  /** Set visibility of a specific mesh by index. */
+  setMeshVisibility(index: number, visible: boolean) {
+    if (index >= 0 && index < this.meshes.length) {
+      this.meshVisibility[index] = visible
+      this.requestRender()
+    }
+  }
+
+  /** Set visibility of all meshes. */
+  setAllVisibility(visible: boolean) {
+    for (let i = 0; i < this.meshVisibility.length; i++) {
+      this.meshVisibility[i] = visible
+    }
+    this.requestRender()
   }
 
   /** Set the exploded view factor (0 = normal, 1 = fully exploded). */
