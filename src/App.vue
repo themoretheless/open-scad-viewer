@@ -339,6 +339,8 @@ const L: Record<string, Record<string, string>> = {
     // Responsive topbar
     menu: 'Меню',
     // Advanced examples
+    mechanical: 'Механизм',
+    mechanicalTip: 'Шестерня + призма + массив + капсула',
     staircase: 'Лестница',
     paramVase: 'Парам. ваза',
     paramGear: 'Парам. шестерня',
@@ -861,6 +863,8 @@ const L: Record<string, Record<string, string>> = {
     // Responsive topbar
     menu: 'Menu',
     // Advanced examples
+    mechanical: 'Mechanical',
+    mechanicalTip: 'Gear + prism + array + capsule',
     staircase: 'Staircase',
     paramVase: 'Param Vase',
     paramGear: 'Param Gear',
@@ -2677,6 +2681,7 @@ const AUTOCOMPLETE_KEYWORDS = [
   'hull','minkowski','multmatrix','module','function','for','if','else',
   'let','each','echo','assert','use','include',
   '$fn','$fa','$fs','true','false','undef','PI',
+  'prism','cone','capsule','gear','radial_array','linear_array',
 ]
 
 const acVisible = ref(false)
@@ -2862,6 +2867,12 @@ const OPENSCAD_DOCS: Record<string, DocEntry> = {
   polyhedron: { sig: 'polyhedron(points, faces)', desc: { ru: 'Многогранник из точек и граней', en: 'Creates a polyhedron from points and faces' } },
   offset: { sig: 'offset(r|delta, chamfer)', desc: { ru: 'Смещение 2D-контура', en: 'Offsets a 2D outline inward or outward' } },
   projection: { sig: 'projection(cut)', desc: { ru: 'Проекция 3D на плоскость XY', en: 'Projects 3D geometry onto XY plane' } },
+  prism: { sig: 'prism(sides, r, h, center)', desc: { ru: 'Правильная призма с N сторонами', en: 'Regular N-sided prism' } },
+  cone: { sig: 'cone(r, h, center, $fn)', desc: { ru: 'Конус (цилиндр с r2=0)', en: 'Cone (cylinder with r2=0)' } },
+  capsule: { sig: 'capsule(r, h, center, $fn)', desc: { ru: 'Капсула (цилиндр с полусферами)', en: 'Capsule (cylinder with hemisphere caps)' } },
+  gear: { sig: 'gear(teeth, mod, thickness, $fn)', desc: { ru: 'Упрощённая прямозубая шестерня', en: 'Simplified spur gear' } },
+  radial_array: { sig: 'radial_array(count, r) { ... }', desc: { ru: 'Круговой массив дочерних объектов', en: 'Radial array of children around a circle' } },
+  linear_array: { sig: 'linear_array(count, spacing) { ... }', desc: { ru: 'Линейный массив дочерних объектов', en: 'Linear array of children along a direction' } },
 }
 
 const hoverDocVisible = ref(false)
@@ -5615,6 +5626,10 @@ const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
     { name: 'text', sig: 'text(text, size, spacing)', desc: { ru: 'Объёмный текст', en: '3D text' } },
     { name: 'star', sig: 'star(points, r1, r2, h, $fn)', desc: { ru: 'Звезда (экструдированная)', en: 'Extruded star shape' } },
     { name: 'thread', sig: 'thread(d, pitch, length, $fn)', desc: { ru: 'Резьбовой цилиндр', en: 'Threaded cylinder' } },
+    { name: 'prism', sig: 'prism(sides, r, h, center)', desc: { ru: 'Правильная призма', en: 'Regular N-sided prism' } },
+    { name: 'cone', sig: 'cone(r, h, center, $fn)', desc: { ru: 'Конус', en: 'Cone' } },
+    { name: 'capsule', sig: 'capsule(r, h, center, $fn)', desc: { ru: 'Капсула', en: 'Capsule with hemisphere caps' } },
+    { name: 'gear', sig: 'gear(teeth, mod, thickness, $fn)', desc: { ru: 'Шестерня', en: 'Simplified spur gear' } },
   ]},
   { key: 'refPrimitives2D', entries: [
     { name: 'circle', sig: 'circle(r|d, $fn)', desc: { ru: 'Окружность', en: 'Circle' } },
@@ -5630,6 +5645,8 @@ const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
     { name: 'multmatrix', sig: 'multmatrix(m)', desc: { ru: 'Произвольная матрица 4x4', en: 'Apply arbitrary 4x4 matrix' } },
     { name: 'color', sig: 'color(c, alpha)', desc: { ru: 'Задать цвет', en: 'Set color of children' } },
     { name: 'offset', sig: 'offset(r|delta, chamfer)', desc: { ru: 'Смещение 2D-контура', en: 'Offset 2D outline' } },
+    { name: 'radial_array', sig: 'radial_array(count, r) { ... }', desc: { ru: 'Круговой массив', en: 'Radial array around circle' } },
+    { name: 'linear_array', sig: 'linear_array(count, spacing) { ... }', desc: { ru: 'Линейный массив', en: 'Linear array along direction' } },
   ]},
   { key: 'refCSG', entries: [
     { name: 'union', sig: 'union() { ... }', desc: { ru: 'Объединение', en: 'Combine children' } },
@@ -5980,6 +5997,7 @@ const EXAMPLE_CARDS: ExampleCard[] = [
   { key: 'gear', nameKey: 'gear', tipKey: 'gearTip' },
   { key: 'vase', nameKey: 'vase', tipKey: 'vaseTip' },
   { key: 'chess', nameKey: 'chess', tipKey: 'chessTip' },
+  { key: 'mechanical', nameKey: 'mechanical', tipKey: 'mechanicalTip' },
 ]
 
 function getExamplePreview(key: string): string {
@@ -6676,6 +6694,41 @@ translate([0, 0, 33])
 color([0.85, 0.8, 0.7])
 translate([0, 0, 39])
     sphere(r = 3, $fn = 24);
+`,
+
+  mechanical: `// Mechanical assembly: gear + prism + radial_array + capsule
+// Central gear
+color([0.6, 0.6, 0.7])
+gear(teeth=16, mod=2, thickness=6);
+
+// Hub
+color([0.5, 0.5, 0.6])
+translate([0, 0, 6])
+  cylinder(h=3, r=5, $fn=32);
+
+// Hexagonal standoff (prism)
+color([0.7, 0.7, 0.4])
+translate([0, 0, 9])
+  prism(sides=6, r=4, h=5, center=false);
+
+// Radial array of capsule pins
+color([0.8, 0.4, 0.3])
+translate([0, 0, 3])
+radial_array(count=8, r=12) {
+  capsule(r=1.2, h=4, center=true, $fn=16);
+}
+
+// Mounting bolts at corners using linear_array
+color([0.4, 0.5, 0.6])
+translate([-20, -20, 0])
+linear_array(count=3, spacing=[20, 0, 0]) {
+  cone(r=3, h=8, $fn=24);
+}
+
+// Base plate
+color([0.3, 0.3, 0.35])
+translate([0, 0, -2])
+  cylinder(h=2, r=22, $fn=48);
 `,
 }
 </script>

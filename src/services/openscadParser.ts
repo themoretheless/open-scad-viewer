@@ -1212,6 +1212,175 @@ function makeStar(points: number, r1: number, r2: number, h: number, _fn: number
   return { v, ix }
 }
 
+function makePrism(sides: number, r: number, h: number, center: boolean): { v: number[], ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const z0 = center ? -h / 2 : 0, z1 = center ? h / 2 : h
+
+  // Build polygon profile
+  const profile: number[][] = []
+  for (let i = 0; i < sides; i++) {
+    const angle = (2 * Math.PI * i) / sides
+    profile.push([r * Math.cos(angle), r * Math.sin(angle)])
+  }
+
+  // Bottom cap (z0, normal -Z)
+  const baseBot = v.length / 6
+  for (let i = 0; i < sides; i++) {
+    v.push(profile[i][0], profile[i][1], z0, 0, 0, -1)
+  }
+  const botTris = earClip(profile)
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseBot + botTris[i], baseBot + botTris[i + 2], baseBot + botTris[i + 1])
+  }
+
+  // Top cap (z1, normal +Z)
+  const baseTop = v.length / 6
+  for (let i = 0; i < sides; i++) {
+    v.push(profile[i][0], profile[i][1], z1, 0, 0, 1)
+  }
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseTop + botTris[i], baseTop + botTris[i + 1], baseTop + botTris[i + 2])
+  }
+
+  // Side walls
+  for (let i = 0; i < sides; i++) {
+    const i2 = (i + 1) % sides
+    const x0 = profile[i][0], y0 = profile[i][1]
+    const x1 = profile[i2][0], y1 = profile[i2][1]
+    const ex = x1 - x0, ey = y1 - y0
+    const len = Math.sqrt(ex * ex + ey * ey) || 1
+    const nx = ey / len, ny = -ex / len
+
+    const base = v.length / 6
+    v.push(x0, y0, z0, nx, ny, 0)
+    v.push(x1, y1, z0, nx, ny, 0)
+    v.push(x1, y1, z1, nx, ny, 0)
+    v.push(x0, y0, z1, nx, ny, 0)
+    ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+  }
+
+  return { v, ix }
+}
+
+function makeCapsule(r: number, h: number, center: boolean, fn: number): { v: number[], ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const totalH = h + 2 * r
+  const z0 = center ? -totalH / 2 : 0
+  const cylBot = z0 + r
+  const cylTop = cylBot + h
+
+  // Cylinder body
+  for (let i = 0; i <= fn; i++) {
+    const a = (2 * Math.PI * i) / fn, ca = Math.cos(a), sa = Math.sin(a)
+    v.push(r * ca, r * sa, cylBot, ca, sa, 0)
+    v.push(r * ca, r * sa, cylTop, ca, sa, 0)
+  }
+  for (let i = 0; i < fn; i++) {
+    const a2 = i * 2; ix.push(a2, a2 + 1, a2 + 2, a2 + 2, a2 + 1, a2 + 3)
+  }
+
+  // Bottom hemisphere (centered at cylBot)
+  const halfSeg = Math.max(4, Math.floor(fn / 2))
+  const botBase = v.length / 6
+  for (let ri = 0; ri <= halfSeg; ri++) {
+    const phi = Math.PI / 2 + (Math.PI / 2) * ri / halfSeg  // PI/2 to PI
+    const sp = Math.sin(phi), cp = Math.cos(phi)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const nx = sp * Math.cos(th), ny = sp * Math.sin(th), nz = cp
+      v.push(r * nx, r * ny, cylBot + r * nz, nx, ny, nz)
+    }
+  }
+  for (let ri = 0; ri < halfSeg; ri++)
+    for (let si = 0; si < fn; si++) {
+      const a = botBase + ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+
+  // Top hemisphere (centered at cylTop)
+  const topBase = v.length / 6
+  for (let ri = 0; ri <= halfSeg; ri++) {
+    const phi = (Math.PI / 2) * ri / halfSeg  // 0 to PI/2
+    const sp = Math.sin(phi), cp = Math.cos(phi)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const nx = sp * Math.cos(th), ny = sp * Math.sin(th), nz = cp
+      v.push(r * nx, r * ny, cylTop + r * nz, nx, ny, nz)
+    }
+  }
+  for (let ri = 0; ri < halfSeg; ri++)
+    for (let si = 0; si < fn; si++) {
+      const a = topBase + ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+
+  return { v, ix }
+}
+
+function makeGear(teeth: number, mod: number, thickness: number, fn: number): { v: number[], ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const tipR = mod * teeth / 2
+  const valleyR = tipR - mod
+  const n2 = teeth * 2
+  const segsPerSide = Math.max(1, fn)
+
+  // Build 2D gear profile: alternating tip/valley arcs
+  const profile: number[][] = []
+  for (let i = 0; i < n2; i++) {
+    const frac = i / n2
+    const nextFrac = (i + 1) / n2
+    const isTip = i % 2 === 0
+    const r1g = isTip ? tipR : valleyR
+    const r2g = isTip ? valleyR : tipR
+    for (let s = 0; s < segsPerSide; s++) {
+      const t = s / segsPerSide
+      const angle = 2 * Math.PI * (frac + t * (nextFrac - frac))
+      const rr = r1g + (r2g - r1g) * t
+      profile.push([rr * Math.cos(angle), rr * Math.sin(angle)])
+    }
+  }
+
+  const np = profile.length
+
+  // Bottom cap (z=0, normal -Z)
+  const baseBot = v.length / 6
+  for (let i = 0; i < np; i++) {
+    v.push(profile[i][0], profile[i][1], 0, 0, 0, -1)
+  }
+  const botTris = earClip(profile)
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseBot + botTris[i], baseBot + botTris[i + 2], baseBot + botTris[i + 1])
+  }
+
+  // Top cap (z=thickness, normal +Z)
+  const baseTop = v.length / 6
+  for (let i = 0; i < np; i++) {
+    v.push(profile[i][0], profile[i][1], thickness, 0, 0, 1)
+  }
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseTop + botTris[i], baseTop + botTris[i + 1], baseTop + botTris[i + 2])
+  }
+
+  // Side walls
+  for (let i = 0; i < np; i++) {
+    const i2 = (i + 1) % np
+    const x0 = profile[i][0], y0 = profile[i][1]
+    const x1 = profile[i2][0], y1 = profile[i2][1]
+    const ex = x1 - x0, ey = y1 - y0
+    const len = Math.sqrt(ex * ex + ey * ey) || 1
+    const nx = ey / len, ny = -ex / len
+
+    const base = v.length / 6
+    v.push(x0, y0, 0, nx, ny, 0)
+    v.push(x1, y1, 0, nx, ny, 0)
+    v.push(x1, y1, thickness, nx, ny, 0)
+    v.push(x0, y0, thickness, nx, ny, 0)
+    ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+  }
+
+  return { v, ix }
+}
+
 function makeThread(d: number, pitch: number, length: number, fn: number): { v: number[], ix: number[] } {
   const v: number[] = [], ix: number[] = []
   const baseR = d / 2
@@ -3097,6 +3266,64 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       else { sx = sy = sz = 10 }
       const { v, ix } = makeWedge(sx, sy, sz)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'prism': {
+      const sides = typeof arg(a, 'sides', 0, 6) === 'number' ? Math.max(3, Math.floor(arg(a, 'sides', 0, 6) as number)) : 6
+      const r = typeof arg(a, 'r', 1, 10) === 'number' ? arg(a, 'r', 1, 10) as number : 10
+      const h = typeof arg(a, 'h', 2, 10) === 'number' ? arg(a, 'h', 2, 10) as number : 10
+      const center = arg(a, 'center', 3, false) === true
+      const { v, ix } = makePrism(sides, r, h, center)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'cone': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
+      const center = arg(a, 'center', 2, false) === true
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeCylinder(h, r, 0, center, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'capsule': {
+      const r = typeof arg(a, 'r', 0, 5) === 'number' ? arg(a, 'r', 0, 5) as number : 5
+      const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
+      const center = arg(a, 'center', 2, false) === true
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const { v, ix } = makeCapsule(r, h, center, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'gear': {
+      const teeth = typeof arg(a, 'teeth', 0, 12) === 'number' ? Math.max(3, Math.floor(arg(a, 'teeth', 0, 12) as number)) : 12
+      const mod = typeof arg(a, 'mod', 1, 2) === 'number' ? arg(a, 'mod', 1, 2) as number : 2
+      const thickness = typeof arg(a, 'thickness', 2, 5) === 'number' ? arg(a, 'thickness', 2, 5) as number : 5
+      const fn = Math.max(1, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6)
+      const { v, ix } = makeGear(teeth, mod, thickness, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'radial_array': {
+      const count = typeof arg(a, 'count', 0, 6) === 'number' ? Math.max(1, Math.floor(arg(a, 'count', 0, 6) as number)) : 6
+      const r = typeof arg(a, 'r', 1, 20) === 'number' ? arg(a, 'r', 1, 20) as number : 20
+      const out: MeshData[] = []
+      for (let i = 0; i < count; i++) {
+        const angle = (i * 360 / count) * Math.PI / 180
+        let nt = rotateZ(tf, angle)
+        nt = translate(nt, [r, 0, 0])
+        out.push(...evalNodes(ch, nt, col, vars, modules, echos, callerChildren, annotations))
+      }
+      return out
+    }
+    case 'linear_array': {
+      const count = typeof arg(a, 'count', 0, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'count', 0, 5) as number)) : 5
+      let spacing = arg(a, 'spacing', 1, [12, 0, 0])
+      if (!Array.isArray(spacing)) spacing = [typeof spacing === 'number' ? spacing : 12, 0, 0]
+      const sx = typeof spacing[0] === 'number' ? spacing[0] : 0
+      const sy = typeof spacing[1] === 'number' ? spacing[1] : 0
+      const sz = typeof spacing[2] === 'number' ? spacing[2] : 0
+      const out: MeshData[] = []
+      for (let i = 0; i < count; i++) {
+        const nt = translate(tf, [i * sx, i * sy, i * sz])
+        out.push(...evalNodes(ch, nt, col, vars, modules, echos, callerChildren, annotations))
+      }
+      return out
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
