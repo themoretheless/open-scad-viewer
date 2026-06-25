@@ -619,6 +619,24 @@ const L: Record<string, Record<string, string>> = {
     compassS: 'Ю',
     compassE: 'В',
     compassW: 'З',
+    // Batch 34: editor & rendering improvements
+    toonShading: 'Тун-шейдинг',
+    cmdToggleToon: 'Переключить тун-шейдинг',
+    explodedView: 'Разнесённый вид',
+    explodeFactor: 'Степень разнесения',
+    vignette: 'Виньетка',
+    cmdToggleVignette: 'Переключить виньетку',
+    fovSlider: 'Угол обзора',
+    orbitInertia: 'Инерция орбиты',
+    cmdToggleInertia: 'Переключить инерцию орбиты',
+    sortLinesAsc: 'Сортировка строк (по возрастанию)',
+    sortLinesDesc: 'Сортировка строк (по убыванию)',
+    toggleUpperCase: 'ВЕРХНИЙ РЕГИСТР',
+    toggleLowerCase: 'нижний регистр',
+    joinLines: 'Объединить строки',
+    sc_joinLines: 'Объединить строки',
+    sc_upperCase: 'ВЕРХНИЙ РЕГИСТР',
+    sc_lowerCase: 'нижний регистр',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1133,6 +1151,24 @@ const L: Record<string, Record<string, string>> = {
     profileTime: 'Time',
     cmdToggleProfile: 'Toggle Profiling',
     noProfileData: 'No profile data',
+    // Batch 34: editor & rendering improvements
+    toonShading: 'Toon Shading',
+    cmdToggleToon: 'Toggle Toon Shading',
+    explodedView: 'Exploded View',
+    explodeFactor: 'Explode Factor',
+    vignette: 'Vignette',
+    cmdToggleVignette: 'Toggle Vignette',
+    fovSlider: 'Field of View',
+    orbitInertia: 'Orbit Inertia',
+    cmdToggleInertia: 'Toggle Orbit Inertia',
+    sortLinesAsc: 'Sort Lines Ascending',
+    sortLinesDesc: 'Sort Lines Descending',
+    toggleUpperCase: 'UPPERCASE',
+    toggleLowerCase: 'lowercase',
+    joinLines: 'Join Lines',
+    sc_joinLines: 'Join Lines',
+    sc_upperCase: 'UPPERCASE',
+    sc_lowerCase: 'lowercase',
   },
 }
 
@@ -1400,6 +1436,11 @@ const outlineEnabled = ref(false)
 const smoothNormalsEnabled = ref(false)
 const colorGrading = ref('none')
 const skyPreset = ref('none')
+const toonShadingEnabled = ref(false)
+const explodeFactorVal = ref(0)
+const vignetteEnabled = ref(false)
+const fovDeg = ref(45)
+const inertiaEnabled = ref(localStorage.getItem('scad-orbit-inertia') === 'true')
 
 const COLOR_GRADING_FILTERS: Record<string, string> = {
   none: '',
@@ -4161,6 +4202,8 @@ onMounted(async () => {
 
   // Restore persisted build-plate setting.
   applyBuildPlate()
+  // Restore orbit inertia setting
+  renderer.setInertia(inertiaEnabled.value)
   // Initialize undo stack with current code
   pushUndoSnapshot(code.value)
   doRender()
@@ -4664,6 +4707,27 @@ function handleKey(e: KeyboardEvent) {
     return
   }
 
+  // Join Lines: Ctrl+J
+  if ((e.ctrlKey || e.metaKey) && e.key === 'j' && !e.shiftKey && !e.altKey) {
+    e.preventDefault()
+    joinLinesCmd()
+    return
+  }
+
+  // Toggle UPPERCASE: Ctrl+Shift+U
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'U') {
+    e.preventDefault()
+    toggleCase('upper')
+    return
+  }
+
+  // Toggle lowercase: Ctrl+Shift+L
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+    e.preventDefault()
+    toggleCase('lower')
+    return
+  }
+
   const editorEl = e.target as HTMLTextAreaElement
 
   // Duplicate line: Ctrl+D
@@ -5156,6 +5220,14 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'tour', label: () => t('tourStart'), action: () => startTour() },
   { id: 'snapshotGallery', label: () => t('cmdSnapshotGallery'), action: () => { showSnapshotGallery.value = !showSnapshotGallery.value } },
   { id: 'profilePanel', label: () => t('cmdToggleProfile'), action: () => { showProfilePanel.value = !showProfilePanel.value } },
+  { id: 'toonShading', label: () => t('cmdToggleToon'), action: () => toggleToonShading() },
+  { id: 'vignette', label: () => t('cmdToggleVignette'), action: () => toggleVignette() },
+  { id: 'orbitInertia', label: () => t('cmdToggleInertia'), action: () => toggleInertia() },
+  { id: 'sortLinesAsc', label: () => t('sortLinesAsc'), action: () => sortLines('asc') },
+  { id: 'sortLinesDesc', label: () => t('sortLinesDesc'), action: () => sortLines('desc') },
+  { id: 'upperCase', label: () => t('toggleUpperCase'), shortcut: 'Ctrl+Shift+U', action: () => toggleCase('upper') },
+  { id: 'lowerCase', label: () => t('toggleLowerCase'), shortcut: 'Ctrl+Shift+L', action: () => toggleCase('lower') },
+  { id: 'joinLines', label: () => t('joinLines'), shortcut: 'Ctrl+J', action: () => joinLinesCmd() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -5503,6 +5575,126 @@ function toggleOutline() {
 function toggleNormalSmoothing() {
   smoothNormalsEnabled.value = !smoothNormalsEnabled.value
   renderer?.setNormalSmoothing(smoothNormalsEnabled.value)
+}
+
+/* ── Feature: Toon Shading ── */
+function toggleToonShading() {
+  toonShadingEnabled.value = !toonShadingEnabled.value
+  renderer?.setToonShading(toonShadingEnabled.value)
+}
+
+/* ── Feature: Exploded View ── */
+function onExplodeChange(e: Event) {
+  const v = parseFloat((e.target as HTMLInputElement).value)
+  explodeFactorVal.value = v
+  renderer?.setExplode(v)
+}
+
+/* ── Feature: Vignette ── */
+function toggleVignette() {
+  vignetteEnabled.value = !vignetteEnabled.value
+}
+
+/* ── Feature: FOV Slider ── */
+function onFovChange(e: Event) {
+  const v = parseInt((e.target as HTMLInputElement).value)
+  fovDeg.value = v
+  renderer?.setFov(v * Math.PI / 180)
+}
+
+/* ── Feature: Orbit Inertia ── */
+function toggleInertia() {
+  inertiaEnabled.value = !inertiaEnabled.value
+  renderer?.setInertia(inertiaEnabled.value)
+  localStorage.setItem('scad-orbit-inertia', String(inertiaEnabled.value))
+}
+
+/* ── Feature: Sort Lines ── */
+function sortLines(direction: 'asc' | 'desc') {
+  const el = textareaRef.value
+  if (!el) return
+  const src = code.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+  const hasSelection = selStart !== selEnd
+
+  let lineStartIdx: number, lineEndIdx: number
+  if (hasSelection) {
+    lineStartIdx = src.lastIndexOf('\n', selStart - 1) + 1
+    lineEndIdx = src.indexOf('\n', selEnd)
+    if (lineEndIdx === -1) lineEndIdx = src.length
+  } else {
+    lineStartIdx = 0
+    lineEndIdx = src.length
+  }
+
+  const block = src.substring(lineStartIdx, lineEndIdx)
+  const lines = block.split('\n')
+  lines.sort((a, b) => direction === 'asc' ? a.localeCompare(b) : b.localeCompare(a))
+  const newBlock = lines.join('\n')
+  code.value = src.substring(0, lineStartIdx) + newBlock + src.substring(lineEndIdx)
+  nextTick(() => {
+    el.selectionStart = lineStartIdx
+    el.selectionEnd = lineStartIdx + newBlock.length
+    el.focus()
+  })
+}
+
+/* ── Feature: Toggle Case ── */
+function toggleCase(mode: 'upper' | 'lower') {
+  const el = textareaRef.value
+  if (!el) return
+  const src = code.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+  if (selStart === selEnd) return // no selection
+
+  const selected = src.substring(selStart, selEnd)
+  const transformed = mode === 'upper' ? selected.toUpperCase() : selected.toLowerCase()
+  code.value = src.substring(0, selStart) + transformed + src.substring(selEnd)
+  nextTick(() => {
+    el.selectionStart = selStart
+    el.selectionEnd = selStart + transformed.length
+    el.focus()
+  })
+}
+
+/* ── Feature: Join Lines ── */
+function joinLinesCmd() {
+  const el = textareaRef.value
+  if (!el) return
+  const src = code.value
+  const selStart = el.selectionStart
+  const selEnd = el.selectionEnd
+
+  if (selStart !== selEnd) {
+    // Join all selected lines into one
+    const lineStartIdx = src.lastIndexOf('\n', selStart - 1) + 1
+    let lineEndIdx = src.indexOf('\n', selEnd)
+    if (lineEndIdx === -1) lineEndIdx = src.length
+    const block = src.substring(lineStartIdx, lineEndIdx)
+    const joined = block.split('\n').map(l => l.trim()).join(' ')
+    code.value = src.substring(0, lineStartIdx) + joined + src.substring(lineEndIdx)
+    nextTick(() => {
+      el.selectionStart = lineStartIdx
+      el.selectionEnd = lineStartIdx + joined.length
+      el.focus()
+    })
+  } else {
+    // Join current line with next
+    let lineEnd = src.indexOf('\n', selStart)
+    if (lineEnd === -1) return // last line, nothing to join
+    const before = src.substring(0, lineEnd)
+    const after = src.substring(lineEnd + 1)
+    // Trim leading whitespace from the next line
+    const afterTrimmed = after.replace(/^\s+/, '')
+    const joined = before + ' ' + afterTrimmed
+    code.value = joined
+    nextTick(() => {
+      el.selectionStart = el.selectionEnd = lineEnd + 1
+      el.focus()
+    })
+  }
 }
 
 /* ── Feature: Color Grading ── */
@@ -6823,6 +7015,9 @@ translate([0, 0, -2])
             <div class="shortcut-row"><kbd>Alt+Z</kbd><span>{{ t('sc_wordWrap') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+G</kbd><span>{{ t('sc_goToLine') }}</span></div>
             <div class="shortcut-row"><kbd>Ctrl+Shift+P / F1</kbd><span>{{ t('sc_commandPalette') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+J</kbd><span>{{ t('sc_joinLines') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+U</kbd><span>{{ t('sc_upperCase') }}</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Shift+L</kbd><span>{{ t('sc_lowerCase') }}</span></div>
 
             <div class="shortcut-category">{{ t('shortcatNavigation') }}</div>
             <div class="shortcut-row"><kbd>W / A / S / D</kbd><span>{{ t('sc_wasd') }}</span></div>
@@ -7793,6 +7988,9 @@ translate([0, 0, -2])
           @drop="onCanvasDrop"
         />
 
+        <!-- Vignette overlay -->
+        <div v-if="vignetteEnabled" class="vignette-overlay"></div>
+
         <!-- STL drag-and-drop overlay on canvas -->
         <div v-if="isCanvasDragOver" class="canvas-drop-overlay">
           <div class="canvas-drop-content">
@@ -7965,6 +8163,17 @@ translate([0, 0, -2])
                 <span class="vp-dd-check" v-if="isFullscreen">&#10003;</span>
                 {{ t('fullscreen') }}
               </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleInertia()">
+                <span class="vp-dd-check" v-if="inertiaEnabled">&#10003;</span>
+                {{ t('orbitInertia') }}
+              </button>
+              <div class="vp-dd-sep" v-show="!simpleMode"></div>
+              <div class="vp-dd-label" v-show="!simpleMode">{{ t('fovSlider') }}: {{ fovDeg }}&deg;</div>
+              <div v-show="!simpleMode" class="vp-dd-slider-row">
+                <input type="range" class="clip-slider" min="15" max="120" step="1" :value="fovDeg" @input="onFovChange" />
+                <span class="clip-value">{{ fovDeg }}&deg;</span>
+              </div>
+              <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleMeasureMode(); closeAllMenus()">
                 <span class="vp-dd-check" v-if="measureMode">&#10003;</span>
                 {{ t('measureMode') }}
@@ -8046,6 +8255,20 @@ translate([0, 0, -2])
                 <span class="vp-dd-check" v-if="smoothNormalsEnabled">&#10003;</span>
                 {{ t('smoothNormals') }}
               </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleToonShading()">
+                <span class="vp-dd-check" v-if="toonShadingEnabled">&#10003;</span>
+                {{ t('toonShading') }}
+              </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleVignette()">
+                <span class="vp-dd-check" v-if="vignetteEnabled">&#10003;</span>
+                {{ t('vignette') }}
+              </button>
+              <div class="vp-dd-sep" v-show="!simpleMode"></div>
+              <div class="vp-dd-label" v-show="!simpleMode">{{ t('explodedView') }}</div>
+              <div v-show="!simpleMode" class="vp-dd-slider-row">
+                <input type="range" class="clip-slider" min="0" max="1" step="0.05" :value="explodeFactorVal" @input="onExplodeChange" />
+                <span class="clip-value">{{ explodeFactorVal.toFixed(2) }}</span>
+              </div>
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleClip()">
                 <span class="vp-dd-check" v-if="clipEnabled">&#10003;</span>
@@ -10689,6 +10912,13 @@ textarea.code:focus-visible {
 }
 
 /* ── Canvas drop overlay for STL import ── */
+/* ── Vignette overlay ── */
+.vignette-overlay {
+  position: absolute; inset: 0; z-index: 50;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 40px rgba(0, 0, 0, 0.55);
+  border-radius: 0;
+}
 .canvas-drop-overlay {
   position: absolute; inset: 0; z-index: 200;
   background: rgba(74, 158, 255, 0.1);

@@ -42,7 +42,13 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
   let L = normalize(sc.light.xyz);
   let V2 = normalize(sc.eye.xyz - v.w);
   let H = normalize(L + V2);
-  let d = max(dot(N, L), 0.0);
+  var d = max(dot(N, L), 0.0);
+
+  // Toon / cel shading: quantize diffuse into discrete steps
+  if (sc._pad1.x > 0.5) {
+    d = floor(d * 4.0) / 4.0;
+  }
+
   let s = pow(max(dot(N, H), 0.0), 40.0);
   let bd = max(dot(-N, L), 0.0) * 0.25;
   var c = sc.ambient.rgb * ob.color.rgb + d * ob.color.rgb + s * vec3f(0.25) + bd * ob.color.rgb * 0.5;
@@ -218,6 +224,22 @@ export class WebGPURenderer {
 
   /* skybox */
   skyPreset = 'none'
+
+  /* toon/cel shading */
+  toonShading = false
+
+  /* exploded view */
+  explodeFactor = 0
+
+  /* field of view (radians, default PI/4 = 45deg) */
+  fov = Math.PI / 4
+
+  /* orbit inertia */
+  inertiaEnabled = false
+  private inertiaYawVel = 0
+  private inertiaPitchVel = 0
+  private inertiaActive = false
+  private lastMoveTime = 0
 
   /* orthographic projection */
   orthographic = false
@@ -645,6 +667,8 @@ export class WebGPURenderer {
     sd[40] = this.flatShading ? 1.0 : 0.0
     // SSAO flag in _pad0.y
     sd[41] = this.ssao ? 1.0 : 0.0
+    // Toon shading flag in _pad1.x
+    sd[44] = this.toonShading ? 1.0 : 0.0
   }
 
   private render() {
@@ -656,11 +680,11 @@ export class WebGPURenderer {
     const view = lookAt([cx,cy,cz], [this.tx,this.ty,this.tz], [0,1,0])
     let proj: Mat4
     if (this.orthographic) {
-      const halfH = this.dist * Math.tan(Math.PI / 8)
+      const halfH = this.dist * Math.tan(this.fov / 2)
       const halfW = halfH * asp
       proj = ortho(-halfW, halfW, -halfH, halfH, 0.1, this.dist * 10)
     } else {
-      proj = perspective(Math.PI / 4, asp, 0.1, this.dist * 10)
+      proj = perspective(this.fov, asp, 0.1, this.dist * 10)
     }
     const vpMat = multiply(proj, view)
     this.lastVP = vpMat
@@ -711,8 +735,42 @@ export class WebGPURenderer {
       pass.draw(3)
     }
 
-    // Outline pass
-    if (this.showOutline && this.renderMode !== 'wireframe') {
+    // Exploded view: offset each mesh's model matrix away from scene center
+    if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
+      const scx = (this.boundsMin[0] + this.boundsMax[0]) / 2
+      const scy = (this.boundsMin[1] + this.boundsMax[1]) / 2
+      const scz = (this.boundsMin[2] + this.boundsMax[2]) / 2
+      for (let mi = 0; mi < this.meshes.length && mi < this.lastRawMeshes.length; mi++) {
+        const rm = this.lastRawMeshes[mi]
+        const tt = rm.transform
+        let mnx2 = Infinity, mny2 = Infinity, mnz2 = Infinity
+        let mxx2 = -Infinity, mxy2 = -Infinity, mxz2 = -Infinity
+        for (let i = 0; i < rm.vertices.length; i += 6) {
+          const x = rm.vertices[i], y = rm.vertices[i+1], z = rm.vertices[i+2]
+          const px = tt[0]*x+tt[1]*y+tt[2]*z+tt[3]
+          const py = tt[4]*x+tt[5]*y+tt[6]*z+tt[7]
+          const pz = tt[8]*x+tt[9]*y+tt[10]*z+tt[11]
+          mnx2 = Math.min(mnx2,px); mxx2 = Math.max(mxx2,px)
+          mny2 = Math.min(mny2,py); mxy2 = Math.max(mxy2,py)
+          mnz2 = Math.min(mnz2,pz); mxz2 = Math.max(mxz2,pz)
+        }
+        const mcx = (mnx2+mxx2)/2, mcy = (mny2+mxy2)/2, mcz = (mnz2+mxz2)/2
+        let edx = mcx - scx, edy = mcy - scy, edz = mcz - scz
+        const elen = Math.sqrt(edx*edx + edy*edy + edz*edz)
+        if (elen > 0.001) { edx /= elen; edy /= elen; edz /= elen }
+        else { edx = 0; edy = 1; edz = 0 }
+        const escale = Math.max(this.boundsMax[0]-this.boundsMin[0], this.boundsMax[1]-this.boundsMin[1], this.boundsMax[2]-this.boundsMin[2])
+        const eoff = escale * this.explodeFactor
+        const explT = new Float32Array(tt)
+        explT[3] += edx * eoff; explT[7] += edy * eoff; explT[11] += edz * eoff
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 0, transpose(explT))
+        const enm = transpose(invert(explT))
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 64, transpose(enm))
+      }
+    }
+
+    // Outline pass (also enable when toon shading is active for thick outlines)
+    if ((this.showOutline || this.toonShading) && this.renderMode !== 'wireframe') {
       pass.setPipeline(this.outlinePipe)
       pass.setBindGroup(0, this.sceneBG)
       for (const g of this.meshes) {
@@ -824,6 +882,16 @@ export class WebGPURenderer {
     }
 
     this.dev.queue.submit([enc.finish()])
+
+    // Restore original model matrices after exploded view
+    if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
+      for (let mi = 0; mi < this.meshes.length && mi < this.lastRawMeshes.length; mi++) {
+        const rm = this.lastRawMeshes[mi]
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 0, transpose(rm.transform))
+        const nm = transpose(invert(rm.transform))
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 64, transpose(nm))
+      }
+    }
   }
 
   private getLightingValues(): { light: [number, number, number, number]; ambient: [number, number, number, number] } {
@@ -897,6 +965,21 @@ export class WebGPURenderer {
       this.dirty = true
     }
 
+    // Orbit inertia
+    if (this.inertiaActive && !this.drag) {
+      this.yaw += this.inertiaYawVel
+      this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + this.inertiaPitchVel))
+      this.inertiaYawVel *= 0.95
+      this.inertiaPitchVel *= 0.95
+      if (Math.abs(this.inertiaYawVel) < 0.0001 && Math.abs(this.inertiaPitchVel) < 0.0001) {
+        this.inertiaActive = false
+        this.inertiaYawVel = 0
+        this.inertiaPitchVel = 0
+      } else {
+        this.dirty = true
+      }
+    }
+
     // Only render if something changed
     if (this.dirty) {
       this.dirty = false
@@ -912,8 +995,8 @@ export class WebGPURenderer {
       this.lastFrameTime = now
     }
 
-    // Keep the loop running while auto-rotate or animating; otherwise stop
-    if (this.autoRotate || this.animating) {
+    // Keep the loop running while auto-rotate, animating, or inertia active; otherwise stop
+    if (this.autoRotate || this.animating || this.inertiaActive) {
       this.raf = requestAnimationFrame(this.loop)
     }
   }
@@ -945,10 +1028,31 @@ export class WebGPURenderer {
         this.yaw = Math.round(this.yaw / step) * step
         this.pitch = Math.max(-1.5, Math.min(1.5, Math.round(this.pitch / step) * step))
       }
+      // Track velocity for inertia
+      if (this.inertiaEnabled) {
+        const now = performance.now()
+        this.inertiaYawVel = -dx * 0.005
+        this.inertiaPitchVel = dy * 0.005
+        this.lastMoveTime = now
+      }
     }
     this.requestRender()
   }
-  private onUp = (e: PointerEvent) => { this.drag = false; this.snapOrbit = false; this.canvas.releasePointerCapture(e.pointerId) }
+  private onUp = (e: PointerEvent) => {
+    const wasDragging = this.drag && !this.pan
+    this.drag = false; this.snapOrbit = false; this.canvas.releasePointerCapture(e.pointerId)
+    // Start inertia animation on pointer up after orbiting
+    if (wasDragging && this.inertiaEnabled) {
+      const timeSinceMove = performance.now() - this.lastMoveTime
+      if (timeSinceMove < 100 && (Math.abs(this.inertiaYawVel) > 0.0005 || Math.abs(this.inertiaPitchVel) > 0.0005)) {
+        this.inertiaActive = true
+        this.requestRender()
+      } else {
+        this.inertiaYawVel = 0
+        this.inertiaPitchVel = 0
+      }
+    }
+  }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
     this.dist = Math.max(1, Math.min(50000, this.dist * (1 + e.deltaY * 0.001)))
@@ -1259,11 +1363,11 @@ export class WebGPURenderer {
     const view = lookAt([cx, cy, cz], [this.tx, this.ty, this.tz], [0, 1, 0])
     let proj: Mat4
     if (this.orthographic) {
-      const halfH = this.dist * Math.tan(Math.PI / 8)
+      const halfH = this.dist * Math.tan(this.fov / 2)
       const halfW = halfH * asp
       proj = ortho(-halfW, halfW, -halfH, halfH, 0.1, this.dist * 10)
     } else {
-      proj = perspective(Math.PI / 4, asp, 0.1, this.dist * 10)
+      proj = perspective(this.fov, asp, 0.1, this.dist * 10)
     }
     const vpMat = multiply(proj, view)
     const vp = transpose(vpMat)
@@ -1310,8 +1414,42 @@ export class WebGPURenderer {
       pass.draw(3)
     }
 
-    // Outline pass
-    if (this.showOutline && this.renderMode !== 'wireframe') {
+    // Exploded view for scaled render
+    if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
+      const scx = (this.boundsMin[0] + this.boundsMax[0]) / 2
+      const scy = (this.boundsMin[1] + this.boundsMax[1]) / 2
+      const scz = (this.boundsMin[2] + this.boundsMax[2]) / 2
+      for (let mi = 0; mi < this.meshes.length && mi < this.lastRawMeshes.length; mi++) {
+        const rm = this.lastRawMeshes[mi]
+        const tt = rm.transform
+        let mnx2 = Infinity, mny2 = Infinity, mnz2 = Infinity
+        let mxx2 = -Infinity, mxy2 = -Infinity, mxz2 = -Infinity
+        for (let i = 0; i < rm.vertices.length; i += 6) {
+          const x = rm.vertices[i], y = rm.vertices[i+1], z = rm.vertices[i+2]
+          const px = tt[0]*x+tt[1]*y+tt[2]*z+tt[3]
+          const py = tt[4]*x+tt[5]*y+tt[6]*z+tt[7]
+          const pz = tt[8]*x+tt[9]*y+tt[10]*z+tt[11]
+          mnx2 = Math.min(mnx2,px); mxx2 = Math.max(mxx2,px)
+          mny2 = Math.min(mny2,py); mxy2 = Math.max(mxy2,py)
+          mnz2 = Math.min(mnz2,pz); mxz2 = Math.max(mxz2,pz)
+        }
+        const mcx = (mnx2+mxx2)/2, mcy = (mny2+mxy2)/2, mcz = (mnz2+mxz2)/2
+        let edx = mcx - scx, edy = mcy - scy, edz = mcz - scz
+        const elen = Math.sqrt(edx*edx + edy*edy + edz*edz)
+        if (elen > 0.001) { edx /= elen; edy /= elen; edz /= elen }
+        else { edx = 0; edy = 1; edz = 0 }
+        const escale = Math.max(this.boundsMax[0]-this.boundsMin[0], this.boundsMax[1]-this.boundsMin[1], this.boundsMax[2]-this.boundsMin[2])
+        const eoff = escale * this.explodeFactor
+        const explT = new Float32Array(tt)
+        explT[3] += edx * eoff; explT[7] += edy * eoff; explT[11] += edz * eoff
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 0, transpose(explT))
+        const enm = transpose(invert(explT))
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 64, transpose(enm))
+      }
+    }
+
+    // Outline pass (also enable when toon shading is active)
+    if ((this.showOutline || this.toonShading) && this.renderMode !== 'wireframe') {
       pass.setPipeline(this.outlinePipe)
       pass.setBindGroup(0, this.sceneBG)
       for (const g of this.meshes) {
@@ -1372,6 +1510,16 @@ export class WebGPURenderer {
     }
     pass.end()
     this.dev.queue.submit([enc.finish()])
+
+    // Restore original model matrices after exploded view in scaled render
+    if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
+      for (let mi = 0; mi < this.meshes.length && mi < this.lastRawMeshes.length; mi++) {
+        const rm = this.lastRawMeshes[mi]
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 0, transpose(rm.transform))
+        const nm = transpose(invert(rm.transform))
+        this.dev.queue.writeBuffer(this.meshes[mi].ub, 64, transpose(nm))
+      }
+    }
   }
 
   /** Copy the current canvas to clipboard as PNG. Returns true on success. */
@@ -1732,6 +1880,72 @@ export class WebGPURenderer {
   /** Check whether flat shading is enabled. */
   isFlatShading(): boolean {
     return this.flatShading
+  }
+
+  /** Toggle toon/cel shading. */
+  toggleToonShading(): boolean {
+    this.toonShading = !this.toonShading
+    this.requestRender()
+    return this.toonShading
+  }
+
+  /** Set toon shading on or off. */
+  setToonShading(v: boolean) {
+    this.toonShading = v
+    this.requestRender()
+  }
+
+  /** Check whether toon shading is enabled. */
+  isToonShading(): boolean {
+    return this.toonShading
+  }
+
+  /** Set the exploded view factor (0 = normal, 1 = fully exploded). */
+  setExplode(factor: number) {
+    this.explodeFactor = Math.max(0, Math.min(2, factor))
+    this.requestRender()
+  }
+
+  /** Get the current explode factor. */
+  getExplodeFactor(): number {
+    return this.explodeFactor
+  }
+
+  /** Set field of view in radians. */
+  setFov(fovRad: number) {
+    this.fov = Math.max(15 * Math.PI / 180, Math.min(120 * Math.PI / 180, fovRad))
+    this.requestRender()
+  }
+
+  /** Get the current field of view in radians. */
+  getFov(): number {
+    return this.fov
+  }
+
+  /** Toggle orbit inertia. */
+  toggleInertia(): boolean {
+    this.inertiaEnabled = !this.inertiaEnabled
+    if (!this.inertiaEnabled) {
+      this.inertiaActive = false
+      this.inertiaYawVel = 0
+      this.inertiaPitchVel = 0
+    }
+    return this.inertiaEnabled
+  }
+
+  /** Set orbit inertia on or off. */
+  setInertia(v: boolean) {
+    this.inertiaEnabled = v
+    if (!v) {
+      this.inertiaActive = false
+      this.inertiaYawVel = 0
+      this.inertiaPitchVel = 0
+    }
+  }
+
+  /** Check whether orbit inertia is enabled. */
+  isInertiaEnabled(): boolean {
+    return this.inertiaEnabled
   }
 
   /** Build a line-list vertex buffer with edges from the current meshes. */
