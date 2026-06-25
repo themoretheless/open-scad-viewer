@@ -2758,6 +2758,190 @@ function makePolyhedron(points: number[][], faces: number[][]): { v: number[]; i
   return { v, ix }
 }
 
+/* ── Trapezoid / Pyramid / Donut generators ───────── */
+
+function makeTrapezoid(top: number, bottom: number, h: number, depth: number) {
+  const v: number[] = [], ix: number[] = []
+  const bt = bottom / 2, tt = top / 2, d = depth / 2
+
+  // 8 vertices of the trapezoid prism
+  // Bottom face (z=0): bl_fl, bl_fr, bl_br, bl_bl
+  // Top face (z=h):    tl_fl, tl_fr, tl_br, tl_bl
+  const verts = [
+    [-bt, -d, 0], [ bt, -d, 0], [ bt,  d, 0], [-bt,  d, 0],  // bottom: 0,1,2,3
+    [-tt, -d, h], [ tt, -d, h], [ tt,  d, h], [-tt,  d, h],   // top: 4,5,6,7
+  ]
+
+  // 6 faces: [indices, normal]
+  // Bottom face (z=0) - normal (0,0,-1)
+  const faces: { verts: number[][]; normal: [number, number, number] }[] = [
+    { verts: [verts[0], verts[3], verts[2], verts[1]], normal: [0, 0, -1] },  // bottom
+    { verts: [verts[4], verts[5], verts[6], verts[7]], normal: [0, 0, 1] },   // top
+    { verts: [verts[0], verts[1], verts[5], verts[4]], normal: [0, -1, 0] },  // front (y=-d)
+    { verts: [verts[2], verts[3], verts[7], verts[6]], normal: [0, 1, 0] },   // back (y=+d)
+  ]
+
+  // Left slope: from (-bt,_,0) to (-tt,_,h)
+  // Normal for left slope: perpendicular to the slope surface
+  const ldx = -tt - (-bt)  // = bt - tt (change in x going up)
+  const ldz = h             // change in z going up
+  // Normal to left slope points leftward: (-ldz, 0, ldx) normalized... actually:
+  // The left face goes from bottom-left to top-left. The slope direction is (ldx, 0, ldz).
+  // Face normal perpendicular to slope, pointing left: (-h, 0, bt - tt) -> but we need outward
+  // Outward normal for left face: (-h, 0, -(bt - tt)) ... let's compute properly
+  // Edge along slope: (-tt - (-bt), 0, h) = (bt-tt, 0, h)
+  // Edge along depth: (0, depth, 0)
+  // Normal = slope x depth = (0*h - depth*0, depth*(bt-tt) - 0*0, 0*0 - 0*(bt-tt))... no
+  // slope = (bt-tt, 0, h), depthEdge = (0, 1, 0)
+  // cross = (0*0 - h*1, h*0 - (bt-tt)*0, (bt-tt)*1 - 0*0) = (-h, 0, bt-tt)
+  const lnx = -h, lny = 0, lnz = bt - tt
+  const lnLen = Math.sqrt(lnx * lnx + lnz * lnz) || 1
+  faces.push({
+    verts: [verts[0], verts[4], verts[7], verts[3]],
+    normal: [lnx / lnLen, lny / lnLen, lnz / lnLen]
+  })
+
+  // Right slope: from (bt,_,0) to (tt,_,h)
+  // By symmetry, normal is (h, 0, bt-tt) normalized
+  const rnx = h, rny = 0, rnz = bt - tt
+  const rnLen = Math.sqrt(rnx * rnx + rnz * rnz) || 1
+  faces.push({
+    verts: [verts[1], verts[2], verts[6], verts[5]],
+    normal: [rnx / rnLen, rny / rnLen, rnz / rnLen]
+  })
+
+  for (const face of faces) {
+    const base = v.length / 6
+    for (const vert of face.verts) {
+      v.push(vert[0], vert[1], vert[2], face.normal[0], face.normal[1], face.normal[2])
+    }
+    ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+  }
+
+  return { v, ix }
+}
+
+function makePyramid(base: number, h: number, sides: number, center: boolean) {
+  const v: number[] = [], ix: number[] = []
+  const r = base / 2
+  const zOff = center ? -h / 2 : 0
+
+  // Generate base polygon vertices
+  const baseVerts: [number, number][] = []
+  for (let i = 0; i < sides; i++) {
+    const angle = (2 * Math.PI * i) / sides
+    baseVerts.push([r * Math.cos(angle), r * Math.sin(angle)])
+  }
+
+  const apex: [number, number, number] = [0, 0, h + zOff]
+
+  // Bottom cap (normal pointing down, z = zOff)
+  const bottomBase = v.length / 6
+  for (let i = 0; i < sides; i++) {
+    v.push(baseVerts[i][0], baseVerts[i][1], zOff, 0, 0, -1)
+  }
+  // Fan triangulation for bottom (winding order for downward normal)
+  for (let i = 1; i < sides - 1; i++) {
+    ix.push(bottomBase, bottomBase + i + 1, bottomBase + i)
+  }
+
+  // Side faces: N triangles
+  for (let i = 0; i < sides; i++) {
+    const i2 = (i + 1) % sides
+    const p0: [number, number, number] = [baseVerts[i][0], baseVerts[i][1], zOff]
+    const p1: [number, number, number] = [baseVerts[i2][0], baseVerts[i2][1], zOff]
+
+    // Compute face normal
+    const e1x = p1[0] - p0[0], e1y = p1[1] - p0[1], e1z = p1[2] - p0[2]
+    const e2x = apex[0] - p0[0], e2y = apex[1] - p0[1], e2z = apex[2] - p0[2]
+    let fnx = e1y * e2z - e1z * e2y
+    let fny = e1z * e2x - e1x * e2z
+    let fnz = e1x * e2y - e1y * e2x
+    const fnLen = Math.sqrt(fnx * fnx + fny * fny + fnz * fnz) || 1
+    fnx /= fnLen; fny /= fnLen; fnz /= fnLen
+
+    const sBase = v.length / 6
+    v.push(p0[0], p0[1], p0[2], fnx, fny, fnz)
+    v.push(p1[0], p1[1], p1[2], fnx, fny, fnz)
+    v.push(apex[0], apex[1], apex[2], fnx, fny, fnz)
+    ix.push(sBase, sBase + 1, sBase + 2)
+  }
+
+  return { v, ix }
+}
+
+function makeDonut(r1: number, r2: number, angle: number, fn: number) {
+  if (angle >= 360) return makeTorus(r1, r2, fn)
+
+  const v: number[] = [], ix: number[] = []
+  const ringSegs = Math.max(4, Math.floor(fn * angle / 360))
+  const tubeSegs = Math.max(8, Math.floor(fn * r2 / r1))
+  const angleRad = (angle * Math.PI) / 180
+
+  // Generate torus surface vertices for partial sweep
+  for (let i = 0; i <= ringSegs; i++) {
+    const u = (angleRad * i) / ringSegs
+    const cu = Math.cos(u), su = Math.sin(u)
+    for (let j = 0; j <= tubeSegs; j++) {
+      const vv = (2 * Math.PI * j) / tubeSegs
+      const cv = Math.cos(vv), sv = Math.sin(vv)
+      const x = (r1 + r2 * cv) * cu
+      const y = r2 * sv
+      const z = (r1 + r2 * cv) * su
+      const nx = cv * cu
+      const ny = sv
+      const nz = cv * su
+      v.push(x, y, z, nx, ny, nz)
+    }
+  }
+  // Index the torus surface
+  for (let i = 0; i < ringSegs; i++) {
+    for (let j = 0; j < tubeSegs; j++) {
+      const a = i * (tubeSegs + 1) + j
+      const b = a + tubeSegs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // End cap at angle=0 (ring index 0)
+  // The cap center is at (r1, 0, 0) and the disc lies in the YZ plane locally
+  // Normal for this cap points in the -Z direction of the sweep (tangent direction at start)
+  // At u=0, tangent direction is (0, 0, 1) so cap normal is (0, 0, -1)
+  const cap0Center = v.length / 6
+  v.push(r1, 0, 0, 0, 0, -1)  // center of cap 0
+  for (let j = 0; j <= tubeSegs; j++) {
+    const vv = (2 * Math.PI * j) / tubeSegs
+    const cv = Math.cos(vv), sv = Math.sin(vv)
+    const x = r1 + r2 * cv
+    const y = r2 * sv
+    v.push(x, y, 0, 0, 0, -1)
+  }
+  for (let j = 0; j < tubeSegs; j++) {
+    ix.push(cap0Center, cap0Center + 1 + j + 1, cap0Center + 1 + j)
+  }
+
+  // End cap at angle=angle
+  const cu2 = Math.cos(angleRad), su2 = Math.sin(angleRad)
+  // Cap center at (r1*cos(angle), 0, r1*sin(angle))
+  // Tangent direction at end: (-sin(angle), 0, cos(angle)), so cap outward normal is same direction
+  const capNx = -su2, capNy = 0, capNz = cu2  // outward-pointing tangent
+  const cap1Center = v.length / 6
+  v.push(r1 * cu2, 0, r1 * su2, capNx, capNy, capNz)
+  for (let j = 0; j <= tubeSegs; j++) {
+    const vv = (2 * Math.PI * j) / tubeSegs
+    const cv = Math.cos(vv), sv = Math.sin(vv)
+    const x = (r1 + r2 * cv) * cu2
+    const y = r2 * sv
+    const z = (r1 + r2 * cv) * su2
+    v.push(x, y, z, capNx, capNy, capNz)
+  }
+  for (let j = 0; j < tubeSegs; j++) {
+    ix.push(cap1Center, cap1Center + 1 + j, cap1Center + 1 + j + 1)
+  }
+
+  return { v, ix }
+}
+
 /* ── Main evaluator ───────────────────────────────── */
 
 function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[], annotations: Annotation[] = []): MeshData[] {
@@ -3711,6 +3895,169 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const { v, ix } = makeLoft(profiles, heights, fn)
       if (!v.length) return []
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'trapezoid': {
+      const top = arg(a, 'top', 0, 10) as number
+      const bottom = arg(a, 'bottom', 1, 20) as number
+      const h = arg(a, 'h', 2, 15) as number
+      const depth = arg(a, 'depth', 3, 5) as number
+      const { v, ix } = makeTrapezoid(top, bottom, h, depth)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'pyramid': {
+      const base = arg(a, 'base', 0, 20) as number
+      const h = arg(a, 'h', 1, 15) as number
+      const sides = Math.max(3, Math.floor(arg(a, 'sides', 2, 4) as number))
+      const center = arg(a, 'center', 3, false) === true
+      const { v, ix } = makePyramid(base, h, sides, center)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'donut': {
+      const r1 = arg(a, 'r1', 0, 15) as number
+      const r2 = arg(a, 'r2', 1, 5) as number
+      const angle = arg(a, 'angle', 2, 360) as number
+      const fn = Math.max(8, arg(a, '$fn', -1, 32) as number)
+      const { v, ix } = makeDonut(r1, r2, angle, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'spiral_extrude': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const pitch = typeof arg(a, 'pitch', 1, 5) === 'number' ? arg(a, 'pitch', 1, 5) as number : 5
+      const turns = typeof arg(a, 'turns', 2, 3) === 'number' ? arg(a, 'turns', 2, 3) as number : 3
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+
+      const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren, annotations)
+      if (childMeshes.length === 0) return []
+
+      const out: MeshData[] = []
+      for (const childMesh of childMeshes) {
+        const { pts, flat } = extractFlatProfile(childMesh)
+        if (!flat || pts.length < 3) { out.push({ ...childMesh, transform: tf }); continue }
+
+        // Build helical path
+        const totalSteps = Math.max(16, Math.floor(fn * turns))
+        const path: number[][] = []
+        for (let i = 0; i <= totalSteps; i++) {
+          const angle = (2 * Math.PI * turns * i) / totalSteps
+          const x = r * Math.cos(angle)
+          const y = r * Math.sin(angle)
+          const z = pitch * angle / (2 * Math.PI)
+          path.push([x, y, z])
+        }
+
+        // Compute tangents
+        const tangents: number[][] = []
+        for (let i = 0; i < path.length; i++) {
+          let tx: number, ty: number, tz: number
+          if (i < path.length - 1) {
+            tx = path[i+1][0] - path[i][0]
+            ty = path[i+1][1] - path[i][1]
+            tz = path[i+1][2] - path[i][2]
+          } else {
+            tx = tangents[i-1][0]; ty = tangents[i-1][1]; tz = tangents[i-1][2]
+          }
+          const tlen = Math.sqrt(tx*tx + ty*ty + tz*tz) || 1
+          tangents.push([tx/tlen, ty/tlen, tz/tlen])
+        }
+
+        // Parallel transport frames
+        const normals: number[][] = []
+        const binormals: number[][] = []
+        const t0 = tangents[0]
+        let upx = 0, upy = 1, upz = 0
+        if (Math.abs(t0[1]) > 0.9) { upx = 1; upy = 0; upz = 0 }
+        let bx = t0[1]*upz - t0[2]*upy, by = t0[2]*upx - t0[0]*upz, bz = t0[0]*upy - t0[1]*upx
+        let blen = Math.sqrt(bx*bx + by*by + bz*bz) || 1
+        bx /= blen; by /= blen; bz /= blen
+        let nx = by*t0[2] - bz*t0[1], ny = bz*t0[0] - bx*t0[2], nz = bx*t0[1] - by*t0[0]
+        let nlen = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1
+        nx /= nlen; ny /= nlen; nz /= nlen
+        normals.push([nx, ny, nz])
+        binormals.push([bx, by, bz])
+
+        for (let i = 1; i < path.length; i++) {
+          const tPrev = tangents[i-1], tCur = tangents[i]
+          const ax = tPrev[1]*tCur[2] - tPrev[2]*tCur[1]
+          const ay = tPrev[2]*tCur[0] - tPrev[0]*tCur[2]
+          const az = tPrev[0]*tCur[1] - tPrev[1]*tCur[0]
+          const alen = Math.sqrt(ax*ax + ay*ay + az*az)
+          if (alen < 1e-10) {
+            normals.push([...normals[i-1]])
+            binormals.push([...binormals[i-1]])
+          } else {
+            const dot = tPrev[0]*tCur[0] + tPrev[1]*tCur[1] + tPrev[2]*tCur[2]
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
+            const ux = ax/alen, uy = ay/alen, uz = az/alen
+            const cosA = Math.cos(angle), sinA = Math.sin(angle)
+            const pn = normals[i-1]
+            const dotUN = ux*pn[0] + uy*pn[1] + uz*pn[2]
+            const crossX = uy*pn[2] - uz*pn[1]
+            const crossY = uz*pn[0] - ux*pn[2]
+            const crossZ = ux*pn[1] - uy*pn[0]
+            let rnx = pn[0]*cosA + crossX*sinA + ux*dotUN*(1-cosA)
+            let rny = pn[1]*cosA + crossY*sinA + uy*dotUN*(1-cosA)
+            let rnz = pn[2]*cosA + crossZ*sinA + uz*dotUN*(1-cosA)
+            const rnlen = Math.sqrt(rnx*rnx + rny*rny + rnz*rnz) || 1
+            rnx /= rnlen; rny /= rnlen; rnz /= rnlen
+            normals.push([rnx, rny, rnz])
+            const rbx = tCur[1]*rnz - tCur[2]*rny
+            const rby = tCur[2]*rnx - tCur[0]*rnz
+            const rbz = tCur[0]*rny - tCur[1]*rnx
+            const rblen = Math.sqrt(rbx*rbx + rby*rby + rbz*rbz) || 1
+            binormals.push([rbx/rblen, rby/rblen, rbz/rblen])
+          }
+        }
+
+        // Center the profile around its centroid
+        let cx = 0, cy = 0
+        for (const p of pts) { cx += p[0]; cy += p[1] }
+        cx /= pts.length; cy /= pts.length
+        const centeredPts = pts.map(p => [p[0] - cx, p[1] - cy] as [number, number])
+
+        // Generate vertices
+        const v: number[] = [], ix: number[] = []
+        const profileLen = centeredPts.length
+        for (let i = 0; i < path.length; i++) {
+          const cur = path[i]
+          const n = normals[i], b = binormals[i]
+          for (let j = 0; j < profileLen; j++) {
+            const px = cur[0] + centeredPts[j][0]*n[0] + centeredPts[j][1]*b[0]
+            const py = cur[1] + centeredPts[j][0]*n[1] + centeredPts[j][1]*b[1]
+            const pz = cur[2] + centeredPts[j][0]*n[2] + centeredPts[j][1]*b[2]
+            // Normal: direction from path center to surface point
+            const dx = px - cur[0], dy = py - cur[1], dz = pz - cur[2]
+            const dl = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1
+            v.push(px, py, pz, dx/dl, dy/dl, dz/dl)
+          }
+        }
+
+        // Connect rings
+        for (let i = 0; i < path.length - 1; i++) {
+          for (let j = 0; j < profileLen; j++) {
+            const j2 = (j + 1) % profileLen
+            const a0 = i * profileLen + j
+            const a1 = i * profileLen + j2
+            const b0 = (i+1) * profileLen + j
+            const b1 = (i+1) * profileLen + j2
+            ix.push(a0, b0, a1, a1, b0, b1)
+          }
+        }
+
+        if (v.length > 0) {
+          out.push({ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? childMesh.color, transform: tf })
+        }
+      }
+      return out
+    }
+    case 'fillet': {
+      const r = arg(a, 'r', 0, 2)
+      echos.push('NOTE: fillet(r=' + r + ') is visual-only, applied as pass-through')
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
+    }
+    case 'chamfer': {
+      const r = arg(a, 'r', 0, 1)
+      echos.push('NOTE: chamfer(r=' + r + ') is visual-only, applied as pass-through')
+      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)

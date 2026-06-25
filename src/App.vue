@@ -718,6 +718,30 @@ const L: Record<string, Record<string, string>> = {
     densityNormal: 'Обычный',
     densityComfortable: 'Просторный',
     sc_quickSwitcher: 'Быстрое переключение вкладок',
+    renderAllTabs: 'Рендер всех вкладок',
+    batchRendering: 'Пакетный рендер...',
+    batchProgress: 'Прогресс: {n}/{total}',
+    batchResults: 'Результаты пакетного рендера',
+    batchTabName: 'Вкладка',
+    batchTriangles: 'Треугольники',
+    batchTime: 'Время (мс)',
+    batchTotal: 'Итого',
+    cmdRenderAll: 'Рендер всех вкладок',
+    customizeShortcuts: 'Настроить горячие клавиши',
+    shortcutEditorTitle: 'Редактор горячих клавиш',
+    shortcutAction: 'Действие',
+    shortcutBinding: 'Клавиша',
+    shortcutDefault: 'По умолчанию',
+    shortcutEdit: 'Изменить',
+    shortcutReset: 'Сброс',
+    shortcutResetAll: 'Сбросить все',
+    shortcutCapturing: 'Нажмите комбинацию клавиш...',
+    shortcutCancel: 'Отмена',
+    screenshotMetadata: 'Метаданные скриншота',
+    metaModelName: 'Название модели',
+    metaDimensions: 'Габариты',
+    metaTriangles: 'Треугольники',
+    metaDate: 'Дата',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1331,6 +1355,30 @@ const L: Record<string, Record<string, string>> = {
     densityNormal: 'Normal',
     densityComfortable: 'Comfortable',
     sc_quickSwitcher: 'Quick tab switcher',
+    renderAllTabs: 'Render All Tabs',
+    batchRendering: 'Batch rendering...',
+    batchProgress: 'Progress: {n}/{total}',
+    batchResults: 'Batch Render Results',
+    batchTabName: 'Tab',
+    batchTriangles: 'Triangles',
+    batchTime: 'Time (ms)',
+    batchTotal: 'Total',
+    cmdRenderAll: 'Render All Tabs',
+    customizeShortcuts: 'Customize Shortcuts',
+    shortcutEditorTitle: 'Shortcut Editor',
+    shortcutAction: 'Action',
+    shortcutBinding: 'Binding',
+    shortcutDefault: 'Default',
+    shortcutEdit: 'Edit',
+    shortcutReset: 'Reset',
+    shortcutResetAll: 'Reset All',
+    shortcutCapturing: 'Press key combination...',
+    shortcutCancel: 'Cancel',
+    screenshotMetadata: 'Screenshot Metadata',
+    metaModelName: 'Model Name',
+    metaDimensions: 'Dimensions',
+    metaTriangles: 'Triangles',
+    metaDate: 'Date',
   },
   zh: {
     title: 'OpenSCAD 3D 查看器',
@@ -4016,7 +4064,13 @@ function setView(name: string) {
 /* ── Screenshot ── */
 function takeScreenshot() {
   if (!renderer) return
-  renderer.screenshot()
+  const meta = screenshotMeta.value
+  const anyMeta = meta.modelName || meta.dimensions || meta.triangles || meta.date
+  if (anyMeta) {
+    screenshotWithMeta(1)
+  } else {
+    renderer.screenshot()
+  }
   addToast(t('screenshot'), 'success')
 }
 
@@ -4376,6 +4430,11 @@ function onDocClick(e: MouseEvent) {
 
 /* ── Global keyboard handler ── */
 function onGlobalKeydown(e: KeyboardEvent) {
+  // Custom shortcut capture mode
+  if (capturingShortcutId.value) {
+    onCaptureKey(e)
+    return
+  }
   const bindings = SHORTCUT_PRESETS[shortcutPreset.value]
   // Ctrl+Shift+P or F1 or preset command palette: Command Palette
   if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') || matchesBinding(e, bindings.commandPalette)) {
@@ -4467,6 +4526,8 @@ function onGlobalKeydown(e: KeyboardEvent) {
     if (acVisible.value) { acVisible.value = false; return }
     if (showRecent.value) { showRecent.value = false; return }
     if (showExportDropdown.value) { showExportDropdown.value = false; return }
+    if (showBatchResults.value) { showBatchResults.value = false; return }
+    if (showShortcutEditor.value) { showShortcutEditor.value = false; return }
     if (measureMode.value) { measureMode.value = false; clearMeasurement(); return }
     if (isFullscreen.value) { isFullscreen.value = false }
   }
@@ -5904,6 +5965,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'bloom', label: () => t('cmdToggleBloom'), action: () => toggleBloom() },
   { id: 'sectionBox', label: () => t('cmdToggleSectionBox'), action: () => toggleSectionBox() },
   { id: 'turntableExport', label: () => t('exportTurntable'), action: () => exportTurntableZip() },
+  { id: 'renderAll', label: () => t('cmdRenderAll'), action: () => doRenderAllTabs() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -6823,13 +6885,18 @@ function exportPng(scale: number) {
   if (!renderer) return
   pngScale.value = scale
   localStorage.setItem('scad-png-scale', String(scale))
-  if (scale <= 1) {
-    renderer.screenshot()
-    addToast(t('screenshot'), 'success')
+  const meta = screenshotMeta.value
+  const anyMeta = meta.modelName || meta.dimensions || meta.triangles || meta.date
+  if (anyMeta) {
+    screenshotWithMeta(scale)
   } else {
-    renderer.screenshotScaled(scale)
-    addToast(t('exportPng') + ' ' + scale + '×', 'success')
+    if (scale <= 1) {
+      renderer.screenshot()
+    } else {
+      renderer.screenshotScaled(scale)
+    }
   }
+  addToast(scale <= 1 ? t('screenshot') : (t('exportPng') + ' ' + scale + 'x'), 'success')
 }
 
 /* ── Viewport Dropdown Menus ── */
@@ -7522,6 +7589,203 @@ function doExportAllTabs() {
   exportAllTabsAsZip(tabs.value.map(tb => ({ name: tb.name, code: tb.code })))
   addToast(t('exportAllTabs'), 'success')
 }
+
+/* -- Feature: Render All Tabs (Batch) -- */
+const batchRendering = ref(false)
+const batchProgress = ref(0)
+const batchTotal = ref(0)
+const batchResults = ref<{name: string, tris: number, timeMs: number}[]>([])
+const showBatchResults = ref(false)
+
+function doRenderAllTabs() {
+  if (batchRendering.value || tabs.value.length === 0) return
+  batchRendering.value = true
+  batchResults.value = []
+  batchTotal.value = tabs.value.length
+  batchProgress.value = 0
+
+  const tabsCopy = [...tabs.value]
+  let idx = 0
+
+  function renderNext() {
+    if (idx >= tabsCopy.length) {
+      batchRendering.value = false
+      showBatchResults.value = true
+      addToast(t('renderAllTabs') + ' (' + tabsCopy.length + ')', 'success')
+      return
+    }
+    const tab = tabsCopy[idx]
+    try {
+      const t0 = performance.now()
+      const result = parseOpenSCADWithAST(tab.code, (name: string) => {
+        const baseName = name.replace(/\.scad$/, '')
+        const found = tabs.value.find(tb => {
+          const tabBase = tb.name.replace(/\.scad$/, '')
+          return tabBase === baseName || tabBase === name || tb.name === name
+        })
+        return found ? found.code : null
+      })
+      const t1 = performance.now()
+      const tris = result.meshes.reduce((s: number, m: any) => s + m.indices.length / 3, 0)
+      batchResults.value.push({ name: tab.name, tris, timeMs: Math.round(t1 - t0) })
+    } catch (e: any) {
+      batchResults.value.push({ name: tab.name, tris: 0, timeMs: 0 })
+    }
+    idx++
+    batchProgress.value = idx
+    setTimeout(renderNext, 10)
+  }
+
+  setTimeout(renderNext, 10)
+}
+
+/* -- Feature: Custom Keyboard Shortcut Editor -- */
+const showShortcutEditor = ref(false)
+
+function loadCustomBindings(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem('scad-custom-bindings')
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return {}
+}
+
+const customBindings = ref<Record<string, string>>(loadCustomBindings())
+const capturingShortcutId = ref<string | null>(null)
+
+const ALL_SHORTCUTS = [
+  { id: 'render', label: () => t('sc_render'), defaultKey: 'Ctrl+Enter' },
+  { id: 'format', label: () => t('cmdFormatCode'), defaultKey: 'Ctrl+Shift+F' },
+  { id: 'fullscreen', label: () => t('fullscreen'), defaultKey: 'F11' },
+  { id: 'commandPalette', label: () => t('sc_commandPalette'), defaultKey: 'Ctrl+Shift+P' },
+  { id: 'find', label: () => t('sc_findOnly'), defaultKey: 'Ctrl+F' },
+  { id: 'findReplace', label: () => t('sc_findReplace'), defaultKey: 'Ctrl+H' },
+  { id: 'goToLine', label: () => t('sc_goToLine'), defaultKey: 'Ctrl+G' },
+  { id: 'wordWrap', label: () => t('sc_wordWrap'), defaultKey: 'Alt+Z' },
+  { id: 'closeTab', label: () => t('sc_closeTab'), defaultKey: 'Ctrl+W' },
+  { id: 'nextTab', label: () => t('sc_nextTab'), defaultKey: 'Ctrl+Tab' },
+  { id: 'prevTab', label: () => t('sc_prevTab'), defaultKey: 'Ctrl+Shift+Tab' },
+]
+
+function saveCustomBindings() {
+  localStorage.setItem('scad-custom-bindings', JSON.stringify(customBindings.value))
+}
+
+function getEffectiveBinding(id: string): string {
+  if (customBindings.value[id]) return customBindings.value[id]
+  const sc = ALL_SHORTCUTS.find(s => s.id === id)
+  return sc ? sc.defaultKey : ''
+}
+
+function startCapture(id: string) {
+  capturingShortcutId.value = id
+}
+
+function onCaptureKey(e: KeyboardEvent) {
+  if (!capturingShortcutId.value) return
+  e.preventDefault()
+  e.stopPropagation()
+  // Ignore lone modifier keys
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
+  const parts: string[] = []
+  if (e.ctrlKey || e.metaKey) parts.push('Ctrl')
+  if (e.shiftKey) parts.push('Shift')
+  if (e.altKey) parts.push('Alt')
+  parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key)
+  customBindings.value[capturingShortcutId.value] = parts.join('+')
+  capturingShortcutId.value = null
+  saveCustomBindings()
+}
+
+function resetBinding(id: string) {
+  delete customBindings.value[id]
+  saveCustomBindings()
+}
+
+function resetAllBindings() {
+  customBindings.value = {}
+  saveCustomBindings()
+  addToast(t('shortcutResetAll'), 'success')
+}
+
+/* -- Feature: Screenshot Metadata -- */
+function loadScreenshotMeta(): { modelName: boolean, dimensions: boolean, triangles: boolean, date: boolean } {
+  try {
+    const raw = localStorage.getItem('scad-screenshot-meta')
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return { modelName: true, dimensions: true, triangles: true, date: true }
+}
+
+const screenshotMeta = ref(loadScreenshotMeta())
+
+watch(screenshotMeta, (v) => {
+  localStorage.setItem('scad-screenshot-meta', JSON.stringify(v))
+}, { deep: true })
+
+function screenshotWithMeta(scale: number) {
+  if (!renderer) return
+  const canvas = canvasRef.value
+  if (!canvas) {
+    // Fallback: no canvas access
+    if (scale <= 1) renderer.screenshot()
+    else renderer.screenshotScaled(scale)
+    return
+  }
+  const w = canvas.width * scale
+  const h = canvas.height * scale
+  const offscreen = document.createElement('canvas')
+  offscreen.width = w
+  offscreen.height = h
+  const ctx = offscreen.getContext('2d')
+  if (!ctx) {
+    if (scale <= 1) renderer.screenshot()
+    else renderer.screenshotScaled(scale)
+    return
+  }
+  ctx.drawImage(canvas, 0, 0, w, h)
+  // Draw metadata box
+  const meta = screenshotMeta.value
+  const lines: string[] = []
+  if (meta.modelName) lines.push(activeTab.value.name)
+  if (meta.dimensions) {
+    const bs = boundsSize.value
+    lines.push(bs[0].toFixed(1) + ' x ' + bs[1].toFixed(1) + ' x ' + bs[2].toFixed(1))
+  }
+  if (meta.triangles) lines.push(triCount.value.toLocaleString() + ' triangles')
+  if (meta.date) lines.push(new Date().toLocaleDateString())
+
+  if (lines.length > 0) {
+    const fontSize = Math.max(12, Math.round(14 * scale))
+    ctx.font = fontSize + 'px sans-serif'
+    const padding = 8 * scale
+    const lineHeight = fontSize + 4 * scale
+    const maxWidth = Math.max(...lines.map(l => ctx.measureText(l).width))
+    const boxW = maxWidth + padding * 2
+    const boxH = lines.length * lineHeight + padding * 2
+    const boxX = padding
+    const boxY = h - boxH - padding
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.beginPath()
+    ctx.roundRect(boxX, boxY, boxW, boxH, 6 * scale)
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.textBaseline = 'top'
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], boxX + padding, boxY + padding + i * lineHeight)
+    }
+  }
+
+  offscreen.toBlob((blob) => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = activeTab.value.name.replace(/\.scad$/, '') + '.png'
+    a.click()
+    URL.revokeObjectURL(url)
+  }, 'image/png')
+}
 </script>
 
 <script lang="ts">
@@ -8116,6 +8380,12 @@ loft(
               </div>
             </div>
             <div class="pref-row">
+              <label class="pref-label">{{ t('customizeShortcuts') }}</label>
+              <div class="pref-control">
+                <button class="btn btn-sm" @click="showShortcutEditor = true">{{ t('customizeShortcuts') }}</button>
+              </div>
+            </div>
+            <div class="pref-row">
               <label class="pref-label">{{ t('watermark') }}</label>
               <div class="pref-control">
                 <input type="checkbox" v-model="wmEnabled" class="pref-checkbox" />
@@ -8144,6 +8414,24 @@ loft(
                 <input type="range" min="0.05" max="0.5" step="0.05" v-model.number="wmOpacity" class="pref-slider" />
                 <span class="pref-value">{{ (wmOpacity * 100).toFixed(0) }}%</span>
               </div>
+            </div>
+            <div class="pref-section-divider"></div>
+            <div class="pref-section-title">{{ t('screenshotMetadata') }}</div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('metaModelName') }}</label>
+              <div class="pref-control"><input type="checkbox" v-model="screenshotMeta.modelName" class="pref-checkbox" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('metaDimensions') }}</label>
+              <div class="pref-control"><input type="checkbox" v-model="screenshotMeta.dimensions" class="pref-checkbox" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('metaTriangles') }}</label>
+              <div class="pref-control"><input type="checkbox" v-model="screenshotMeta.triangles" class="pref-checkbox" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('metaDate') }}</label>
+              <div class="pref-control"><input type="checkbox" v-model="screenshotMeta.date" class="pref-checkbox" /></div>
             </div>
             <!-- Presets Section -->
             <div class="pref-section-divider"></div>
@@ -8174,6 +8462,90 @@ loft(
             </div>
             <div class="pref-footer">
               <button class="btn btn-sm pref-reset-btn" @click="resetPreferences">{{ t('resetPrefs') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch Results modal -->
+      <div v-if="showBatchResults" class="modal-backdrop" @click.self="showBatchResults = false">
+        <div class="modal-box" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('batchResults') }}</span>
+            <button class="modal-close" @click="showBatchResults = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <table style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">{{ t('batchTabName') }}</th>
+                  <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border);">{{ t('batchTriangles') }}</th>
+                  <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border);">{{ t('batchTime') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, i) in batchResults" :key="i">
+                  <td style="padding:4px 8px;">{{ row.name }}</td>
+                  <td style="text-align:right;padding:4px 8px;">{{ row.tris.toLocaleString() }}</td>
+                  <td style="text-align:right;padding:4px 8px;">{{ row.timeMs }}ms</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr style="font-weight:bold;border-top:1px solid var(--border);">
+                  <td style="padding:4px 8px;">{{ t('batchTotal') }}</td>
+                  <td style="text-align:right;padding:4px 8px;">{{ batchResults.reduce((s, r) => s + r.tris, 0).toLocaleString() }}</td>
+                  <td style="text-align:right;padding:4px 8px;">{{ batchResults.reduce((s, r) => s + r.timeMs, 0) }}ms</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch rendering progress -->
+      <div v-if="batchRendering" class="modal-backdrop" style="z-index:9999;">
+        <div style="background:var(--bg);padding:24px 32px;border-radius:12px;text-align:center;">
+          <div style="margin-bottom:12px;font-size:14px;">{{ t('batchRendering') }}</div>
+          <div style="width:240px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+            <div :style="{width: (batchTotal > 0 ? (batchProgress/batchTotal*100) : 0) + '%', height:'100%', background:'var(--accent)', transition:'width 0.2s'}"></div>
+          </div>
+          <div style="margin-top:8px;font-size:12px;opacity:0.7;">{{ t('batchProgress').replace('{n}', String(batchProgress)).replace('{total}', String(batchTotal)) }}</div>
+        </div>
+      </div>
+
+      <!-- Shortcut Editor modal -->
+      <div v-if="showShortcutEditor" class="modal-backdrop" @click.self="showShortcutEditor = false">
+        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:520px;">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('shortcutEditorTitle') }}</span>
+            <button class="modal-close" @click="showShortcutEditor = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <table style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">{{ t('shortcutAction') }}</th>
+                  <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">{{ t('shortcutBinding') }}</th>
+                  <th style="padding:4px 8px;border-bottom:1px solid var(--border);"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="sc in ALL_SHORTCUTS" :key="sc.id">
+                  <td style="padding:4px 8px;font-size:13px;">{{ sc.label() }}</td>
+                  <td style="padding:4px 8px;">
+                    <kbd v-if="capturingShortcutId !== sc.id" style="font-size:11px;padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:3px;">{{ getEffectiveBinding(sc.id) }}</kbd>
+                    <span v-else style="font-size:11px;color:var(--accent);font-style:italic;">{{ t('shortcutCapturing') }}</span>
+                  </td>
+                  <td style="padding:4px 8px;white-space:nowrap;">
+                    <button v-if="capturingShortcutId !== sc.id" class="btn btn-sm" @click="startCapture(sc.id)" style="margin-right:4px;">{{ t('shortcutEdit') }}</button>
+                    <button v-if="capturingShortcutId === sc.id" class="btn btn-sm" @click="capturingShortcutId = null">{{ t('shortcutCancel') }}</button>
+                    <button v-if="customBindings[sc.id]" class="btn btn-sm" @click="resetBinding(sc.id)">{{ t('shortcutReset') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:12px;text-align:right;">
+              <button class="btn btn-sm" @click="resetAllBindings">{{ t('shortcutResetAll') }}</button>
             </div>
           </div>
         </div>
@@ -8316,6 +8688,9 @@ loft(
         <div class="toolbar">
           <button class="btn btn-primary" @click="doRender" title="Ctrl+Enter">
             {{ t('render') }}
+          </button>
+          <button class="btn btn-sm" @click="doRenderAllTabs" :disabled="batchRendering" :title="t('renderAllTabs')">
+            {{ batchRendering ? t('batchProgress').replace('{n}', String(batchProgress)).replace('{total}', String(batchTotal)) : t('renderAllTabs') }}
           </button>
           <label class="auto-check">
             <input type="checkbox" v-model="autoRender" /> {{ t('auto') }}
