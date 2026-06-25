@@ -653,6 +653,17 @@ const L: Record<string, Record<string, string>> = {
     dontShowTips: 'Больше не показывать',
     meshVisible: 'Видимый',
     meshHidden: 'Скрытый',
+    // Batch 36
+    flyCamera: 'Режим полёта',
+    cmdToggleFly: 'Переключить режим полёта',
+    bloom: 'Свечение (Bloom)',
+    cmdToggleBloom: 'Переключить свечение',
+    sectionBox: 'Сечение коробкой',
+    cmdToggleSectionBox: 'Переключить сечение коробкой',
+    colorOverride: 'Цвет объекта',
+    resetColor: 'Сбросить цвет',
+    orbitMode: 'Орбита',
+    flyModeLabel: 'Полёт',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1201,6 +1212,17 @@ const L: Record<string, Record<string, string>> = {
     dontShowTips: 'Don\'t show again',
     meshVisible: 'Visible',
     meshHidden: 'Hidden',
+    // Batch 36
+    flyCamera: 'Fly Camera',
+    cmdToggleFly: 'Toggle Fly Camera',
+    bloom: 'Bloom',
+    cmdToggleBloom: 'Toggle Bloom',
+    sectionBox: 'Section Box',
+    cmdToggleSectionBox: 'Toggle Section Box',
+    colorOverride: 'Object Color',
+    resetColor: 'Reset Color',
+    orbitMode: 'Orbit',
+    flyModeLabel: 'Fly',
   },
 }
 
@@ -1483,7 +1505,13 @@ const COLOR_GRADING_FILTERS: Record<string, string> = {
   vivid: 'saturate(1.6) contrast(1.1)',
 }
 
-const canvasFilter = computed(() => COLOR_GRADING_FILTERS[colorGrading.value] || '')
+const canvasFilter = computed(() => {
+  let f = COLOR_GRADING_FILTERS[colorGrading.value] || ''
+  if (bloomEnabled.value) {
+    f = (f ? f + ' ' : '') + 'contrast(1.1) brightness(1.05)'
+  }
+  return f
+})
 
 /* ── Code Folding ── */
 const foldedLines = ref<Set<number>>(new Set())
@@ -1497,6 +1525,27 @@ const colorPickerValue = ref('#ffffff')
 let colorPickerMatch: { start: number; end: number } | null = null
 
 const fastPreviewMode = ref(false)
+
+/* ── Batch 35 features ── */
+const goochShadingEnabled = ref(false)
+const groundShadowEnabled = ref(false)
+const zenModeActive = ref(false)
+const showTipOfDay = ref(false)
+const tipOfDayDismissed = ref(localStorage.getItem('scad-no-tips') === 'true')
+const turntableExporting = ref(false)
+
+let zenChordPending = false
+let zenChordTimer: ReturnType<typeof setTimeout> | null = null
+
+/* ── Batch 36 features ── */
+const flyCameraMode = ref(false)
+const bloomEnabled = ref(false)
+const sectionBoxEnabled = ref(false)
+const sectionBoxX = ref(0)
+const sectionBoxY = ref(0)
+const sectionBoxZ = ref(0)
+const meshColorOverrides = ref<Map<number, string>>(new Map())
+const meshVisibilityMap = ref<Map<number, boolean>>(new Map())
 
 let renderer: WebGPURenderer | null = null
 let debounce: ReturnType<typeof setTimeout> | null = null
@@ -2162,15 +2211,21 @@ interface FlatTreeNode {
   node: ASTNode
   depth: number
   hasChildren: boolean
+  meshIndex: number // -1 if not a geometry leaf
 }
+
+const GEOMETRY_NODES = new Set(['cube', 'sphere', 'cylinder', 'polyhedron', 'circle', 'square', 'polygon', 'text', 'import', 'surface'])
 
 const flatTree = computed(() => {
   const result: FlatTreeNode[] = []
+  let meshIdx = 0
   function walk(nodes: ASTNode[], depth: number) {
     for (const n of nodes) {
       if (n.name === '__assign') continue
       const hasChildren = n.children.length > 0
-      result.push({ node: n, depth, hasChildren })
+      const isGeom = GEOMETRY_NODES.has(n.name) && !hasChildren
+      result.push({ node: n, depth, hasChildren, meshIndex: isGeom ? meshIdx : -1 })
+      if (isGeom) meshIdx++
       if (hasChildren && expandedNodes.value.has(n.pos)) {
         walk(n.children, depth + 1)
       }
@@ -4112,6 +4167,23 @@ function onGlobalKeydown(e: KeyboardEvent) {
     else openCommandPalette()
     return
   }
+  // Ctrl+K Z chord: Zen Mode (VS Code style)
+  if (zenChordPending && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault()
+    zenChordPending = false
+    if (zenChordTimer) { clearTimeout(zenChordTimer); zenChordTimer = null }
+    toggleZenMode()
+    return
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && !e.shiftKey && !e.altKey) {
+    e.preventDefault()
+    zenChordPending = true
+    if (zenChordTimer) clearTimeout(zenChordTimer)
+    zenChordTimer = setTimeout(() => { zenChordPending = false }, 1500)
+    return
+  }
+  zenChordPending = false
+
   // Ctrl+\ : Toggle split editor
   if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
     e.preventDefault()
@@ -4161,8 +4233,9 @@ function onGlobalKeydown(e: KeyboardEvent) {
     openFindReplace(false)
     return
   }
-  // Escape to close modal or exit fullscreen
+  // Escape to close modal or exit fullscreen or zen mode
   if (e.key === 'Escape') {
+    if (zenModeActive.value) { zenModeActive.value = false; return }
     if (viewMenuOpen.value || renderMenuOpen.value || exportMenuOpen.value) { closeAllMenus(); return }
     if (showContextMenu.value) { showContextMenu.value = false; return }
     if (showCommandPalette.value) { closeCommandPalette(); return }
@@ -4189,6 +4262,11 @@ onMounted(async () => {
   loadRecentFiles()
   loadFromHash()
   computeFolds()
+
+  // Show tip of the day if not dismissed
+  if (!tipOfDayDismissed.value) {
+    showTipOfDay.value = true
+  }
 
   // Dynamic favicon: isometric 3D cube SVG
   {
@@ -4877,7 +4955,37 @@ function handleCanvasKeydown(e: KeyboardEvent) {
   const distStep = renderer.dist * 0.05
   const panStep = renderer.dist * 0.02
 
-  if (key === 'w' || key === 'ц') {
+  if (flyCameraMode.value) {
+    // Fly camera: WASD moves camera position in look direction, Q/E for altitude
+    const flySpeed = renderer.dist * 0.04
+    const cy = Math.cos(renderer.yaw), sy = Math.sin(renderer.yaw)
+    const cp = Math.cos(renderer.pitch), sp = Math.sin(renderer.pitch)
+    if (key === 'w' || key === 'ц') {
+      e.preventDefault()
+      renderer.tx += sy * cp * flySpeed
+      renderer.ty += sp * flySpeed
+      renderer.tz += cy * cp * flySpeed
+    } else if (key === 's' || key === 'ы') {
+      e.preventDefault()
+      renderer.tx -= sy * cp * flySpeed
+      renderer.ty -= sp * flySpeed
+      renderer.tz -= cy * cp * flySpeed
+    } else if (key === 'a' || key === 'ф') {
+      e.preventDefault()
+      renderer.tx += cy * flySpeed
+      renderer.tz -= sy * flySpeed
+    } else if (key === 'd' || key === 'в') {
+      e.preventDefault()
+      renderer.tx -= cy * flySpeed
+      renderer.tz += sy * flySpeed
+    } else if (key === 'q' || key === 'й') {
+      e.preventDefault()
+      renderer.ty += flySpeed
+    } else if (key === 'e' || key === 'у') {
+      e.preventDefault()
+      renderer.ty -= flySpeed
+    }
+  } else if (key === 'w' || key === 'ц') {
     e.preventDefault()
     if (shift) {
       // Pan forward (into screen along view direction)
@@ -5260,6 +5368,13 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'upperCase', label: () => t('toggleUpperCase'), shortcut: 'Ctrl+Shift+U', action: () => toggleCase('upper') },
   { id: 'lowerCase', label: () => t('toggleLowerCase'), shortcut: 'Ctrl+Shift+L', action: () => toggleCase('lower') },
   { id: 'joinLines', label: () => t('joinLines'), shortcut: 'Ctrl+J', action: () => joinLinesCmd() },
+  { id: 'goochShading', label: () => t('cmdToggleGooch'), action: () => toggleGoochShading() },
+  { id: 'groundShadow', label: () => t('cmdToggleGroundShadow'), action: () => toggleGroundShadow() },
+  { id: 'zenMode', label: () => t('cmdToggleZen'), shortcut: 'Ctrl+K Z', action: () => toggleZenMode() },
+  { id: 'flyCamera', label: () => t('cmdToggleFly'), action: () => toggleFlyCamera() },
+  { id: 'bloom', label: () => t('cmdToggleBloom'), action: () => toggleBloom() },
+  { id: 'sectionBox', label: () => t('cmdToggleSectionBox'), action: () => toggleSectionBox() },
+  { id: 'turntableExport', label: () => t('exportTurntable'), action: () => exportTurntableZip() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -5613,6 +5728,228 @@ function toggleNormalSmoothing() {
 function toggleToonShading() {
   toonShadingEnabled.value = !toonShadingEnabled.value
   renderer?.setToonShading(toonShadingEnabled.value)
+}
+
+/* ── Feature: Gooch Shading (batch 35) ── */
+function toggleGoochShading() {
+  goochShadingEnabled.value = !goochShadingEnabled.value
+  renderer?.toggleGoochShading()
+}
+
+/* ── Feature: Ground Shadow (batch 35) ── */
+function toggleGroundShadow() {
+  groundShadowEnabled.value = !groundShadowEnabled.value
+  renderer?.toggleGroundShadow()
+}
+
+/* ── Feature: Zen Mode (batch 35) ── */
+function toggleZenMode() {
+  zenModeActive.value = !zenModeActive.value
+}
+
+/* ── Feature: Tips of the Day (batch 35) ── */
+const TIPS = [
+  { ru: 'Используйте Ctrl+Enter для быстрого рендера.', en: 'Use Ctrl+Enter for quick render.' },
+  { ru: 'Ctrl+ЛКМ привязывает вращение к 15°.', en: 'Ctrl+LMB snaps rotation to 15 degrees.' },
+  { ru: 'WASD управляет камерой. Shift+WASD панорамирует.', en: 'WASD controls the camera. Shift+WASD pans.' },
+  { ru: 'Нажмите F для вписывания модели в экран.', en: 'Press F to fit the model to screen.' },
+  { ru: 'Попробуйте режим Рентген (X-Ray) для просмотра внутренней геометрии.', en: 'Try X-Ray mode to see internal geometry.' },
+  { ru: 'Ctrl+Shift+P открывает палитру команд.', en: 'Ctrl+Shift+P opens the command palette.' },
+  { ru: 'Используйте $fn для контроля детализации окружностей.', en: 'Use $fn to control circle resolution.' },
+  { ru: 'Экспортируйте в STL, OBJ или 3MF из меню Экспорт.', en: 'Export to STL, OBJ, or 3MF from the Export menu.' },
+]
+
+const currentTip = ref(TIPS[Math.floor(Math.random() * TIPS.length)])
+
+function dismissTipOfDay() {
+  showTipOfDay.value = false
+  tipOfDayDismissed.value = true
+  localStorage.setItem('scad-no-tips', 'true')
+}
+
+function nextTip() {
+  currentTip.value = TIPS[Math.floor(Math.random() * TIPS.length)]
+}
+
+/* ── Feature: Turntable ZIP Export (batch 35) ── */
+async function exportTurntableZip() {
+  if (!renderer || turntableExporting.value) return
+  turntableExporting.value = true
+  addToast(t('turntableProgress'), 'info')
+
+  try {
+    const frames: Blob[] = []
+    const frameCount = 36
+    const origYaw = renderer.yaw
+    for (let i = 0; i < frameCount; i++) {
+      renderer.yaw = origYaw + (i / frameCount) * Math.PI * 2
+      renderer.requestRender()
+      // Wait for one frame
+      await new Promise(r => requestAnimationFrame(r))
+      const blob = await renderer.captureFrameAsBlob()
+      if (blob) frames.push(blob)
+    }
+    renderer.yaw = origYaw
+    renderer.requestRender()
+
+    // Build a ZIP with the frames
+    // Simple ZIP building - using the existing exportAllTabsAsZip pattern
+    // but we'll build it manually for binary data
+    const zipParts: { name: string; data: Uint8Array }[] = []
+    for (let i = 0; i < frames.length; i++) {
+      const ab = await frames[i].arrayBuffer()
+      zipParts.push({ name: `frame_${String(i).padStart(3, '0')}.png`, data: new Uint8Array(ab) })
+    }
+
+    // Simple ZIP creator (no compression, store only)
+    const encoder = new TextEncoder()
+    const parts: Uint8Array[] = []
+    const centralDir: Uint8Array[] = []
+    let offset = 0
+    for (const file of zipParts) {
+      const nameBytes = encoder.encode(file.name)
+      // Local file header
+      const lh = new Uint8Array(30 + nameBytes.length)
+      const lhv = new DataView(lh.buffer)
+      lhv.setUint32(0, 0x04034b50, true) // signature
+      lhv.setUint16(4, 20, true) // version
+      lhv.setUint16(8, 0, true) // method: stored
+      lhv.setUint32(18, file.data.length, true) // compressed
+      lhv.setUint32(22, file.data.length, true) // uncompressed
+      lhv.setUint16(26, nameBytes.length, true)
+      lh.set(nameBytes, 30)
+      parts.push(lh)
+      parts.push(file.data)
+
+      // Central directory entry
+      const cd = new Uint8Array(46 + nameBytes.length)
+      const cdv = new DataView(cd.buffer)
+      cdv.setUint32(0, 0x02014b50, true)
+      cdv.setUint16(4, 20, true)
+      cdv.setUint16(6, 20, true)
+      cdv.setUint32(20, file.data.length, true)
+      cdv.setUint32(24, file.data.length, true)
+      cdv.setUint16(28, nameBytes.length, true)
+      cdv.setUint32(42, offset, true)
+      cd.set(nameBytes, 46)
+      centralDir.push(cd)
+
+      offset += lh.length + file.data.length
+    }
+
+    const cdOffset = offset
+    let cdSize = 0
+    for (const cd of centralDir) { parts.push(cd); cdSize += cd.length }
+
+    // End of central directory
+    const eocd = new Uint8Array(22)
+    const eocdv = new DataView(eocd.buffer)
+    eocdv.setUint32(0, 0x06054b50, true)
+    eocdv.setUint16(8, zipParts.length, true)
+    eocdv.setUint16(10, zipParts.length, true)
+    eocdv.setUint32(12, cdSize, true)
+    eocdv.setUint32(16, cdOffset, true)
+    parts.push(eocd)
+
+    const totalLen = parts.reduce((s, p) => s + p.length, 0)
+    const zipData = new Uint8Array(totalLen)
+    let pos = 0
+    for (const p of parts) { zipData.set(p, pos); pos += p.length }
+
+    const blob = new Blob([zipData], { type: 'application/zip' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `turntable-${Date.now()}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+    addToast(t('turntableComplete'), 'success')
+  } catch (err) {
+    console.error('Turntable export failed:', err)
+  } finally {
+    turntableExporting.value = false
+  }
+}
+
+/* ── Feature: Fly Camera Mode (batch 36) ── */
+function toggleFlyCamera() {
+  flyCameraMode.value = !flyCameraMode.value
+  renderer?.setFlyMode(flyCameraMode.value)
+}
+
+/* ── Feature: Bloom Effect (batch 36) ── */
+function toggleBloom() {
+  bloomEnabled.value = !bloomEnabled.value
+}
+
+/* ── Feature: Section Box (batch 36) ── */
+function toggleSectionBox() {
+  sectionBoxEnabled.value = !sectionBoxEnabled.value
+  renderer?.setSectionBoxEnabled(sectionBoxEnabled.value)
+  if (sectionBoxEnabled.value && renderer) {
+    // Initialize section box values to middle of bounds
+    const rx = renderer.getSectionBoxRange(0)
+    const ry = renderer.getSectionBoxRange(1)
+    const rz = renderer.getSectionBoxRange(2)
+    sectionBoxX.value = (rx.min + rx.max) / 2
+    sectionBoxY.value = (ry.min + ry.max) / 2
+    sectionBoxZ.value = (rz.min + rz.max) / 2
+    renderer.setSectionBoxValues(sectionBoxX.value, sectionBoxY.value, sectionBoxZ.value)
+  }
+}
+
+function onSectionBoxChange(axis: number, e: Event) {
+  const val = parseFloat((e.target as HTMLInputElement).value)
+  if (axis === 0) sectionBoxX.value = val
+  else if (axis === 1) sectionBoxY.value = val
+  else sectionBoxZ.value = val
+  renderer?.setSectionBoxAxis(axis, val)
+}
+
+const sectionBoxRangeX = computed(() => renderer ? renderer.getSectionBoxRange(0) : { min: -50, max: 50 })
+const sectionBoxRangeY = computed(() => renderer ? renderer.getSectionBoxRange(1) : { min: -50, max: 50 })
+const sectionBoxRangeZ = computed(() => renderer ? renderer.getSectionBoxRange(2) : { min: -50, max: 50 })
+
+/* ── Feature: Per-Object Color Override (batch 36) ── */
+function setObjectColorOverride(meshIndex: number, hexColor: string) {
+  // Convert hex to RGBA float array
+  const r = parseInt(hexColor.slice(1, 3), 16) / 255
+  const g = parseInt(hexColor.slice(3, 5), 16) / 255
+  const b = parseInt(hexColor.slice(5, 7), 16) / 255
+  meshColorOverrides.value.set(meshIndex, hexColor)
+  renderer?.setMeshColorOverride(meshIndex, [r, g, b, 1.0])
+}
+
+function clearObjectColorOverride(meshIndex: number) {
+  meshColorOverrides.value.delete(meshIndex)
+  renderer?.clearMeshColorOverride(meshIndex)
+}
+
+function getMeshColorHex(meshIndex: number): string {
+  const override = meshColorOverrides.value.get(meshIndex)
+  if (override) return override
+  if (renderer) {
+    const c = renderer.getMeshColor(meshIndex)
+    if (c) {
+      const r = Math.round(c[0] * 255).toString(16).padStart(2, '0')
+      const g = Math.round(c[1] * 255).toString(16).padStart(2, '0')
+      const b = Math.round(c[2] * 255).toString(16).padStart(2, '0')
+      return `#${r}${g}${b}`
+    }
+  }
+  return '#888888'
+}
+
+/* ── Feature: Mesh Visibility Toggle (batch 35) ── */
+function toggleMeshVisibility(meshIndex: number) {
+  const current = meshVisibilityMap.value.get(meshIndex) ?? true
+  const newVal = !current
+  meshVisibilityMap.value.set(meshIndex, newVal)
+  renderer?.setMeshVisibility(meshIndex, newVal)
+}
+
+function isMeshVisible(meshIndex: number): boolean {
+  return meshVisibilityMap.value.get(meshIndex) ?? true
 }
 
 /* ── Feature: Exploded View ── */
@@ -6958,7 +7295,7 @@ translate([0, 0, -2])
 </script>
 
 <template>
-  <div class="app" :class="[isDark ? 'dark' : 'light', { 'app-loaded': appLoaded }]">
+  <div class="app" :class="[isDark ? 'dark' : 'light', { 'app-loaded': appLoaded, 'zen-mode': zenModeActive }]">
     <nav class="topbar">
       <div class="topbar-left">
         <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -7369,6 +7706,23 @@ translate([0, 0, -2])
         </div>
       </div>
     </Teleport>
+
+    <!-- Tip of the Day Banner -->
+    <transition name="tip-slide">
+    <div v-if="showTipOfDay && !zenModeActive" class="tip-of-day-banner">
+      <span class="tip-icon">&#128161;</span>
+      <span class="tip-label">{{ t('tipOfDay') }}:</span>
+      <span class="tip-text">{{ lang === 'ru' ? currentTip.ru : currentTip.en }}</span>
+      <button class="tip-next-btn" @click="nextTip" title="&#8635;">&#8635;</button>
+      <button class="tip-dismiss-btn" @click="dismissTipOfDay">{{ t('dontShowTips') }}</button>
+      <button class="tip-close-btn" @click="showTipOfDay = false">&times;</button>
+    </div>
+    </transition>
+
+    <!-- Zen Mode Exit Button -->
+    <transition name="overlay-fade">
+    <button v-if="zenModeActive" class="zen-exit-btn" @click="zenModeActive = false">{{ t('exitZenMode') }} (Esc)</button>
+    </transition>
 
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
@@ -8215,6 +8569,15 @@ translate([0, 0, -2])
                 {{ t('ghostCompare') }}
               </button>
               <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleFlyCamera(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="flyCameraMode">&#10003;</span>
+                {{ t('flyCamera') }}
+              </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleZenMode(); closeAllMenus()">
+                <span class="vp-dd-check" v-if="zenModeActive">&#10003;</span>
+                {{ t('zenMode') }}
+              </button>
+              <div class="vp-dd-sep"></div>
               <div class="vp-dd-label">{{ t('bgColor') }}</div>
               <div class="vp-dd-swatches">
                 <button
@@ -8257,6 +8620,7 @@ translate([0, 0, -2])
                 <option value="solid+edges">{{ t('modeSolidEdges') }}</option>
                 <option value="wireframe">{{ t('modeWireframe') }}</option>
                 <option value="xray">{{ t('modeXray') }}</option>
+                <option value="hidden-line">{{ t('modeHiddenLine') }}</option>
               </select>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="toggleFlatShading()">
@@ -8295,6 +8659,18 @@ translate([0, 0, -2])
                 <span class="vp-dd-check" v-if="vignetteEnabled">&#10003;</span>
                 {{ t('vignette') }}
               </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleGoochShading()">
+                <span class="vp-dd-check" v-if="goochShadingEnabled">&#10003;</span>
+                {{ t('goochShading') }}
+              </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleGroundShadow()">
+                <span class="vp-dd-check" v-if="groundShadowEnabled">&#10003;</span>
+                {{ t('groundShadow') }}
+              </button>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleBloom()">
+                <span class="vp-dd-check" v-if="bloomEnabled">&#10003;</span>
+                {{ t('bloom') }}
+              </button>
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
               <div class="vp-dd-label" v-show="!simpleMode">{{ t('explodedView') }}</div>
               <div v-show="!simpleMode" class="vp-dd-slider-row">
@@ -8314,6 +8690,27 @@ translate([0, 0, -2])
                 </select>
                 <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
                 <span class="clip-value">{{ clipY.toFixed(1) }}</span>
+              </div>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleSectionBox()">
+                <span class="vp-dd-check" v-if="sectionBoxEnabled">&#10003;</span>
+                {{ t('sectionBox') }}
+              </button>
+              <div v-if="sectionBoxEnabled && !simpleMode">
+                <div class="vp-dd-slider-row">
+                  <span class="clip-axis-label">X</span>
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeX.min" :max="sectionBoxRangeX.max" step="0.5" :value="sectionBoxX" @input="onSectionBoxChange(0, $event)" />
+                  <span class="clip-value">{{ sectionBoxX.toFixed(1) }}</span>
+                </div>
+                <div class="vp-dd-slider-row">
+                  <span class="clip-axis-label">Y</span>
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeY.min" :max="sectionBoxRangeY.max" step="0.5" :value="sectionBoxY" @input="onSectionBoxChange(1, $event)" />
+                  <span class="clip-value">{{ sectionBoxY.toFixed(1) }}</span>
+                </div>
+                <div class="vp-dd-slider-row">
+                  <span class="clip-axis-label">Z</span>
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeZ.min" :max="sectionBoxRangeZ.max" step="0.5" :value="sectionBoxZ" @input="onSectionBoxChange(2, $event)" />
+                  <span class="clip-value">{{ sectionBoxZ.toFixed(1) }}</span>
+                </div>
               </div>
               <div class="vp-dd-sep"></div>
               <div class="vp-dd-label">{{ t('lighting') }}</div>
@@ -8410,6 +8807,8 @@ translate([0, 0, -2])
               <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="doExportAllTabs(); closeAllMenus()">{{ t('exportAllTabs') }}</button>
               <div class="vp-dd-sep"></div>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" @click="printCode(); closeAllMenus()">{{ t('printCode') }}</button>
+              <div class="vp-dd-sep"></div>
+              <button class="vp-dd-item" role="menuitem" tabindex="-1" :disabled="turntableExporting" @click="exportTurntableZip(); closeAllMenus()">{{ t('exportTurntable') }}</button>
             </div>
             </transition>
           </div>
@@ -8468,6 +8867,13 @@ translate([0, 0, -2])
               <span class="tree-icon">{{ getNodeIcon(item.node.name) }}</span>
               <span class="tree-name">{{ item.node.name }}</span>
               <span v-if="getNodeSummary(item.node)" class="tree-summary">{{ getNodeSummary(item.node) }}</span>
+              <span class="tree-actions" v-if="item.meshIndex >= 0">
+                <button class="tree-eye-btn" :class="{ 'tree-eye-hidden': !isMeshVisible(item.meshIndex) }" @click.stop="toggleMeshVisibility(item.meshIndex)" :title="isMeshVisible(item.meshIndex) ? t('meshVisible') : t('meshHidden')">
+                  <svg v-if="isMeshVisible(item.meshIndex)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+                <input type="color" class="tree-color-swatch" :value="getMeshColorHex(item.meshIndex)" @input="setObjectColorOverride(item.meshIndex, ($event.target as HTMLInputElement).value)" @click.stop :title="t('colorOverride')" />
+              </span>
             </div>
             <div v-if="!flatTree.length" class="object-tree-empty">--</div>
           </div>
@@ -12309,5 +12715,125 @@ textarea.code:focus-visible {
 .profile-slow {
   color: #ff6b5a;
   font-weight: 600;
+}
+
+/* ── Zen Mode ── */
+.zen-mode .topbar { display: none !important; }
+.zen-mode .editor-panel { display: none !important; }
+.zen-mode .divider { display: none !important; }
+.zen-mode .main { display: flex !important; }
+.zen-mode .canvas-panel { flex: 1 !important; width: 100% !important; }
+.zen-mode .vp-toolbar { opacity: 0.3; transition: opacity 0.2s; }
+.zen-mode .vp-toolbar:hover { opacity: 1; }
+.zen-mode .vp-zoom-controls { opacity: 0.3; transition: opacity 0.2s; }
+.zen-mode .vp-zoom-controls:hover { opacity: 1; }
+.zen-exit-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  padding: 6px 16px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+}
+.zen-exit-btn:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.9);
+}
+
+/* ── Tip of the Day ── */
+.tip-of-day-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: var(--accent, #4a9eff);
+  color: #fff;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.tip-icon { font-size: 14px; }
+.tip-label { font-weight: 600; white-space: nowrap; }
+.tip-text { flex: 1; }
+.tip-next-btn, .tip-dismiss-btn, .tip-close-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tip-next-btn:hover, .tip-dismiss-btn:hover, .tip-close-btn:hover {
+  background: rgba(255,255,255,0.35);
+}
+.tip-close-btn { font-size: 14px; padding: 0 4px; }
+.tip-slide-enter-active, .tip-slide-leave-active {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+.tip-slide-enter-from, .tip-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.tip-slide-enter-to, .tip-slide-leave-from {
+  max-height: 50px;
+  opacity: 1;
+}
+
+/* ── Object Tree: Eye Icon & Color Swatch ── */
+.tree-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.tree-eye-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim, #888);
+  padding: 1px 2px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.tree-eye-btn:hover { opacity: 1; }
+.tree-eye-hidden { opacity: 0.3 !important; }
+.tree-eye-hidden:hover { opacity: 0.5 !important; }
+.tree-color-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border, #2e2e34);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.tree-color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.tree-color-swatch::-webkit-color-swatch { border: none; border-radius: 2px; }
+.tree-node {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Section Box axis label ── */
+.clip-axis-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim, #888);
+  min-width: 14px;
+  text-align: center;
 }
 </style>

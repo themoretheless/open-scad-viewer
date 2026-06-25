@@ -9,7 +9,7 @@ import type { MeshData } from './openscadParser'
 /* ── WGSL shaders ─────────────────────────────────── */
 
 const MESH_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f, sectionBox: vec4f }
 struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f }
 
 @group(0) @binding(0) var<uniform> sc: Scene;
@@ -31,6 +31,13 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
     if (clipAxis == 0) { clipCoord = v.w.x; }
     else if (clipAxis == 2) { clipCoord = v.w.z; }
     if (clipCoord < sc.clip.x) { discard; }
+  }
+
+  // Section box: clip on all 3 axes simultaneously
+  if (sc.sectionBox.w > 0.5) {
+    if (v.w.x < sc.sectionBox.x) { discard; }
+    if (v.w.y < sc.sectionBox.y) { discard; }
+    if (v.w.z < sc.sectionBox.z) { discard; }
   }
 
   // Flat or smooth shading
@@ -80,7 +87,7 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
 `
 
 const LINE_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f, sectionBox: vec4f }
 @group(0) @binding(0) var<uniform> sc: Scene;
 
 struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
@@ -92,7 +99,7 @@ struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
 `
 
 const OUTLINE_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, clip: vec4f, fogParams: vec4f, fogColor: vec4f, _pad0: vec4f, _pad1: vec4f, sectionBox: vec4f }
 struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f }
 
 @group(0) @binding(0) var<uniform> sc: Scene;
@@ -243,6 +250,15 @@ export class WebGPURenderer {
   /* ground shadow */
   showGroundShadow = false
 
+  /* section box (3-axis clip) */
+  sectionBoxEnabled = false
+  sectionBoxX = 0
+  sectionBoxY = 0
+  sectionBoxZ = 0
+
+  /* per-mesh color overrides */
+  meshColorOverrides: Map<number, [number, number, number, number]> = new Map()
+
   /* per-mesh visibility */
   meshVisibility: boolean[] = []
 
@@ -251,6 +267,9 @@ export class WebGPURenderer {
 
   /* field of view (radians, default PI/4 = 45deg) */
   fov = Math.PI / 4
+
+  /* fly camera mode */
+  flyMode = false
 
   /* orbit inertia */
   inertiaEnabled = false
@@ -458,7 +477,7 @@ export class WebGPURenderer {
   }
 
   private buildSceneUB() {
-    this.sceneUB = this.dev.createBuffer({ size: 192, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.sceneUB = this.dev.createBuffer({ size: 208, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
     this.sceneBG = this.dev.createBindGroup({
       layout: this.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
@@ -574,17 +593,23 @@ export class WebGPURenderer {
       const nm = transpose(invert(m.transform))
       this.dev.queue.writeBuffer(ub, 64, transpose(nm))
 
-      // If in xray mode, override alpha to 0.3
-      const color = this.renderMode === 'xray'
-        ? [m.color[0], m.color[1], m.color[2], 0.3]
-        : m.color
+      // Apply per-object color override if present, else xray / original color
+      const meshIdx = this.meshes.length
+      const colorOverride = this.meshColorOverrides.get(meshIdx)
+      const color = colorOverride
+        ? colorOverride
+        : this.renderMode === 'xray'
+          ? [m.color[0], m.color[1], m.color[2], 0.3]
+          : m.color
       this.dev.queue.writeBuffer(ub, 128, new Float32Array(color))
 
       const bg = this.dev.createBindGroup({
         layout: this.objBGL,
         entries: [{ binding: 0, resource: { buffer: ub } }],
       })
-      const transp = this.renderMode === 'xray' ? true : m.color[3] < 0.99
+      const transp = colorOverride
+        ? colorOverride[3] < 0.99
+        : this.renderMode === 'xray' ? true : m.color[3] < 0.99
       this.meshes.push({ vb, ib, ic: m.indices.length, ub, bg, transp })
     }
     this.meshVisibility = new Array(this.meshes.length).fill(true)
@@ -692,6 +717,11 @@ export class WebGPURenderer {
     sd[44] = this.toonShading ? 1.0 : 0.0
     // Ground shadow flag in _pad1.y
     sd[45] = this.showGroundShadow ? 1.0 : 0.0
+    // Section box: [clipX, clipY, clipZ, enabled]
+    sd[48] = this.sectionBoxX
+    sd[49] = this.sectionBoxY
+    sd[50] = this.sectionBoxZ
+    sd[51] = this.sectionBoxEnabled ? 1.0 : 0.0
   }
 
   private render() {
@@ -714,7 +744,7 @@ export class WebGPURenderer {
     this.lastW = w
     this.lastH = h
     const vp = transpose(vpMat)
-    const sd = new Float32Array(48)
+    const sd = new Float32Array(52)
     sd.set(vp, 0)
     this.fillSceneData(sd, cx, cy, cz)
     this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
@@ -1114,7 +1144,11 @@ export class WebGPURenderer {
     this.mx = e.clientX; this.my = e.clientY
     // Allow toggling Ctrl mid-drag for orbit snapping.
     if (!this.pan) this.snapOrbit = e.ctrlKey
-    if (this.pan) {
+    if (this.flyMode && !this.pan) {
+      // Fly mode: mouse drag rotates the view direction, keeping camera position fixed
+      this.yaw -= dx * 0.003
+      this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.003))
+    } else if (this.pan) {
       const sp = this.dist * 0.002
       const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw)
       this.tx -= dx * cy * sp; this.tz += dx * sy * sp; this.ty += dy * sp
@@ -1470,7 +1504,7 @@ export class WebGPURenderer {
     }
     const vpMat = multiply(proj, view)
     const vp = transpose(vpMat)
-    const sd = new Float32Array(48)
+    const sd = new Float32Array(52)
     sd.set(vp, 0)
     this.fillSceneData(sd, cx, cy, cz)
     this.dev.queue.writeBuffer(this.sceneUB, 0, sd)
@@ -2230,6 +2264,94 @@ export class WebGPURenderer {
       triCount += m.indices.length / 3
     }
     return { totalVertexBytes: totalVB, totalIndexBytes: totalIB, meshCount: this.lastRawMeshes.length, triangleCount: triCount }
+  }
+
+  /** Set fly camera mode on or off. */
+  setFlyMode(v: boolean) {
+    this.flyMode = v
+  }
+
+  /* ── Section Box (3-axis clip) ── */
+
+  /** Toggle section box on/off. */
+  toggleSectionBox(): boolean {
+    this.sectionBoxEnabled = !this.sectionBoxEnabled
+    this.requestRender()
+    return this.sectionBoxEnabled
+  }
+
+  setSectionBoxEnabled(v: boolean) {
+    this.sectionBoxEnabled = v
+    this.requestRender()
+  }
+
+  isSectionBoxEnabled(): boolean {
+    return this.sectionBoxEnabled
+  }
+
+  setSectionBoxValues(x: number, y: number, z: number) {
+    this.sectionBoxX = x
+    this.sectionBoxY = y
+    this.sectionBoxZ = z
+    this.requestRender()
+  }
+
+  setSectionBoxAxis(axis: number, value: number) {
+    if (axis === 0) this.sectionBoxX = value
+    else if (axis === 1) this.sectionBoxY = value
+    else if (axis === 2) this.sectionBoxZ = value
+    this.requestRender()
+  }
+
+  getSectionBoxRange(axis: number): { min: number; max: number } {
+    return { min: this.boundsMin[axis] - 5, max: this.boundsMax[axis] + 5 }
+  }
+
+  /* ── Per-Object Color Override ── */
+
+  /** Override the color of a specific mesh by index. */
+  setMeshColorOverride(index: number, color: [number, number, number, number]) {
+    this.meshColorOverrides.set(index, color)
+    if (index >= 0 && index < this.meshes.length) {
+      this.dev.queue.writeBuffer(this.meshes[index].ub, 128, new Float32Array(color))
+      this.meshes[index].transp = color[3] < 0.99
+      this.requestRender()
+    }
+  }
+
+  /** Clear the color override for a specific mesh, restoring its original color. */
+  clearMeshColorOverride(index: number) {
+    this.meshColorOverrides.delete(index)
+    if (index >= 0 && index < this.meshes.length && index < this.lastRawMeshes.length) {
+      const m = this.lastRawMeshes[index]
+      const color = this.renderMode === 'xray'
+        ? [m.color[0], m.color[1], m.color[2], 0.3]
+        : m.color
+      this.dev.queue.writeBuffer(this.meshes[index].ub, 128, new Float32Array(color))
+      this.meshes[index].transp = this.renderMode === 'xray' ? true : m.color[3] < 0.99
+      this.requestRender()
+    }
+  }
+
+  /** Get the current color of a mesh (override or original). */
+  getMeshColor(index: number): [number, number, number, number] | null {
+    const ov = this.meshColorOverrides.get(index)
+    if (ov) return ov
+    if (index >= 0 && index < this.lastRawMeshes.length) {
+      const c = this.lastRawMeshes[index].color
+      return [c[0], c[1], c[2], c[3]]
+    }
+    return null
+  }
+
+  /* ── Turntable Export ── */
+
+  /** Capture a single frame as Blob (used for turntable ZIP export). */
+  captureFrameAsBlob(): Promise<Blob | null> {
+    this.render()
+    return new Promise((resolve) => {
+      this.canvas.toBlob((blob) => resolve(blob), 'image/png')
+    })
   }
 
   destroy() {
