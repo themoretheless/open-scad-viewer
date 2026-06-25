@@ -66,6 +66,15 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
     c = c * ao;
   }
 
+  // Gooch shading
+  if (sc._pad0.z > 0.5) {
+    let gooch_cool = vec3f(0.0, 0.0, 0.55) + 0.25 * ob.color.rgb;
+    let gooch_warm = vec3f(0.3, 0.3, 0.0) + 0.25 * ob.color.rgb;
+    let gooch_t = (1.0 + dot(N, L)) * 0.5;
+    let gooch_c = mix(gooch_cool, gooch_warm, gooch_t);
+    c = gooch_c + s * vec3f(0.25);
+  }
+
   return vec4f(c, ob.color.a);
 }
 `
@@ -184,7 +193,7 @@ export class WebGPURenderer {
   showEdges = false
 
   /* render mode */
-  renderMode: 'solid' | 'solid+edges' | 'wireframe' | 'xray' = 'solid'
+  renderMode: 'solid' | 'solid+edges' | 'wireframe' | 'xray' | 'hidden-line' = 'solid'
 
   /* flat shading */
   flatShading = false
@@ -227,6 +236,15 @@ export class WebGPURenderer {
 
   /* toon/cel shading */
   toonShading = false
+
+  /* gooch shading */
+  goochShading = false
+
+  /* ground shadow */
+  showGroundShadow = false
+
+  /* per-mesh visibility */
+  meshVisibility: boolean[] = []
 
   /* exploded view */
   explodeFactor = 0
@@ -667,8 +685,12 @@ export class WebGPURenderer {
     sd[40] = this.flatShading ? 1.0 : 0.0
     // SSAO flag in _pad0.y
     sd[41] = this.ssao ? 1.0 : 0.0
+    // Gooch shading flag in _pad0.z
+    sd[42] = this.goochShading ? 1.0 : 0.0
     // Toon shading flag in _pad1.x
     sd[44] = this.toonShading ? 1.0 : 0.0
+    // Ground shadow flag in _pad1.y
+    sd[45] = this.showGroundShadow ? 1.0 : 0.0
   }
 
   private render() {
@@ -773,7 +795,9 @@ export class WebGPURenderer {
     if ((this.showOutline || this.toonShading) && this.renderMode !== 'wireframe') {
       pass.setPipeline(this.outlinePipe)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -785,11 +809,27 @@ export class WebGPURenderer {
     // Render mode dispatch
     if (this.renderMode === 'wireframe') {
       // wireframe only — skip solid meshes
+    } else if (this.renderMode === 'hidden-line') {
+      // hidden-line: render meshes in background color to occlude, then edges on top
+      pass.setPipeline(this.meshPipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
+        // Temporarily write clear color to mesh UB for occlusion
+        this.dev.queue.writeBuffer(g.ub, 128, new Float32Array([this.clearR, this.clearG, this.clearB, 1.0]))
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
     } else if (this.renderMode === 'xray') {
       // xray: render ALL meshes with meshPipeT (alpha already set to 0.3 in UB)
       pass.setPipeline(this.meshPipeT)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
         pass.setIndexBuffer(g.ib, 'uint32')
@@ -799,7 +839,9 @@ export class WebGPURenderer {
       // solid / solid+edges: normal opaque then transparent
       pass.setPipeline(this.meshPipe)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -809,7 +851,9 @@ export class WebGPURenderer {
 
       pass.setPipeline(this.meshPipeT)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (!g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -855,6 +899,7 @@ export class WebGPURenderer {
       reflPass.setBindGroup(0, this.sceneBG)
 
       for (let mi = 0; mi < this.meshes.length; mi++) {
+        if (this.meshVisibility[mi] === false) continue
         const g = this.meshes[mi]
         if (g.transp && this.renderMode !== 'xray') continue
         const m = this.lastRawMeshes[mi]
@@ -1837,6 +1882,11 @@ export class WebGPURenderer {
         this.buildWireframeBuffer()
         break
       case 'xray':
+        this.wireframe = false
+        this.showEdges = true
+        this.buildEdgeBuffer()
+        break
+      case 'hidden-line':
         this.wireframe = false
         this.showEdges = true
         this.buildEdgeBuffer()
