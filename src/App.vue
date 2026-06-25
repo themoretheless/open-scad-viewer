@@ -9,20 +9,20 @@ import { export3MF } from './services/threemfExport'
 import { parseSTL } from './services/stlImport'
 import { exportAllTabsAsZip } from './services/zipExport'
 
-const lang = ref<'ru'|'en'|'de'>((localStorage.getItem('scad-lang') as any) || 'ru')
+const lang = ref<'ru'|'en'|'de'|'zh'>((localStorage.getItem('scad-lang') as any) || 'ru')
 const isDark = ref(true)
 
 /* ── Editor Themes ── */
 interface EditorTheme {
   id: string
-  name: { ru: string; en: string; de: string }
+  name: { ru: string; en: string; de: string; zh: string }
   dark: boolean
   vars: Record<string, string>
 }
 
 const EDITOR_THEMES: EditorTheme[] = [
   {
-    id: 'default-dark', name: { ru: 'Тёмная', en: 'Default Dark', de: 'Standard Dunkel' }, dark: true,
+    id: 'default-dark', name: { ru: 'Тёмная', en: 'Default Dark', de: 'Standard Dunkel', zh: '默认深色' }, dark: true,
     vars: {
       '--bg': '#141416', '--surface': '#1e1e22', '--border': '#2e2e34',
       '--text': '#e4e4e8', '--text-dim': '#888', '--accent': '#4a9eff',
@@ -33,7 +33,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'default-light', name: { ru: 'Светлая', en: 'Default Light', de: 'Standard Hell' }, dark: false,
+    id: 'default-light', name: { ru: 'Светлая', en: 'Default Light', de: 'Standard Hell', zh: '默认浅色' }, dark: false,
     vars: {
       '--bg': '#f4f4f6', '--surface': '#fff', '--border': '#d4d4da',
       '--text': '#1a1a1e', '--text-dim': '#777', '--accent': '#2b7de9',
@@ -44,7 +44,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'monokai', name: { ru: 'Monokai', en: 'Monokai', de: 'Monokai' }, dark: true,
+    id: 'monokai', name: { ru: 'Monokai', en: 'Monokai', de: 'Monokai', zh: 'Monokai' }, dark: true,
     vars: {
       '--bg': '#272822', '--surface': '#2e2e28', '--border': '#49483e',
       '--text': '#f8f8f2', '--text-dim': '#75715e', '--accent': '#a6e22e',
@@ -55,7 +55,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'solarized', name: { ru: 'Solarized', en: 'Solarized', de: 'Solarized' }, dark: true,
+    id: 'solarized', name: { ru: 'Solarized', en: 'Solarized', de: 'Solarized', zh: 'Solarized' }, dark: true,
     vars: {
       '--bg': '#002b36', '--surface': '#073642', '--border': '#586e75',
       '--text': '#839496', '--text-dim': '#657b83', '--accent': '#268bd2',
@@ -66,7 +66,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'nord', name: { ru: 'Nord', en: 'Nord', de: 'Nord' }, dark: true,
+    id: 'nord', name: { ru: 'Nord', en: 'Nord', de: 'Nord', zh: 'Nord' }, dark: true,
     vars: {
       '--bg': '#2e3440', '--surface': '#3b4252', '--border': '#4c566a',
       '--text': '#d8dee9', '--text-dim': '#8690a3', '--accent': '#88c0d0',
@@ -77,7 +77,7 @@ const EDITOR_THEMES: EditorTheme[] = [
     },
   },
   {
-    id: 'high-contrast', name: { ru: 'Высокий контраст', en: 'High Contrast', de: 'Hoher Kontrast' }, dark: true,
+    id: 'high-contrast', name: { ru: 'Высокий контраст', en: 'High Contrast', de: 'Hoher Kontrast', zh: '高对比度' }, dark: true,
     vars: {
       '--bg': '#000000', '--surface': '#000000', '--border': '#ffffff',
       '--text': '#ffffff', '--text-dim': '#cfcfcf', '--accent': '#ffff00',
@@ -341,6 +341,16 @@ const L: Record<string, Record<string, string>> = {
     // Advanced examples
     mechanical: 'Механизм',
     mechanicalTip: 'Шестерня + призма + массив + капсула',
+    honeycomb: 'Соты',
+    honeycombTip: 'Сотовая решётка',
+    springCoil: 'Пружина',
+    springCoilTip: 'Спиральная пружина',
+    knurledCylinder: 'Накатка',
+    knurledCylinderTip: 'Цилиндр с накаткой',
+    chamferedBox: 'Фаска',
+    chamferedBoxTip: 'Куб с фасками',
+    loftShape: 'Лофт',
+    loftShapeTip: 'Лофт между профилями',
     staircase: 'Лестница',
     paramVase: 'Парам. ваза',
     paramGear: 'Парам. шестерня',
@@ -556,6 +566,12 @@ const L: Record<string, Record<string, string>> = {
     ghostDeltaTriangles: 'Δ Треугольники',
     ghostDeltaVolume: 'Δ Объём',
     ghostDeltaSize: 'Δ Размер',
+    ghostOverlayMode: 'Режим наложения',
+    ghostTransparent: 'Прозрачный',
+    ghostSideBySide: 'Рядом',
+    ghostDifference: 'Различие',
+    historyTimeline: 'Временная шкала',
+    historyCurrent: 'Текущая',
     // Presets
     presets: 'Пресеты',
     savePreset: 'Сохранить пресет',
@@ -910,6 +926,16 @@ const L: Record<string, Record<string, string>> = {
     // Advanced examples
     mechanical: 'Mechanical',
     mechanicalTip: 'Gear + prism + array + capsule',
+    honeycomb: 'Honeycomb',
+    honeycombTip: 'Hexagonal grid',
+    springCoil: 'Spring',
+    springCoilTip: 'Coil spring',
+    knurledCylinder: 'Knurl',
+    knurledCylinderTip: 'Knurled cylinder',
+    chamferedBox: 'Chamfer',
+    chamferedBoxTip: 'Chamfered cube',
+    loftShape: 'Loft',
+    loftShapeTip: 'Loft between profiles',
     staircase: 'Staircase',
     paramVase: 'Param Vase',
     paramGear: 'Param Gear',
@@ -1125,6 +1151,12 @@ const L: Record<string, Record<string, string>> = {
     ghostDeltaTriangles: 'Δ Triangles',
     ghostDeltaVolume: 'Δ Volume',
     ghostDeltaSize: 'Δ Size',
+    ghostOverlayMode: 'Overlay Mode',
+    ghostTransparent: 'Transparent',
+    ghostSideBySide: 'Side by Side',
+    ghostDifference: 'Difference',
+    historyTimeline: 'Timeline',
+    historyCurrent: 'Current',
     // Presets
     presets: 'Presets',
     savePreset: 'Save Preset',
@@ -1224,10 +1256,104 @@ const L: Record<string, Record<string, string>> = {
     orbitMode: 'Orbit',
     flyModeLabel: 'Fly',
   },
+  zh: {
+    title: 'OpenSCAD 3D 查看器',
+    subtitle: '基于WebGPU的OpenSCAD编辑器',
+    render: '渲染', auto: '自动', examples: '示例',
+    basic: '基础', csg: 'CSG', house: '房屋', tower: '塔',
+    meshes: '网格', triangles: '三角形',
+    hint: '左键:旋转 · Ctrl+左键:15°吸附 · 右键/Shift:平移 · 滚轮:缩放 · Ctrl+Enter:渲染',
+    noGpu: 'WebGPU不受支持。请使用Chrome 113+ / Edge 113+ / Firefox Nightly。',
+    theme: '主题',
+    wireframe: '线框', grid: '网格', fullscreen: '全屏',
+    autoRotate: '自动旋转',
+    shortcuts: '快捷键',
+    shortcutsTitle: '快捷键',
+    close: '关闭',
+    preferences: '设置',
+    exportStl: '导出STL',
+    save: '保存',
+    open: '打开',
+    find: '查找',
+    replace: '替换',
+    replaceAll: '全部替换',
+    next: '下一个',
+    prev: '上一个',
+    console: '控制台',
+    consoleClear: '清空',
+    parameters: '参数',
+    lighting: '照明',
+    screenshot: '截图',
+    format: '格式化',
+    themeSelector: '主题选择',
+    fontSize: '字体大小',
+    tabSize: 'Tab大小',
+    newTab: '新建标签',
+    closeTab: '关闭标签',
+    minimap: '小地图',
+    exportObj: '导出OBJ',
+    export3mf: '导出3MF',
+    exportPng: '导出PNG',
+    share: '分享',
+    copied: '已复制!',
+    undo: '撤销',
+    commandPalette: '命令面板',
+    wordWrap: '自动换行',
+    objectTree: '对象树',
+    renderTime: '渲染',
+    top: '俯', front: '前', right: '右', iso: '等轴', reset: '重置',
+    persp: '透视', ortho: '正交',
+    zoomIn: '放大', zoomOut: '缩小',
+    gear: '齿轮', vase: '花瓶', chess: '棋子', mechanical: '机械',
+    staircase: '楼梯', paramVase: '参数花瓶', paramGear: '参数齿轮',
+    honeycomb: '蜂窝',
+    honeycombTip: '六角网格',
+    springCoil: '弹簧',
+    springCoilTip: '螺旋弹簧',
+    knurledCylinder: '滚花',
+    knurledCylinderTip: '滚花圆柱',
+    chamferedBox: '倒角',
+    chamferedBoxTip: '倒角立方体',
+    loftShape: '放样',
+    loftShapeTip: '截面放样',
+    statistics: '统计', history: '历史',
+    historyTitle: '版本历史',
+    historyEmpty: '没有保存的版本',
+    historyRestore: '恢复',
+    historyEntry: '{n}个字符',
+    ghostCompare: '对比',
+    ghostTab: '对比标签',
+    ghostStats: '模型对比',
+    ghostDeltaTriangles: 'Δ 三角形',
+    ghostDeltaVolume: 'Δ 体积',
+    ghostDeltaSize: 'Δ 尺寸',
+    ghostOverlayMode: '对比模式',
+    ghostTransparent: '透明',
+    ghostSideBySide: '左右对比',
+    ghostDifference: '差异',
+    historyTimeline: '时间线',
+    historyCurrent: '当前',
+    justNow: '刚刚',
+    minutesAgo: '{n}分钟前',
+    hoursAgo: '{n}小时前',
+    daysAgo: '{n}天前',
+    menu: '菜单',
+    simpleMode: '简单',
+    advancedMode: '高级',
+    clipPlane: '截面',
+    fog: '雾',
+    reflection: '反射',
+    scadReference: 'OpenSCAD参考',
+    whatsNew: '新功能',
+    measureMode: '测量',
+    buildPlate: '打印平台',
+    exportDropdown: '导出',
+    menuView: '视图', menuRender: '渲染', menuExport: '导出',
+  },
 }
 
 const t = (k: string) => L[lang.value]?.[k] ?? k
-const toggleLang = () => { lang.value = lang.value === 'ru' ? 'en' : 'ru'; localStorage.setItem('scad-lang', lang.value) }
+const toggleLang = () => { const cycle: Array<'ru'|'en'|'de'|'zh'> = ['ru', 'en', 'de', 'zh']; const idx = cycle.indexOf(lang.value); lang.value = cycle[(idx + 1) % cycle.length]; localStorage.setItem('scad-lang', lang.value) }
 
 onMounted(() => {
   const savedThemeId = localStorage.getItem('scad-editor-theme')
@@ -2401,6 +2527,7 @@ function onMeasureClick(e: PointerEvent) {
 /* ── Feature: Ghost Comparison ── */
 const ghostMode = ref(false)
 const ghostTabId = ref('')
+const ghostOverlay = ref<'transparent'|'side-by-side'|'difference'>('transparent')
 const ghostTriCount = ref(0)
 const ghostVolume = ref(0)
 const ghostBoundsSize = ref<[number, number, number]>([0, 0, 0])
@@ -6559,6 +6686,11 @@ const EXAMPLE_CARDS: ExampleCard[] = [
   { key: 'vase', nameKey: 'vase', tipKey: 'vaseTip' },
   { key: 'chess', nameKey: 'chess', tipKey: 'chessTip' },
   { key: 'mechanical', nameKey: 'mechanical', tipKey: 'mechanicalTip' },
+  { key: 'honeycomb', nameKey: 'honeycomb', tipKey: 'honeycombTip' },
+  { key: 'springCoil', nameKey: 'springCoil', tipKey: 'springCoilTip' },
+  { key: 'knurledCylinder', nameKey: 'knurledCylinder', tipKey: 'knurledCylinderTip' },
+  { key: 'chamferedBox', nameKey: 'chamferedBox', tipKey: 'chamferedBoxTip' },
+  { key: 'loftShape', nameKey: 'loftShape', tipKey: 'loftShapeTip' },
 ]
 
 function getExamplePreview(key: string): string {
@@ -7291,6 +7423,39 @@ color([0.3, 0.3, 0.35])
 translate([0, 0, -2])
   cylinder(h=2, r=22, $fn=48);
 `,
+
+  honeycomb: `// Honeycomb hex grid
+color([0.9, 0.7, 0.2])
+honeycomb(rows=4, cols=4, r=5, h=3, wall=1);
+`,
+
+  springCoil: `// Coil spring
+color([0.5, 0.5, 0.6])
+spring(r=10, wire_r=1.5, coils=6, pitch=4, $fn=20);
+`,
+
+  knurledCylinder: `// Knurled cylinder
+color([0.6, 0.6, 0.7])
+knurl(d=15, h=20, pitch=2, depth=0.8, $fn=48);
+`,
+
+  chamferedBox: `// Chamfered cube
+color([0.4, 0.6, 0.8])
+chamfer_cube(size=[20,15,10], chamfer=2, center=true);
+`,
+
+  loftShape: `// Loft between profiles
+color([0.5, 0.8, 0.5])
+loft(
+  profiles=[
+    [[0,0],[10,0],[10,10],[0,10]],
+    [[2,2],[12,2],[8,12],[0,8]],
+    [[1,1],[9,1],[9,9],[1,9]]
+  ],
+  heights=[0, 15, 30],
+  $fn=16
+);
+`,
 }
 </script>
 
@@ -7305,7 +7470,7 @@ translate([0, 0, -2])
       </div>
       <div class="topbar-right">
         <!-- Always visible: Render-relevant & essential controls -->
-        <button class="tb-btn" @click="toggleLang" :aria-label="t('ariaToggleLang')">{{ lang === 'ru' ? 'RU' : 'EN' }}</button>
+        <button class="tb-btn" @click="toggleLang" :aria-label="t('ariaToggleLang')">{{ lang === 'ru' ? 'RU' : lang === 'en' ? 'EN' : lang === 'de' ? 'DE' : 'ZH' }}</button>
         <!-- Theme selector dropdown -->
         <div class="theme-selector-wrapper">
           <button class="tb-btn" @click.stop="showThemeDropdown = !showThemeDropdown" :title="t('themeSelector')" :aria-label="t('ariaThemeSelector')">
@@ -8201,6 +8366,22 @@ translate([0, 0, -2])
               <button class="history-close" @click="showHistory = false">&times;</button>
             </div>
             <div class="history-body">
+              <!-- Timeline visualization -->
+              <div v-if="currentTabHistory.length > 0" class="history-timeline">
+                <div class="timeline-bar">
+                  <div
+                    v-for="(entry, idx) in currentTabHistory"
+                    :key="'tl-' + entry.timestamp"
+                    class="timeline-dot"
+                    :class="{ 'timeline-dot-current': idx === 0 }"
+                    :style="{ left: currentTabHistory.length > 1 ? ((currentTabHistory.length - 1 - idx) / (currentTabHistory.length - 1) * 100) + '%' : '50%' }"
+                    :title="formatHistoryTime(entry.timestamp)"
+                    @click="restoreHistoryEntry(entry)"
+                  >
+                    <span class="timeline-tooltip">{{ formatHistoryTime(entry.timestamp) }}</span>
+                  </div>
+                </div>
+              </div>
               <div v-if="currentTabHistory.length === 0" class="history-empty">{{ t('historyEmpty') }}</div>
               <div
                 v-for="(entry, idx) in currentTabHistory"
@@ -8440,6 +8621,12 @@ translate([0, 0, -2])
           <label class="ghost-label">{{ t('ghostTab') }}:</label>
           <select class="ghost-select" v-model="ghostTabId" @change="updateGhostMeshes()">
             <option v-for="tab in tabs.filter(tb => tb.id !== activeTabId)" :key="tab.id" :value="tab.id">{{ tab.name }}</option>
+          </select>
+          <label class="ghost-label" style="margin-left:8px">{{ t('ghostOverlayMode') }}:</label>
+          <select class="ghost-select" v-model="ghostOverlay" @change="updateGhostMeshes()">
+            <option value="transparent">{{ t('ghostTransparent') }}</option>
+            <option value="side-by-side">{{ t('ghostSideBySide') }}</option>
+            <option value="difference">{{ t('ghostDifference') }}</option>
           </select>
         </div>
 
@@ -11827,6 +12014,59 @@ textarea.code:focus-visible {
 .history-restore-btn {
   font-size: 10px;
   padding: 1px 8px;
+}
+.history-timeline {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.timeline-bar {
+  position: relative;
+  height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  margin: 8px 0;
+}
+.timeline-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+  z-index: 1;
+}
+.timeline-dot:hover {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+}
+.timeline-dot-current {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.timeline-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-bottom: 4px;
+  pointer-events: none;
+}
+.timeline-dot:hover .timeline-tooltip {
+  display: block;
 }
 
 /* ── Example Gallery Modal ── */

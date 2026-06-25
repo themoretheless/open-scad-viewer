@@ -1578,6 +1578,273 @@ function makePolygon(points: number[][]) {
   return { v, ix }
 }
 
+function makeHoneycomb(rows: number, cols: number, r: number, h: number, wall: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const sqrt3 = Math.sqrt(3)
+  // Spacing between hex centers
+  const xSpacing = r * 1.5 + wall
+  const ySpacing = r * sqrt3 + wall
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cx = col * xSpacing
+      const cy = row * ySpacing + (col % 2) * (ySpacing / 2)
+      // Create hexagonal prism at (cx, cy)
+      const hexVerts: number[][] = []
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i + Math.PI / 6
+        hexVerts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)])
+      }
+      // Bottom cap
+      const baseBot = v.length / 6
+      for (let i = 0; i < 6; i++) {
+        v.push(hexVerts[i][0], hexVerts[i][1], 0, 0, 0, -1)
+      }
+      // Fan triangulation for bottom (reversed winding)
+      for (let i = 1; i < 5; i++) {
+        ix.push(baseBot, baseBot + i + 1, baseBot + i)
+      }
+      // Top cap
+      const baseTop = v.length / 6
+      for (let i = 0; i < 6; i++) {
+        v.push(hexVerts[i][0], hexVerts[i][1], h, 0, 0, 1)
+      }
+      for (let i = 1; i < 5; i++) {
+        ix.push(baseTop, baseTop + i, baseTop + i + 1)
+      }
+      // Side walls
+      for (let i = 0; i < 6; i++) {
+        const i2 = (i + 1) % 6
+        const x0 = hexVerts[i][0], y0 = hexVerts[i][1]
+        const x1 = hexVerts[i2][0], y1 = hexVerts[i2][1]
+        const ex = x1 - x0, ey = y1 - y0
+        const len = Math.sqrt(ex * ex + ey * ey) || 1
+        const nx = ey / len, ny = -ex / len
+        const base = v.length / 6
+        v.push(x0, y0, 0, nx, ny, 0)
+        v.push(x1, y1, 0, nx, ny, 0)
+        v.push(x1, y1, h, nx, ny, 0)
+        v.push(x0, y0, h, nx, ny, 0)
+        ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+      }
+    }
+  }
+  return { v, ix }
+}
+
+function makeKnurl(d: number, h: number, pitch: number, depth: number, fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const baseR = d / 2
+  const nTeeth = Math.max(1, Math.round(Math.PI * d / pitch))
+  const nVertical = Math.max(1, Math.round(h / pitch))
+  const zSlices = Math.max(8, fn)
+  const segs = fn
+
+  for (let zi = 0; zi <= zSlices; zi++) {
+    const z = (zi / zSlices) * h
+    for (let ti = 0; ti <= segs; ti++) {
+      const theta = (2 * Math.PI * ti) / segs
+      // Diamond knurl: two crossed sine waves
+      const mod1 = Math.sin(nTeeth * theta)
+      const mod2 = Math.sin(nVertical * 2 * Math.PI * z / h)
+      const r = baseR + depth * mod1 * mod2
+
+      const x = r * Math.cos(theta)
+      const y = r * Math.sin(theta)
+
+      // Approximate normal (radial)
+      const nx0 = Math.cos(theta)
+      const ny0 = Math.sin(theta)
+      v.push(x, y, z, nx0, ny0, 0)
+    }
+  }
+
+  for (let zi = 0; zi < zSlices; zi++) {
+    for (let ti = 0; ti < segs; ti++) {
+      const a = zi * (segs + 1) + ti
+      const b = a + segs + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // Bottom cap
+  const botCenter = v.length / 6
+  v.push(0, 0, 0, 0, 0, -1)
+  const botRing = v.length / 6
+  for (let ti = 0; ti < segs; ti++) {
+    const theta = (2 * Math.PI * ti) / segs
+    const mod1 = Math.sin(nTeeth * theta)
+    const mod2 = Math.sin(0) // z=0
+    const r = baseR + depth * mod1 * mod2
+    v.push(r * Math.cos(theta), r * Math.sin(theta), 0, 0, 0, -1)
+  }
+  for (let ti = 0; ti < segs; ti++) {
+    const next = (ti + 1) % segs
+    ix.push(botCenter, botRing + next, botRing + ti)
+  }
+
+  // Top cap
+  const topCenter = v.length / 6
+  v.push(0, 0, h, 0, 0, 1)
+  const topRing = v.length / 6
+  for (let ti = 0; ti < segs; ti++) {
+    const theta = (2 * Math.PI * ti) / segs
+    const mod1 = Math.sin(nTeeth * theta)
+    const mod2 = Math.sin(nVertical * 2 * Math.PI)
+    const r = baseR + depth * mod1 * mod2
+    v.push(r * Math.cos(theta), r * Math.sin(theta), h, 0, 0, 1)
+  }
+  for (let ti = 0; ti < segs; ti++) {
+    const next = (ti + 1) % segs
+    ix.push(topCenter, topRing + ti, topRing + next)
+  }
+
+  return { v, ix }
+}
+
+function makeChamferCube(sx: number, sy: number, sz: number, chamfer: number, center: boolean): { v: number[]; ix: number[] } {
+  const c = Math.min(chamfer, sx / 2, sy / 2, sz / 2)
+  const x0 = center ? -sx / 2 : 0
+  const y0 = center ? -sy / 2 : 0
+  const z0 = center ? -sz / 2 : 0
+  const x1 = x0 + sx
+  const y1 = y0 + sy
+  const z1 = z0 + sz
+
+  // 24 vertices: for each of 8 corners, 3 vertices offset inward along each edge
+  const points: number[][] = []
+  const corners: [number, number, number][] = [
+    [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
+    [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
+  ]
+  // For each corner, generate 3 chamfer vertices (offset along each adjacent edge)
+  const dirs: [number, number, number][][] = [
+    [[1,0,0],[0,1,0],[0,0,1]],   // corner 0 (x0,y0,z0)
+    [[-1,0,0],[0,1,0],[0,0,1]],  // corner 1 (x1,y0,z0)
+    [[-1,0,0],[0,-1,0],[0,0,1]], // corner 2 (x1,y1,z0)
+    [[1,0,0],[0,-1,0],[0,0,1]],  // corner 3 (x0,y1,z0)
+    [[1,0,0],[0,1,0],[0,0,-1]],  // corner 4 (x0,y0,z1)
+    [[-1,0,0],[0,1,0],[0,0,-1]], // corner 5 (x1,y0,z1)
+    [[-1,0,0],[0,-1,0],[0,0,-1]],// corner 6 (x1,y1,z1)
+    [[1,0,0],[0,-1,0],[0,0,-1]], // corner 7 (x0,y1,z1)
+  ]
+
+  for (let ci = 0; ci < 8; ci++) {
+    const [cx, cy, cz] = corners[ci]
+    for (const [dx, dy, dz] of dirs[ci]) {
+      points.push([cx + c * dx, cy + c * dy, cz + c * dz])
+    }
+  }
+
+  // Build faces. Each original face is a rectangle with corners cut.
+  // The 24 vertices are indexed as: corner i => vertices 3*i, 3*i+1, 3*i+2
+  // where vertex 3*i+j is offset along direction j of that corner.
+  // Faces:
+  // Bottom (z0): corners 0,1,2,3 - use z-edge vertices (index +2 for each corner)
+  //   but actually we need the vertices that lie on the bottom face.
+  //   For corner 0: the x-offset (idx 0) and y-offset (idx 1) lie on z=z0
+  //   For corner 1: the x-offset (idx 3) and y-offset (idx 4) lie on z=z0
+  //   etc.
+  const faceDefs: { verts: number[]; nx: number; ny: number; nz: number }[] = [
+    // Bottom face (z=z0): vertices that have z=z0, i.e. x and y offsets of bottom corners
+    { verts: [0,1, 4,3, 7,6, 10,11], nx: 0, ny: 0, nz: -1 },
+    // Top face (z=z1): vertices that have z=z1
+    { verts: [12,13, 16,15, 19,18, 22,23], nx: 0, ny: 0, nz: 1 },
+    // Front face (y=y0): corners 0,1,5,4, y-offset vertices
+    { verts: [1,2, 5,3, 14,15, 13,12], nx: 0, ny: -1, nz: 0 },
+    // Wait, let me re-index properly...
+  ]
+  void faceDefs
+
+  // Simpler approach: use convex hull on the 24 points
+  const hullPts: [number, number, number][] = points.map(p => [p[0], p[1], p[2]])
+  return convexHull3D(hullPts)
+}
+
+function makeLoft(profiles: number[][][], heights: number[], fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  if (profiles.length < 2 || heights.length < 2) return { v, ix }
+
+  // Ensure all profiles have the same number of vertices by resampling
+  const maxVerts = Math.max(...profiles.map(p => p.length))
+  const targetVerts = Math.max(maxVerts, fn)
+
+  // Resample a profile to have exactly n points
+  function resampleProfile(profile: number[][], n: number): number[][] {
+    if (profile.length === n) return profile
+    const result: number[][] = []
+    const len = profile.length
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * len
+      const idx = Math.floor(t)
+      const frac = t - idx
+      const p0 = profile[idx % len]
+      const p1 = profile[(idx + 1) % len]
+      result.push([
+        p0[0] + frac * (p1[0] - p0[0]),
+        p0[1] + frac * (p1[1] - p0[1]),
+      ])
+    }
+    return result
+  }
+
+  const resampledProfiles = profiles.map(p => resampleProfile(p, targetVerts))
+
+  // Generate vertices for each profile at its height
+  for (let pi = 0; pi < resampledProfiles.length; pi++) {
+    const profile = resampledProfiles[pi]
+    const z = heights[pi] ?? (pi * 10)
+    for (let vi2 = 0; vi2 < targetVerts; vi2++) {
+      const x = profile[vi2][0]
+      const y = profile[vi2][1]
+      // Approximate normal: outward from centroid
+      let cx = 0, cy = 0
+      for (const pt of profile) { cx += pt[0]; cy += pt[1] }
+      cx /= profile.length; cy /= profile.length
+      const dx = x - cx, dy = y - cy
+      const nl = Math.sqrt(dx * dx + dy * dy) || 1
+      v.push(x, y, z, dx / nl, dy / nl, 0)
+    }
+  }
+
+  // Connect adjacent profiles with quads
+  for (let pi = 0; pi < resampledProfiles.length - 1; pi++) {
+    for (let vi2 = 0; vi2 < targetVerts; vi2++) {
+      const nextVi = (vi2 + 1) % targetVerts
+      const a = pi * targetVerts + vi2
+      const b = pi * targetVerts + nextVi
+      const c = (pi + 1) * targetVerts + vi2
+      const d = (pi + 1) * targetVerts + nextVi
+      ix.push(a, b, d, a, d, c)
+    }
+  }
+
+  // Bottom cap
+  const botOff = v.length / 6
+  const botProfile = resampledProfiles[0]
+  const botZ = heights[0] ?? 0
+  for (let i = 0; i < targetVerts; i++) {
+    v.push(botProfile[i][0], botProfile[i][1], botZ, 0, 0, -1)
+  }
+  const botTris = earClip(botProfile)
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(botOff + botTris[i], botOff + botTris[i + 2], botOff + botTris[i + 1])
+  }
+
+  // Top cap
+  const topOff = v.length / 6
+  const topProfile = resampledProfiles[resampledProfiles.length - 1]
+  const topZ = heights[heights.length - 1] ?? ((resampledProfiles.length - 1) * 10)
+  for (let i = 0; i < targetVerts; i++) {
+    v.push(topProfile[i][0], topProfile[i][1], topZ, 0, 0, 1)
+  }
+  const topTris = earClip(topProfile)
+  for (let i = 0; i < topTris.length; i += 3) {
+    ix.push(topOff + topTris[i], topOff + topTris[i + 1], topOff + topTris[i + 2])
+  }
+
+  return { v, ix }
+}
+
 function makeSurface(data: number[][]): { v: number[]; ix: number[] } {
   const rows = data.length
   if (rows < 2) return { v: [], ix: [] }
@@ -3324,6 +3591,126 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         out.push(...evalNodes(ch, nt, col, vars, modules, echos, callerChildren, annotations))
       }
       return out
+    }
+    case 'honeycomb': {
+      const rows = typeof arg(a, 'rows', 0, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'rows', 0, 5) as number)) : 5
+      const cols = typeof arg(a, 'cols', 1, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'cols', 1, 5) as number)) : 5
+      const r = typeof arg(a, 'r', 2, 5) === 'number' ? arg(a, 'r', 2, 5) as number : 5
+      const h = typeof arg(a, 'h', 3, 3) === 'number' ? arg(a, 'h', 3, 3) as number : 3
+      const wall = typeof arg(a, 'wall', 4, 1) === 'number' ? arg(a, 'wall', 4, 1) as number : 1
+      const { v, ix } = makeHoneycomb(rows, cols, r, h, wall)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'spring': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const wire_r = typeof arg(a, 'wire_r', 1, 1) === 'number' ? arg(a, 'wire_r', 1, 1) as number : 1
+      const coils = typeof arg(a, 'coils', 2, 5) === 'number' ? arg(a, 'coils', 2, 5) as number : 5
+      const pitch = typeof arg(a, 'pitch', 3, 3) === 'number' ? arg(a, 'pitch', 3, 3) as number : 3
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      // Delegate to makeHelix with wire_r as the tube radius factor
+      const helixResult = makeHelix(r, pitch, coils, fn)
+      // Scale tube radius: makeHelix uses pitch * 0.15 as tube radius
+      // We want wire_r instead, so scale all vertex positions relative to the helix center
+      // Simpler: just use makeHelix directly; the wire radius is pitch * 0.15
+      // For better control, let's re-generate with the correct tube radius
+      const vArr: number[] = [], ixArr: number[] = []
+      const tubeR = wire_r
+      const totalHeight = pitch * coils
+      const ringSegs = Math.max(16, fn * coils)
+      const tubeSegs = Math.max(6, Math.floor(fn / 4))
+      for (let i = 0; i <= ringSegs; i++) {
+        const t = i / ringSegs
+        const angle = 2 * Math.PI * coils * t
+        const ca = Math.cos(angle), sa = Math.sin(angle)
+        const cx2 = r * ca, cy2 = totalHeight * t, cz = r * sa
+        const tx = -r * sa * 2 * Math.PI * coils
+        const ty = totalHeight
+        const tz = r * ca * 2 * Math.PI * coils
+        const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1
+        const ttx = tx / tlen, tty = ty / tlen, ttz = tz / tlen
+        let upx = 0, upy = 1, upz = 0
+        if (Math.abs(tty) > 0.9) { upx = 1; upy = 0; upz = 0 }
+        let bx = tty * upz - ttz * upy
+        let by = ttz * upx - ttx * upz
+        let bz = ttx * upy - tty * upx
+        const blen = Math.sqrt(bx * bx + by * by + bz * bz) || 1
+        bx /= blen; by /= blen; bz /= blen
+        let nx = by * ttz - bz * tty
+        let ny = bz * ttx - bx * ttz
+        let nz = bx * tty - by * ttx
+        const nlen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+        nx /= nlen; ny /= nlen; nz /= nlen
+        for (let j = 0; j <= tubeSegs; j++) {
+          const phi = (2 * Math.PI * j) / tubeSegs
+          const cp = Math.cos(phi), sp = Math.sin(phi)
+          const px = cx2 + tubeR * (cp * nx + sp * bx)
+          const py = cy2 + tubeR * (cp * ny + sp * by)
+          const pz = cz + tubeR * (cp * nz + sp * bz)
+          const snx = cp * nx + sp * bx
+          const sny = cp * ny + sp * by
+          const snz = cp * nz + sp * bz
+          vArr.push(px, py, pz, snx, sny, snz)
+        }
+      }
+      for (let i = 0; i < ringSegs; i++) {
+        for (let j = 0; j < tubeSegs; j++) {
+          const a2 = i * (tubeSegs + 1) + j
+          const b = a2 + tubeSegs + 1
+          ixArr.push(a2, b, a2 + 1, a2 + 1, b, b + 1)
+        }
+      }
+      void helixResult // we built our own
+      return [{ vertices: new Float32Array(vArr), indices: new Uint32Array(ixArr), color: col ?? nextC(), transform: tf }]
+    }
+    case 'knurl': {
+      const d = typeof arg(a, 'd', 0, 10) === 'number' ? arg(a, 'd', 0, 10) as number : 10
+      const h = typeof arg(a, 'h', 1, 10) === 'number' ? arg(a, 'h', 1, 10) as number : 10
+      const pitch = typeof arg(a, 'pitch', 2, 1.5) === 'number' ? arg(a, 'pitch', 2, 1.5) as number : 1.5
+      const depth = typeof arg(a, 'depth', 3, 0.5) === 'number' ? arg(a, 'depth', 3, 0.5) as number : 0.5
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeKnurl(d, h, pitch, depth, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'chamfer_cube': {
+      const sizeRaw = arg(a, 'size', 0, [10, 10, 10])
+      let sx: number, sy: number, sz: number
+      if (Array.isArray(sizeRaw)) {
+        sx = typeof sizeRaw[0] === 'number' ? sizeRaw[0] : 10
+        sy = typeof sizeRaw[1] === 'number' ? sizeRaw[1] : 10
+        sz = typeof sizeRaw[2] === 'number' ? sizeRaw[2] : 10
+      } else if (typeof sizeRaw === 'number') {
+        sx = sy = sz = sizeRaw
+      } else {
+        sx = sy = sz = 10
+      }
+      const chamfer = typeof arg(a, 'chamfer', 1, 1) === 'number' ? arg(a, 'chamfer', 1, 1) as number : 1
+      const center = !!arg(a, 'center', 2, false)
+      const { v, ix } = makeChamferCube(sx, sy, sz, chamfer, center)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'loft': {
+      const profilesRaw = arg(a, 'profiles', 0, [])
+      const heightsRaw = arg(a, 'heights', 1, [])
+      const fn = Math.max(3, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      if (!Array.isArray(profilesRaw) || profilesRaw.length < 2) return []
+      const profiles: number[][][] = profilesRaw.map((p: any) => {
+        if (!Array.isArray(p)) return []
+        return p.map((pt: any) => Array.isArray(pt) ? [typeof pt[0] === 'number' ? pt[0] : 0, typeof pt[1] === 'number' ? pt[1] : 0] : [0, 0])
+      })
+      let heights: number[] = []
+      if (Array.isArray(heightsRaw) && heightsRaw.length >= 2) {
+        heights = heightsRaw.map((h: any) => typeof h === 'number' ? h : 0)
+      } else {
+        // Auto-generate heights: evenly spaced
+        for (let i = 0; i < profiles.length; i++) {
+          heights.push(i * 10)
+        }
+      }
+      // Ensure heights array matches profiles length
+      while (heights.length < profiles.length) heights.push(heights[heights.length - 1] + 10)
+      const { v, ix } = makeLoft(profiles, heights, fn)
+      if (!v.length) return []
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
