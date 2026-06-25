@@ -5470,6 +5470,311 @@ onUnmounted(() => {
   document.removeEventListener('selectionchange', onSelectionChange)
 })
 
+/* ── Feature: Multi-Replace Mode (Ctrl+D) ── */
+const multiReplaceActive = ref(false)
+const multiReplaceWord = ref('')
+const multiReplaceInput = ref('')
+const multiReplaceCount = ref(0)
+
+function activateMultiReplace(el: HTMLTextAreaElement) {
+  const src = code.value
+  const s = el.selectionStart
+  const e = el.selectionEnd
+
+  // If no selection, select the word under cursor first
+  if (s === e) {
+    const wordChars = /[a-zA-Z0-9_$]/
+    let wStart = s, wEnd = s
+    while (wStart > 0 && wordChars.test(src[wStart - 1])) wStart--
+    while (wEnd < src.length && wordChars.test(src[wEnd])) wEnd++
+    if (wStart === wEnd) return
+    el.setSelectionRange(wStart, wEnd)
+    updateOccurrenceHighlight()
+    return
+  }
+
+  const selected = src.substring(s, e)
+  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(selected)) return
+
+  // Count all occurrences
+  let count = 0
+  let idx = 0
+  while (idx <= src.length - selected.length) {
+    const pos = src.indexOf(selected, idx)
+    if (pos === -1) break
+    const before = pos > 0 ? src[pos - 1] : ' '
+    const after = pos + selected.length < src.length ? src[pos + selected.length] : ' '
+    if (!/[a-zA-Z0-9_$]/.test(before) && !/[a-zA-Z0-9_$]/.test(after)) {
+      count++
+    }
+    idx = pos + 1
+  }
+  if (count < 2) return
+
+  multiReplaceActive.value = true
+  multiReplaceWord.value = selected
+  multiReplaceInput.value = selected
+  multiReplaceCount.value = count
+}
+
+function executeMultiReplace() {
+  if (!multiReplaceWord.value) return
+  const src = code.value
+  const oldWord = multiReplaceWord.value
+  const newWord = multiReplaceInput.value
+  if (oldWord === newWord) { cancelMultiReplace(); return }
+
+  // Replace all occurrences with word boundary check
+  let result = ''
+  let lastIdx = 0
+  let idx = 0
+  while (idx <= src.length - oldWord.length) {
+    const pos = src.indexOf(oldWord, idx)
+    if (pos === -1) break
+    const before = pos > 0 ? src[pos - 1] : ' '
+    const after = pos + oldWord.length < src.length ? src[pos + oldWord.length] : ' '
+    if (!/[a-zA-Z0-9_$]/.test(before) && !/[a-zA-Z0-9_$]/.test(after)) {
+      result += src.substring(lastIdx, pos) + newWord
+      lastIdx = pos + oldWord.length
+      idx = pos + oldWord.length
+    } else {
+      idx = pos + 1
+    }
+  }
+  result += src.substring(lastIdx)
+  code.value = result
+  multiReplaceActive.value = false
+  multiReplaceWord.value = ''
+  addToast(t('multiReplaceActive').replace('{n}', String(multiReplaceCount.value)), 'success')
+}
+
+function cancelMultiReplace() {
+  multiReplaceActive.value = false
+  multiReplaceWord.value = ''
+}
+
+/* ── Feature: Duplicate Tab ── */
+function duplicateTab(id: string) {
+  const source = tabs.value.find(tb => tb.id === id)
+  if (!source) return
+  const newName = t('copyOf').replace('{name}', source.name)
+  const newTab: EditorTab = {
+    id: generateTabId(),
+    name: newName,
+    code: source.code,
+    savedCode: source.code,
+    colorTag: source.colorTag,
+  }
+  tabs.value.push(newTab)
+  activeTabId.value = newTab.id
+  saveTabs()
+  closeTabContextMenu()
+}
+
+/* ── Feature: Tab Color Tags ── */
+const TAB_COLORS: { key: string; color: string }[] = [
+  { key: 'tabColorNone', color: '' },
+  { key: 'tabColorRed', color: '#e53935' },
+  { key: 'tabColorGreen', color: '#43a047' },
+  { key: 'tabColorBlue', color: '#1e88e5' },
+  { key: 'tabColorYellow', color: '#fdd835' },
+  { key: 'tabColorPurple', color: '#8e24aa' },
+]
+const showTabColorMenu = ref(false)
+
+function setTabColor(id: string, color: string) {
+  const tab = tabs.value.find(tb => tb.id === id)
+  if (tab) {
+    tab.colorTag = color || undefined
+    saveTabs()
+  }
+  showTabColorMenu.value = false
+  closeTabContextMenu()
+}
+
+/* ── Feature: Quick Switcher (Ctrl+P) ── */
+const showQuickSwitcher = ref(false)
+const quickSwitcherSearch = ref('')
+const quickSwitcherIndex = ref(0)
+const quickSwitcherInputRef = ref<HTMLInputElement | null>(null)
+
+const filteredTabs = computed(() => {
+  const q = quickSwitcherSearch.value.trim().toLowerCase()
+  const all = sortedTabs.value
+  if (!q) return all
+  return all.filter(tb => tb.name.toLowerCase().includes(q))
+})
+
+function openQuickSwitcher() {
+  showQuickSwitcher.value = true
+  quickSwitcherSearch.value = ''
+  quickSwitcherIndex.value = 0
+  nextTick(() => quickSwitcherInputRef.value?.focus())
+}
+
+function closeQuickSwitcher() {
+  showQuickSwitcher.value = false
+  quickSwitcherSearch.value = ''
+}
+
+function executeQuickSwitch() {
+  const tabs_f = filteredTabs.value
+  if (tabs_f.length > 0) {
+    switchTab(tabs_f[quickSwitcherIndex.value].id)
+  }
+  closeQuickSwitcher()
+}
+
+function handleQuickSwitcherKeydown(e: KeyboardEvent) {
+  const items = filteredTabs.value
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    quickSwitcherIndex.value = (quickSwitcherIndex.value + 1) % items.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    quickSwitcherIndex.value = (quickSwitcherIndex.value - 1 + items.length) % items.length
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    executeQuickSwitch()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closeQuickSwitcher()
+  }
+}
+
+watch(quickSwitcherSearch, () => {
+  quickSwitcherIndex.value = 0
+})
+
+/* ── Feature: Notification Center ── */
+interface NotificationEntry {
+  id: number
+  message: string
+  type: 'success' | 'info' | 'error'
+  timestamp: Date
+  read: boolean
+}
+
+const MAX_NOTIFICATIONS = 50
+const notifications = ref<NotificationEntry[]>([])
+const showNotificationCenter = ref(false)
+let notifIdCounter = 0
+
+const unreadNotificationCount = computed(() => notifications.value.filter(n => !n.read).length)
+
+function addNotification(message: string, type: 'success' | 'info' | 'error') {
+  notifications.value.unshift({
+    id: notifIdCounter++,
+    message,
+    type,
+    timestamp: new Date(),
+    read: false,
+  })
+  if (notifications.value.length > MAX_NOTIFICATIONS) {
+    notifications.value = notifications.value.slice(0, MAX_NOTIFICATIONS)
+  }
+}
+
+function toggleNotificationCenter() {
+  showNotificationCenter.value = !showNotificationCenter.value
+  if (showNotificationCenter.value) {
+    // Mark all as read
+    for (const n of notifications.value) n.read = true
+  }
+}
+
+function clearNotifications() {
+  notifications.value = []
+}
+
+function formatNotifTime(d: Date): string {
+  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+/* ── Feature: Embed Mode ── */
+const embedMode = ref(false)
+
+/* ── Feature: Spec Sheet ── */
+function generateSpecSheet() {
+  if (!renderer || !lastParsedMeshes.length) return
+  computeStatistics()
+  const modelName = activeTab.value.name || t('untitled')
+  const dims = boundsSize.value
+  const vol = statsVolume.value
+  const area = statsSurfaceArea.value
+  const tris = triCount.value
+  const density = 1.24  // PLA default g/cm3
+  const volumeCm3 = vol / 1000  // mm3 to cm3
+  const weight = volumeCm3 * density
+  const codeText = code.value
+  const now = new Date().toLocaleString()
+
+  // Capture screenshot as data URL
+  let screenshotDataUrl = ''
+  try {
+    const canvas = canvasRef.value
+    if (canvas) {
+      screenshotDataUrl = canvas.toDataURL('image/png')
+    }
+  } catch { /* cross-origin, skip */ }
+
+  const win = window.open('', '_blank', 'width=800,height=900')
+  if (!win) return
+  win.document.write(`<!DOCTYPE html><html><head><title>${t('specSheet')} - ${modelName}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #222; max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; }
+  .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin-bottom: 24px; }
+  .spec-item { display: flex; flex-direction: column; }
+  .spec-label { font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 0.05em; }
+  .spec-value { font-size: 1rem; font-weight: 500; }
+  .spec-screenshot { max-width: 100%; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 24px; }
+  .spec-code { background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 300px; overflow: auto; margin-top: 16px; }
+  .spec-footer { margin-top: 24px; font-size: 0.75rem; color: #999; border-top: 1px solid #eee; padding-top: 8px; }
+  @media print { body { padding: 16px; } .spec-code { max-height: none; } }
+</style></head><body>
+<h1>${modelName}</h1>
+${screenshotDataUrl ? `<img class="spec-screenshot" src="${screenshotDataUrl}" alt="3D Model" />` : ''}
+<div class="spec-grid">
+  <div class="spec-item"><span class="spec-label">${t('specDimensions')}</span><span class="spec-value">${formatNumber(dims[0])} x ${formatNumber(dims[1])} x ${formatNumber(dims[2])} mm</span></div>
+  <div class="spec-item"><span class="spec-label">${t('specTriangles')}</span><span class="spec-value">${fmtInt(tris)}</span></div>
+  <div class="spec-item"><span class="spec-label">${t('specVolume')}</span><span class="spec-value">${formatNumber(vol)} mm3</span></div>
+  <div class="spec-item"><span class="spec-label">${t('specSurfaceArea')}</span><span class="spec-value">${formatNumber(area)} mm2</span></div>
+  <div class="spec-item"><span class="spec-label">${t('specDensity')}</span><span class="spec-value">${density}</span></div>
+  <div class="spec-item"><span class="spec-label">${t('specWeight')}</span><span class="spec-value">${formatNumber(weight)}</span></div>
+</div>
+<h3>${t('specSourceCode')}</h3>
+<div class="spec-code">${codeText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+<div class="spec-footer">${t('specGenerated')}: ${now}</div>
+</body></html>`)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print() }, 500)
+}
+
+/* ── Feature: UI Density ── */
+type UIDensity = 'compact' | 'normal' | 'comfortable'
+const uiDensity = ref<UIDensity>((localStorage.getItem('scad-ui-density') as UIDensity) || 'normal')
+
+const UI_DENSITY_SCALES: Record<UIDensity, number> = {
+  compact: 0.8,
+  normal: 1.0,
+  comfortable: 1.2,
+}
+
+watch(uiDensity, (v) => {
+  localStorage.setItem('scad-ui-density', v)
+  applyUIDensity()
+})
+
+function applyUIDensity() {
+  const scale = UI_DENSITY_SCALES[uiDensity.value]
+  document.documentElement.style.setProperty('--density-scale', String(scale))
+  document.documentElement.style.setProperty('--density-padding', `${Math.round(8 * scale)}px`)
+  document.documentElement.style.setProperty('--density-gap', `${Math.round(6 * scale)}px`)
+  document.documentElement.style.setProperty('--density-font-size', `${Math.round(13 * scale)}px`)
+}
+
 /* ── Feature: Go to Line (Ctrl+G) ── */
 const showGoToLine = ref(false)
 const goToLineText = ref('')
