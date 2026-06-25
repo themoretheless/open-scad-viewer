@@ -680,6 +680,44 @@ const L: Record<string, Record<string, string>> = {
     resetColor: 'Сбросить цвет',
     orbitMode: 'Орбита',
     flyModeLabel: 'Полёт',
+    // Batch 38
+    multiReplace: 'Множественная замена',
+    multiReplaceActive: 'Замена {n} совпадений',
+    multiReplaceHint: 'Ctrl+D: выделить слово / заменить все совпадения',
+    sc_multiReplace: 'Выделить все совпадения',
+    duplicateTab: 'Дублировать вкладку',
+    copyOf: 'Копия {name}',
+    tabColor: 'Цвет вкладки',
+    tabColorNone: 'Без цвета',
+    tabColorRed: 'Красный',
+    tabColorGreen: 'Зелёный',
+    tabColorBlue: 'Синий',
+    tabColorYellow: 'Жёлтый',
+    tabColorPurple: 'Фиолетовый',
+    quickSwitcher: 'Быстрое переключение',
+    quickSwitcherPlaceholder: 'Поиск вкладки...',
+    noTabsFound: 'Вкладки не найдены',
+    notificationCenter: 'Центр уведомлений',
+    clearAllNotifications: 'Очистить все',
+    noNotifications: 'Нет уведомлений',
+    embedMode: 'Режим встраивания',
+    specSheet: 'Спецификация',
+    cmdSpecSheet: 'Создать спецификацию',
+    specModelName: 'Название модели',
+    specDimensions: 'Габариты',
+    specVolume: 'Объём',
+    specSurfaceArea: 'Площадь поверхности',
+    specTriangles: 'Треугольники',
+    specMaterialEst: 'Оценка материала',
+    specSourceCode: 'Исходный код',
+    specGenerated: 'Дата создания',
+    specDensity: 'Плотность (г/см³)',
+    specWeight: 'Масса (г)',
+    uiDensity: 'Плотность интерфейса',
+    densityCompact: 'Компактный',
+    densityNormal: 'Обычный',
+    densityComfortable: 'Просторный',
+    sc_quickSwitcher: 'Быстрое переключение вкладок',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1255,6 +1293,44 @@ const L: Record<string, Record<string, string>> = {
     resetColor: 'Reset Color',
     orbitMode: 'Orbit',
     flyModeLabel: 'Fly',
+    // Batch 38
+    multiReplace: 'Multi-Replace',
+    multiReplaceActive: 'Replacing {n} occurrences',
+    multiReplaceHint: 'Ctrl+D: select word / replace all occurrences',
+    sc_multiReplace: 'Select All Occurrences',
+    duplicateTab: 'Duplicate Tab',
+    copyOf: 'Copy of {name}',
+    tabColor: 'Tab Color',
+    tabColorNone: 'None',
+    tabColorRed: 'Red',
+    tabColorGreen: 'Green',
+    tabColorBlue: 'Blue',
+    tabColorYellow: 'Yellow',
+    tabColorPurple: 'Purple',
+    quickSwitcher: 'Quick Switcher',
+    quickSwitcherPlaceholder: 'Search tabs...',
+    noTabsFound: 'No tabs found',
+    notificationCenter: 'Notification Center',
+    clearAllNotifications: 'Clear All',
+    noNotifications: 'No notifications',
+    embedMode: 'Embed Mode',
+    specSheet: 'Spec Sheet',
+    cmdSpecSheet: 'Generate Spec Sheet',
+    specModelName: 'Model Name',
+    specDimensions: 'Dimensions',
+    specVolume: 'Volume',
+    specSurfaceArea: 'Surface Area',
+    specTriangles: 'Triangles',
+    specMaterialEst: 'Material Estimate',
+    specSourceCode: 'Source Code',
+    specGenerated: 'Generated',
+    specDensity: 'Density (g/cm3)',
+    specWeight: 'Weight (g)',
+    uiDensity: 'UI Density',
+    densityCompact: 'Compact',
+    densityNormal: 'Normal',
+    densityComfortable: 'Comfortable',
+    sc_quickSwitcher: 'Quick tab switcher',
   },
   zh: {
     title: 'OpenSCAD 3D 查看器',
@@ -1349,6 +1425,19 @@ const L: Record<string, Record<string, string>> = {
     buildPlate: '打印平台',
     exportDropdown: '导出',
     menuView: '视图', menuRender: '渲染', menuExport: '导出',
+    // Batch 38
+    duplicateTab: '复制标签',
+    tabColor: '标签颜色',
+    tabColorNone: '无',
+    quickSwitcher: '快速切换',
+    notificationCenter: '通知中心',
+    clearAllNotifications: '清除所有',
+    noNotifications: '没有通知',
+    specSheet: '规格表',
+    uiDensity: '界面密度',
+    densityCompact: '紧凑',
+    densityNormal: '正常',
+    densityComfortable: '舒适',
   },
 }
 
@@ -1406,6 +1495,7 @@ interface EditorTab {
   code: string
   pinned?: boolean
   savedCode?: string
+  colorTag?: string  // 'red' | 'green' | 'blue' | 'yellow' | 'purple' | ''
 }
 
 function generateTabId(): string {
@@ -4967,8 +5057,15 @@ function handleKey(e: KeyboardEvent) {
 
   const editorEl = e.target as HTMLTextAreaElement
 
-  // Duplicate line: Ctrl+D
+  // Multi-replace / Select all occurrences: Ctrl+D
   if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+    e.preventDefault()
+    activateMultiReplace(editorEl)
+    return
+  }
+
+  // Duplicate line: Ctrl+Shift+D (moved from Ctrl+D)
+  if ((e.ctrlKey || e.metaKey) && e.key === 'D' && e.shiftKey) {
     e.preventDefault()
     duplicateLine(editorEl)
     return
