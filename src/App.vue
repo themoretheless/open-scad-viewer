@@ -5694,7 +5694,7 @@ const filteredRefSections = computed(() => {
       entries: section.entries.filter(e =>
         e.name.toLowerCase().includes(q) ||
         e.sig.toLowerCase().includes(q) ||
-        e.desc[lang.value]?.toLowerCase().includes(q) ||
+        (e.desc as any)[lang.value]?.toLowerCase().includes(q) ||
         e.desc.en.toLowerCase().includes(q)
       ),
     }))
@@ -6087,6 +6087,35 @@ watch(code, (v) => {
   }, 300)
 }, { immediate: true })
 
+/* ── Feature: Code Complexity Indicator ── */
+const codeComplexity = computed(() => {
+  const src = code.value
+  const lines = src.split('\n').length
+  const modules = (src.match(/\bmodule\s+\w+/g) || []).length
+  const forLoops = (src.match(/\bfor\s*\(/g) || []).length
+  const csgOps = (src.match(/\b(union|difference|intersection|hull|minkowski)\s*\(/g) || []).length
+
+  // Nesting depth
+  let maxDepth = 0, curDepth = 0
+  for (const ch of src) {
+    if (ch === '{') { curDepth++; if (curDepth > maxDepth) maxDepth = curDepth }
+    else if (ch === '}') curDepth--
+  }
+
+  // Score: weighted combination
+  const score = lines + modules * 10 + forLoops * 8 + csgOps * 5 + maxDepth * 4
+
+  let level: 'simple' | 'medium' | 'complex'
+  let color: string
+  if (lines < 50 && score < 80) { level = 'simple'; color = '#4caf50' }
+  else if (lines < 200 && score < 300) { level = 'medium'; color = '#ff9800' }
+  else { level = 'complex'; color = '#f44336' }
+
+  const labelKey = level === 'simple' ? 'complexitySimple' : level === 'medium' ? 'complexityMedium' : 'complexityComplex'
+
+  return { level, color, lines, modules, forLoops, csgOps, maxDepth, label: labelKey }
+})
+
 /* ── Feature: Viewport Camera Info ── */
 const showCameraInfo = ref(false)
 const cameraInfoData = ref({ yaw: 0, pitch: 0, dist: 0, tx: 0, ty: 0, tz: 0 })
@@ -6117,6 +6146,16 @@ onUnmounted(() => {
   if (cameraInfoInterval) clearInterval(cameraInfoInterval)
   if (codeStatsDebounce) clearTimeout(codeStatsDebounce)
 })
+
+/* ── Feature: Viewport Compass ── */
+const compassYaw = ref(0)
+let compassAnimFrame = 0
+function updateCompass() {
+  if (renderer) compassYaw.value = renderer.yaw * 180 / Math.PI
+  compassAnimFrame = requestAnimationFrame(updateCompass)
+}
+onMounted(() => { compassAnimFrame = requestAnimationFrame(updateCompass) })
+onUnmounted(() => { cancelAnimationFrame(compassAnimFrame) })
 
 /* ── Feature: Export All Formats Dropdown (toolbar) ── */
 const showExportDropdown = ref(false)
@@ -6757,15 +6796,22 @@ translate([0, 0, 39])
             <span class="modal-title">{{ t('scadReference') }}</span>
             <button class="modal-close" @click="showScadReference = false" :aria-label="t('ariaCloseModal')">&times;</button>
           </div>
+          <div class="ref-search-bar">
+            <svg class="ref-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input class="ref-search-input" v-model="refSearchQuery" :placeholder="t('refSearch')" />
+          </div>
           <div class="modal-body scad-ref-scroll">
-            <div v-for="section in SCAD_REF_SECTIONS" :key="section.key" class="scad-ref-section">
-              <div class="scad-ref-section-title">{{ t(section.key) }}</div>
+            <div v-for="section in filteredRefSections" :key="section.key" class="scad-ref-section">
+              <div class="scad-ref-section-title" v-html="highlightMatch(t(section.key))"></div>
               <div v-for="entry in section.entries" :key="entry.name" class="scad-ref-entry">
-                <div class="scad-ref-name">{{ entry.name }}</div>
-                <code class="scad-ref-sig">{{ entry.sig }}</code>
-                <div class="scad-ref-desc">{{ (entry.desc as any)[lang] || entry.desc.en }}</div>
+                <div class="scad-ref-name" v-html="highlightMatch(entry.name)"></div>
+                <code class="scad-ref-sig" v-html="highlightMatch(entry.sig)"></code>
+                <div class="scad-ref-desc" v-html="highlightMatch((entry.desc as any)[lang] || entry.desc.en)"></div>
               </div>
             </div>
+            <div v-if="filteredRefSections.length === 0" class="ref-no-results">{{ t('noMatches') }}</div>
           </div>
         </div>
       </div>
@@ -7649,6 +7695,16 @@ translate([0, 0, 39])
               <span class="stat-val">{{ codeStatsData.lines }}{{ t('codeLines').charAt(0).toLowerCase() }} {{ codeStatsData.modules }}{{ t('codeModules').charAt(0).toLowerCase() }} {{ t('codeNestingDepth').charAt(0).toLowerCase() }}{{ codeStatsData.nestingDepth }}</span>
             </div>
           </template>
+          <!-- Code Complexity -->
+          <template v-if="!simpleMode">
+            <span class="stat-div"></span>
+            <div class="stat-seg stat-complexity" :title="t('complexity') + ': ' + t(codeComplexity.label) + ' (' + codeComplexity.lines + ' ' + t('codeLines') + ', ' + codeComplexity.modules + ' ' + t('codeModules') + ', ' + codeComplexity.forLoops + ' ' + t('codeForLoops') + ', ' + codeComplexity.csgOps + ' CSG, ' + t('codeNestingDepth') + ' ' + codeComplexity.maxDepth + ')'">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" :stroke="codeComplexity.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>
+              </svg>
+              <span class="stat-val" :style="{ color: codeComplexity.color }">{{ t(codeComplexity.label) }}</span>
+            </div>
+          </template>
           <!-- Camera Info toggle -->
           <template v-if="!simpleMode">
             <span class="stat-div"></span>
@@ -7784,6 +7840,28 @@ translate([0, 0, 39])
                 class="gizmo-text"
                 :opacity="ax.z < 0 ? 1 : 0.6"
               >{{ ax.label }}</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Viewport Compass -->
+        <div class="viewport-compass" :title="t('compassN')">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <g :transform="`rotate(${-compassYaw}, 30, 30)`">
+              <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="1.5" opacity="0.5"/>
+              <circle cx="30" cy="30" r="2" fill="var(--text-dim)" />
+              <!-- N marker (top) -->
+              <line x1="30" y1="30" x2="30" y2="8" stroke="#f44336" stroke-width="2" stroke-linecap="round"/>
+              <text x="30" y="7" text-anchor="middle" dominant-baseline="auto" fill="#f44336" font-size="9" font-weight="bold">{{ t('compassN') }}</text>
+              <!-- S marker (bottom) -->
+              <line x1="30" y1="30" x2="30" y2="52" stroke="var(--text-dim)" stroke-width="1.2" stroke-linecap="round"/>
+              <text x="30" y="59" text-anchor="middle" dominant-baseline="auto" fill="var(--text-dim)" font-size="8">{{ t('compassS') }}</text>
+              <!-- E marker (right) -->
+              <line x1="30" y1="30" x2="52" y2="30" stroke="var(--text-dim)" stroke-width="1.2" stroke-linecap="round"/>
+              <text x="58" y="33" text-anchor="middle" dominant-baseline="central" fill="var(--text-dim)" font-size="8">{{ t('compassE') }}</text>
+              <!-- W marker (left) -->
+              <line x1="30" y1="30" x2="8" y2="30" stroke="var(--text-dim)" stroke-width="1.2" stroke-linecap="round"/>
+              <text x="2" y="33" text-anchor="middle" dominant-baseline="central" fill="var(--text-dim)" font-size="8">{{ t('compassW') }}</text>
             </g>
           </svg>
         </div>
@@ -10026,6 +10104,47 @@ textarea.code:focus-visible {
   fill: #fff;
   pointer-events: none;
 }
+
+/* Viewport Compass */
+.viewport-compass {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  width: 60px;
+  height: 60px;
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 5;
+}
+.viewport-compass:hover { opacity: 1; }
+.viewport-compass text { user-select: none; pointer-events: none; }
+
+/* Reference search */
+.ref-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ref-search-icon { color: var(--text-dim); flex-shrink: 0; }
+.ref-search-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.ref-search-input:focus { border-color: var(--accent); }
+.ref-search-input::placeholder { color: var(--text-dim); }
+.ref-highlight { background: rgba(255, 200, 0, 0.3); color: inherit; border-radius: 2px; }
+.ref-no-results { padding: 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+
+/* Code Complexity indicator */
+.stat-complexity { cursor: default; }
 
 /* ── Feature 2: WebGPU loading overlay ── */
 .webgpu-loading {
