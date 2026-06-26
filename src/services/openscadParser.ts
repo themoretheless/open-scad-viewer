@@ -3272,6 +3272,117 @@ function makeHemisphere(r: number, fn: number): { v: number[]; ix: number[] } {
   return { v, ix }
 }
 
+function makeOgive(r: number, h: number, fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  // Ogive radius of curvature: R = (r^2 + h^2) / (2*r)
+  const R = (r * r + h * h) / (2 * r)
+  const stacks = Math.max(4, Math.floor(fn / 2))
+
+  // Generate profile: z goes from 0 (base) to h (tip)
+  for (let ri = 0; ri <= stacks; ri++) {
+    const z = h * ri / stacks
+    // Ogive profile: x(z) = sqrt(R^2 - (z - h)^2) - (R - r)
+    const inner = R * R - (z - h) * (z - h)
+    const xr = inner > 0 ? Math.sqrt(inner) - (R - r) : 0
+    const radius = Math.max(0, xr)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const nx0 = Math.cos(th), nz0 = Math.sin(th)
+      const px = radius * nx0, py = z, pz = radius * nz0
+      // Approximate normal: tangent along profile gives slope
+      const zUp = h * Math.min(ri + 1, stacks) / stacks
+      const innerUp = R * R - (zUp - h) * (zUp - h)
+      const xrUp = innerUp > 0 ? Math.sqrt(innerUp) - (R - r) : 0
+      const zDn = h * Math.max(ri - 1, 0) / stacks
+      const innerDn = R * R - (zDn - h) * (zDn - h)
+      const xrDn = innerDn > 0 ? Math.sqrt(innerDn) - (R - r) : 0
+      const dr = (xrUp - xrDn) / (zUp - zDn || 1)
+      // Normal perpendicular to surface: (1, -dr, 0) rotated around Y
+      let nnx = nx0, nny = -dr, nnz = nz0
+      const nlen = Math.sqrt(nnx * nnx + nny * nny + nnz * nnz) || 1
+      nnx /= nlen; nny /= nlen; nnz /= nlen
+      v.push(px, py, pz, nnx, nny, nnz)
+    }
+  }
+  for (let ri = 0; ri < stacks; ri++) {
+    for (let si = 0; si < fn; si++) {
+      const a = ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // Bottom cap at z=0
+  const capCenter = v.length / 6
+  v.push(0, 0, 0, 0, -1, 0)
+  for (let si = 0; si <= fn; si++) {
+    const th = 2 * Math.PI * si / fn
+    v.push(r * Math.cos(th), 0, r * Math.sin(th), 0, -1, 0)
+  }
+  for (let si = 0; si < fn; si++) {
+    ix.push(capCenter, capCenter + 1 + si + 1, capCenter + 1 + si)
+  }
+
+  return { v, ix }
+}
+
+function makeTeardrop(r: number, fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const halfSeg = Math.max(4, Math.floor(fn / 2))
+
+  // Lower hemisphere: phi from PI/2 (equator, y=0) to PI (bottom, y=-r)
+  for (let ri = 0; ri <= halfSeg; ri++) {
+    const phi = Math.PI / 2 + (Math.PI / 2) * ri / halfSeg
+    const sp = Math.sin(phi), cp = Math.cos(phi)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th)
+      v.push(r * nx, r * ny, r * nz, nx, ny, nz)
+    }
+  }
+  for (let ri = 0; ri < halfSeg; ri++) {
+    for (let si = 0; si < fn; si++) {
+      const a = ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // 45-degree cone from equator (y=0) to tip (y=r)
+  // At equator radius = r, at tip radius = 0, height = r (45 degrees)
+  const coneStacks = halfSeg
+  const baseOffset = v.length / 6
+  for (let ri = 0; ri <= coneStacks; ri++) {
+    const t = ri / coneStacks
+    const y = r * t
+    const radius = r * (1 - t)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const cx = Math.cos(th), cz = Math.sin(th)
+      const px = radius * cx, py = y, pz = radius * cz
+      // Cone normal: 45-degree slope, normalized
+      const s45 = Math.SQRT1_2
+      const nnx = s45 * cx, nny = s45, nnz = s45 * cz
+      v.push(px, py, pz, nnx, nny, nnz)
+    }
+  }
+  for (let ri = 0; ri < coneStacks; ri++) {
+    for (let si = 0; si < fn; si++) {
+      const a = baseOffset + ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // Stitch hemisphere equator (row 0) to cone base (row 0)
+  // They share the same y=0, radius=r ring, so just connect them
+  for (let si = 0; si < fn; si++) {
+    const hTop = si  // hemisphere row 0 (equator)
+    const cBot = baseOffset + si  // cone row 0 (equator)
+    ix.push(hTop, cBot, hTop + 1)
+    ix.push(hTop + 1, cBot, cBot + 1)
+  }
+
+  return { v, ix }
+}
+
 /* ── Main evaluator ───────────────────────────────── */
 
 function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[], annotations: Annotation[] = []): MeshData[] {
@@ -4474,6 +4585,58 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r = arg(a, 'r', 0, 1)
       echos.push('NOTE: chamfer(r=' + r + ') is visual-only, applied as pass-through')
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
+    }
+    case 'ogive': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makeOgive(r, h, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'teardrop': {
+      const r = typeof arg(a, 'r', 0, 5) === 'number' ? arg(a, 'r', 0, 5) as number : 5
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const { v, ix } = makeTeardrop(r, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'ring': {
+      const r1 = typeof arg(a, 'r1', 0, 15) === 'number' ? arg(a, 'r1', 0, 15) as number : 15
+      const r2 = typeof arg(a, 'r2', 1, 12) === 'number' ? arg(a, 'r2', 1, 12) as number : 12
+      const h = typeof arg(a, 'h', 2, 5) === 'number' ? arg(a, 'h', 2, 5) as number : 5
+      const center = arg(a, 'center', -1, false) === true
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const { v, ix } = makePipe(h, r1, r2, center, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'tube': {
+      const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
+      const wall = typeof arg(a, 'wall', 1, 1) === 'number' ? arg(a, 'wall', 1, 1) as number : 1
+      const h = typeof arg(a, 'h', 2, 20) === 'number' ? arg(a, 'h', 2, 20) as number : 20
+      const center = arg(a, 'center', -1, false) === true
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const innerR = Math.max(0, r - wall)
+      const { v, ix } = makePipe(h, r, innerR, center, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'mirror_copy': {
+      const raw = arg(a, 'v', 0, [1, 0, 0])
+      const original = evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
+      if (Array.isArray(raw)) {
+        const sv: Vec3 = [raw[0] ? -1 : 1, raw[1] ? -1 : 1, raw[2] ? -1 : 1]
+        const mirrored = evalNodes(ch, scale(tf, sv), col, vars, modules, echos, callerChildren, annotations)
+        return [...original, ...mirrored]
+      }
+      return original
+    }
+    case 'distribute': {
+      const count = typeof arg(a, 'count', 0, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'count', 0, 5) as number)) : 5
+      const spacing = typeof arg(a, 'spacing', 1, 15) === 'number' ? arg(a, 'spacing', 1, 15) as number : 15
+      const out: MeshData[] = []
+      for (let i = 0; i < count; i++) {
+        const nt = translate(tf, [i * spacing, 0, 0])
+        out.push(...evalNodes(ch, nt, col, vars, modules, echos, callerChildren, annotations))
+      }
+      return out
     }
     case 'minkowski': case 'render': case 'group':
       return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)

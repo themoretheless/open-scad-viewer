@@ -781,6 +781,32 @@ const L: Record<string, Record<string, string>> = {
     errorExplanation: 'Пояснение',
     errorFixHint: 'Возможное исправление',
     showErrorHelp: 'Помощь',
+    // Batch 42 — Weight/Cost Estimator
+    material: 'Материал',
+    weight: 'Вес',
+    cost: 'Стоимость',
+    materialPLA: 'PLA',
+    materialABS: 'ABS',
+    materialPETG: 'PETG',
+    materialNylon: 'Нейлон',
+    materialResin: 'Смола',
+    costPerKg: 'Цена за кг',
+    currency: 'Валюта',
+    // Batch 42 — About Dialog
+    about: 'О программе',
+    aboutTitle: 'О программе',
+    aboutVersion: 'Версия',
+    aboutBuiltWith: 'Создано с помощью Vue 3, WebGPU, TypeScript',
+    aboutLicense: 'Лицензия: MIT',
+    // Batch 42 — Screenshot Comparison
+    compareScreenshots: 'Сравнение скриншотов',
+    saveReference: 'Сохранить эталон',
+    compareWithReference: 'Сравнить с эталоном',
+    referenceNotSaved: 'Сначала сохраните эталонный скриншот',
+    overlay: 'Наложение',
+    sideBySide: 'Рядом',
+    difference: 'Разница',
+    cmdAbout: 'О программе',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1457,6 +1483,32 @@ const L: Record<string, Record<string, string>> = {
     errorExplanation: 'Explanation',
     errorFixHint: 'Possible fix',
     showErrorHelp: 'Help',
+    // Batch 42 — Weight/Cost Estimator
+    material: 'Material',
+    weight: 'Weight',
+    cost: 'Cost',
+    materialPLA: 'PLA',
+    materialABS: 'ABS',
+    materialPETG: 'PETG',
+    materialNylon: 'Nylon',
+    materialResin: 'Resin',
+    costPerKg: 'Cost per kg',
+    currency: 'Currency',
+    // Batch 42 — About Dialog
+    about: 'About',
+    aboutTitle: 'About',
+    aboutVersion: 'Version',
+    aboutBuiltWith: 'Built with Vue 3, WebGPU, TypeScript',
+    aboutLicense: 'License: MIT',
+    // Batch 42 — Screenshot Comparison
+    compareScreenshots: 'Compare Screenshots',
+    saveReference: 'Save Reference',
+    compareWithReference: 'Compare with Reference',
+    referenceNotSaved: 'Save a reference screenshot first',
+    overlay: 'Overlay',
+    sideBySide: 'Side by Side',
+    difference: 'Difference',
+    cmdAbout: 'About',
   },
   zh: {
     title: 'OpenSCAD 3D 查看器',
@@ -1600,6 +1652,30 @@ const L: Record<string, Record<string, string>> = {
     errorExplanation: '说明',
     errorFixHint: '可能的修复',
     showErrorHelp: '帮助',
+    // Batch 42
+    material: '材料',
+    weight: '重量',
+    cost: '成本',
+    materialPLA: 'PLA',
+    materialABS: 'ABS',
+    materialPETG: 'PETG',
+    materialNylon: '尼龙',
+    materialResin: '树脂',
+    costPerKg: '每公斤价格',
+    currency: '货币',
+    about: '关于',
+    aboutTitle: '关于',
+    aboutVersion: '版本',
+    aboutBuiltWith: '使用 Vue 3, WebGPU, TypeScript 构建',
+    aboutLicense: '许可证: MIT',
+    compareScreenshots: '截图对比',
+    saveReference: '保存参考',
+    compareWithReference: '与参考对比',
+    referenceNotSaved: '请先保存参考截图',
+    overlay: '叠加',
+    sideBySide: '并排',
+    difference: '差异',
+    cmdAbout: '关于',
   },
 }
 
@@ -7176,6 +7252,73 @@ watch([meshCount, triCount], () => {
   if (showStatistics.value) computeStatistics()
 })
 
+/* ── Feature: Weight & Cost Estimator ── */
+interface MaterialDef { id: string; nameKey: string; density: number }
+const MATERIALS: MaterialDef[] = [
+  { id: 'pla', nameKey: 'materialPLA', density: 1.24 },
+  { id: 'abs', nameKey: 'materialABS', density: 1.04 },
+  { id: 'petg', nameKey: 'materialPETG', density: 1.27 },
+  { id: 'nylon', nameKey: 'materialNylon', density: 1.14 },
+  { id: 'resin', nameKey: 'materialResin', density: 1.18 },
+]
+const selectedMaterial = ref(localStorage.getItem('scad-material') || 'pla')
+const materialCostPerKg = ref(parseFloat(localStorage.getItem('scad-cost-per-kg') || '25'))
+const selectedCurrency = ref(localStorage.getItem('scad-currency') || 'USD')
+const CURRENCIES = ['USD', 'EUR', 'RUB'] as const
+
+const estimatedWeight = computed(() => {
+  const mat = MATERIALS.find(m => m.id === selectedMaterial.value)
+  if (!mat) return 0
+  // volume is in mm³, density in g/cm³; 1 cm³ = 1000 mm³
+  return statsVolume.value * mat.density / 1000
+})
+
+const estimatedCost = computed(() => {
+  // weight in grams, cost per kg
+  return estimatedWeight.value * materialCostPerKg.value / 1000
+})
+
+const currencySymbol = computed(() => {
+  switch (selectedCurrency.value) {
+    case 'EUR': return '€'
+    case 'RUB': return '₽'
+    default: return '$'
+  }
+})
+
+watch(selectedMaterial, v => localStorage.setItem('scad-material', v))
+watch(materialCostPerKg, v => localStorage.setItem('scad-cost-per-kg', String(v)))
+watch(selectedCurrency, v => localStorage.setItem('scad-currency', v))
+
+/* ── Feature: About Dialog ── */
+const showAbout = ref(false)
+
+/* ── Feature: Screenshot Comparison ── */
+const referenceScreenshot = ref<string | null>(null)
+const showScreenshotCompare = ref(false)
+const screenshotCompareMode = ref<'overlay' | 'sideBySide' | 'difference'>('sideBySide')
+const currentScreenshot = ref<string | null>(null)
+const comparisonSlider = ref(50)
+
+function saveReferenceScreenshot() {
+  if (!renderer) return
+  const canvas = canvasRef.value
+  if (!canvas) return
+  referenceScreenshot.value = canvas.toDataURL('image/png')
+  addToast(t('saveReference'), 'success')
+}
+
+function compareWithReference() {
+  if (!referenceScreenshot.value) {
+    addToast(t('referenceNotSaved'), 'error')
+    return
+  }
+  const canvas = canvasRef.value
+  if (!canvas) return
+  currentScreenshot.value = canvas.toDataURL('image/png')
+  showScreenshotCompare.value = true
+}
+
 /* ── OpenSCAD Reference Panel ── */
 const showScadReference = ref(false)
 
@@ -7195,6 +7338,10 @@ const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
     { name: 'cone', sig: 'cone(r, h, center, $fn)', desc: { ru: 'Конус', en: 'Cone' } },
     { name: 'capsule', sig: 'capsule(r, h, center, $fn)', desc: { ru: 'Капсула', en: 'Capsule with hemisphere caps' } },
     { name: 'gear', sig: 'gear(teeth, mod, thickness, $fn)', desc: { ru: 'Шестерня', en: 'Simplified spur gear' } },
+    { name: 'ogive', sig: 'ogive(r, h, $fn)', desc: { ru: 'Оживальная форма (носовой обтекатель)', en: 'Ogive / nose cone shape' } },
+    { name: 'teardrop', sig: 'teardrop(r, h, $fn)', desc: { ru: 'Каплевидная форма (для 3D-печати)', en: 'Teardrop shape (3D print friendly)' } },
+    { name: 'ring', sig: 'ring(r1, r2, h, $fn)', desc: { ru: 'Кольцо (полый цилиндр)', en: 'Ring (hollow cylinder)' } },
+    { name: 'tube', sig: 'tube(r, wall, h, $fn)', desc: { ru: 'Труба (с толщиной стенки)', en: 'Tube (with wall thickness)' } },
   ]},
   { key: 'refPrimitives2D', entries: [
     { name: 'circle', sig: 'circle(r|d, $fn)', desc: { ru: 'Окружность', en: 'Circle' } },
@@ -7212,6 +7359,8 @@ const SCAD_REF_SECTIONS: { key: string; entries: RefEntry[] }[] = [
     { name: 'offset', sig: 'offset(r|delta, chamfer)', desc: { ru: 'Смещение 2D-контура', en: 'Offset 2D outline' } },
     { name: 'radial_array', sig: 'radial_array(count, r) { ... }', desc: { ru: 'Круговой массив', en: 'Radial array around circle' } },
     { name: 'linear_array', sig: 'linear_array(count, spacing) { ... }', desc: { ru: 'Линейный массив', en: 'Linear array along direction' } },
+    { name: 'mirror_copy', sig: 'mirror_copy(v) { ... }', desc: { ru: 'Зеркальная копия (оригинал + отражение)', en: 'Mirror copy (original + reflection)' } },
+    { name: 'distribute', sig: 'distribute(count, spacing) { ... }', desc: { ru: 'Распределение копий (линейный массив)', en: 'Distribute copies (linear array alias)' } },
   ]},
   { key: 'refCSG', entries: [
     { name: 'union', sig: 'union() { ... }', desc: { ru: 'Объединение', en: 'Combine children' } },
@@ -8628,10 +8777,65 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <button class="hamburger-item" @click="toggleScadReference">{{ t('scadReference') }}</button>
             <button class="hamburger-item" @click="showShortcuts = true">{{ t('shortcuts') }}</button>
             <button class="hamburger-item" @click="showPreferences = !showPreferences">{{ t('preferences') }}</button>
+            <button class="hamburger-item" @click="saveReferenceScreenshot()">{{ t('saveReference') }}</button>
+            <button class="hamburger-item" @click="compareWithReference()">{{ t('compareScreenshots') }}</button>
+            <button class="hamburger-item" @click="showAbout = true">{{ t('about') }}</button>
           </div>
         </div>
       </div>
     </nav>
+
+    <!-- About modal -->
+    <Teleport to="body">
+      <div v-if="showAbout" class="modal-backdrop" @click.self="showAbout = false">
+        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:400px">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('aboutTitle') }}</span>
+            <button class="modal-close" @click="showAbout = false">&times;</button>
+          </div>
+          <div class="modal-body" style="text-align:center;padding:20px">
+            <div style="font-size:20px;font-weight:700;margin-bottom:4px">OpenSCAD 3D Viewer</div>
+            <div style="color:var(--text-dim);margin-bottom:12px">{{ t('aboutVersion') }}: 0.1.0</div>
+            <div style="margin-bottom:8px">{{ t('aboutBuiltWith') }}</div>
+            <div style="color:var(--text-dim);margin-bottom:12px">{{ t('aboutLicense') }}</div>
+            <div style="font-size:11px;color:var(--text-dim)">WebGPU-powered 3D rendering</div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Screenshot Comparison modal -->
+    <Teleport to="body">
+      <div v-if="showScreenshotCompare" class="modal-backdrop" @click.self="showScreenshotCompare = false">
+        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:900px;width:90vw">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('compareScreenshots') }}</span>
+            <div class="modal-header-actions">
+              <button :class="{'btn': true, 'btn-sm': true, 'btn-active': screenshotCompareMode === 'sideBySide'}" @click="screenshotCompareMode = 'sideBySide'" style="margin-right:4px">{{ t('sideBySide') }}</button>
+              <button :class="{'btn': true, 'btn-sm': true, 'btn-active': screenshotCompareMode === 'overlay'}" @click="screenshotCompareMode = 'overlay'" style="margin-right:4px">{{ t('overlay') }}</button>
+              <button class="modal-close" @click="showScreenshotCompare = false">&times;</button>
+            </div>
+          </div>
+          <div class="modal-body" style="padding:12px">
+            <div v-if="screenshotCompareMode === 'sideBySide'" style="display:flex;gap:12px;justify-content:center">
+              <div style="flex:1;text-align:center">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">{{ t('saveReference') }}</div>
+                <img v-if="referenceScreenshot" :src="referenceScreenshot" style="max-width:100%;border:1px solid var(--border);border-radius:4px" />
+              </div>
+              <div style="flex:1;text-align:center">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">{{ t('screenshot') }}</div>
+                <img v-if="currentScreenshot" :src="currentScreenshot" style="max-width:100%;border:1px solid var(--border);border-radius:4px" />
+              </div>
+            </div>
+            <div v-else-if="screenshotCompareMode === 'overlay'" style="position:relative;text-align:center">
+              <img v-if="referenceScreenshot" :src="referenceScreenshot" style="max-width:100%;border:1px solid var(--border);border-radius:4px" />
+              <img v-if="currentScreenshot" :src="currentScreenshot" :style="{position:'absolute',top:'0',left:'50%',transform:'translateX(-50%)',maxWidth:'100%',opacity: comparisonSlider / 100,borderRadius:'4px'}" />
+              <input type="range" v-model.number="comparisonSlider" min="0" max="100" style="width:100%;margin-top:8px" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Shortcuts modal -->
     <Teleport to="body">
@@ -10401,6 +10605,33 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <div class="stats-panel-row">
               <span class="stats-panel-key">{{ t('statsBoundingBox') }}</span>
               <span class="stats-panel-val">{{ formatNumber(boundsSize[0]) }}&times;{{ formatNumber(boundsSize[1]) }}&times;{{ formatNumber(boundsSize[2]) }} mm</span>
+            </div>
+            <div class="stats-panel-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+              <span class="stats-panel-key">{{ t('material') }}</span>
+              <span class="stats-panel-val">
+                <select v-model="selectedMaterial" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:11px">
+                  <option v-for="mat in MATERIALS" :key="mat.id" :value="mat.id">{{ t(mat.nameKey) }}</option>
+                </select>
+              </span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('weight') }}</span>
+              <span class="stats-panel-val">{{ formatNumber(estimatedWeight, 2) }} g</span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('cost') }}</span>
+              <span class="stats-panel-val">
+                {{ currencySymbol }}{{ formatNumber(estimatedCost, 2) }}
+                <select v-model="selectedCurrency" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:11px;margin-left:4px">
+                  <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
+                </select>
+              </span>
+            </div>
+            <div class="stats-panel-row">
+              <span class="stats-panel-key">{{ t('costPerKg') }}</span>
+              <span class="stats-panel-val">
+                {{ currencySymbol }}<input type="number" v-model.number="materialCostPerKg" min="0" step="1" style="width:50px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:11px;text-align:right">
+              </span>
             </div>
           </div>
         </div>
