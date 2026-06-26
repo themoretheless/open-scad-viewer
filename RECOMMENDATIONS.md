@@ -5,6 +5,7 @@ Actionable plan derived from a 10-perspective architecture audit (Frontend, Perf
 This is the **execution plan**. It is kept in sync with:
 - [README.md](./README.md) — what the app does (user-facing)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — how it's built + the target structure (the 4 phases below mirror its "Planned Refactor")
+- [ISSUES.md](./ISSUES.md) — the 500-item defect catalog these phases resolve (domain→phase mapping at its end)
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 

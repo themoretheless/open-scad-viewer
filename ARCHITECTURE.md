@@ -93,6 +93,8 @@ State persists to `localStorage` (tabs, preferences, theme, bookmarks, snapshots
 
 ## Known Limitations
 
+> A full 500-item defect catalog across all domains is in [ISSUES.md](./ISSUES.md); the items below are the geometry-correctness subset.
+
 - **CSG is visual, not boolean.** `difference`/`intersection` do not compute true mesh booleans; subtracted bodies are shown translucent. `hull` is a real 3D convex hull; `minkowski` is a pass-through.
 - **`linear_extrude` / `rotate_extrude` / `offset` / `projection`** are approximations.
 - **`fillet` / `chamfer`** operations are pass-throughs that log a note.
