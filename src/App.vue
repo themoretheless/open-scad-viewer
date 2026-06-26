@@ -742,6 +742,45 @@ const L: Record<string, Record<string, string>> = {
     metaDimensions: 'Габариты',
     metaTriangles: 'Треугольники',
     metaDate: 'Дата',
+    // Batch 40 — New primitive examples
+    latticeEx: 'Решётка',
+    latticeTip: 'Кубическая решётка',
+    slotCrossEx: 'Слот и крест',
+    slotCrossTip: 'Слот (стадион) и крест',
+    mazeEx: 'Лабиринт',
+    mazeTip: 'Случайный лабиринт',
+    fibSphereEx: 'Сфера Фибоначчи',
+    fibSphereTip: 'Точки по сфере Фибоначчи',
+    // Batch 40 — Theme Editor
+    customTheme: 'Пользовательская тема',
+    customThemeName: 'Название темы',
+    themeBackground: 'Фон',
+    themeSurface: 'Поверхность',
+    themeBorder: 'Граница',
+    themeText: 'Текст',
+    themeAccent: 'Акцент',
+    themeSave: 'Сохранить тему',
+    themeDelete: 'Удалить',
+    themeNamePlaceholder: 'Моя тема',
+    themeSaved: 'Тема сохранена',
+    themeDeleted: 'Тема удалена',
+    // Batch 40 — Playground
+    playground: 'Площадка',
+    playgroundTitle: 'Интерактивная площадка',
+    playgroundChallenge: 'Задание {n}',
+    playgroundGoal: 'Цель',
+    playgroundHint: 'Подсказка',
+    playgroundCheck: 'Проверить',
+    playgroundSuccess: 'Отлично! Задание пройдено!',
+    playgroundFail: 'Пока не получилось. Попробуйте ещё раз.',
+    playgroundNext: 'Следующее задание',
+    playgroundComplete: 'Все задания выполнены! Поздравляем!',
+    playgroundReset: 'Начать заново',
+    cmdPlayground: 'Площадка (обучение)',
+    // Batch 40 — Error Explanation
+    errorExplanation: 'Пояснение',
+    errorFixHint: 'Возможное исправление',
+    showErrorHelp: 'Помощь',
   },
   en: {
     title: 'OpenSCAD 3D Viewer',
@@ -1379,6 +1418,45 @@ const L: Record<string, Record<string, string>> = {
     metaDimensions: 'Dimensions',
     metaTriangles: 'Triangles',
     metaDate: 'Date',
+    // Batch 40 — New primitive examples
+    latticeEx: 'Lattice',
+    latticeTip: 'Cubic lattice structure',
+    slotCrossEx: 'Slot & Cross',
+    slotCrossTip: 'Stadium slot and cross shape',
+    mazeEx: 'Maze',
+    mazeTip: 'Random maze generator',
+    fibSphereEx: 'Fibonacci Sphere',
+    fibSphereTip: 'Fibonacci spiral point distribution',
+    // Batch 40 — Theme Editor
+    customTheme: 'Custom Theme',
+    customThemeName: 'Theme Name',
+    themeBackground: 'Background',
+    themeSurface: 'Surface',
+    themeBorder: 'Border',
+    themeText: 'Text',
+    themeAccent: 'Accent',
+    themeSave: 'Save Theme',
+    themeDelete: 'Delete',
+    themeNamePlaceholder: 'My Theme',
+    themeSaved: 'Theme saved',
+    themeDeleted: 'Theme deleted',
+    // Batch 40 — Playground
+    playground: 'Playground',
+    playgroundTitle: 'Interactive Playground',
+    playgroundChallenge: 'Challenge {n}',
+    playgroundGoal: 'Goal',
+    playgroundHint: 'Hint',
+    playgroundCheck: 'Check',
+    playgroundSuccess: 'Great job! Challenge passed!',
+    playgroundFail: 'Not quite right. Try again.',
+    playgroundNext: 'Next Challenge',
+    playgroundComplete: 'All challenges completed! Congratulations!',
+    playgroundReset: 'Start Over',
+    cmdPlayground: 'Playground (tutorial)',
+    // Batch 40 — Error Explanation
+    errorExplanation: 'Explanation',
+    errorFixHint: 'Possible fix',
+    showErrorHelp: 'Help',
   },
   zh: {
     title: 'OpenSCAD 3D 查看器',
@@ -1486,6 +1564,42 @@ const L: Record<string, Record<string, string>> = {
     densityCompact: '紧凑',
     densityNormal: '正常',
     densityComfortable: '舒适',
+    // Batch 40
+    latticeEx: '晶格',
+    latticeTip: '立方晶格结构',
+    slotCrossEx: '槽和十字',
+    slotCrossTip: '体育场槽和十字形',
+    mazeEx: '迷宫',
+    mazeTip: '随机迷宫生成器',
+    fibSphereEx: '斐波那契球',
+    fibSphereTip: '斐波那契螺旋点分布',
+    customTheme: '自定义主题',
+    customThemeName: '主题名称',
+    themeBackground: '背景',
+    themeSurface: '表面',
+    themeBorder: '边框',
+    themeText: '文字',
+    themeAccent: '强调',
+    themeSave: '保存主题',
+    themeDelete: '删除',
+    themeNamePlaceholder: '我的主题',
+    themeSaved: '主题已保存',
+    themeDeleted: '主题已删除',
+    playground: '练习场',
+    playgroundTitle: '交互式练习场',
+    playgroundChallenge: '挑战 {n}',
+    playgroundGoal: '目标',
+    playgroundHint: '提示',
+    playgroundCheck: '检查',
+    playgroundSuccess: '太棒了！挑战通过！',
+    playgroundFail: '还不太对，再试试。',
+    playgroundNext: '下一个挑战',
+    playgroundComplete: '所有挑战完成！恭喜！',
+    playgroundReset: '重新开始',
+    cmdPlayground: '练习场（教程）',
+    errorExplanation: '说明',
+    errorFixHint: '可能的修复',
+    showErrorHelp: '帮助',
   },
 }
 
@@ -2768,7 +2882,7 @@ function computeGhostStats(meshes: MeshData[]) {
 }
 
 /* ── Feature: Notification Badge for Updates ── */
-const APP_VERSION = 8 // Increment when adding major features
+const APP_VERSION = 9 // Increment when adding major features
 const hasNewFeatures = ref(false)
 
 function checkVersionBadge() {
@@ -2785,6 +2899,10 @@ function dismissNewFeatures() {
 checkVersionBadge()
 
 const WHATS_NEW_ITEMS = [
+  { version: 9, items: {
+    ru: ['Примитивы lattice(), slot(), cross(), maze(), fibonacci_sphere()', 'Редактор тем оформления', 'Площадка с интерактивными уроками', 'Подсказки по ошибкам парсера'],
+    en: ['lattice(), slot(), cross(), maze(), fibonacci_sphere() primitives', 'Custom theme editor', 'Interactive playground with tutorials', 'Error explanation panel'],
+  }},
   { version: 8, items: {
     ru: ['Примитив star()', 'Примитив thread()', 'Сравнение моделей (призрак)', 'Пресеты конфигурации', 'Интерактивный тур', 'Навигация с клавиатуры (Numpad)'],
     en: ['star() primitive', 'thread() primitive', 'Model comparison stats (ghost)', 'Configuration presets', 'Interactive tour', 'Keyboard viewport navigation (Numpad)'],
@@ -5877,6 +5995,300 @@ function handleGoToLineKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') { e.preventDefault(); closeGoToLine() }
 }
 
+/* ── Feature: Custom Theme Editor ── */
+interface CustomTheme {
+  name: string
+  bg: string
+  surface: string
+  border: string
+  text: string
+  accent: string
+}
+const customThemes = ref<CustomTheme[]>(JSON.parse(localStorage.getItem('scad-custom-themes') || '[]'))
+const customThemeName = ref('')
+const customThemeBg = ref('#1a1a2e')
+const customThemeSurface = ref('#16213e')
+const customThemeBorder = ref('#0f3460')
+const customThemeText = ref('#e4e4e8')
+const customThemeAccent = ref('#e94560')
+
+function saveCustomTheme() {
+  const name = customThemeName.value.trim()
+  if (!name) return
+  const existing = customThemes.value.findIndex(ct => ct.name === name)
+  const themeData: CustomTheme = {
+    name,
+    bg: customThemeBg.value,
+    surface: customThemeSurface.value,
+    border: customThemeBorder.value,
+    text: customThemeText.value,
+    accent: customThemeAccent.value,
+  }
+  if (existing >= 0) {
+    customThemes.value[existing] = themeData
+  } else {
+    customThemes.value.push(themeData)
+  }
+  localStorage.setItem('scad-custom-themes', JSON.stringify(customThemes.value))
+  // Register as an EditorTheme
+  registerCustomThemes()
+  // Select the new theme
+  selectTheme('custom-' + name)
+  addToast(t('themeSaved'), 'success')
+}
+
+function deleteCustomTheme(name: string) {
+  customThemes.value = customThemes.value.filter(ct => ct.name !== name)
+  localStorage.setItem('scad-custom-themes', JSON.stringify(customThemes.value))
+  registerCustomThemes()
+  if (activeThemeId.value === 'custom-' + name) {
+    selectTheme('default-dark')
+  }
+  addToast(t('themeDeleted'), 'info')
+}
+
+function registerCustomThemes() {
+  // Remove old custom themes
+  const baseCount = 6 // number of built-in themes
+  while (EDITOR_THEMES.length > baseCount) EDITOR_THEMES.pop()
+  // Add custom themes
+  for (const ct of customThemes.value) {
+    const isDarkTheme = isColorDark(ct.bg)
+    EDITOR_THEMES.push({
+      id: 'custom-' + ct.name,
+      name: { ru: ct.name, en: ct.name, de: ct.name, zh: ct.name },
+      dark: isDarkTheme,
+      vars: {
+        '--bg': ct.bg,
+        '--surface': ct.surface,
+        '--border': ct.border,
+        '--text': ct.text,
+        '--text-dim': adjustAlpha(ct.text, 0.6),
+        '--accent': ct.accent,
+        '--hover': adjustBrightness(ct.surface, isDarkTheme ? 1.2 : 0.95),
+        '--canvas-bg': adjustBrightness(ct.bg, isDarkTheme ? 0.85 : 1.05),
+        '--hl-comment': adjustAlpha(ct.text, 0.5),
+        '--hl-keyword': ct.accent,
+        '--hl-number': '#d19a66',
+        '--hl-string': '#6ec87a',
+        '--hl-boolean': '#c678dd',
+        '--hl-special': '#56c8d8',
+      },
+    })
+  }
+}
+
+function isColorDark(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16) || 0
+  const g = parseInt(hex.slice(3, 5), 16) || 0
+  const b = parseInt(hex.slice(5, 7), 16) || 0
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 128
+}
+
+function adjustAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16) || 0
+  const g = parseInt(hex.slice(3, 5), 16) || 0
+  const b = parseInt(hex.slice(5, 7), 16) || 0
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+function adjustBrightness(hex: string, factor: number): string {
+  const r = Math.min(255, Math.max(0, Math.round((parseInt(hex.slice(1, 3), 16) || 0) * factor)))
+  const g = Math.min(255, Math.max(0, Math.round((parseInt(hex.slice(3, 5), 16) || 0) * factor)))
+  const b = Math.min(255, Math.max(0, Math.round((parseInt(hex.slice(5, 7), 16) || 0) * factor)))
+  return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0')
+}
+
+function applyCustomThemePreview() {
+  const root = document.documentElement
+  root.style.setProperty('--bg', customThemeBg.value)
+  root.style.setProperty('--surface', customThemeSurface.value)
+  root.style.setProperty('--border', customThemeBorder.value)
+  root.style.setProperty('--text', customThemeText.value)
+  root.style.setProperty('--accent', customThemeAccent.value)
+}
+
+// Register custom themes on load
+registerCustomThemes()
+
+/* ── Feature: Playground Mode ── */
+const showPlayground = ref(false)
+const playgroundStep = ref(0)
+const playgroundCompleted = ref<boolean[]>([false, false, false, false, false])
+
+interface PlaygroundChallenge {
+  goal: { ru: string; en: string; zh: string }
+  hint: { ru: string; en: string; zh: string }
+  initialCode: string
+  check: (code: string, meshCount: number) => boolean
+}
+
+const PLAYGROUND_CHALLENGES: PlaygroundChallenge[] = [
+  {
+    goal: { ru: 'Создайте куб любого размера', en: 'Create a cube of any size', zh: '创建一个任意大小的立方体' },
+    hint: { ru: 'Используйте cube([x,y,z]) или cube(size)', en: 'Use cube([x,y,z]) or cube(size)', zh: '使用 cube([x,y,z]) 或 cube(size)' },
+    initialCode: '// Create a cube\n',
+    check: (code, mc) => /\bcube\s*\(/.test(code) && mc > 0,
+  },
+  {
+    goal: { ru: 'Добавьте сферу и куб', en: 'Add a sphere and a cube', zh: '添加一个球体和一个立方体' },
+    hint: { ru: 'Используйте sphere(r=...) и cube()', en: 'Use sphere(r=...) and cube()', zh: '使用 sphere(r=...) 和 cube()' },
+    initialCode: '// Create a sphere and a cube\n',
+    check: (code, mc) => /\bsphere\s*\(/.test(code) && /\bcube\s*\(/.test(code) && mc >= 2,
+  },
+  {
+    goal: { ru: 'Используйте difference() чтобы вырезать отверстие', en: 'Use difference() to cut a hole', zh: '使用 difference() 切割一个孔' },
+    hint: { ru: 'difference() { куб; цилиндр; }', en: 'difference() { cube; cylinder; }', zh: 'difference() { cube; cylinder; }' },
+    initialCode: '// Use difference() to subtract shapes\ndifference() {\n  \n}\n',
+    check: (code, mc) => /\bdifference\s*\(\s*\)\s*\{/.test(code) && mc > 0,
+  },
+  {
+    goal: { ru: 'Создайте модуль и вызовите его', en: 'Create a module and call it', zh: '创建一个模块并调用它' },
+    hint: { ru: 'module myShape() { ... } myShape();', en: 'module myShape() { ... } myShape();', zh: 'module myShape() { ... } myShape();' },
+    initialCode: '// Define a module and use it\n',
+    check: (code, mc) => /\bmodule\s+\w+\s*\(/.test(code) && mc > 0,
+  },
+  {
+    goal: { ru: 'Используйте for для создания массива объектов', en: 'Use for to create an array of objects', zh: '使用 for 创建对象数组' },
+    hint: { ru: 'for(i=[0:4]) translate([i*10,0,0]) cube(5);', en: 'for(i=[0:4]) translate([i*10,0,0]) cube(5);', zh: 'for(i=[0:4]) translate([i*10,0,0]) cube(5);' },
+    initialCode: '// Use a for loop to create multiple objects\n',
+    check: (code, mc) => /\bfor\s*\(/.test(code) && mc >= 2,
+  },
+]
+
+function openPlayground() {
+  showPlayground.value = true
+  playgroundStep.value = 0
+  playgroundCompleted.value = [false, false, false, false, false]
+  const challenge = PLAYGROUND_CHALLENGES[0]
+  code.value = challenge.initialCode
+  doRender()
+}
+
+function checkPlayground() {
+  const challenge = PLAYGROUND_CHALLENGES[playgroundStep.value]
+  if (!challenge) return
+  const passed = challenge.check(code.value, meshCount.value)
+  if (passed) {
+    playgroundCompleted.value[playgroundStep.value] = true
+    addToast(t('playgroundSuccess'), 'success')
+  } else {
+    addToast(t('playgroundFail'), 'error')
+  }
+}
+
+function nextPlaygroundChallenge() {
+  if (playgroundStep.value < PLAYGROUND_CHALLENGES.length - 1) {
+    playgroundStep.value++
+    const challenge = PLAYGROUND_CHALLENGES[playgroundStep.value]
+    code.value = challenge.initialCode
+    doRender()
+  }
+}
+
+function resetPlayground() {
+  playgroundStep.value = 0
+  playgroundCompleted.value = [false, false, false, false, false]
+  const challenge = PLAYGROUND_CHALLENGES[0]
+  code.value = challenge.initialCode
+  doRender()
+}
+
+/* ── Feature: Error Explanation Panel ── */
+const showErrorExplanation = ref(false)
+
+interface ErrorExplanationData {
+  explanation: string
+  fix: string
+}
+
+function getErrorExplanation(errorMsg: string): ErrorExplanationData | null {
+  const msg = errorMsg.toLowerCase()
+  if (msg.includes('unexpected token') || msg.includes('unexpected char')) {
+    return {
+      explanation: lang.value === 'ru'
+        ? 'Обнаружен неожиданный символ. Возможно, есть синтаксическая ошибка.'
+        : lang.value === 'zh'
+        ? '发现意外字符。可能存在语法错误。'
+        : 'An unexpected character was found. There might be a syntax error.',
+      fix: lang.value === 'ru'
+        ? 'Проверьте парные скобки, кавычки и правильность написания.'
+        : lang.value === 'zh'
+        ? '检查括号、引号和拼写是否正确。'
+        : 'Check for unmatched brackets, quotes, or typos.',
+    }
+  }
+  if (msg.includes('semicolon') || msg.includes(';')) {
+    return {
+      explanation: lang.value === 'ru'
+        ? 'Возможно, пропущена точка с запятой в конце выражения.'
+        : lang.value === 'zh'
+        ? '可能在语句末尾缺少分号。'
+        : 'You may have forgotten a semicolon at the end of a statement.',
+      fix: lang.value === 'ru'
+        ? 'Добавьте ; в конце строки с вызовом функции или выражением.'
+        : lang.value === 'zh'
+        ? '在函数调用或表达式的行末添加 ;。'
+        : 'Add a ; at the end of the line with the function call or expression.',
+    }
+  }
+  if (msg.includes('unknown') || msg.includes('not supported') || msg.includes('undefined')) {
+    return {
+      explanation: lang.value === 'ru'
+        ? 'Использована неизвестная функция или переменная.'
+        : lang.value === 'zh'
+        ? '使用了未知的函数或变量。'
+        : 'An unknown function or variable was used.',
+      fix: lang.value === 'ru'
+        ? 'Проверьте написание имени. Откройте справку OpenSCAD для списка доступных функций.'
+        : lang.value === 'zh'
+        ? '检查名称拼写。查看 OpenSCAD 参考获取可用函数列表。'
+        : 'Check the spelling. See the OpenSCAD Reference for available functions.',
+    }
+  }
+  if (msg.includes('bracket') || msg.includes('brace') || msg.includes('paren') || msg.includes('{') || msg.includes('}') || msg.includes('(') || msg.includes(')')) {
+    return {
+      explanation: lang.value === 'ru'
+        ? 'Обнаружена проблема со скобками.'
+        : lang.value === 'zh'
+        ? '发现括号问题。'
+        : 'There is a bracket or parenthesis issue.',
+      fix: lang.value === 'ru'
+        ? 'Убедитесь, что все открывающие скобки имеют закрывающие пары.'
+        : lang.value === 'zh'
+        ? '确保所有括号都有对应的配对。'
+        : 'Make sure all opening brackets have matching closing brackets.',
+    }
+  }
+  if (msg.includes('number') || msg.includes('argument') || msg.includes('parameter')) {
+    return {
+      explanation: lang.value === 'ru'
+        ? 'Проблема с аргументами функции.'
+        : lang.value === 'zh'
+        ? '函数参数问题。'
+        : 'There is an issue with the function arguments.',
+      fix: lang.value === 'ru'
+        ? 'Проверьте количество и тип аргументов функции.'
+        : lang.value === 'zh'
+        ? '检查函数参数的数量和类型。'
+        : 'Check the number and type of arguments for the function.',
+    }
+  }
+  // Generic fallback
+  return {
+    explanation: lang.value === 'ru'
+      ? 'Произошла ошибка при разборе кода.'
+      : lang.value === 'zh'
+      ? '解析代码时发生错误。'
+      : 'An error occurred while parsing the code.',
+    fix: lang.value === 'ru'
+      ? 'Проверьте синтаксис вашего кода. Убедитесь в правильности скобок и точек с запятой.'
+      : lang.value === 'zh'
+      ? '检查代码语法。确保括号和分号正确。'
+      : 'Review your code syntax. Make sure brackets and semicolons are correct.',
+  }
+}
+
 /* ── Feature: Command Palette (Ctrl+Shift+P / F1) ── */
 const showCommandPalette = ref(false)
 const commandSearch = ref('')
@@ -5966,6 +6378,7 @@ const paletteCommands: PaletteCommand[] = [
   { id: 'sectionBox', label: () => t('cmdToggleSectionBox'), action: () => toggleSectionBox() },
   { id: 'turntableExport', label: () => t('exportTurntable'), action: () => exportTurntableZip() },
   { id: 'renderAll', label: () => t('cmdRenderAll'), action: () => doRenderAllTabs() },
+  { id: 'playground', label: () => t('cmdPlayground'), action: () => openPlayground() },
 ]
 
 function fuzzyMatch(needle: string, haystack: string): boolean {
@@ -7160,6 +7573,10 @@ const EXAMPLE_CARDS: ExampleCard[] = [
   { key: 'knurledCylinder', nameKey: 'knurledCylinder', tipKey: 'knurledCylinderTip' },
   { key: 'chamferedBox', nameKey: 'chamferedBox', tipKey: 'chamferedBoxTip' },
   { key: 'loftShape', nameKey: 'loftShape', tipKey: 'loftShapeTip' },
+  { key: 'lattice', nameKey: 'latticeEx', tipKey: 'latticeTip' },
+  { key: 'slotCross', nameKey: 'slotCrossEx', tipKey: 'slotCrossTip' },
+  { key: 'maze', nameKey: 'mazeEx', tipKey: 'mazeTip' },
+  { key: 'fibSphere', nameKey: 'fibSphereEx', tipKey: 'fibSphereTip' },
 ]
 
 function getExamplePreview(key: string): string {
@@ -8122,6 +8539,33 @@ loft(
   $fn=16
 );
 `,
+
+  lattice: `// Cubic lattice structure
+// Great for lightweight 3D-printable infill
+color([0.3, 0.6, 0.9])
+lattice(type="cubic", cell=5, r=0.4, size=[25,25,25], $fn=8);
+`,
+
+  slotCross: `// Slot and cross primitives
+// Stadium-shaped slot for bolt holes
+color([0.6, 0.7, 0.8])
+slot(length=30, width=8, h=5);
+
+// Cross / plus shape
+translate([0, 20, 0])
+color([0.8, 0.5, 0.3])
+cross(size=[25,25,8], arm=7);
+`,
+
+  maze: `// Random maze generator
+color([0.7, 0.6, 0.5])
+maze(rows=8, cols=8, cell=4, wall=0.8, h=3);
+`,
+
+  fibSphere: `// Fibonacci sphere — uniform point distribution
+color([0.2, 0.7, 0.6])
+fibonacci_sphere(count=150, r=15, $fn=8);
+`,
 }
 </script>
 
@@ -8433,6 +8877,45 @@ loft(
               <label class="pref-label">{{ t('metaDate') }}</label>
               <div class="pref-control"><input type="checkbox" v-model="screenshotMeta.date" class="pref-checkbox" /></div>
             </div>
+            <!-- Custom Theme Section -->
+            <div class="pref-section-divider"></div>
+            <div class="pref-section-title">{{ t('customTheme') }}</div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('themeBackground') }}</label>
+              <div class="pref-control"><input type="color" v-model="customThemeBg" class="pref-color-input" @input="applyCustomThemePreview" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('themeSurface') }}</label>
+              <div class="pref-control"><input type="color" v-model="customThemeSurface" class="pref-color-input" @input="applyCustomThemePreview" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('themeBorder') }}</label>
+              <div class="pref-control"><input type="color" v-model="customThemeBorder" class="pref-color-input" @input="applyCustomThemePreview" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('themeText') }}</label>
+              <div class="pref-control"><input type="color" v-model="customThemeText" class="pref-color-input" @input="applyCustomThemePreview" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('themeAccent') }}</label>
+              <div class="pref-control"><input type="color" v-model="customThemeAccent" class="pref-color-input" @input="applyCustomThemePreview" /></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">{{ t('customThemeName') }}</label>
+              <div class="pref-control preset-save-row">
+                <input type="text" v-model="customThemeName" class="pref-text-input" :placeholder="t('themeNamePlaceholder')" @keydown.enter="saveCustomTheme" />
+                <button class="btn btn-sm btn-primary" @click="saveCustomTheme" :disabled="!customThemeName.trim()">{{ t('themeSave') }}</button>
+              </div>
+            </div>
+            <div v-if="customThemes.length > 0" class="pref-row">
+              <label class="pref-label">{{ t('customTheme') }}</label>
+              <div class="pref-control preset-list">
+                <div v-for="ct in customThemes" :key="ct.name" class="preset-item">
+                  <button class="btn btn-sm preset-btn" @click="selectTheme('custom-' + ct.name)">{{ ct.name }}</button>
+                  <button class="btn btn-sm preset-del-btn" @click="deleteCustomTheme(ct.name)">&times;</button>
+                </div>
+              </div>
+            </div>
             <!-- Presets Section -->
             <div class="pref-section-divider"></div>
             <div class="pref-section-title">{{ t('presets') }}</div>
@@ -8616,6 +9099,7 @@ loft(
             </ul>
             <button class="btn btn-primary welcome-start-btn" @click="dismissWelcome(); dismissNewFeatures()">{{ t('welcomeStart') }}</button>
             <button class="btn btn-sm welcome-tour-btn" @click="startTour(); dismissNewFeatures()">{{ t('tourStart') }}</button>
+            <button class="btn btn-sm welcome-tour-btn" @click="dismissWelcome(); dismissNewFeatures(); openPlayground()" style="margin-left:6px">{{ t('playground') }}</button>
             <!-- What's New section -->
             <div class="whats-new-section">
               <h3 class="whats-new-title">{{ t('whatsNewTitle') }}</h3>
@@ -8626,6 +9110,43 @@ loft(
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playground Modal -->
+      <div v-if="showPlayground" class="modal-backdrop" @click.self="showPlayground = false">
+        <div class="modal-box playground-modal" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <span class="modal-title">{{ t('playgroundTitle') }}</span>
+            <button class="modal-close" @click="showPlayground = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <template v-if="playgroundStep < PLAYGROUND_CHALLENGES.length">
+              <div class="playground-progress">
+                <span v-for="(_, idx) in PLAYGROUND_CHALLENGES" :key="idx"
+                  class="playground-dot"
+                  :class="{ completed: playgroundCompleted[idx], active: idx === playgroundStep }"
+                ></span>
+              </div>
+              <div class="playground-challenge-num">{{ t('playgroundChallenge').replace('{n}', String(playgroundStep + 1)) }}</div>
+              <div class="playground-goal">
+                <strong>{{ t('playgroundGoal') }}:</strong>
+                {{ (PLAYGROUND_CHALLENGES[playgroundStep].goal as any)[lang] || PLAYGROUND_CHALLENGES[playgroundStep].goal.en }}
+              </div>
+              <div class="playground-hint">
+                <strong>{{ t('playgroundHint') }}:</strong>
+                <code>{{ (PLAYGROUND_CHALLENGES[playgroundStep].hint as any)[lang] || PLAYGROUND_CHALLENGES[playgroundStep].hint.en }}</code>
+              </div>
+              <div class="playground-actions">
+                <button class="btn btn-primary" @click="checkPlayground">{{ t('playgroundCheck') }}</button>
+                <button v-if="playgroundCompleted[playgroundStep]" class="btn btn-sm" @click="nextPlaygroundChallenge">{{ t('playgroundNext') }}</button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="playground-complete">{{ t('playgroundComplete') }}</div>
+              <button class="btn btn-sm" @click="resetPlayground">{{ t('playgroundReset') }}</button>
+            </template>
           </div>
         </div>
       </div>
@@ -9211,7 +9732,16 @@ loft(
         </transition>
 
         <transition name="panel-slide">
-          <div v-if="error" class="error">{{ error }}</div>
+          <div v-if="error" class="error">
+            <div class="error-main">
+              <span>{{ error }}</span>
+              <button class="error-help-btn" @click="showErrorExplanation = !showErrorExplanation" :title="t('showErrorHelp')">?</button>
+            </div>
+            <div v-if="showErrorExplanation && getErrorExplanation(error)" class="error-explanation">
+              <div class="error-expl-row"><strong>{{ t('errorExplanation') }}:</strong> {{ getErrorExplanation(error)!.explanation }}</div>
+              <div class="error-expl-row"><strong>{{ t('errorFixHint') }}:</strong> {{ getErrorExplanation(error)!.fix }}</div>
+            </div>
+          </div>
         </transition>
 
         <div class="stats">
@@ -13852,5 +14382,125 @@ textarea.code:focus-visible {
   color: var(--text-dim, #888);
   min-width: 14px;
   text-align: center;
+}
+
+/* ── Error Explanation Panel ── */
+.error-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.error-main span {
+  flex: 1;
+}
+.error-help-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: inherit;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.error-help-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+.error-explanation {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.error-expl-row {
+  margin-bottom: 4px;
+}
+.error-expl-row:last-child {
+  margin-bottom: 0;
+}
+.error-expl-row strong {
+  color: #ffcc00;
+}
+
+/* ── Custom Theme Editor ── */
+.pref-color-input {
+  width: 48px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  padding: 1px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pref-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.pref-color-input::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+/* ── Playground Modal ── */
+.playground-modal {
+  max-width: 500px;
+}
+.playground-progress {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.playground-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.playground-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.playground-dot.completed {
+  background: #4caf50;
+}
+.playground-challenge-num {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+.playground-goal {
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.playground-hint {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.playground-hint code {
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.playground-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.playground-complete {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4caf50;
+  text-align: center;
+  margin-bottom: 16px;
 }
 </style>
