@@ -40,11 +40,19 @@ Load any of the built-in examples from the toolbar:
 
 The parser implements only a small useful subset of OpenSCAD. Variables, loops, user modules, complex expressions, and many built-ins are not yet supported. CSG operations are visualized rather than producing true boolean geometry.
 
+**250 documented problems and bad practices.** See the full analysis:
+
+- [Top 50 + 200 more problems](recommendation.md)
+
 For accurate results and full language support use the official OpenSCAD application.
 
 ## Roadmap & Ideas
 
-Hundreds of improvements are possible. The full list of **200 concrete ideas and suggestions** lives in [architecture.md](architecture.md).
+Hundreds of improvements are possible. See:
+- [architecture.md](architecture.md) for current architecture + 200 ideas
+- [recommendation.md](recommendation.md) for 250 things done poorly or incorrectly (critical technical debt and bugs)
+
+The 200-item list of forward suggestions is maintained in architecture.md.
 
 Here are some highlighted directions:
 

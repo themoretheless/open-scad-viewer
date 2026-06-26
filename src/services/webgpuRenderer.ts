@@ -83,6 +83,17 @@ export class WebGPURenderer {
   private dead = false
   private drag = false; private pan = false
   private mx = 0; private my = 0
+  private ro: ResizeObserver | null = null
+
+  // Extracted magic values for maintainability (still many remain)
+  private readonly ROT_SPEED = 0.005
+  private readonly PAN_SPEED = 0.002
+  private readonly ZOOM_FACTOR = 0.001
+  private readonly MIN_DIST = 1
+  private readonly MAX_DIST = 50000
+  private readonly MAX_PITCH = 1.5
+  private readonly GRID_SIZE = 200
+  private readonly GRID_STEP = 10
 
   async init(canvas: HTMLCanvasElement): Promise<boolean> {
     this.canvas = canvas
@@ -90,6 +101,10 @@ export class WebGPURenderer {
     const adapter = await navigator.gpu.requestAdapter()
     if (!adapter) return false
     this.dev = await adapter.requestDevice()
+    this.dev.lost.then(() => {
+      console.warn('WebGPU device lost')
+      // In a real fix we would attempt recovery here
+    })
     this.ctx = canvas.getContext('webgpu') as GPUCanvasContext
     this.fmt = navigator.gpu.getPreferredCanvasFormat()
     this.ctx.configure({ device: this.dev, format: this.fmt, alphaMode: 'premultiplied' })
@@ -99,6 +114,8 @@ export class WebGPURenderer {
     this.buildGrid()
     this.resize()
     this.bindInput()
+    this.ro = new ResizeObserver(() => this.resize())
+    this.ro.observe(this.canvas)
     this.loop()
     return true
   }
@@ -179,7 +196,7 @@ export class WebGPURenderer {
 
   private buildGrid() {
     const d: number[] = []
-    const gs = 200, step = 10
+    const gs = this.GRID_SIZE, step = this.GRID_STEP
     const gc = [0.35, 0.35, 0.35, 0.4]
     const xc = [0.85, 0.2, 0.2, 0.8]
     const zc = [0.2, 0.2, 0.85, 0.8]
@@ -328,18 +345,18 @@ export class WebGPURenderer {
     const dx = e.clientX - this.mx, dy = e.clientY - this.my
     this.mx = e.clientX; this.my = e.clientY
     if (this.pan) {
-      const sp = this.dist * 0.002
+      const sp = this.dist * this.PAN_SPEED
       const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw)
       this.tx -= dx * cy * sp; this.tz += dx * sy * sp; this.ty += dy * sp
     } else {
-      this.yaw -= dx * 0.005
-      this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.005))
+      this.yaw -= dx * this.ROT_SPEED
+      this.pitch = Math.max(-this.MAX_PITCH, Math.min(this.MAX_PITCH, this.pitch + dy * this.ROT_SPEED))
     }
   }
   private onUp = (e: PointerEvent) => { this.drag = false; this.canvas.releasePointerCapture(e.pointerId) }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
-    this.dist = Math.max(1, Math.min(50000, this.dist * (1 + e.deltaY * 0.001)))
+    this.dist = Math.max(this.MIN_DIST, Math.min(this.MAX_DIST, this.dist * (1 + e.deltaY * this.ZOOM_FACTOR)))
   }
   private noCtx = (e: Event) => e.preventDefault()
 
@@ -366,6 +383,8 @@ export class WebGPURenderer {
     this.gridVB?.destroy()
     this.depth?.destroy()
     this.sceneUB?.destroy()
+    this.ro?.disconnect()
+    this.ro = null
     this.dev.destroy()
   }
 }

@@ -64,7 +64,8 @@ function tokenize(src: string): Token[] {
       '?': TT.Question, ':': TT.Colon, '.': TT.Dot,
     }
     if (map[ch] !== undefined) { out.push({ t: map[ch], v: ch, p }); i++; continue }
-    i++
+    // Previously silently skipped unknown characters — now error to prevent silent corruption
+    throw new Error(`Unexpected character '${ch}' at position ${i}`)
   }
   out.push({ t: TT.Eof, v: '', p: i })
   return out
@@ -322,7 +323,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const d = arg(a,'d',-1,undefined)
       if (r == null) r = d != null ? d / 2 : 1
       if (typeof r !== 'number') r = 1
-      const fn = Math.max(8, arg(a,'$fn',-1,24))
+      const fn = Math.max(4, Math.min(256, (arg(a,'$fn',-1,24) || 24)))
       const { v, ix } = makeSphere(r, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -335,7 +336,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (r1 == null && r2 == null) { const br = d != null ? d/2 : r != null ? r : 1; r1 = br; r2 = br }
       if (r1 == null) r1 = r2; if (r2 == null) r2 = r1
       const center = arg(a,'center',-1,false) === true
-      const fn = Math.max(8, arg(a,'$fn',-1,24))
+      const fn = Math.max(4, Math.min(256, (arg(a,'$fn',-1,24) || 24)))
       const { v, ix } = makeCylinder(h, r1!, r2!, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }

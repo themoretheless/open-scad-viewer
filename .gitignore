@@ -2,3 +2,9 @@ node_modules
 dist
 *.js.map
 src/**/*.js
+.DS_Store
+*.log
+*.tmp
+coverage
+.env*
+.vscode/*.log

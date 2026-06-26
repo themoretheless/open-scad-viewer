@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { parseOpenSCAD } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 
-const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as any) || 'ru')
+const lang = ref<'ru'|'en'>((localStorage.getItem('scad-lang') as 'ru' | 'en' | null) || 'ru')
 const isDark = ref(true)
 
 const L: Record<string, Record<string, string>> = {
@@ -64,11 +64,15 @@ onMounted(async () => {
   renderer = new WebGPURenderer()
   const ok = await renderer.init(canvasRef.value)
   if (!ok) { gpuOk.value = false; return }
+  window.addEventListener('resize', onWindowResize)
   doRender()
 })
 
+const onWindowResize = () => { renderer?.resize() }
+
 onUnmounted(() => {
   if (debounce) clearTimeout(debounce)
+  window.removeEventListener('resize', onWindowResize)
   renderer?.destroy(); renderer = null
 })
 
@@ -85,10 +89,11 @@ function doRender() {
   try {
     const meshes = parseOpenSCAD(code.value)
     meshCount.value = meshes.length
-    triCount.value = meshes.reduce((s, m) => s + m.indices.length / 3, 0)
+    const idxTotal = meshes.reduce((s, m) => s + m.indices.length, 0)
+    triCount.value = idxTotal > 0 && idxTotal % 3 === 0 ? idxTotal / 3 : Math.floor(idxTotal / 3)
     renderer.setMeshes(meshes)
-  } catch (e: any) {
-    error.value = e.message || String(e)
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   }
 }
 

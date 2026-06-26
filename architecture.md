@@ -79,6 +79,23 @@ Key layers:
 - No persistence beyond localStorage, no import/export of models or projects.
 - No accessibility story, limited mobile support.
 
+## Critical Flaws and Technical Debt
+
+The project has many serious implementation problems. The full lists (initial Top 50 + another 200 additional problems = 250 total documented issues) live in [recommendation.md](recommendation.md).
+
+Highlights from the 250 documented issues:
+- Monolithic architecture with no separation.
+- Extremely weak parser with almost no expressions or language features + silent corruptions (now partially fixed).
+- Fake CSG that lies about geometry.
+- Hand-rolled untested matrix math.
+- Zero tests, zero CI, raw `any` everywhere.
+- Main-thread blocking on every keystroke.
+- No device recovery, no proper error reporting (partially improved).
+- Editor and UX are at 1995 textarea level.
+- Hundreds of granular correctness, perf, and maintainability smells (full list in recommendation.md).
+
+Treat recommendation.md as the current source of truth for what is broken.
+
 ## 200 Ideas, Suggestions and Improvements
 
 Below is a numbered list of 200 concrete ideas. They range from small polish to ambitious architectural changes. They are not strictly ordered by priority.
