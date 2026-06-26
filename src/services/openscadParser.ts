@@ -2942,6 +2942,336 @@ function makeDonut(r1: number, r2: number, angle: number, fn: number) {
   return { v, ix }
 }
 
+function makeLattice(type: string, cell: number, r: number, size: [number, number, number], fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const [sx, sy, sz] = size
+  const nx = Math.max(1, Math.floor(sx / cell))
+  const ny = Math.max(1, Math.floor(sy / cell))
+  const nz = Math.max(1, Math.floor(sz / cell))
+
+  // Helper to merge a cylinder mesh with offset and optional rotation
+  const addCyl = (cyl: { v: number[]; ix: number[] }, offsetX: number, offsetY: number, offsetZ: number, axis: 'x' | 'y' | 'z') => {
+    const base = v.length / 6
+    const cv = cyl.v
+    const nv = cv.length / 6
+    for (let i = 0; i < nv; i++) {
+      let px = cv[i * 6], py = cv[i * 6 + 1], pz = cv[i * 6 + 2]
+      let nnx = cv[i * 6 + 3], nny = cv[i * 6 + 4], nnz = cv[i * 6 + 5]
+      // Rotate from Z-axis to target axis
+      if (axis === 'x') {
+        // Rotate 90 deg around Y: (x,y,z) -> (z,y,-x)
+        const tmp = px; px = pz; pz = -tmp
+        const tmpn = nnx; nnx = nnz; nnz = -tmpn
+      } else if (axis === 'y') {
+        // Rotate -90 deg around X: (x,y,z) -> (x,-z,y)
+        const tmp = py; py = -pz; pz = tmp
+        const tmpn = nny; nny = -nnz; nnz = tmpn
+      }
+      v.push(px + offsetX, py + offsetY, pz + offsetZ, nnx, nny, nnz)
+    }
+    for (const idx of cyl.ix) {
+      ix.push(base + idx)
+    }
+  }
+
+  void type // currently only cubic lattice
+
+  // X-axis struts
+  for (let iy = 0; iy <= ny; iy++) {
+    for (let iz = 0; iz <= nz; iz++) {
+      const cyl = makeCylinder(sx, r, r, false, fn)
+      addCyl(cyl, 0, iy * cell, iz * cell, 'x')
+    }
+  }
+  // Y-axis struts
+  for (let ix2 = 0; ix2 <= nx; ix2++) {
+    for (let iz = 0; iz <= nz; iz++) {
+      const cyl = makeCylinder(sy, r, r, false, fn)
+      addCyl(cyl, ix2 * cell, 0, iz * cell, 'y')
+    }
+  }
+  // Z-axis struts
+  for (let ix2 = 0; ix2 <= nx; ix2++) {
+    for (let iy = 0; iy <= ny; iy++) {
+      const cyl = makeCylinder(sz, r, r, false, fn)
+      addCyl(cyl, ix2 * cell, iy * cell, 0, 'z')
+    }
+  }
+
+  return { v, ix }
+}
+
+function makeSlot(length: number, width: number, h: number, center: boolean): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const r = width / 2
+  const halfLen = (length - width) / 2  // half of the straight section
+  const fn = 16
+
+  // Build 2D stadium profile
+  const profile: number[][] = []
+  // Right semicircle (center at x = halfLen)
+  for (let i = 0; i <= fn / 2; i++) {
+    const angle = -Math.PI / 2 + (Math.PI * i) / (fn / 2)
+    profile.push([halfLen + r * Math.cos(angle), r * Math.sin(angle)])
+  }
+  // Left semicircle (center at x = -halfLen)
+  for (let i = 0; i <= fn / 2; i++) {
+    const angle = Math.PI / 2 + (Math.PI * i) / (fn / 2)
+    profile.push([-halfLen + r * Math.cos(angle), r * Math.sin(angle)])
+  }
+
+  const np = profile.length
+  const ox = center ? 0 : length / 2
+  const oy = center ? 0 : width / 2
+  const z0 = center ? -h / 2 : 0
+  const z1 = center ? h / 2 : h
+
+  // Shift profile to handle centering
+  const shifted = profile.map(p => [p[0] + ox, p[1] + oy])
+
+  // Bottom cap
+  const baseBot = v.length / 6
+  for (let i = 0; i < np; i++) {
+    v.push(shifted[i][0], shifted[i][1], z0, 0, 0, -1)
+  }
+  const botTris = earClip(shifted)
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseBot + botTris[i], baseBot + botTris[i + 2], baseBot + botTris[i + 1])
+  }
+
+  // Top cap
+  const baseTop = v.length / 6
+  for (let i = 0; i < np; i++) {
+    v.push(shifted[i][0], shifted[i][1], z1, 0, 0, 1)
+  }
+  for (let i = 0; i < botTris.length; i += 3) {
+    ix.push(baseTop + botTris[i], baseTop + botTris[i + 1], baseTop + botTris[i + 2])
+  }
+
+  // Side walls
+  for (let i = 0; i < np; i++) {
+    const i2 = (i + 1) % np
+    const x0 = shifted[i][0], y0 = shifted[i][1]
+    const x1 = shifted[i2][0], y1 = shifted[i2][1]
+    const ex = x1 - x0, ey = y1 - y0
+    const len = Math.sqrt(ex * ex + ey * ey) || 1
+    const nnx = ey / len, nny = -ex / len
+    const base = v.length / 6
+    v.push(x0, y0, z0, nnx, nny, 0)
+    v.push(x1, y1, z0, nnx, nny, 0)
+    v.push(x1, y1, z1, nnx, nny, 0)
+    v.push(x0, y0, z1, nnx, nny, 0)
+    ix.push(base, base + 1, base + 2, base, base + 2, base + 3)
+  }
+
+  return { v, ix }
+}
+
+function makeCross(size: [number, number, number], arm: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const [sx, sy, sz] = size
+
+  // Bar 1: along X, centered
+  const bar1 = makeCube(sx, arm, sz, true)
+  // Bar 2: along Y, centered
+  const bar2 = makeCube(arm, sy, sz, true)
+
+  // Merge bar1
+  v.push(...bar1.v)
+  ix.push(...bar1.ix)
+
+  // Merge bar2 with offset
+  const base = v.length / 6
+  v.push(...bar2.v)
+  for (const idx of bar2.ix) {
+    ix.push(base + idx)
+  }
+
+  return { v, ix }
+}
+
+function makeMaze(rows: number, cols: number, cell: number, wall: number, h: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+
+  // Simple seeded random
+  let seed = rows * 1000 + cols * 100 + cell * 10 + wall
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff
+    return seed / 0x7fffffff
+  }
+
+  // Initialize grid
+  const visited: boolean[][] = []
+  // walls: [right, bottom] for each cell
+  const wallsR: boolean[][] = []
+  const wallsB: boolean[][] = []
+  for (let r = 0; r < rows; r++) {
+    visited.push(new Array(cols).fill(false))
+    wallsR.push(new Array(cols).fill(true))
+    wallsB.push(new Array(cols).fill(true))
+  }
+
+  // Recursive backtracking maze generation
+  const stack: [number, number][] = []
+  const start: [number, number] = [0, 0]
+  visited[start[0]][start[1]] = true
+  stack.push(start)
+
+  while (stack.length > 0) {
+    const [cr, cc] = stack[stack.length - 1]
+    // Find unvisited neighbors
+    const neighbors: [number, number, string][] = []
+    if (cr > 0 && !visited[cr - 1][cc]) neighbors.push([cr - 1, cc, 'up'])
+    if (cr < rows - 1 && !visited[cr + 1][cc]) neighbors.push([cr + 1, cc, 'down'])
+    if (cc > 0 && !visited[cr][cc - 1]) neighbors.push([cr, cc - 1, 'left'])
+    if (cc < cols - 1 && !visited[cr][cc + 1]) neighbors.push([cr, cc + 1, 'right'])
+
+    if (neighbors.length === 0) {
+      stack.pop()
+    } else {
+      const choice = Math.floor(rand() * neighbors.length) % neighbors.length
+      const [nr, nc, dir] = neighbors[choice]
+      // Remove wall between current and chosen
+      if (dir === 'right') wallsR[cr][cc] = false
+      if (dir === 'left') wallsR[cr][nc] = false
+      if (dir === 'down') wallsB[cr][cc] = false
+      if (dir === 'up') wallsB[nr][cc] = false
+      visited[nr][nc] = true
+      stack.push([nr, nc])
+    }
+  }
+
+  const addCube = (cx: number, cy: number, cz: number, csx: number, csy: number, csz: number) => {
+    const cube = makeCube(csx, csy, csz, false)
+    const base = v.length / 6
+    const nv = cube.v.length / 6
+    for (let i = 0; i < nv; i++) {
+      v.push(cube.v[i * 6] + cx, cube.v[i * 6 + 1] + cy, cube.v[i * 6 + 2] + cz,
+             cube.v[i * 6 + 3], cube.v[i * 6 + 4], cube.v[i * 6 + 5])
+    }
+    for (const idx of cube.ix) {
+      ix.push(base + idx)
+    }
+  }
+
+  // Floor
+  const totalW = cols * cell + wall
+  const totalH = rows * cell + wall
+  addCube(0, 0, 0, totalW, totalH, wall)
+
+  // Border walls
+  // Bottom border (y=0)
+  addCube(0, 0, 0, totalW, wall, h)
+  // Top border (y=totalH-wall)
+  addCube(0, totalH - wall, 0, totalW, wall, h)
+  // Left border (x=0)
+  addCube(0, 0, 0, wall, totalH, h)
+  // Right border (x=totalW-wall)
+  addCube(totalW - wall, 0, 0, wall, totalH, h)
+
+  // Internal walls
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx = wall + c * cell
+      const cy = wall + r * cell
+      // Right wall
+      if (wallsR[r][c] && c < cols - 1) {
+        addCube(cx + cell - wall, cy, 0, wall, cell, h)
+      }
+      // Bottom wall (which is top in our Y direction)
+      if (wallsB[r][c] && r < rows - 1) {
+        addCube(cx, cy + cell - wall, 0, cell, wall, h)
+      }
+    }
+  }
+
+  return { v, ix }
+}
+
+function makeFibonacciSphere(count: number, r: number, fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5))
+  const smallR = Math.max(0.3, r / Math.sqrt(count) * 0.5)
+
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (2 * i) / (count - 1)  // y goes from 1 to -1
+    const radiusAtY = Math.sqrt(1 - y * y)
+    const theta = goldenAngle * i
+
+    const px = r * radiusAtY * Math.cos(theta)
+    const py = r * y
+    const pz = r * radiusAtY * Math.sin(theta)
+
+    // Add a small sphere at this position
+    const sphere = makeSphere(smallR, Math.max(4, Math.floor(fn / 4)))
+    const base = v.length / 6
+    const nv = sphere.v.length / 6
+    for (let j = 0; j < nv; j++) {
+      v.push(sphere.v[j * 6] + px, sphere.v[j * 6 + 1] + py, sphere.v[j * 6 + 2] + pz,
+             sphere.v[j * 6 + 3], sphere.v[j * 6 + 4], sphere.v[j * 6 + 5])
+    }
+    for (const idx of sphere.ix) {
+      ix.push(base + idx)
+    }
+  }
+
+  return { v, ix }
+}
+
+function makeEllipsoid(rx: number, ry: number, rz: number, fn: number): { v: number[]; ix: number[] } {
+  const sphere = makeSphere(1, fn)
+  const v: number[] = []
+  const nv = sphere.v.length / 6
+  for (let i = 0; i < nv; i++) {
+    const px = sphere.v[i * 6] * rx
+    const py = sphere.v[i * 6 + 1] * ry
+    const pz = sphere.v[i * 6 + 2] * rz
+    // Recompute normal for ellipsoid: gradient of (x/rx)^2 + (y/ry)^2 + (z/rz)^2
+    let nnx = px / (rx * rx)
+    let nny = py / (ry * ry)
+    let nnz = pz / (rz * rz)
+    const nlen = Math.sqrt(nnx * nnx + nny * nny + nnz * nnz) || 1
+    nnx /= nlen; nny /= nlen; nnz /= nlen
+    v.push(px, py, pz, nnx, nny, nnz)
+  }
+  return { v, ix: sphere.ix }
+}
+
+function makeHemisphere(r: number, fn: number): { v: number[]; ix: number[] } {
+  const v: number[] = [], ix: number[] = []
+  const halfSeg = Math.floor(fn / 2)
+
+  // Upper hemisphere: phi from 0 (top) to PI/2 (equator)
+  for (let ri = 0; ri <= halfSeg; ri++) {
+    const phi = (Math.PI / 2) * ri / halfSeg
+    const sp = Math.sin(phi), cp = Math.cos(phi)
+    for (let si = 0; si <= fn; si++) {
+      const th = 2 * Math.PI * si / fn
+      const nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th)
+      v.push(r * nx, r * ny, r * nz, nx, ny, nz)
+    }
+  }
+  for (let ri = 0; ri < halfSeg; ri++) {
+    for (let si = 0; si < fn; si++) {
+      const a = ri * (fn + 1) + si, b = a + fn + 1
+      ix.push(a, b, a + 1, a + 1, b, b + 1)
+    }
+  }
+
+  // Flat circular cap at y=0 (equator)
+  const capCenter = v.length / 6
+  v.push(0, 0, 0, 0, -1, 0)  // center, normal pointing down
+  for (let si = 0; si <= fn; si++) {
+    const th = 2 * Math.PI * si / fn
+    v.push(r * Math.cos(th), 0, r * Math.sin(th), 0, -1, 0)
+  }
+  for (let si = 0; si < fn; si++) {
+    ix.push(capCenter, capCenter + 1 + si + 1, capCenter + 1 + si)
+  }
+
+  return { v, ix }
+}
+
 /* ── Main evaluator ───────────────────────────────── */
 
 function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number]|null, vars: Record<string, number> = {}, modules: Map<string, ModuleDef> = new Map(), echos: string[] = [], callerChildren?: ASTNode[], annotations: Annotation[] = []): MeshData[] {
@@ -4048,6 +4378,92 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         }
       }
       return out
+    }
+    case 'lattice': {
+      const type = typeof arg(a, 'type', 0, 'cubic') === 'string' ? arg(a, 'type', 0, 'cubic') as string : 'cubic'
+      const cell = typeof arg(a, 'cell', 1, 5) === 'number' ? arg(a, 'cell', 1, 5) as number : 5
+      const r = typeof arg(a, 'r', 2, 0.5) === 'number' ? arg(a, 'r', 2, 0.5) as number : 0.5
+      const sizeRaw = arg(a, 'size', 3, [30, 30, 30])
+      let lsx: number, lsy: number, lsz: number
+      if (Array.isArray(sizeRaw)) {
+        lsx = typeof sizeRaw[0] === 'number' ? sizeRaw[0] : 30
+        lsy = typeof sizeRaw[1] === 'number' ? sizeRaw[1] : 30
+        lsz = typeof sizeRaw[2] === 'number' ? sizeRaw[2] : 30
+      } else if (typeof sizeRaw === 'number') {
+        lsx = lsy = lsz = sizeRaw
+      } else {
+        lsx = lsy = lsz = 30
+      }
+      const fn = Math.max(4, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6)
+      const { v, ix } = makeLattice(type, cell, r, [lsx, lsy, lsz], fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'slot': {
+      const length = typeof arg(a, 'length', 0, 20) === 'number' ? arg(a, 'length', 0, 20) as number : 20
+      const width = typeof arg(a, 'width', 1, 5) === 'number' ? arg(a, 'width', 1, 5) as number : 5
+      const h = typeof arg(a, 'h', 2, 3) === 'number' ? arg(a, 'h', 2, 3) as number : 3
+      const center = arg(a, 'center', 3, false) === true
+      const { v, ix } = makeSlot(length, width, h, center)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'cross': {
+      const sizeRaw = arg(a, 'size', 0, [20, 20, 10])
+      let csx: number, csy: number, csz: number
+      if (Array.isArray(sizeRaw)) {
+        csx = typeof sizeRaw[0] === 'number' ? sizeRaw[0] : 20
+        csy = typeof sizeRaw[1] === 'number' ? sizeRaw[1] : 20
+        csz = typeof sizeRaw[2] === 'number' ? sizeRaw[2] : 10
+      } else if (typeof sizeRaw === 'number') {
+        csx = csy = csz = sizeRaw
+      } else {
+        csx = csy = csz = 20
+      }
+      const arm = typeof arg(a, 'arm', 1, 5) === 'number' ? arg(a, 'arm', 1, 5) as number : 5
+      const { v, ix } = makeCross([csx, csy, csz], arm)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'maze': {
+      const rows = typeof arg(a, 'rows', 0, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'rows', 0, 5) as number)) : 5
+      const cols = typeof arg(a, 'cols', 1, 5) === 'number' ? Math.max(1, Math.floor(arg(a, 'cols', 1, 5) as number)) : 5
+      const cell = typeof arg(a, 'cell', 2, 5) === 'number' ? arg(a, 'cell', 2, 5) as number : 5
+      const wall = typeof arg(a, 'wall', 3, 1) === 'number' ? arg(a, 'wall', 3, 1) as number : 1
+      const h = typeof arg(a, 'h', 4, 3) === 'number' ? arg(a, 'h', 4, 3) as number : 3
+      const { v, ix } = makeMaze(rows, cols, cell, wall, h)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'fibonacci_sphere': {
+      const count = typeof arg(a, 'count', 0, 50) === 'number' ? Math.max(2, Math.floor(arg(a, 'count', 0, 50) as number)) : 50
+      const r = typeof arg(a, 'r', 1, 10) === 'number' ? arg(a, 'r', 1, 10) as number : 10
+      const fn = Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8)
+      const { v, ix } = makeFibonacciSphere(count, r, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'iso_triangle': {
+      const size = typeof arg(a, 'size', 0, 10) === 'number' ? arg(a, 'size', 0, 10) as number : 10
+      const h = typeof arg(a, 'h', 1, 5) === 'number' ? arg(a, 'h', 1, 5) as number : 5
+      const center = arg(a, 'center', 2, false) === true
+      // Equilateral triangle prism = prism with 3 sides
+      // For equilateral triangle with side length = size, circumradius = size / sqrt(3)
+      const r = size / Math.sqrt(3)
+      const { v, ix } = makePrism(3, r, h, center)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'ellipsoid': {
+      const rx = typeof arg(a, 'rx', 0, 10) === 'number' ? arg(a, 'rx', 0, 10) as number : 10
+      const ry = typeof arg(a, 'ry', 1, 8) === 'number' ? arg(a, 'ry', 1, 8) as number : 8
+      const rz = typeof arg(a, 'rz', 2, 5) === 'number' ? arg(a, 'rz', 2, 5) as number : 5
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const { v, ix } = makeEllipsoid(rx, ry, rz, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
+    }
+    case 'hemisphere': {
+      let r = arg(a, 'r', 0, undefined)
+      const d = arg(a, 'd', -1, undefined)
+      if (r == null) r = d != null ? d / 2 : 10
+      if (typeof r !== 'number') r = 10
+      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const { v, ix } = makeHemisphere(r, fn)
+      return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'fillet': {
       const r = arg(a, 'r', 0, 2)
