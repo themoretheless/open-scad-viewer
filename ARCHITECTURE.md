@@ -102,7 +102,7 @@ State persists to `localStorage` (tabs, preferences, theme, bookmarks, snapshots
 
 ## Planned Refactor (modularity & loose coupling)
 
-`App.vue` (~14k lines), `openscadParser.ts` (~4.7k), and `webgpuRenderer.ts` (~2.4k) are monoliths. The target structure, derived from a 10-perspective architecture audit:
+`App.vue` (~14k lines), `openscadParser.ts` (~4.7k), and `webgpuRenderer.ts` (~2.4k) are monoliths. The target structure, derived from a 10-perspective architecture audit, is summarized below. The **actionable checklist with priorities and exit criteria** lives in [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) — the phases here map 1:1 to it.
 
 ### Phase 1 — Decompose `App.vue`
 ```

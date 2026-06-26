@@ -118,7 +118,7 @@ src/
     └── zipExport.ts
 ```
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the planned modular refactor.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the planned modular refactor, and [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) for the actionable roadmap with checklists.
 
 ---
 
