@@ -18,15 +18,15 @@ Key layers:
    - Examples are embedded as template literals.
 
 3. **Parser (openscadParser.ts)**
-   - Hand-written lexer (`tokenize`) that produces a flat token stream.
-   - Recursive-descent parser (`Parser` class) that recognizes a limited statement/call grammar.
+   - Hand-written lexer (`tokenize`) that produces a flat token stream. Now throws on unexpected chars.
+   - Recursive-descent parser with basic expression support (+ - * / ( )) in values.
    - Produces a tiny AST consisting only of `{type:'call', name, args, children}`.
-   - No real expression parser — only literals, simple vectors and idents.
    - Evaluator walks the AST and emits flat `MeshData[]`.
    - Mesh generators are pure JS (cube, sphere, cylinder with basic normals).
    - CSG (difference, intersection) is visual only: subtracted bodies are emitted with translucent red color. No actual boolean mesh operations are performed.
    - Transforms are accumulated as 4x4 matrices (row-major Float32Array).
    - Color is inherited or overridden via the `color()` module.
+   - Added exportToSTL helper.
 
 4. **Math (math3d.ts)**
    - Minimal row-major matrix and vector helpers.
@@ -71,7 +71,7 @@ Key layers:
 - No source locations on AST nodes → poor error messages.
 - CSG is not real; the resulting mesh is not correct for export or measurements.
 - All geometry lives on CPU then uploaded. No incremental updates.
-- Editor is a textarea — no highlighting, no intellisense, bad UX for code.
+- Editor is a textarea — no highlighting, no intellisense, bad UX for code. (top priority for upgrade)
 - Renderer is simple forward Phong. No shadows, no advanced materials, limited transparency.
 - Single monolithic App.vue.
 - No tests, no CI, no type-level guarantees on AST or MeshData.
@@ -81,18 +81,14 @@ Key layers:
 
 ## Critical Flaws and Technical Debt
 
-The project has many serious implementation problems. The full lists (initial Top 50 + another 200 additional problems = 250 total documented issues) live in [recommendation.md](recommendation.md).
+The project has many serious implementation problems. The full historical 250 problems + a fresh **Top 200 Ideas, Suggestions and Problems (prioritized June 2026)** live in [recommendation.md](recommendation.md).
 
-Highlights from the 250 documented issues:
-- Monolithic architecture with no separation.
-- Extremely weak parser with almost no expressions or language features + silent corruptions (now partially fixed).
-- Fake CSG that lies about geometry.
-- Hand-rolled untested matrix math.
-- Zero tests, zero CI, raw `any` everywhere.
-- Main-thread blocking on every keystroke.
-- No device recovery, no proper error reporting (partially improved).
-- Editor and UX are at 1995 textarea level.
-- Hundreds of granular correctness, perf, and maintainability smells (full list in recommendation.md).
+Highlights from the 250 historical problems + latest Top 200:
+- Monolithic architecture (still the case).
+- Weak parser (partially improved: tokenizer now throws on bad chars; $fn clamped).
+- Fake CSG, hand math, no real tests/CI.
+- Editor remains textarea level.
+- See recommendation.md for the complete prioritized 200 + old lists.
 
 Treat recommendation.md as the current source of truth for what is broken.
 

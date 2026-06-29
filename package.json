@@ -8,7 +8,8 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
-    "check": "npm run typecheck"
+    "check": "npm run typecheck",
+    "test": "vitest run"
   },
   "dependencies": {
     "vue": "^3.5.31"
@@ -18,6 +19,7 @@
     "@webgpu/types": "^0.1.60",
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
+    "vitest": "^1.6.0",
     "vue-tsc": "^3.2.6"
   }
 }

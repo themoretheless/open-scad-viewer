@@ -155,9 +155,47 @@ class Parser {
   }
 
   private parseValue(): any {
+    // Start with expression support for basic arithmetic
+    return this.parseExpr()
+  }
+
+  private parseExpr(): any {
+    return this.parseAddSub()
+  }
+
+  private parseAddSub(): any {
+    let left = this.parseMulDiv()
+    while (this.peek().t === TT.Plus || this.peek().t === TT.Minus) {
+      const op = this.adv().t
+      const right = this.parseMulDiv()
+      if (typeof left === 'number' && typeof right === 'number') {
+        left = op === TT.Plus ? left + right : left - right
+      } else {
+        return { __op: op === TT.Plus ? '+' : '-', left, right } // placeholder for future
+      }
+    }
+    return left
+  }
+
+  private parseMulDiv(): any {
+    let left = this.parseUnary()
+    while (this.peek().t === TT.Star || this.peek().t === TT.Slash) {
+      const op = this.adv().t
+      const right = this.parseUnary()
+      if (typeof left === 'number' && typeof right === 'number') {
+        left = op === TT.Star ? left * right : (right !== 0 ? left / right : 0)
+      } else {
+        return { __op: op === TT.Star ? '*' : '/', left, right }
+      }
+    }
+    return left
+  }
+
+  private parseUnary(): any {
     if (this.peek().t === TT.Minus) {
-      this.adv(); const v = this.parseValue()
-      return typeof v === 'number' ? -v : v
+      this.adv()
+      const v = this.parseUnary()
+      return typeof v === 'number' ? -v : { __op: '-', left: 0, right: v }
     }
     if (this.peek().t === TT.Num) return parseFloat(this.adv().v)
     if (this.peek().t === TT.Str) return this.adv().v
@@ -179,6 +217,12 @@ class Parser {
       return v
     }
     if (this.peek().t === TT.LBracket) return this.parseVec()
+    if (this.peek().t === TT.LParen) {
+      this.adv()
+      const val = this.parseExpr()
+      this.expect(TT.RParen)
+      return val
+    }
     this.adv(); return 0
   }
 
@@ -441,4 +485,47 @@ export function parseOpenSCAD(source: string): MeshData[] {
   const parser = new Parser(tokens)
   const ast = parser.parseAll()
   return evalNodes(ast, identity(), null)
+}
+
+/* ── Export ───────────────────────────────────────── */
+
+function applyTransform(v: Float32Array, idx: number, t: Mat4): [number, number, number] {
+  const x = v[idx], y = v[idx+1], z = v[idx+2]
+  return [
+    t[0]*x + t[1]*y + t[2]*z + t[3],
+    t[4]*x + t[5]*y + t[6]*z + t[7],
+    t[8]*x + t[9]*y + t[10]*z + t[11]
+  ]
+}
+
+function computeNormal(p0: [number,number,number], p1: [number,number,number], p2: [number,number,number]): [number,number,number] {
+  const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2]
+  const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2]
+  const nx = uy * vz - uz * vy
+  const ny = uz * vx - ux * vz
+  const nz = ux * vy - uy * vx
+  const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1
+  return [nx/len, ny/len, nz/len]
+}
+
+export function exportToSTL(meshes: MeshData[]): string {
+  let stl = 'solid openscad\n'
+  for (const mesh of meshes) {
+    const { vertices, indices, transform: t } = mesh
+    for (let i = 0; i < indices.length; i += 3) {
+      const i0 = indices[i] * 6, i1 = indices[i+1] * 6, i2 = indices[i+2] * 6
+      const p0 = applyTransform(vertices, i0, t)
+      const p1 = applyTransform(vertices, i1, t)
+      const p2 = applyTransform(vertices, i2, t)
+      const n = computeNormal(p0, p1, p2)
+      stl += `  facet normal ${n[0].toFixed(6)} ${n[1].toFixed(6)} ${n[2].toFixed(6)}\n`
+      stl += `    outer loop\n`
+      stl += `      vertex ${p0[0].toFixed(6)} ${p0[1].toFixed(6)} ${p0[2].toFixed(6)}\n`
+      stl += `      vertex ${p1[0].toFixed(6)} ${p1[1].toFixed(6)} ${p1[2].toFixed(6)}\n`
+      stl += `      vertex ${p2[0].toFixed(6)} ${p2[1].toFixed(6)} ${p2[2].toFixed(6)}\n`
+      stl += `    endloop\n  endfacet\n`
+    }
+  }
+  stl += 'endsolid openscad\n'
+  return stl
 }
