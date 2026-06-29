@@ -6,6 +6,7 @@ This is the **execution plan**. It is kept in sync with:
 - [README.md](./README.md) — what the app does (user-facing)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — how it's built + the target structure (the 4 phases below mirror its "Planned Refactor")
 - [ISSUES.md](./ISSUES.md) — the 500-item defect catalog these phases resolve (domain→phase mapping at its end)
+- [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — severity-ranked shortlist with a concrete fix-sequencing order
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 

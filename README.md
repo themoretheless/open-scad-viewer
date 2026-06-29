@@ -118,7 +118,7 @@ src/
     └── zipExport.ts
 ```
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the planned modular refactor, [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) for the actionable roadmap with checklists, and [ISSUES.md](./ISSUES.md) for the full 500-item defect catalog.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the planned modular refactor, [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) for the actionable roadmap with checklists, [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) for the severity-ranked shortlist, and [ISSUES.md](./ISSUES.md) for the full 500-item defect catalog.
 
 ---
 

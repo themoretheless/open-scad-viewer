@@ -2,7 +2,9 @@
 
 A comprehensive, concrete catalog of things done badly or incorrectly, produced by a 5-domain deep audit (parser, renderer, app/state, UX/CSS/a11y, build/security/i18n/exports). Each item cites a file, approximate line, and the actual problem.
 
-Synced with: [README.md](./README.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) (limitations) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) (fixes mapped to phases).
+Synced with: [README.md](./README.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) (limitations) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) (fixes mapped to phases) · [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (severity-ranked shortlist).
+
+> In a hurry? Start with [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — the 50 highest-severity items curated from this catalog.
 
 | Domain | File(s) | Count |
 |--------|---------|------|
