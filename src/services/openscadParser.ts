@@ -1495,11 +1495,15 @@ function makeThread(d: number, pitch: number, length: number, fn: number): { v: 
 }
 
 function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
+  // Strict containment: a point lying on an edge of the triangle does NOT count
+  // as inside (so it never blocks an otherwise-valid ear). A point counts as
+  // inside only if it is on the same side of every edge by more than epsilon.
+  const eps = 1e-9
   const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by)
   const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy)
   const d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay)
-  const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0)
-  const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0)
+  const hasNeg = (d1 < -eps) || (d2 < -eps) || (d3 < -eps)
+  const hasPos = (d1 > eps) || (d2 > eps) || (d3 > eps)
   return !(hasNeg && hasPos)
 }
 
@@ -1520,8 +1524,10 @@ function earClip(pts: number[][]): number[] {
   const remaining = Array.from({ length: n }, (_, i) => i)
   const tris: number[] = []
 
-  let attempts = 0
-  while (remaining.length > 2 && attempts < remaining.length * 2) {
+  // Epsilon for treating a candidate ear's area as ~0 (collinear / degenerate).
+  const areaEps = 1e-9
+
+  while (remaining.length > 2) {
     let found = false
     for (let i = 0; i < remaining.length; i++) {
       const prev = remaining[(i - 1 + remaining.length) % remaining.length]
@@ -1534,10 +1540,15 @@ function earClip(pts: number[][]): number[] {
 
       // Cross product to check if ear is convex
       const cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+
+      // Skip near-degenerate (collinear / zero-area) candidate ears so the
+      // algorithm doesn't stall on them.
+      if (Math.abs(cross) < areaEps) continue
+
       const isConvex = ccw ? cross > 0 : cross < 0
       if (!isConvex) continue
 
-      // Check no other point is inside this triangle
+      // Check no other point is strictly inside this triangle
       let hasInside = false
       for (const idx of remaining) {
         if (idx === prev || idx === cur || idx === next) continue
@@ -1552,10 +1563,20 @@ function earClip(pts: number[][]): number[] {
       tris.push(prev, cur, next)
       remaining.splice(i, 1)
       found = true
-      attempts = 0
       break
     }
-    if (!found) attempts++
+
+    // No valid ear found in a full pass but vertices remain (self-intersecting,
+    // collinear, or otherwise degenerate polygon). Fall back to a fan
+    // triangulation of the remaining vertices so the cap is fully covered
+    // (no holes) rather than returning a partial result.
+    if (!found) {
+      const anchor = remaining[0]
+      for (let i = 1; i < remaining.length - 1; i++) {
+        tris.push(anchor, remaining[i], remaining[i + 1])
+      }
+      break
+    }
   }
 
   return tris

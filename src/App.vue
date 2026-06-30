@@ -14076,6 +14076,38 @@ textarea.code:focus-visible {
   }
 }
 
+/* ── WCAG 2.5.5: enlarge small interactive touch targets to >=44px on
+   coarse (touch) pointers. Desktop (pointer: fine) sizes are untouched. ── */
+@media (pointer: coarse) {
+  /* Small icon buttons: grow hit area, keep content centered. */
+  .tab-close,
+  .tab-add,
+  .modal-close,
+  .tip-close-btn,
+  .tree-eye-btn,
+  .zoom-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* tab-close is normally hidden until hover; keep it visible/usable on touch. */
+  .tab-close {
+    opacity: 1;
+  }
+  /* Tiny color/theme swatches: expand the clickable area via padding + box-sizing
+     so the visual dot stays small but the tap target grows. */
+  .bg-swatch,
+  .color-palette-swatch,
+  .theme-swatch {
+    min-width: 32px;
+    min-height: 32px;
+    box-sizing: content-box;
+    background-clip: content-box;
+  }
+}
+
 @media (max-width: 600px) {
   .mobile-reset-fab {
     display: flex;
