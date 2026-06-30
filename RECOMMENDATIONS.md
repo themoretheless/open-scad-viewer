@@ -68,9 +68,9 @@ Goal: separate parsing / evaluation / geometry; make it Web-Worker-ready.
 ## Phase 3 — Build & test infrastructure
 
 - [x] **3.1** `.gitignore` excludes `src/**/*.js` and `*.js.map`
-- [ ] **3.2** Remove already-committed `.js`/`.js.map` artifacts from `src/` (git rm --cached)
-- [ ] **3.3** Add **Vitest**; first suite = parser unit + snapshot tests (tokenizer, expressions, primitives → triangle/vertex counts)
-- [ ] **3.4** Configure Vite `manualChunks`: isolate parser chunk; lazy-import export modules; split locales
+- [x] **3.2** No `.js`/`.js.map` tracked in git; `tsconfig` `noEmit:true` stops vue-tsc emitting new ones
+- [x] **3.3** Added **Vitest** + 26 parser/STL tests + `test`/`test:watch`/`typecheck` scripts
+- [x] **3.4** Vite `manualChunks` isolates parser/renderer/exporters/vue chunks *(lazy-import + locale split still TODO)*
 - [ ] **3.5** Add **ESLint** + **Prettier** configs
 - [ ] **3.6** Add `.github/workflows/ci.yml`: `vue-tsc` typecheck + build + tests
 - [ ] **3.7** Add `npm run lint`, `npm run test` scripts

@@ -8,6 +8,36 @@ Each row: rank · `file:line` · problem · **why it matters** · → Recommenda
 
 ---
 
+## ✅ Resolved on branch `claude/extract-openscad-viewer-q3BT0`
+
+A first remediation pass has fixed **~24 of the top items** (all verified with `npm run build` + `npm test`, 26 tests green):
+
+| Items | What was done |
+|-------|---------------|
+| 1, 2 | CSG honesty: persistent "CSG: visual preview" badge + tooltip when difference/intersection/minkowski used (interim honest fix; true boolean kernel still pending) |
+| 3, 4 | XSS: `escapeHtml`/`escapeAttr` on all `document.write` sinks (printCode, spec-sheet) |
+| 5 | `loadFromHash` validates + 1 MB size-caps share payload in try/catch |
+| 6, 16 | `safeParse` wraps every localStorage `JSON.parse`; `lang` validated |
+| 7, 8 | `$fn` capped at 256; helix/thread/spring/spiral/sweep/fibonacci vertex counts bounded |
+| 9 | STL import validates triangle count + exact byte size before allocating |
+| 10 | Variable assignment stores vectors/strings/bools; `for` iterates all vars (Cartesian) |
+| 11 | i18n falls back to English before raw key (German no longer shows raw keys) |
+| 13 | Session restore compares tab content+names, not just IDs |
+| 14 | History save trims oldest on quota error and retries |
+| 17 | String/array equality compares like-typed values (`"a"=="b"` now false) |
+| 19 | Perf metrics measure their real phases (parse/mesh/upload) |
+| 20 | `$t` replacement skips strings/comments |
+| 24 | Vite `manualChunks` splits parser/renderer/exporters/vue (main 490→293 KB) |
+| 25 | Vitest added + 26 parser/STL tests + `test`/`typecheck` scripts *(CI workflow still TODO)* |
+| 34 | Device-lost stops loop/cancels RAF; `requestDevice` try/catch; shortest-path yaw lerp |
+| 39–42 | `:focus-visible` ring, `aria-live` toasts, `role=alert` errors, canvas/editor/modal aria-labels |
+
+Also fixed (full catalog): `log()` base-10 [A21], removed misleading MATH_FUNCS stubs [A19], `tsconfig` `noEmit` stops stray `.js` artifacts.
+
+**Still open (high priority):** 12 (WebGPU depth convention), 15 (mirror winding in STL), 18/26 (render/renderScaled divergence), 21–23/27/28/37 (decomposition + de-globalize parser), 25-CI, 29–33 (perf), 35/36 (earClip/hull), 38 (OBJ normals), 43–50 (CSS tokens, RTL, feature overload, plurals, touch targets, SW).
+
+---
+
 ## 🔴 Critical (correctness / security / data-loss) — 1–20
 
 | # | Where | Problem | Why it matters | Phase |
