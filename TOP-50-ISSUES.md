@@ -32,9 +32,20 @@ A first remediation pass has fixed **~24 of the top items** (all verified with `
 | 34 | Device-lost stops loop/cancels RAF; `requestDevice` try/catch; shortest-path yaw lerp |
 | 39–42 | `:focus-visible` ring, `aria-live` toasts, `role=alert` errors, canvas/editor/modal aria-labels |
 
+| 15, 38 | STL/OBJ reverse winding for mirror transforms; OBJ normals via inverse-transpose; STL skips degenerate/out-of-range tris |
+| 18 | `renderScaled` applies per-mesh visibility (+ hidden-line mode) — screenshots match the live view |
+| 29, 30 | `saveTabs` debounced with flush; stats/camera intervals idle when panels closed |
+| 35 | `earClip` strict containment + degenerate-skip + fan fallback (caps never have holes) |
+| 47, 48 | `formatNumber` uses correct BCP-47 locale; `Intl.PluralRules` for relative-time/undo counts |
+| 49 | Coarse-pointer media query enlarges small buttons/swatches to 44 px hit area |
+| 50 | SW network-first navigations + cache-first assets, resilient precache, fetch timeout, offline fallback, manifest `id`/apple-touch-icon |
+| 25-CI | GitHub Actions CI (typecheck + test + build) |
+
 Also fixed (full catalog): `log()` base-10 [A21], removed misleading MATH_FUNCS stubs [A19], `tsconfig` `noEmit` stops stray `.js` artifacts.
 
-**Still open (high priority):** 12 (WebGPU depth convention), 15 (mirror winding in STL), 18/26 (render/renderScaled divergence), 21–23/27/28/37 (decomposition + de-globalize parser), 25-CI, 29–33 (perf), 35/36 (earClip/hull), 38 (OBJ normals), 43–50 (CSS tokens, RTL, feature overload, plurals, touch targets, SW).
+**~35 of 50 resolved.** Remaining are mostly large architectural refactors or higher-risk changes:
+
+**Still open:** 12 (WebGPU depth convention — risky, needs visual regression testing), 21–23, 27, 28, 37 (decompose 14.7k-line `App.vue`, de-globalize/Web-Worker the parser, extract i18n — multi-session refactor = Recommendations **Phase 1 & 2**), 31, 32 (per-frame/per-mesh render-loop allocations), 36 (convex-hull O(n³) rewrite), 43–46 (CSS color tokens, RTL, feature-overload UX redesign). These need the structural work in [RECOMMENDATIONS.md](./RECOMMENDATIONS.md), not surgical patches.
 
 ---
 
