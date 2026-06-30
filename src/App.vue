@@ -1695,7 +1695,7 @@ const L: Record<string, Record<string, string>> = {
   },
 }
 
-const t = (k: string) => L[lang.value]?.[k] ?? k
+const t = (k: string) => L[lang.value]?.[k] ?? L.en?.[k] ?? k
 const toggleLang = () => { const cycle: Array<'ru'|'en'|'de'|'zh'> = ['ru', 'en', 'de', 'zh']; const idx = cycle.indexOf(lang.value); lang.value = cycle[(idx + 1) % cycle.length]; localStorage.setItem('scad-lang', lang.value) }
 
 onMounted(() => {
@@ -1940,6 +1940,9 @@ const errorLine = ref(-1)
 const errorCharPos = ref(-1)
 const meshCount = ref(0)
 const triCount = ref(0)
+// Guard so the heavy-model warning toast fires once per crossing into the
+// heavy range, instead of on every render. Reset when back under threshold.
+const heavyWarned = ref(false)
 const gpuOk = ref(true)
 const autoRender = ref(true)
 const renderTime = ref(0)
@@ -2450,7 +2453,32 @@ function loadHistories(): Record<string, TabHistoryEntry[]> {
 function saveHistories(h: Record<string, TabHistoryEntry[]>) {
   try {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(h))
-  } catch { /* quota exceeded - trim old entries */ }
+  } catch {
+    // Quota exceeded: trim the oldest entries (halve the total across all tabs,
+    // dropping oldest first) and retry the save once.
+    try {
+      const total = Object.values(h).reduce((s, e) => s + e.length, 0)
+      let toDrop = Math.ceil(total / 2)
+      while (toDrop > 0) {
+        // Find the tab whose oldest entry has the smallest timestamp.
+        let oldestTab: string | null = null
+        let oldestTs = Infinity
+        for (const [tabId, entries] of Object.entries(h)) {
+          if (entries.length > 0 && entries[0].timestamp < oldestTs) {
+            oldestTs = entries[0].timestamp
+            oldestTab = tabId
+          }
+        }
+        if (!oldestTab) break
+        h[oldestTab].shift()
+        if (h[oldestTab].length === 0) delete h[oldestTab]
+        toDrop--
+      }
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(h))
+    } catch (e) {
+      console.warn('saveHistories: storage quota exceeded, history not saved', e)
+    }
+  }
 }
 
 function addHistorySnapshot(tabId: string, codeVal: string) {
@@ -4868,6 +4896,57 @@ watch(code, (v) => {
   }, 3000)
 })
 
+// Replace standalone `$t` tokens with a value, skipping occurrences inside
+// string literals ("..."), line comments (//...) and block comments (/* ... */).
+// Pragmatic, single-pass scanner: it is not a full OpenSCAD lexer but correctly
+// handles the common cases (escaped quotes, nested-looking comments).
+function replaceAnimT(src: string, value: string): string {
+  let out = ''
+  let i = 0
+  const n = src.length
+  while (i < n) {
+    const c = src[i]
+    // Line comment
+    if (c === '/' && src[i + 1] === '/') {
+      const end = src.indexOf('\n', i)
+      const stop = end === -1 ? n : end
+      out += src.slice(i, stop)
+      i = stop
+      continue
+    }
+    // Block comment
+    if (c === '/' && src[i + 1] === '*') {
+      const end = src.indexOf('*/', i + 2)
+      const stop = end === -1 ? n : end + 2
+      out += src.slice(i, stop)
+      i = stop
+      continue
+    }
+    // String literal
+    if (c === '"') {
+      out += c
+      i++
+      while (i < n) {
+        const sc = src[i]
+        out += sc
+        i++
+        if (sc === '\\' && i < n) { out += src[i]; i++; continue }
+        if (sc === '"') break
+      }
+      continue
+    }
+    // Standalone $t token (followed by a non-word char or end)
+    if (c === '$' && src[i + 1] === 't' && !/[A-Za-z0-9_]/.test(src[i + 2] || '')) {
+      out += value
+      i += 2
+      continue
+    }
+    out += c
+    i++
+  }
+  return out
+}
+
 function doRender() {
   if (!renderer) return
   error.value = ''
@@ -4876,7 +4955,7 @@ function doRender() {
   try {
     const t0 = performance.now()
     // Inject $t animation variable
-    let codeWithT = code.value.replace(/\$t\b/g, String(animT.value))
+    let codeWithT = replaceAnimT(code.value, String(animT.value))
     // Fast preview: halve all $fn values
     if (fastPreviewMode.value) {
       codeWithT = codeWithT.replace(/\$fn\s*=\s*(\d+)/g, (_m: string, n: string) => {
@@ -4907,13 +4986,19 @@ function doRender() {
     const tMeshStart = performance.now()
     renderer.setMeshes(meshes)
     const tMeshEnd = performance.now()
-    perfMeshGenTime.value = Math.round(tParsed - t0)
+    // Mesh generation (post-parse CPU work preparing meshes, before GPU upload).
+    perfMeshGenTime.value = Math.round(tMeshStart - tParsed)
     perfGpuUploadTime.value = Math.round(tMeshEnd - tMeshStart)
     const t1 = performance.now()
     renderTime.value = Math.round(t1 - t0)
-    // Adaptive quality warnings
+    // Adaptive quality warnings (warn once per crossing into the heavy range)
     if (triCount.value > 100000) {
-      addToast(t('perfWarning').replace('{n}', String(triCount.value)), 'info', { duration: 5000 })
+      if (!heavyWarned.value) {
+        addToast(t('perfWarning').replace('{n}', String(triCount.value)), 'info', { duration: 5000 })
+        heavyWarned.value = true
+      }
+    } else {
+      heavyWarned.value = false
     }
     if (renderTime.value > 500 && !fastPreviewMode.value) {
       addToast(t('slowRenderHint').replace('{ms}', String(renderTime.value)), 'info', {
@@ -8121,10 +8206,14 @@ function checkSessionRestore() {
     localStorage.removeItem(SESSION_KEY)
     return
   }
-  // Check if backup differs from current state
-  const currentTabIds = tabs.value.map(tb => tb.id).join(',')
-  const backupTabIds = backup.tabs.map(tb => tb.id).join(',')
-  if (currentTabIds === backupTabIds) return
+  // Check if backup differs from current state — compare the set of tabs AND
+  // their content (id, name, code), not just IDs, so a content-only change
+  // (same tabs, edited code) still offers a restore.
+  const sig = (tbs: Array<{ id: string; name: string; code: string }>) =>
+    tbs.map(tb => `${tb.id} ${tb.name} ${tb.code}`).join('')
+  const currentSig = sig(tabs.value)
+  const backupSig = sig(backup.tabs)
+  if (currentSig === backupSig) return
   showSessionRestore.value = true
 }
 
