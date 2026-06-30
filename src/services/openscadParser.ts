@@ -108,8 +108,8 @@ const MATH_FUNCS: Record<string, (...args: number[]) => number> = {
   min: (...a: number[]) => Math.min(...a),
   max: (...a: number[]) => Math.max(...a),
   pow: Math.pow,
-  ln: Math.log,
-  log: Math.log,
+  ln: Math.log,            // natural log (OpenSCAD ln())
+  log: (x: number) => Math.log10(x), // base-10 log (OpenSCAD log())
   exp: Math.exp,
   sign: Math.sign,
   rands: (minv: number, maxv: number, count: number) => {
@@ -117,18 +117,19 @@ const MATH_FUNCS: Record<string, (...args: number[]) => number> = {
     void count
     return minv + Math.random() * (maxv - minv)
   },
-  len: (x: number) => {
-    // For arrays this would be different; for numbers return 0
-    void x
-    return 0
-  },
-  norm: (x: number) => Math.abs(x),
-  cross: () => 0, // placeholder
-  lookup: () => 0, // placeholder
-  str: () => 0, // placeholder
-  chr: () => 0, // placeholder
-  concat: () => 0, // placeholder
+  // Note: len, norm, cross, lookup, str, chr, concat are intentionally NOT
+  // defined here. They are reimplemented correctly in evalExprNode (they
+  // operate on arrays/strings, not plain numbers). Keeping stubs here would
+  // cause wrong constant-folding at parse time.
 }
+
+/**
+ * Function names that must never be constant-folded at parse time.
+ * These are handled with correct array/string-aware semantics in evalExprNode.
+ */
+const NON_FOLDABLE_FUNCS = new Set<string>([
+  'len', 'norm', 'cross', 'lookup', 'str', 'chr', 'concat', 'ord', 'rands',
+])
 
 const MATH_CONSTANTS: Record<string, number> = {
   PI: Math.PI,
@@ -428,7 +429,7 @@ class Parser {
         }
         this.expect(TT.RParen)
         // If it's a known math function and all args are literal numbers, compute now
-        if (name in MATH_FUNCS) {
+        if (name in MATH_FUNCS && !NON_FOLDABLE_FUNCS.has(name)) {
           if (fnArgs.every(a2 => typeof a2 === 'number')) {
             const fn = MATH_FUNCS[name]
             return fn(...fnArgs)
@@ -1903,6 +1904,24 @@ function makeSurface(data: number[][]): { v: number[]; ix: number[] } {
 /* ── Expression evaluator ─────────────────────────── */
 
 function evalComparison(op: string, left: any, right: any): boolean {
+  // Equality / inequality: compare like-typed values directly.
+  if (op === '==' || op === '!=') {
+    let eq: boolean
+    if (typeof left === 'number' && typeof right === 'number') {
+      eq = left === right
+    } else if (typeof left === 'string' && typeof right === 'string') {
+      eq = left === right
+    } else if (typeof left === 'boolean' && typeof right === 'boolean') {
+      eq = left === right
+    } else if (Array.isArray(left) && Array.isArray(right)) {
+      eq = JSON.stringify(left) === JSON.stringify(right)
+    } else {
+      // Mixed/other types: strict structural comparison.
+      eq = left === right
+    }
+    return op === '==' ? eq : !eq
+  }
+  // Ordering operators: numeric comparison.
   const l = typeof left === 'number' ? left : 0
   const r = typeof right === 'number' ? right : 0
   switch (op) {
@@ -1910,8 +1929,6 @@ function evalComparison(op: string, left: any, right: any): boolean {
     case '>': return l > r
     case '<=': return l <= r
     case '>=': return l >= r
-    case '==': return l === r
-    case '!=': return l !== r
     default: return false
   }
 }
@@ -3416,7 +3433,10 @@ function evalNodes(nodes: ASTNode[], tf: Mat4, col: [number,number,number,number
       const varValue = n.args.__varValue
       if (typeof varName === 'string') {
         const resolved = resolveArg(varValue, vars)
-        if (typeof resolved === 'number') {
+        // Store the variable regardless of type (number, vector/array,
+        // string, boolean) so it can be looked up later by resolveArg /
+        // evalExprNode. Only skip undefined/null results.
+        if (resolved !== undefined && resolved !== null) {
           vars = { ...vars, [varName]: resolved }
         }
       }
@@ -3633,25 +3653,40 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     }
     case 'for': {
       // for(i = [0:5]) or for(i = [0:2:10]) or for(i = [1,3,7])
+      // Multiple variables are nested (Cartesian product):
+      //   for(x=[0:2], y=[0:2]) -> 3*3 = 9 iterations.
       const out: MeshData[] = []
+      // Collect every named loop variable and its values, preserving order.
+      const loopVars: { name: string; values: any[] }[] = []
       for (const [varName, rawVal] of Object.entries(a)) {
         if (varName.startsWith('_')) continue // skip positional
         const val = rawVal
-        let iterValues: number[] = []
+        let iterValues: any[] = []
         if (val && typeof val === 'object' && val.__range) {
           iterValues = expandRange(val)
         } else if (Array.isArray(val)) {
-          iterValues = val.filter((v): v is number => typeof v === 'number')
-        } else if (typeof val === 'number') {
+          iterValues = val
+        } else if (val !== undefined && val !== null) {
           iterValues = [val]
         }
-        for (const iterVal of iterValues) {
-          const newVars = { ...vars, [varName]: iterVal }
-          out.push(...evalNodes(ch, tf, col, newVars, modules, echos, callerChildren, annotations))
-        }
-        return out // only support one loop variable per for()
+        loopVars.push({ name: varName, values: iterValues })
       }
-      return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
+      if (loopVars.length === 0) {
+        return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
+      }
+      // Recursively walk the Cartesian product of all loop variables.
+      const walk = (idx: number, accVars: Record<string, any>) => {
+        if (idx >= loopVars.length) {
+          out.push(...evalNodes(ch, tf, col, accVars, modules, echos, callerChildren, annotations))
+          return
+        }
+        const { name, values } = loopVars[idx]
+        for (const v of values) {
+          walk(idx + 1, { ...accVars, [name]: v })
+        }
+      }
+      walk(0, vars)
+      return out
     }
     case 'let': {
       const newVars = { ...vars }

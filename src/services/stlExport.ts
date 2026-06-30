@@ -32,9 +32,10 @@ function triangleNormal(
 }
 
 /**
- * Generate a binary STL file from mesh data and trigger a download.
+ * Build a binary STL file from mesh data and return the raw ArrayBuffer.
+ * (Pure / no DOM — safe to call in any environment.)
  */
-export function exportSTL(meshes: MeshData[], filename = 'model.stl') {
+export function buildSTLBuffer(meshes: MeshData[]): ArrayBuffer {
   // Count total triangles across all meshes
   let totalTriangles = 0
   for (const m of meshes) {
@@ -101,6 +102,15 @@ export function exportSTL(meshes: MeshData[], filename = 'model.stl') {
       view.setUint16(offset, 0, true); offset += 2
     }
   }
+
+  return buffer
+}
+
+/**
+ * Generate a binary STL file from mesh data and trigger a download.
+ */
+export function exportSTL(meshes: MeshData[], filename = 'model.stl') {
+  const buffer = buildSTLBuffer(meshes)
 
   // Create download
   const blob = new Blob([buffer], { type: 'application/octet-stream' })
