@@ -569,6 +569,10 @@ const L: Record<string, Record<string, string>> = {
     exportAllTabs: 'Экспорт всех вкладок (ZIP)',
     cmdExportAllTabs: 'Экспорт всех вкладок',
     colorPalette: 'Палитра цветов',
+    csgVisualBadge: 'CSG: предпросмотр',
+    csgVisualTooltip: 'difference/intersection/minkowski отображаются как визуальное приближение, а не настоящая булева геометрия — экспортированные меши могут не совпадать.',
+    ariaCanvas: 'Окно просмотра 3D-модели',
+    ariaCodeEditor: 'Редактор кода OpenSCAD',
     perfWarning: 'Модель сложная ({n} треугольников). Уменьшите $fn для ускорения.',
     slowRenderHint: 'Рендер занял {ms}мс. Попробуйте уменьшить $fn.',
     fastPreview: 'Быстрый просмотр',
@@ -1282,6 +1286,10 @@ const L: Record<string, Record<string, string>> = {
     exportAllTabs: 'Export All Tabs (ZIP)',
     cmdExportAllTabs: 'Export All Tabs',
     colorPalette: 'Color Palette',
+    csgVisualBadge: 'CSG: visual preview',
+    csgVisualTooltip: 'difference/intersection/minkowski are rendered as a visual approximation, not true boolean geometry — exported meshes may not match.',
+    ariaCanvas: '3D model viewport',
+    ariaCodeEditor: 'OpenSCAD code editor',
     perfWarning: 'Complex model ({n} triangles). Reduce $fn for better performance.',
     slowRenderHint: 'Render took {ms}ms. Try reducing $fn.',
     fastPreview: 'Fast Preview',
@@ -1692,6 +1700,10 @@ const L: Record<string, Record<string, string>> = {
     sideBySide: '并排',
     difference: '差异',
     cmdAbout: '关于',
+    csgVisualBadge: 'CSG：视觉预览',
+    csgVisualTooltip: 'difference/intersection/minkowski 仅作为视觉近似渲染，并非真正的布尔几何 — 导出的网格可能不匹配。',
+    ariaCanvas: '3D 模型视口',
+    ariaCodeEditor: 'OpenSCAD 代码编辑器',
   },
 }
 
@@ -1940,6 +1952,9 @@ const errorLine = ref(-1)
 const errorCharPos = ref(-1)
 const meshCount = ref(0)
 const triCount = ref(0)
+// True when the active code uses CSG ops (difference/intersection/minkowski),
+// which are rendered as a visual approximation only — not true boolean geometry.
+const usesCsg = ref(false)
 // Guard so the heavy-model warning toast fires once per crossing into the
 // heavy range, instead of on every render. Reset when back under threshold.
 const heavyWarned = ref(false)
@@ -4971,6 +4986,9 @@ function doRender() {
       return tab ? tab.code : null
     })
     const meshes = result.meshes
+    // CSG honesty: detect visual-only boolean ops in the active source so the UI
+    // can flag that exported geometry may not match the preview.
+    usesCsg.value = /\b(?:difference|intersection|minkowski)\b/.test(code.value)
     astNodes.value = result.ast
     // Collect 3D annotations from parse result
     parsedAnnotations.value = result.annotations || []
@@ -8868,7 +8886,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
     <!-- About modal -->
     <Teleport to="body">
       <div v-if="showAbout" class="modal-backdrop" @click.self="showAbout = false">
-        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:400px">
+        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('aboutTitle')" style="max-width:400px">
           <div class="modal-header">
             <span class="modal-title">{{ t('aboutTitle') }}</span>
             <button class="modal-close" @click="showAbout = false">&times;</button>
@@ -8887,7 +8905,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
     <!-- Screenshot Comparison modal -->
     <Teleport to="body">
       <div v-if="showScreenshotCompare" class="modal-backdrop" @click.self="showScreenshotCompare = false">
-        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:900px;width:90vw">
+        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('compareScreenshots')" style="max-width:900px;width:90vw">
           <div class="modal-header">
             <span class="modal-title">{{ t('compareScreenshots') }}</span>
             <div class="modal-header-actions">
@@ -9236,7 +9254,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
 
       <!-- Batch Results modal -->
       <div v-if="showBatchResults" class="modal-backdrop" @click.self="showBatchResults = false">
-        <div class="modal-box" role="dialog" aria-modal="true">
+        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('batchResults')">
           <div class="modal-header">
             <span class="modal-title">{{ t('batchResults') }}</span>
             <button class="modal-close" @click="showBatchResults = false">&times;</button>
@@ -9282,7 +9300,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
 
       <!-- Shortcut Editor modal -->
       <div v-if="showShortcutEditor" class="modal-backdrop" @click.self="showShortcutEditor = false">
-        <div class="modal-box" role="dialog" aria-modal="true" style="max-width:520px;">
+        <div class="modal-box" role="dialog" aria-modal="true" :aria-label="t('shortcutEditorTitle')" style="max-width:520px;">
           <div class="modal-header">
             <span class="modal-title">{{ t('shortcutEditorTitle') }}</span>
             <button class="modal-close" @click="showShortcutEditor = false">&times;</button>
@@ -9400,7 +9418,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
 
       <!-- Playground Modal -->
       <div v-if="showPlayground" class="modal-backdrop" @click.self="showPlayground = false">
-        <div class="modal-box playground-modal" role="dialog" aria-modal="true">
+        <div class="modal-box playground-modal" role="dialog" aria-modal="true" :aria-label="t('playgroundTitle')">
           <div class="modal-header">
             <span class="modal-title">{{ t('playgroundTitle') }}</span>
             <button class="modal-close" @click="showPlayground = false">&times;</button>
@@ -9835,6 +9853,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <textarea
               ref="textareaRef"
               class="code"
+              :aria-label="t('ariaCodeEditor')"
               v-model="code"
               spellcheck="false"
               autocomplete="off"
@@ -9927,6 +9946,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <div class="code-area">
               <textarea
                 class="code"
+                :aria-label="t('ariaCodeEditor')"
                 :value="rightCode"
                 @input="onRightPaneInput"
                 spellcheck="false"
@@ -10016,7 +10036,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
         </transition>
 
         <transition name="panel-slide">
-          <div v-if="error" class="error">
+          <div v-if="error" class="error" role="alert">
             <div class="error-main">
               <span>{{ error }}</span>
               <button class="error-help-btn" @click="showErrorExplanation = !showErrorExplanation" :title="t('showErrorHelp')">?</button>
@@ -10029,6 +10049,15 @@ fibonacci_sphere(count=150, r=15, $fn=8);
         </transition>
 
         <div class="stats">
+          <template v-if="usesCsg">
+            <div class="stat-seg stat-csg-warn" :title="t('csgVisualTooltip')">
+              <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>
+              </svg>
+              <span class="stat-val">{{ t('csgVisualBadge') }}</span>
+            </div>
+            <span class="stat-div"></span>
+          </template>
           <div class="stat-seg" :title="t('statMeshes')">
             <svg class="stat-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -10132,6 +10161,8 @@ fibonacci_sphere(count=150, r=15, $fn=8);
         <canvas
           ref="canvasRef"
           class="gpu-canvas"
+          role="img"
+          :aria-label="t('ariaCanvas')"
           :class="{ 'canvas-transparent': !!canvasGradient }"
           :style="{ filter: canvasFilter }"
           tabindex="0"
@@ -10919,7 +10950,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
     </transition>
 
     <!-- Toast Notifications -->
-    <div class="toast-container">
+    <div class="toast-container" role="status" aria-live="polite" aria-atomic="false">
       <transition-group name="toast">
         <div
           v-for="toast in toasts"
@@ -10943,6 +10974,13 @@ fibonacci_sphere(count=150, r=15, $fn=8);
 </template>
 
 <style>
+/* Accessibility: visible keyboard focus ring app-wide. :focus-visible only
+   matches keyboard (not mouse) focus, so it never shows on click. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 :root {
   --bg: #141416;
   --surface: #1e1e22;
@@ -12753,6 +12791,10 @@ textarea.code:focus-visible {
   flex-shrink: 0;
   opacity: 0.85;
 }
+/* CSG honesty badge: subtle amber to flag visual-only boolean ops. */
+.stat-csg-warn { cursor: help; }
+.stat-csg-warn .stat-ico { color: #e6a23c; opacity: 1; }
+.stat-csg-warn .stat-val { color: #e6a23c; }
 .stat-val {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.7rem;

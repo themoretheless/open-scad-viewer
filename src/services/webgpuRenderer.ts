@@ -347,25 +347,44 @@ export class WebGPURenderer {
   async init(canvas: HTMLCanvasElement): Promise<boolean> {
     this.canvas = canvas
     if (!navigator.gpu) return false
-    const adapter = await navigator.gpu.requestAdapter()
-    if (!adapter) return false
 
-    // Cache adapter info for perf panel
+    // Acquire adapter + device. Any rejection here is treated as an init
+    // failure (returns false), matching the other failure paths above.
     try {
-      this.adapterInfoCache = adapter.info
-    } catch {
-      this.adapterInfoCache = null
+      const adapter = await navigator.gpu.requestAdapter()
+      if (!adapter) return false
+
+      // Cache adapter info for perf panel
+      try {
+        this.adapterInfoCache = adapter.info
+      } catch {
+        this.adapterInfoCache = null
+      }
+
+      this.dev = await adapter.requestDevice()
+    } catch (err) {
+      console.error('[WebGPU] Failed to acquire device:', err)
+      return false
     }
 
-    this.dev = await adapter.requestDevice()
     this.ctx = canvas.getContext('webgpu') as GPUCanvasContext
     this.fmt = navigator.gpu.getPreferredCanvasFormat()
     this.ctx.configure({ device: this.dev, format: this.fmt, alphaMode: 'premultiplied' })
 
-    // Handle device lost
+    // Handle device lost. The `lost` promise also resolves when we call
+    // device.destroy() ourselves (reason === 'destroyed'); in that case this
+    // is an intentional teardown, not a real loss. In all cases stop the loop
+    // (mark dead + cancel any pending frame) so we never issue GPU work on a
+    // dead device; only surface a real loss to the user callback.
     this.dev.lost.then((info) => {
       console.error('[WebGPU] Device lost:', info.reason, info.message)
-      if (!this.dead && this.onDeviceLost) {
+      const wasDead = this.dead
+      this.dead = true
+      if (this.raf) {
+        cancelAnimationFrame(this.raf)
+        this.raf = 0
+      }
+      if (info.reason !== 'destroyed' && !wasDead && this.onDeviceLost) {
         this.onDeviceLost(info.reason + (info.message ? ': ' + info.message : ''))
       }
     })
@@ -725,6 +744,7 @@ export class WebGPURenderer {
   }
 
   private render() {
+    if (this.dead) return
     this.resize()
     const w = this.canvas.width, h = this.canvas.height, asp = w / h
     const cx = this.tx + this.dist * Math.cos(this.pitch) * Math.sin(this.yaw)
@@ -1048,7 +1068,13 @@ export class WebGPURenderer {
     const t = Math.min(elapsed / this.animDuration, 1)
     const e = this.easeInOutCubic(t)
 
-    this.yaw = this.animStartYaw + (this.animTargetYaw - this.animStartYaw) * e
+    // Interpolate yaw along the shortest angular path so we never spin the
+    // long way around ±π (e.g. 0.6 → π). Pitch is clamped and does not wrap.
+    const dYaw = Math.atan2(
+      Math.sin(this.animTargetYaw - this.animStartYaw),
+      Math.cos(this.animTargetYaw - this.animStartYaw),
+    )
+    this.yaw = this.animStartYaw + dYaw * e
     this.pitch = this.animStartPitch + (this.animTargetPitch - this.animStartPitch) * e
     this.dist = this.animStartDist + (this.animTargetDist - this.animStartDist) * e
     this.tx = this.animStartTx + (this.animTargetTx - this.animStartTx) * e
