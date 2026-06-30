@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "OpenSCAD 3D Viewer",
   "short_name": "OpenSCAD Viewer",
   "description": "OpenSCAD editor with WebGPU 3D rendering",

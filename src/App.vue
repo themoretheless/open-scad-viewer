@@ -13,6 +13,21 @@ const savedLang = localStorage.getItem('scad-lang')
 const lang = ref<'ru'|'en'|'de'|'zh'>(['ru','en','de','zh'].includes(savedLang as any) ? (savedLang as 'ru'|'en'|'de'|'zh') : 'ru')
 const isDark = ref(true)
 
+/* ── i18n number/locale helpers ── */
+// Map the current UI language to a proper BCP-47 locale so number grouping,
+// decimals and plural rules are correct for every supported language.
+function localeFor(l: string): string {
+  return ({ ru: 'ru-RU', en: 'en-US', de: 'de-DE', zh: 'zh-CN' } as Record<string, string>)[l] ?? 'en-US'
+}
+
+// Pluralization helper using Intl.PluralRules. `forms` maps CLDR plural
+// categories (one/few/many/other) to templates containing `{n}`.
+function plural(n: number, forms: Record<string, string>): string {
+  const rules = new Intl.PluralRules(localeFor(lang.value))
+  const cat = rules.select(n)
+  return (forms[cat] ?? forms.other ?? '').replace('{n}', String(n))
+}
+
 /* ── Security helpers ── */
 function escapeHtml(s: string): string {
   return String(s)
@@ -1796,9 +1811,25 @@ const code = computed({
   set: (v: string) => { activeTab.value.code = v },
 })
 
+let saveTabsDebounce: ReturnType<typeof setTimeout> | null = null
+
+// Persist tabs to localStorage. Updating in-memory state is immediate; the actual
+// (potentially expensive) serialization + setItem is debounced to avoid O(total source)
+// writes on every trivial UI action (tab switch, rename, pin, code change).
+function flushSaveTabs() {
+  if (saveTabsDebounce) {
+    clearTimeout(saveTabsDebounce)
+    saveTabsDebounce = null
+  }
+  try {
+    localStorage.setItem('scad-tabs', JSON.stringify(tabs.value))
+    localStorage.setItem('scad-active-tab', activeTabId.value)
+  } catch { /* quota exceeded – ignore */ }
+}
+
 function saveTabs() {
-  localStorage.setItem('scad-tabs', JSON.stringify(tabs.value))
-  localStorage.setItem('scad-active-tab', activeTabId.value)
+  if (saveTabsDebounce) clearTimeout(saveTabsDebounce)
+  saveTabsDebounce = setTimeout(flushSaveTabs, 500)
 }
 
 function switchTab(id: string) {
@@ -2044,6 +2075,36 @@ const UNDO_MAX = 100
 const undoStack = ref<string[]>([])
 const redoStack = ref<string[]>([])
 let undoDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// Grammatically-correct plural labels for the undo/redo step counts.
+// ru: one/few/many/other ; en: one/other ; de: one/other ; zh: other only.
+const UNDO_STEP_FORMS: Record<string, { undo: Record<string, string>; redo: Record<string, string> }> = {
+  ru: {
+    undo: { one: '{n} шаг отмены', few: '{n} шага отмены', many: '{n} шагов отмены', other: '{n} шагов отмены' },
+    redo: { one: '{n} шаг повтора', few: '{n} шага повтора', many: '{n} шагов повтора', other: '{n} шагов повтора' },
+  },
+  en: {
+    undo: { one: '{n} undo step', other: '{n} undo steps' },
+    redo: { one: '{n} redo step', other: '{n} redo steps' },
+  },
+  de: {
+    undo: { one: '{n} Schritt rückgängig', other: '{n} Schritte rückgängig' },
+    redo: { one: '{n} Schritt wiederholen', other: '{n} Schritte wiederholen' },
+  },
+  zh: {
+    undo: { other: '{n} 步撤销' },
+    redo: { other: '{n} 步重做' },
+  },
+}
+
+const undoStepsLabel = computed(() => {
+  const forms = UNDO_STEP_FORMS[lang.value] ?? UNDO_STEP_FORMS.en
+  return undoStack.value.length ? plural(undoStack.value.length, forms.undo) : ''
+})
+const redoStepsLabel = computed(() => {
+  const forms = UNDO_STEP_FORMS[lang.value] ?? UNDO_STEP_FORMS.en
+  return redoStack.value.length ? plural(redoStack.value.length, forms.redo) : ''
+})
 
 function pushUndoSnapshot(snapshot?: string) {
   const snap = snapshot ?? code.value
@@ -2520,10 +2581,11 @@ function restoreHistoryEntry(entry: TabHistoryEntry) {
 
 function formatHistoryTime(ts: number): string {
   const diff = Date.now() - ts
+  const forms = RELATIVE_TIME_FORMS[lang.value] ?? RELATIVE_TIME_FORMS.en
   if (diff < 60000) return t('justNow')
-  if (diff < 3600000) return t('minutesAgo').replace('{n}', String(Math.floor(diff / 60000)))
-  if (diff < 86400000) return t('hoursAgo').replace('{n}', String(Math.floor(diff / 3600000)))
-  return t('daysAgo').replace('{n}', String(Math.floor(diff / 86400000)))
+  if (diff < 3600000) return plural(Math.floor(diff / 60000), forms.min)
+  if (diff < 86400000) return plural(Math.floor(diff / 3600000), forms.hour)
+  return plural(Math.floor(diff / 86400000), forms.day)
 }
 
 // Debounced history save
@@ -3175,15 +3237,41 @@ function loadRecent(entry: RecentEntry) {
   showRecent.value = false
 }
 
+// Plural forms for relative-time units, per language.
+// ru: one/few/many/other ; en: one/other ; de: one/other ; zh: other only.
+const RELATIVE_TIME_FORMS: Record<string, Record<'min' | 'hour' | 'day', Record<string, string>>> = {
+  ru: {
+    min: { one: '{n} минуту назад', few: '{n} минуты назад', many: '{n} минут назад', other: '{n} минут назад' },
+    hour: { one: '{n} час назад', few: '{n} часа назад', many: '{n} часов назад', other: '{n} часов назад' },
+    day: { one: '{n} день назад', few: '{n} дня назад', many: '{n} дней назад', other: '{n} дней назад' },
+  },
+  en: {
+    min: { one: '{n} minute ago', other: '{n} minutes ago' },
+    hour: { one: '{n} hour ago', other: '{n} hours ago' },
+    day: { one: '{n} day ago', other: '{n} days ago' },
+  },
+  de: {
+    min: { one: 'vor {n} Minute', other: 'vor {n} Minuten' },
+    hour: { one: 'vor {n} Stunde', other: 'vor {n} Stunden' },
+    day: { one: 'vor {n} Tag', other: 'vor {n} Tagen' },
+  },
+  zh: {
+    min: { other: '{n}分钟前' },
+    hour: { other: '{n}小时前' },
+    day: { other: '{n}天前' },
+  },
+}
+
 function formatRelativeTime(ts: number): string {
   const diff = Date.now() - ts
   const mins = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
+  const forms = RELATIVE_TIME_FORMS[lang.value] ?? RELATIVE_TIME_FORMS.en
   if (mins < 1) return t('justNow')
-  if (mins < 60) return t('minutesAgo').replace('{n}', String(mins))
-  if (hours < 24) return t('hoursAgo').replace('{n}', String(hours))
-  return t('daysAgo').replace('{n}', String(days))
+  if (mins < 60) return plural(mins, forms.min)
+  if (hours < 24) return plural(hours, forms.hour)
+  return plural(days, forms.day)
 }
 
 /* ── Code Minimap ── */
@@ -4857,6 +4945,8 @@ onMounted(async () => {
   // Stats polling
   statsInterval = setInterval(() => {
     if (!renderer) return
+    // Skip reactive writes/re-renders when no panel that shows these stats is open
+    if (!showStatistics.value && !showPerfPanel.value) return
     fpsVal.value = renderer.getFPS()
     vertexCount.value = renderer.getVertexCount()
     const bounds = renderer.getBounds()
@@ -4865,6 +4955,9 @@ onMounted(async () => {
 
   // Session auto-save every 30 seconds
   sessionAutoSaveInterval = setInterval(saveSessionBackup, 30000)
+
+  // Ensure pending debounced tab writes are flushed before the page unloads
+  window.addEventListener('beforeunload', flushSaveTabs)
 
   // Check for session to restore (only if tabs match old storage - i.e. user might have lost data)
   checkSessionRestore()
@@ -4881,6 +4974,8 @@ onUnmounted(() => {
   if (gizmoRAF) cancelAnimationFrame(gizmoRAF)
   if (sessionAutoSaveInterval) clearInterval(sessionAutoSaveInterval)
   if (undoDebounceTimer) clearTimeout(undoDebounceTimer)
+  window.removeEventListener('beforeunload', flushSaveTabs)
+  flushSaveTabs()
   document.removeEventListener('click', onCloseContextMenu)
   renderer?.destroy(); renderer = null
 })
@@ -7345,14 +7440,14 @@ function computeStatistics() {
 }
 
 function formatNumber(n: number, decimals = 1): string {
-  return n.toLocaleString(lang.value === 'ru' ? 'ru-RU' : 'en-US', {
+  return n.toLocaleString(localeFor(lang.value), {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })
 }
 
 function fmtInt(n: number): string {
-  return n.toLocaleString(lang.value === 'ru' ? 'ru-RU' : 'en-US', {
+  return n.toLocaleString(localeFor(lang.value), {
     maximumFractionDigits: 0,
   })
 }
@@ -7984,6 +8079,7 @@ function toggleCameraInfo() {
   if (showCameraInfo.value && !cameraInfoInterval) {
     cameraInfoInterval = setInterval(() => {
       if (!renderer) return
+      if (!showCameraInfo.value) return
       cameraInfoData.value = {
         yaw: (renderer.yaw * 180 / Math.PI),
         pitch: (renderer.pitch * 180 / Math.PI),
@@ -8205,6 +8301,8 @@ interface SessionBackup {
 }
 
 function saveSessionBackup() {
+  // Piggy-back on the periodic backup to flush any pending debounced tab write
+  flushSaveTabs()
   const backup: SessionBackup = {
     tabs: tabs.value,
     activeTabId: activeTabId.value,
@@ -9519,11 +9617,11 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <input type="checkbox" v-model="autoRender" /> {{ t('auto') }}
           </label>
           <!-- Undo/Redo buttons -->
-          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !undoStack.length }" @click="customUndo" :title="t('undoBtn') + (undoStack.length ? ' (' + undoStack.length + ')' : '')" :aria-label="t('undoBtn')">
+          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !undoStack.length }" @click="customUndo" :title="t('undoBtn') + (undoStepsLabel ? ' (' + undoStepsLabel + ')' : '')" :aria-label="t('undoBtn')">
             <span class="undo-redo-icon">&#8630;</span>
             <span v-if="undoStack.length" class="undo-redo-badge">{{ undoStack.length }}</span>
           </button>
-          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !redoStack.length }" @click="customRedo" :title="t('redoBtn') + (redoStack.length ? ' (' + redoStack.length + ')' : '')" :aria-label="t('redoBtn')">
+          <button class="btn btn-sm btn-icon undo-redo-btn" :class="{ 'btn-disabled': !redoStack.length }" @click="customRedo" :title="t('redoBtn') + (redoStepsLabel ? ' (' + redoStepsLabel + ')' : '')" :aria-label="t('redoBtn')">
             <span class="undo-redo-icon">&#8631;</span>
             <span v-if="redoStack.length" class="undo-redo-badge">{{ redoStack.length }}</span>
           </button>
