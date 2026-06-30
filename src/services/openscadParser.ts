@@ -10,6 +10,11 @@ import {
   type Mat4, type Vec3,
 } from './math3d'
 
+/* ── Limits ───────────────────────────────────────── */
+
+/** Upper bound on `$fn` (facet count) to prevent DoS via huge tessellation. */
+const MAX_FN = 256
+
 /* ── Tokens ───────────────────────────────────────── */
 
 enum TT {
@@ -365,8 +370,8 @@ class Parser {
         left = { __expr: true, op, left, right } as ExprBinary
       } else if (typeof left === 'number' && typeof right === 'number') {
         if (op === '*') left = left * right
-        else if (op === '/') left = right !== 0 ? left / right : 0
-        else left = right !== 0 ? left % right : 0
+        else if (op === '/') left = right !== 0 ? left / right : (left === 0 ? NaN : (left > 0 ? Infinity : -Infinity))
+        else left = right !== 0 ? left % right : NaN
       } else {
         left = { __expr: true, op, left, right } as ExprBinary
       }
@@ -881,8 +886,9 @@ function makeTorus(r1: number, r2: number, fn: number) {
 function makeHelix(r: number, pitch: number, turns: number, fn: number) {
   const v: number[] = [], ix: number[] = []
   const tubeR = pitch * 0.15 // tube radius = 15% of pitch
+  turns = Math.min(Math.max(turns, 0), 200) // clamp to prevent unbounded vertex generation
   const totalHeight = pitch * turns
-  const ringSegs = Math.max(16, fn * turns)
+  const ringSegs = Math.min(20000, Math.max(16, fn * turns))
   const tubeSegs = Math.max(6, Math.floor(fn / 4))
   for (let i = 0; i <= ringSegs; i++) {
     const t = i / ringSegs
@@ -1049,6 +1055,9 @@ function makeBezier(points: number[][], thickness: number, fn: number) {
 function makeSweep(path: number[][], radius: number, fn: number) {
   const v: number[] = [], ix: number[] = []
   const tubeSegs = fn
+  // Cap total ring*tube segment count at 20000 to prevent DoS
+  const maxRings = Math.max(2, Math.floor(20000 / Math.max(1, tubeSegs)))
+  if (path.length > maxRings) path = path.slice(0, maxRings)
   const ringSegs = path.length - 1
 
   // Compute tangents for each path point
@@ -1385,7 +1394,9 @@ function makeThread(d: number, pitch: number, length: number, fn: number): { v: 
   const v: number[] = [], ix: number[] = []
   const baseR = d / 2
   const threadDepth = pitch * 0.3
-  const zSlices = Math.ceil(length / pitch) * Math.max(1, Math.floor(fn / 4))
+  // Clamp length/pitch ratio and cap total slices to prevent unbounded vertex generation
+  const ratio = pitch > 0 ? Math.min(Math.ceil(length / pitch), 20000) : 1
+  const zSlices = Math.min(20000, ratio * Math.max(1, Math.floor(fn / 4)))
   const segs = fn // segments around circumference
 
   // Generate vertices
@@ -2091,8 +2102,8 @@ function evalExprNode(val: any, vars: Record<string, number>): any {
         case '+': return l + r
         case '-': return l - r
         case '*': return l * r
-        case '/': return r !== 0 ? l / r : 0
-        case '%': return r !== 0 ? l % r : 0
+        case '/': return r !== 0 ? l / r : (l === 0 ? NaN : (l > 0 ? Infinity : -Infinity))
+        case '%': return r !== 0 ? l % r : NaN
         default: return l
       }
     }
@@ -2178,7 +2189,14 @@ function expandRange(r: any): number[] {
   const start = typeof r.start === 'number' ? r.start : 0
   const step = typeof r.step === 'number' ? r.step : 1
   const end = typeof r.end === 'number' ? r.end : 0
-  if (step === 0) return []
+  // Guard against invalid step (zero / non-finite) which would never terminate
+  if (step === 0 || !Number.isFinite(step) || !Number.isFinite(start) || !Number.isFinite(end)) {
+    throw new Error('Invalid range step')
+  }
+  // Reject degenerate ranges that would allocate huge arrays BEFORE iterating
+  if (Math.abs((end - start) / step) > 10000) {
+    throw new Error('Range too large (>10000 elements)')
+  }
   const result: number[] = []
   if (step > 0) {
     for (let i = start; i <= end + 1e-9; i += step) { result.push(i); if (result.length > 10000) break }
@@ -3550,7 +3568,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const d = arg(a,'d',-1,undefined)
       if (r == null) r = d != null ? d / 2 : 1
       if (typeof r !== 'number') r = 1
-      const fn = Math.max(8, arg(a,'$fn',-1,24))
+      const fn = Math.min(MAX_FN, Math.max(8, arg(a,'$fn',-1,24)))
       const { v, ix } = makeSphere(r, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -3563,7 +3581,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (r1 == null && r2 == null) { const br = d != null ? d/2 : r != null ? r : 1; r1 = br; r2 = br }
       if (r1 == null) r1 = r2; if (r2 == null) r2 = r1
       const center = arg(a,'center',-1,false) === true
-      const fn = Math.max(8, arg(a,'$fn',-1,24))
+      const fn = Math.min(MAX_FN, Math.max(8, arg(a,'$fn',-1,24)))
       const { v, ix } = makeCylinder(h, r1!, r2!, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -3580,7 +3598,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const d = arg(a, 'd', -1, undefined)
       if (r == null) r = d != null ? d / 2 : 1
       if (typeof r !== 'number') r = 1
-      const fn = Math.max(8, arg(a, '$fn', -1, 24))
+      const fn = Math.min(MAX_FN, Math.max(8, arg(a, '$fn', -1, 24)))
       const pts: number[][] = []
       for (let i = 0; i < fn; i++) {
         const angle = (2 * Math.PI * i) / fn
@@ -3797,7 +3815,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       return out
     }
     case 'rotate_extrude': {
-      const fn = Math.max(3, typeof arg(a, '$fn', -1, 36) === 'number' ? arg(a, '$fn', -1, 36) as number : 36)
+      const fn = Math.min(MAX_FN, Math.max(3, typeof arg(a, '$fn', -1, 36) === 'number' ? arg(a, '$fn', -1, 36) as number : 36))
       const angle = typeof arg(a, 'angle', -1, 360) === 'number' ? arg(a, 'angle', -1, 360) as number : 360
 
       // Evaluate children to get flat meshes
@@ -4014,7 +4032,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     case 'torus': {
       const r1 = typeof arg(a, 'r1', 0, 10) === 'number' ? arg(a, 'r1', 0, 10) as number : 10
       const r2 = typeof arg(a, 'r2', 1, 3) === 'number' ? arg(a, 'r2', 1, 3) as number : 3
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeTorus(r1, r2, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4022,14 +4040,14 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
       const pitch = typeof arg(a, 'pitch', 1, 5) === 'number' ? arg(a, 'pitch', 1, 5) as number : 5
       const turns = typeof arg(a, 'turns', 2, 3) === 'number' ? arg(a, 'turns', 2, 3) as number : 3
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeHelix(r, pitch, turns, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'bezier': {
       const pts = arg(a, 'points', 0, [[0,0,0],[10,10,0],[20,10,0],[30,0,0]])
       const thickness = typeof arg(a, 'thickness', 1, 1) === 'number' ? arg(a, 'thickness', 1, 1) as number : 1
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const points = Array.isArray(pts) ? pts.map((p: any) => Array.isArray(p) ? [p[0]??0, p[1]??0, p[2]??0] : [0,0,0]) : [[0,0,0],[10,10,0],[20,10,0],[30,0,0]]
       if (points.length < 2) return []
       const { v, ix } = makeBezier(points, thickness, fn)
@@ -4038,7 +4056,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     case 'sweep': {
       const pathRaw = arg(a, 'path', 0, [[0,0,0],[10,0,5],[20,0,0]])
       const radius = typeof arg(a, 'r', 1, 1) === 'number' ? arg(a, 'r', 1, 1) as number : 1
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16))
       const path = Array.isArray(pathRaw) ? pathRaw.map((p: any) => Array.isArray(p) ? [p[0]??0, p[1]??0, p[2]??0] : [0,0,0]) : [[0,0,0],[10,0,5],[20,0,0]]
       if (path.length < 2) return []
       const { v, ix } = makeSweep(path, radius, fn)
@@ -4063,7 +4081,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r1 = typeof arg(a, 'r1', 1, 15) === 'number' ? arg(a, 'r1', 1, 15) as number : 15
       const r2 = typeof arg(a, 'r2', 2, 8) === 'number' ? arg(a, 'r2', 2, 8) as number : 8
       const h = typeof arg(a, 'h', 3, 3) === 'number' ? arg(a, 'h', 3, 3) as number : 3
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeStar(points, r1, r2, h, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4071,7 +4089,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const d = typeof arg(a, 'd', 0, 10) === 'number' ? arg(a, 'd', 0, 10) as number : 10
       const pitch = typeof arg(a, 'pitch', 1, 1.5) === 'number' ? arg(a, 'pitch', 1, 1.5) as number : 1.5
       const length = typeof arg(a, 'length', 2, 20) === 'number' ? arg(a, 'length', 2, 20) as number : 20
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeThread(d, pitch, length, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4089,7 +4107,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       }
       const r = typeof arg(a, 'r', 1, 1) === 'number' ? arg(a, 'r', 1, 1) as number : 1
       const center = !!arg(a, 'center', 2, false)
-      const fn = Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8)
+      const fn = Math.min(MAX_FN, Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8))
       const cr = Math.min(r, sx / 2, sy / 2, sz / 2)
       // Place 8 small spheres at the inner corners
       const innerX = sx - 2 * cr, innerY = sy - 2 * cr, innerZ = sz - 2 * cr
@@ -4121,7 +4139,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const shaftR = typeof arg(a, 'shaft_r', 1, 1) === 'number' ? arg(a, 'shaft_r', 1, 1) as number : 1
       const headR = typeof arg(a, 'head_r', 2, 3) === 'number' ? arg(a, 'head_r', 2, 3) as number : 3
       const headLen = typeof arg(a, 'head_length', 3, 5) === 'number' ? arg(a, 'head_length', 3, 5) as number : 5
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16))
       const shaftLen = Math.max(0, length - headLen)
       // Shaft: cylinder from z=0 to z=shaftLen
       const shaft = makeCylinder(shaftLen, shaftR, shaftR, false, fn)
@@ -4146,7 +4164,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r1 = typeof arg(a, 'r1', 1, 10) === 'number' ? arg(a, 'r1', 1, 10) as number : 10
       const r2 = typeof arg(a, 'r2', 2, 8) === 'number' ? arg(a, 'r2', 2, 8) as number : 8
       const center = arg(a, 'center', -1, false) === true
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makePipe(h, r1, r2, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4171,7 +4189,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
       const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
       const center = arg(a, 'center', 2, false) === true
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeCylinder(h, r, 0, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4179,7 +4197,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r = typeof arg(a, 'r', 0, 5) === 'number' ? arg(a, 'r', 0, 5) as number : 5
       const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
       const center = arg(a, 'center', 2, false) === true
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24))
       const { v, ix } = makeCapsule(r, h, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4187,7 +4205,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const teeth = typeof arg(a, 'teeth', 0, 12) === 'number' ? Math.max(3, Math.floor(arg(a, 'teeth', 0, 12) as number)) : 12
       const mod = typeof arg(a, 'mod', 1, 2) === 'number' ? arg(a, 'mod', 1, 2) as number : 2
       const thickness = typeof arg(a, 'thickness', 2, 5) === 'number' ? arg(a, 'thickness', 2, 5) as number : 5
-      const fn = Math.max(1, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6)
+      const fn = Math.min(MAX_FN, Math.max(1, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6))
       const { v, ix } = makeGear(teeth, mod, thickness, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4231,7 +4249,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const wire_r = typeof arg(a, 'wire_r', 1, 1) === 'number' ? arg(a, 'wire_r', 1, 1) as number : 1
       const coils = typeof arg(a, 'coils', 2, 5) === 'number' ? arg(a, 'coils', 2, 5) as number : 5
       const pitch = typeof arg(a, 'pitch', 3, 3) === 'number' ? arg(a, 'pitch', 3, 3) as number : 3
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16))
       // Delegate to makeHelix with wire_r as the tube radius factor
       const helixResult = makeHelix(r, pitch, coils, fn)
       // Scale tube radius: makeHelix uses pitch * 0.15 as tube radius
@@ -4240,17 +4258,18 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       // For better control, let's re-generate with the correct tube radius
       const vArr: number[] = [], ixArr: number[] = []
       const tubeR = wire_r
-      const totalHeight = pitch * coils
-      const ringSegs = Math.max(16, fn * coils)
+      const safeCoils = Math.min(Math.max(coils, 0), 200) // clamp coils to prevent DoS
+      const totalHeight = pitch * safeCoils
+      const ringSegs = Math.min(20000, Math.max(16, fn * safeCoils))
       const tubeSegs = Math.max(6, Math.floor(fn / 4))
       for (let i = 0; i <= ringSegs; i++) {
         const t = i / ringSegs
-        const angle = 2 * Math.PI * coils * t
+        const angle = 2 * Math.PI * safeCoils * t
         const ca = Math.cos(angle), sa = Math.sin(angle)
         const cx2 = r * ca, cy2 = totalHeight * t, cz = r * sa
-        const tx = -r * sa * 2 * Math.PI * coils
+        const tx = -r * sa * 2 * Math.PI * safeCoils
         const ty = totalHeight
-        const tz = r * ca * 2 * Math.PI * coils
+        const tz = r * ca * 2 * Math.PI * safeCoils
         const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1
         const ttx = tx / tlen, tty = ty / tlen, ttz = tz / tlen
         let upx = 0, upy = 1, upz = 0
@@ -4292,7 +4311,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const h = typeof arg(a, 'h', 1, 10) === 'number' ? arg(a, 'h', 1, 10) as number : 10
       const pitch = typeof arg(a, 'pitch', 2, 1.5) === 'number' ? arg(a, 'pitch', 2, 1.5) as number : 1.5
       const depth = typeof arg(a, 'depth', 3, 0.5) === 'number' ? arg(a, 'depth', 3, 0.5) as number : 0.5
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeKnurl(d, h, pitch, depth, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4316,7 +4335,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     case 'loft': {
       const profilesRaw = arg(a, 'profiles', 0, [])
       const heightsRaw = arg(a, 'heights', 1, [])
-      const fn = Math.max(3, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16)
+      const fn = Math.min(MAX_FN, Math.max(3, typeof arg(a, '$fn', -1, 16) === 'number' ? arg(a, '$fn', -1, 16) as number : 16))
       if (!Array.isArray(profilesRaw) || profilesRaw.length < 2) return []
       const profiles: number[][][] = profilesRaw.map((p: any) => {
         if (!Array.isArray(p)) return []
@@ -4357,15 +4376,16 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r1 = arg(a, 'r1', 0, 15) as number
       const r2 = arg(a, 'r2', 1, 5) as number
       const angle = arg(a, 'angle', 2, 360) as number
-      const fn = Math.max(8, arg(a, '$fn', -1, 32) as number)
+      const fn = Math.min(MAX_FN, Math.max(8, arg(a, '$fn', -1, 32) as number))
       const { v, ix } = makeDonut(r1, r2, angle, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'spiral_extrude': {
       const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
       const pitch = typeof arg(a, 'pitch', 1, 5) === 'number' ? arg(a, 'pitch', 1, 5) as number : 5
-      const turns = typeof arg(a, 'turns', 2, 3) === 'number' ? arg(a, 'turns', 2, 3) as number : 3
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const turnsRaw = typeof arg(a, 'turns', 2, 3) === 'number' ? arg(a, 'turns', 2, 3) as number : 3
+      const turns = Math.min(Math.max(turnsRaw, 0), 200) // clamp turns to prevent DoS
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
 
       const childMeshes = evalNodes(ch, identity(), null, vars, modules, echos, callerChildren, annotations)
       if (childMeshes.length === 0) return []
@@ -4376,7 +4396,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
         if (!flat || pts.length < 3) { out.push({ ...childMesh, transform: tf }); continue }
 
         // Build helical path
-        const totalSteps = Math.max(16, Math.floor(fn * turns))
+        const totalSteps = Math.min(20000, Math.max(16, Math.floor(fn * turns)))
         const path: number[][] = []
         for (let i = 0; i <= totalSteps; i++) {
           const angle = (2 * Math.PI * turns * i) / totalSteps
@@ -4505,7 +4525,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       } else {
         lsx = lsy = lsz = 30
       }
-      const fn = Math.max(4, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6)
+      const fn = Math.min(MAX_FN, Math.max(4, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6))
       const { v, ix } = makeLattice(type, cell, r, [lsx, lsy, lsz], fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4543,9 +4563,9 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'fibonacci_sphere': {
-      const count = typeof arg(a, 'count', 0, 50) === 'number' ? Math.max(2, Math.floor(arg(a, 'count', 0, 50) as number)) : 50
+      const count = typeof arg(a, 'count', 0, 50) === 'number' ? Math.min(5000, Math.max(2, Math.floor(arg(a, 'count', 0, 50) as number))) : 50
       const r = typeof arg(a, 'r', 1, 10) === 'number' ? arg(a, 'r', 1, 10) as number : 10
-      const fn = Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8)
+      const fn = Math.min(MAX_FN, Math.max(4, typeof arg(a, '$fn', -1, 8) === 'number' ? arg(a, '$fn', -1, 8) as number : 8))
       const { v, ix } = makeFibonacciSphere(count, r, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4563,7 +4583,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const rx = typeof arg(a, 'rx', 0, 10) === 'number' ? arg(a, 'rx', 0, 10) as number : 10
       const ry = typeof arg(a, 'ry', 1, 8) === 'number' ? arg(a, 'ry', 1, 8) as number : 8
       const rz = typeof arg(a, 'rz', 2, 5) === 'number' ? arg(a, 'rz', 2, 5) as number : 5
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24))
       const { v, ix } = makeEllipsoid(rx, ry, rz, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4572,7 +4592,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const d = arg(a, 'd', -1, undefined)
       if (r == null) r = d != null ? d / 2 : 10
       if (typeof r !== 'number') r = 10
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24))
       const { v, ix } = makeHemisphere(r, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4589,13 +4609,13 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
     case 'ogive': {
       const r = typeof arg(a, 'r', 0, 10) === 'number' ? arg(a, 'r', 0, 10) as number : 10
       const h = typeof arg(a, 'h', 1, 20) === 'number' ? arg(a, 'h', 1, 20) as number : 20
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makeOgive(r, h, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'teardrop': {
       const r = typeof arg(a, 'r', 0, 5) === 'number' ? arg(a, 'r', 0, 5) as number : 5
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 24) === 'number' ? arg(a, '$fn', -1, 24) as number : 24))
       const { v, ix } = makeTeardrop(r, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4604,7 +4624,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const r2 = typeof arg(a, 'r2', 1, 12) === 'number' ? arg(a, 'r2', 1, 12) as number : 12
       const h = typeof arg(a, 'h', 2, 5) === 'number' ? arg(a, 'h', 2, 5) as number : 5
       const center = arg(a, 'center', -1, false) === true
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const { v, ix } = makePipe(h, r1, r2, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
@@ -4613,7 +4633,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       const wall = typeof arg(a, 'wall', 1, 1) === 'number' ? arg(a, 'wall', 1, 1) as number : 1
       const h = typeof arg(a, 'h', 2, 20) === 'number' ? arg(a, 'h', 2, 20) as number : 20
       const center = arg(a, 'center', -1, false) === true
-      const fn = Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32)
+      const fn = Math.min(MAX_FN, Math.max(8, typeof arg(a, '$fn', -1, 32) === 'number' ? arg(a, '$fn', -1, 32) as number : 32))
       const innerR = Math.max(0, r - wall)
       const { v, ix } = makePipe(h, r, innerR, center, fn)
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]

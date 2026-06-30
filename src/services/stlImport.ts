@@ -10,7 +10,14 @@ import type { MeshData } from './openscadParser'
  * Parse a binary STL buffer and return a single-element MeshData array
  * containing all triangles.
  */
+const MAX_STL_TRIANGLES = 5_000_000
+
 export function parseSTL(buffer: ArrayBuffer): MeshData[] {
+  // A valid binary STL must be at least 84 bytes (80 header + 4 count).
+  if (buffer.byteLength < 84) {
+    throw new Error('Invalid or corrupt STL file')
+  }
+
   const view = new DataView(buffer)
 
   // 80-byte header is skipped
@@ -18,10 +25,27 @@ export function parseSTL(buffer: ArrayBuffer): MeshData[] {
 
   // Validate buffer size: 84 header bytes + 50 bytes per triangle
   const expectedSize = 84 + triangleCount * 50
-  if (buffer.byteLength < expectedSize) {
-    throw new Error(
-      `Invalid STL: expected at least ${expectedSize} bytes, got ${buffer.byteLength}`
-    )
+
+  // Reject ASCII STL: starts with "solid" and does not match the binary layout.
+  const head = new Uint8Array(buffer, 0, 5)
+  const isSolid =
+    head[0] === 0x73 && head[1] === 0x6f && head[2] === 0x6c &&
+    head[3] === 0x69 && head[4] === 0x64 // "solid"
+  if (isSolid && buffer.byteLength !== expectedSize) {
+    throw new Error('ASCII STL not supported, please use binary STL')
+  }
+
+  // Validate triangle count: positive finite integer within sane bounds, and
+  // the buffer length must exactly match the declared triangle count. This
+  // prevents a crafted header from requesting a multi-GB allocation.
+  if (
+    !Number.isFinite(triangleCount) ||
+    !Number.isInteger(triangleCount) ||
+    triangleCount <= 0 ||
+    triangleCount > MAX_STL_TRIANGLES ||
+    buffer.byteLength !== expectedSize
+  ) {
+    throw new Error('Invalid or corrupt STL file')
   }
 
   // Each triangle produces 3 unique vertices (STL stores no shared vertices).

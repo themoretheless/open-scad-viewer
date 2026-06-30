@@ -9,8 +9,21 @@ import { export3MF } from './services/threemfExport'
 import { parseSTL } from './services/stlImport'
 import { exportAllTabsAsZip } from './services/zipExport'
 
-const lang = ref<'ru'|'en'|'de'|'zh'>((localStorage.getItem('scad-lang') as any) || 'ru')
+const savedLang = localStorage.getItem('scad-lang')
+const lang = ref<'ru'|'en'|'de'|'zh'>(['ru','en','de','zh'].includes(savedLang as any) ? (savedLang as 'ru'|'en'|'de'|'zh') : 'ru')
 const isDark = ref(true)
+
+/* ── Security helpers ── */
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+function escapeAttr(s: string): string { return escapeHtml(s) }
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback
+  try { const v = JSON.parse(raw); return (v ?? fallback) as T } catch { return fallback }
+}
 
 /* ── Editor Themes ── */
 interface EditorTheme {
@@ -140,6 +153,7 @@ const L: Record<string, Record<string, string>> = {
     exportStl: 'Экспорт STL',
     share: 'Поделиться',
     copied: 'Скопировано!',
+    shareInvalid: 'Недопустимая ссылка общего доступа',
     recent: 'Недавние',
     noRecent: 'Нет недавних файлов',
     newTab: 'Новая вкладка',
@@ -852,6 +866,7 @@ const L: Record<string, Record<string, string>> = {
     exportStl: 'Export STL',
     share: 'Share',
     copied: 'Copied!',
+    shareInvalid: 'Invalid share link',
     recent: 'Recent',
     noRecent: 'No recent files',
     newTab: 'New tab',
@@ -1550,6 +1565,7 @@ const L: Record<string, Record<string, string>> = {
     exportPng: '导出PNG',
     share: '分享',
     copied: '已复制!',
+    shareInvalid: '无效的分享链接',
     undo: '撤销',
     commandPalette: '命令面板',
     wordWrap: '自动换行',
@@ -1741,13 +1757,8 @@ function generateTabId(): string {
 }
 
 function loadTabsFromStorage(): EditorTab[] {
-  try {
-    const raw = localStorage.getItem('scad-tabs')
-    if (raw) {
-      const parsed = JSON.parse(raw) as EditorTab[]
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-  } catch { /* ignore */ }
+  const parsed = safeParse<EditorTab[]>(localStorage.getItem('scad-tabs'), [])
+  if (Array.isArray(parsed) && parsed.length > 0) return parsed
   // Migrate from old single-code storage
   const oldCode = localStorage.getItem('scad-code')
   const initialCode = oldCode || EXAMPLES.basic
@@ -2306,11 +2317,8 @@ const BUILT_IN_PRESETS: Record<string, ViewerPreset> = {
 }
 
 function loadUserPresets(): Record<string, ViewerPreset> {
-  try {
-    const raw = localStorage.getItem('scad-user-presets')
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return {}
+  const parsed = safeParse<Record<string, ViewerPreset>>(localStorage.getItem('scad-user-presets'), {})
+  return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}
 }
 
 const userPresets = ref<Record<string, ViewerPreset>>(loadUserPresets())
@@ -2435,11 +2443,8 @@ const MAX_HISTORY_ENTRIES = 20
 const HISTORY_STORAGE_KEY = 'scad-tab-history'
 
 function loadHistories(): Record<string, TabHistoryEntry[]> {
-  try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return {}
+  const parsed = safeParse<Record<string, TabHistoryEntry[]>>(localStorage.getItem(HISTORY_STORAGE_KEY), {})
+  return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}
 }
 
 function saveHistories(h: Record<string, TabHistoryEntry[]>) {
@@ -3018,7 +3023,7 @@ function printCode() {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <title>${tabName} - OpenSCAD</title>
+  <title>${escapeHtml(tabName)} - OpenSCAD</title>
   <style>
     body { font-family: 'Courier New', monospace; font-size: 11pt; margin: 20px; }
     h2 { font-family: sans-serif; margin-bottom: 4px; }
@@ -3031,8 +3036,8 @@ function printCode() {
   </style>
 </head>
 <body>
-  <h2>${tabName}</h2>
-  <div class="meta">${now}</div>
+  <h2>${escapeHtml(tabName)}</h2>
+  <div class="meta">${escapeHtml(now)}</div>
   <table>${lineNumbered}</table>
   <script>window.print();<\/script>
 </body>
@@ -3072,13 +3077,24 @@ function shareLink() {
 function loadFromHash() {
   const hash = window.location.hash
   if (hash.startsWith('#code=')) {
+    let decoded: string
     try {
       const encoded = hash.slice(6)
-      const decoded = decodeURIComponent(atob(encoded))
-      code.value = decoded
-      // Clear hash after loading
+      decoded = decodeURIComponent(atob(encoded))
+    } catch {
+      addToast(t('shareInvalid'), 'error')
       history.replaceState(null, '', window.location.pathname)
-    } catch { /* ignore invalid hash */ }
+      return
+    }
+    if (decoded.length > 1_000_000) {
+      addToast(t('shareInvalid'), 'error')
+      history.replaceState(null, '', window.location.pathname)
+      return
+    }
+    // Only assign after successful validation
+    code.value = decoded
+    // Clear hash after loading
+    history.replaceState(null, '', window.location.pathname)
   }
 }
 
@@ -3093,12 +3109,8 @@ const recentFiles = ref<RecentEntry[]>([])
 const showRecent = ref(false)
 
 function loadRecentFiles() {
-  try {
-    const raw = localStorage.getItem('scad-recent')
-    if (raw) {
-      recentFiles.value = JSON.parse(raw) as RecentEntry[]
-    }
-  } catch { /* ignore */ }
+  const parsed = safeParse<RecentEntry[]>(localStorage.getItem('scad-recent'), [])
+  recentFiles.value = Array.isArray(parsed) ? parsed : []
 }
 
 function saveRecentFiles() {
@@ -5565,14 +5577,14 @@ function printShortcuts() {
   if (!el) return
   const win = window.open('', '_blank', 'width=600,height=800')
   if (!win) return
-  win.document.write(`<!DOCTYPE html><html><head><title>${t('shortcutsTitle')}</title><style>
+  win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(t('shortcutsTitle'))}</title><style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #222; }
     h1 { font-size: 1.3rem; margin-bottom: 16px; }
     .shortcut-category { font-weight: 700; font-size: 0.9rem; margin-top: 16px; margin-bottom: 6px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
     .shortcut-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.85rem; border-bottom: 1px solid #eee; }
     kbd { background: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 1px 6px; font-size: 0.78rem; font-family: monospace; }
     @media print { body { padding: 0; } }
-  </style></head><body><h1>${t('shortcutsTitle')}</h1>${el.innerHTML}</body></html>`)
+  </style></head><body><h1>${escapeHtml(t('shortcutsTitle'))}</h1>${el.innerHTML}</body></html>`)
   win.document.close()
   win.focus()
   setTimeout(() => { win.print() }, 300)
@@ -5975,7 +5987,7 @@ function generateSpecSheet() {
 
   const win = window.open('', '_blank', 'width=800,height=900')
   if (!win) return
-  win.document.write(`<!DOCTYPE html><html><head><title>${t('specSheet')} - ${modelName}</title>
+  win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(t('specSheet'))} - ${escapeHtml(modelName)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #222; max-width: 800px; margin: 0 auto; }
   h1 { font-size: 1.5rem; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; }
@@ -5988,8 +6000,8 @@ function generateSpecSheet() {
   .spec-footer { margin-top: 24px; font-size: 0.75rem; color: #999; border-top: 1px solid #eee; padding-top: 8px; }
   @media print { body { padding: 16px; } .spec-code { max-height: none; } }
 </style></head><body>
-<h1>${modelName}</h1>
-${screenshotDataUrl ? `<img class="spec-screenshot" src="${screenshotDataUrl}" alt="3D Model" />` : ''}
+<h1>${escapeHtml(modelName)}</h1>
+${screenshotDataUrl ? `<img class="spec-screenshot" src="${escapeAttr(screenshotDataUrl)}" alt="3D Model" />` : ''}
 <div class="spec-grid">
   <div class="spec-item"><span class="spec-label">${t('specDimensions')}</span><span class="spec-value">${formatNumber(dims[0])} x ${formatNumber(dims[1])} x ${formatNumber(dims[2])} mm</span></div>
   <div class="spec-item"><span class="spec-label">${t('specTriangles')}</span><span class="spec-value">${fmtInt(tris)}</span></div>
@@ -5999,8 +6011,8 @@ ${screenshotDataUrl ? `<img class="spec-screenshot" src="${screenshotDataUrl}" a
   <div class="spec-item"><span class="spec-label">${t('specWeight')}</span><span class="spec-value">${formatNumber(weight)}</span></div>
 </div>
 <h3>${t('specSourceCode')}</h3>
-<div class="spec-code">${codeText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-<div class="spec-footer">${t('specGenerated')}: ${now}</div>
+<div class="spec-code">${escapeHtml(codeText)}</div>
+<div class="spec-footer">${escapeHtml(t('specGenerated'))}: ${escapeHtml(now)}</div>
 </body></html>`)
   win.document.close()
   win.focus()
@@ -6080,7 +6092,7 @@ interface CustomTheme {
   text: string
   accent: string
 }
-const customThemes = ref<CustomTheme[]>(JSON.parse(localStorage.getItem('scad-custom-themes') || '[]'))
+const customThemes = ref<CustomTheme[]>((() => { const v = safeParse<CustomTheme[]>(localStorage.getItem('scad-custom-themes'), []); return Array.isArray(v) ? v : [] })())
 const customThemeName = ref('')
 const customThemeBg = ref('#1a1a2e')
 const customThemeSurface = ref('#16213e')
@@ -7574,11 +7586,8 @@ interface CameraBookmark {
 }
 
 function loadBookmarks(): CameraBookmark[] {
-  try {
-    const raw = localStorage.getItem('scad-bookmarks')
-    if (raw) return JSON.parse(raw) as CameraBookmark[]
-  } catch { /* ignore */ }
-  return []
+  const parsed = safeParse<CameraBookmark[]>(localStorage.getItem('scad-bookmarks'), [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 const cameraBookmarks = ref<CameraBookmark[]>(loadBookmarks())
@@ -7996,14 +8005,8 @@ const showSnapshotGallery = ref(false)
 const snapshotPreview = ref<string | null>(null)
 
 function loadSnapshots(): Snapshot[] {
-  try {
-    const raw = localStorage.getItem(SNAPSHOT_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Snapshot[]
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch { /* ignore */ }
-  return []
+  const parsed = safeParse<Snapshot[]>(localStorage.getItem(SNAPSHOT_KEY), [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function saveSnapshots() {
@@ -8110,36 +8113,29 @@ function saveSessionBackup() {
 }
 
 function checkSessionRestore() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return
-    const backup = JSON.parse(raw) as SessionBackup
-    // Only show restore if backup is less than 24 hours old and differs from current tabs
-    const age = Date.now() - (backup.timestamp || 0)
-    if (age > 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(SESSION_KEY)
-      return
-    }
-    // Check if backup differs from current state
-    const currentTabIds = tabs.value.map(tb => tb.id).join(',')
-    const backupTabIds = backup.tabs.map(tb => tb.id).join(',')
-    if (currentTabIds === backupTabIds) return
-    showSessionRestore.value = true
-  } catch { /* ignore */ }
+  const backup = safeParse<SessionBackup | null>(localStorage.getItem(SESSION_KEY), null)
+  if (!backup || !Array.isArray(backup.tabs)) return
+  // Only show restore if backup is less than 24 hours old and differs from current tabs
+  const age = Date.now() - (backup.timestamp || 0)
+  if (age > 24 * 60 * 60 * 1000) {
+    localStorage.removeItem(SESSION_KEY)
+    return
+  }
+  // Check if backup differs from current state
+  const currentTabIds = tabs.value.map(tb => tb.id).join(',')
+  const backupTabIds = backup.tabs.map(tb => tb.id).join(',')
+  if (currentTabIds === backupTabIds) return
+  showSessionRestore.value = true
 }
 
 function restoreSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return
-    const backup = JSON.parse(raw) as SessionBackup
-    if (backup.tabs && backup.tabs.length > 0) {
-      tabs.value = backup.tabs
-      activeTabId.value = backup.activeTabId || backup.tabs[0].id
-      saveTabs()
-      doRender()
-    }
-  } catch { /* ignore */ }
+  const backup = safeParse<SessionBackup | null>(localStorage.getItem(SESSION_KEY), null)
+  if (backup && Array.isArray(backup.tabs) && backup.tabs.length > 0) {
+    tabs.value = backup.tabs
+    activeTabId.value = backup.activeTabId || backup.tabs[0].id
+    saveTabs()
+    doRender()
+  }
   showSessionRestore.value = false
   localStorage.removeItem(SESSION_KEY)
 }
@@ -8209,11 +8205,8 @@ function doRenderAllTabs() {
 const showShortcutEditor = ref(false)
 
 function loadCustomBindings(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem('scad-custom-bindings')
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return {}
+  const parsed = safeParse<Record<string, string>>(localStorage.getItem('scad-custom-bindings'), {})
+  return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}
 }
 
 const customBindings = ref<Record<string, string>>(loadCustomBindings())
@@ -8276,11 +8269,9 @@ function resetAllBindings() {
 
 /* -- Feature: Screenshot Metadata -- */
 function loadScreenshotMeta(): { modelName: boolean, dimensions: boolean, triangles: boolean, date: boolean } {
-  try {
-    const raw = localStorage.getItem('scad-screenshot-meta')
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return { modelName: true, dimensions: true, triangles: true, date: true }
+  const fallback = { modelName: true, dimensions: true, triangles: true, date: true }
+  const parsed = safeParse<typeof fallback>(localStorage.getItem('scad-screenshot-meta'), fallback)
+  return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : fallback
 }
 
 const screenshotMeta = ref(loadScreenshotMeta())
