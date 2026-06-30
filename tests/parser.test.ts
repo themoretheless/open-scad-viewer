@@ -220,4 +220,26 @@ describe('parseOpenSCADWithAST shape', () => {
     expect(res.meshes.length).toBeGreaterThanOrEqual(1)
     expect(totalTriangles(res.meshes)).toBeGreaterThan(0)
   })
+
+  // Regression: multi-variable `for` Cartesian product must be bounded so it
+  // can't schedule billions of iterations and hang the tab.
+  it('bounds a huge Cartesian for loop without hanging', () => {
+    const start = Date.now()
+    const meshes = parseOpenSCAD('for(x=[0:9999], y=[0:9999]) cube(1);')
+    // The oversized loop is rejected (per-node error recovery), not expanded.
+    expect(Array.isArray(meshes)).toBe(true)
+    expect(Date.now() - start).toBeLessThan(2000)
+  })
+
+  // A modest nested loop still works.
+  it('evaluates a small nested for loop', () => {
+    const meshes = parseOpenSCAD('for(x=[0:1], y=[0:1]) translate([x*5,y*5,0]) cube(1);')
+    expect(meshes.length).toBe(4)
+  })
+
+  // Regression: a /0 expression yields a non-finite dimension; it must not
+  // produce NaN that breaks downstream consumers — parser stays alive.
+  it('handles division-by-zero dimensions without crashing', () => {
+    expect(() => parseOpenSCAD('cube(5/0);')).not.toThrow()
+  })
 })

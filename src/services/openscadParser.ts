@@ -3695,6 +3695,13 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       if (loopVars.length === 0) {
         return evalNodes(ch, tf, col, vars, modules, echos, callerChildren, annotations)
       }
+      // Bound the Cartesian product so nested ranges can't blow up:
+      // for(x=[0:9999], y=[0:9999]) would otherwise schedule 1e8 iterations.
+      let totalIterations = 1
+      for (const lv of loopVars) totalIterations *= lv.values.length
+      if (totalIterations > 100000) {
+        throw new Error('for loop too large (>100000 iterations)')
+      }
       // Recursively walk the Cartesian product of all loop variables.
       const walk = (idx: number, accVars: Record<string, any>) => {
         if (idx >= loopVars.length) {

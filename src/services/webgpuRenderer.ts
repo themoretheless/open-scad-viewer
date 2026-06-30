@@ -651,12 +651,15 @@ export class WebGPURenderer {
         const px = t[0] * x + t[1] * y + t[2] * z + t[3]
         const py = t[4] * x + t[5] * y + t[6] * z + t[7]
         const pz = t[8] * x + t[9] * y + t[10] * z + t[11]
+        // Skip non-finite coords (e.g. a model dimension from a /0 expression)
+        // so a single bad mesh can't poison the whole scene's bounds with NaN.
+        if (!Number.isFinite(px) || !Number.isFinite(py) || !Number.isFinite(pz)) continue
         mnx = Math.min(mnx, px); mxx = Math.max(mxx, px)
         mny = Math.min(mny, py); mxy = Math.max(mxy, py)
         mnz = Math.min(mnz, pz); mxz = Math.max(mxz, pz)
       }
     }
-    if (!meshes.length) {
+    if (!meshes.length || !Number.isFinite(mnx)) {
       this.boundsMin = [0, 0, 0]
       this.boundsMax = [0, 0, 0]
     } else {
@@ -677,11 +680,15 @@ export class WebGPURenderer {
         const px = t[0]*x+t[1]*y+t[2]*z+t[3]
         const py = t[4]*x+t[5]*y+t[6]*z+t[7]
         const pz = t[8]*x+t[9]*y+t[10]*z+t[11]
+        if (!Number.isFinite(px) || !Number.isFinite(py) || !Number.isFinite(pz)) continue
         mnx = Math.min(mnx,px); mxx = Math.max(mxx,px)
         mny = Math.min(mny,py); mxy = Math.max(mxy,py)
         mnz = Math.min(mnz,pz); mxz = Math.max(mxz,pz)
       }
     }
+    // If no finite vertices were found, keep the current camera rather than
+    // setting NaN target/distance (which would break the whole viewport).
+    if (!Number.isFinite(mnx)) return
     this.tx = (mnx+mxx)/2; this.ty = (mny+mxy)/2; this.tz = (mnz+mxz)/2
     this.dist = Math.max(Math.max(mxx-mnx, mxy-mny, mxz-mnz) * 1.8, 5)
   }

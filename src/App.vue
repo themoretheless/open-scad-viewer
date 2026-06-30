@@ -5102,6 +5102,10 @@ function doRender() {
     // Mesh generation (post-parse CPU work preparing meshes, before GPU upload).
     perfMeshGenTime.value = Math.round(tMeshStart - tParsed)
     perfGpuUploadTime.value = Math.round(tMeshEnd - tMeshStart)
+    // Bounds change only on re-render; keep boundsSize fresh here so the
+    // always-visible footer dimensions, spec sheet, and screenshot metadata
+    // are correct even when the Statistics/Performance panels are closed.
+    boundsSize.value = renderer.getBounds().size
     const t1 = performance.now()
     renderTime.value = Math.round(t1 - t0)
     // Adaptive quality warnings (warn once per crossing into the heavy range)
