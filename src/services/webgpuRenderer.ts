@@ -1611,7 +1611,9 @@ export class WebGPURenderer {
     if ((this.showOutline || this.toonShading) && this.renderMode !== 'wireframe') {
       pass.setPipeline(this.outlinePipe)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -1623,10 +1625,26 @@ export class WebGPURenderer {
     // Render mode dispatch (same logic as render())
     if (this.renderMode === 'wireframe') {
       // wireframe only
+    } else if (this.renderMode === 'hidden-line') {
+      // hidden-line: render meshes in background color to occlude, then edges on top
+      pass.setPipeline(this.meshPipe)
+      pass.setBindGroup(0, this.sceneBG)
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
+        // Temporarily write clear color to mesh UB for occlusion
+        this.dev.queue.writeBuffer(g.ub, 128, new Float32Array([this.clearR, this.clearG, this.clearB, 1.0]))
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
     } else if (this.renderMode === 'xray') {
       pass.setPipeline(this.meshPipeT)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
         pass.setIndexBuffer(g.ib, 'uint32')
@@ -1635,7 +1653,9 @@ export class WebGPURenderer {
     } else {
       pass.setPipeline(this.meshPipe)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -1644,7 +1664,9 @@ export class WebGPURenderer {
       }
       pass.setPipeline(this.meshPipeT)
       pass.setBindGroup(0, this.sceneBG)
-      for (const g of this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
+        if (this.meshVisibility[i] === false) continue
+        const g = this.meshes[i]
         if (!g.transp) continue
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -1669,6 +1691,14 @@ export class WebGPURenderer {
     }
     pass.end()
     this.dev.queue.submit([enc.finish()])
+
+    // Restore original colors after hidden-line render
+    if (this.renderMode === 'hidden-line' && this.lastRawMeshes.length > 0) {
+      for (let i = 0; i < this.meshes.length && i < this.lastRawMeshes.length; i++) {
+        const raw = this.lastRawMeshes[i]
+        this.dev.queue.writeBuffer(this.meshes[i].ub, 128, new Float32Array(raw.color))
+      }
+    }
 
     // Restore original model matrices after exploded view in scaled render
     if (this.explodeFactor > 0 && this.lastRawMeshes.length > 0 && this.meshes.length > 0) {
