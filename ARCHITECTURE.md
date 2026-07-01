@@ -93,18 +93,18 @@ State persists to `localStorage` (tabs, preferences, theme, bookmarks, snapshots
 
 ## Known Limitations
 
-> A full 500-item defect catalog is in [ISSUES.md](./ISSUES.md), with the 50 most severe in [TOP-50-ISSUES.md](./TOP-50-ISSUES.md). The items below are the geometry-correctness subset.
+> A full 500-item defect catalog is in [ISSUES.md](./ISSUES.md), with the 50 most severe in [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (now on its second audit pass). The items below are the geometry-correctness subset.
 
-- **CSG is visual, not boolean.** `difference`/`intersection` do not compute true mesh booleans; subtracted bodies are shown translucent. `hull` is a real 3D convex hull; `minkowski` is a pass-through.
-- **`linear_extrude` / `rotate_extrude` / `offset` / `projection`** are approximations.
+- **CSG is visual, not boolean.** `difference`/`intersection` do not compute true mesh booleans; subtracted bodies are shown translucent (an in-UI "CSG: visual preview" badge makes this honest to the user). `hull` is a real 3D convex hull — though Pass 2 found its horizon-edge detection has a logic bug that can produce non-convex/self-intersecting hulls (see TOP-50 #16); `minkowski` is a pass-through.
+- **`linear_extrude` / `rotate_extrude` / `offset` / `projection`** are approximations; `linear_extrude`'s `twist` is also unbounded (TOP-50 #12), and `torus`/`donut` divide by `r1` with no zero-guard, which hangs the tab (TOP-50 #4, #5).
 - **`fillet` / `chamfer`** operations are pass-throughs that log a note.
-- Parser uses some module-level mutable state (not Web-Worker-ready yet).
+- Parser still uses module-level mutable state (`cIdx`, `_resolveFile`, `_profiling`, …) — not Web-Worker-ready yet, and re-entrant parses can corrupt each other's state (TOP-50 #22).
 
 ---
 
 ## Planned Refactor (modularity & loose coupling)
 
-`App.vue` (~14k lines), `openscadParser.ts` (~4.7k), and `webgpuRenderer.ts` (~2.4k) are monoliths. The target structure, derived from a 10-perspective architecture audit, is summarized below. The **actionable checklist with priorities and exit criteria** lives in [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) — the phases here map 1:1 to it.
+`App.vue` (~15.0k lines), `openscadParser.ts` (~4.8k), and `webgpuRenderer.ts` (~2.5k) are monoliths. The target structure, derived from a 10-perspective architecture audit, is summarized below. The **actionable checklist with priorities and exit criteria** lives in [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) — the phases here map 1:1 to it.
 
 ### Phase 1 — Decompose `App.vue`
 ```

@@ -1,3 +1,13 @@
+# Recommendations (superseded — kept for history)
+
+> **This file is stale and no longer maintained.** It predates the doc restructuring and has not been updated since. For the current, actively-synced documents, see:
+> - [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — the current severity-ranked top-50 (now on its second audit pass)
+> - [ISSUES.md](./ISSUES.md) — the full 500-item defect catalog
+> - [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) — the actionable phased roadmap
+> - [ARCHITECTURE.md](./ARCHITECTURE.md) — current design + known limitations
+>
+> Most of the "Top 50" and "Additional 200"/"Top 200" items below have since been superseded, re-numbered, or fixed; treat this file as a historical snapshot from an earlier pass, not a live backlog.
+
 # Recommendations
 
 This document catalogs the most serious problems in the current implementation of the OpenSCAD WebGPU Viewer.
