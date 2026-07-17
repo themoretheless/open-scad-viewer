@@ -1,134 +1,120 @@
-# OpenSCAD 3D Viewer
+# OpenSCAD Viewer
 
-Web-based OpenSCAD editor and viewer using WebGPU for fast, native-quality 3D rendering directly in the browser.
+A client-side OpenSCAD workspace built with Vue, WebGPU, and the
+[Manifold](https://github.com/elalish/manifold) geometry kernel. It is designed
+as a fast, independent subset viewer: supported operations produce
+real geometry, while unsupported OpenSCAD syntax returns a line/column error
+instead of a misleading preview.
 
-No installation. No server. Just open the page and start modeling.
+## Highlights
 
-## Features (Current)
+- Real manifold `union()`, `difference()`, `intersection()`, and `hull()`.
+- Variables, expressions, ranges, `for`, `if`, `let`, user modules, and
+  `children()`.
+- 3D primitives, 2D shapes, `linear_extrude()`, `rotate_extrude()`,
+  `projection()`, transforms, colors, and polyhedra.
+- Cancellable preview → full geometry compilation in a dedicated Worker with
+  stale-result protection, source/AST/tessellation budgets, and transferable
+  mesh, semantic-edge, provenance, and BVH buffers.
+- Z-up WebGPU viewport with BVH-accelerated preselection/picking, point/face/
+  body selection modes, focus/isolate/hide, shaded/semantic-edge/x-ray display,
+  an interactive view cube, fit/reset, standard views, grid control,
+  perspective/orthographic projection, and event-driven redraw.
+- Plasticity-inspired searchable command palette, Scene Outliner, Inspect
+  workspace, source ↔ CSG cross-highlighting, two-point measurements, virtual
+  section analysis, and viewport-scoped shortcuts.
+- Lightweight OpenSCAD Customizer controls for top-level literal variables,
+  including `// [min:step:max]` sliders and choice lists.
+- Binary STL and OBJ export with object transforms baked into the result.
+- Open/save/drag-and-drop `.scad` files, shareable source links, local draft
+  persistence, RU/EN UI, light/dark themes, and a resizable workspace.
+- Strict diagnostics and tests for booleans, transforms, modules, loops,
+  extrusion, projection math, and all bundled examples.
 
-- Live editing of a useful subset of OpenSCAD
-- Primitives: cube, sphere, cylinder (with r1/r2)
-- Transforms: translate, rotate, scale, mirror, multmatrix
-- CSG: union, difference, intersection (visual approximation)
-- Color assignment
-- Orbit camera, panning, zoom with mouse
-- Automatic camera fit
-- Grid + axis helpers
-- Bilingual interface (Russian / English)
-- Dark and light themes
-- Persistent code in localStorage
-- Four built-in examples
+## Run locally
 
-## Quick Start
-
-1. Open the app
-2. Edit the code on the left
-3. Changes render automatically (or press Ctrl/Cmd + Enter)
-4. Drag with left mouse to rotate, right mouse or Shift to pan, wheel to zoom
-
-Supported browsers: recent Chrome, Edge, or Firefox Nightly with WebGPU enabled.
-
-## Examples
-
-Load any of the built-in examples from the toolbar:
-- Basic primitives
-- CSG operations (difference shown with translucent red)
-- Simple house
-- Decorative tower
-
-## Current Limitations
-
-The parser implements only a small useful subset of OpenSCAD. Variables, loops, user modules, complex expressions, and many built-ins are not yet supported. CSG operations are visualized rather than producing true boolean geometry.
-
-**250 historical problems + fresh Top 200 Ideas, Suggestions and Problems.** See the full prioritized analysis:
-
-- [recommendation.md](recommendation.md)
-
-For accurate results and full language support use the official OpenSCAD application.
-
-## Roadmap & Ideas
-
-Hundreds of improvements are possible. See:
-- [architecture.md](architecture.md) for architecture + original 200 ideas
-- [recommendation.md](recommendation.md) for 250 historical problems + **new Top 200 Ideas, Suggestions and Problems** (prioritized mix, June 2026)
-
-The latest prioritized backlog lives in recommendation.md.
-
-Here are some highlighted directions:
-
-### Language & Parser
-- Full expression engine, variables, for-loops, if, user modules and functions
-- Real `hull()`, `minkowski()`, `linear_extrude` with twist, `rotate_extrude`
-- 2D primitives + `polygon`, `polyhedron`, `text`, `surface`
-- `import()` for STL/OBJ and `projection()`
-- Proper scoped `let()`, `$fn`/`$fa`/`$fs`, special variables, echo/assert
-
-### Real CSG & Geometry
-- Replace visual-only difference with true boolean operations
-- Mesh healing, manifold checks, volume/surface calculations
-- High-quality normals, vertex welding, better curved tessellation
-
-### Editor Experience
-- Replace textarea with Monaco or CodeMirror + full syntax highlighting
-- Autocomplete, hover docs, snippets, formatter
-- Customizer panel auto-generated from variables
-- Multi-file support and project sidebar
-- Inline error squiggles with accurate source locations
-
-### Rendering & Visualization
-- Shadows, SSAO, multiple lights, PBR materials
-- Wireframe + shaded modes, section planes, exploded views
-- High-quality transparency
-- Measurement tools, view cube, preset cameras, orthographic mode
-- Animation timeline and video/GIF export
-
-### Export & Workflow
-- Export STL, glTF/GLB, OBJ, 3MF, high-res PNG
-- Import existing meshes
-- Print preparation helpers (supports preview, bed visualization)
-- "Send to slicer" integration
-
-### Architecture & Quality
-- Parser and mesh generation in a Web Worker
-- Incremental evaluation and caching
-- Real test suite (parser + visual regression)
-- CI, coverage, accessibility
-- Publish reusable parser and web component packages
-
-### Platforms & Ecosystem
-- PWA + offline support
-- Desktop apps (Tauri)
-- VS Code extension
-- Shareable links (code in URL)
-- Public model gallery
-- AI-assisted modeling (prompt → SCAD)
-
-See [architecture.md](architecture.md) for the complete numbered list of 200 ideas covering parser, renderer, UI, testing, distribution, advanced features and blue-sky directions.
-
-## Development
+Requirements: Node.js 20.19+ and a browser with WebGPU.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Build:
+Quality gate:
+
+```bash
+npm run check
+```
+
+Production preview:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Contributing
+## Controls
 
-Ideas, issues, and pull requests are welcome.
+- Left drag: orbit.
+- Right drag or Shift + left drag: pan.
+- Mouse wheel: zoom.
+- Hover: preselect the nearest surface through the mesh BVH.
+- Click without dragging: select the exact surface and its source operation.
+- `1`, `3`, `4`: point, face, and body selection modes.
+- `Shift + M`: cycle selection modes (`Tab` keeps normal keyboard focus traversal).
+- `F` or `/`: focus the selection, or fit the model when nothing is selected.
+- `.`: isolate/unisolate the selected object.
+- `H`: hide the selected object; use the Outliner to show it again.
+- `Esc`: clear selection.
+- `E`, `X`, `G`: toggle mesh edges, x-ray, and grid.
+- `5`: toggle perspective/orthographic projection.
+- Numpad `0`, `1`, `3`, `7`: isometric, front, right, and top views.
+- `Ctrl/⌘ + =`: start/cancel a two-point measurement.
+- `Shift + F`: flip an active section plane.
+- `Ctrl/⌘ + K`: open the command palette.
+- `Ctrl/⌘ + Shift + B`: toggle the Scene/Inspect/Parameters dock.
+- `Ctrl/⌘ + Enter`: render.
 
-Before submitting large changes, consider skimming the 200-item list in architecture.md to avoid duplicating effort and to pick high-impact items.
+## Supported subset and limits
 
-## License
+This project does **not** bundle the official OpenSCAD compiler. The official
+WASM runtime is the best route to full OpenSCAD compatibility, but bundling it
+introduces GPL-2.0+ licensing requirements. This viewer instead uses the
+Apache-2.0 `manifold-3d` package and implements a strict language subset.
 
-MIT (or your preferred license — add it here).
+Currently unsupported features include `include`/`use`, user functions,
+`import()`, `surface()`, `text()`, Minkowski operations, and advanced OpenSCAD
+Customizer annotations. These fail explicitly. Complexity is bounded to protect
+the browser: source length, AST size, recursion, range size, object count,
+`$fn`, and final triangle count all have limits.
 
-## Credits
+## Architecture
 
-Built as a compact demonstration of WebGPU + a hand-written OpenSCAD subset parser and evaluator.
+- `src/services/openscadParser.ts`: lexer, expression/statement parser,
+  evaluator, Manifold geometry conversion, diagnostics, and budgets.
+- `src/workers/geometry.worker.ts`: asynchronous compilation and transferable
+  mesh response protocol.
+- `src/services/webgpuRenderer.ts`: WebGPU resource lifecycle, lighting,
+  camera, BVH picking/preselection, measurement and section overlays, grid,
+  input, resize, and event-driven rendering.
+- `src/services/meshBvh.ts`: compact transferable triangle BVH and raycast.
+- `src/services/meshTopology.ts`: boundary/crease/non-manifold edge extraction.
+- `src/services/meshInspection.ts`: provenance, bounds, hit, and measurement
+  helpers.
+- `src/components/`: command palette, ViewCube, Scene Outliner, Inspect, and
+  Customizer panels.
+- `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
+  viewer controls.
+- `tests/`: mathematical and geometry golden tests.
+
+The implementation priorities came from two reproducible, non-overlapping
+comparisons covering 200 OpenSCAD, CAD, mesh, and 3D-viewer repositories. See
+[the benchmark](docs/research/top-100-repositories.md).
+The follow-up UI pass is documented in
+[Plasticity interaction patterns](docs/research/plasticity-patterns.md).
+The second independent benchmark adds
+[100 non-overlapping repositories](docs/research/top-100-repositories-second.md),
+while the [geometry literature review](docs/research/geometry-pipeline-literature.md),
+[CAD/HCI review](docs/research/cad-hci-literature.md), and
+[prioritized roadmap](docs/research/second-pass-recommendations.md) document the
+next evidence-backed implementation candidates.

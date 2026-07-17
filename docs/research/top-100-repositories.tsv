@@ -1,0 +1,100 @@
+mrdoob/three.js	113711	https://github.com/mrdoob/three.js	false	false	2026-07-13T16:30:07Z	MIT	JavaScript 3D Library.
+FreeCAD/FreeCAD	32096	https://github.com/FreeCAD/FreeCAD	false	false	2026-07-13T20:28:29Z	LGPL-2.1	Official source code of FreeCAD, a free and opensource multiplatform 3D parametric modeler.
+pmndrs/react-three-fiber	31417	https://github.com/pmndrs/react-three-fiber	false	false	2026-07-08T07:13:52Z	MIT	🇨🇭 A React renderer for Three.js
+BabylonJS/Babylon.js	25786	https://github.com/BabylonJS/Babylon.js	false	false	2026-07-13T12:24:42Z	Apache-2.0	Babylon.js is a powerful, beautiful, simple, and open game and rendering engine packed into a friendly JavaScript framework.
+google/filament	20250	https://github.com/google/filament	false	false	2026-07-13T20:33:24Z	Apache-2.0	Filament is a real-time physically based rendering engine for Android, iOS, Windows, Linux, macOS, and WebGL2
+playcanvas/engine	16234	https://github.com/playcanvas/engine	false	false	2026-07-10T21:17:38Z	MIT	Powerful web graphics runtime built on WebGL, WebGPU, WebXR and glTF
+CesiumGS/cesium	15460	https://github.com/CesiumGS/cesium	false	false	2026-07-13T18:38:09Z	Apache-2.0	An open-source JavaScript library for world-class 3D globes and maps :earth_americas:
+assimp/assimp	13054	https://github.com/assimp/assimp	false	false	2026-07-10T09:20:13Z	NOASSERTION	The official Open-Asset-Importer-Library Repository. Loads 40+ 3D-file-formats into one unified and clean data structure.
+openscad/openscad	9826	https://github.com/openscad/openscad	false	false	2026-07-13T20:49:07Z	NOASSERTION	OpenSCAD - The Programmers Solid 3D CAD Modeller
+pmndrs/drei	9737	https://github.com/pmndrs/drei	false	false	2026-03-23T19:31:26Z	MIT	🥉 useful helpers for react-three-fiber
+prusa3d/PrusaSlicer	9175	https://github.com/prusa3d/PrusaSlicer	false	false	2026-06-25T20:49:52Z	AGPL-3.0	G-code generator for 3D printers (RepRap, Makerbot, Ultimaker etc.)
+zeux/meshoptimizer	8191	https://github.com/zeux/meshoptimizer	false	false	2026-07-13T19:56:51Z	MIT	Mesh optimization library that makes meshes smaller and faster to render
+google/model-viewer	8160	https://github.com/google/model-viewer	false	false	2026-07-07T21:23:39Z	Apache-2.0	Easily display interactive 3D models on the web and in AR!
+KhronosGroup/glTF	7785	https://github.com/KhronosGroup/glTF	false	false	2026-07-13T16:18:09Z	NOASSERTION	glTF – Runtime 3D Asset Delivery
+google/draco	7400	https://github.com/google/draco	false	false	2026-07-01T20:31:57Z	Apache-2.0	Draco is a library for compressing and decompressing 3D geometric meshes and point clouds. It is intended to improve the storage and transmission of 3D graphics.
+Ultimaker/Cura	6996	https://github.com/Ultimaker/Cura	false	false	2026-07-13T11:32:52Z	LGPL-3.0	3D printer / slicing GUI built on top of the Uranium framework
+pmndrs/gltfjsx	5818	https://github.com/pmndrs/gltfjsx	false	false	2024-11-04T16:51:26Z	MIT	🎮 Turns GLTFs into JSX components
+cnr-isti-vclab/meshlab	5752	https://github.com/cnr-isti-vclab/meshlab	false	false	2026-06-08T07:32:08Z	GPL-3.0	The open source mesh processing system
+regl-project/regl	5557	https://github.com/regl-project/regl	false	false	2026-06-22T00:01:34Z	MIT	👑 Functional WebGL
+potree/potree	5530	https://github.com/potree/potree	false	false	2026-01-08T10:01:16Z	NOASSERTION	WebGL point cloud viewer for large datasets
+CadQuery/cadquery	5448	https://github.com/CadQuery/cadquery	false	false	2026-07-13T17:33:24Z	NOASSERTION	A python parametric CAD scripting framework based on OCCT
+Adam-CAD/CADAM	4797	https://github.com/Adam-CAD/CADAM	false	false	2026-07-10T20:20:42Z	GPL-3.0	CADAM is the open source text-to-CAD web application
+f3d-app/f3d	4538	https://github.com/f3d-app/f3d	false	false	2026-07-13T11:44:35Z	BSD-3-Clause	Fast and minimalist 3D viewer.
+slic3r/Slic3r	3633	https://github.com/slic3r/Slic3r	false	false	2024-06-18T02:49:57Z	AGPL-3.0	Open Source toolpath generator for 3D printers
+kovacsv/Online3DViewer	3586	https://github.com/kovacsv/Online3DViewer	false	false	2026-06-24T14:54:51Z	MIT	A solution to visualize and explore 3D models in your browser.
+gkjohnson/three-mesh-bvh	3419	https://github.com/gkjohnson/three-mesh-bvh	false	false	2026-07-10T10:10:45Z	MIT	A BVH implementation to speed up raycasting and enable spatial queries against three.js meshes.
+jscad/OpenJSCAD.org	3206	https://github.com/jscad/OpenJSCAD.org	false	false	2026-07-02T13:27:36Z	MIT	JSCAD is an open source set of modular, browser and command line tools for creating parametric 2D and 3D designs with JavaScript code. It provides a quick, precise and reproducible method for generating 3D models, and is especially useful for creating ready-to-print 3D designs.
+pmndrs/postprocessing	2810	https://github.com/pmndrs/postprocessing	false	false	2026-06-28T22:29:32Z	Zlib	A post processing library for three.js.
+IfcOpenShell/IfcOpenShell	2646	https://github.com/IfcOpenShell/IfcOpenShell	false	false	2026-07-13T12:09:29Z	LGPL-3.0	Open source IFC library and geometry engine
+Open-Cascade-SAS/OCCT	2645	https://github.com/Open-Cascade-SAS/OCCT	false	false	2026-07-13T13:58:26Z	LGPL-2.1	Open CASCADE Technology (OCCT) is an open-source software development platform for 3D CAD, CAM, CAE.
+gumyr/build123d	2629	https://github.com/gumyr/build123d	false	false	2026-07-09T18:24:35Z	Apache-2.0	A python CAD programming library
+hujiulong/vue-3d-model	2519	https://github.com/hujiulong/vue-3d-model	false	false	2023-05-30T21:55:20Z	MIT	📷 vue.js 3D model viewer component
+visgl/luma.gl	2458	https://github.com/visgl/luma.gl	false	false	2026-07-13T12:51:38Z	NOASSERTION	High-performance Toolkit for WebGL-based Data Visualization
+donmccurdy/three-gltf-viewer	2446	https://github.com/donmccurdy/three-gltf-viewer	false	false	2026-04-09T07:18:24Z	MIT	Drag-and-drop preview for glTF 2.0 models in WebGL using three.js.
+yomotsu/camera-controls	2415	https://github.com/yomotsu/camera-controls	false	false	2026-02-02T04:58:37Z	MIT	A camera control for three.js, similar to THREE.OrbitControls yet supports smooth transitions and more features.
+NASA-AMMOS/3DTilesRendererJS	2385	https://github.com/NASA-AMMOS/3DTilesRendererJS	false	false	2026-07-11T07:26:44Z	Apache-2.0	Renderer for 3D Tiles in Javascript using three.js, Babylon.js, and r3f
+facebookincubator/FBX2glTF	2325	https://github.com/facebookincubator/FBX2glTF	false	false	2026-03-27T00:55:55Z	NOASSERTION	A command-line tool for the conversion of 3D model assets on the FBX file format to the glTF file format.
+BelfrySCAD/BOSL2	2266	https://github.com/BelfrySCAD/BOSL2	false	false	2026-06-29T12:06:33Z	BSD-2-Clause	The Belfry OpenScad Library, v2.0.  An OpenSCAD library of shapes, masks, and manipulators to make working with OpenSCAD easier.  BETA
+kennetek/gridfinity-rebuilt-openscad	2200	https://github.com/kennetek/gridfinity-rebuilt-openscad	false	false	2025-08-31T23:35:30Z	NOASSERTION	A ground-up rebuild of the stock gridfinity bins in OpenSCAD
+mkeeter/antimony	2186	https://github.com/mkeeter/antimony	false	false	2025-10-12T13:01:34Z		CAD from a parallel universe
+webgpu/webgpu-samples	2146	https://github.com/webgpu/webgpu-samples	false	false	2026-07-07T02:30:08Z	BSD-3-Clause	WebGPU Samples
+elalish/manifold	2131	https://github.com/elalish/manifold	false	false	2026-07-11T11:16:37Z	Apache-2.0	Geometry library for topological robustness
+CesiumGS/gltf-pipeline	2121	https://github.com/CesiumGS/gltf-pipeline	false	false	2026-06-23T13:27:31Z	Apache-2.0	Content pipeline tools for optimizing glTF assets. :globe_with_meridians:
+fougue/mayo	2094	https://github.com/fougue/mayo	false	false	2026-07-03T13:02:56Z	BSD-2-Clause	3D CAD viewer and converter based on Qt + OpenCascade
+microsoft/maker.js	2012	https://github.com/microsoft/maker.js	false	false	2026-06-27T21:35:50Z	Apache-2.0	📐⚙ 2D vector line drawing and shape modeling for CNC and laser cutters.
+fogleman/sdf	1992	https://github.com/fogleman/sdf	false	false	2024-08-10T20:40:33Z	MIT	Simple SDF mesh generation in Python
+donmccurdy/glTF-Transform	1913	https://github.com/donmccurdy/glTF-Transform	false	false	2026-07-03T15:40:15Z	MIT	glTF 2.0 SDK for JavaScript and TypeScript, on Web and Node.js.
+nophead/NopSCADlib	1604	https://github.com/nophead/NopSCADlib	false	false	2025-10-08T16:20:29Z	GPL-3.0	Library of parts modelled in OpenSCAD and a framework for making projects
+Kitware/vtk-js	1515	https://github.com/Kitware/vtk-js	false	false	2026-07-13T15:47:36Z	BSD-3-Clause	Visualization Toolkit for the Web
+KhronosGroup/glTF-Sample-Viewer	1464	https://github.com/KhronosGroup/glTF-Sample-Viewer	false	false	2026-06-28T13:09:08Z	Apache-2.0	Physically-Based Rendering in glTF 2.0 using WebGL
+zalo/CascadeStudio	1424	https://github.com/zalo/CascadeStudio	false	false	2026-06-16T22:06:27Z	MIT	A Full Live-Scripted CAD Kernel in the Browser
+flyfish-dev/file-viewer	1406	https://github.com/flyfish-dev/file-viewer	false	false	2026-07-13T15:50:07Z	Apache-2.0	Browser-native Office / PDF / CAD / archive viewer for internal web apps, with Vue, React, Svelte, jQuery, Web Components, and no server-side conversion.
+SolidCode/SolidPython	1259	https://github.com/SolidCode/SolidPython	false	false	2025-10-08T19:01:34Z		A python frontend for solid modelling that compiles to OpenSCAD
+playcanvas/editor	1223	https://github.com/playcanvas/editor	false	false	2026-07-13T15:56:17Z	MIT	Browser-based visual editor for building WebGL, WebGPU, WebXR apps
+CadQuery/CQ-editor	1197	https://github.com/CadQuery/CQ-editor	false	false	2026-07-11T15:55:24Z	Apache-2.0	CadQuery GUI editor based on PyQT
+ThatOpen/web-ifc-viewer	1026	https://github.com/ThatOpen/web-ifc-viewer	false	false	2023-09-29T13:18:30Z	MIT	Graphics engine and toolkit for client applications.
+ThatOpen/engine_web-ifc	990	https://github.com/ThatOpen/engine_web-ifc	false	false	2026-07-13T01:08:43Z	MPL-2.0	Reading and writing IFC files with Javascript, at native speeds.
+JustinSDK/dotSCAD	929	https://github.com/JustinSDK/dotSCAD	false	false	2023-01-02T22:07:52Z	LGPL-3.0	Reduce the burden of mathematics when playing OpenSCAD
+xeokit/xeokit-sdk	912	https://github.com/xeokit/xeokit-sdk	false	false	2026-07-13T16:32:04Z	AGPL-3.0	3D BIM IFC Viewer SDK for AEC engineering applications. Open Source JavaScript Toolkit based on pure WebGL for top performance, real-world coordinates and full double precision
+repalash/threepipe	895	https://github.com/repalash/threepipe	false	false	2026-04-07T13:36:19Z	Apache-2.0	Next generation toolkit for web3D and photorealistic graphics
+GridSpace/grid-apps	881	https://github.com/GridSpace/grid-apps	false	false	2026-07-12T00:40:21Z	MIT	Browser-based Slicer for 3D Printing, CAM, Laser (Kiri:Moto) and mesh editor (Mesh:Tool)
+ostat/gridfinity_extended_openscad	877	https://github.com/ostat/gridfinity_extended_openscad	false	false	2026-06-01T17:59:38Z	GPL-3.0	Gridfinity Extended OpenSCAD Model
+pmndrs/three-stdlib	853	https://github.com/pmndrs/three-stdlib	false	false	2026-06-26T20:07:07Z	MIT	📚 Stand-alone library of threejs examples designed to run without transpilation in node & browser
+specklesystems/speckle-server	824	https://github.com/specklesystems/speckle-server	false	false	2026-07-08T02:36:23Z	NOASSERTION	The Speckle Server, Frontend, 3D Viewer, & other JS utilities.
+mlightcad/cad-viewer	817	https://github.com/mlightcad/cad-viewer	false	false	2026-07-13T10:55:23Z	MIT	The world’s first fully web-based DXF/DWG viewer and editor that runs entirely in the browser — no backend server required.
+revarbat/BOSL	688	https://github.com/revarbat/BOSL	false	false	2023-02-20T02:52:25Z	BSD-2-Clause	The Belfry OpenScad Library - A library of tools, shapes, and helpers to make OpenScad easier to use.
+ThatOpen/engine_components	682	https://github.com/ThatOpen/engine_components	false	false	2026-07-10T22:10:28Z	MIT	""
+Irev-Dev/Round-Anything	670	https://github.com/Irev-Dev/Round-Anything	false	false	2024-04-02T07:03:18Z	MIT	A set of OpenSCAD utilities for adding radii and fillets, that embodies a robust approach to developing OpenSCAD parts.
+sgenoud/replicad	657	https://github.com/sgenoud/replicad	false	false	2026-05-01T14:42:32Z	MIT	The library to build browser based 3D models with code.
+gdsestimating/three-dxf	639	https://github.com/gdsestimating/three-dxf	false	false	2024-01-29T09:05:30Z	MIT	A dxf viewer for the browser using three.js
+deadsy/sdfx	625	https://github.com/deadsy/sdfx	false	false	2026-05-11T22:39:06Z	MIT	A simple CAD package using signed distance functions
+fstl-app/fstl	587	https://github.com/fstl-app/fstl	false	false	2026-02-11T18:06:32Z		A fast STL file viewer
+xeokit/xeokit-bim-viewer	551	https://github.com/xeokit/xeokit-bim-viewer	false	false	2026-02-04T13:20:28Z	AGPL-3.0	Built with xeokit SDK. IFC, BIM and Point Cloud 3D Viewer as a package. Enables AEC & GIS applications with double precision global coordinates.
+DSchroer/dslcad	534	https://github.com/DSchroer/dslcad	false	false	2025-02-02T23:56:39Z	LGPL-2.1	DSLCad is a programming language & interpreter for building 3D models.
+KhronosGroup/glTF-Validator	452	https://github.com/KhronosGroup/glTF-Validator	false	false	2025-12-30T10:44:16Z	Apache-2.0	Tool to validate glTF assets.
+openscad/openscad-playground	434	https://github.com/openscad/openscad-playground	false	false	2026-07-01T09:53:41Z	NOASSERTION	OpenSCAD Web Playground
+opensourceBIM/BIMsurfer	425	https://github.com/opensourceBIM/BIMsurfer	false	false	2025-12-30T21:07:41Z	MIT	The latest version of the BIM Surfer WebGL viewer for IFC
+openscad/openscad-wasm	405	https://github.com/openscad/openscad-wasm	false	false	2025-12-15T23:05:59Z	GPL-2.0	Webassembly port of OpenSCAD
+Irev-Dev/cadhub	379	https://github.com/Irev-Dev/cadhub	false	false	2023-01-28T07:36:43Z	GPL-3.0	We're out to raise awareness and put CodeCAD on the map. The success of CadHub can be measured by the amount it promotes the use of CodeCAD within the mechanical/manufacturing industry and the strength the CadHub community.
+bernhard-42/three-cad-viewer	373	https://github.com/bernhard-42/three-cad-viewer	false	false	2026-07-13T13:40:23Z	MIT	A CAD viewer component based on three.js
+thingraph/bim-viewer	322	https://github.com/thingraph/bim-viewer	false	false	2026-02-05T14:13:32Z	MIT	A WebGL based BIM viewer, built on three.js and Vue. Used to view gltf, ifc, obj, dae, stl models, etc.
+kovacsv/occt-import-js	273	https://github.com/kovacsv/occt-import-js	false	false	2024-12-03T07:01:27Z	LGPL-2.1	The emscripten interface for OpenCascade import functionalities.
+wx-chevalier/ts-3d-model-viewer	222	https://github.com/wx-chevalier/ts-3d-model-viewer	false	false	2023-03-07T02:31:49Z		整合了 google-model-viewer/WebGL/Three.js/WASM 等一系列 3D 模型（STL/OBJ/GLTF/PLY/STEP/X_T）预览工具，便捷地进行模型预览、生成截图、计算拓扑信息。支持 Blender 进行模型压缩优化，提供了基于 Web 的简单 CAD 在线排版操作。
+bldrs-ai/Share	178	https://github.com/bldrs-ai/Share	false	false	2026-07-13T19:24:03Z	AGPL-3.0	Share is a browser-based BIM & CAD viewer and collaboration platform.  Supports IFC, STEP, STL, OBJ, GLTF
+zacharyfmarion/openscad-studio	171	https://github.com/zacharyfmarion/openscad-studio	false	false	2026-06-30T22:23:21Z	GPL-2.0	Create 2D and 3D designs with AI
+ieskudero/three-dxf-viewer	157	https://github.com/ieskudero/three-dxf-viewer	false	false	2025-11-27T10:48:54Z	MIT	DXF viewer using ThreeJS
+yeicor-3d/yet-another-cad-viewer	132	https://github.com/yeicor-3d/yet-another-cad-viewer	false	false	2026-07-13T11:06:45Z	MIT	A CAD viewer capable of displaying (and editing) OCP models (CadQuery/Build123d) in a web browser.
+mkeeter/erizo	126	https://github.com/mkeeter/erizo	false	false	2023-04-12T02:24:40Z	Apache-2.0	Fast native STL viewer
+seasick/openscad-web-gui	126	https://github.com/seasick/openscad-web-gui	false	false	2024-10-01T11:19:53Z	GPL-3.0	Web GUI for OpenSCAD, using OpenSCAD WASM
+castle-engine/castle-model-viewer	116	https://github.com/castle-engine/castle-model-viewer	false	false	2026-07-12T02:08:09Z		Viewer for many 3D and 2D model formats: glTF, X3D, VRML, Collada, 3DS, MD3, Wavefront OBJ, STL, Spine JSON, sprite sheets in Cocos2D and Starling XML formats
+Rufus31415/react-webgl-3d-viewer-demo	104	https://github.com/Rufus31415/react-webgl-3d-viewer-demo	false	false	2026-02-13T20:58:22Z		A 45+ 3D file format viewer built with React and WebGL
+gabotechs/react-stl-viewer	101	https://github.com/gabotechs/react-stl-viewer	false	false	2024-01-14T17:51:28Z	MIT	React component for visualizing 3d STL models in the browser using three.js
+earthtojake/cad-viewer	64	https://github.com/earthtojake/cad-viewer	false	false	2026-05-20T21:05:30Z		Interactive browser-based CAD viewer for inspecting STEP, STL, 3MF, GLB, DXF, URDF, SDF, and SRDF files
+arbaev/dxf-kit	24	https://github.com/arbaev/dxf-kit	false	false	2026-06-26T07:59:23Z	MIT	Parse and render AutoCAD DXF files in the browser — framework-agnostic engine (dxf-render) with drop-in Vue, React and Web Components viewers. Three.js + TypeScript.
+looeee/multiformat-model-viewer	19	https://github.com/looeee/multiformat-model-viewer	false	false	2023-03-01T11:57:21Z		Loader and viewer for models in several formats such as glTF, FBX, and Collada. Additional formats can be easily added.
+Kompakkt/Viewer	17	https://github.com/Kompakkt/Viewer	false	false	2026-07-07T10:50:31Z	AGPL-3.0	Kompakkt - the web based 3D viewer and 3D annotation system.
+flyfish-dev/dwf-viewer	9	https://github.com/flyfish-dev/dwf-viewer	false	false	2026-06-12T08:26:28Z	AGPL-3.0	World's first open-source pure frontend DWF/DWFx preview component: browser-native WebGL/WASM viewer for DWF, DWFx/XPS, W2D, W3D/HSF; English by default with Chinese switch.
+flyfish-dev/cad-viewer	4	https://github.com/flyfish-dev/cad-viewer	false	false	2026-06-15T03:37:40Z	AGPL-3.0	Production-oriented browser CAD viewer for DWG, DXF, DWF, DWFx and XPS with workers, LibreDWG WASM, native dwf-viewer, WebGL 2D/3D rendering and embedded XPS fonts.
+tegos/cad-3d-viewer	3	https://github.com/tegos/cad-3d-viewer	false	false	2026-05-27T21:43:22Z	MIT	Browser-based STEP/IGES/BREP viewer Babylon.js + occt-import-js WASM, no backend
+CameronBrooks11/openscad-web	1	https://github.com/CameronBrooks11/openscad-web	false	false	2026-07-10T12:34:49Z	NOASSERTION	OpenSCAD Web is a browser-based environment for creating, customizing, and viewing models, running the OpenSCAD engine in WebAssembly with a built-in editor, customizer, and 3D viewer.
