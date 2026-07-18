@@ -6,9 +6,21 @@ import {
   transformPoint, unprojectRay,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
-import { raycastMeshBvh, type MeshBvh } from './meshBvh'
-import { buildFaceOverlayGeometry, pointOverlayPosition } from './meshSelectionOverlay'
+import { CameraHistory, cameraStatesEqual, type CameraState } from './cameraHistory'
+import { raycastMeshBvh, type MeshBvh, type MeshBvhHit } from './meshBvh'
+import {
+  buildFaceOverlayGeometry,
+  buildSourceOverlayGeometry,
+  MAX_SOURCE_OVERLAY_TRIANGLES,
+  pointOverlayPosition,
+} from './meshSelectionOverlay'
 import type { MeshData, MeshProvenanceRun, MeshSourceReference } from './openscadParser'
+import {
+  chooseDepthCandidate,
+  normalizeDepthCandidates,
+  type DepthCandidate,
+  type DepthCycleState,
+} from './selectionCycling'
 
 /* ── WGSL shaders ─────────────────────────────────── */
 
@@ -40,6 +52,25 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
   let base = mix(selected, vec3f(0.12, 0.78, 1.0), ob.style.w * 0.38);
   let c = sc.ambient.rgb * base + d * base + s * vec3f(0.25) + bd * base * 0.5;
   return vec4f(c, ob.style.x);
+}
+`
+
+const DEEP_MESH_WGSL = /* wgsl */`
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
+struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f }
+@group(0) @binding(0) var<uniform> sc: Scene;
+@group(1) @binding(0) var<uniform> ob: Obj;
+
+struct V { @builtin(position) p: vec4f, @location(0) w: vec3f }
+
+@vertex fn vs(@location(0) pos: vec3f) -> V {
+  let world = (ob.model * vec4f(pos, 1)).xyz;
+  return V(sc.vp * vec4f(world, 1), world);
+}
+
+@fragment fn fs(v: V) -> @location(0) vec4f {
+  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
+  return vec4f(1.0, 0.42, 0.06, 0.14);
 }
 `
 
@@ -133,6 +164,10 @@ export interface PickHit {
   barycentric: Vec3
   source: MeshSourceReference | null
   backside: boolean
+  /** Zero-based position in the current front-to-back click cycle. */
+  cycleIndex?: number
+  /** Number of selectable targets currently under the pointer. */
+  cycleCount?: number
 }
 export interface DistanceMeasurement {
   points: Vec3[]
@@ -141,6 +176,7 @@ export interface DistanceMeasurement {
 export type SelectionChangeHandler = (selectedIndex: number | null, isIsolated: boolean, hit: PickHit | null) => void
 export type HoverChangeHandler = (hit: PickHit | null) => void
 export type MeasurementChangeHandler = (measurement: DistanceMeasurement | null, active: boolean) => void
+export type CameraHistoryChangeHandler = (canGoBack: boolean) => void
 export interface SetMeshesOptions {
   /** Keep world-space inspection measurements while swapping equivalent geometry. */
   preserveMeasurement?: boolean
@@ -159,6 +195,9 @@ const GRID_STEP = 10
 const CLICK_MOVE_THRESHOLD = 3
 const MAX_EDGE_BUFFER_BYTES = 32 * 1024 * 1024
 const MAX_OVERLAY_BUFFER_BYTES = 16 * 1024 * 1024
+const MAX_DEPTH_CANDIDATES = 32
+const MAX_DEPTH_CONTINUATIONS = 256
+const WHEEL_HISTORY_IDLE_MS = 250
 
 /* ── Renderer class ───────────────────────────────── */
 
@@ -170,10 +209,13 @@ export class WebGPURenderer {
 
   private meshPipe!: GPURenderPipeline
   private meshPipeT!: GPURenderPipeline
+  private deepMeshPipe!: GPURenderPipeline
   private linePipe!: GPURenderPipeline
   private edgePipe!: GPURenderPipeline
+  private deepEdgePipe!: GPURenderPipeline
   private selectionFacePipe!: GPURenderPipeline
   private selectionLinePipe!: GPURenderPipeline
+  private deepSelectionLinePipe!: GPURenderPipeline
   private sceneBGL!: GPUBindGroupLayout
   private objBGL!: GPUBindGroupLayout
   private sceneUB: GPUBuffer | null = null
@@ -205,10 +247,20 @@ export class WebGPURenderer {
   private selectionFaceVC = 0
   private selectionLineVB: GPUBuffer | null = null
   private selectionLineVC = 0
+  private deepSelectionLineVB: GPUBuffer | null = null
+  private deepSelectionLineVC = 0
+  private sourceHighlightId: number | null = null
+  private sourceFaceVB: GPUBuffer | null = null
+  private sourceFaceVC = 0
+  private sourceLineVB: GPUBuffer | null = null
+  private sourceLineVC = 0
+  private cameraHistory = new CameraHistory(32)
+  private depthCycleState: DepthCycleState | null = null
 
   onSelectionChange: SelectionChangeHandler | null = null
   onHoverChange: HoverChangeHandler | null = null
   onMeasurementChange: MeasurementChangeHandler | null = null
+  onCameraHistoryChange: CameraHistoryChangeHandler | null = null
 
   yaw = ISO_YAW; pitch = ISO_PITCH; dist = DEFAULT_DISTANCE
   tx = 0; ty = 0; tz = 0
@@ -228,6 +280,8 @@ export class WebGPURenderer {
   private downX = 0; private downY = 0
   private downButton = -1
   private gestureMoved = false
+  private gestureCameraStart: CameraState | null = null
+  private lastWheelHistoryAt = -Infinity
   private hoverRaf = 0
   private hoverGeneration = 0
   private hoverX = 0
@@ -345,6 +399,21 @@ export class WebGPURenderer {
       depthStencil: { ...ds, depthWriteEnabled: false },
     })
 
+    const deepMeshMod = dev.createShaderModule({ code: DEEP_MESH_WGSL })
+    this.deepMeshPipe = dev.createRenderPipeline({
+      layout: meshLayout,
+      vertex: { module: deepMeshMod, entryPoint: 'vs', buffers: [vbl] },
+      fragment: { module: deepMeshMod, entryPoint: 'fs', targets: [{
+        format: this.fmt,
+        blend: {
+          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+        },
+      }] },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
+    })
+
     const lineMod = dev.createShaderModule({ code: LINE_WGSL })
     const lineLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
     const lineVBL: GPUVertexBufferLayout = {
@@ -393,6 +462,30 @@ export class WebGPURenderer {
       primitive: { topology: 'line-list' },
       depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'less-equal' },
     })
+    this.deepEdgePipe = dev.createRenderPipeline({
+      layout: meshLayout,
+      vertex: {
+        module: edgeMod,
+        entryPoint: 'vs',
+        buffers: [{
+          arrayStride: 24,
+          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+        }],
+      },
+      fragment: {
+        module: edgeMod,
+        entryPoint: 'fs',
+        targets: [{
+          format: this.fmt,
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
+        }],
+      },
+      primitive: { topology: 'line-list' },
+      depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
+    })
 
     const selectionMod = dev.createShaderModule({ code: SELECTION_OVERLAY_WGSL })
     const selectionLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
@@ -428,6 +521,13 @@ export class WebGPURenderer {
       fragment: { module: selectionMod, entryPoint: 'fs', targets: [selectionTarget] },
       primitive: { topology: 'line-list' },
       depthStencil: selectionDepth,
+    })
+    this.deepSelectionLinePipe = dev.createRenderPipeline({
+      layout: selectionLayout,
+      vertex: { module: selectionMod, entryPoint: 'vs', buffers: [selectionVBL] },
+      fragment: { module: selectionMod, entryPoint: 'fs', targets: [selectionTarget] },
+      primitive: { topology: 'line-list' },
+      depthStencil: { ...selectionDepth, depthCompare: 'always' },
     })
   }
 
@@ -538,12 +638,15 @@ export class WebGPURenderer {
     this.hovered = null
     this.hoveredHit = null
     this.isolated = false
+    this.resetDepthCycle()
     if (!options.preserveMeasurement) {
       this.measurementPoints = []
       this.measureActive = false
     }
     this.rebuildMeasurementBuffer()
     this.clearSelectionOverlayBuffers()
+    this.sourceHighlightId = null
+    this.clearSourceHighlightOverlayBuffers()
     this.emitMeasurementChange()
     this.destroyMeshes(previous)
     if (this.displayMode === 'edges') {
@@ -556,7 +659,8 @@ export class WebGPURenderer {
 
     if (nextBounds && !this.initialFitDone) {
       this.initialFitDone = true
-      this.fitView()
+      this.applyFitBounds(nextBounds)
+      this.requestRender()
     } else {
       this.requestRender()
     }
@@ -615,6 +719,10 @@ export class WebGPURenderer {
   }
 
   private fitBounds(bounds: Bounds) {
+    this.commitCameraChange(() => this.applyFitBounds(bounds))
+  }
+
+  private applyFitBounds(bounds: Bounds) {
     const [x, y, z] = bounds.center
     this.tx = x; this.ty = y; this.tz = z
     const aspect = this.getAspect()
@@ -623,13 +731,40 @@ export class WebGPURenderer {
     const limitingHalfFov = Math.max(1e-6, Math.min(halfVertical, halfHorizontal))
     const radius = Math.max(bounds.radius, 0.5)
     this.dist = this.clampDistance(radius * 1.15 / Math.sin(limitingHalfFov))
-    this.requestRender()
   }
 
   get currentDisplayMode(): DisplayMode { return this.displayMode }
   get selectedIndex(): number | null { return this.selected }
   get currentHit(): PickHit | null { return this.selectedHit }
   get isIsolated(): boolean { return this.isolated }
+  get canGoToPreviousView(): boolean { return this.cameraHistory.size > 0 }
+
+  getCameraState(): CameraState {
+    return {
+      yaw: this.yaw,
+      pitch: this.pitch,
+      distance: this.dist,
+      target: [this.tx, this.ty, this.tz],
+      projection: this.projection,
+    }
+  }
+
+  previousView(): CameraState | null {
+    this.flushActiveGestureCameraSnapshot()
+    const state = this.cameraHistory.previous()
+    if (!state) return null
+    this.yaw = state.yaw
+    this.pitch = state.pitch
+    this.dist = this.clampDistance(state.distance)
+    ;[this.tx, this.ty, this.tz] = state.target
+    this.projection = state.projection
+    if (this.gestureCameraStart) this.gestureCameraStart = this.getCameraState()
+    this.lastWheelHistoryAt = -Infinity
+    this.resetDepthCycle()
+    this.emitCameraHistoryChange()
+    this.requestRender()
+    return state
+  }
 
   setDisplayMode(mode: DisplayMode) {
     if (this.displayMode === mode) return
@@ -643,11 +778,13 @@ export class WebGPURenderer {
 
   clearSelection() {
     if (this.selected === null && !this.isolated) return
+    this.resetDepthCycle(false)
     this.selected = null
     this.selectedHit = null
     this.isolated = false
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
+    this.rebuildSourceHighlightOverlay()
     this.emitSelectionChange()
     this.requestRender()
   }
@@ -666,27 +803,29 @@ export class WebGPURenderer {
       if (this.selected === null || !this.meshes[this.selected]) return false
       this.isolated = true
     }
+    this.resetDepthCycle()
     this.rebuildSelectionOverlays()
+    this.rebuildSourceHighlightOverlay()
     this.emitSelectionChange()
     this.requestRender()
     return this.isolated
   }
 
   resetView() {
-    this.yaw = ISO_YAW
-    this.pitch = ISO_PITCH
-    if (this.bounds) this.fitView()
-    else {
-      this.tx = 0; this.ty = 0; this.tz = 0
-      this.dist = DEFAULT_DISTANCE
-      this.requestRender()
-    }
+    this.commitCameraChange(() => {
+      this.yaw = ISO_YAW
+      this.pitch = ISO_PITCH
+      if (this.bounds) this.applyFitBounds(this.bounds)
+      else {
+        this.tx = 0; this.ty = 0; this.tz = 0
+        this.dist = DEFAULT_DISTANCE
+      }
+    })
   }
 
   setProjection(projection: ProjectionMode) {
     if (this.projection === projection) return
-    this.projection = projection
-    this.requestRender()
+    this.commitCameraChange(() => { this.projection = projection })
   }
 
   setGridVisible(visible: boolean) {
@@ -697,19 +836,34 @@ export class WebGPURenderer {
 
   setSelectionMode(mode: SelectionMode) {
     if (this.selectionMode === mode) return
+    this.resetDepthCycle()
     this.selectionMode = mode
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
     this.requestRender()
   }
 
+  /**
+   * Highlights every surviving triangle produced by a source operation.
+   * This state is independent from viewport selection and preselection.
+   */
+  setSourceHighlight(sourceId: number | null) {
+    const next = sourceId !== null && Number.isInteger(sourceId) && sourceId >= 0 ? sourceId : null
+    if (this.sourceHighlightId === next) return
+    this.sourceHighlightId = next
+    this.rebuildSourceHighlightOverlay()
+    this.requestRender()
+  }
+
   selectMesh(index: number | null) {
+    this.resetDepthCycle(false)
     this.setSelection(index, null)
   }
 
   setMeshVisibility(index: number, visible: boolean) {
     const mesh = this.meshes[index]
     if (!mesh || mesh.visible === visible) return
+    this.resetDepthCycle()
     mesh.visible = visible
     if (!visible && this.selected === index) this.setSelection(null, null)
     if (!visible && this.hovered === index) {
@@ -720,6 +874,7 @@ export class WebGPURenderer {
     }
     this.bounds = this.combineBounds(this.meshes.filter(candidate => candidate.visible).map(candidate => candidate.worldBounds))
     this.rebuildSelectionOverlays()
+    this.rebuildSourceHighlightOverlay()
     this.requestRender()
   }
 
@@ -736,6 +891,7 @@ export class WebGPURenderer {
   }
 
   setSection(enabled: boolean, normal: Vec3, offset: number) {
+    this.resetDepthCycle()
     const length = Math.hypot(...normal)
     this.sectionEnabled = enabled && length > 0 && Number.isFinite(length) && Number.isFinite(offset)
     this.sectionNormal = this.sectionEnabled
@@ -747,6 +903,7 @@ export class WebGPURenderer {
 
   setMeasureMode(active: boolean) {
     if (this.measureActive === active) return
+    this.resetDepthCycle()
     this.measureActive = active
     this.emitMeasurementChange()
   }
@@ -798,6 +955,7 @@ export class WebGPURenderer {
     if (index === null) this.isolated = false
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
+    this.rebuildSourceHighlightOverlay()
     this.emitSelectionChange()
     this.requestRender()
   }
@@ -820,20 +978,65 @@ export class WebGPURenderer {
   }
 
   setView(view: StandardView) {
-    switch (view) {
-      case 'iso': this.yaw = ISO_YAW; this.pitch = ISO_PITCH; break
-      case 'front': this.yaw = 0; this.pitch = 0; break
-      case 'back': this.yaw = Math.PI; this.pitch = 0; break
-      case 'left': this.yaw = -Math.PI / 2; this.pitch = 0; break
-      case 'right': this.yaw = Math.PI / 2; this.pitch = 0; break
-      case 'top': this.yaw = 0; this.pitch = Math.PI / 2; break
-      case 'bottom': this.yaw = 0; this.pitch = -Math.PI / 2; break
+    this.commitCameraChange(() => {
+      switch (view) {
+        case 'iso': this.yaw = ISO_YAW; this.pitch = ISO_PITCH; break
+        case 'front': this.yaw = 0; this.pitch = 0; break
+        case 'back': this.yaw = Math.PI; this.pitch = 0; break
+        case 'left': this.yaw = -Math.PI / 2; this.pitch = 0; break
+        case 'right': this.yaw = Math.PI / 2; this.pitch = 0; break
+        case 'top': this.yaw = 0; this.pitch = Math.PI / 2; break
+        case 'bottom': this.yaw = 0; this.pitch = -Math.PI / 2; break
+      }
+    })
+  }
+
+  private commitCameraChange(mutator: () => void): boolean {
+    this.flushActiveGestureCameraSnapshot()
+    const before = this.getCameraState()
+    mutator()
+    if (cameraStatesEqual(before, this.getCameraState())) return false
+    this.recordCameraSnapshot(before)
+    if (this.gestureCameraStart) this.gestureCameraStart = this.getCameraState()
+    this.lastWheelHistoryAt = -Infinity
+    this.resetDepthCycle()
+    this.requestRender()
+    return true
+  }
+
+  private recordCameraSnapshot(state: CameraState) {
+    if (this.cameraHistory.record(state)) this.emitCameraHistoryChange()
+  }
+
+  private flushActiveGestureCameraSnapshot() {
+    if (!this.gestureCameraStart) return
+    const current = this.getCameraState()
+    if (!cameraStatesEqual(this.gestureCameraStart, current)) {
+      this.recordCameraSnapshot(this.gestureCameraStart)
     }
+    this.gestureCameraStart = current
+  }
+
+  private emitCameraHistoryChange() {
+    try { this.onCameraHistoryChange?.(this.canGoToPreviousView) } catch { /* UI callbacks must not break rendering. */ }
+  }
+
+  private resetDepthCycle(invalidateSelectedHit = true) {
+    this.depthCycleState = null
+    if (!invalidateSelectedHit || !this.selectedHit
+        || (this.selectedHit.cycleIndex === undefined && this.selectedHit.cycleCount === undefined)) return
+    const { cycleIndex: _cycleIndex, cycleCount: _cycleCount, ...hit } = this.selectedHit
+    this.selectedHit = hit
+    this.rebuildSelectionOverlays()
+    this.emitSelectionChange()
     this.requestRender()
   }
 
   resize() {
-    if (this.updateSize()) this.requestRender()
+    if (this.updateSize()) {
+      this.resetDepthCycle()
+      this.requestRender()
+    }
   }
 
   private updateSize(): boolean {
@@ -975,6 +1178,29 @@ export class WebGPURenderer {
       pass.drawIndexed(g.ic)
     }
 
+    const deepSelectedIndex = this.selectionMode === 'object'
+      && (this.selectedHit?.cycleIndex ?? 0) > 0
+      ? this.selected
+      : null
+    if (deepSelectedIndex !== null) {
+      const selectedMesh = this.meshes[deepSelectedIndex]
+      if (this.isMeshVisible(deepSelectedIndex) && selectedMesh) {
+        pass.setPipeline(this.deepMeshPipe)
+        pass.setBindGroup(0, this.sceneBG)
+        pass.setBindGroup(1, selectedMesh.bg)
+        pass.setVertexBuffer(0, selectedMesh.vb)
+        pass.setIndexBuffer(selectedMesh.ib, 'uint32')
+        pass.drawIndexed(selectedMesh.ic)
+      }
+    }
+
+    if (this.sourceFaceVB && this.sourceFaceVC) {
+      pass.setPipeline(this.selectionFacePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.sourceFaceVB)
+      pass.draw(this.sourceFaceVC)
+    }
+
     if (this.selectionFaceVB && this.selectionFaceVC) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
@@ -994,12 +1220,37 @@ export class WebGPURenderer {
       pass.drawIndexed(g.edgeIC)
     }
 
+    if (deepSelectedIndex !== null) {
+      const selectedMesh = this.meshes[deepSelectedIndex]
+      if (this.isMeshVisible(deepSelectedIndex) && selectedMesh?.edgeIB) {
+        pass.setPipeline(this.deepEdgePipe)
+        pass.setBindGroup(0, this.sceneBG)
+        pass.setBindGroup(1, selectedMesh.bg)
+        pass.setVertexBuffer(0, selectedMesh.vb)
+        pass.setIndexBuffer(selectedMesh.edgeIB, 'uint32')
+        pass.drawIndexed(selectedMesh.edgeIC)
+      }
+    }
+
+    if (this.sourceLineVB && this.sourceLineVC) {
+      pass.setPipeline(this.selectionLinePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.sourceLineVB)
+      pass.draw(this.sourceLineVC)
+    }
 
     if (this.selectionLineVB && this.selectionLineVC) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionLineVB)
       pass.draw(this.selectionLineVC)
+    }
+
+    if (this.deepSelectionLineVB && this.deepSelectionLineVC) {
+      pass.setPipeline(this.deepSelectionLinePipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.deepSelectionLineVB)
+      pass.draw(this.deepSelectionLineVC)
     }
 
     pass.end()
@@ -1042,60 +1293,177 @@ export class WebGPURenderer {
     return null
   }
 
-  private findHit(clientX: number, clientY: number): PickHit | null {
+  private pickHitFromBvh(meshIndex: number, mesh: GMesh, hit: MeshBvhHit): PickHit {
+    const run = this.sourceForTriangle(mesh, hit.triangleIndex)
+    let point = hit.worldPoint as Vec3
+    if (this.selectionMode === 'point') {
+      let corner = 0
+      if (hit.barycentric[1] > hit.barycentric[corner]) corner = 1
+      if (hit.barycentric[2] > hit.barycentric[corner]) corner = 2
+      const vertexIndex = hit.triangleVertexIndices[corner]
+      const offset = vertexIndex * 6
+      point = transformPoint(mesh.transform, [
+        mesh.vertices[offset],
+        mesh.vertices[offset + 1],
+        mesh.vertices[offset + 2],
+      ])
+    }
+    return {
+      meshIndex,
+      triangleIndex: hit.triangleIndex,
+      faceId: mesh.faceIds[hit.triangleIndex] ?? null,
+      point,
+      normal: hit.worldNormal,
+      barycentric: hit.barycentric,
+      source: run?.source ?? null,
+      backside: run?.backside ?? false,
+    }
+  }
+
+  private isSectionClipped(point: readonly number[]) {
+    return this.sectionEnabled && (
+      point[0] * this.sectionNormal[0]
+      + point[1] * this.sectionNormal[1]
+      + point[2] * this.sectionNormal[2]
+    ) < this.sectionOffset
+  }
+
+  private selectionCandidateKey(hit: PickHit) {
+    if (this.selectionMode === 'object') return `o:${hit.meshIndex}`
+    if (this.selectionMode === 'face') {
+      return hit.faceId === null
+        ? `f:${hit.meshIndex}:t${hit.triangleIndex}`
+        : `f:${hit.meshIndex}:${hit.faceId}`
+    }
+    // Flat-shaded meshes may duplicate a geometric vertex for each face. A
+    // world-space key avoids multiple visually identical point-cycle stops.
+    return `p:${hit.meshIndex}:${hit.point.map(value => value.toPrecision(12)).join(':')}`
+  }
+
+  private findHitCandidates(
+    clientX: number,
+    clientY: number,
+    maximum = MAX_DEPTH_CANDIDATES,
+  ): DepthCandidate<PickHit>[] {
+    const limit = Math.max(0, Math.min(MAX_DEPTH_CANDIDATES, Math.trunc(maximum)))
+    if (!limit) return []
     const ray = this.rayForClientPoint(clientX, clientY)
-    if (!ray) return null
-    let nearest = Infinity
-    let picked: PickHit | null = null
+    if (!ray) return []
+
+    type HitCursor = {
+      meshIndex: number
+      mesh: GMesh
+      hit: MeshBvhHit
+      excludedTriangles: Set<number>
+    }
+    const frontier: HitCursor[] = []
+    const cursorBefore = (a: HitCursor, b: HitCursor) => a.hit.t < b.hit.t
+      || (a.hit.t === b.hit.t && (
+        a.meshIndex < b.meshIndex
+        || (a.meshIndex === b.meshIndex && a.hit.triangleIndex < b.hit.triangleIndex)
+      ))
+    const insertFrontier = (cursor: HitCursor) => {
+      frontier.push(cursor)
+      let child = frontier.length - 1
+      while (child > 0) {
+        const parent = (child - 1) >>> 1
+        if (!cursorBefore(frontier[child], frontier[parent])) break
+        ;[frontier[parent], frontier[child]] = [frontier[child], frontier[parent]]
+        child = parent
+      }
+    }
+    const takeNearest = () => {
+      const nearest = frontier[0]
+      const last = frontier.pop()!
+      if (frontier.length) {
+        frontier[0] = last
+        let parent = 0
+        while (true) {
+          const left = parent * 2 + 1
+          const right = left + 1
+          if (left >= frontier.length) break
+          let child = left
+          if (right < frontier.length && cursorBefore(frontier[right], frontier[left])) child = right
+          if (!cursorBefore(frontier[child], frontier[parent])) break
+          ;[frontier[parent], frontier[child]] = [frontier[child], frontier[parent]]
+          parent = child
+        }
+      }
+      return nearest
+    }
+
+    // One initial BVH query per visible mesh is required to avoid mesh-order
+    // bias. All additional continuations share one global budget and are
+    // processed nearest-first across meshes.
     for (let index = 0; index < this.meshes.length; index++) {
       if (!this.isMeshVisible(index)) continue
       const mesh = this.meshes[index]
-      let minT = 0
-      for (let attempt = 0; attempt < 32; attempt++) {
-        const hit = raycastMeshBvh(mesh.bvh, mesh.vertices, mesh.indices, ray, {
-          minT,
-          maxT: nearest,
-          localFromWorld: mesh.inverseTransform,
-        })
-        if (!hit) break
-        if (this.sectionEnabled && (
-          hit.worldPoint[0] * this.sectionNormal[0]
-          + hit.worldPoint[1] * this.sectionNormal[1]
-          + hit.worldPoint[2] * this.sectionNormal[2]
-        ) < this.sectionOffset) {
-          minT = hit.t + Math.max(1e-8, Math.abs(hit.t) * 1e-8)
-          continue
-        }
-        nearest = hit.t
-        const run = this.sourceForTriangle(mesh, hit.triangleIndex)
-        let point = hit.worldPoint as Vec3
-        if (this.selectionMode === 'point') {
-          let corner = 0
-          if (hit.barycentric[1] > hit.barycentric[corner]) corner = 1
-          if (hit.barycentric[2] > hit.barycentric[corner]) corner = 2
-          const vertexIndex = hit.triangleVertexIndices[corner]
-          const offset = vertexIndex * 6
-          point = transformPoint(mesh.transform, [mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]])
-        }
-        picked = {
-          meshIndex: index,
-          triangleIndex: hit.triangleIndex,
-          faceId: mesh.faceIds[hit.triangleIndex] ?? null,
-          point,
-          normal: hit.worldNormal,
-          barycentric: hit.barycentric,
-          source: run?.source ?? null,
-          backside: run?.backside ?? false,
-        }
-        break
-      }
+      const hit = raycastMeshBvh(mesh.bvh, mesh.vertices, mesh.indices, ray, {
+        localFromWorld: mesh.inverseTransform,
+      })
+      if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Set() })
     }
-    return picked
+
+    const candidates: DepthCandidate<PickHit>[] = []
+    const seen = new Set<string>()
+    let continuations = 0
+    while (frontier.length && candidates.length < limit) {
+      const cursor = takeNearest()
+      const clipped = this.isSectionClipped(cursor.hit.worldPoint)
+      if (!clipped) {
+        const { meshIndex, mesh, hit } = cursor
+        const value = this.pickHitFromBvh(meshIndex, mesh, hit)
+        const key = this.selectionCandidateKey(value)
+        if (!seen.has(key)) {
+          seen.add(key)
+          candidates.push({ key, distance: hit.t, value })
+        }
+      }
+
+      const needsContinuation = clipped || this.selectionMode !== 'object'
+      if (!needsContinuation || continuations >= MAX_DEPTH_CONTINUATIONS || candidates.length >= limit) continue
+      continuations++
+      cursor.excludedTriangles.add(cursor.hit.triangleIndex)
+      const next = raycastMeshBvh(cursor.mesh.bvh, cursor.mesh.vertices, cursor.mesh.indices, ray, {
+        minT: cursor.hit.t,
+        excludedTriangles: cursor.excludedTriangles,
+        localFromWorld: cursor.mesh.inverseTransform,
+      })
+      if (next) insertFrontier({ ...cursor, hit: next })
+    }
+    return normalizeDepthCandidates(candidates, limit)
+  }
+
+  private findHit(clientX: number, clientY: number): PickHit | null {
+    return this.findHitCandidates(clientX, clientY, 1)[0]?.value ?? null
   }
 
   private pickAt(clientX: number, clientY: number) {
-    const hit = this.findHit(clientX, clientY)
-    if (hit && this.measureActive) this.addMeasurementPoint(hit.point)
+    if (this.measureActive) {
+      this.resetDepthCycle()
+      const hit = this.findHit(clientX, clientY)
+      if (hit) this.addMeasurementPoint(hit.point)
+      this.setSelection(hit?.meshIndex ?? null, hit)
+      return
+    }
+
+    const candidates = this.findHitCandidates(clientX, clientY)
+    const timestamp = typeof performance === 'undefined' ? Date.now() : performance.now()
+    const choice = chooseDepthCandidate(
+      candidates,
+      clientX,
+      clientY,
+      this.depthCycleState,
+      timestamp,
+    )
+    this.depthCycleState = choice.state
+    const hit = choice.candidate
+      ? {
+          ...choice.candidate.value,
+          cycleIndex: choice.state?.index ?? 0,
+          cycleCount: candidates.length,
+        }
+      : null
     this.setSelection(hit?.meshIndex ?? null, hit)
   }
 
@@ -1192,6 +1560,18 @@ export class WebGPURenderer {
     this.selectionLineVB?.destroy()
     this.selectionLineVB = null
     this.selectionLineVC = 0
+    this.deepSelectionLineVB?.destroy()
+    this.deepSelectionLineVB = null
+    this.deepSelectionLineVC = 0
+  }
+
+  private clearSourceHighlightOverlayBuffers() {
+    this.sourceFaceVB?.destroy()
+    this.sourceFaceVB = null
+    this.sourceFaceVC = 0
+    this.sourceLineVB?.destroy()
+    this.sourceLineVB = null
+    this.sourceLineVC = 0
   }
 
   private createSelectionOverlayBuffer(values: number[]): GPUBuffer | null {
@@ -1283,17 +1663,21 @@ export class WebGPURenderer {
 
     const faceValues: number[] = []
     const lineValues: number[] = []
+    const deepLineValues: number[] = []
     const add = (hit: PickHit, preselected: boolean) => {
+      const targetLines = !preselected && (hit.cycleIndex ?? 0) > 0
+        ? deepLineValues
+        : lineValues
       if (this.selectionMode === 'face') {
         this.appendFaceOverlay(
           hit,
           faceValues,
-          lineValues,
+          targetLines,
           preselected ? [0.05, 0.82, 1, 0.27] : [1, 0.47, 0.04, 0.38],
           preselected ? [0.08, 0.88, 1, 1] : [1, 0.58, 0.08, 1],
         )
       } else {
-        this.appendPointOverlay(hit, lineValues, preselected ? [0.08, 0.88, 1, 1] : [1, 0.58, 0.08, 1])
+        this.appendPointOverlay(hit, targetLines, preselected ? [0.08, 0.88, 1, 1] : [1, 0.58, 0.08, 1])
       }
     }
 
@@ -1304,6 +1688,38 @@ export class WebGPURenderer {
     this.selectionFaceVC = this.selectionFaceVB ? faceValues.length / 7 : 0
     this.selectionLineVB = this.createSelectionOverlayBuffer(lineValues)
     this.selectionLineVC = this.selectionLineVB ? lineValues.length / 7 : 0
+    this.deepSelectionLineVB = this.createSelectionOverlayBuffer(deepLineValues)
+    this.deepSelectionLineVC = this.deepSelectionLineVB ? deepLineValues.length / 7 : 0
+  }
+
+  private rebuildSourceHighlightOverlay() {
+    this.clearSourceHighlightOverlayBuffers()
+    if (!this.dev || this.sourceHighlightId === null) return
+
+    const faceValues: number[] = []
+    const lineValues: number[] = []
+    let remainingTriangles = MAX_SOURCE_OVERLAY_TRIANGLES
+    for (let index = 0; index < this.meshes.length && remainingTriangles > 0; index++) {
+      if (!this.isMeshVisible(index)) continue
+      const mesh = this.meshes[index]
+      const geometry = buildSourceOverlayGeometry(
+        mesh.vertices,
+        mesh.indices,
+        mesh.provenance,
+        mesh.transform,
+        this.sourceHighlightId,
+        remainingTriangles,
+      )
+      this.appendColoredPositions(faceValues, geometry.triangles, [0.68, 0.24, 1, 0.32])
+      this.appendColoredPositions(lineValues, geometry.boundaryLines, [0.82, 0.42, 1, 1])
+      remainingTriangles -= geometry.triangleCount
+      if (geometry.truncated) break
+    }
+
+    this.sourceFaceVB = this.createSelectionOverlayBuffer(faceValues)
+    this.sourceFaceVC = this.sourceFaceVB ? faceValues.length / 7 : 0
+    this.sourceLineVB = this.createSelectionOverlayBuffer(lineValues)
+    this.sourceLineVC = this.sourceLineVB ? lineValues.length / 7 : 0
   }
 
   private onDown = (e: PointerEvent) => {
@@ -1316,6 +1732,7 @@ export class WebGPURenderer {
     this.downX = e.clientX; this.downY = e.clientY
     this.downButton = e.button
     this.gestureMoved = false
+    this.gestureCameraStart = this.getCameraState()
     try { canvas.setPointerCapture(e.pointerId) } catch { /* Pointer may already be gone. */ }
     e.preventDefault()
   }
@@ -1325,9 +1742,14 @@ export class WebGPURenderer {
     if (!this.gestureMoved) {
       this.gestureMoved = Math.hypot(e.clientX - this.downX, e.clientY - this.downY) >= CLICK_MOVE_THRESHOLD
       if (!this.gestureMoved) return
+      this.lastWheelHistoryAt = -Infinity
+      this.resetDepthCycle()
     }
     const dx = e.clientX - this.mx, dy = e.clientY - this.my
     this.mx = e.clientX; this.my = e.clientY
+    // A camera move between wheel events starts a new chronological segment;
+    // it must not be swallowed by the previous wheel burst's coalescing window.
+    if (dx !== 0 || dy !== 0) this.lastWheelHistoryAt = -Infinity
     if (this.pan) {
       const scale = 2 * this.dist * Math.tan(FOV_Y / 2) / Math.max(1, this.canvas?.clientHeight || 1)
       const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw)
@@ -1346,6 +1768,7 @@ export class WebGPURenderer {
   }
   private onPointerEnd = (e: PointerEvent) => {
     if (this.activePointer !== e.pointerId) return
+    const gestureCameraStart = this.gestureCameraStart
     const shouldPick = e.type === 'pointerup'
       && !this.gestureMoved
       && Math.hypot(e.clientX - this.downX, e.clientY - this.downY) < CLICK_MOVE_THRESHOLD
@@ -1354,6 +1777,10 @@ export class WebGPURenderer {
     this.activePointer = null
     this.drag = false
     this.pan = false
+    this.gestureCameraStart = null
+    if (gestureCameraStart && !cameraStatesEqual(gestureCameraStart, this.getCameraState())) {
+      this.recordCameraSnapshot(gestureCameraStart)
+    }
     const canvas = this.canvas
     if (e.type !== 'lostpointercapture' && canvas?.hasPointerCapture(e.pointerId)) {
       try { canvas.releasePointerCapture(e.pointerId) } catch { /* Capture can be released asynchronously. */ }
@@ -1366,7 +1793,17 @@ export class WebGPURenderer {
       : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? Math.max(1, this.canvas?.clientHeight || 1)
       : 1
     const delta = Math.max(-1000, Math.min(1000, e.deltaY * unit))
-    this.dist = this.clampDistance(this.dist * Math.exp(delta * 0.001))
+    const nextDistance = this.clampDistance(this.dist * Math.exp(delta * 0.001))
+    if (nextDistance === this.dist) return
+    this.flushActiveGestureCameraSnapshot()
+    const now = typeof performance === 'undefined' ? Date.now() : performance.now()
+    if (now - this.lastWheelHistoryAt > WHEEL_HISTORY_IDLE_MS) {
+      this.recordCameraSnapshot(this.getCameraState())
+    }
+    this.lastWheelHistoryAt = now
+    this.resetDepthCycle()
+    this.dist = nextDistance
+    if (this.gestureCameraStart) this.gestureCameraStart = this.getCameraState()
     this.requestRender()
   }
   private noCtx = (e: Event) => e.preventDefault()
@@ -1434,6 +1871,11 @@ export class WebGPURenderer {
     this.drag = false
     this.pan = false
     this.gestureMoved = false
+    this.gestureCameraStart = null
+    this.lastWheelHistoryAt = -Infinity
+    this.resetDepthCycle(false)
+    const hadCameraHistory = this.canGoToPreviousView
+    this.cameraHistory.clear()
 
     this.destroyMeshes(this.meshes)
     this.meshes = []
@@ -1443,6 +1885,8 @@ export class WebGPURenderer {
     this.measurementVB = null
     this.measurementVC = 0
     this.clearSelectionOverlayBuffers()
+    this.sourceHighlightId = null
+    this.clearSourceHighlightOverlayBuffers()
     this.depth?.destroy()
     this.depth = null
     this.sceneUB?.destroy()
@@ -1460,10 +1904,12 @@ export class WebGPURenderer {
     this.hoveredHit = null
     this.isolated = false
     this.measurementPoints = []
+    this.measureActive = false
     this.initialFitDone = false
     this.drawable = false
     this.lost = false
     try { device?.destroy() } catch { /* Repeated/lost-device cleanup is harmless. */ }
     if (selectionChanged) this.emitSelectionChange()
+    if (hadCameraHistory) this.emitCameraHistoryChange()
   }
 }

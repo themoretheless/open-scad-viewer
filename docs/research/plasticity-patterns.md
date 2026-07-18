@@ -35,10 +35,16 @@ Manifold results and cannot promise stable B-Rep faces or edges.
 
 - exact section contours/caps and interference coloring;
 - endpoint/midpoint/center/perpendicular snap families;
-- source-cursor → result reverse highlighting and depth cycling;
 - face-direction and draft-angle diagnostic shaders;
 - adaptive grid spacing and display units;
 - radial viewport menu and technical hidden-line export.
+
+## Status update — 2026-07-18
+
+Source-cursor/Outliner → result reverse highlighting and bounded depth cycling
+have been implemented, together with source reveal in the other direction.
+The remaining list above is intentionally still open; exact section caps,
+interference analysis and draft/overhang shaders are not claimed as complete.
 
 Direct face push/pull, edge loops, exact fillets and G0–G3 surface analysis are
 deliberately excluded: those operations require persistent B-Rep/NURBS

@@ -5,7 +5,11 @@ Snapshot: **2026-07-14 00:56 +04:00**. The final set contains exactly
 463,267 stars in total with a median of 1,444 stars. Star counts are a discovery
 signal, not a quality score.
 
-## Reproducible selection
+## Selection snapshot
+
+The final TSV is independently verifiable, but this is not a fully reproducible
+benchmark artifact: the exact query strings and the raw candidate pool were not
+committed with the snapshot. The recorded selection procedure was:
 
 1. Run 24 GitHub Search API queries with `fork:false archived:false`,
    `sort=stars`, `order=desc`, and `per_page=100`.
@@ -21,7 +25,7 @@ signal, not a quality score.
    REST API.
 
 The [TSV snapshot](top-100-repositories.tsv) used to build this document has SHA-256
-`7b4f96106592f9dbc235f3ecd3093d462d048423296c531e8e6f230a7afdc435`.
+`729a88cb675c830e6c529613508d1cce4e52ac218e76715cbe939b9327ca51e2`.
 
 ## What the mature projects do better
 

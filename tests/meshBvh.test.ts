@@ -98,6 +98,44 @@ describe('mesh BVH raycasting', () => {
     expect(hit?.t).toBeCloseTo(2, 12)
   })
 
+  it('keeps strict distance ordering at large ray parameters', () => {
+    const vertices = vertexBuffer([
+      [0, 0, 0], [1, 0, 0], [0, 1, 0],
+      [0, 0, 1e-6], [1, 0, 1e-6], [0, 1, 1e-6],
+    ])
+    const indices = new Uint32Array([0, 1, 2, 3, 4, 5])
+    const bvh = buildMeshBvh(vertices, indices)
+    const ray = { origin: [0.2, 0.2, 1e9] as const, direction: [0, 0, -1] as const }
+    const nearest = raycastMeshBvh(bvh, vertices, indices, ray)
+    const farther = raycastMeshBvh(bvh, vertices, indices, ray, {
+      minT: nearest!.t,
+      excludedTriangles: new Set([nearest!.triangleIndex]),
+    })
+
+    expect(nearest?.triangleIndex).toBe(1)
+    expect(farther?.triangleIndex).toBe(0)
+    expect(nearest!.t).toBeLessThan(farther!.t)
+  })
+
+  it('can enumerate exact same-depth triangle ties by identity', () => {
+    const vertices = vertexBuffer([
+      [0, 0, 0], [1, 0, 0], [0, 1, 0],
+      [0, 0, 0], [1, 0, 0], [0, 1, 0],
+    ])
+    const indices = new Uint32Array([0, 1, 2, 3, 4, 5])
+    const bvh = buildMeshBvh(vertices, indices)
+    const ray = { origin: [0.2, 0.2, 2] as const, direction: [0, 0, -1] as const }
+    const first = raycastMeshBvh(bvh, vertices, indices, ray)
+    const second = raycastMeshBvh(bvh, vertices, indices, ray, {
+      minT: first!.t,
+      excludedTriangles: new Set([first!.triangleIndex]),
+    })
+
+    expect(first?.triangleIndex).toBe(0)
+    expect(second?.triangleIndex).toBe(1)
+    expect(second?.t).toBe(first?.t)
+  })
+
   it('honours min/max ray parameters and rejects misses or zero rays', () => {
     const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
     const indices = new Uint32Array([0, 1, 2])

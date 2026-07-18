@@ -6,6 +6,8 @@ export type Vector3 = readonly [x: number, y: number, z: number]
 
 export interface SourceProvenanceRow {
   id: MeshKey
+  /** Stable source-operation identifier used for exact geometry highlighting. */
+  sourceId: number
   label?: string
   sourceStart: number
   sourceEnd: number

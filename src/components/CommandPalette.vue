@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId, watch } from 'vue'
-
-interface PaletteCommand {
-  id: string
-  label: string
-  detail?: string
-  shortcut?: string
-  keywords?: string | readonly string[]
-}
+import {
+  isPaletteCommandEnabled,
+  nextEnabledCommandIndex,
+  nextPaletteCommandIndex,
+  rankPaletteCommands,
+  type PaletteCommand,
+} from '../services/commandSearch'
 
 const props = defineProps<{
   open: boolean
@@ -29,22 +28,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 let previousFocus: HTMLElement | null = null
 
-const filteredCommands = computed(() => {
-  const terms = normalize(query.value).split(/\s+/).filter(Boolean)
-  if (!terms.length) return props.commands
-
-  return props.commands.filter(command => {
-    const keywords = typeof command.keywords === 'string'
-      ? command.keywords
-      : command.keywords?.join(' ') ?? ''
-    const searchable = normalize([
-      command.label,
-      command.detail ?? '',
-      keywords,
-    ].join(' '))
-    return terms.every(term => searchable.includes(term))
-  })
-})
+const filteredCommands = computed(() => rankPaletteCommands(props.commands, query.value))
 
 const activeOptionId = computed(() => activeIndex.value >= 0
   ? optionId(activeIndex.value)
@@ -54,7 +38,7 @@ watch(() => props.open, async open => {
   if (open) {
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     query.value = ''
-    activeIndex.value = props.commands.length ? 0 : -1
+    activeIndex.value = nextEnabledCommandIndex(filteredCommands.value, -1, 1)
     await nextTick()
     inputRef.value?.focus()
     inputRef.value?.select()
@@ -65,13 +49,8 @@ watch(() => props.open, async open => {
   }
 })
 
-watch(query, () => {
-  activeIndex.value = filteredCommands.value.length ? 0 : -1
-})
-
 watch(filteredCommands, commands => {
-  if (!commands.length) activeIndex.value = -1
-  else if (activeIndex.value < 0 || activeIndex.value >= commands.length) activeIndex.value = 0
+  activeIndex.value = nextEnabledCommandIndex(commands, -1, 1)
 })
 
 watch(activeIndex, async index => {
@@ -82,24 +61,30 @@ watch(activeIndex, async index => {
     ?.scrollIntoView({ block: 'nearest' })
 })
 
-function normalize(value: string) {
-  return value.normalize('NFKD').toLocaleLowerCase()
-}
-
 function optionId(index: number) {
   return `${listboxId}-option-${index}`
 }
 
+function reasonId(index: number) {
+  return `${optionId(index)}-reason`
+}
+
 function moveActive(direction: 1 | -1) {
-  const count = filteredCommands.value.length
-  if (!count) return
-  activeIndex.value = (activeIndex.value + direction + count) % count
+  activeIndex.value = nextPaletteCommandIndex(
+    filteredCommands.value,
+    activeIndex.value,
+    direction,
+  )
 }
 
 function execute(command: PaletteCommand | undefined) {
-  if (!command) return
+  if (!command || !isPaletteCommandEnabled(command)) return
   emit('execute', command.id)
   emit('close')
+}
+
+function activatePointer(index: number) {
+  activeIndex.value = index
 }
 
 function requestClose() {
@@ -176,18 +161,27 @@ function handleKeydown(event: KeyboardEvent) {
               :id="optionId(index)"
               :key="command.id"
               class="command-option"
-              :class="{ active: index === activeIndex }"
+              :class="{ active: index === activeIndex, 'is-disabled': !isPaletteCommandEnabled(command) }"
               type="button"
               role="option"
               tabindex="-1"
               :aria-selected="index === activeIndex"
+              :aria-disabled="!isPaletteCommandEnabled(command)"
+              :aria-describedby="!isPaletteCommandEnabled(command) ? reasonId(index) : undefined"
               :data-palette-index="index"
-              @pointerenter="activeIndex = index"
+              @pointerenter="activatePointer(index)"
               @click="execute(command)"
             >
               <span class="command-copy">
                 <span class="command-label">{{ command.label }}</span>
                 <span v-if="command.detail" class="command-detail">{{ command.detail }}</span>
+                <span
+                  v-if="!isPaletteCommandEnabled(command)"
+                  :id="reasonId(index)"
+                  class="command-disabled-reason"
+                >
+                  {{ command.disabledReason || 'Unavailable / Недоступно' }}
+                </span>
               </span>
               <kbd v-if="command.shortcut" class="shortcut">{{ command.shortcut }}</kbd>
             </button>
@@ -309,6 +303,16 @@ kbd {
   border-color: color-mix(in srgb, var(--accent, #559dff) 25%, transparent);
 }
 
+.command-option.is-disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.command-option.is-disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
 .command-copy {
   min-width: 0;
   flex: 1;
@@ -328,6 +332,15 @@ kbd {
   overflow: hidden;
   color: var(--text-dim, #a4a9b5);
   font-size: 0.72rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-disabled-reason {
+  overflow: hidden;
+  color: var(--warning, #f5bd55);
+  font-size: 0.68rem;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;

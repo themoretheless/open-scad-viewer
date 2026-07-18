@@ -18,11 +18,12 @@ instead of a misleading preview.
   mesh, semantic-edge, provenance, and BVH buffers.
 - Z-up WebGPU viewport with BVH-accelerated preselection/picking, point/face/
   body selection modes, focus/isolate/hide, shaded/semantic-edge/x-ray display,
-  an interactive view cube, fit/reset, standard views, grid control,
-  perspective/orthographic projection, and event-driven redraw.
-- Plasticity-inspired searchable command palette, Scene Outliner, Inspect
-  workspace, source ↔ CSG cross-highlighting, two-point measurements, virtual
-  section analysis, and viewport-scoped shortcuts.
+  bounded front-to-back click cycling, an interactive view cube, fit/reset,
+  Previous View history, standard views, grid control, perspective/orthographic
+  projection, and event-driven redraw.
+- Plasticity-inspired fuzzy/contextual command palette with RU/EN aliases and
+  MRU, Scene Outliner, Inspect workspace, bounded source ↔ CSG cross-highlighting,
+  two-point measurements, virtual section-plane clipping, and viewport-scoped shortcuts.
 - Lightweight OpenSCAD Customizer controls for top-level literal variables,
   including `// [min:step:max]` sliders and choice lists.
 - Binary STL and OBJ export with object transforms baked into the result.
@@ -59,7 +60,10 @@ npm run preview
 - Right drag or Shift + left drag: pan.
 - Mouse wheel: zoom.
 - Hover: preselect the nearest surface through the mesh BVH.
-- Click without dragging: select the exact surface and its source operation.
+- Click without dragging: select the exact surface and its source operation;
+  repeat at the same screen point to cycle front-to-back through up to 32 targets.
+- Move the editor caret into a geometry call, or hover/focus its Outliner source
+  row, to highlight that operation's surviving triangles in the viewport.
 - `1`, `3`, `4`: point, face, and body selection modes.
 - `Shift + M`: cycle selection modes (`Tab` keeps normal keyboard focus traversal).
 - `F` or `/`: focus the selection, or fit the model when nothing is selected.
@@ -68,6 +72,8 @@ npm run preview
 - `Esc`: clear selection.
 - `E`, `X`, `G`: toggle mesh edges, x-ray, and grid.
 - `5`: toggle perspective/orthographic projection.
+- `[`: restore the previous camera view (camera actions, drag gestures, and
+  coalesced wheel-zoom bursts share a bounded history).
 - Numpad `0`, `1`, `3`, `7`: isometric, front, right, and top views.
 - `Ctrl/⌘ + =`: start/cancel a two-point measurement.
 - `Shift + F`: flip an active section plane.
@@ -107,7 +113,7 @@ the browser: source length, AST size, recursion, range size, object count,
   viewer controls.
 - `tests/`: mathematical and geometry golden tests.
 
-The implementation priorities came from two reproducible, non-overlapping
+The implementation priorities came from two timestamped, non-overlapping
 comparisons covering 200 OpenSCAD, CAD, mesh, and 3D-viewer repositories. See
 [the benchmark](docs/research/top-100-repositories.md).
 The follow-up UI pass is documented in
@@ -117,4 +123,8 @@ The second independent benchmark adds
 while the [geometry literature review](docs/research/geometry-pipeline-literature.md),
 [CAD/HCI review](docs/research/cad-hci-literature.md), and
 [prioritized roadmap](docs/research/second-pass-recommendations.md) document the
-next evidence-backed implementation candidates.
+next evidence-backed implementation candidates. A third pass adds
+[10 ideas with distinct user outcomes](docs/research/ten-new-ideas-third-pass.md)
+for model contracts, dimensional linting, printability, profiling, multi-view
+inspection, tolerance analysis, reproducible exports, assembly interference, automatic
+failure reduction, and parameter galleries.

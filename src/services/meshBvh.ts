@@ -41,6 +41,8 @@ export interface RaycastMeshBvhOptions {
   minT?: number
   /** Inclusive upper ray parameter. Defaults to Infinity. */
   maxT?: number
+  /** Triangle identities to skip, used by bounded same-depth hit traversal. */
+  excludedTriangles?: ReadonlySet<number>
   /**
    * Optional affine row-major matrix mapping the supplied world-space ray to
    * mesh-local space. Its direction is deliberately not normalised, so the
@@ -486,14 +488,18 @@ export function raycastMeshBvh(
       const end = Math.min(firstOrLeft + count, bvh.triangles.length)
       for (let slot = firstOrLeft; slot < end; slot++) {
         const triangle = bvh.triangles[slot]
+        if (options.excludedTriangles?.has(triangle)) continue
         const intersection = intersectTriangle(
           vertices, indices, bvh.vertexStride, triangle,
           localOrigin, localDirection, minT, nearestT,
         )
         if (!intersection) continue
-        const tolerance = Number.EPSILON * 64 * Math.max(1, Math.abs(nearestT), Math.abs(intersection.t))
-        if (!nearestIntersection || intersection.t < nearestT - tolerance ||
-            (Math.abs(intersection.t - nearestT) <= tolerance && triangle < nearestTriangle)) {
+        // Distance is authoritative. A scale-relative tolerance can let a
+        // slightly farther triangle win at large ray parameters and then make
+        // a continuation skip the true nearest layer. Only exact ties use the
+        // original triangle id for deterministic ordering.
+        if (!nearestIntersection || intersection.t < nearestT ||
+            (intersection.t === nearestT && triangle < nearestTriangle)) {
           nearestT = intersection.t
           nearestTriangle = triangle
           nearestIntersection = intersection

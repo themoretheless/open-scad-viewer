@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUpdate, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onBeforeUpdate, ref, watch } from 'vue'
 import type {
   MeshKey,
   PanelLocale,
@@ -28,6 +28,7 @@ const emit = defineEmits<{
   focus: [meshId: MeshKey]
   isolate: [meshId: MeshKey]
   'reveal-source': [source: SourceProvenanceRow, meshId: MeshKey]
+  'highlight-source': [sourceId: number | null]
 }>()
 
 const copy = {
@@ -56,6 +57,24 @@ const expandedIds = ref<Set<MeshKey>>(new Set())
 const panelRef = ref<HTMLElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
 const rowRefs = ref<HTMLButtonElement[]>([])
+const hoveredSourceId = ref<number | null>(null)
+const focusedSourceId = ref<number | null>(null)
+
+onBeforeUnmount(clearActiveSourceHighlight)
+watch(query, clearActiveSourceHighlight)
+watch(() => props.meshes, meshes => {
+  const availableSourceIds = new Set(
+    meshes.flatMap(mesh => (mesh.sources ?? []).map(source => source.sourceId)),
+  )
+  if ((hoveredSourceId.value !== null && !availableSourceIds.has(hoveredSourceId.value))
+      || (focusedSourceId.value !== null && !availableSourceIds.has(focusedSourceId.value))) {
+    clearActiveSourceHighlight()
+  } else if (hoveredSourceId.value !== null || focusedSourceId.value !== null) {
+    // setMeshes() replaces GPU buffers, so a still-active DOM row must restore
+    // its overlay even though pointerenter/focus does not fire again.
+    emitActiveSourceHighlight()
+  }
+})
 
 const filteredMeshes = computed(() => {
   const needle = normalize(query.value.trim())
@@ -93,7 +112,10 @@ function rowTabIndex(mesh: SceneMeshRow, index: number) {
 
 function toggleExpanded(meshId: MeshKey) {
   const next = new Set(expandedIds.value)
-  if (next.has(meshId)) next.delete(meshId)
+  if (next.has(meshId)) {
+    next.delete(meshId)
+    clearActiveSourceHighlight()
+  }
   else next.add(meshId)
   expandedIds.value = next
 }
@@ -101,6 +123,7 @@ function toggleExpanded(meshId: MeshKey) {
 function toggleAllExpanded() {
   if (allExpanded.value) {
     expandedIds.value = new Set()
+    clearActiveSourceHighlight()
     return
   }
   expandedIds.value = new Set(
@@ -156,7 +179,7 @@ function handlePanelKeydown(event: KeyboardEvent) {
   } else if (event.key === 'Escape' && searchOpen.value) {
     event.preventDefault()
     if (query.value) query.value = ''
-    else searchOpen.value = false
+    else closeSearch()
   } else if (event.key === 'Escape' && !typing) {
     event.preventDefault()
     emit('clear-selection')
@@ -211,6 +234,40 @@ function sourceLocation(source: SourceProvenanceRow) {
     return `${text.value.line} ${source.line}${source.column === undefined ? '' : `:${source.column}`}`
   }
   return `${source.sourceStart}–${source.sourceEnd}`
+}
+
+function emitActiveSourceHighlight() {
+  emit('highlight-source', hoveredSourceId.value ?? focusedSourceId.value)
+}
+
+function clearActiveSourceHighlight() {
+  hoveredSourceId.value = null
+  focusedSourceId.value = null
+  emit('highlight-source', null)
+}
+
+function hoverSource(source: SourceProvenanceRow) {
+  hoveredSourceId.value = source.sourceId
+  emit('preselect', null)
+  emitActiveSourceHighlight()
+}
+
+function leaveSource(meshId: MeshKey) {
+  hoveredSourceId.value = null
+  emitActiveSourceHighlight()
+  if (focusedSourceId.value === null) emit('preselect', meshId)
+}
+
+function focusSource(source: SourceProvenanceRow) {
+  focusedSourceId.value = source.sourceId
+  emit('preselect', null)
+  emitActiveSourceHighlight()
+}
+
+function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
+  if (focusedSourceId.value === source.sourceId) focusedSourceId.value = null
+  emitActiveSourceHighlight()
+  if (hoveredSourceId.value === null) emit('preselect', meshId)
 }
 </script>
 
@@ -351,7 +408,14 @@ function sourceLocation(source: SourceProvenanceRow) {
 
         <ul v-if="mesh.sources?.length && expandedIds.has(mesh.id)" class="source-list" :aria-label="text.sources">
           <li v-for="source in mesh.sources" :key="source.id">
-            <button type="button" @click="emit('reveal-source', source, mesh.id)">
+            <button
+              type="button"
+              @pointerenter="hoverSource(source)"
+              @pointerleave="leaveSource(mesh.id)"
+              @focus="focusSource(source)"
+              @blur="blurSource(mesh.id, source)"
+              @click="emit('reveal-source', source, mesh.id)"
+            >
               <span class="source-rail" aria-hidden="true" />
               <span class="material-dot source-dot" :style="colorStyle(source.color ?? mesh.color)" aria-hidden="true" />
               <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true">

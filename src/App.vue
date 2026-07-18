@@ -13,7 +13,9 @@ import type {
   SourceProvenanceRow,
 } from './components/cadPanels.types'
 import { EXAMPLES } from './data/examples'
+import type { CameraState } from './services/cameraHistory'
 import type { GeometryResponse } from './services/geometryWorkerProtocol'
+import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh, matchMeshesByProvenance } from './services/meshInspection'
 import type { GeometryQuality, MeshData } from './services/openscadParser'
@@ -40,14 +42,15 @@ const L: Record<Language, Record<string, string>> = {
     noParameters: 'Добавьте верхнеуровневые переменные; диапазон слайдера: // [min:step:max]',
     openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
     meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
-    hint: 'Клик: выбрать · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
+    hint: 'Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
     noGpu: 'WebGPU недоступен. Откройте приложение в актуальном Chrome, Edge, Firefox или Safari.',
     theme: 'Тема', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
     language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
-    fit: 'Вписать', reset: 'Сбросить вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
+    fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
     grid: 'Сетка', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
     left: 'Слева', right: 'Справа', top: 'Сверху', bottom: 'Снизу',
     compiling: 'Собираем геометрию…', stale: 'Показан предыдущий результат', ready: 'Готово',
+    failed: 'Ошибка сборки',
     preview: 'Быстрый preview', full: 'Точная сборка', exported: 'Геометрия экспортирована',
     copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
     opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
@@ -60,6 +63,10 @@ const L: Record<Language, Record<string, string>> = {
     selectionMode: 'Режим выбора', sidebar: 'Боковая панель', measure: 'Измерить расстояние',
     section: 'Сечение', hidden: 'Скрыт',
     sourceStale: 'Сначала дождитесь сборки текущего исходника',
+    needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
+    needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
+    buildInProgress: 'Дождитесь завершения текущей сборки',
+    depthCandidate: 'цель в глубине',
   },
   en: {
     title: 'OpenSCAD Viewer',
@@ -70,14 +77,15 @@ const L: Record<Language, Record<string, string>> = {
     noParameters: 'Add top-level variables; slider metadata: // [min:step:max]',
     openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
     meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
-    hint: 'Click: select · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
+    hint: 'Click: select · repeat click: cycle deeper · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
     noGpu: 'WebGPU is unavailable. Open the app in a current Chrome, Edge, Firefox, or Safari.',
     theme: 'Theme', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
     language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
-    fit: 'Fit', reset: 'Reset view', perspective: 'Perspective', orthographic: 'Orthographic',
+    fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
     grid: 'Grid', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
     left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom',
     compiling: 'Building geometry…', stale: 'Showing the previous result', ready: 'Ready',
+    failed: 'Build failed',
     preview: 'Fast preview', full: 'Full build', exported: 'Geometry exported',
     copied: 'Link copied', copyFailed: 'Link added to the address bar',
     opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
@@ -90,7 +98,24 @@ const L: Record<Language, Record<string, string>> = {
     selectionMode: 'Selection mode', sidebar: 'Sidebar', measure: 'Measure distance',
     section: 'Section', hidden: 'Hidden',
     sourceStale: 'Wait for the current source to finish building first',
+    needsModel: 'Build a model first', needsSelection: 'Select an object first',
+    needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
+    buildInProgress: 'Wait for the current build to finish',
+    depthCandidate: 'depth target',
   },
+}
+
+const COMMAND_ALIAS_KEYS: Record<string, readonly string[]> = {
+  render: ['render'], open: ['open'], save: ['save'], share: ['share'],
+  'export-stl': ['exportStl'], 'export-obj': ['exportObj'],
+  fit: ['fit'], focus: ['focus'], reset: ['reset'], 'previous-view': ['previousView'],
+  isolate: ['isolate', 'unisolate'], deselect: ['deselect'],
+  projection: ['perspective', 'orthographic'], grid: ['grid'],
+  shaded: ['shaded'], edges: ['edges'], xray: ['xray'],
+  'select-point': ['point'], 'select-face': ['face'], 'select-object': ['body', 'object'],
+  measure: ['measure'], section: ['section'], sidebar: ['sidebar'],
+  iso: ['iso'], front: ['front'], right: ['right'], top: ['top'],
+  back: ['back'], left: ['left'], bottom: ['bottom'], theme: ['theme'],
 }
 
 const lang = ref<Language>(readStorage('scad-lang') === 'en' ? 'en' : 'ru')
@@ -129,6 +154,8 @@ const selectedHit = ref<PickHit | null>(null)
 const hoveredHit = ref<PickHit | null>(null)
 const isolated = ref(false)
 const paletteOpen = ref(false)
+const canPreviousView = ref(false)
+const commandMru = ref<string[]>(readCommandMru())
 const sceneMeshes = ref<MeshData[]>([])
 const meshVisibility = ref<boolean[]>([])
 const selectionMode = ref<SelectionMode>('face')
@@ -150,7 +177,9 @@ const canExport = computed(() => (
   && renderedQuality.value === 'full'
   && renderedSource.value === code.value
 ))
-const statusText = computed(() => rendering.value ? t('compiling') : stale.value ? t('stale') : t('ready'))
+const statusText = computed(() => rendering.value
+  ? t('compiling')
+  : error.value ? t('failed') : stale.value ? t('stale') : t('ready'))
 const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, index) => {
   const grouped = new Map<number, SourceProvenanceRow>()
   for (const run of mesh.provenance) {
@@ -162,6 +191,7 @@ const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, in
       const location = lineAndColumn(renderedSource.value || code.value, run.source.start)
       grouped.set(run.source.id, {
         id: `${index}:${run.source.id}`,
+        sourceId: run.source.id,
         label: run.source.label,
         sourceStart: run.source.start,
         sourceEnd: run.source.end,
@@ -194,6 +224,7 @@ const currentInspection = computed<InspectSelection | null>(() => {
     const location = lineAndColumn(renderedSource.value || code.value, hit.source.start)
     source = {
       id: `${index}:${hit.source.originalId}`,
+      sourceId: hit.source.id,
       label: hit.source.label,
       sourceStart: hit.source.start,
       sourceEnd: hit.source.end,
@@ -235,15 +266,45 @@ const sectionRange = computed(() => {
   return { min, max, step: Math.max(0.001, span / 500) }
 })
 const paletteCommands = computed(() => {
-  const commands = [
-    command('render', t('render'), 'Ctrl/⌘+Enter', 'build compile render'),
+  const hasVisibleModel = sceneMeshes.value.some((_, index) => meshVisibility.value[index] !== false)
+  const hasSelection = selectedMesh.value !== null
+  const commands: PaletteCommand[] = [
+    command('render', t('render'), 'Ctrl/⌘+Enter', 'build compile render', {
+      enabled: !rendering.value,
+      disabledReason: t('buildInProgress'),
+    }),
     command('open', t('open'), 'Ctrl/⌘+O', 'file import'),
     command('save', t('save'), 'Ctrl/⌘+S', 'file export'),
-    command('export-stl', t('exportStl'), '', 'mesh manufacturing print'),
-    command('export-obj', t('exportObj'), '', 'mesh interchange'),
+    command('export-stl', t('exportStl'), '', 'mesh manufacturing print', {
+      enabled: canExport.value,
+      disabledReason: t('needsFullBuild'),
+    }),
+    command('export-obj', t('exportObj'), '', 'mesh interchange', {
+      enabled: canExport.value,
+      disabledReason: t('needsFullBuild'),
+    }),
     command('share', t('share'), '', 'link copy'),
-    command('fit', t('fit'), 'F', 'camera frame all'),
+    command('focus', t('focus'), '/', 'selection frame', {
+      enabled: hasSelection,
+      disabledReason: t('needsSelection'),
+    }),
+    command('isolate', isolated.value ? t('unisolate') : t('isolate'), '.', 'selection visibility', {
+      enabled: hasSelection,
+      disabledReason: t('needsSelection'),
+    }),
+    command('deselect', t('deselect'), 'Esc', 'selection clear', {
+      enabled: hasSelection,
+      disabledReason: t('needsSelection'),
+    }),
+    command('fit', t('fit'), 'F', 'camera frame all', {
+      enabled: hasVisibleModel,
+      disabledReason: t('needsModel'),
+    }),
     command('reset', t('reset'), '', 'camera home'),
+    command('previous-view', t('previousView'), '[', 'camera history back', {
+      enabled: canPreviousView.value,
+      disabledReason: t('noPreviousView'),
+    }),
     command('projection', projection.value === 'perspective' ? t('orthographic') : t('perspective'), '5', 'camera projection'),
     command('grid', t('grid'), 'G', 'overlay'),
     command('shaded', t('shaded'), '', 'shader display'),
@@ -252,27 +313,24 @@ const paletteCommands = computed(() => {
     command('select-point', t('point'), '1', 'selection vertex snap'),
     command('select-face', t('face'), '3', 'selection surface'),
     command('select-object', t('body'), '4', 'selection body solid'),
-    command('measure', t('measure'), 'Ctrl/⌘+=', 'inspect distance dimension'),
-    command('section', t('section'), '', 'inspect slice clipping plane'),
+    command('measure', t('measure'), 'Ctrl/⌘+=', 'inspect distance dimension', {
+      enabled: hasVisibleModel || measureActive.value,
+      disabledReason: t('needsModel'),
+    }),
+    command('section', t('section'), '', 'inspect slice clipping plane', {
+      enabled: hasVisibleModel || sectionEnabled.value,
+      disabledReason: t('needsModel'),
+    }),
     command('sidebar', t('sidebar'), 'Ctrl/⌘+Shift+B', 'panel outliner inspect parameters'),
-    command('iso', t('iso'), '0', 'camera view'),
-    command('front', t('front'), '1', 'camera view'),
-    command('right', t('right'), '2', 'camera view'),
-    command('top', t('top'), '3', 'camera view'),
+    command('iso', t('iso'), 'Num 0', 'camera view'),
+    command('front', t('front'), 'Num 1', 'camera view'),
+    command('right', t('right'), 'Num 3', 'camera view'),
+    command('top', t('top'), 'Num 7', 'camera view'),
     command('back', t('back'), '', 'camera view'),
     command('left', t('left'), '', 'camera view'),
     command('bottom', t('bottom'), '', 'camera view'),
     command('theme', t('theme'), '', 'dark light'),
   ]
-  if (selectedMesh.value !== null) {
-    commands.splice(5, 0,
-      command('focus', t('focus'), '/', 'selection frame'),
-      command('isolate', isolated.value ? t('unisolate') : t('isolate'), '.', 'selection visibility'),
-      command('deselect', t('deselect'), 'Esc', 'selection clear'),
-    )
-  } else if (isolated.value) {
-    commands.splice(5, 0, command('isolate', t('unisolate'), '.', 'selection visibility'))
-  }
   return commands
 })
 
@@ -312,6 +370,8 @@ onMounted(async () => {
     measurement.value = value
     measureActive.value = active
   }
+  renderer.onCameraHistoryChange = available => { canPreviousView.value = available }
+  canPreviousView.value = renderer.canGoToPreviousView
   renderer.setDisplayMode(displayMode.value)
   renderer.setSelectionMode(selectionMode.value)
   window.addEventListener('keydown', handleGlobalKey)
@@ -336,12 +396,16 @@ onUnmounted(() => {
     renderer.onSelectionChange = null
     renderer.onHoverChange = null
     renderer.onMeasurementChange = null
+    renderer.onCameraHistoryChange = null
   }
   renderer?.destroy()
   renderer = null
 })
 
 watch(code, value => {
+  // Provenance belongs to the last compiled source revision. Never retain a
+  // reverse highlight while the editor has moved ahead of that revision.
+  if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
   if (storageDebounce) clearTimeout(storageDebounce)
   storageDebounce = setTimeout(() => writeStorage('scad-code', value), 300)
   if (autoRender.value) scheduleRender()
@@ -455,6 +519,7 @@ function handleGeometryResponse(event: MessageEvent<GeometryResponse>) {
     warnings.value = response.warnings
     renderedSource.value = source
     renderedQuality.value = response.quality
+    syncSourceHighlightFromEditor()
     sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
     applySection()
   } catch (caught) {
@@ -580,6 +645,31 @@ function resetView() {
   activeView.value = 'iso'
   renderer?.resetView()
 }
+function previousView() {
+  const state = renderer?.previousView()
+  if (!state) return
+  projection.value = state.projection
+  const restoredView = standardViewForCamera(state)
+  if (restoredView) {
+    standardView.value = restoredView
+    activeView.value = restoredView
+  } else {
+    activeView.value = 'custom'
+  }
+}
+
+function standardViewForCamera(state: CameraState): StandardView | null {
+  const orientations: Array<[StandardView, number, number]> = [
+    ['iso', Math.PI / 4, Math.atan(1 / Math.sqrt(2))],
+    ['front', 0, 0], ['back', Math.PI, 0],
+    ['left', -Math.PI / 2, 0], ['right', Math.PI / 2, 0],
+    ['top', 0, Math.PI / 2], ['bottom', 0, -Math.PI / 2],
+  ]
+  const angularDistance = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)))
+  return orientations.find(([, yaw, pitch]) => (
+    angularDistance(state.yaw, yaw) <= 1e-7 && Math.abs(state.pitch - pitch) <= 1e-7
+  ))?.[0] ?? null
+}
 function focusSelection() {
   if (!renderer?.fitSelection()) renderer?.fitView()
 }
@@ -664,6 +754,49 @@ function revealSource(source: SourceProvenanceRow) {
   const end = clamp(source.sourceEnd, start, code.value.length)
   editor.focus({ preventScroll: false })
   editor.setSelectionRange(start, end, 'forward')
+  renderer?.setSourceHighlight(source.sourceId)
+}
+
+function sourceIdAtEditorCaret(): number | null {
+  const editor = editorRef.value
+  if (!editor || !sourceMatchesEditor.value) return null
+  const caret = editor.selectionStart === editor.selectionEnd
+    ? editor.selectionStart
+    : editor.selectionDirection === 'backward'
+      ? editor.selectionStart
+      : Math.max(editor.selectionStart, editor.selectionEnd - 1)
+  let sourceId: number | null = null
+  let smallestSpan = Infinity
+  let deepestStart = -1
+  for (const mesh of sceneMeshes.value) {
+    for (const run of mesh.provenance) {
+      const source = run.source
+      if (!source || caret < source.start || caret >= source.end) continue
+      const span = source.end - source.start
+      if (span < smallestSpan || (span === smallestSpan && source.start > deepestStart)) {
+        sourceId = source.id
+        smallestSpan = span
+        deepestStart = source.start
+      }
+    }
+  }
+  return sourceId
+}
+
+function syncSourceHighlightFromEditor() {
+  renderer?.setSourceHighlight(sourceIdAtEditorCaret())
+}
+
+function highlightSource(sourceId: number | null) {
+  if (sourceId === null) syncSourceHighlightFromEditor()
+  else renderer?.setSourceHighlight(sourceMatchesEditor.value ? sourceId : null)
+}
+
+function handleEditorInput() {
+  selectedExample.value = ''
+  // The v-model update precedes this handler, so this also clears stale
+  // geometry immediately instead of waiting for the next Worker response.
+  syncSourceHighlightFromEditor()
 }
 
 function startMeasure() {
@@ -735,12 +868,33 @@ function lineAndColumn(source: string, offset: number) {
   return { line, column: before.length - before.lastIndexOf('\n') }
 }
 
-function command(id: string, label: string, shortcut = '', keywords = '') {
-  return { id, label, shortcut, keywords }
+function command(
+  id: string,
+  label: string,
+  shortcut = '',
+  keywords = '',
+  options: Partial<Pick<PaletteCommand, 'enabled' | 'disabledReason'>> = {},
+): PaletteCommand {
+  const aliases = (COMMAND_ALIAS_KEYS[id] ?? [])
+    .flatMap(key => [L.ru[key], L.en[key]])
+    .filter((value, index, values) => !!value && values.indexOf(value) === index)
+  const mruRank = commandMru.value.indexOf(id)
+  return {
+    id,
+    label,
+    shortcut,
+    keywords,
+    aliases,
+    ...options,
+    ...(mruRank >= 0 ? { mruRank } : {}),
+  }
 }
 
 function executeCommand(id: string) {
+  const target = paletteCommands.value.find(candidate => candidate.id === id)
+  if (target && !isPaletteCommandEnabled(target)) return
   paletteOpen.value = false
+  recordCommandUsage(id)
   const views: StandardView[] = ['iso', 'front', 'back', 'left', 'right', 'top', 'bottom']
   if (views.includes(id as StandardView)) { setStandardView(id as StandardView); return }
   switch (id) {
@@ -753,6 +907,7 @@ function executeCommand(id: string) {
     case 'fit': fitView(); break
     case 'focus': focusSelection(); break
     case 'reset': resetView(); break
+    case 'previous-view': previousView(); break
     case 'isolate': toggleIsolate(); break
     case 'deselect': clearSelection(); break
     case 'projection': toggleProjection(); break
@@ -772,6 +927,12 @@ function executeCommand(id: string) {
     case 'sidebar': dockOpen.value = !dockOpen.value; break
     case 'theme': toggleTheme(); break
   }
+}
+
+function recordCommandUsage(id: string) {
+  const next = [id, ...commandMru.value.filter(candidate => candidate !== id)].slice(0, 12)
+  commandMru.value = next
+  writeStorage('scad-command-mru', JSON.stringify(next))
 }
 
 function handleEditorKey(event: KeyboardEvent) {
@@ -797,6 +958,7 @@ function handleViewportKey(event: KeyboardEvent) {
     measureActive.value ? cancelMeasure() : startMeasure()
   }
   else if (event.shiftKey && key === 'f' && sectionEnabled.value) { event.preventDefault(); setSectionFlip(!sectionFlip.value) }
+  else if (plainKey && event.code === 'BracketLeft') { event.preventDefault(); previousView() }
   else if (key === 'f' || event.key === '/') { event.preventDefault(); focusSelection() }
   else if (event.key === '.') { event.preventDefault(); toggleIsolate() }
   else if (event.key === 'Escape') { event.preventDefault(); measureActive.value ? cancelMeasure() : clearSelection() }
@@ -879,6 +1041,13 @@ function showNotice(message: string) {
 function readStorage(key: string): string | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key) }
   catch { return null }
+}
+function readCommandMru(): string[] {
+  try {
+    const value: unknown = JSON.parse(readStorage('scad-command-mru') ?? '[]')
+    if (!Array.isArray(value)) return []
+    return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
+  } catch { return [] }
 }
 function writeStorage(key: string, value: string) {
   try { localStorage.setItem(key, value) } catch { /* storage can be unavailable or full */ }
@@ -972,7 +1141,11 @@ function readSharedCode() {
           autocomplete="off"
           autocorrect="off"
           autocapitalize="off"
-          @input="selectedExample = ''"
+          @input="handleEditorInput"
+          @select="syncSourceHighlightFromEditor"
+          @click="syncSourceHighlightFromEditor"
+          @keyup="syncSourceHighlightFromEditor"
+          @focus="syncSourceHighlightFromEditor"
           @keydown="handleEditorKey"
         />
 
@@ -986,7 +1159,7 @@ function readSharedCode() {
           <span>{{ t('triangles') }} <strong>{{ formatNumber(triangleCount) }}</strong></span>
           <span v-if="meshCount">{{ t('volume') }} <strong>{{ formatNumber(volume, 2) }}</strong></span>
           <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
-          <span class="status" :class="{ stale, busy: rendering }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
+          <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
       </section>
 
@@ -1010,6 +1183,14 @@ function readSharedCode() {
         <div class="viewer-toolbar">
           <button class="view-btn" type="button" :title="t('fit')" @click="fitView">⌗ <span>{{ t('fit') }}</span></button>
           <button class="view-btn icon-only" type="button" :title="t('reset')" @click="resetView">↺</button>
+          <button
+            class="view-btn icon-only"
+            type="button"
+            :disabled="!canPreviousView"
+            :aria-label="t('previousView')"
+            :title="canPreviousView ? `${t('previousView')} · [` : t('noPreviousView')"
+            @click="previousView"
+          >←</button>
           <button class="view-btn" type="button" :aria-pressed="projection === 'orthographic'" @click="toggleProjection">
             {{ projection === 'perspective' ? t('perspective') : t('orthographic') }}
           </button>
@@ -1062,10 +1243,10 @@ function readSharedCode() {
           <ViewCube :active-view="activeView" @view="setStandardView" />
         </div>
         <div v-if="dockOpen" class="cad-dock">
-          <div class="dock-tabs" role="tablist" :aria-label="t('sidebar')">
-            <button type="button" role="tab" :aria-selected="dockTab === 'scene'" :class="{ active: dockTab === 'scene' }" @click="dockTab = 'scene'">{{ t('scene') }}</button>
-            <button type="button" role="tab" :aria-selected="dockTab === 'inspect'" :class="{ active: dockTab === 'inspect' }" @click="dockTab = 'inspect'">{{ t('inspect') }}</button>
-            <button type="button" role="tab" :aria-selected="dockTab === 'parameters'" :class="{ active: dockTab === 'parameters' }" @click="dockTab = 'parameters'">{{ t('parameters') }}</button>
+          <div class="dock-tabs" :aria-label="t('sidebar')">
+            <button type="button" :aria-pressed="dockTab === 'scene'" :class="{ active: dockTab === 'scene' }" @click="dockTab = 'scene'">{{ t('scene') }}</button>
+            <button type="button" :aria-pressed="dockTab === 'inspect'" :class="{ active: dockTab === 'inspect' }" @click="dockTab = 'inspect'">{{ t('inspect') }}</button>
+            <button type="button" :aria-pressed="dockTab === 'parameters'" :class="{ active: dockTab === 'parameters' }" @click="dockTab = 'parameters'">{{ t('parameters') }}</button>
             <button class="dock-close" type="button" :aria-label="t('sidebar')" @click="dockOpen = false">×</button>
           </div>
           <SceneOutliner
@@ -1082,6 +1263,7 @@ function readSharedCode() {
             @focus="focusSceneMesh"
             @isolate="isolateSceneMesh"
             @reveal-source="revealSource"
+            @highlight-source="highlightSource"
           />
           <InspectPanel
             v-else-if="dockTab === 'inspect'"
@@ -1121,6 +1303,9 @@ function readSharedCode() {
           <span v-if="selectedMesh !== null">
             <span class="selection-dot" aria-hidden="true" />
             {{ t('selected') }}: {{ t('object') }} {{ selectedMesh + 1 }} / {{ meshCount }}
+            <span v-if="(selectedHit?.cycleCount ?? 0) > 1">
+              · {{ t('depthCandidate') }} {{ (selectedHit?.cycleIndex ?? 0) + 1 }}/{{ selectedHit?.cycleCount }}
+            </span>
           </span>
           <span v-else>{{ t('isolate') }}</span>
           <button v-if="selectedMesh !== null" type="button" :title="t('focus')" @click="focusSelection">/</button>
@@ -1259,6 +1444,7 @@ button, select { color: inherit; }
 .status { margin-left: auto; }
 .status.busy { color: var(--accent); }
 .status.stale { color: var(--warning); }
+.status.failed { color: var(--danger); }
 .splitter {
   position: relative; z-index: 4; width: 7px; flex: 0 0 7px; cursor: col-resize;
   background: var(--surface); border-inline: 1px solid var(--border); touch-action: none;

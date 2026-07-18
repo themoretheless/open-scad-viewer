@@ -15,16 +15,27 @@ Plasticity. SCAD-код остаётся источником истины; view
 semantic edges; Manifold `runOriginalID`, `runFlags` и `faceID` преобразуются в
 source provenance. Viewport поддерживает hover preselection, point/face/body
 режимы с отдельными point/face overlays, переход от выбранной CSG-поверхности
-к диапазону SCAD, Scene Outliner, Inspect, двухточечное измерение и виртуальное
-сечение. Superseded preview реально отменяется restart-ом Worker, затем
+к диапазону SCAD и обратную подсветку всех surviving patches от caret/Outliner.
+Повторный клик перебирает bounded front-to-back цели. Scene Outliner, Inspect,
+двухточечное измерение и виртуальное сечение дополняют inspection workspace.
+Superseded preview реально отменяется restart-ом Worker, затем
 idle-запрос публикует full build; visibility, selection, isolate и measurement
 переносятся в full по source provenance. Также реализованы базовый Customizer,
-topology diagnostics и STL/OBJ export только из актуальной full-сборки.
+topology diagnostics, bounded Previous View stack и контекстная fuzzy command
+palette с RU/EN aliases, MRU и причинами недоступности. STL/OBJ export разрешён
+только из актуальной full-сборки.
 
-Из P0 остаются улучшения, а не блокирующие основы: depth-cycling совпадающих
-поверхностей, silhouette edges, section caps/точный контур и дополнительные
-snap-типы. Из P1/P2 по-прежнему открыты multi-file/incremental editor,
-checkpoints, 26-direction camera history, 3MF/GLB, chunked LOD и opt-in SDF.
+Из P0 остаются semantic CSG tree поверх уже работающего provenance, silhouette
+edges, section caps/точный контур и дополнительные snap-типы. Из P1/P2 по-прежнему открыты
+multi-file/incremental editor, checkpoints, drag/26-direction ViewCube,
+3MF/GLB, chunked LOD и opt-in SDF.
+
+Отдельный [третий проход](ten-new-ideas-third-pass.md) добавил десять
+недублирующих открытых направлений. Приоритетный следующий пакет: исполняемые
+контракты модели, профилировщик пересборки по AST, матрица пересечений сборки и
+предварительная карта пригодности к FFF-печати. Эти функции используют
+готовые Worker, provenance и BVH, но дают новые пользовательские результаты и
+не заменяют пункты backlog ниже.
 
 ## Материалы
 
@@ -33,13 +44,14 @@ checkpoints, 26-direction camera history, 3MF/GLB, chunked LOD и opt-in SDF.
 - [25 работ по геометрическому пайплайну](geometry-pipeline-literature.md).
 - [24 источника по CAD/3D HCI](cad-hci-literature.md).
 - [Уже перенесённые идеи Plasticity](plasticity-patterns.md).
+- [Третий проход: ещё 10 недублирующих идей](ten-new-ideas-third-pass.md).
 
 ## Что обнаружено в текущей реализации
 
 | Узкое место | Текущее состояние | Следствие |
 |---|---|---|
-| Код ↔ геометрия | Реализованы source spans и Manifold provenance runs | следующая ступень — reverse highlight от курсора и semantic CSG tree |
-| Picking | Compact Worker BVH, точный triangle hit и hover preselection | добавить depth-cycling и более широкий snapping |
+| Код ↔ геометрия | Source spans, provenance runs и двусторонняя bounded cross-highlight | следующая ступень — semantic CSG tree |
+| Picking | Compact Worker BVH, hover и bounded front-to-back depth-cycling | добавить более широкий screen-space snapping |
 | Edges | Boundary/crease/non-manifold edge index без coplanar diagonals; typed-array radix pipeline ограничивает heap | добавить view-dependent silhouettes |
 | Worker | Preview/full state machine и отмена через безопасный restart Worker | профилировать persistent pool/ExecutionContext |
 | Масштаб | Worker передаёт один монолитный full-detail mesh | нет progressive first paint, LOD и chunk eviction |
@@ -52,6 +64,18 @@ checkpoints, 26-direction camera history, 3MF/GLB, chunked LOD и opt-in SDF.
 [ray math](../../src/services/math3d.ts).
 
 ## Приоритетный backlog
+
+Таблица ниже сохраняет исходные формулировки и теперь читается вместе со
+статусом: **#1 частично** (provenance/cross-highlight готовы, semantic tree
+остаётся); **#2 готов по пользовательскому результату** (BVH/cycling работают,
+но текущая BVH использует balanced median split, а не записанный binned-SAH);
+**#4 готов**; **#3 частично** (silhouettes остаются); **#5
+частично** (section caps и дополнительные snaps остаются); **#6 частично**
+(нужны расширенный degeneracy corpus и kernel status); **#7 частично**
+(Customizer готов, direct handles остаются); **#8 и #9 открыты**; **#10
+частично** (Previous View готов, drag/26 направлений/анимация остаются); **#11
+готов**; **#12 частично**; **#13 частично** (STL/OBJ готовы, units/3MF/GLB
+остаются); **#14 и #15 открыты**.
 
 | # | Приоритет | Что добавить | MVP и причина |
 |---:|---|---|---|
