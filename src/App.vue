@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { parseOpenSCADWithAST } from './services/openscadParser'
+import {
+  setStorageFailureHandler, storageSet, storageSetJSON,
+  storageGetInt, storageGetFloat, storageGetEnum,
+} from './services/safeStorage'
 import type { MeshData, ASTNode, Annotation, ProfileEntry } from './services/openscadParser'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { exportSTL } from './services/stlExport'
@@ -646,6 +650,7 @@ const L: Record<string, Record<string, string>> = {
     snapshotBtn: 'Снимок',
     snapshotGallery: 'Галерея снимков',
     snapshotSaved: 'Снимок сохранён',
+    storageFull: 'Хранилище переполнено — данные не сохранены',
     snapshotDeleted: 'Снимок удалён',
     noSnapshots: 'Нет сохранённых снимков',
     deleteSnapshot: 'Удалить',
@@ -1363,6 +1368,7 @@ const L: Record<string, Record<string, string>> = {
     snapshotBtn: 'Snapshot',
     snapshotGallery: 'Snapshot Gallery',
     snapshotSaved: 'Snapshot saved',
+    storageFull: 'Storage full — data not saved',
     snapshotDeleted: 'Snapshot deleted',
     noSnapshots: 'No saved snapshots',
     deleteSnapshot: 'Delete',
@@ -1821,10 +1827,10 @@ function flushSaveTabs() {
     clearTimeout(saveTabsDebounce)
     saveTabsDebounce = null
   }
-  try {
-    localStorage.setItem('scad-tabs', JSON.stringify(tabs.value))
-    localStorage.setItem('scad-active-tab', activeTabId.value)
-  } catch { /* quota exceeded – ignore */ }
+  // Failed writes surface a (throttled) toast via the storage failure
+  // handler — silently losing the user's tabs is the worst possible outcome.
+  storageSetJSON('scad-tabs', tabs.value)
+  storageSet('scad-active-tab', activeTabId.value)
 }
 
 function saveTabs() {
@@ -2312,9 +2318,9 @@ const PREF_DEFAULTS = {
   showLineNumbers: true,
 }
 const showPreferences = ref(false)
-const prefFontSize = ref(parseInt(localStorage.getItem('scad-pref-fontSize') || String(PREF_DEFAULTS.fontSize)))
-const prefTabSize = ref(parseInt(localStorage.getItem('scad-pref-tabSize') || String(PREF_DEFAULTS.tabSize)))
-const prefAutoRenderDelay = ref(parseInt(localStorage.getItem('scad-pref-autoRenderDelay') || String(PREF_DEFAULTS.autoRenderDelay)))
+const prefFontSize = ref(storageGetInt('scad-pref-fontSize', PREF_DEFAULTS.fontSize, 8, 32))
+const prefTabSize = ref(storageGetInt('scad-pref-tabSize', PREF_DEFAULTS.tabSize, 1, 8))
+const prefAutoRenderDelay = ref(storageGetInt('scad-pref-autoRenderDelay', PREF_DEFAULTS.autoRenderDelay, 50, 5000))
 const prefShowMinimap = ref(localStorage.getItem('scad-pref-showMinimap') !== 'false')
 const prefShowLineNumbers = ref(localStorage.getItem('scad-pref-showLineNumbers') !== 'false')
 
@@ -2404,7 +2410,7 @@ const userPresets = ref<Record<string, ViewerPreset>>(loadUserPresets())
 const presetNameInput = ref('')
 
 function saveUserPresetsToStorage() {
-  localStorage.setItem('scad-user-presets', JSON.stringify(userPresets.value))
+  storageSetJSON('scad-user-presets', userPresets.value)
 }
 
 function captureCurrentPreset(): ViewerPreset {
@@ -2593,7 +2599,9 @@ let historyDebounce: ReturnType<typeof setTimeout> | null = null
 
 /* ── Shortcut Presets ── */
 type ShortcutPreset = 'default' | 'vscode' | 'sublime' | 'emacs'
-const shortcutPreset = ref<ShortcutPreset>((localStorage.getItem('scad-shortcut-preset') as ShortcutPreset) || 'default')
+const shortcutPreset = ref<ShortcutPreset>(
+  storageGetEnum('scad-shortcut-preset', ['default', 'vscode', 'sublime', 'emacs'] as const, 'default'),
+)
 watch(shortcutPreset, v => { localStorage.setItem('scad-shortcut-preset', v) })
 
 interface KeyBinding {
@@ -2633,7 +2641,7 @@ let consoleIdCounter = 0
 const showConsole = ref(false)
 const consoleEntries = ref<ConsoleEntry[]>([])
 const consoleRef = ref<HTMLElement | null>(null)
-const consolePanelHeight = ref(parseInt(localStorage.getItem('scad-console-height') || '150'))
+const consolePanelHeight = ref(storageGetInt('scad-console-height', 150, 60, 800))
 const consoleDragging = ref(false)
 
 function addConsoleEntry(type: 'info' | 'warn' | 'error', message: string) {
@@ -2870,6 +2878,16 @@ function addToast(
     dismissToast(id)
   }, duration)
 }
+
+// Surface failed localStorage writes to the user (throttled so the periodic
+// session backup can't spam a toast every 30s while the quota stays full).
+let lastStorageFailureToast = 0
+setStorageFailureHandler((key) => {
+  const now = Date.now()
+  if (now - lastStorageFailureToast < 30000) return
+  lastStorageFailureToast = now
+  addToast(`${t('storageFull')} (${key})`, 'error', { duration: 6000 })
+})
 
 function runToastAction(toast: Toast) {
   toast.action?.()
@@ -3219,7 +3237,12 @@ function loadRecentFiles() {
 }
 
 function saveRecentFiles() {
-  localStorage.setItem('scad-recent', JSON.stringify(recentFiles.value))
+  // Recent entries embed full code snippets; on quota pressure drop the
+  // oldest entries and retry rather than throwing mid file-open/save.
+  if (!storageSetJSON('scad-recent', recentFiles.value) && recentFiles.value.length > 1) {
+    recentFiles.value = recentFiles.value.slice(0, Math.ceil(recentFiles.value.length / 2))
+    storageSetJSON('scad-recent', recentFiles.value)
+  }
 }
 
 function addToRecent(name: string, codeStr: string) {
@@ -3665,7 +3688,7 @@ function onEditorMouseLeave() {
 }
 
 /* ── Resizable split pane ── */
-const editorWidth = ref(parseInt(localStorage.getItem('scad-editor-width') || '420'))
+const editorWidth = ref(storageGetInt('scad-editor-width', 420, 200, 2000))
 const isDraggingDivider = ref(false)
 
 function onDividerDown(e: MouseEvent) {
@@ -4222,6 +4245,9 @@ function openFile() {
       activeTab.value.savedCode = content
       addToRecent(file.name.replace(/\.scad$/, ''), content)
     }
+    reader.onerror = () => {
+      addToast(`${file.name}: ${reader.error?.message ?? 'read failed'}`, 'error')
+    }
     reader.readAsText(file)
   }
   input.click()
@@ -4772,7 +4798,8 @@ function onGlobalKeydown(e: KeyboardEvent) {
     onCaptureKey(e)
     return
   }
-  const bindings = SHORTCUT_PRESETS[shortcutPreset.value]
+  // Fallback: a bad persisted preset value must not break every keydown.
+  const bindings = SHORTCUT_PRESETS[shortcutPreset.value] ?? SHORTCUT_PRESETS.default
   // Ctrl+Shift+P or F1 or preset command palette: Command Palette
   if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') || matchesBinding(e, bindings.commandPalette)) {
     e.preventDefault()
@@ -4974,6 +5001,7 @@ onUnmounted(() => {
   if (gizmoRAF) cancelAnimationFrame(gizmoRAF)
   if (sessionAutoSaveInterval) clearInterval(sessionAutoSaveInterval)
   if (undoDebounceTimer) clearTimeout(undoDebounceTimer)
+  if (historyDebounce) clearTimeout(historyDebounce)
   window.removeEventListener('beforeunload', flushSaveTabs)
   flushSaveTabs()
   document.removeEventListener('click', onCloseContextMenu)
@@ -4999,10 +5027,13 @@ watch(code, (v) => {
     if (minimapDebounce) clearTimeout(minimapDebounce)
     minimapDebounce = setTimeout(renderMinimap, 300)
   }
-  // Debounce history snapshot
+  // Debounce history snapshot. Capture the tab id NOW: reading
+  // activeTabId.value when the timer fires would write this tab's code into
+  // whichever tab the user switched to during the 3s window.
   if (historyDebounce) clearTimeout(historyDebounce)
+  const historyTabId = activeTabId.value
   historyDebounce = setTimeout(() => {
-    addHistorySnapshot(activeTabId.value, v)
+    addHistorySnapshot(historyTabId, v)
   }, 3000)
 })
 
@@ -6223,7 +6254,9 @@ ${screenshotDataUrl ? `<img class="spec-screenshot" src="${escapeAttr(screenshot
 
 /* ── Feature: UI Density ── */
 type UIDensity = 'compact' | 'normal' | 'comfortable'
-const uiDensity = ref<UIDensity>((localStorage.getItem('scad-ui-density') as UIDensity) || 'normal')
+const uiDensity = ref<UIDensity>(
+  storageGetEnum('scad-ui-density', ['compact', 'normal', 'comfortable'] as const, 'normal'),
+)
 
 const UI_DENSITY_SCALES: Record<UIDensity, number> = {
   compact: 0.8,
@@ -6231,10 +6264,12 @@ const UI_DENSITY_SCALES: Record<UIDensity, number> = {
   comfortable: 1.2,
 }
 
+// immediate: a persisted compact/comfortable preference must apply on page
+// load, not only after the user re-toggles the setting.
 watch(uiDensity, (v) => {
-  localStorage.setItem('scad-ui-density', v)
+  storageSet('scad-ui-density', v)
   applyUIDensity()
-})
+}, { immediate: true })
 
 function applyUIDensity() {
   const scale = UI_DENSITY_SCALES[uiDensity.value]
@@ -7476,7 +7511,7 @@ const MATERIALS: MaterialDef[] = [
   { id: 'resin', nameKey: 'materialResin', density: 1.18 },
 ]
 const selectedMaterial = ref(localStorage.getItem('scad-material') || 'pla')
-const materialCostPerKg = ref(parseFloat(localStorage.getItem('scad-cost-per-kg') || '25'))
+const materialCostPerKg = ref(storageGetFloat('scad-cost-per-kg', 25, 0))
 const selectedCurrency = ref(localStorage.getItem('scad-currency') || 'USD')
 const CURRENCIES = ['USD', 'EUR', 'RUB'] as const
 
@@ -7794,8 +7829,15 @@ function loadBookmarks(): CameraBookmark[] {
 
 const cameraBookmarks = ref<CameraBookmark[]>(loadBookmarks())
 
-function saveBookmarksToStorage() {
-  localStorage.setItem('scad-bookmarks', JSON.stringify(cameraBookmarks.value))
+function saveBookmarksToStorage(): boolean {
+  // Bookmarks embed base64 PNG thumbnails — the most quota-hungry payload.
+  // On failure drop the oldest bookmark and retry once.
+  if (storageSetJSON('scad-bookmarks', cameraBookmarks.value)) return true
+  if (cameraBookmarks.value.length > 1) {
+    cameraBookmarks.value.shift()
+    return storageSetJSON('scad-bookmarks', cameraBookmarks.value)
+  }
+  return false
 }
 
 function saveCameraBookmark() {
@@ -8212,16 +8254,15 @@ function loadSnapshots(): Snapshot[] {
   return Array.isArray(parsed) ? parsed : []
 }
 
-function saveSnapshots() {
-  try {
-    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshots.value))
-  } catch {
-    // localStorage full — remove oldest
-    if (snapshots.value.length > 1) {
-      snapshots.value.shift()
-      saveSnapshots()
-    }
+function saveSnapshots(): boolean {
+  // localStorage full — drop oldest snapshots and retry until it fits or
+  // nothing is left to drop; report the final outcome so callers can avoid
+  // showing a success toast for a write that never landed.
+  while (!storageSetJSON(SNAPSHOT_KEY, snapshots.value)) {
+    if (snapshots.value.length === 0) return false
+    snapshots.value.shift()
   }
+  return true
 }
 
 function takeSnapshot() {
@@ -8243,9 +8284,12 @@ function takeSnapshot() {
     }
     snapshots.value.push(snap)
     if (snapshots.value.length > SNAPSHOT_MAX) snapshots.value.shift()
-    saveSnapshots()
-    addToast(t('snapshotSaved'), 'success')
-  } catch { /* ignore */ }
+    if (saveSnapshots()) addToast(t('snapshotSaved'), 'success')
+    else addToast(t('storageFull'), 'error')
+  } catch (e) {
+    // Canvas capture itself failed (e.g. tainted canvas / zero-size buffer)
+    console.warn('takeSnapshot: capture failed', e)
+  }
 }
 
 function deleteSnapshot(id: string) {
@@ -8312,9 +8356,9 @@ function saveSessionBackup() {
     activeTabId: activeTabId.value,
     timestamp: Date.now(),
   }
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(backup))
-  } catch { /* quota exceeded – ignore */ }
+  // storageSetJSON reports quota failures through the (throttled) toast
+  // handler — the crash-recovery net must not fail silently.
+  storageSetJSON(SESSION_KEY, backup)
 }
 
 function checkSessionRestore() {
@@ -8330,7 +8374,7 @@ function checkSessionRestore() {
   // their content (id, name, code), not just IDs, so a content-only change
   // (same tabs, edited code) still offers a restore.
   const sig = (tbs: Array<{ id: string; name: string; code: string }>) =>
-    tbs.map(tb => `${tb.id} ${tb.name} ${tb.code}`).join('')
+    tbs.map(tb => `${tb.id}\x00${tb.name}\x00${tb.code}`).join('\x01')
   const currentSig = sig(tabs.value)
   const backupSig = sig(backup.tabs)
   if (currentSig === backupSig) return
@@ -8365,7 +8409,7 @@ function doExportAllTabs() {
 const batchRendering = ref(false)
 const batchProgress = ref(0)
 const batchTotal = ref(0)
-const batchResults = ref<{name: string, tris: number, timeMs: number}[]>([])
+const batchResults = ref<{name: string, tris: number, timeMs: number, error?: string}[]>([])
 const showBatchResults = ref(false)
 
 function doRenderAllTabs() {
@@ -8399,8 +8443,11 @@ function doRenderAllTabs() {
       const t1 = performance.now()
       const tris = result.meshes.reduce((s: number, m: any) => s + m.indices.length / 3, 0)
       batchResults.value.push({ name: tab.name, tris, timeMs: Math.round(t1 - t0) })
-    } catch (e: any) {
-      batchResults.value.push({ name: tab.name, tris: 0, timeMs: 0 })
+    } catch (e: unknown) {
+      // Record the real failure: a tab with a syntax error must be
+      // distinguishable from a tab that genuinely renders 0 triangles.
+      const msg = e instanceof Error ? e.message : String(e)
+      batchResults.value.push({ name: tab.name, tris: 0, timeMs: 0, error: msg })
     }
     idx++
     batchProgress.value = idx
@@ -9373,8 +9420,11 @@ fibonacci_sphere(count=150, r=15, $fn=8);
               <tbody>
                 <tr v-for="(row, i) in batchResults" :key="i">
                   <td style="padding:4px 8px;">{{ row.name }}</td>
-                  <td style="text-align:right;padding:4px 8px;">{{ row.tris.toLocaleString() }}</td>
-                  <td style="text-align:right;padding:4px 8px;">{{ row.timeMs }}ms</td>
+                  <td v-if="row.error" colspan="2" style="text-align:right;padding:4px 8px;color:#e5534b;" :title="row.error">⚠ {{ row.error }}</td>
+                  <template v-else>
+                    <td style="text-align:right;padding:4px 8px;">{{ row.tris.toLocaleString() }}</td>
+                    <td style="text-align:right;padding:4px 8px;">{{ row.timeMs }}ms</td>
+                  </template>
                 </tr>
               </tbody>
               <tfoot>

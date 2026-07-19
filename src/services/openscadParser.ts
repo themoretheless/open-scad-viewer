@@ -857,7 +857,9 @@ function makeWedge(sx: number, sy: number, sz: number) {
 function makeTorus(r1: number, r2: number, fn: number) {
   const v: number[] = [], ix: number[] = []
   const ringSegs = fn
-  const tubeSegs = Math.max(8, Math.floor(fn * r2 / r1))
+  // Guard r1<=0 (division by zero → Infinity → infinite loop) and cap the
+  // ratio-derived count so a tiny ring radius can't allocate unbounded verts.
+  const tubeSegs = Math.max(8, Math.min(MAX_FN, r1 > 0 ? Math.floor(fn * r2 / r1) : 8))
   for (let i = 0; i <= ringSegs; i++) {
     const u = (2 * Math.PI * i) / ringSegs
     const cu = Math.cos(u), su = Math.sin(u)
@@ -2371,7 +2373,9 @@ function extrudeMesh(profile: [number, number][], height: number, twist: number,
   const n = profile.length
   if (n < 3) return { v, ix }
 
-  const actualSlices = Math.max(1, twist !== 0 ? Math.max(slices, Math.ceil(Math.abs(twist) / 10)) : slices)
+  // Cap slices: an unbounded twist (e.g. twist=2e6) would otherwise derive
+  // hundreds of thousands of slices and stall the main thread.
+  const actualSlices = Math.min(512, Math.max(1, twist !== 0 ? Math.max(slices, Math.ceil(Math.abs(twist) / 10)) : slices))
 
   // Generate vertices for each slice
   for (let s = 0; s <= actualSlices; s++) {
@@ -2931,7 +2935,8 @@ function makeDonut(r1: number, r2: number, angle: number, fn: number) {
 
   const v: number[] = [], ix: number[] = []
   const ringSegs = Math.max(4, Math.floor(fn * angle / 360))
-  const tubeSegs = Math.max(8, Math.floor(fn * r2 / r1))
+  // Same r1<=0 / ratio guards as makeTorus.
+  const tubeSegs = Math.max(8, Math.min(MAX_FN, r1 > 0 ? Math.floor(fn * r2 / r1) : 8))
   const angleRad = (angle * Math.PI) / 180
 
   // Generate torus surface vertices for partial sweep
@@ -4265,7 +4270,7 @@ function evalNode(node: ASTNode, tf: Mat4, col: [number,number,number,number]|nu
       return [{ vertices: new Float32Array(v), indices: new Uint32Array(ix), color: col ?? nextC(), transform: tf }]
     }
     case 'gear': {
-      const teeth = typeof arg(a, 'teeth', 0, 12) === 'number' ? Math.max(3, Math.floor(arg(a, 'teeth', 0, 12) as number)) : 12
+      const teeth = typeof arg(a, 'teeth', 0, 12) === 'number' ? Math.min(500, Math.max(3, Math.floor(arg(a, 'teeth', 0, 12) as number))) : 12
       const mod = typeof arg(a, 'mod', 1, 2) === 'number' ? arg(a, 'mod', 1, 2) as number : 2
       const thickness = typeof arg(a, 'thickness', 2, 5) === 'number' ? arg(a, 'thickness', 2, 5) as number : 5
       const fn = Math.min(MAX_FN, Math.max(1, typeof arg(a, '$fn', -1, 6) === 'number' ? arg(a, '$fn', -1, 6) as number : 6))

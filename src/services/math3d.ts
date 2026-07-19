@@ -75,12 +75,23 @@ export function ortho(left: number, right: number, bottom: number, top: number, 
 }
 
 export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
-  const zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]
-  let len = 1 / Math.sqrt(zx * zx + zy * zy + zz * zz)
+  let zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]
+  // Degenerate eye==center: pick an arbitrary view direction instead of
+  // dividing by zero and poisoning the whole matrix with NaN.
+  const zLen = Math.sqrt(zx * zx + zy * zy + zz * zz)
+  if (zLen < 1e-12) { zx = 0; zy = 0; zz = 1 }
+  let len = 1 / (zLen < 1e-12 ? 1 : zLen)
   const fz = [zx * len, zy * len, zz * len]
-  const xx = up[1] * fz[2] - up[2] * fz[1]
-  const xy = up[2] * fz[0] - up[0] * fz[2]
-  const xz = up[0] * fz[1] - up[1] * fz[0]
+  let xx = up[1] * fz[2] - up[2] * fz[1]
+  let xy = up[2] * fz[0] - up[0] * fz[2]
+  let xz = up[0] * fz[1] - up[1] * fz[0]
+  // Degenerate up parallel to view direction: substitute a perpendicular axis.
+  const xLen = Math.sqrt(xx * xx + xy * xy + xz * xz)
+  if (xLen < 1e-12) {
+    xx = Math.abs(fz[2]) < 0.9 ? fz[1] : 0
+    xy = Math.abs(fz[2]) < 0.9 ? -fz[0] : fz[2]
+    xz = Math.abs(fz[2]) < 0.9 ? 0 : -fz[1]
+  }
   len = 1 / Math.sqrt(xx * xx + xy * xy + xz * xz)
   const fx = [xx * len, xy * len, xz * len]
   const fy = [

@@ -242,4 +242,31 @@ describe('parseOpenSCADWithAST shape', () => {
   it('handles division-by-zero dimensions without crashing', () => {
     expect(() => parseOpenSCAD('cube(5/0);')).not.toThrow()
   })
+
+  // Regression: torus/donut with r1=0 previously derived tubeSegs=Infinity
+  // (division by zero) and hung the tab in an infinite loop.
+  it('bounds torus with r1=0 without hanging', () => {
+    const start = Date.now()
+    const meshes = parseOpenSCAD('torus(r1=0, r2=3);')
+    expect(Array.isArray(meshes)).toBe(true)
+    expect(Date.now() - start).toBeLessThan(2000)
+  })
+
+  // Regression: an extreme twist previously derived ~200k extrusion slices
+  // and stalled the main thread; slices are now capped.
+  it('caps linear_extrude slices for extreme twist values', () => {
+    const start = Date.now()
+    const meshes = parseOpenSCAD('linear_extrude(height=10, twist=2000000) square(5);')
+    expect(Array.isArray(meshes)).toBe(true)
+    expect(Date.now() - start).toBeLessThan(3000)
+  })
+
+  // Regression: gear teeth count is capped so a huge value can't feed a
+  // 100k+ point profile into O(n^3) triangulation.
+  it('caps gear teeth without freezing', () => {
+    const start = Date.now()
+    const meshes = parseOpenSCAD('gear(teeth=50000, mod=2, thickness=5);')
+    expect(Array.isArray(meshes)).toBe(true)
+    expect(Date.now() - start).toBeLessThan(5000)
+  })
 })
