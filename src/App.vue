@@ -7700,7 +7700,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
       </div>
 
       <!-- Batch rendering progress -->
-      <div v-if="batchRendering" class="modal-backdrop" style="z-index:9999;">
+      <div v-if="batchRendering" class="modal-backdrop" style="z-index:var(--z-modal);">
         <div style="background:var(--bg);padding:24px 32px;border-radius:12px;text-align:center;">
           <div style="margin-bottom:12px;font-size:14px;">{{ t('batchRendering') }}</div>
           <div style="width:240px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
@@ -7900,7 +7900,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
 
     <div v-if="!gpuOk" class="no-gpu">{{ t('noGpu') }}</div>
 
-    <div v-else class="main" :class="{ dragging: isDraggingDivider, fullscreen: isFullscreen }">
+    <div v-else class="main" role="main" :class="{ dragging: isDraggingDivider, fullscreen: isFullscreen }">
       <div
         class="editor-panel"
         :style="{ width: editorWidth + 'px' }"
@@ -8336,6 +8336,8 @@ fibonacci_sphere(count=150, r=15, $fn=8);
             <canvas
               ref="minimapCanvasRef"
               class="minimap-canvas"
+              role="img"
+              :aria-label="t('minimap')"
               @mousedown="onMinimapMouseDown"
             />
           </div>
@@ -8777,7 +8779,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
               <div class="vp-dd-label" v-show="!simpleMode">{{ t('fovSlider') }}: {{ fovDeg }}&deg;</div>
               <div v-show="!simpleMode" class="vp-dd-slider-row">
-                <input type="range" class="clip-slider" min="15" max="120" step="1" :value="fovDeg" @input="onFovChange" />
+                <input type="range" class="clip-slider" min="15" max="120" step="1" :value="fovDeg" @input="onFovChange" :aria-label="t('fovSlider')" :aria-valuetext="fovDeg + '°'" />
                 <span class="clip-value">{{ fovDeg }}&deg;</span>
               </div>
               <div class="vp-dd-sep"></div>
@@ -8895,7 +8897,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
               <div class="vp-dd-label" v-show="!simpleMode">{{ t('explodedView') }}</div>
               <div v-show="!simpleMode" class="vp-dd-slider-row">
-                <input type="range" class="clip-slider" min="0" max="1" step="0.05" :value="explodeFactorVal" @input="onExplodeChange" />
+                <input type="range" class="clip-slider" min="0" max="1" step="0.05" :value="explodeFactorVal" @input="onExplodeChange" :aria-label="t('explodedView')" />
                 <span class="clip-value">{{ explodeFactorVal.toFixed(2) }}</span>
               </div>
               <div class="vp-dd-sep" v-show="!simpleMode"></div>
@@ -8909,7 +8911,7 @@ fibonacci_sphere(count=150, r=15, $fn=8);
                   <option :value="1">Y</option>
                   <option :value="2">Z</option>
                 </select>
-                <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" />
+                <input type="range" class="clip-slider" :min="clipRange.min" :max="clipRange.max" step="0.5" :value="clipY" @input="onClipYChange" :aria-label="t('clipPlane')" />
                 <span class="clip-value">{{ clipY.toFixed(1) }}</span>
               </div>
               <button class="vp-dd-item" role="menuitem" tabindex="-1" v-show="!simpleMode" @click="toggleSectionBox()">
@@ -8919,17 +8921,17 @@ fibonacci_sphere(count=150, r=15, $fn=8);
               <div v-if="sectionBoxEnabled && !simpleMode">
                 <div class="vp-dd-slider-row">
                   <span class="clip-axis-label">X</span>
-                  <input type="range" class="clip-slider" :min="sectionBoxRangeX.min" :max="sectionBoxRangeX.max" step="0.5" :value="sectionBoxX" @input="onSectionBoxChange(0, $event)" />
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeX.min" :max="sectionBoxRangeX.max" step="0.5" :value="sectionBoxX" @input="onSectionBoxChange(0, $event)" :aria-label="t('sectionBox') + ' X'" />
                   <span class="clip-value">{{ sectionBoxX.toFixed(1) }}</span>
                 </div>
                 <div class="vp-dd-slider-row">
                   <span class="clip-axis-label">Y</span>
-                  <input type="range" class="clip-slider" :min="sectionBoxRangeY.min" :max="sectionBoxRangeY.max" step="0.5" :value="sectionBoxY" @input="onSectionBoxChange(1, $event)" />
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeY.min" :max="sectionBoxRangeY.max" step="0.5" :value="sectionBoxY" @input="onSectionBoxChange(1, $event)" :aria-label="t('sectionBox') + ' Y'" />
                   <span class="clip-value">{{ sectionBoxY.toFixed(1) }}</span>
                 </div>
                 <div class="vp-dd-slider-row">
                   <span class="clip-axis-label">Z</span>
-                  <input type="range" class="clip-slider" :min="sectionBoxRangeZ.min" :max="sectionBoxRangeZ.max" step="0.5" :value="sectionBoxZ" @input="onSectionBoxChange(2, $event)" />
+                  <input type="range" class="clip-slider" :min="sectionBoxRangeZ.min" :max="sectionBoxRangeZ.max" step="0.5" :value="sectionBoxZ" @input="onSectionBoxChange(2, $event)" :aria-label="t('sectionBox') + ' Z'" />
                   <span class="clip-value">{{ sectionBoxZ.toFixed(1) }}</span>
                 </div>
               </div>
@@ -9393,6 +9395,17 @@ fibonacci_sphere(count=150, r=15, $fn=8);
   outline-offset: 2px;
 }
 
+/* Accessibility: honor the OS "reduce motion" preference — kill decorative
+   transitions/animations for vestibular-sensitive users (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 :root {
   --bg: #141416;
   --surface: #1e1e22;
@@ -9430,6 +9443,13 @@ fibonacci_sphere(count=150, r=15, $fn=8);
   --fz-xs: 0.72rem;
   --fz-sm: 0.8rem;
   --fz-md: 0.95rem;
+
+  /* Layering scale — new rules must use these instead of ad-hoc z-index
+   * literals (the codebase historically accumulated 18 distinct values). */
+  --z-panel: 100;
+  --z-dropdown: 1000;
+  --z-modal: 9999;
+  --z-toast: 20000;
 }
 
 [data-theme="light"] {

@@ -1102,7 +1102,13 @@ export class WebGPURenderer {
   }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
-    this.dist = Math.max(1, Math.min(50000, this.dist * (1 + e.deltaY * 0.001)))
+    // Normalize deltaY across deltaMode (0=pixels, 1=lines, 2=pages) — some
+    // trackpads/mice report line/page deltas where one tick would otherwise
+    // multiply the distance several-fold. Clamp the per-event zoom factor so
+    // a single tick can never "teleport" the camera (OrbitControls pattern).
+    const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1
+    const factor = Math.max(0.5, Math.min(2, 1 + e.deltaY * scale * 0.001))
+    this.dist = Math.max(1, Math.min(50000, this.dist * factor))
     this.requestRender()
   }
   private noCtx = (e: Event) => e.preventDefault()
