@@ -15,4 +15,11 @@ describe('OpenSCAD Customizer parameters', () => {
     const [parameter] = extractCustomizerParameters(source)
     expect(replaceCustomizerValue(source, parameter, 32)).toBe('width = 32; // [5:40]\ncube([width, 20, 20]);')
   })
+
+  it('does not corrupt names that contain the value substring', () => {
+    // indexOf-based offset matched the "1" INSIDE "x1", splicing the name.
+    const source = 'x1 = 1;\ncube([x1, 2, 3]);'
+    const [parameter] = extractCustomizerParameters(source)
+    expect(replaceCustomizerValue(source, parameter, 2)).toBe('x1 = 2;\ncube([x1, 2, 3]);')
+  })
 })

@@ -12,7 +12,7 @@ export interface CustomizerParameter {
   options?: CustomizerValue[]
 }
 
-const ASSIGNMENT = /(^|\n)([ \t]*)([A-Za-z_$][A-Za-z0-9_$]*)[ \t]*=[ \t]*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|true|false|"(?:\\.|[^"\\])*")[ \t]*;([^\n]*)/g
+const ASSIGNMENT = /(^|\n)([ \t]*)([A-Za-z_$][A-Za-z0-9_$]*)([ \t]*=[ \t]*)(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|true|false|"(?:\\.|[^"\\])*")[ \t]*;([^\n]*)/g
 
 function decodeLiteral(raw: string): CustomizerValue {
   if (raw === 'true') return true
@@ -82,8 +82,11 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
     if (bracesBefore(source, statementStart) !== 0) continue
     const name = match[3]
     if (name.startsWith('$')) continue
-    const rawValue = match[4]
-    const valueStart = statementStart + match[2].length + match[0].slice(match[1].length + match[2].length).indexOf(rawValue)
+    const rawValue = match[5]
+    // Structural offset: indent + name + "=" run. The previous
+    // indexOf(rawValue) could match INSIDE the variable name (`x1 = 1;`
+    // found "1" at offset 1), corrupting the source on replacement.
+    const valueStart = statementStart + match[2].length + name.length + match[4].length
     const value = decodeLiteral(rawValue)
     const label = name.replace(/[_-]+/g, ' ').replace(/^./, character => character.toUpperCase())
     parameters.push({
@@ -92,7 +95,7 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
       value,
       valueStart,
       valueEnd: valueStart + rawValue.length,
-      ...parseMetadata(match[5], value),
+      ...parseMetadata(match[6], value),
     })
   }
   return parameters

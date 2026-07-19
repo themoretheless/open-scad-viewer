@@ -36,4 +36,11 @@ describe('mesh export', () => {
     mesh.transform = identity()
     expect(buildObj([mesh, mesh])).toContain('f 4 5 6')
   })
+
+  it('truncates multibyte STL header names by bytes, not characters', () => {
+    // 80 Cyrillic chars encode to 160 UTF-8 bytes; must not overflow the
+    // 80-byte header slot (previously a RangeError for small scenes).
+    const data = buildBinaryStl([], '\u044f'.repeat(80))
+    expect(data.byteLength).toBe(84)
+  })
 })

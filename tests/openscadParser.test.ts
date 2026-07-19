@@ -104,6 +104,40 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
       expect(result.meshes.every(mesh => mesh.vertices.every(Number.isFinite)), name).toBe(true)
     }
   })
+
+  it('builds OpenSCAD-convention (clockwise-from-outside) polyhedra outward-facing', async () => {
+    // Unit tetrahedron with faces wound per the OpenSCAD spec; volume must be
+    // positive ~1/6 (the inverted-winding bug rejected or everted it).
+    const result = await parseOpenSCAD(
+      'polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]], faces=[[0,1,2],[0,2,3],[0,3,1],[1,3,2]]);',
+    )
+    expect(result.meshes).toHaveLength(1)
+    expect(result.volume).toBeCloseTo(1 / 6, 3)
+  })
+
+  it('accepts clockwise-wound polygon() point lists', async () => {
+    // With the default Positive fill rule a CW outline yields an EMPTY shape.
+    const result = await parseOpenSCAD('linear_extrude(height=2) polygon(points=[[0,0],[0,4],[4,4],[4,0]]);')
+    expect(result.volume).toBeCloseTo(32, 3)
+  })
+
+  it('bounds nested loops that produce no geometry', async () => {
+    const started = Date.now()
+    await expect(parseOpenSCAD('for(i=[0:9999]) for(j=[0:9999]) x = i + j;')).rejects.toThrow(/evaluation step limit/)
+    expect(Date.now() - started).toBeLessThan(10_000)
+  })
+
+  it('caps runaway concat() growth', async () => {
+    const doubling = Array.from({ length: 40 }, () => 'a = concat(a, a);').join('\n')
+    await expect(parseOpenSCAD(`a = [0:1:999];\n${doubling}\ncube(1);`)).rejects.toThrow(/concat\(\) result exceeds/)
+  })
+
+  it('caps linear_extrude slices before they reach the kernel', async () => {
+    const started = Date.now()
+    const result = await parseOpenSCAD('linear_extrude(height=10, twist=90, slices=100000000) square(5);')
+    expect(result.meshes.length).toBeGreaterThan(0)
+    expect(Date.now() - started).toBeLessThan(15_000)
+  })
 })
 
 const MAX_SAFE_TEST_TRIANGLES = 150_000

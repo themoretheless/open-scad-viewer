@@ -1072,6 +1072,10 @@ function decodeBase64(value: string) {
 function readSharedCode() {
   try {
     if (!location.hash.startsWith('#code=')) return null
+    // Size-cap BEFORE decoding: a crafted multi-MB #code= link would
+    // otherwise force large synchronous atob/TextDecoder allocations (and
+    // an O(n^2) customizer parse) on page load. ~1.4M base64 chars ≈ 1 MB.
+    if (location.hash.length > 1_400_000) return null
     return decodeBase64(location.hash.slice(6))
   } catch { return null }
 }

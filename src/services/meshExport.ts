@@ -39,7 +39,10 @@ function triangles(meshes: MeshData[]): Triangle[] {
 export function buildBinaryStl(meshes: MeshData[], name = 'OpenSCAD Viewer'): Uint8Array {
   const all = triangles(meshes)
   const output = new Uint8Array(84 + all.length * 50)
-  const header = new TextEncoder().encode(name.slice(0, 80))
+  // Truncate by BYTES after encoding: 80 multibyte characters encode to up
+  // to 240 UTF-8 bytes, which overflowed the 80-byte header slot (and threw
+  // a RangeError for small scenes).
+  const header = new TextEncoder().encode(name).subarray(0, 80)
   output.set(header, 0)
   const view = new DataView(output.buffer)
   view.setUint32(80, all.length, true)

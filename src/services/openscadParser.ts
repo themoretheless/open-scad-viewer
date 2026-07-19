@@ -75,6 +75,16 @@ const MAX_RANGE_ITEMS = 10_000
 const MAX_SHAPES = 1_000
 const MAX_TRIANGLES = 750_000
 const MAX_FN = 256
+/** Total evaluation steps (statements + loop iterations) before aborting —
+ * bounds nested loops whose bodies produce no shapes, which MAX_SHAPES
+ * can never catch (`for(i=[0:9999]) for(j=[0:9999]) x = i+j;`). */
+const MAX_EVAL_OPS = 1_000_000
+/** Cap on evaluated vector/string length — `a = concat(a, a);` repeated
+ * ~40 times otherwise materializes 2^40 elements and OOMs the worker. */
+const MAX_VALUE_ELEMENTS = 1_000_000
+/** Cap on linear_extrude slices — passed straight into the Manifold kernel,
+ * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
+const MAX_EXTRUDE_SLICES = 512
 
 type Value = number | string | boolean | undefined | Value[]
 
@@ -458,6 +468,8 @@ interface EvalContext {
   sourceReferences: Map<number, MeshSourceReference>
   callChildren?: Statement[]
   depth: number
+  /** Shared mutable evaluation budget — one object across all ctx spreads. */
+  budget: { ops: number }
 }
 
 interface Shape2D { dimension: 2; geometry: CrossSectionGeometry; color: RGBA }
@@ -648,8 +660,16 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext): V
     const vector = vectorValue(values[0], ctx, expr.p, 'norm vector')
     return Math.hypot(...vector)
   }
-  if (expr.name === 'concat') return values.flatMap(value => Array.isArray(value) ? value : [value])
-  if (expr.name === 'str') return values.map(value => valueToString(value)).join('')
+  if (expr.name === 'concat') {
+    const result = values.flatMap(value => Array.isArray(value) ? value : [value])
+    if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `concat() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+    return result
+  }
+  if (expr.name === 'str') {
+    const result = values.map(value => valueToString(value)).join('')
+    if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `str() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
+    return result
+  }
   evaluationError(ctx, expr.p, `Unsupported function ${expr.name}()`)
 }
 
@@ -690,6 +710,7 @@ function evalNodes(nodes: Statement[], parent: EvalContext, scoped = true): Shap
   const ctx: EvalContext = { ...parent, env: scoped ? new Map(parent.env) : parent.env }
   const output: Shape[] = []
   for (const node of nodes) {
+    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
     if (node.type === 'assign') { ctx.env.set(node.name, evalExpression(node.value, ctx)); continue }
     if (node.type === 'module') continue
     output.push(...evalNode(node, ctx))
@@ -870,10 +891,16 @@ function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
     const polygon = vectorValue(face, ctx, node.p, 'polyhedron face').map(Math.trunc)
     if (polygon.length < 3) evaluationError(ctx, node.p, 'Each polyhedron face needs at least three vertices')
     for (const index of polygon) if (index < 0 || index >= points.length) evaluationError(ctx, node.p, 'Polyhedron face index is out of bounds')
-    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0], polygon[i], polygon[i + 1])
+    // OpenSCAD faces are wound clockwise viewed from outside; Manifold
+    // requires counter-clockwise — reverse the fan so spec-correct
+    // polyhedra build outward-facing instead of inside-out.
+    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0], polygon[i + 1], polygon[i])
   }
   try {
     const mesh = new ctx.wasm.Mesh({ numProp: 3, vertProperties: new Float32Array(vertices), triVerts: new Uint32Array(indices) })
+    // Weld duplicated coordinates first: OpenSCAD accepts point lists with
+    // repeated positions, but Manifold's halfedge pairing rejects them.
+    mesh.merge()
     return [trackedSolid(ctx.wasm.Manifold.ofMesh(mesh), nextColor(), node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `Invalid manifold polyhedron: ${error instanceof Error ? error.message : String(error)}`)
@@ -898,7 +925,9 @@ function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
       return point
     }))
   }
-  return [{ dimension: 2, geometry: ctx.wasm.CrossSection.ofPolygons(polygons), color: nextColor() }]
+  // EvenOdd: the default Positive fill rule silently yields an EMPTY shape
+  // for clockwise-wound point lists, which are perfectly valid in OpenSCAD.
+  return [{ dimension: 2, geometry: ctx.wasm.CrossSection.ofPolygons(polygons, 'EvenOdd'), color: nextColor() }]
 }
 
 function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
@@ -989,13 +1018,20 @@ function linearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
   const height = finiteNumber(arg(node, 'height', 0, 1, ctx), ctx, node.p, 'extrusion height')
+  if (height <= 0) evaluationError(ctx, node.p, 'linear_extrude() height must be positive')
   const twist = finiteNumber(arg(node, 'twist', -1, 0, ctx), ctx, node.p, 'extrusion twist')
-  const slices = Math.max(0, Math.trunc(finiteNumber(arg(node, 'slices', -1, 0, ctx), ctx, node.p, 'extrusion slices')))
+  // Cap slices: the value goes straight into the Manifold kernel, which
+  // allocates per-slice cross-sections long before MAX_TRIANGLES can fire.
+  const slices = Math.min(MAX_EXTRUDE_SLICES, Math.max(0, Math.trunc(finiteNumber(arg(node, 'slices', -1, 0, ctx), ctx, node.p, 'extrusion slices'))))
   const rawScale = arg(node, 'scale', -1, [1, 1], ctx)
   const scaleValues = Array.isArray(rawScale) ? vectorValue(rawScale, ctx, node.p, 'extrusion scale') : [finiteNumber(rawScale, ctx, node.p, 'extrusion scale')]
   const scale: Vec2 = [scaleValues[0] ?? 1, scaleValues[1] ?? scaleValues[0] ?? 1]
-  const geometry = ctx.wasm.Manifold.extrude(sections[0].geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
-  return [trackedSolid(geometry, sections[0].color, node, ctx)]
+  try {
+    const geometry = ctx.wasm.Manifold.extrude(sections[0].geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
+    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+  } catch (error) {
+    evaluationError(ctx, node.p, `linear_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 function rotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
@@ -1003,8 +1039,12 @@ function rotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
   const angle = finiteNumber(arg(node, 'angle', -1, 360, ctx), ctx, node.p, 'revolve angle')
-  const geometry = ctx.wasm.Manifold.revolve(sections[0].geometry, segments(node, ctx, 48, 3), angle)
-  return [trackedSolid(geometry, sections[0].color, node, ctx)]
+  try {
+    const geometry = ctx.wasm.Manifold.revolve(sections[0].geometry, segments(node, ctx, 48, 3), angle)
+    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+  } catch (error) {
+    evaluationError(ctx, node.p, `rotate_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 function evalFor(node: CallNode, ctx: EvalContext): Shape[] {
@@ -1015,6 +1055,9 @@ function evalFor(node: CallNode, ctx: EvalContext): Shape[] {
   if (!Array.isArray(values)) evaluationError(ctx, node.p, 'for() iterator must be a vector or range')
   const output: Shape[] = []
   for (const value of values) {
+    // Count each iteration even when the body produces no statements/shapes —
+    // nested empty-bodied loops are otherwise invisible to every other limit.
+    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
     const env = new Map(ctx.env)
     env.set(name, value)
     output.push(...evalNodes(node.children, { ...ctx, env }, false))
@@ -1073,7 +1116,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
   const env = new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]])
   const quality = options.quality ?? 'full'
   const sourceReferences = new Map<number, MeshSourceReference>()
-  const ctx: EvalContext = { wasm, source, env, modules, warnings, quality, sourceReferences, depth: 0 }
+  const ctx: EvalContext = { wasm, source, env, modules, warnings, quality, sourceReferences, depth: 0, budget: { ops: 0 } }
 
   try {
     const shapes = evalNodes(ast, ctx, false)

@@ -1,16 +1,18 @@
 import { parseOpenSCAD, OpenSCADParseError } from '../services/openscadParser'
 import type { GeometryRequest, GeometryResponse } from '../services/geometryWorkerProtocol'
 
-let latestRequest = 0
-
 self.addEventListener('message', async (event: MessageEvent<GeometryRequest>) => {
   const { id, source, quality } = event.data
-  latestRequest = Math.max(latestRequest, id)
+  // Validate the id and ALWAYS respond; the main thread discards stale
+  // responses by comparing against its own latest id. The previous
+  // Math.max(latestRequest, id) tracker was NaN-poisonable (one malformed
+  // message muted every future response) and suppressed responses that a
+  // per-id waiter on the main side would wait on forever.
+  if (!Number.isInteger(id) || typeof source !== 'string') return
   const started = performance.now()
 
   try {
     const result = await parseOpenSCAD(source, { quality })
-    if (id !== latestRequest) return
     const response: GeometryResponse = {
       id,
       ok: true,
@@ -28,7 +30,6 @@ self.addEventListener('message', async (event: MessageEvent<GeometryRequest>) =>
     ])
     self.postMessage(response, { transfer })
   } catch (error) {
-    if (id !== latestRequest) return
     const response: GeometryResponse = {
       id,
       ok: false,
