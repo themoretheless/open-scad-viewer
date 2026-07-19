@@ -6118,8 +6118,8 @@ function saveCameraBookmark() {
   if (cameraBookmarks.value.length > 10) {
     cameraBookmarks.value = cameraBookmarks.value.slice(-10)
   }
-  saveBookmarksToStorage()
-  addToast(t('bookmarkSaved'), 'success')
+  if (saveBookmarksToStorage()) addToast(t('bookmarkSaved'), 'success')
+  else addToast(t('storageFull'), 'error')
 }
 
 function restoreBookmark(bk: CameraBookmark) {

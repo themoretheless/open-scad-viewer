@@ -535,9 +535,6 @@ export interface MeshData {
   transform: Mat4
 }
 
-/* ── Bitmap font (5x7, ASCII 32-126) ─────────────── */
-
-
 function evalComparison(op: string, left: any, right: any): boolean {
   // Equality / inequality: compare like-typed values directly.
   if (op === '==' || op === '!=') {
