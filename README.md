@@ -106,19 +106,27 @@ translate([50, 0, 0])
 
 ```
 src/
-├── App.vue                      # main application component
+├── App.vue                      # main application component (being decomposed)
 ├── main.ts                      # entry point
+├── i18n/                        # locale dictionaries (ru/en/de/zh), t(), lang state
+├── config/                      # editor themes, viewer presets, shortcut presets
+├── parser/
+│   ├── geometry.ts              # 41 pure mesh generators, earClip, extrude, hull
+│   └── limits.ts                # shared tessellation bounds ($fn cap)
+├── renderer/
+│   └── shaders.ts               # WGSL sources; Scene struct single-sourced
 └── services/
-    ├── openscadParser.ts        # tokenizer, parser, evaluator, mesh generators
+    ├── openscadParser.ts        # tokenizer, parser, evaluator (public API)
     ├── webgpuRenderer.ts        # WebGPU pipelines, camera, render passes
     ├── math3d.ts                # mat4 / vec3 math
+    ├── safeStorage.ts           # validated + quota-safe localStorage access
     ├── stlExport.ts / stlImport.ts
     ├── objExport.ts
     ├── threemfExport.ts
     └── zipExport.ts
 ```
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the planned modular refactor, [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) for the actionable roadmap with checklists, [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) for the severity-ranked shortlist, and [ISSUES.md](./ISSUES.md) for the full 500-item defect catalog.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for a deeper dive and the module map, [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) for the phased roadmap with checklists, [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) for the severity-ranked shortlist, [recommendation.md](./recommendation.md) for the live 500-item improvement catalog (v2), and [ISSUES.md](./ISSUES.md) for the older full defect snapshot.
 
 ---
 

@@ -1,772 +1,547 @@
-# Recommendations (superseded — kept for history)
-
-> **This file is stale and no longer maintained.** It predates the doc restructuring and has not been updated since. For the current, actively-synced documents, see:
-> - [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — the current severity-ranked top-50 (now on its second audit pass)
-> - [ISSUES.md](./ISSUES.md) — the full 500-item defect catalog
-> - [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) — the actionable phased roadmap
-> - [ARCHITECTURE.md](./ARCHITECTURE.md) — current design + known limitations
->
-> Most of the "Top 50" and "Additional 200"/"Top 200" items below have since been superseded, re-numbered, or fixed; treat this file as a historical snapshot from an earlier pass, not a live backlog.
-
-# Recommendations
-
-This document catalogs the most serious problems in the current implementation of the OpenSCAD WebGPU Viewer.
-
-The goal is to be brutally honest about what is done poorly or incorrectly so that future work can be prioritized effectively.
-
-## Top 50 Things Done Poorly or Incorrectly
-
-1. **Monolithic App.vue** — Over 400 lines containing state management, rendering logic, examples, event handlers, translations, and styles in a single file. Zero separation of concerns.
-
-2. **Hardcoded examples inside the component** — All four example models live as massive JS template literals embedded directly in App.vue. They are not external assets or test fixtures.
-
-3. **Excessive use of `any`** — Parser is full of `Record<string, any>`, `parseValue(): any`, and casts like `(localStorage... as any)`. Type safety is mostly abandoned in the core logic.
-
-4. **Useless error handling** — `catch (e: any) { error.value = e.message || String(e) }`. Errors lose stack, context, and source location. No recovery.
-
-5. **Silent character skipping in tokenizer** — At the end of tokenize: `i++` with no error or warning when an unexpected character is seen. Invalid input is silently corrupted.
-
-6. **No expression support whatsoever** — The parser cannot evaluate arithmetic, variables, function calls in arguments, or even simple expressions. `1+2` or `r*2` will not work.
-
-7. **Crude assignment hack** — When seeing `foo = ...` the parser emits a fake `__assign` node that is completely ignored later. Variables are not supported at all.
-
-8. **Zero source location tracking** — Tokens have a crude `p` (position), but AST nodes carry no line/column/range info. Error messages are useless.
-
-9. **Global mutable color counter** — `let cIdx = 0` at module scope + `nextC()` mutates state on every parse. Repeated parses give different colors. Pure side effect.
-
-10. **Fake CSG implementation** — `difference()` and `intersection()` only change color of the subtracted parts to red (or lower alpha). The actual mesh geometry is never modified. The result is visually misleading and export-broken.
-
-11. **Hand-written matrix math** — 110+ lines of manually transcribed `invert()` with high risk of transcription error. No tests. Every other 3D project uses a library for this reason.
-
-12. **invert() fails silently** — On near-zero determinant it just returns identity(). Callers have no idea their transform is now garbage.
-
-13. **Massive vertex duplication** — Cube, sphere, cylinder all emit 4 vertices per face (or worse) with no index sharing or deduplication. Memory and upload waste.
-
-14. **No geometry processing** — Zero vertex welding, normal averaging, index optimization, or manifold repair.
-
-15. **Hardcoded magic constants everywhere** — Grid size 200, step 10, specular power 40, auto-fit multiplier 1.8, rotation speed 0.005, debounce 400ms, near/far planes, etc. No constants file.
-
-16. **Renderer exposes internal camera state** — `yaw`, `pitch`, `dist`, `tx` etc. are public mutable fields on WebGPURenderer. External code can (and will) break invariants.
-
-17. **Expensive autoFit every time** — Full O(n) scan over every vertex on every `setMeshes`. Happens even for tiny edits.
-
-18. **No device-lost handling** — WebGPU context or device loss is never handled. App will die silently after GPU reset or tab sleep.
-
-19. **Resize logic is racy** — `resize()` is only called from the render loop. Rapid window changes or initial layout can leave wrong canvas size.
-
-20. **Primitive manual debounce** — `let debounce; if (debounce) clearTimeout...` repeated in watch. No use of lodash, no AbortController, no Vue `debounce`.
-
-21. **Everything on main thread** — Parser, mesh generation, buffer uploads, and rendering all block the UI. Large models or slow $fn will freeze the tab.
-
-22. **Naive triangle counting** — `indices.length / 3` with no check that indices are valid or complete. Can produce fractional or wrong counts.
-
-23. **Poor tessellation quality** — Sphere uses simple lat/long (bad poles). Cylinder caps have naive fan. No adaptive subdivision.
-
-24. **Broken transparency ordering** — Two-pass (opaque then transparent) without sorting back-to-front per triangle or even per mesh. Classic alpha artifacts.
-
-25. **Incorrect normal matrix for non-uniform scales** — The code always does `transpose(invert(transform))`. This is only correct for uniform or no scale. Skewed models get wrong lighting.
-
-26. **Shaders as giant inline strings** — Both WGSL shaders live as template literals in the middle of the renderer file. No syntax highlighting, no separate files, hard to edit.
-
-27. **Grid and gizmo are inflexible** — Generated once at startup with magic numbers. Cannot be toggled, resized, or styled by user.
-
-28. **Zero editor features** — Plain textarea. No syntax highlighting, no error underlines, no autocomplete, no formatting, no folding, no minimap.
-
-29. **No undo/redo** — Code changes are not tracked. User can lose work instantly with no way back except browser history.
-
-30. **Translation strings are ad-hoc** — Big `L` object with duplicated keys. No extraction, no pluralization, no external files, easy to get out of sync between languages.
-
-31. **Raw localStorage everywhere** — Direct `getItem`/`setItem` calls with magic strings in multiple places. No namespace, no schema version, no migration.
-
-32. **Poor HTML metadata** — index.html has Russian `lang`, no description, no viewport best practices beyond basic, no Open Graph, no theme-color.
-
-33. **Missing development scripts** — package.json has only dev/build/preview. No `test`, `lint`, `format`, `typecheck`, `check` commands.
-
-34. **Complete absence of tests** — No Vitest, no parser golden tests, no math property tests, no visual regression. The parser can regress silently.
-
-35. **No CI/CD** — No GitHub Actions, no automated build on PR, no lint gate, no test gate.
-
-36. **Incomplete .gitignore** — Still picks up .DS_Store. Missing coverage/, .env*, IDE folders, etc.
-
-37. **Parser error recovery is terrible** — One syntax problem often causes large parts of the model to disappear because `stmt()` just advances and returns null.
-
-38. **parseValue is full of silent fallbacks** — Unknown identifiers return the identifier name as string or 0. Bad numbers become zero. No diagnostics.
-
-39. **Unsupported modules silently degrade** — `hull`, `minkowski`, `linear_extrude`, `text` etc. just recurse into children. User gets wrong geometry with no warning.
-
-40. **Color state is lost across CSG** — When difference emits red children, subsequent siblings can inherit the wrong color because `col` parameter is passed inconsistently.
-
-41. **No resource limits** — User can write `$fn=1000` and generate millions of triangles with no warning, no clamping beyond a weak `Math.max(8, ...)`.
-
-42. **Input handling is spaghetti** — All pointer state (`drag`, `pan`, `mx`, `my`) lives as flat private fields. No controller class, hard to test or extend.
-
-43. **No architecture layers** — Parser, evaluator, math, and renderer are tightly coupled inside the single Vue app. Impossible to reuse or test in isolation today.
-
-44. **UI elements are afterthoughts** — Stats, error box, and hint are crammed into the giant component with almost no componentization.
-
-45. **Zero accessibility** — Canvas has no ARIA description, toolbar buttons lack labels in places, no keyboard focus management beyond Tab in textarea, no reduced-motion respect.
-
-46. **Mobile experience is an afterthought** — Touch gestures are partially inherited from pointer events but lack proper pinch, double-tap, long-press, or orientation handling.
-
-47. **No progress indication** — Parsing or uploading a 500k triangle model shows nothing. User thinks the app is frozen.
-
-48. **Auto-render is dangerous** — Every keystroke triggers a full reparse + re-upload after debounce. Complex models cause constant jank or battery drain.
-
-49. **No asset I/O** — You cannot export STL, OBJ, glTF, or even a screenshot easily. The only persistence is raw source in localStorage.
-
-50. **Core logic is not packaged** — Parser and renderer cannot be consumed by other projects (VSCode extension, web component, headless renderer, npm package). Everything is glued to this one Vue app.
-
-## How to Use This List
-
-- Items 1–15 are foundational and should block any claim of "production readiness".
-- Items 16–30 are severe UX and correctness problems that affect daily users.
-- Items 31–50 are maintainability, process and polish issues.
-
-Any new feature work should be evaluated against whether it makes one of these 50 items worse.
-
-## Related Documents
-
-- [architecture.md](architecture.md) — current design + 200 forward ideas
-- [README.md](README.md) — user facing overview and limitations
-
-## Additional 200 Problems (51–250)
-
-Here are 200 more distinct issues discovered during deeper audit. These complement the initial Top 50. All are based on inspection of the actual source.
-
-51. Parser silently drops statement-starting modifiers like # % * ! without error or effect (OpenSCAD uses them for debug/render).
-
-52. skipExpr() is extremely crude and can consume far too much or too little when expressions appear.
-
-53. parseVec does not support nested vectors or ranges like [0:5].
-
-54. Negative numbers in vectors are parsed inconsistently due to limited minus handling.
-
-55. The tokenizer treats $fn as a normal Ident, special handling is only in evaluator via string key.
-
-56. No distinction between module calls and variable references — everything is call or ident.
-
-57. Parser accepts but completely ignores "function" and "module" declarations.
-
-58. Children of unsupported nodes (hull etc) are still evaluated, producing wrong but non-empty output.
-
-59. cIdx reset only happens at top level parseOpenSCAD; nested or partial parses pollute colors.
-
-60. arg() helper uses ?? but many defaults pass -1 as position making call sites confusing.
-
-61. Sphere generation has degenerate triangles and zero-area faces near poles.
-
-62. Cylinder with h=0 or r1=r2=0 produces invalid or zero-area geometry without warning.
-
-63. makeCube always emits 24 vertices (6 faces × 4) even for tiny cubes.
-
-64. No face normal averaging or smoothing groups support.
-
-65. Vertices store normals but no UVs or tangents — future texturing impossible without rewrite.
-
-66. MeshData transform is always applied at eval time; no way to keep symbolic transforms.
-
-67. evalNode for difference hardcodes alpha=0.35 and red color — magic and not overridable.
-
-68. intersection() forces alpha 0.55 on everything — changes user colors silently.
-
-69. Color names via cssColor only support a tiny hardcoded list, no #hex or rgb().
-
-70. In rotate, axis-angle path assumes default [0,0,1] but code has bug in default vec.
-
-71. mirror() with non-axis vector produces incorrect (non-orthogonal) result because it just scales.
-
-72. multmatrix applies matrix but never validates that it is affine or has proper last row.
-
-73. No handling for "center" in sphere or other primitives beyond cylinder/cube.
-
-74. $fn lower bound was 8 now 4, but can still produce < 3 sides for cylinder which collapses.
-
-75. No convex hull even for simple 2-point cases.
-
-76. All mesh generation allocates new arrays every time; no pooling.
-
-77. parseOpenSCAD always resets color index — no way to continue coloring across multiple parses.
-
-78. Tokenizer does not recognize scientific E notation fully in all edge cases (sign after E).
-
-79. Comments inside numbers or strings? No, but nested /* */ not properly depth counted.
-
-80. Parser has no recovery for mismatched braces — can leave AST in bad state.
-
-81. In renderer, normal matrix is always computed even for identity transforms.
-
-82. Scene uniform buffer size is hardcoded 112 bytes — fragile if Scene struct changes.
-
-83. WGSL structs are duplicated between MESH_WGSL and LINE_WGSL.
-
-84. Depth texture is recreated every resize even if size didn't change enough.
-
-85. No mipmaps or sampler usage at all (not needed yet but architecture doesn't plan for it).
-
-86. Camera projection near/far planes are magic 0.1 and dist*10 — can clip large models badly.
-
-87. lookAt and perspective in math3d use row-major but some conventions expect column.
-
-88. Pitch clamp is hardcoded -1.5/1.5 radians (~86 deg) — not configurable and asymmetric with yaw.
-
-89. Grid lines include axis highlights but axis colors are magic arrays inside buildGrid.
-
-90. No way to disable grid or axes at runtime.
-
-91. Render loop always redraws everything even if nothing changed (no dirty flag).
-
-92. setMeshes destroys old buffers synchronously but new ones are queued — potential race on rapid edits.
-
-93. Transp flag is only based on color[3] < 0.99 — any alpha <1 treated same, no sorting key.
-
-94. drawIndexed called even when ic===0 — wastes a draw call.
-
-95. GPU buffers for uniforms are 144 bytes (model + nmat + color) but no versioning.
-
-96. Pointer capture is set but never checked if capture succeeded.
-
-97. Wheel listener uses {passive:false} but no equivalent for touch.
-
-98. No velocity or momentum on camera after drag release.
-
-99. AutoFit can set dist=5 minimum even for tiny objects causing bad initial view.
-
-100. Bbox computation in autoFit does not account for transformed normals correctly? Wait it does vertices only.
-
-101. Multiple rapid calls to setMeshes leak old bindgroups until GC (buffers are destroyed but).
-
-102. Canvas clear color is hardcoded dark gray in render().
-
-103. Light direction is hardcoded [0.55,0.75,0.45].
-
-104. Ambient is hardcoded [0.22,0.22,0.24].
-
-105. Specular contribution is fixed 0.25 white — no material control.
-
-106. Backlight term "bd" is arbitrary 0.25 factor.
-
-107. Phong exponent 40 is magic and too high for many materials.
-
-108. No support for point lights or multiple lights (only one directional).
-
-109. No fog, no environment, nothing beyond basic directional + ambient.
-
-110. Line pipeline for grid uses same scene bindgroup but different layout expectation.
-
-111. In math3d, multiply is O(n^3) naive loop — fine for 4x4 but no SIMD or fast path.
-
-112. All rotate functions allocate new identity every call.
-
-113. translate, scale etc create temp matrices unnecessarily.
-
-114. invert code is 50+ duplicated arithmetic expressions — copy-paste hell, easy to desync.
-
-115. No quaternion or euler conversion helpers despite rotate supporting them indirectly.
-
-116. perspective matrix formula uses 1/tan but no handling for fov==0 or aspect==0.
-
-117. lookAt does not handle collinear eye/center (division by zero risk before normalize).
-
-118. identity() always allocates new Float32Array.
-
-119. No matrix stack or push/pop for hierarchical transforms (relies on recursion in evaluator only).
-
-120. transpose is used heavily on every upload — unnecessary work if we stored column major.
-
-121. Vec3 is just a TS tuple alias, no class or methods.
-
-122. Mat4 type is just Float32Array — no nominal typing, easy to pass wrong sized array.
-
-123. No determinant function exposed (only inside invert).
-
-124. App.vue contains the only usage of EXAMPLES — dead code if we ever remove the buttons.
-
-125. L translation object has duplicated keys between ru and en for some entries.
-
-126. diff_note string is bilingual in one key and not used consistently.
-
-127. Theme is applied via data-attribute but no CSS variables for all colors in one place.
-
-128. Canvas hint text color uses hard rgba in light/dark.
-
-129. Media query only for 800px — no other breakpoints or container queries.
-
-130. Textarea has no max length or protection against huge pastes.
-
-131. Code change watcher always writes to localStorage even if value didn't change meaningfully.
-
-132. Auto render debounce 400ms is arbitrary and not user configurable.
-
-133. When autoRender off, there is no visual "dirty" state.
-
-134. Stats line mixes count with a long italic note that may overflow on mobile.
-
-135. Error box uses inline styles-ish via classes but white-space pre-wrap can explode on bad errors.
-
-136. Brand logo is inline SVG with no title or aria.
-
-137. Toggle buttons have no aria-pressed or labels beyond text.
-
-138. All buttons lack type="button" — could submit forms if ever wrapped.
-
-139. No keyboard shortcut for theme or language toggle.
-
-140. Ctrl+Enter works but no visual affordance on the Render button for the shortcut.
-
-141. EXAMPLES are only loaded at module evaluation time — cannot be extended at runtime.
-
-142. loadExample does silent fail if name unknown.
-
-143. The second <script lang="ts"> for EXAMPLES is an anti-pattern in Vue SFC (mixes two scripts).
-
-144. No use of defineProps or better composition in the giant setup.
-
-145. Reactive refs for counts are updated after parse but UI may flicker.
-
-146. No use of computed for triCount or derived stats.
-
-147. onMounted does async work without loading indicator.
-
-148. gpuOk ref is set only once at start; never retried.
-
-149. No handling for when user pastes OpenSCAD with Windows \r\n line endings specially.
-
-150. Code is saved on every keystroke to localStorage — wear on mobile + privacy.
-
-151. No "clear code" or reset button.
-
-152. Examples buttons overwrite current code without confirmation.
-
-153. No way to download the current .scad source easily.
-
-154. No shareable link generation (encode code to URL).
-
-155. The project name in package.json has hyphen but title has spaces inconsistently.
-
-156. Version is stuck at 0.1.0 with no plan.
-
-157. No "engines" field or browserslist in package.
-
-158. vite.config has zero config — no alias, no define, no optimizeDeps.
-
-159. tsconfig allowsJs true and no "noImplicitAny" override (but strict is on).
-
-160. No "declaration": true or types export for possible future library.
-
-161. vue-tsc is used in build but no incremental or project references.
-
-162. No source maps control for prod.
-
-163. The worktree path in user info suggests this is developed in unusual git setup.
-
-164. No CONTRIBUTING, LICENSE, or CHANGELOG files visible.
-
-165. .vscode configs reference chrome debugger which may not be installed.
-
-166. Tasks.json has very weak problemMatcher (empty regexp).
-
-167. Launch configs hardcode port 5173.
-
-168. No .editorconfig.
-
-169. No prettier / biome / eslint config.
-
-170. package-lock is committed (good) but no "lockfileVersion" discussion.
-
-171. Math functions like rotate use degrees->radians conversion only in evaluator — inconsistent API.
-
-172. axisAngle function can return non-normalized result if input matrix had scale.
-
-173. CSS_COLORS uses approximate values (0.5 instead of 0.50196 for gray etc).
-
-174. No support for color alpha in cssColor path.
-
-175. In App.vue the canvas-hint is always English-ish in style, not translated.
-
-176. L object keys are not typed — t(k) can return any string.
-
-177. No use of Vue's useTemplateRef or better refs in 3.5+.
-
-178. The entire UI is flex column without any landmark roles (header, main, aside).
-
-179. Stats div has no live region for screen readers when counts update.
-
-180. When WebGPU fails the message is static and not actionable beyond "use newer browser".
-
-181. Parser never reports which line or which module failed.
-
-182. Large models with thousands of meshes will create thousands of GPU buffers and bind groups — will OOM.
-
-183. No instancing or multi-draw indirect planned.
-
-184. setMeshes always uploads full vertex data even if only transform changed.
-
-185. There is no "preview quality" vs "final" $fn switch.
-
-186. Camera target (tx ty tz) can drift to NaN if bad bbox from degenerate input.
-
-187. dist can become Infinity in some edge autoFit cases.
-
-188. No protection against NaN or Infinity in camera math propagating to matrices.
-
-189. perspective with very large far plane loses depth precision.
-
-190. Grid is drawn every frame with line-list — thousands of lines with no culling.
-
-191. No frustum culling for grid or meshes.
-
-192. The 3D math uses degrees in some places internally but radians exposed in rotate helpers inconsistently.
-
-193. No matrix equality or approx equal helper for tests.
-
-194. invert can produce denormal floats.
-
-195. No SIMD or @std/math usage even if available.
-
-196. The bilingual strings contain the note about difference() which mixes languages in same string in places.
-
-197. When language changes the whole app doesn't force re-render of some static parts.
-
-198. EXAMPLES contain Russian comments? No, English only.
-
-199. There is no test that the parser roundtrips its own examples.
-
-200. Adding a new primitive requires changes in 4+ places (tokenizer not needed, but parser + evaluator + examples + docs).
-
-201. Tokenizer position 'p' is byte index but never used for user messages.
-
-202. Parser class has private tok and pos but no encapsulation of token stream abstraction.
-
-203. Many switch cases in evalNode fallthrough to same code without comment.
-
-204. nextC cycles 8 colors — after 8 objects colors repeat without user control.
-
-205. difference always renders subtracts in red regardless of user color() on them.
-
-206. No way to visualize the "positive" part of difference only.
-
-207. AutoFit uses vertices[i] directly assuming stride 6 without constant.
-
-208. In setMeshes the uniform write for color is new Float32Array every time.
-
-209. Buffers are created with exact byteLength but no alignment consideration.
-
-210. The line grid vertices interleave pos+color as vec3+vec4 = 28 bytes — not 16-byte aligned nicely.
-
-211. No use of WebGPU timestamp queries for profiling.
-
-212. Render pass always clears — no preserve for overlays.
-
-213. No scissor or viewport control.
-
-214. destroy() destroys device but other code may hold references.
-
-215. App.vue never calls renderer.destroy on error paths fully.
-
-216. Multiple canvas elements or hot reload can leave orphan listeners.
-
-217. The hint text at bottom of canvas is not hidden when error is shown.
-
-218. No "copy error" button.
-
-219. Error messages from parser contain no suggestion of what was expected.
-
-220. In parser, LParen after ident for call but function call args not parsed at all.
-
-221. Vectors in args like translate(v=[1,2,3]) work only because of parseVec.
-
-222. But expressions like translate(v=[1,2,3]+[0,1,0]) do not.
-
-223. No support for "true" "false" as module args beyond bools in some places.
-
-224. center=true is compared with === true after arg — fragile.
-
-225. In makeCylinder the slope normal calculation can divide by zero when h=0 or r1==r2? Handled poorly.
-
-226. Cap indices for cylinder can overlap or be wrong for fn=3.
-
-227. Sphere segments use inclusive ri<=seg which produces one extra ring.
-
-228. No "convexity" parameter respected anywhere.
-
-229. import() and surface() are no-ops that just return children.
-
-230. The whole system assumes all geometry is closed manifold — no open surfaces or lines.
-
-231. No wireframe only mode.
-
-232. Stats "Objects" actually counts meshes (one per color group or primitive).
-
-233. Triangles count can be misleading because of duplicated verts.
-
-234. When using difference the tri count includes the "invisible" red parts.
-
-235. No volume or area computation exposed.
-
-236. Camera can be zoomed inside the model without clipping warning.
-
-237. No "focus selected" or "frame all" separate from auto on load.
-
-238. Drag with right button only works because of shift check, not consistent cross platform.
-
-239. Contextmenu prevention is global on canvas.
-
-240. No double-click handler (common for fit in 3D apps).
-
-241. Touch on canvas may trigger unwanted browser behaviors.
-
-242. No pinch to zoom implementation beyond pointer.
-
-243. The 420px editor width is magic in CSS.
-
-244. Code font stack may not exist on user's machine (no system fallback listed fully).
-
-245. Tab insert always uses 4 spaces — no setting.
-
-246. No way to change font size in editor or canvas.
-
-247. Dark/light theme switch does not persist the choice across all elements perfectly on first load.
-
-248. localStorage keys are not prefixed ("scad-") consistently for all (only some).
-
-249. No migration strategy if localStorage format ever changes.
-
-250. The entire project has no automated way to verify that a change didn't break an example visually.
-
-These 200 additional problems bring the documented issues to 250 concrete items. Many are small but real; some are architectural.
-
-Fixes performed in this pass (examples):
-- .gitignore now covers .DS_Store and common junk.
-- Added "typecheck" and "check" scripts.
-- Improved HTML metadata.
-- Removed one `as any`, switched catch to unknown.
-- Added real window resize listener + ResizeObserver in renderer.
-- Extracted several magic numbers to class constants and used them.
-- Made tokenizer throw on unexpected characters (no more silent corruption).
-- Clamped and bounded $fn to [4,256].
-- Improved triangle count robustness.
-- Added basic device.lost listener stub.
-- Parser now supports basic expressions (+-*/ and parens) in sizes/args.
-- Added exportToSTL() and UI button for STL download.
-- Basic Vitest setup + parser tests.
-- Examples extracted to src/examples.ts.
-- Ongoing: implementing from Top 200 list.
-
-Synchronize note: these fixes address only a tiny fraction. The lists in this file should be used to drive future work.
-
-## Top 200 Ideas, Suggestions and Problems (Prioritized - June 2026)
-
-This is a fresh, curated top 200 list mixing high-impact ideas, concrete suggestions, and remaining problems. Prioritized roughly by user impact + implementation feasibility. Many build on the partial fixes already landed (tokenizer errors, $fn clamp, resize handling, etc.).
-
-1. **Upgrade editor to Monaco/CodeMirror** — Replace textarea with real code editor supporting OpenSCAD syntax highlighting, error squiggles, autocomplete for primitives.
-2. **Full expression evaluator** — Add support for arithmetic (+-*/%), comparisons, parentheses, and function calls inside arguments.
-3. **Implement real CSG** — Replace visual-only difference/intersection with actual boolean operations (WASM Manifold or port csg.js) so meshes are correct for export.
-4. **Variables and assignments** — Support `foo = 10;` and use of variables in expressions and module calls with proper scoping.
-5. **For loops** — Parse and evaluate `for (i = [0:10]) { ... }` and list-based for.
-6. **User modules with params** — Allow `module mybox(w=10) { cube([w,10,10]); }` and calls with overrides.
-7. **let() scoping** — Support `let(a=5) { cube(a); }` for local variables.
-8. **$fn / $fa / $fs resolution** — Make special vars affect tessellation dynamically instead of only static arg lookup.
-9. **hull() implementation** — Add convex hull algorithm for 3D points generated by children.
-10. **linear_extrude with twist/scale** — Support advanced params for extrude beyond simple height.
-11. **polygon and paths** — Add 2D polygon support with holes for more accurate 2D-to-3D workflows.
-12. **STL import** — Parse binary and ASCII STL files and turn them into renderable meshes.
-13. **Proper error positions** — Store line/column in tokens and AST; show "Error at line 12 col 4: ..." 
-14. **Undo/redo for code** — Maintain edit history with Ctrl+Z support (beyond browser).
-15. **Customizer panel** — Auto-generate sliders/color pickers from top-level variables in the SCAD code.
-16. **Export STL / glTF** — Add buttons to download current geometry as binary STL or glTF for real use.
-17. **Add Vitest + parser tests** — Golden tests for all examples and edge cases; run on every change.
-18. **Move EXAMPLES out of App.vue** — Load from external .json or separate .scad files for easier maintenance and testing.
-19. **CI with GitHub Actions** — Add build, typecheck, test, and visual regression jobs.
-20. **Real math library** — Replace hand-written math3d with gl-matrix or similar; add tests for invert/multiply.
-21. **Web Worker for parse/render** — Offload parsing, evaluation and mesh gen to worker so UI stays responsive.
-22. **Vertex deduplication + index optimization** — Post-process generated meshes to share vertices and reduce size.
-23. **Better camera controls** — Add zoom-to-cursor, double-click focus, inertia, orthographic toggle.
-24. **View cube + preset buttons** — Standard 3D navigation aids (top/front/right/iso) with hotkeys.
-25. **Measurement tools** — Click points to measure distances, angles, diameters in the 3D view.
-26. **Section plane / clipping** — Interactive cutting plane to inspect internal geometry.
-27. **Wireframe + edges overlay** — Toggle to show model edges on top of shaded view.
-28. **Shadows and better lighting** — Add simple shadow mapping + multiple lights or IBL.
-29. **PBR materials** — Allow color() to set roughness/metallic for more realistic rendering.
-30. **Better transparency** — Implement proper order-independent or sorted transparency instead of crude two-pass.
-31. **Export high-res PNG with alpha** — Canvas capture at 2x/4x resolution for documentation.
-32. **Shareable links** — Base64-encode SCAD code in URL hash for easy sharing.
-33. **Multi-file support** — Virtual project with tabs or sidebar for include/use simulation.
-34. **Syntax error recovery** — Parser should continue after bad statements and report all errors.
-35. **Clamp and warn on extreme $fn** — Prevent OOM from $fn=10000; show warning.
-36. **Device lost recovery** — Attempt to recreate device/context when WebGPU signals lost.
-37. **Performance metrics overlay** — Show parse time, triangle count, FPS, buffer sizes in dev mode.
-38. **i18n extraction** — Move all strings out of code into JSON files; add more languages.
-39. **Accessibility audit + fixes** — ARIA labels, keyboard nav for canvas (limited), focus management, reduced motion.
-40. **Mobile gestures** — Proper pinch zoom, two-finger pan, tap for selection on touch devices.
-41. **Print bed visualization** — Select printer size and show build volume + origin.
-42. **Volume / surface area calc** — Compute and display after successful render.
-43. **Named camera bookmarks** — Save/restore specific views.
-44. **Animation scrubber for $t** — Support OpenSCAD animation variable with timeline.
-45. **Command palette** — Ctrl/Cmd+K for render, load example, export, toggle grid etc.
-46. **Snippet library** — Common patterns (difference with hole, rounded box) insertable via UI or editor.
-47. **Formatter** — Button or on-save that pretty-prints the SCAD code.
-48. **Minimap in editor** — Once real editor is in.
-49. **Find & replace** — Across current file (later project).
-50. **Theme sync** — Make editor theme follow app light/dark automatically.
-
-51. **Support rotate_extrude** — With angle and other params.
-52. **polyhedron primitive** — Direct points + faces support.
-53. **text() primitive** — Using 2D canvas or font loading for extruded text.
-54. **surface() from image** — Heightmap import.
-55. **projection(cut)** — Generate 2D outlines from 3D.
-56. **offset() 2D** — Round, delta, chamfer for 2D shapes.
-57. **minkowski() basic approx** — At least for simple cases.
-58. **color alpha in all paths** — Consistent propagation.
-59. **mirror with proper normal flip** — Current scale hack doesn't always invert normals correctly.
-60. **multmatrix validation** — Warn on non-affine or bad matrices.
-61. **Better sphere tessellation** — Icosahedron or geodesic for even triangles.
-62. **Cylinder cone normal fix** — Improve for non-tangent cases.
-63. **Cap generation cleanup** — Avoid degenerate triangles on flat ends.
-64. **Mesh metadata** — Attach original module name / source range to each MeshData.
-65. **Scene graph instead of flat list** — For future selection and hierarchy view.
-66. **Incremental re-evaluation** — Only re-parse changed subtrees when possible.
-67. **Mesh caching** — Cache results of identical sub-expressions.
-68. **Frustum culling** — Skip drawing meshes outside view.
-69. **Level of detail** — Simplify high-$fn models when far or in preview mode.
-70. **Instanced rendering** — For repeated identical subassemblies.
-71. **Post-processing stack** — FXAA, SSAO, simple bloom.
-72. **Environment map** — For metal materials.
-73. **Outline / selection highlight** — Click mesh to highlight.
-74. **Exploded view mode** — Separate parts along axes.
-75. **Layer simulation** — Simple sliced preview for 3D printing.
-76. **Support preview** — Generate tree-like supports.
-77. **Build volume config** — User-selectable printers.
-78. **Cost estimator** — Rough filament/weight from volume.
-79. **Send to slicer** — Download STL + open local slicer if possible.
-80. **DXF/SVG export of projections** — For laser/cnc.
-
-81. **VSCode extension** — Embed viewer in VSCode for .scad files.
-82. **Web component** — <scad-viewer src="..." /> reusable.
-83. **npm packages** — Publish parser and renderer separately.
-84. **PWA + offline** — Installable, cache examples and last code.
-85. **Tauri / Electron desktop** — Native file open/save, better perf.
-86. **GitHub Action for render** — Render SCAD to STL/PNG in CI.
-87. **Public gallery** — Upload/share example models (opt-in).
-88. **Prompt-to-SCAD** — Basic LLM integration to generate starter code.
-89. **Parametric sweep** — Generate variants for a variable range.
-90. **BOM extraction** — List "parts" based on colors or named groups.
-91. **Overhang detection** — Visualize angles >45 deg.
-92. **Orientation optimizer** — Suggest best print orientation.
-93. **2D drawing export** — Orthographic views as SVG/DXF.
-94. **Engineering drawing** — Auto multi-view + dimensions.
-95. **Physics preview** — Simple drop or stability test (future).
-96. **AR mode (WebXR)** — Place model in real world.
-97. **Collaborative editing** — CRDT for shared models (advanced).
-98. **Plugin system** — Register custom primitives from JS.
-99. **Node-based alternative UI** — Visual graph that generates SCAD.
-100. **Headless render API** — For server or batch use.
-
-101. **Extract constants everywhere** — Finish the job started in renderer (grid, speeds, shader params, debounce ms, etc.).
-102. **Strict TypeScript cleanup** — Remove remaining `any`, add branded types for Mat4/MeshData.
-103. **AST visitor pattern** — Make future transformations and analyses easy.
-104. **Separate concerns in App.vue** — Split into Editor, Viewport, Toolbar, Console components.
-105. **State management** — Use Pinia or simple store for editor state, camera, settings.
-106. **Config object** — Central place for all defaults (speeds, colors, grid, quality).
-107. **Feature flags** — Easy toggle for experimental features (real CSG, worker, etc.).
-108. **Better localStorage abstraction** — Namespaced keys, versioned schema, migration.
-109. **Error boundary + recovery** — Catch render errors without full crash.
-110. **Progress indicator** — For long parses / large uploads.
-111. **Throttle auto-render** — Only re-render after meaningful change or on Ctrl+Enter always.
-112. **Debounce with Abort** — Use modern patterns instead of manual timeout.
-113. **Canvas context menu** — Right click for measure, focus, isolate, hide.
-114. **Keyboard shortcuts overlay** — Show available keys.
-115. **Recent files / history** — List of last edited codes.
-116. **Drag & drop .scad** — Load file directly.
-117. **Download current .scad** — Easy save button.
-118. **Reset to example** — With confirmation.
-119. **Dark/light more palettes** — Solarized, high-contrast.
-120. **Live stats in title or favicon** — Triangle count badge?
-
-121. **Support more OpenSCAD keywords** — group, render, projection without crash.
-122. **Better default colors** — Per-primitive or user palette.
-123. **Color inheritance fixes** — Make sure difference red doesn't pollute siblings.
-124. **Normal matrix correctness** — Handle non-uniform scale properly (current transpose(invert) is approximate).
-125. **Grid customization** — Size, step, visibility, polar option.
-126. **Axis labels and ticks** — Make gizmo more useful.
-127. **Camera speed settings** — User-adjustable rotate/pan/zoom sensitivity.
-128. **Min/max distance clamp** — Prevent flying to infinity or inside model badly.
-129. **Bbox computation optimization** — Use typed arrays or WebAssembly later.
-130. **Memory monitoring** — Warn when too many buffers created.
-131. **Dispose checks** — Dev-only leak detection for GPU resources.
-132. **Source maps in prod** — Optional for debugging shipped errors.
-133. **Bundle size audit** — Code-split heavy editor when added.
-134. **Tree shaking** — Ensure unused math functions are dropped.
-135. **Strict lint + format on commit** — Add biome or eslint + husky.
-136. **Coverage thresholds** — Fail CI if parser coverage drops.
-137. **Property based testing** — Generate random valid-ish SCAD for parser.
-138. **Visual regression** — Playwright screenshots of key examples on canvas.
-139. **Benchmark harness** — Track parse/render time regressions.
-140. **Axe-core + pa11y** — Automated a11y checks.
-
-141. **Help / docs panel** — In-app reference for supported syntax.
-142. **Tutorial mode** — Step-by-step guided modeling.
-143. **Example browser with thumbnails** — Generate small previews.
-144. **Search in examples** — By keyword or feature.
-145. **Version the saved code** — So old localStorage doesn't break new parser.
-146. **Telemetry opt-in** — Anonymous usage (parse time, features used) to prioritize.
-147. **Crash reporting** — Opt-in send error + SCAD snippet (sanitized).
-148. **Contribution guide** — Make it easy to add a primitive or fix.
-149. **Changelog automation** — From commits.
-150. **Release process** — Tags + GitHub releases.
-
-151. **Support center=true for sphere**.
-152. **Handle d= diameter in sphere/cylinder consistently**.
-153. **Support negative sizes?** — Or warn.
-154. **Vector math helpers** — len, norm, cross inside expressions.
-155. **Math functions** — sin, cos, sqrt, min, max, abs usable in code.
-156. **Undef handling** — More graceful.
-157. **Comment preservation** — For future formatter.
-158. **Include/use from URL** — Fetch remote .scad (with CORS note).
-159. **Stdlib bundle** — Common modules like rounded_cube built-in.
-160. **Recursion guard** — Prevent stack overflow on bad modules.
-
-161. **Better grid generation** — Fewer vertices, major/minor lines.
-162. **Axis with arrows and labels**.
-163. **Camera target snapping** — Optional grid snap for pan target.
-164. **Reference images** — Load background plane for modeling aid.
-165. **Multi light presets** — Sunny, studio, rim.
-166. **X-ray / ghost mode**.
-167. **Isolate / hide selected** — Once selection exists.
-168. **Hierarchy tree view** — Show CSG structure.
-169. **Properties inspector** — For selected mesh (color, bbox).
-170. **Raycast selection** — Click to select which primitive.
-
-171. **Volume calculation** — Accurate after real CSG.
-172. **Center of mass**.
-173. **Manifold check** — Warn if result is not watertight.
-174. **Auto center on plate**.
-175. **Multiple views** — Side by side perspective + ortho.
-176. **Recording** — Export turntable video or GIF.
-177. **Comparison mode** — Load two models side by side or difference.
-178. **Versioned examples** — Tag which OpenSCAD version they target.
-179. **Compatibility warnings** — "This uses unsupported linear_extrude twist".
-180. **Migrate to proper 3D math lib** — Finish the suggestion.
-
-181. **Support for child() and $children**.
-182. **resize() primitive**.
-183. **echo / assert to console panel**.
-184. **Special vars $vpr $vpt $vpd for view**.
-185. **$preview flag**.
-186. **Convexity param** (hint for renderer).
-187. **Render() module respect**.
-188. **Better default $fn** — 32 or dynamic.
-189. **Support negative radii?** — Clamp or error nicely.
-190. **String color names** — More than the 20 hard-coded.
-
-191. **Drag to reorder in future multi-doc**.
-192. **Diff view** — Show before/after of edit.
-193. **Live link to official docs** — For each keyword.
-194. **Keyboard only mode** — Full nav without mouse.
-195. **High contrast mode**.
-196. **Voice commands** (experimental).
-197. **Integration with FreeCAD / Blender** — Import/export bridges.
-198. **Slicer preview bridge** — Call external slicer via API if available.
-199. **Print farm integration** — Send job (future).
-200. **Become the best browser OpenSCAD tool** — Full fidelity + modern UX while staying lightweight and offline-first.
-
-This list can be used as a living backlog. Items 1-50 are highest priority for the next development phase. Many low-number items directly address the 250 problems already logged.
+# 500 Suggestions, Improvements, Problems & Defects — Catalog v2 (July 2026)
+
+The living backlog: everything known to be done poorly, incorrectly, or not at all — plus concrete improvement ideas — ranked into 10 domains of 50. Compiled after the SOLID/DRY decomposition pass (see [ARCHITECTURE.md](./ARCHITECTURE.md) for the current module structure), superseding both the original list in this file and complementing [ISSUES.md](./ISSUES.md) (the older 500-item snapshot) and [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (the severity shortlist).
+
+Legend: items are present-tense problems or actionable suggestions. `[fixed]` marks items resolved on branch `claude/top-issues-architecture-sync-00p2q9` during the July 2026 remediation passes — kept for the record; everything unmarked is open.
+
+Synced with: [README.md](./README.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [TOP-50-ISSUES.md](./TOP-50-ISSUES.md)
+
+---
+
+## I. Architecture & Decomposition (1–50)
+
+1. `App.vue` is still ~13.3k lines after extraction passes; target < 1,000 (thin shell composing components).
+2. [fixed] i18n dictionaries (~1.6k lines) inlined in App.vue → extracted to `src/i18n/index.ts`.
+3. [fixed] EDITOR_THEMES/BUILT_IN_PRESETS/SHORTCUT_PRESETS inlined → extracted to `src/config/index.ts`.
+4. [fixed] 41 mesh generators trapped in the parser monolith → extracted to `src/parser/geometry.ts` (pure, Worker-ready).
+5. [fixed] WGSL shaders inlined in the renderer with a triplicated Scene struct → `src/renderer/shaders.ts`, struct defined once.
+6. Extract `useTabs()` composable: tab CRUD, rename, pin, color, drag-reorder (~600 App.vue lines).
+7. Extract `usePreferences()` composable wrapping every `scad-pref-*` key through SafeStorage.
+8. Extract `useToast()` composable (toasts array + addToast/dismissToast + the storage-failure hook).
+9. Extract `useHistory()` composable (undo/redo stacks, history snapshots, restore).
+10. Extract `useExportImport()` composable (STL/OBJ/3MF/PNG/ZIP + STL import), lazy-imported.
+11. Extract `EditorPanel.vue`, `Toolbar.vue`, `TabBar.vue`, `ConsolePanel.vue`, `Minimap.vue` components.
+12. Extract `ViewportCanvas.vue`, `OrientationGizmo.vue`, `AxisLabels.vue`, `CompassOverlay.vue` components.
+13. Extract each of the 12 modals into `src/components/modals/` with a shared `AppModal.vue` (focus trap once, not 12×).
+14. Introduce a store layer (Pinia or module-singleton composables) instead of 237 refs sharing one setup scope.
+15. Parser: split evaluator out of `openscadParser.ts` into `src/parser/evaluator.ts` (evalNode/evalNodes + context).
+16. Parser: split tokenizer + Parser class into `src/parser/tokenizer.ts` and `src/parser/parser.ts`.
+17. Parser: replace 6 module-globals (`cIdx`, `_resolveFile`, `_profiling`, `_profileEntries`, `_profileDepth`, `_source`) with an `EvalContext` object threaded through evaluation — blocks Worker migration and makes parses non-reentrant.
+18. Parser: replace the untyped `args: Record<string, any>` bag with a discriminated-union AST.
+19. Renderer: split the ~300-line `render()` into RenderPass classes (mesh/line/outline/sky/reflection/shadow).
+20. Renderer: `renderScaled()` is a diverged copy of `render()` — screenshots miss reflection/shadow passes; unify into one parameterized path.
+21. Renderer: replace `_pad0`/`_pad1` flag smuggling with a typed FeatureFlags uniform field.
+22. Move parsing+mesh generation into a Web Worker (geometry module is now pure and ready); main thread only uploads buffers.
+23. `doRender()` still runs parse→mesh→upload synchronously; large models freeze typing.
+24. Three separate `watch(code, …)` watchers with no defined ordering — consolidate into one orchestrator with named effects.
+25. `MeshData` type lives in `openscadParser.ts` while `geometry.ts` type-imports it back (circular type edge) — move to `src/parser/types.ts`.
+26. `cssColor()` still sits in the parser file; move to geometry or a color module.
+27. The `sig()` session-restore signature builds full-code strings per compare; hash instead (djb2/fnv) to cut GC on every backup tick.
+28. `matchesBinding` moved to config but keybinding *capture* logic stays in App.vue — extract `useKeyboard()`.
+29. Five different popover implementations (viewport menu, context menus, dropdowns, tooltips, quick switcher) — one `usePopover()` with shared Esc/outside-click dismissal.
+30. Favicon generation, document-title updates, and `<link>` insertion happen inside component code — extract a head-management util.
+31. `reinitializeWebGPU()` duplicates chunks of `onMounted` init; extract shared `initRenderer()`.
+32. Use/include file-resolution callback duplicated between doRender and doRenderAllTabs — extract one resolver.
+33. Print-window harness duplicated between printCode/printShortcuts/spec-sheet — extract `openPrintWindow(html)`.
+34. The `showCopied`-flag+timeout pattern repeats ~6× — extract `useTransientFlag()`.
+35. ~25 one-line persistence watchers — replace with a `persistRef(key, ref)` helper over SafeStorage.
+36. Console panel logic (entries, filters, drag-resize) is interleaved with render logic — extract `useConsole()`.
+37. Breadcrumbs/AST-outline update walks the full AST on every caret move — move into the parse result and cache.
+38. Statistics/weight/cost estimator recompute from meshes in the component — move to a `useModelStats()` composable with memoization.
+39. Example gallery data embedded in App.vue — move to `src/examples/` with per-example files.
+40. SCAD reference documentation strings embedded in App.vue — move to data files under `src/reference/`.
+41. Command palette command list (~40 inline entries) — declare commands as data with ids, titles, handlers in `src/commands.ts`.
+42. Animation ($t) subsystem mixed into App.vue — extract `useAnimation()`.
+43. Ghost/comparison mode logic — extract `useGhostCompare()`.
+44. Measurement tool state machine — extract `useMeasure()`.
+45. Annotation overlay logic — extract `useAnnotations()`.
+46. `zipExport.ts` is a generic ZIP writer living beside domain exporters — move to `src/lib/zip.ts`.
+47. Introduce `src/lib/` for framework-free utilities (escapeHtml, safeParse, debounce) currently re-declared in App.vue.
+48. Debounce is hand-rolled 5× with different handle names — one `debounce()` util with cancel.
+49. Renderer camera state (`yaw/pitch/dist/tx/ty/tz`) is public mutable fields poked by App.vue — encapsulate behind methods/events.
+50. Define module dependency rules (lint-enforced): `lib → services → parser/renderer → i18n/config → App` with no upward imports.
+
+## II. Parser & Language (51–100)
+
+51. String tokenizer never decodes escapes — `"\n"` stays two characters; unterminated strings run past EOF.
+52. Number lexer accepts `1e` (no exponent digits) and silently parseFloats to 1.
+53. Unterminated `/*` block comment scan overshoots EOF.
+54. `ch <= ' '` treats NUL/DEL control chars as whitespace.
+55. `||`/`&&` constant-fold to booleans; OpenSCAD semantics return the operand value.
+56. `/0` folded to 0 at parse time; OpenSCAD yields inf/nan.
+57. `%0` returns 0 instead of nan.
+58. Ternary folded at parse time discards the unevaluated branch's side semantics for arrays/strings.
+59. Only `PI` is modeled; `$fa`/`$fs`/`$t`/`$preview` are ignored by the evaluator core.
+60. `min`/`max` with a single vector argument (`max([1,2,3])`) yields NaN.
+61. Unknown primary token: parser advances and returns 0, silently desyncing instead of erroring.
+62. List comprehensions support only `[for(x=range) body]` — no `if`, no nesting, no `let`, no multi-generator.
+63. Range parse only triggers on `:` after the first element; `[a, b:c]` mis-parses.
+64. `*`/`#`/`%`/`!` statement modifiers are discarded; `*` (disable) still renders its subtree.
+65. Unresolved variables evaluate to their own name as a string — surprising in arithmetic contexts.
+66. `expandRange` silently truncates at 10,000 entries; float-accumulated step causes off-by-one counts.
+67. Empty vector is truthy (`!![]`); OpenSCAD treats it as false.
+68. `undef` is not modeled at all.
+69. Recursive user modules have no depth guard — `module a(){a();}` overflows the JS stack.
+70. `children(i)` index argument unsupported; `$children` missing.
+71. `assert()` lacks the message argument and never reports source position.
+72. `echo` output loses the expression labels OpenSCAD prints (`ECHO: a = 5`).
+73. No error positions: line/column exist in tokens (`p`) but never surface in messages.
+74. Parser stops at the first syntax error instead of recovering and reporting all errors.
+75. `let()` inside expressions (not statements) unsupported.
+76. String functions incomplete: `str()`, `chr()`, `ord()`, `len()` on strings have gaps.
+77. `search()` builtin missing entirely.
+78. `lookup()` interpolation table function missing.
+79. Vector math builtins missing: `norm()`, `cross()` in expressions.
+80. `rands()` returns wrong shape (scalar vs vector list).
+81. `log()` is documented base-10 in OpenSCAD [fixed] but `exp`/`ln` coverage still untested.
+82. `import()`/`surface()` file loading is a no-op without an error to the user.
+83. `include`/`use` resolve only across open tabs; no URL fetch option (with CORS note) for shared libraries.
+84. No support for `intersection_for`.
+85. `offset()` on 2D children uses radial-from-centroid — wrong for concave shapes; ignores `delta`/`chamfer` params.
+86. `projection(cut=true)` keep-logic inverted/garbled for solids straddling z=0.
+87. `linear_extrude` reconstructs the 2D profile from a 3D mesh (`extractFlatProfile`) — fails on shapes with holes.
+88. `extractFlatProfile`'s 0.5-thickness threshold misclassifies thin solids as flat profiles.
+89. Boundary walk in profile extraction picks the first neighbor without orientation — self-crossing polygons result.
+90. `rotate_extrude` sorts profile points by atan2 — wrong for non-star-shaped profiles.
+91. `rotate_extrude` silently mirrors negative-X profiles; OpenSCAD errors instead.
+92. 360° `rotate_extrude` leaves an unwelded seam (not watertight).
+93. Named-argument detection can misclassify `f(a=b==c)`.
+94. Module-definition single-child path mishandles `module m();`.
+95. Add a formatter (`scad-fmt`) — comment-preserving pretty printer over the AST.
+96. Add an AST visitor API so tooling (outline, lint, rename) stops re-walking ad hoc.
+97. Property-based fuzz tests for the tokenizer/parser (fast random near-valid SCAD).
+98. Golden-file tests: every example in the gallery parses to a stable mesh hash.
+99. Publish the parser as a standalone npm package once de-globalized.
+100. Long-term: adopt the OpenSCAD grammar via tree-sitter for editor tooling parity.
+
+## III. Geometry & CSG (101–150)
+
+101. `difference()` is a translucent overlay, not a boolean — exported STL still contains subtrahends (unprintable). The #1 correctness gap.
+102. `intersection()` renders children semi-transparent; no intersection volume computed.
+103. `union()` concatenates meshes without merging — internal faces remain (non-manifold export).
+104. `minkowski()` is a pass-through.
+105. Integrate Manifold (manifold-3d WASM) as the boolean kernel behind a feature flag — the single highest-value geometry change; keeps the current path as fallback.
+106. [fixed] `torus`/`donut` with `r1=0` divided by zero → infinite loop; now guarded and capped.
+107. [fixed] `gear` teeth unbounded → 100k-point profile into O(n³) earClip; now capped at 500.
+108. [fixed] `linear_extrude` twist could derive ~200k slices; now capped at 512.
+109. `earClip` is O(n³) worst case with no vertex cap — SVG-traced polygons freeze the tab.
+110. Replace earClip with a robust triangulator (earcut port — battle-tested, handles holes).
+111. `convexHull3D` horizon detection: `isHorizon` is initialized true and never set false — hulls of 5+ points can self-intersect.
+112. `convexHull3D` is O(n³); incremental hull with adjacency would be O(n log n).
+113. Near-coplanar initial tetrahedron has no epsilon check — sliver tetrahedra produce warped hulls.
+114. Sphere poles: duplicated pole vertices with independently computed normals → visible seam under smoothing.
+115. Sphere lat/long tessellation over-denses poles; icosphere option would give uniform triangles.
+116. Cylinder `h=0` degenerates with forced (0,0,1) side normals.
+117. Cone (r2=0) emits a degenerate apex ring of coincident vertices.
+118. `pipe` inner-wall winding doesn't match the stated inward normals; `r2<r1` self-intersects without warning.
+119. Torus inner-ring normals likely inverted.
+120. Helix tube radius hard-coded as `pitch*0.15`, ignoring any wire-radius argument.
+121. Helix with huge `pitch` puts vertices millions of units out — Float32 precision jitter; clamp or warn.
+122. Bezier 5-point control list drops point 4; segment boundaries duplicate points with wrong seam tangents.
+123. Sweep with a single-point path indexes `tangents[-1]` — crash.
+124. Sweep generates no end caps — open tube.
+125. Gear profile is a tip/valley star, not an involute; `valleyR` can go ≤0 for small teeth inverting the profile.
+126. Thread profile is half-rectified `max(0,sin)` — not a usable V-thread; derivative math has canceling constants.
+127. Knurl top-cap radius mismatches side wall for non-integer vertical counts — visible crack.
+128. chamferCube falls back to convex hull (approximate + expensive) and carries abandoned half-written faceDefs code.
+129. Loft resamples profiles by index, ignoring edge lengths; recomputes centroid per vertex (O(n²)).
+130. Surface heightmap is an open sheet (not a solid) with downward-vs-computed normal mismatch.
+131. Polyhedron fan triangulation assumes convex planar faces and never bounds-checks indices.
+132. Hemisphere is built on the Y axis; OpenSCAD convention is +Z.
+133. `axisAngle` multiply order is inconsistent with the Euler rotate branch.
+134. Mirror with a non-axis vector just scales — normals not properly reflected.
+135. `multmatrix` never validates the matrix is affine.
+136. No vertex welding/dedup pass — cube emits 24 verts, sphere duplicates ring starts; memory + upload waste.
+137. No mesh validation (manifold check, degenerate-triangle count) surfaced to the user.
+138. Compute and display volume/surface area/center of mass (accurate once real CSG lands).
+139. No `resize()` primitive support.
+140. `center=true` unsupported on several primitives that accept it in OpenSCAD.
+141. `d=` diameter aliases inconsistently handled across sphere/cylinder/circle.
+142. Negative sizes/radii neither clamped nor diagnosed.
+143. `$fa`/`$fs` should participate in facet-count resolution, not just `$fn`.
+144. Per-primitive tessellation quality switch (preview vs export $fn) — halving exists for preview only.
+145. 2D subsystem is fake: circle/square are extruded 3D shims, so 2D booleans can't ever be right; model true 2D paths with holes.
+146. `polygon(paths=…)` with holes unsupported (single outline only).
+147. Text: real font loading (opentype.js) instead of the 5×7 bitmap font; `halign`/`valign`/`font` params.
+148. DXF/SVG import for 2D profiles.
+149. Geometry unit tests per generator (closed-mesh invariant: every edge shared by exactly 2 triangles).
+150. Benchmark harness tracking triangles/sec per generator to catch perf regressions.
+
+## IV. Renderer & WebGPU (151–200)
+
+151. `perspective`/`ortho` map z to OpenGL [−1,1] instead of WebGPU [0,1] — half the depth buffer wasted, z-fighting on coplanar detail.
+152. Adopt reversed-z (near=1, far=0, GREATER compare) — the modern standard for depth precision.
+153. `lookAt` [fixed] guards degenerate eye==center and parallel-up; remaining: normalize `up` input.
+154. `invert()` silently returns identity on singular matrices — callers can't tell; add an epsilon-fail signal.
+155. Per-mesh normal matrix recomputed with full 4×4 invert+transpose every frame — cache until transform changes; affine 3×3 suffices.
+156. Reflection pass allocates mirror matrix + multiply/invert/transpose per mesh per frame — hoist the constant, reuse scratch arrays.
+157. Ground-shadow pass allocates flattenY per mesh per frame.
+158. `new Float32Array(52)` scene scratch allocated every frame — reuse one.
+159. Per-mesh 144-byte uniform buffers + bind groups — replace with one dynamic-offset uniform buffer (webgpu-utils pattern).
+160. `cullMode:'none'` globally doubles fragment work; meshes are (mostly) closed — enable back-face culling once winding is trusted.
+161. Specular term not gated on `dot(N,L)>0` — highlights leak onto unlit faces.
+162. Gooch branch overwrites the fog/SSAO-composited color — enabling fog+Gooch loses fog entirely.
+163. Lighting computed in sRGB space without gamma correction — linearize, then encode.
+164. Flat-shading via `cross(dpdx,dpdy)` flips at grazing angles/MSAA edges; a real per-face normal path would be stable.
+165. Fog divides by zero when fogNear==fogFar.
+166. Clip/section `discard` executes even when disabled — specialize pipelines or use uniform branch hints.
+167. "Section box" only clips lower bounds — it's 3 half-spaces, not a box; implement the upper bounds.
+168. Outline inflation is fixed world-space 0.3 — not screen-constant; scale by distance.
+169. Sky drawn after grid with `depthCompare: always` — ordering wasteful; draw first or depth-test.
+170. MSAA `count:4` hard-coded with no adapter limit check or off switch.
+171. `createView()` per frame for swapchain+MSAA targets — cache the MSAA view.
+172. Depth texture recreated on every resize event even when size is unchanged.
+173. Device-lost: loop stops [fixed], but recovery never restarts axis/gizmo/annotation RAF loops (App side).
+174. Wheel zoom [fixed] normalizes deltaMode and clamps per-event factor.
+175. Add zoom-to-cursor (dolly toward pointer ray) — standard in every serious viewer.
+176. Add double-click to focus/frame the picked point.
+177. Pan basis ignores pitch — wrong plane at steep angles; vertical pan uses world-Y instead of camera-up.
+178. Auto-rotate and inertia are framerate-dependent (no delta-time normalization).
+179. Fly mode never translates the camera — the toggle is decorative.
+180. Ortho zoom is coupled to perspective FOV; decouple with a proper ortho scale.
+181. far=dist*10/near=0.1 gives a huge depth ratio; fit near/far to scene bounds.
+182. Direct `renderer.fov=` assignment bypasses clamping setters.
+183. Multiple MSAA resolves per frame overwrite each other in the reflection path.
+184. Shadow alpha-blend darkens overlapping triangles into bands — use stencil or a max-blend.
+185. Hidden-line mode writes/restores per-mesh color UBs every frame — double uniform traffic; use a pipeline constant instead.
+186. Wireframe buffer duplicates every edge (no dedup) and is CPU-baked per mesh change.
+187. Edge-overlay buffer builds a string-keyed Set per edge — slow; use sorted-pair numeric keys.
+188. `smoothNormals` quantizes with `(x*1000|0)` — overflows beyond ±2.1M and truncates instead of rounding.
+189. Screenshot path relies on preserved drawing buffer semantics — capture straight after an explicit render into an offscreen target.
+190. Timestamp queries for GPU profiling (feature-gated) instead of the meaningless FPS-under-on-demand metric.
+191. Frustum culling for meshes and the grid.
+192. Instanced rendering for repeated sub-assemblies (radial_array/linear_array/grid outputs).
+193. Order-independent transparency (weighted-blended) instead of unsorted two-pass alpha.
+194. Optional render scale (resolution slider) for heavy scenes on hi-DPI screens.
+195. Pipeline creation is 5 copy-pasted blocks — a small builder would collapse them.
+196. GMesh fields `vb/ib/ic/ub/bg/transp` are cryptic — rename for the next reader.
+197. `setRenderMode` casts an arbitrary string — validate against the union.
+198. Scene uniform byte offsets are raw literals in fillSceneData — derive from a schema (webgpu-utils) to kill the stale-index class of bugs.
+199. Color override keyed by mesh array position desyncs on reorder — key by stable mesh id.
+200. Canvas resize: debounced observer races the per-frame resize() call — single source of truth.
+
+## V. Editor & UX (201–250)
+
+201. The editor is a `<textarea>` with an overlay highlighter — replace with CodeMirror 6 (undo model, decorations, folding, find/replace, IME, a11y come free; ~150 kB, lazy-loadable).
+202. Hand-rolled syntax highlighting re-tokenizes the whole document per keystroke.
+203. Undo: custom stack + native undo fight each other; suppress flag is racy across nextTick.
+204. Find matches go stale when code changes while the find panel is open.
+205. No multi-cursor/column selection.
+206. Autocomplete is prefix-only over a static list; no argument hints from the reference data.
+207. Hover docs exist but aren't keyboard-invokable.
+208. Error squiggle underlines only the first error line; parser recovery (item 74) would enable multi-error display.
+209. Go-to-definition for user modules within/between tabs.
+210. Rename-symbol for variables/modules (needs AST positions — item 73).
+211. Tab size setting exists but tab-vs-spaces choice doesn't.
+212. Bracket auto-close ignores selection wrapping (select text + `(` should wrap).
+213. Comment toggle doesn't preserve cursor column.
+214. Share links use raw base64 — lz-string compression would triple capacity within the 1 MB cap.
+215. Share links lose tab name and camera pose — encode a small envelope {name, code, camera}.
+216. Drag & drop a `.scad` file onto the editor to open it.
+217. `Ctrl+S` should download/save instead of the browser dialog.
+218. Recent-files list stores full code copies — store digests + lazy content.
+219. Session restore prompt shows no diff preview of what would be restored.
+220. Welcome modal crowds onboarding + changelog + CTAs — split.
+221. The Render menu is ~21 flat toggles + a select — group into labeled sections (Display/Effects/Camera/Debug) with headers.
+222. Toolbar is ~21 buttons in one overflow-prone row — group with separators + overflow menu ("More…").
+223. Three export entry points with inconsistent options — one export dialog with format/scale/units, shared by all.
+224. Icon-only stats bar segments need visible labels on hover focus, not title-only.
+225. Simple mode is a v-show scatter — curate an actual reduced layout.
+226. Advanced mode is the implied default for first-timers — flip the default, offer "show everything".
+227. Multiple popovers can be open simultaneously and overlap.
+228. Popups anchor to fixed pixels with no viewport-edge collision handling.
+229. Context menu isn't keyboard-openable (Shift+F10/menu key) and has no roles.
+230. Command palette lacks fuzzy matching and recent-command ranking.
+231. Keyboard shortcut editor exists, but conflicts aren't detected.
+232. `?` button is dual-purpose (what's-new vs shortcuts) — separate.
+233. Tip banner has 3 same-weight controls — unclear hierarchy.
+234. Canvas hint text shows permanently — auto-hide after first interaction.
+235. Animation timeline appears even when the code has no `$t`.
+236. Ghost/animation overlays compete for the same bottom strip.
+237. No visual "dirty" indicator when auto-render is off and code changed.
+238. Tri-count warning toasts on every render past threshold — once per crossing [check] and offer "don't warn again".
+239. Batch render results modal [fixed: shows per-tab errors] — add re-run failed only.
+240. No progress indicator during long parses — the Worker migration (item 22) enables a real progress/cancel UI.
+241. Examples gallery lacks thumbnails and search.
+242. Parametric customizer: auto-generate sliders from top-level variables (OpenSCAD Customizer parity) — the single most-requested CAD-playground feature.
+243. View cube with clickable faces/edges/corners instead of gizmo dots only.
+244. Named camera bookmarks exist; add view transitions between them for turntable-style demos.
+245. Measurement: snap to vertices/edges/face centers; show angle and diameter, not just distance.
+246. Print-bed presets (Prusa/Bambu/Ender sizes) for the build-volume overlay.
+247. Overhang visualization (>45°) for print planning.
+248. Auto-orient suggestion for printability.
+249. Model comparison mode: side-by-side or blink two tabs.
+250. Zen mode hides the exit affordance — keep a subtle persistent escape hint.
+
+## VI. Accessibility (251–300)
+
+251. 12 modals: no focus trap — Tab escapes behind the backdrop.
+252. Focus is never moved into a dialog on open nor restored to the trigger on close.
+253. Toasts have no `aria-live` region — screen readers miss all feedback. (Error box has role=alert [fixed earlier].)
+254. Batch/loading states lack `role="status"`/`aria-busy`.
+255. [fixed] Main canvas has role=img+label; minimap canvas now labeled too — but minimap is still keyboard-unreachable (no tabindex/keyboard nav).
+256. [fixed] Range sliders (FOV/explode/clip/section XYZ) now have aria-labels; remaining sliders in preferences/watermark need the same.
+257. [fixed] `role="main"` landmark added; header/aside landmarks still missing.
+258. Theme option swatches are clickable divs — no role/tabindex/keyboard.
+259. Recent-file rows are clickable divs — keyboard-unreachable.
+260. Object-tree rows: no `role="treeitem"`, toggles lack `aria-expanded`, eye/color controls lack accessible names.
+261. Timeline dots are div@click — unreachable by keyboard.
+262. Gizmo axes/dots are SVG click targets with no keyboard equivalent — provide the Numpad views as the documented alternative and label the gizmo group.
+263. Breadcrumb segments are clickable spans without role/tabindex.
+264. Context menus lack `role="menu"`/`menuitem` and arrow-key navigation.
+265. Viewport dropdown uses menuitems but no roving tabindex — mouse-only.
+266. Language toggle doesn't announce the newly active language (`aria-live` or aria-pressed pattern).
+267. Preference labels not associated via for/id — clicking text doesn't focus controls.
+268. Comparison slider has no label or value readout for AT.
+269. Modal close `×` buttons: several lack aria-label.
+270. Tip/help "?" buttons expose only `title` — no accessible name.
+271. Disabled buttons are dimmed but still focusable/clickable (`.btn-disabled` isn't `disabled`).
+272. `v-html` highlighter output is read as markup soup by AT — `aria-hidden` the overlay and expose the textarea value.
+273. Tab order jumps: zen-exit FAB and late-DOM overlays appear in unpredictable sequence.
+274. Tour spotlight is visual-only — target element not conveyed to AT.
+275. Print windows drop theme/contrast entirely.
+276. `--text-dim: #888` on dark is ~3.5:1 — fails AA for body text; bump to #9a9aa2.
+277. Light-theme `--text-dim: #777` is borderline 4.48:1.
+278. Ghost-diff +/− encoded by color only — add glyphs.
+279. `.profile-slow` rows flagged by color only.
+280. Compass N marker is hardcoded red only — add the letter form/shape distinction it already has, verify contrast.
+281. `prefers-contrast: more` / forced-colors mode unhandled.
+282. [fixed] `prefers-reduced-motion` now honored globally.
+283. Focus ring [fixed]; but ~12 `outline: none` rules remain — audit each has a visible replacement.
+284. Tab-name inline edit input has outline:none with no replacement focus style.
+285. Keyboard-only camera controls: arrow keys orbit is present; document it and add zoom/pan keys.
+286. Skip-link to jump from header to editor/canvas.
+287. `<html lang>` is static "ru" — sync with the active locale on toggle.
+288. RTL: 100+ physical left/right CSS props; adopt logical properties (margin-inline-start …) for future ar/he.
+289. Modal Escape handling inconsistent — some close, some don't.
+290. Roving focus for the example gallery grid.
+291. Touch targets: most fixed [44px media query], but tree eye/color swatches remain ~16px on touch.
+292. Error messages should link the error line (click → caret jump) — exists visually? make it a real focusable link.
+293. Announce render completion ("Rendered: N triangles") politely for AT.
+294. High-contrast editor theme preset.
+295. Screen-reader-friendly stats summary behind a visually-hidden live region (throttled).
+296. `aria-keyshortcuts` on buttons that have bindings (Render: Ctrl+Enter).
+297. Dialog titles: `aria-labelledby` pointing at the visible heading (several use aria-label duplicating text).
+298. Minimap click-to-navigate needs a keyboard path (Ctrl+G exists — cross-reference it in the tooltip).
+299. Automated axe-core smoke test in CI on the built index.html.
+300. An ACCESSIBILITY.md documenting the support level and known gaps.
+
+## VII. Performance (301–350)
+
+301. Parsing on main thread (see 22/23) — the umbrella perf item.
+302. Full reparse on every debounced keystroke — incremental/again-if-changed hash gate first (cheap win: skip if code hash unchanged).
+303. Mesh regeneration ignores caching — same subtree → same mesh; hash-cons geometry by (node, args, $fn).
+304. `saveTabs` stringifies all tabs on every debounced flush — serialize only the dirty tab into a keyed store.
+305. Session backup every 30s re-serializes everything even when nothing changed — skip via dirty flag/hash.
+306. History snapshot writes read-modify-write the full history store per burst.
+307. `currentTabHistory` re-parses localStorage on unrelated reactivity — cache by tab id + invalidation.
+308. Two always-on setInterval polls (stats, camera info) tick while panels closed [partially fixed] — verify both gate.
+309. Compass/axis/gizmo RAF loops run even when overlays hidden.
+310. Minimap renders on 3 different cadences (50ms drag, 300ms debounce, immediate) — unify.
+311. `computeFolds` runs un-debounced on every keystroke.
+312. `updateBreadcrumbs` walks the AST on every caret move — throttle + reuse the outline index (37).
+313. `updateSelectionInfo` substrings/splits the whole document per selection change.
+314. Console: every entry schedules a nextTick scroll; batch.
+315. Console array re-slices wholesale per log — ring buffer.
+316. codeStats watcher recomputes lines/words per keystroke — debounce with the render watcher.
+317. `$t` regex scans the source twice per render even without `$t` — single indexOf gate.
+318. Fast-preview `$fn` halving regex only matches integer literals — misses `$fn=fn` var forms; also double regex pass.
+319. Vertex data uploads recreate every GPU buffer on every parse — diff by mesh identity, update transforms only when geometry unchanged.
+320. Grid rebuilt into a fresh buffer on theme change — keep static, tint via uniform.
+321. Sphere generator recomputes sin/cos per ring — precompute tables (O(seg) vs O(seg²) trig).
+322. Loft centroid recomputation per vertex (O(n²)) — hoist.
+323. convexHull centroid recomputed inside nested loop.
+324. Text generator allocates per-glyph arrays — pool.
+325. `multiply()` allocates a new Float32Array per call in hot paths — out-param variants for the render loop.
+326. translate/rotate/scale helpers build identity + full multiply for trivial ops — fused constructors.
+327. transpose(invert(m)) chains allocate 3 temporaries per mesh per frame (see 155).
+328. Bounds computation runs over all vertices per render — cache per-mesh local bounds, transform 8 corners.
+329. Wireframe/edge buffers rebuilt on any mesh change even if topology identical.
+330. Screenshot at 4× renders everything twice (see renderScaled unification 20).
+331. Turntable ZIP export blocks the UI between frames — yield via rAF loop with progress.
+332. STL export allocates the entire buffer contiguously — stream in chunks to the Blob.
+333. OBJ export builds a giant string array — write into a growing buffer.
+334. 3MF ZIP CRC table recomputed per file — memoize.
+335. STL import creates a mesh per 5,000 triangles — batch into fewer, larger meshes.
+336. localStorage JSON.parse of tabs at module scope delays first paint — defer to idle.
+337. i18n module loads all 4 locales eagerly (~1.6k lines) — split per-locale JSON with dynamic import.
+338. Reference/help data loads with the main chunk — lazy-load on first open.
+339. Export modules could be `import()`-ed on first use (manualChunks already isolates them, but they're statically imported).
+340. Minimap canvas re-renders whole document — render visible window ± overscan.
+341. Occurrence highlighting rescans the document per cursor move — index word positions once per parse.
+342. Long-line documents (minified SCAD) freeze the highlighter — line-length guard, fall back to plain text.
+343. Auto-render debounce is fixed 400ms — adapt: longer for heavier last-parse times.
+344. Adaptive quality: drop $fn under interaction (orbit), restore on idle.
+345. `requestRender` dirty flag races RAF — single scheduling gate.
+346. Inertia decay is per-frame multiplicative without dt — normalize.
+347. Idle callback to pre-parse the next-likely tab (hover-intent on tab bar).
+348. Track and cap total GPU buffer bytes; warn before OOM instead of crashing.
+349. Performance budget test in CI: parse+mesh time for the largest example must stay under threshold.
+350. Report Web Vitals-style startup metrics (time-to-first-render) in the perf panel.
+
+## VIII. Reliability, Storage & Security (351–400)
+
+351. [fixed] SafeStorage module: validated reads + quota-safe writes with user-visible failure toasts.
+352. [fixed] flushSaveTabs/saveUserPresets/saveRecentFiles/saveBookmarks/saveSessionBackup/saveSnapshots wired through SafeStorage with retry/trim.
+353. [fixed] History snapshot stale-closure (wrote into the wrong tab after a quick switch).
+354. [fixed] shortcutPreset/uiDensity enum-validated on read; keydown guarded against missing preset.
+355. [fixed] NaN-guarded numeric prefs (fontSize/tabSize/delay/console-height/editor-width/cost-per-kg).
+356. ~80 direct localStorage call sites remain — migrate all to SafeStorage (mechanical, high value).
+357. No schema version key — add `scad-schema: N` + migration runner before any format change.
+358. Keys are inconsistently named — central registry const with typed keys.
+359. Tabs parse has no shape validation — validate {id,name,code}[] before trusting (feeds editor + exporters).
+360. Presets parse unvalidated — crash in applyPreset on tampered storage.
+361. customThemes validated as array [fixed earlier] but element shape unchecked.
+362. SessionBackup `as` cast; `.map` throws if tabs is null despite the Array check upstream — tighten.
+363. `scad-last-version` parseInt unvalidated.
+364. Onboarding flag set in two places can diverge.
+365. document.write print paths [escaped earlier] — replace with Blob URL + print stylesheet, removing the sink class entirely.
+366. Screenshot dataURL is interpolated into spec-sheet HTML — it's self-generated, but move to DOM assignment anyway.
+367. Share-URL payload: 1 MB cap [fixed earlier]; add integrity (length+hash) so truncated links fail loudly.
+368. Add CSP meta (default-src 'self'; no inline script beyond the SW registration — move it to a file).
+369. SW registration is an inline script in index.html — CSP-hostile; externalize.
+370. Service worker: cache name version bump is manual — inject build hash at build time.
+371. SW: no cache size cap for runtime caches — prune LRU.
+372. SW: navigations network-first [fixed earlier]; add offline fallback page test.
+373. FileReader paths: openFile [fixed]; STL import reader still lacks onerror.
+374. copyCanvasToClipboard: unhandled promise rejection when clipboard permission denied — catch + fallback to download.
+375. reinitializeWebGPU is fire-and-forget — surface failure to the user with retry.
+376. 22 empty catch blocks remain — each needs at least a console.warn with context.
+377. `catch (e: any) { e.message }` crashes on non-Error throws — normalize via `toErrorMessage(e)` util.
+378. Renderer init failure collapses to boolean — keep the reason for the error screen.
+379. GPU errors during upload surface as "parse error" — separate the pipeline stages' error channels.
+380. No error boundary around the app — one thrown watcher kills everything; add app-level errorCaptured + recovery UI.
+381. Crash reporting opt-in (console ring buffer + last code hash, copy-to-clipboard).
+382. `window.onerror`/unhandledrejection hooks feeding the console panel.
+383. Tab IDs use Date.now().toString(36) — collisions possible across rapid creates; use crypto.randomUUID().
+384. Session-restore signature uses \x00/\x01 joins [fixed from raw bytes] — replace with a hash for robustness (see 27).
+385. Autosave conflict: two browser tabs of the app fight over scad-tabs — detect via storage events, warn, or adopt BroadcastChannel coordination.
+386. Import size guard: STL byte-size validated [fixed earlier], but no user-facing size ceiling on text file open (100 MB .scad freezes).
+387. Paste guard: pasting multi-MB text into the editor has no confirmation.
+388. History retention policy is count-based only — add age+size budget.
+389. Snapshots store JPEG dataURLs at fixed 0.6 quality — make quality/size explicit, show storage usage meter in prefs.
+390. Storage usage panel: navigator.storage.estimate() surfaced to the user.
+391. localStorage → IndexedDB for bulky payloads (histories, snapshots, bookmarks): higher quotas, async, structured.
+392. Persist preference for "ask before restore" vs auto-restore.
+393. Undo/redo stacks are unbounded in memory — cap with size accounting.
+394. Console retains 50 entries but the ID counter grows monotonically — fine, but timestamps use locale-naive formatting (see i18n 424).
+395. Numeric inputs (cost, density, bed size) accept negative/absurd values — clamp at the input layer too, not just read.
+396. Renderer `destroy()` order: device.destroy while in-flight passes exist — await queue idle first.
+397. Multiple App mounts (HMR) can leak the module-level renderer listener set — idempotent init guard.
+398. beforeunload flush [exists] — also flush on visibilitychange: hidden (mobile tab kill).
+399. Fuzz the share-URL decoder with truncated/corrupt payloads in tests.
+400. Threat-model doc: what's trusted (own storage) vs untrusted (URL hash, imported files) — encode in code comments at each boundary.
+
+## IX. Build, Tests, CI & Hygiene (401–450)
+
+401. No ESLint — add flat config (typescript-eslint + eslint-plugin-vue), `npm run lint`, CI step.
+402. No Prettier/format script — or adopt ESLint stylistic; either, but one.
+403. tsconfig lacks noUnusedLocals/noUnusedParameters — dead code accumulates silently.
+404. tsconfig lacks noImplicitReturns/noFallthroughCasesInSwitch/noUncheckedIndexedAccess.
+405. skipLibCheck hides dependency type breakage — document why or drop.
+406. allowJs true serves no purpose now — drop to stop stale-JS pickup class of bugs for good.
+407. isolatedModules not set (esbuild semantics divergence risk).
+408. [fixed] engines field; packageManager field still absent (npm@x pin for reproducibility).
+409. [fixed] LICENSE file (README claimed MIT with no license text).
+410. No CONTRIBUTING.md (how to add a primitive end-to-end: geometry.ts + evaluator case + docs + example + test).
+411. No CHANGELOG.md — adopt keep-a-changelog, cut 0.2.0 after this branch merges.
+412. Version stuck at 0.1.0 through ~250 features.
+413. No issue/PR templates (.github/ISSUE_TEMPLATE with bug/feature forms).
+414. CI runs typecheck+test+build [fixed earlier] — add lint (401) and axe smoke (299).
+415. CI: no Node version matrix (18/20/22).
+416. CI: no npm cache… (actually setup-node cache: npm present) — add artifact upload of dist for preview.
+417. Deploy preview per PR (GitHub Pages/Netlify) — reviewers see the app, not just code.
+418. Coverage reporting with a parser-coverage floor (start 50%).
+419. Visual regression: Playwright + WebGPU screenshot of 3 examples, pixel-diff gate (Chromium supports WebGPU headless).
+420. Test the exporters against golden binary fixtures (STL/OBJ/3MF byte-exact).
+421. Test SafeStorage quota paths with a mocked throwing localStorage.
+422. Unit tests for math3d (invert·M≈I property test, lookAt orthonormality) — zero exist.
+423. i18n completeness test: every key present in en; ru/de/zh missing-key report artifact.
+424. Locale-aware date formatting test (currently toLocaleString with no locale arg in history panel).
+425. `.vscode/` launch configs reference chrome debugging port 5173 — parameterize; tasks.json has empty problemMatcher.
+426. Source maps for production builds (opt-in) for field debugging.
+427. Bundle-size budget check in CI (fail on +10% main chunk).
+428. dead-code: rightScrollTop and other suspected-unused refs — knip or ts-prune sweep.
+429. Rename `recommendation.md` (this file) vs RECOMMENDATIONS.md confusion — merge or clearly scope both (this = catalog, that = phased plan).
+430. Commit hooks (husky + lint-staged) once lint exists.
+431. Conventional commits or at least a subject-line convention documented.
+432. Release process: tags + GitHub Releases with dist zip.
+433. Renovate/Dependabot for dependency updates.
+434. npm audit in CI (currently 2 low-severity findings unreviewed).
+435. Document the dual test locations (src/services/*.test.ts vs tests/) — consolidate into tests/.
+436. Add vitest --coverage script wired to CI.
+437. Type the i18n keys: generate a union from the en dictionary, `t(key: I18nKey)`.
+438. Extract magic numbers scattered in App.vue (debounce durations, limits, sizes) into src/config/limits.ts.
+439. `simpleMode`, `zenMode`, `embedMode` interactions are undocumented — state matrix in docs.
+440. ARCHITECTURE.md module diagram [updated this pass] — keep a docs-sync checklist in PR template.
+441. JSDoc the public API of parser/renderer/exporters (typedoc-able).
+442. `npm run check` = typecheck+lint+test aggregate.
+443. Storybook (or Histoire) once components exist (Phase 1) for isolated UI dev.
+444. Node 18 EOL is 2025-04 — bump engines floor to 20 and CI accordingly.
+445. Lockfile-only renovation policy documented (no floating carets on runtime deps — currently only Vue).
+446. Pre-commit secret scan (gitleaks) — hygiene for a public repo.
+447. `dist/` size tracking over time (bundlewatch badge).
+448. README badges: CI status, license, PRs-welcome.
+449. Repo topics/description for discoverability once public.
+450. Mirror the examples as .scad files under examples/ so they're testable and diffable instead of embedded strings.
+
+## X. Product & Ecosystem (451–500)
+
+451. Real boolean CSG (see 105) — unlocks: correct exports, volume, mass, printability; the #1 product gap vs openscad-wasm-based playgrounds.
+452. OpenSCAD-WASM compatibility mode: run the real engine in a Worker as a "high fidelity" toggle, keep the fast custom engine for live preview — best of both.
+453. Customizer panel (see 242) — parity with OpenSCAD's killer feature.
+454. Library ecosystem: bundle BOSL2-style helpers (rounded_cube, screws) as importable stdlib tabs.
+455. Import STL [exists] → add OBJ/3MF/AMF import.
+456. Export glTF/GLB (with per-mesh colors) — the web-native interchange format.
+457. Export STEP via occt-import-js (long-term, heavy).
+458. PNG export with transparent background option.
+459. Turntable GIF/WebM export (MediaRecorder) alongside frame ZIP.
+460. Shareable embeds: read-only iframe mode with `?embed` [exists] — document + add height auto-messaging.
+461. PWA: install prompt UX, offline example pack, file handling API (`.scad` file association).
+462. File System Access API: open/save real files with permission persistence (Chromium).
+463. VS Code extension embedding the viewer for .scad previews (webview reusing the same modules — enabled by the decomposition).
+464. Headless render CLI (node + dawn/webgpu or software raster fallback) for CI thumbnails of models.
+465. GitHub Action: render .scad → STL/PNG artifacts on push (community distribution vector).
+466. Gallery of community models (opt-in, static JSON to start, no backend).
+467. "Open in OpenSCAD" file download with proper mime + instructions.
+468. Deep links to docs per keyword (hover → F1 → cheatsheet.openscad.org anchor).
+469. Interactive tutorial series (tour exists; add guided modeling lessons with checkpoints).
+470. AI assist: prompt → SCAD starter (behind an API-key setting, no backend of our own).
+471. Diff view between history snapshots (side-by-side with mesh diff highlight).
+472. A/B render compare slider between two tabs (comparison slider exists for screenshots — extend to live scenes).
+473. Multi-file projects: folders, use/include across a virtual FS, import/export as ZIP.
+474. Git-friendly project export (each tab → file + manifest).
+475. Print-time/filament estimator refinement: infill %, wall count parameters (currently naive volume-based).
+476. Slicer hand-off: "Download STL + open Cura/PrusaSlicer" protocol links where registered.
+477. Units support (mm/inch display toggle; SCAD is unitless-mm by convention).
+478. Annotation export into the spec sheet PDF.
+479. BOM extraction from named modules/colors.
+480. Exploded-view animation recording for assembly instructions.
+481. Section-view screenshots with hatching for engineering drawings.
+482. 2-view/4-view orthographic layout export (front/top/side + iso).
+483. Keyboard-only modeling mode documentation page.
+484. Mobile: bottom-sheet UI for panels, larger touch targets [partially done], pinch gestures [exist] — do a real phone usability pass.
+485. Tablet + pencil: two-finger orbit, pencil for measure/annotate.
+486. Theme marketplace: shareable theme JSON export/import [custom themes exist — add import/export].
+487. Locale contributions: extract per-locale JSON (item 337) + community translation guide; es/fr/ja as candidates.
+488. Public roadmap page generated from this catalog (buckets by domain, checkboxes).
+489. Telemetry opt-in (privacy-respecting counts: feature usage, parse times) to prioritize the next 500.
+490. Feature flags module for experimental subsystems (real CSG, worker, OIT) with a hidden dev panel.
+491. Session replay for bug reports: record code edits + camera (local only, user-exported).
+492. Benchmark page: run standard models, report parse/mesh/render times, compare across releases.
+493. Model health report: manifoldness, degenerate tris, open edges, bbox — one click after render.
+494. Educational mode: display the AST/CSG tree live as a teaching aid (object tree exists — add CSG-op annotations).
+495. Competitive analysis doc vs openscad-playground/JSCAD/CascadeStudio kept in-repo and refreshed quarterly.
+496. Community: Discussions enabled, "good first issue" labels seeded from this catalog's S-effort items.
+497. Sponsorware/donations link if maintenance continues (FUNDING.yml).
+498. Security policy (SECURITY.md) with reporting contact.
+499. Versioned docs site (VitePress) building from these markdown files.
+500. The north star: full-fidelity OpenSCAD in the browser with modern UX — every item above serves it; re-rank this catalog quarterly and retire `[fixed]` rows into the changelog.
+
+---
+
+## How to use this catalog
+
+- **Right now**: the top of [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) is the severity-ranked subset; [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) maps work into phases with exit criteria.
+- **Quick wins** (S-effort, high value): 27, 105-flag-off prototype, 110, 214, 221, 222, 276, 287, 302, 317, 356, 373, 374, 383, 401, 403, 408-413, 423, 437, 450.
+- **The three big rocks**: real CSG (105/451-452), Web Worker parsing (22), CodeMirror editor (201). Everything else compounds around them.

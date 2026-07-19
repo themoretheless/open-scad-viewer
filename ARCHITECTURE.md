@@ -73,8 +73,19 @@ Minimal row-major `Mat4` (`Float32Array`) and `Vec3` helpers: `identity`, `multi
 - `zipExport.ts` — minimal uncompressed ZIP builder (used by 3MF, turntable, all-tabs export).
 - `stlImport.ts` — binary STL reader → `MeshData[]`.
 
+### Extracted modules (July 2026 decomposition pass)
+
+| Module | Lines | Responsibility |
+|--------|-------|----------------|
+| `src/i18n/index.ts` | ~1.6k | All four locale dictionaries (ru/en/de/zh), the singleton `lang` ref, `t()`, `toggleLang` |
+| `src/config/index.ts` | ~150 | `EDITOR_THEMES`, `BUILT_IN_PRESETS`, `SHORTCUT_PRESETS` + `matchesBinding` and their types |
+| `src/parser/geometry.ts` | ~2.6k | All 41 pure mesh generators (makeCube…makeTeardrop), `earClip`, extrusion, `convexHull3D`, bitmap font — zero parser/evaluator state, Worker-ready |
+| `src/parser/limits.ts` | — | Shared `MAX_FN` DoS bound |
+| `src/renderer/shaders.ts` | ~140 | The four WGSL sources; the Scene uniform struct is defined once and interpolated into each shader (drift-proof, locked by `tests/shaders.test.ts`) |
+| `src/services/safeStorage.ts` | ~100 | The single localStorage access point: validated reads (int/float/enum/bool/JSON), quota-safe writes reporting failures via an injectable handler (App.vue shows a throttled toast) |
+
 ### `App.vue`
-The single Vue component holding all UI and state: editor, tabs, viewport overlays, modals, panels, preferences, i18n dictionaries (ru/en/de/zh), and orchestration between parser and renderer.
+Still the main Vue component (~13.3k lines after extraction; target < 1k): editor, tabs, viewport overlays, modals, panels, preferences, and orchestration between parser and renderer. Decomposition continues per [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) Phase 1 and [recommendation.md](./recommendation.md) items 6–14.
 
 ---
 
