@@ -10,8 +10,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('/src/services/openscadParser')) return 'parser'
-          if (id.includes('/src/services/webgpuRenderer')) return 'renderer'
+          if (id.includes('/src/services/openscadParser') || id.includes('/src/parser/')) return 'parser'
+          if (id.includes('/src/services/webgpuRenderer') || id.includes('/src/renderer/')) return 'renderer'
           if (
             id.includes('/src/services/stlExport') ||
             id.includes('/src/services/objExport') ||
