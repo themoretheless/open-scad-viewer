@@ -14,18 +14,38 @@ import type {
 } from './components/cadPanels.types'
 import { EXAMPLES } from './data/examples'
 import type { CameraState } from './services/cameraHistory'
-import type { GeometryResponse } from './services/geometryWorkerProtocol'
-import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
+import {
+  BuildCoordinator,
+  type BuildCoordinatorState,
+  type PublishedGeometryBuild,
+} from './services/buildCoordinator'
+import {
+  buildPaletteDescriptors,
+  resolveKeyboardCommand,
+  type CommandId,
+  type CommandScope,
+  type PaletteCommandId,
+  type PaletteCommandRuntimeState,
+} from './services/commandRegistry'
+import { isPaletteCommandEnabled } from './services/commandSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh, matchMeshesByProvenance } from './services/meshInspection'
 import type { GeometryQuality, MeshData } from './services/openscadParser'
 import { extractCustomizerParameters, replaceCustomizerValue, type CustomizerValue } from './services/scadCustomizer'
+import {
+  createWorkspaceDocument,
+  loadWorkspaceDocument,
+  saveWorkspaceDocument,
+  updateWorkspaceDocument,
+  type WorkspaceDocumentSnapshot,
+} from './services/workspaceDocument'
 import {
   WebGPURenderer,
   type DisplayMode,
   type DistanceMeasurement,
   type PickHit,
   type ProjectionMode,
+  type RendererLifecycleEvent,
   type SelectionMode,
   type StandardView,
 } from './services/webgpuRenderer'
@@ -55,6 +75,8 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
     opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
     workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
+    gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
+    gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
     commands: 'Команды', commandHelp: 'Поиск действий', display: 'Отображение',
     shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
     selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
@@ -90,6 +112,8 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Link copied', copyFailed: 'Link added to the address bar',
     opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
     workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
+    gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
+    gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
     commands: 'Commands', commandHelp: 'Search actions', display: 'Display',
     shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
     selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
@@ -105,23 +129,17 @@ const L: Record<Language, Record<string, string>> = {
   },
 }
 
-const COMMAND_ALIAS_KEYS: Record<string, readonly string[]> = {
-  render: ['render'], open: ['open'], save: ['save'], share: ['share'],
-  'export-stl': ['exportStl'], 'export-obj': ['exportObj'],
-  fit: ['fit'], focus: ['focus'], reset: ['reset'], 'previous-view': ['previousView'],
-  isolate: ['isolate', 'unisolate'], deselect: ['deselect'],
-  projection: ['perspective', 'orthographic'], grid: ['grid'],
-  shaded: ['shaded'], edges: ['edges'], xray: ['xray'],
-  'select-point': ['point'], 'select-face': ['face'], 'select-object': ['body', 'object'],
-  measure: ['measure'], section: ['section'], sidebar: ['sidebar'],
-  iso: ['iso'], front: ['front'], right: ['right'], top: ['top'],
-  back: ['back'], left: ['left'], bottom: ['bottom'], theme: ['theme'],
-}
-
 const lang = ref<Language>(readStorage('scad-lang') === 'en' ? 'en' : 'ru')
 const isDark = ref(readStorage('scad-theme') !== 'light')
 const sharedCode = readSharedCode()
-const code = ref(sharedCode ?? readStorage('scad-code') ?? EXAMPLES.basic)
+const storedWorkspace = typeof localStorage === 'undefined'
+  ? createWorkspaceDocument(EXAMPLES.basic)
+  : loadWorkspaceDocument(localStorage, EXAMPLES.basic)
+const initialWorkspace = sharedCode === null
+  ? storedWorkspace
+  : createWorkspaceDocument(sharedCode, { fileName: 'shared-model.scad' })
+const workspaceDocument = ref<WorkspaceDocumentSnapshot>(initialWorkspace)
+const code = ref(initialWorkspace.source)
 const autoRender = ref(readStorage('scad-auto') !== 'false')
 const editorWidth = ref(clamp(Number(readStorage('scad-editor-width')) || 440, 300, 820))
 
@@ -142,7 +160,7 @@ const renderingQuality = ref<GeometryQuality>('full')
 const renderedQuality = ref<GeometryQuality>('full')
 const renderedSource = ref('')
 const notice = ref('')
-const fileName = ref('model.scad')
+const fileName = ref(initialWorkspace.fileName)
 const selectedExample = ref('')
 const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
@@ -181,16 +199,18 @@ const statusText = computed(() => rendering.value
   ? t('compiling')
   : error.value ? t('failed') : stale.value ? t('stale') : t('ready'))
 const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, index) => {
-  const grouped = new Map<number, SourceProvenanceRow>()
+  const meshId = mesh.entityId ?? index
+  const grouped = new Map<string | number, SourceProvenanceRow>()
   for (const run of mesh.provenance) {
     if (!run.source) continue
-    const existing = grouped.get(run.source.id)
+    const sourceKey = run.source.instanceId ?? run.source.operationId ?? run.source.id
+    const existing = grouped.get(sourceKey)
     const triangleCount = run.triangleEnd - run.triangleStart
     if (existing) existing.triangleCount = (existing.triangleCount ?? 0) + triangleCount
     else {
       const location = lineAndColumn(renderedSource.value || code.value, run.source.start)
-      grouped.set(run.source.id, {
-        id: `${index}:${run.source.id}`,
+      grouped.set(sourceKey, {
+        id: `${meshId}:${sourceKey}`,
         sourceId: run.source.id,
         label: run.source.label,
         sourceStart: run.source.start,
@@ -204,7 +224,7 @@ const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, in
     }
   }
   return {
-    id: index,
+    id: meshId,
     name: `${t('object')} ${index + 1}`,
     visible: meshVisibility.value[index] !== false,
     triangleCount: mesh.indices.length / 3,
@@ -212,7 +232,11 @@ const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, in
     sources: [...grouped.values()],
   }
 }))
-const hoveredMesh = computed(() => hoveredHit.value?.meshIndex ?? null)
+const sceneMeshId = (index: number | null) => index === null
+  ? null
+  : sceneMeshes.value[index]?.entityId ?? index
+const selectedSceneMeshId = computed(() => sceneMeshId(selectedMesh.value))
+const hoveredMesh = computed(() => sceneMeshId(hoveredHit.value?.meshIndex ?? null))
 const currentInspection = computed<InspectSelection | null>(() => {
   const index = selectedMesh.value
   const mesh = index === null ? null : sceneMeshes.value[index]
@@ -223,7 +247,7 @@ const currentInspection = computed<InspectSelection | null>(() => {
   if (hit?.source) {
     const location = lineAndColumn(renderedSource.value || code.value, hit.source.start)
     source = {
-      id: `${index}:${hit.source.originalId}`,
+      id: `${mesh.entityId ?? index}:${hit.source.instanceId ?? hit.source.operationId ?? hit.source.originalId}`,
       sourceId: hit.source.id,
       label: hit.source.label,
       sourceStart: hit.source.start,
@@ -235,7 +259,7 @@ const currentInspection = computed<InspectSelection | null>(() => {
     }
   }
   return {
-    meshId: index,
+    meshId: mesh.entityId ?? index,
     meshName: `${t('object')} ${index + 1}`,
     triangleCount: facts.triangles,
     surfaceArea: sceneMeshes.value.length === 1 ? surfaceArea.value : undefined,
@@ -268,152 +292,243 @@ const sectionRange = computed(() => {
 const paletteCommands = computed(() => {
   const hasVisibleModel = sceneMeshes.value.some((_, index) => meshVisibility.value[index] !== false)
   const hasSelection = selectedMesh.value !== null
-  const commands: PaletteCommand[] = [
-    command('render', t('render'), 'Ctrl/⌘+Enter', 'build compile render', {
+  const state: Partial<Record<PaletteCommandId, PaletteCommandRuntimeState>> = {
+    render: {
       enabled: !rendering.value,
       disabledReason: t('buildInProgress'),
-    }),
-    command('open', t('open'), 'Ctrl/⌘+O', 'file import'),
-    command('save', t('save'), 'Ctrl/⌘+S', 'file export'),
-    command('export-stl', t('exportStl'), '', 'mesh manufacturing print', {
+    },
+    'export-stl': {
       enabled: canExport.value,
       disabledReason: t('needsFullBuild'),
-    }),
-    command('export-obj', t('exportObj'), '', 'mesh interchange', {
+    },
+    'export-obj': {
       enabled: canExport.value,
       disabledReason: t('needsFullBuild'),
-    }),
-    command('share', t('share'), '', 'link copy'),
-    command('focus', t('focus'), '/', 'selection frame', {
+    },
+    focus: {
+      enabled: hasSelection || hasVisibleModel,
+      disabledReason: t('needsModel'),
+    },
+    isolate: {
+      label: isolated.value ? t('unisolate') : t('isolate'),
       enabled: hasSelection,
       disabledReason: t('needsSelection'),
-    }),
-    command('isolate', isolated.value ? t('unisolate') : t('isolate'), '.', 'selection visibility', {
+    },
+    deselect: {
       enabled: hasSelection,
       disabledReason: t('needsSelection'),
-    }),
-    command('deselect', t('deselect'), 'Esc', 'selection clear', {
-      enabled: hasSelection,
-      disabledReason: t('needsSelection'),
-    }),
-    command('fit', t('fit'), 'F', 'camera frame all', {
+    },
+    fit: {
       enabled: hasVisibleModel,
       disabledReason: t('needsModel'),
-    }),
-    command('reset', t('reset'), '', 'camera home'),
-    command('previous-view', t('previousView'), '[', 'camera history back', {
+    },
+    'previous-view': {
       enabled: canPreviousView.value,
       disabledReason: t('noPreviousView'),
-    }),
-    command('projection', projection.value === 'perspective' ? t('orthographic') : t('perspective'), '5', 'camera projection'),
-    command('grid', t('grid'), 'G', 'overlay'),
-    command('shaded', t('shaded'), '', 'shader display'),
-    command('edges', t('edges'), 'E', 'wireframe mesh display'),
-    command('xray', t('xray'), 'X', 'transparent display'),
-    command('select-point', t('point'), '1', 'selection vertex snap'),
-    command('select-face', t('face'), '3', 'selection surface'),
-    command('select-object', t('body'), '4', 'selection body solid'),
-    command('measure', t('measure'), 'Ctrl/⌘+=', 'inspect distance dimension', {
+    },
+    projection: {
+      label: projection.value === 'perspective' ? t('orthographic') : t('perspective'),
+    },
+    measure: {
       enabled: hasVisibleModel || measureActive.value,
       disabledReason: t('needsModel'),
-    }),
-    command('section', t('section'), '', 'inspect slice clipping plane', {
+    },
+    section: {
       enabled: hasVisibleModel || sectionEnabled.value,
       disabledReason: t('needsModel'),
-    }),
-    command('sidebar', t('sidebar'), 'Ctrl/⌘+Shift+B', 'panel outliner inspect parameters'),
-    command('iso', t('iso'), 'Num 0', 'camera view'),
-    command('front', t('front'), 'Num 1', 'camera view'),
-    command('right', t('right'), 'Num 3', 'camera view'),
-    command('top', t('top'), 'Num 7', 'camera view'),
-    command('back', t('back'), '', 'camera view'),
-    command('left', t('left'), '', 'camera view'),
-    command('bottom', t('bottom'), '', 'camera view'),
-    command('theme', t('theme'), '', 'dark light'),
-  ]
-  return commands
+    },
+  }
+  return buildPaletteDescriptors({
+    resolveLabel: key => t(key),
+    aliasResolvers: [
+      key => L.ru[key] ?? key,
+      key => L.en[key] ?? key,
+    ],
+    state,
+    mru: commandMru.value,
+  })
 })
 
 let renderer: WebGPURenderer | null = null
-let geometryWorker: Worker | null = null
+let buildCoordinator: BuildCoordinator | null = null
 let renderDebounce: ReturnType<typeof setTimeout> | null = null
 let fullRenderDebounce: ReturnType<typeof setTimeout> | null = null
 let storageDebounce: ReturnType<typeof setTimeout> | null = null
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
-let requestId = 0
+let rendererRecoveryToken = 0
+let activeRendererRecoveryToken: number | null = null
+let rendererErrorMessage = ''
 let resizing = false
 let fitNextRender = false
-const requestSources = new Map<number, string>()
+const buildSources = new Map<number, string>()
 
 const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 onMounted(async () => {
   applyPreferences()
+  // Give a migrated legacy draft a durable document ID even if no edit follows.
+  persistWorkspaceNow()
+  window.addEventListener('pagehide', flushWorkspacePersistence)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   if (!canvasRef.value) return
 
-  renderer = new WebGPURenderer()
-  const ok = await renderer.init(canvasRef.value)
+  const nextRenderer = new WebGPURenderer()
+  renderer = nextRenderer
+  bindRendererCallbacks(nextRenderer)
+  const ok = await nextRenderer.init(canvasRef.value)
   if (!ok) {
     gpuOk.value = false
+    nextRenderer.onStatusChange = null
     renderer = null
     return
   }
 
-  renderer.onSelectionChange = (index, isIsolated, hit) => {
-    selectedMesh.value = index
-    isolated.value = isIsolated
-    selectedHit.value = hit
-  }
-  renderer.onHoverChange = hit => { hoveredHit.value = hit }
-  renderer.onMeasurementChange = (value, active) => {
-    measurement.value = value
-    measureActive.value = active
-  }
-  renderer.onCameraHistoryChange = available => { canPreviousView.value = available }
-  canPreviousView.value = renderer.canGoToPreviousView
-  renderer.setDisplayMode(displayMode.value)
-  renderer.setSelectionMode(selectionMode.value)
+  nextRenderer.setDisplayMode(displayMode.value)
+  nextRenderer.setSelectionMode(selectionMode.value)
   window.addEventListener('keydown', handleGlobalKey)
 
   try {
-    startGeometryWorker()
+    startBuildCoordinator()
     doRender('full')
   } catch {
     error.value = t('workerError')
   }
 })
 
+function bindRendererCallbacks(instance: WebGPURenderer) {
+  instance.onSelectionChange = (index, isIsolated, hit) => {
+    if (activeRendererRecoveryToken !== null) return
+    selectedMesh.value = index
+    isolated.value = isIsolated
+    selectedHit.value = hit
+  }
+  instance.onHoverChange = hit => { hoveredHit.value = hit }
+  instance.onMeasurementChange = (value, active) => {
+    measurement.value = value
+    measureActive.value = active
+  }
+  instance.onCameraHistoryChange = available => { canPreviousView.value = available }
+  instance.onStatusChange = event => handleRendererStatus(instance, event)
+  canPreviousView.value = instance.canGoToPreviousView
+}
+
 onUnmounted(() => {
+  rendererRecoveryToken++
+  activeRendererRecoveryToken = null
   if (renderDebounce) clearTimeout(renderDebounce)
   if (fullRenderDebounce) clearTimeout(fullRenderDebounce)
-  if (storageDebounce) clearTimeout(storageDebounce)
+  if (storageDebounce) {
+    clearTimeout(storageDebounce)
+    persistWorkspaceNow()
+  }
   if (noticeTimeout) clearTimeout(noticeTimeout)
-  geometryWorker?.terminate()
-  geometryWorker = null
+  buildCoordinator?.dispose()
+  buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
+  window.removeEventListener('pagehide', flushWorkspacePersistence)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (renderer) {
     renderer.onSelectionChange = null
     renderer.onHoverChange = null
     renderer.onMeasurementChange = null
     renderer.onCameraHistoryChange = null
+    renderer.onStatusChange = null
   }
   renderer?.destroy()
   renderer = null
 })
 
+function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycleEvent) {
+  if (renderer !== instance) return
+  if (event.status === 'device-lost') {
+    showNotice(t('gpuLost'))
+    if (activeRendererRecoveryToken === null) void recoverRenderer(instance)
+  } else if (event.status === 'error') {
+    rendererErrorMessage = `${t('rendererError')}: ${event.error.message}`
+    if (!rendering.value) error.value = rendererErrorMessage
+  } else if (event.status === 'ready' && rendererErrorMessage && error.value === rendererErrorMessage) {
+    error.value = ''
+    rendererErrorMessage = ''
+  }
+}
+
+async function recoverRenderer(instance: WebGPURenderer) {
+  const canvas = canvasRef.value
+  if (!canvas || renderer !== instance) return
+  const token = ++rendererRecoveryToken
+  activeRendererRecoveryToken = token
+  const camera = instance.getCameraState()
+
+  const recovered = await instance.init(canvas)
+  if (token !== rendererRecoveryToken || renderer !== instance) {
+    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
+    return
+  }
+  if (!recovered) {
+    activeRendererRecoveryToken = null
+    gpuOk.value = false
+    error.value = t('gpuRecoverFailed')
+    return
+  }
+
+  try {
+    instance.setDisplayMode(displayMode.value)
+    instance.setSelectionMode(selectionMode.value)
+    instance.setGridVisible(gridVisible.value)
+    // Builds can complete while adapter/device acquisition is pending. The CPU
+    // scene and Vue state are authoritative, so re-read them after the await.
+    const currentVisibility = [...meshVisibility.value]
+    const currentSelection = selectedMesh.value
+    const currentIsolation = isolated.value
+    const currentMeasurement = measurement.value
+    const currentMeasureActive = measureActive.value
+    if (sceneMeshes.value.length) {
+      instance.setMeshes(sceneMeshes.value)
+      currentVisibility.forEach((visible, index) => {
+        if (!visible) instance.setMeshVisibility(index, false)
+      })
+      if (currentSelection !== null && currentVisibility[currentSelection] !== false) {
+        instance.selectMesh(currentSelection)
+        if (currentIsolation) instance.toggleIsolateSelection()
+      }
+    }
+    instance.restoreCameraState(camera)
+    instance.restoreMeasurement(currentMeasurement, currentMeasureActive)
+    applySection()
+    syncSourceHighlightFromEditor()
+    gpuOk.value = true
+    if (error.value === t('gpuRecoverFailed')) error.value = ''
+    showNotice(t('gpuRecovered'))
+  } catch (caught) {
+    gpuOk.value = false
+    error.value = caught instanceof Error ? caught.message : t('gpuRecoverFailed')
+  } finally {
+    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
+  }
+}
+
 watch(code, value => {
   // Provenance belongs to the last compiled source revision. Never retain a
   // reverse highlight while the editor has moved ahead of that revision.
   if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
-  if (storageDebounce) clearTimeout(storageDebounce)
-  storageDebounce = setTimeout(() => writeStorage('scad-code', value), 300)
+  workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { source: value })
+  scheduleWorkspacePersistence()
   if (autoRender.value) scheduleRender()
+})
+
+watch(fileName, value => {
+  workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { fileName: value })
+  scheduleWorkspacePersistence()
 })
 
 watch(autoRender, enabled => {
   writeStorage('scad-auto', String(enabled))
   if (enabled) scheduleRender(0)
+  else {
+    if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
+    if (fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
+  }
 })
 
 function scheduleRender(delay = 450) {
@@ -423,16 +538,33 @@ function scheduleRender(delay = 450) {
   fullRenderDebounce = setTimeout(() => doRender('full'), Math.max(delay + 500, 780))
 }
 
-function startGeometryWorker() {
-  geometryWorker = new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' })
-  geometryWorker.addEventListener('message', handleGeometryResponse)
-  geometryWorker.addEventListener('error', handleWorkerError)
+function scheduleWorkspacePersistence() {
+  if (storageDebounce) clearTimeout(storageDebounce)
+  storageDebounce = setTimeout(persistWorkspaceNow, 300)
 }
 
-function restartGeometryWorker() {
-  geometryWorker?.terminate()
-  geometryWorker = null
-  startGeometryWorker()
+function persistWorkspaceNow() {
+  storageDebounce = null
+  if (typeof localStorage !== 'undefined') saveWorkspaceDocument(localStorage, workspaceDocument.value)
+}
+
+function flushWorkspacePersistence() {
+  if (storageDebounce) clearTimeout(storageDebounce)
+  persistWorkspaceNow()
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'hidden' && storageDebounce) flushWorkspacePersistence()
+}
+
+function startBuildCoordinator() {
+  if (buildCoordinator) return
+  buildCoordinator = new BuildCoordinator({
+    workerFactory: () => new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
+    supersedeGraceMs: 40,
+    onPublish: handleGeometryResponse,
+    onStateChange: handleBuildState,
+  })
 }
 
 function doRender(quality: GeometryQuality = 'full') {
@@ -440,48 +572,55 @@ function doRender(quality: GeometryQuality = 'full') {
   if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
   if (quality === 'full' && fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
   try {
-    if (!geometryWorker) startGeometryWorker()
-    else if (rendering.value) restartGeometryWorker()
-  } catch {
-    handleWorkerError()
+    startBuildCoordinator()
+    const documentRevision = workspaceDocument.value.revision
+    const source = code.value
+    buildSources.clear()
+    buildSources.set(documentRevision, source)
+    buildCoordinator!.requestBuild({ documentRevision, source, quality })
+  } catch (caught) {
+    handleWorkerError(caught)
     return
   }
-  const id = ++requestId
-  const source = code.value
-  requestSources.set(id, source)
-  rendering.value = true
-  renderingQuality.value = quality
   error.value = ''
   warnings.value = []
-  geometryWorker!.postMessage({ id, source, quality })
 }
 
-function handleGeometryResponse(event: MessageEvent<GeometryResponse>) {
-  const response = event.data
-  if (response.id !== requestId) return
-  rendering.value = false
-  renderDuration.value = response.durationMs
-  const source = requestSources.get(response.id) ?? code.value
-  requestSources.clear()
+function handleBuildState(state: BuildCoordinatorState) {
+  rendering.value = state.status === 'building'
+  if (state.requestedQuality) renderingQuality.value = state.requestedQuality
+  if (!rendering.value && rendererErrorMessage && !error.value) error.value = rendererErrorMessage
+}
 
-  if (!response.ok) {
+function handleGeometryResponse(response: PublishedGeometryBuild) {
+  // The editor revision advances before its debounced preview is submitted.
+  // Never publish an older build during that window, even if the coordinator
+  // has not seen the replacement job yet.
+  if (response.documentRevision !== workspaceDocument.value.revision) return
+  renderDuration.value = response.durationMs
+  const source = buildSources.get(response.documentRevision) ?? code.value
+  for (const revision of buildSources.keys()) {
+    if (revision < response.documentRevision) buildSources.delete(revision)
+  }
+
+  if (response.status === 'failed') {
     error.value = response.error.message
     return
   }
 
   try {
-    const preserveInteraction = renderedSource.value !== '' && renderedSource.value === source
+    const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
     const previousMeshes = sceneMeshes.value
     const previousVisibility = meshVisibility.value
     const previousSelection = selectedMesh.value
     const previousIsolation = isolated.value
     const previousMeasurement = measurement.value
     const previousMeasureActive = measureActive.value
-    const previousIndices = preserveInteraction
-      ? matchMeshesByProvenance(previousMeshes, response.meshes)
+    const previousIndices = previousMeshes.length
+      ? matchMeshesByProvenance(previousMeshes, response.meshes, { sameSourceSnapshot })
       : response.meshes.map(() => -1)
 
-    renderer?.setMeshes(response.meshes, { preserveMeasurement: preserveInteraction })
+    renderer?.setMeshes(response.meshes, { preserveMeasurement: sameSourceSnapshot })
     sceneMeshes.value = response.meshes
     meshVisibility.value = previousIndices.map(previousIndex => (
       previousIndex >= 0 ? previousVisibility[previousIndex] !== false : true
@@ -491,23 +630,27 @@ function handleGeometryResponse(event: MessageEvent<GeometryResponse>) {
     })
     selectedHit.value = null
     hoveredHit.value = null
-    if (preserveInteraction) {
-      const replacementSelection = previousSelection === null
-        ? -1
-        : previousIndices.indexOf(previousSelection)
-      if (replacementSelection >= 0) {
-        renderer?.selectMesh(replacementSelection)
-        if (previousIsolation) renderer?.toggleIsolateSelection()
-      }
+    const replacementSelection = previousSelection === null
+      ? -1
+      : previousIndices.indexOf(previousSelection)
+    if (replacementSelection >= 0) {
+      selectedMesh.value = replacementSelection
+      isolated.value = previousIsolation
+      renderer?.selectMesh(replacementSelection)
+      if (previousIsolation) renderer?.toggleIsolateSelection()
+    } else {
+      selectedMesh.value = null
+      isolated.value = false
+    }
+    if (sameSourceSnapshot) {
       // The renderer may rebuild this overlay; retaining the UI value avoids a
       // preview → full flash and lets it restore the exact world-space points.
       measurement.value = previousMeasurement
       measureActive.value = previousMeasureActive
     } else {
       measurement.value = null
+      measureActive.value = false
     }
-    selectedMesh.value = renderer?.selectedIndex ?? null
-    isolated.value = renderer?.isIsolated ?? false
     if (fitNextRender) {
       renderer?.fitView()
       fitNextRender = false
@@ -527,11 +670,11 @@ function handleGeometryResponse(event: MessageEvent<GeometryResponse>) {
   }
 }
 
-function handleWorkerError() {
+function handleWorkerError(caught?: unknown) {
   rendering.value = false
-  geometryWorker?.terminate()
-  geometryWorker = null
-  error.value = t('workerError')
+  buildCoordinator?.dispose()
+  buildCoordinator = null
+  error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
 }
 
 function toggleLang() {
@@ -708,7 +851,10 @@ function setSelectionMode(mode: SelectionMode) {
 }
 
 function meshIndex(id: number | string) {
-  const index = typeof id === 'number' ? id : Number(id)
+  const entityIndex = typeof id === 'string'
+    ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id)
+    : -1
+  const index = entityIndex >= 0 ? entityIndex : typeof id === 'number' ? id : Number(id)
   return Number.isInteger(index) && index >= 0 && index < sceneMeshes.value.length ? index : null
 }
 
@@ -868,33 +1014,12 @@ function lineAndColumn(source: string, offset: number) {
   return { line, column: before.length - before.lastIndexOf('\n') }
 }
 
-function command(
-  id: string,
-  label: string,
-  shortcut = '',
-  keywords = '',
-  options: Partial<Pick<PaletteCommand, 'enabled' | 'disabledReason'>> = {},
-): PaletteCommand {
-  const aliases = (COMMAND_ALIAS_KEYS[id] ?? [])
-    .flatMap(key => [L.ru[key], L.en[key]])
-    .filter((value, index, values) => !!value && values.indexOf(value) === index)
-  const mruRank = commandMru.value.indexOf(id)
-  return {
-    id,
-    label,
-    shortcut,
-    keywords,
-    aliases,
-    ...options,
-    ...(mruRank >= 0 ? { mruRank } : {}),
-  }
-}
-
 function executeCommand(id: string) {
   const target = paletteCommands.value.find(candidate => candidate.id === id)
   if (target && !isPaletteCommandEnabled(target)) return
+  const paletteWasOpen = paletteOpen.value
   paletteOpen.value = false
-  recordCommandUsage(id)
+  if (target) recordCommandUsage(id)
   const views: StandardView[] = ['iso', 'front', 'back', 'left', 'right', 'top', 'bottom']
   if (views.includes(id as StandardView)) { setStandardView(id as StandardView); return }
   switch (id) {
@@ -926,6 +1051,19 @@ function executeCommand(id: string) {
       break
     case 'sidebar': dockOpen.value = !dockOpen.value; break
     case 'theme': toggleTheme(); break
+    case 'command-palette': paletteOpen.value = !paletteWasOpen; break
+    case 'cancel-measure': cancelMeasure(); break
+    case 'flip-section': setSectionFlip(!sectionFlip.value); break
+    case 'hide-selected':
+      if (selectedMesh.value !== null) {
+        setSceneMeshVisibility(selectedMesh.value, meshVisibility.value[selectedMesh.value] === false)
+      }
+      break
+    case 'cycle-selection-mode': {
+      const modes: SelectionMode[] = ['point', 'face', 'object']
+      setSelectionMode(modes[(modes.indexOf(selectionMode.value) + 1) % modes.length])
+      break
+    }
   }
 }
 
@@ -936,76 +1074,31 @@ function recordCommandUsage(id: string) {
 }
 
 function handleEditorKey(event: KeyboardEvent) {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-    event.preventDefault()
-    doRender('full')
-  }
+  dispatchKeyboardCommand(event, 'editor')
 }
 
 function handleViewportKey(event: KeyboardEvent) {
-  const numpadViews: Record<string, StandardView> = {
-    Numpad0: 'iso', Numpad1: 'front', Numpad3: 'right', Numpad7: 'top',
-  }
-  const key = event.key.toLowerCase()
-  const plainKey = !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
-  if (plainKey && numpadViews[event.code]) {
-    event.preventDefault()
-    standardView.value = numpadViews[event.code]
-    changeStandardView()
-  }
-  else if ((event.ctrlKey || event.metaKey) && event.key === '=') {
-    event.preventDefault()
-    measureActive.value ? cancelMeasure() : startMeasure()
-  }
-  else if (event.shiftKey && key === 'f' && sectionEnabled.value) { event.preventDefault(); setSectionFlip(!sectionFlip.value) }
-  else if (plainKey && event.code === 'BracketLeft') { event.preventDefault(); previousView() }
-  else if (key === 'f' || event.key === '/') { event.preventDefault(); focusSelection() }
-  else if (event.key === '.') { event.preventDefault(); toggleIsolate() }
-  else if (event.key === 'Escape') { event.preventDefault(); measureActive.value ? cancelMeasure() : clearSelection() }
-  else if (key === 'e') { event.preventDefault(); setDisplayMode(displayMode.value === 'edges' ? 'shaded' : 'edges') }
-  else if (key === 'x') { event.preventDefault(); setDisplayMode(displayMode.value === 'xray' ? 'shaded' : 'xray') }
-  else if (key === 'g') { event.preventDefault(); toggleGrid() }
-  else if (key === 'h' && selectedMesh.value !== null) {
-    event.preventDefault()
-    setSceneMeshVisibility(selectedMesh.value, meshVisibility.value[selectedMesh.value] === false)
-  }
-  else if (plainKey && event.code === 'Digit5') { event.preventDefault(); toggleProjection() }
-  else if (plainKey && event.code === 'Digit1') { event.preventDefault(); setSelectionMode('point') }
-  else if (plainKey && event.code === 'Digit3') { event.preventDefault(); setSelectionMode('face') }
-  else if (plainKey && event.code === 'Digit4') { event.preventDefault(); setSelectionMode('object') }
-  else if (event.shiftKey && event.code === 'KeyM') {
-    event.preventDefault()
-    const modes: SelectionMode[] = ['point', 'face', 'object']
-    setSelectionMode(modes[(modes.indexOf(selectionMode.value) + 1) % modes.length])
-  }
+  dispatchKeyboardCommand(event, 'viewport')
 }
 
 function handleGlobalKey(event: KeyboardEvent) {
-  if (event.defaultPrevented) return
-  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'b') {
-    event.preventDefault()
-    dockOpen.value = !dockOpen.value
-    return
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key === '=') {
-    event.preventDefault()
-    measureActive.value ? cancelMeasure() : startMeasure()
-    return
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault()
-    paletteOpen.value = true
-    return
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-    event.preventDefault()
-    saveSource()
-    return
-  }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
-    event.preventDefault()
-    triggerOpen()
-  }
+  dispatchKeyboardCommand(event, 'global')
+}
+
+function dispatchKeyboardCommand(event: KeyboardEvent, scope: CommandScope) {
+  const id = resolveKeyboardCommand(event, scope, { isEnabled: isCommandEnabled })
+  if (!id) return
+  if (paletteOpen.value && id !== 'command-palette') return
+  event.preventDefault()
+  executeCommand(id)
+}
+
+function isCommandEnabled(id: CommandId): boolean {
+  if (id === 'cancel-measure') return measureActive.value
+  if (id === 'flip-section') return sectionEnabled.value
+  if (id === 'hide-selected') return selectedMesh.value !== null
+  const target = paletteCommands.value.find(candidate => candidate.id === id)
+  return target ? isPaletteCommandEnabled(target) : true
 }
 
 function startResize(event: PointerEvent) {
@@ -1237,7 +1330,7 @@ function readSharedCode() {
         <canvas
           ref="canvasRef"
           class="gpu-canvas"
-          role="img"
+          role="application"
           tabindex="0"
           :aria-label="t('viewport')"
           @pointermove="markCustomView"
@@ -1256,7 +1349,7 @@ function readSharedCode() {
           <SceneOutliner
             v-if="dockTab === 'scene'"
             :meshes="sceneRows"
-            :selected-mesh-id="selectedMesh"
+            :selected-mesh-id="selectedSceneMeshId"
             :hovered-mesh-id="hoveredMesh"
             :locale="lang"
             :busy="rendering"

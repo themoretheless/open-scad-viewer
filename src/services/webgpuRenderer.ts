@@ -21,6 +21,12 @@ import {
   type DepthCandidate,
   type DepthCycleState,
 } from './selectionCycling'
+import {
+  buildSceneAabbIndex,
+  querySceneAabbIndex,
+  type SceneAabbIndex,
+} from './sceneAabbIndex'
+import { sortTransparentBackToFront } from './transparentOrdering'
 
 /* ── WGSL shaders ─────────────────────────────────── */
 
@@ -177,6 +183,27 @@ export type SelectionChangeHandler = (selectedIndex: number | null, isIsolated: 
 export type HoverChangeHandler = (hit: PickHit | null) => void
 export type MeasurementChangeHandler = (measurement: DistanceMeasurement | null, active: boolean) => void
 export type CameraHistoryChangeHandler = (canGoBack: boolean) => void
+export type RendererLifecycleEvent =
+  | { readonly status: 'idle' }
+  | { readonly status: 'initializing' }
+  | { readonly status: 'ready' }
+  | {
+      readonly status: 'unavailable'
+      readonly reason: 'webgpu' | 'adapter' | 'context'
+      readonly message: string
+    }
+  | {
+      readonly status: 'device-lost'
+      readonly reason: GPUDeviceLostReason
+      readonly message: string
+    }
+  | {
+      readonly status: 'error'
+      readonly phase: 'initialization' | 'frame'
+      readonly error: Error
+    }
+  | { readonly status: 'destroyed' }
+export type RendererStatusChangeHandler = (event: RendererLifecycleEvent) => void
 export interface SetMeshesOptions {
   /** Keep world-space inspection measurements while swapping equivalent geometry. */
   preserveMeasurement?: boolean
@@ -223,6 +250,8 @@ export class WebGPURenderer {
   private depth: GPUTexture | null = null
 
   private meshes: GMesh[] = []
+  private sceneAabbIndex: SceneAabbIndex = buildSceneAabbIndex([])
+  private sceneAabbIndexDirty = false
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
   private bounds: Bounds | null = null
@@ -261,11 +290,16 @@ export class WebGPURenderer {
   onHoverChange: HoverChangeHandler | null = null
   onMeasurementChange: MeasurementChangeHandler | null = null
   onCameraHistoryChange: CameraHistoryChangeHandler | null = null
+  /** Device/render lifecycle notifications; existing callback APIs remain unchanged. */
+  onStatusChange: RendererStatusChangeHandler | null = null
+
+  private status: RendererLifecycleEvent = { status: 'idle' }
 
   yaw = ISO_YAW; pitch = ISO_PITCH; dist = DEFAULT_DISTANCE
   tx = 0; ty = 0; tz = 0
 
   private raf = 0
+  private frameRetryCount = 0
   private dead = true
   private initialized = false
   private lost = false
@@ -288,23 +322,36 @@ export class WebGPURenderer {
   private hoverY = 0
 
   async init(canvas: HTMLCanvasElement): Promise<boolean> {
-    if (this.canvas || this.dev || this.initialized) this.destroy()
+    if (this.canvas || this.dev || this.initialized) this.teardown()
 
     const generation = ++this.generation
     this.canvas = canvas
     this.dead = false
     this.lost = false
+    this.updateStatus({ status: 'initializing' })
 
     try {
       if (typeof navigator === 'undefined' || !navigator.gpu) {
-        this.destroy()
+        this.teardown()
+        this.updateStatus({
+          status: 'unavailable',
+          reason: 'webgpu',
+          message: 'WebGPU is unavailable in this environment.',
+        })
         return false
       }
 
       const gpu = navigator.gpu
       const adapter = await gpu.requestAdapter()
       if (!adapter || !this.isCurrentInit(generation, canvas)) {
-        if (this.isCurrentInit(generation, canvas)) this.destroy()
+        if (this.isCurrentInit(generation, canvas)) {
+          this.teardown()
+          this.updateStatus({
+            status: 'unavailable',
+            reason: 'adapter',
+            message: 'No compatible WebGPU adapter was found.',
+          })
+        }
         return false
       }
 
@@ -319,7 +366,12 @@ export class WebGPURenderer {
       this.dev = device
       const context = canvas.getContext('webgpu')
       if (!context) {
-        this.destroy()
+        this.teardown()
+        this.updateStatus({
+          status: 'unavailable',
+          reason: 'context',
+          message: 'The canvas could not create a WebGPU context.',
+        })
         return false
       }
 
@@ -327,7 +379,7 @@ export class WebGPURenderer {
       this.fmt = gpu.getPreferredCanvasFormat()
       context.configure({ device, format: this.fmt, alphaMode: 'premultiplied' })
 
-      void device.lost.then(() => {
+      void device.lost.then(info => {
         if (this.dev !== device || this.dead) return
         this.lost = true
         this.initialized = false
@@ -335,6 +387,11 @@ export class WebGPURenderer {
         this.cancelPendingHover()
         if (this.raf) cancelAnimationFrame(this.raf)
         this.raf = 0
+        this.updateStatus({
+          status: 'device-lost',
+          reason: info.reason,
+          message: info.message,
+        })
       })
 
       this.buildPipelines()
@@ -345,9 +402,13 @@ export class WebGPURenderer {
       this.observeResize()
       this.resize()
       this.requestRender()
+      this.updateStatus({ status: 'ready' })
       return true
-    } catch {
-      if (this.isCurrentInit(generation, canvas)) this.destroy()
+    } catch (error) {
+      if (this.isCurrentInit(generation, canvas)) {
+        this.teardown()
+        this.reportError('initialization', error)
+      }
       return false
     }
   }
@@ -632,6 +693,7 @@ export class WebGPURenderer {
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.meshes = next
+    this.rebuildSceneAabbIndex()
     this.bounds = nextBounds
     this.selected = null
     this.selectedHit = null
@@ -747,6 +809,30 @@ export class WebGPURenderer {
       target: [this.tx, this.ty, this.tz],
       projection: this.projection,
     }
+  }
+
+  /**
+   * Restore a previously captured camera without creating a navigation-history
+   * entry. This is intended for renderer/device re-initialization.
+   */
+  restoreCameraState(state: CameraState): boolean {
+    if (!Number.isFinite(state.yaw)
+        || !Number.isFinite(state.pitch)
+        || !Number.isFinite(state.distance)
+        || !state.target.every(Number.isFinite)
+        || (state.projection !== 'perspective' && state.projection !== 'orthographic')) return false
+    const before = this.getCameraState()
+    this.yaw = state.yaw
+    this.pitch = Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, state.pitch))
+    this.dist = this.clampDistance(state.distance)
+    ;[this.tx, this.ty, this.tz] = state.target
+    this.projection = state.projection
+    if (cameraStatesEqual(before, this.getCameraState())) return false
+    this.gestureCameraStart = null
+    this.lastWheelHistoryAt = -Infinity
+    this.resetDepthCycle()
+    this.requestRender()
+    return true
   }
 
   previousView(): CameraState | null {
@@ -865,6 +951,9 @@ export class WebGPURenderer {
     if (!mesh || mesh.visible === visible) return
     this.resetDepthCycle()
     mesh.visible = visible
+    // Visibility can be toggled many times while restoring a scene. Defer the
+    // O(n log n) rebuild until the next pointer query so the batch costs once.
+    this.sceneAabbIndexDirty = true
     if (!visible && this.selected === index) this.setSelection(null, null)
     if (!visible && this.hovered === index) {
       this.hovered = null
@@ -914,6 +1003,20 @@ export class WebGPURenderer {
     this.rebuildMeasurementBuffer()
     this.emitMeasurementChange()
     this.requestRender()
+  }
+
+  /** Rehydrate inspection state after a WebGPU device/context rebuild. */
+  restoreMeasurement(measurement: DistanceMeasurement | null, active = false): boolean {
+    const points = measurement?.points ?? []
+    if (points.length > 2 || points.some(point => (
+      point.length !== 3 || !point.every(Number.isFinite)
+    ))) return false
+    this.measurementPoints = points.map(point => [...point] as Vec3)
+    this.measureActive = active
+    this.rebuildMeasurementBuffer()
+    this.emitMeasurementChange()
+    this.requestRender()
+    return true
   }
 
   private ensureEdgeBuffer(mesh: GMesh) {
@@ -1169,9 +1272,17 @@ export class WebGPURenderer {
 
     pass.setPipeline(this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
-    for (let index = 0; index < this.meshes.length; index++) {
+    const transparentOrder = sortTransparentBackToFront(
+      this.meshes.flatMap((mesh, index) => (
+        this.isMeshVisible(index) && mesh.alpha < 0.99
+          ? [{ index, center: mesh.worldBounds.center }]
+          : []
+      )),
+      eye,
+      [this.tx, this.ty, this.tz],
+    )
+    for (const index of transparentOrder) {
       const g = this.meshes[index]
-      if (!this.isMeshVisible(index) || g.alpha >= 0.99) continue
       pass.setBindGroup(1, g.bg)
       pass.setVertexBuffer(0, g.vb)
       pass.setIndexBuffer(g.ib, 'uint32')
@@ -1257,15 +1368,30 @@ export class WebGPURenderer {
     dev.queue.submit([enc.finish()])
   }
 
-  requestRender() {
-    if (this.dead || this.lost || !this.initialized || this.raf) return
+  requestRender(resetFrameRetry = true) {
+    if (resetFrameRetry) this.frameRetryCount = 0
+    if (this.dead || this.lost || !this.initialized || this.raf || typeof requestAnimationFrame !== 'function') return
     this.raf = requestAnimationFrame(this.drawFrame)
   }
 
   private drawFrame = () => {
     this.raf = 0
     if (this.dead || this.lost || !this.initialized) return
-    try { this.render() } catch { /* A lost/outdated surface is retried on the next invalidation. */ }
+    try {
+      this.render()
+      this.frameRetryCount = 0
+      if (this.status.status === 'error' && this.status.phase === 'frame') {
+        this.updateStatus({ status: 'ready' })
+      }
+    } catch (error) {
+      // A lost/outdated surface can still be retried on the next invalidation,
+      // but the failure must remain observable to both UI and developers.
+      this.reportError('frame', error)
+      if (this.frameRetryCount < 1) {
+        this.frameRetryCount++
+        this.requestRender(false)
+      }
+    }
   }
 
   private rayForClientPoint(clientX: number, clientY: number) {
@@ -1392,22 +1518,37 @@ export class WebGPURenderer {
       return nearest
     }
 
-    // One initial BVH query per visible mesh is required to avoid mesh-order
-    // bias. All additional continuations share one global budget and are
-    // processed nearest-first across meshes.
-    for (let index = 0; index < this.meshes.length; index++) {
-      if (!this.isMeshVisible(index)) continue
+    const boundsCandidates = querySceneAabbIndex(this.currentSceneAabbIndex(), ray)
+    let boundsCursor = 0
+    const addNextBoundsCandidate = () => {
+      const candidate = boundsCandidates[boundsCursor++]
+      if (!candidate) return false
+      const index = candidate.id
+      if (!this.isMeshVisible(index)) return true
       const mesh = this.meshes[index]
       const hit = raycastMeshBvh(mesh.bvh, mesh.vertices, mesh.indices, ray, {
         localFromWorld: mesh.inverseTransform,
       })
       if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Set() })
+      return true
     }
 
     const candidates: DepthCandidate<PickHit>[] = []
     const seen = new Set<string>()
     let continuations = 0
-    while (frontier.length && candidates.length < limit) {
+    while (candidates.length < limit) {
+      // Bounds are front-to-back lower bounds. Touch triangle BVHs lazily until
+      // no unopened object can beat the exact hit at the frontier. This makes
+      // hover/measurement (`limit = 1`) independent of farther overlapping
+      // bodies while preserving deterministic depth cycling for larger limits.
+      while (!frontier.length && boundsCursor < boundsCandidates.length) addNextBoundsCandidate()
+      while (
+        frontier.length
+        && boundsCursor < boundsCandidates.length
+        && boundsCandidates[boundsCursor].distance <= frontier[0].hit.t
+      ) addNextBoundsCandidate()
+      if (!frontier.length) break
+
       const cursor = takeNearest()
       const clipped = this.isSectionClipped(cursor.hit.worldPoint)
       if (!clipped) {
@@ -1844,11 +1985,17 @@ export class WebGPURenderer {
   }
 
   destroy() {
+    this.teardown()
+    this.updateStatus({ status: 'destroyed' })
+  }
+
+  private teardown() {
     ++this.generation
     this.dead = true
     this.initialized = false
     if (this.raf) cancelAnimationFrame(this.raf)
     this.raf = 0
+    this.frameRetryCount = 0
     this.cancelPendingHover()
     this.resizeObserver?.disconnect()
     this.resizeObserver = null
@@ -1879,6 +2026,8 @@ export class WebGPURenderer {
 
     this.destroyMeshes(this.meshes)
     this.meshes = []
+    this.sceneAabbIndex = buildSceneAabbIndex([])
+    this.sceneAabbIndexDirty = false
     this.gridVB?.destroy()
     this.gridVB = null
     this.measurementVB?.destroy()
@@ -1911,5 +2060,34 @@ export class WebGPURenderer {
     try { device?.destroy() } catch { /* Repeated/lost-device cleanup is harmless. */ }
     if (selectionChanged) this.emitSelectionChange()
     if (hadCameraHistory) this.emitCameraHistoryChange()
+  }
+
+  get currentStatus(): RendererLifecycleEvent { return this.status }
+
+  private rebuildSceneAabbIndex() {
+    this.sceneAabbIndex = buildSceneAabbIndex(this.meshes.flatMap((mesh, index) => (
+      mesh.visible
+        ? [{ id: index, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max } }]
+        : []
+    )))
+    this.sceneAabbIndexDirty = false
+  }
+
+  private currentSceneAabbIndex() {
+    if (this.sceneAabbIndexDirty) this.rebuildSceneAabbIndex()
+    return this.sceneAabbIndex
+  }
+
+  private updateStatus(event: RendererLifecycleEvent) {
+    this.status = event
+    try { this.onStatusChange?.(event) } catch { /* UI callbacks must not break rendering. */ }
+  }
+
+  private reportError(phase: 'initialization' | 'frame', caught: unknown) {
+    const error = caught instanceof Error ? caught : new Error(String(caught))
+    this.updateStatus({ status: 'error', phase, error })
+    if (phase === 'frame' && typeof console !== 'undefined') {
+      console.error('[WebGPURenderer] frame failed', error)
+    }
   }
 }

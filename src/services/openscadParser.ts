@@ -25,6 +25,8 @@ import { buildMeshBvh, type MeshBvh } from './meshBvh'
 import { extractSemanticEdges, type MeshTopologyDiagnostics } from './meshTopology'
 
 export interface MeshData {
+  /** Stable identity for this evaluated scene entity, independent of tessellation quality. */
+  entityId?: SceneEntityId
   vertices: Float32Array // interleaved position(3) + normal(3)
   indices: Uint32Array
   bvh: MeshBvh
@@ -38,9 +40,19 @@ export interface MeshData {
   topology: MeshTopologyDiagnostics
 }
 
+/** Stable identity of a static geometry operation in the parsed source tree. */
+export type SourceOperationId = `op:${string}`
+
+/** Stable identity of one evaluated operation instance in the scene. */
+export type SceneEntityId = `entity:${string}`
+
 export interface MeshSourceReference {
-  /** Stable within a source revision; currently the call's character offset. */
+  /** Legacy source-selection key. Prefer operationId/instanceId for identity. */
   id: number
+  /** Static operation identity; stable across whitespace, quality and unrelated sibling edits. */
+  operationId?: SourceOperationId
+  /** Evaluated instance identity; distinguishes module calls and loop iterations. */
+  instanceId?: SceneEntityId
   originalId: number
   start: number
   end: number
@@ -70,12 +82,14 @@ export interface ParseResult {
 
 const MAX_SOURCE_LENGTH = 250_000
 const MAX_AST_NODES = 25_000
+const MAX_EXPRESSION_DEPTH = 256
 const MAX_EVAL_DEPTH = 128
+const MAX_EVALUATED_VALUE_UNITS = 500_000
 const MAX_RANGE_ITEMS = 10_000
 const MAX_SHAPES = 1_000
 const MAX_TRIANGLES = 750_000
 const MAX_FN = 256
-/** Total evaluation steps (statements + loop iterations) before aborting —
+/** Total evaluation steps (expressions + statements + loop iterations) before aborting —
  * bounds nested loops whose bodies produce no shapes, which MAX_SHAPES
  * can never catch (`for(i=[0:9999]) for(j=[0:9999]) x = i+j;`). */
 const MAX_EVAL_OPS = 1_000_000
@@ -97,7 +111,7 @@ enum TT {
   Eof,
 }
 
-interface Token { t: TT; v: string; p: number }
+interface Token { t: TT; v: string; p: number; end: number }
 
 export class OpenSCADParseError extends Error {
   readonly line: number
@@ -155,7 +169,7 @@ function tokenize(source: string): Token[] {
         }
       }
       if (!closed) throw new OpenSCADParseError(source, p, 'Unterminated string')
-      out.push({ t: TT.Str, v: value, p })
+      out.push({ t: TT.Str, v: value, p, end: i })
       continue
     }
 
@@ -172,14 +186,14 @@ function tokenize(source: string): Token[] {
         if (!isDigit(source[i])) throw new OpenSCADParseError(source, p, 'Invalid exponent')
         while (isDigit(source[i])) value += source[i++]
       }
-      out.push({ t: TT.Num, v: value, p })
+      out.push({ t: TT.Num, v: value, p, end: i })
       continue
     }
 
     if (isIdentStart(ch)) {
       let value = ''
       while (isIdentPart(source[i])) value += source[i++]
-      out.push({ t: TT.Ident, v: value, p })
+      out.push({ t: TT.Ident, v: value, p, end: i })
       continue
     }
 
@@ -189,7 +203,7 @@ function tokenize(source: string): Token[] {
       '&&': TT.And, '||': TT.Or,
     }
     if (doubles[two] !== undefined) {
-      out.push({ t: doubles[two], v: two, p })
+      out.push({ t: doubles[two], v: two, p, end: i + 2 })
       i += 2
       continue
     }
@@ -204,10 +218,10 @@ function tokenize(source: string): Token[] {
     }
     const tokenType = singles[ch]
     if (tokenType === undefined) throw new OpenSCADParseError(source, p, `Unexpected character ${JSON.stringify(ch)}`)
-    out.push({ t: tokenType, v: ch, p })
+    out.push({ t: tokenType, v: ch, p, end: i + 1 })
     i++
   }
-  out.push({ t: TT.Eof, v: '', p: source.length })
+  out.push({ t: TT.Eof, v: '', p: source.length, end: source.length })
   return out
 }
 
@@ -235,9 +249,11 @@ interface CallNode {
   children: Statement[]
   alternative: Statement[]
   p: number
+  end: number
+  operationId?: SourceOperationId
 }
 
-interface AssignNode { type: 'assign'; name: string; value: Expr; p: number }
+interface AssignNode { type: 'assign'; name: string; value: Expr; p: number; end: number }
 interface ModuleParam { name: string; defaultValue?: Expr }
 interface ModuleNode {
   type: 'module'
@@ -245,12 +261,16 @@ interface ModuleNode {
   params: ModuleParam[]
   children: Statement[]
   p: number
+  end: number
 }
 type Statement = CallNode | AssignNode | ModuleNode
 
 class Parser {
   private pos = 0
   private nodes = 0
+  private expressionDepth = 0
+  private statementDepth = 0
+  private lastTokenEnd = 0
 
   constructor(private readonly tokens: Token[], private readonly source: string) {}
 
@@ -264,7 +284,11 @@ class Parser {
   }
 
   private peek(offset = 0) { return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1] }
-  private advance() { return this.tokens[this.pos++] }
+  private advance() {
+    const token = this.tokens[this.pos++]
+    this.lastTokenEnd = token.end
+    return token
+  }
   private match(type: TT) { if (this.peek().t === type) { this.advance(); return true } return false }
   private expect(type: TT, message?: string) {
     const token = this.advance()
@@ -274,10 +298,33 @@ class Parser {
   private fail(token: Token, message: string): never { throw new OpenSCADParseError(this.source, token.p, message) }
   private countNode() {
     this.nodes++
-    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString()} statement limit`)
+    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString()} syntax node limit`)
+  }
+  private expressionNode<T extends Expr>(node: T): T {
+    this.countNode()
+    return node
+  }
+  private descendExpression<T>(position: number, parse: () => T): T {
+    if (this.expressionDepth >= MAX_EXPRESSION_DEPTH) {
+      throw new OpenSCADParseError(this.source, position, `Expression exceeds ${MAX_EXPRESSION_DEPTH} nested levels`)
+    }
+    this.expressionDepth++
+    try { return parse() } finally { this.expressionDepth-- }
   }
 
   private statement(): Statement | null {
+    if (this.statementDepth >= MAX_EVAL_DEPTH) {
+      this.fail(this.peek(), `Model exceeds ${MAX_EVAL_DEPTH} nested statements`)
+    }
+    this.statementDepth++
+    try {
+      return this.parseStatement()
+    } finally {
+      this.statementDepth--
+    }
+  }
+
+  private parseStatement(): Statement | null {
     if (this.match(TT.Semi)) return null
     let disabled = false
     while ([TT.Hash, TT.Percent, TT.Star, TT.Not].includes(this.peek().t)) {
@@ -299,8 +346,8 @@ class Parser {
     const name = this.expect(TT.Ident)
     this.expect(TT.Eq)
     const value = this.expression()
-    this.expect(TT.Semi, 'Expected ; after assignment')
-    return { type: 'assign', name: name.v, value, p: name.p }
+    const terminator = this.expect(TT.Semi, 'Expected ; after assignment')
+    return { type: 'assign', name: name.v, value, p: name.p, end: terminator.end }
   }
 
   private moduleDefinition(): ModuleNode {
@@ -316,7 +363,7 @@ class Parser {
     }
     this.advance()
     const children = this.body(true)
-    return { type: 'module', name: name.v, params, children, p: keyword.p }
+    return { type: 'module', name: name.v, params, children, p: keyword.p, end: this.lastTokenEnd }
   }
 
   private call(): CallNode {
@@ -343,7 +390,7 @@ class Parser {
       this.advance()
       alternative = this.body(true)
     }
-    return { type: 'call', name: name.v, args, children, alternative, p: name.p }
+    return { type: 'call', name: name.v, args, children, alternative, p: name.p, end: this.lastTokenEnd }
   }
 
   private body(required: boolean): Statement[] {
@@ -362,14 +409,14 @@ class Parser {
     return child ? [child] : []
   }
 
-  private expression(): Expr { return this.ternary() }
+  private expression(): Expr { return this.descendExpression(this.peek().p, () => this.ternary()) }
 
   private ternary(): Expr {
     const test = this.binaryOr()
     if (!this.match(TT.Question)) return test
     const yes = this.expression()
     this.expect(TT.Colon, 'Expected : in conditional expression')
-    return { kind: 'ternary', test, yes, no: this.expression(), p: test.p }
+    return this.expressionNode({ kind: 'ternary', test, yes, no: this.expression(), p: test.p })
   }
 
   private binaryOr(): Expr { return this.binary(() => this.binaryAnd(), [TT.Or]) }
@@ -381,14 +428,18 @@ class Parser {
   private power(): Expr {
     const left = this.unary()
     if (!this.match(TT.Caret)) return left
-    return { kind: 'binary', op: TT.Caret, left, right: this.power(), p: left.p }
+    return this.expressionNode({
+      kind: 'binary', op: TT.Caret, left,
+      right: this.descendExpression(this.peek().p, () => this.power()),
+      p: left.p,
+    })
   }
 
   private binary(next: () => Expr, operators: TT[]): Expr {
     let left = next()
     while (operators.includes(this.peek().t)) {
       const op = this.advance()
-      left = { kind: 'binary', op: op.t, left, right: next(), p: op.p }
+      left = this.expressionNode({ kind: 'binary', op: op.t, left, right: next(), p: op.p })
     }
     return left
   }
@@ -396,7 +447,11 @@ class Parser {
   private unary(): Expr {
     if ([TT.Plus, TT.Minus, TT.Not].includes(this.peek().t)) {
       const op = this.advance()
-      return { kind: 'unary', op: op.t, value: this.unary(), p: op.p }
+      return this.expressionNode({
+        kind: 'unary', op: op.t,
+        value: this.descendExpression(op.p, () => this.unary()),
+        p: op.p,
+      })
     }
     return this.postfix()
   }
@@ -407,15 +462,15 @@ class Parser {
       const p = value.p
       const index = this.expression()
       this.expect(TT.RBracket, 'Expected ] after index')
-      value = { kind: 'index', value, index, p }
+      value = this.expressionNode({ kind: 'index', value, index, p })
     }
     return value
   }
 
   private primary(): Expr {
     const token = this.peek()
-    if (this.match(TT.Num)) return { kind: 'literal', value: Number(token.v), p: token.p }
-    if (this.match(TT.Str)) return { kind: 'literal', value: token.v, p: token.p }
+    if (this.match(TT.Num)) return this.expressionNode({ kind: 'literal', value: Number(token.v), p: token.p })
+    if (this.match(TT.Str)) return this.expressionNode({ kind: 'literal', value: token.v, p: token.p })
     if (this.match(TT.LParen)) {
       const value = this.expression()
       this.expect(TT.RParen, 'Expected )')
@@ -423,22 +478,22 @@ class Parser {
     }
     if (this.match(TT.LBracket)) return this.vectorOrRange(token.p)
     if (this.match(TT.Ident)) {
-      if (token.v === 'true' || token.v === 'false') return { kind: 'literal', value: token.v === 'true', p: token.p }
-      if (token.v === 'undef') return { kind: 'literal', value: undefined, p: token.p }
-      if (!this.match(TT.LParen)) return { kind: 'identifier', name: token.v, p: token.p }
+      if (token.v === 'true' || token.v === 'false') return this.expressionNode({ kind: 'literal', value: token.v === 'true', p: token.p })
+      if (token.v === 'undef') return this.expressionNode({ kind: 'literal', value: undefined, p: token.p })
+      if (!this.match(TT.LParen)) return this.expressionNode({ kind: 'identifier', name: token.v, p: token.p })
       const args: Expr[] = []
       while (this.peek().t !== TT.RParen) {
         args.push(this.expression())
         if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
       }
       this.advance()
-      return { kind: 'call', name: token.v, args, p: token.p }
+      return this.expressionNode({ kind: 'call', name: token.v, args, p: token.p })
     }
     this.fail(token, `Expected expression, got ${token.v || TT[token.t]}`)
   }
 
   private vectorOrRange(p: number): Expr {
-    if (this.match(TT.RBracket)) return { kind: 'vector', items: [], p }
+    if (this.match(TT.RBracket)) return this.expressionNode({ kind: 'vector', items: [], p })
     const first = this.expression()
     if (this.match(TT.Colon)) {
       const second = this.expression()
@@ -446,7 +501,7 @@ class Parser {
       let end = second
       if (this.match(TT.Colon)) { step = second; end = this.expression() }
       this.expect(TT.RBracket, 'Expected ] after range')
-      return { kind: 'range', start: first, step, end, p }
+      return this.expressionNode({ kind: 'range', start: first, step, end, p })
     }
     const items = [first]
     while (this.match(TT.Comma)) {
@@ -454,7 +509,30 @@ class Parser {
       items.push(this.expression())
     }
     this.expect(TT.RBracket, 'Expected ]')
-    return { kind: 'vector', items, p }
+    return this.expressionNode({ kind: 'vector', items, p })
+  }
+}
+
+/**
+ * Give call sites structural identities after parsing. Occurrences are counted
+ * per operation name, so whitespace, comments, unrelated siblings and quality
+ * changes do not move an existing identity. Identical same-name siblings remain
+ * positional because the language has no persistent user-authored node IDs.
+ */
+function assignOperationIds(nodes: Statement[], parent: readonly string[] = ['root']) {
+  const occurrences = new Map<string, number>()
+  for (const node of nodes) {
+    const key = `${node.type}:${node.name}`
+    const occurrence = occurrences.get(key) ?? 0
+    occurrences.set(key, occurrence + 1)
+    const path = [...parent, `${key}#${occurrence}`]
+    if (node.type === 'call') {
+      node.operationId = `op:${path.map(encodeURIComponent).join('/')}`
+      assignOperationIds(node.children, [...path, 'children'])
+      assignOperationIds(node.alternative, [...path, 'alternative'])
+    } else if (node.type === 'module') {
+      assignOperationIds(node.children, [...path, 'body'])
+    }
   }
 }
 
@@ -470,51 +548,23 @@ interface EvalContext {
   depth: number
   /** Shared mutable evaluation budget — one object across all ctx spreads. */
   budget: { ops: number }
+  instancePath: string
+  valueBudget: { used: number }
+  valueWeights: WeakMap<Value[], number>
+  valueDepths: WeakMap<Value[], number>
 }
 
-interface Shape2D { dimension: 2; geometry: CrossSectionGeometry; color: RGBA }
-interface Shape3D { dimension: 3; geometry: ManifoldGeometry; color: RGBA }
+interface Shape2D { dimension: 2; geometry: CrossSectionGeometry; color: RGBA; entityId: SceneEntityId }
+interface Shape3D { dimension: 3; geometry: ManifoldGeometry; color: RGBA; entityId: SceneEntityId }
 type Shape = Shape2D | Shape3D
 type RGBA = [number, number, number, number]
 
-function findSourceCallEnd(source: string, start: number): number {
-  let round = 0
-  let square = 0
-  let curly = 0
-  let sawCurly = false
-  let quote = ''
+function currentEntityId(ctx: EvalContext): SceneEntityId {
+  return `entity:${ctx.instancePath}`
+}
 
-  for (let index = Math.max(0, start); index < source.length; index++) {
-    const character = source[index]
-    const next = source[index + 1]
-    if (quote) {
-      if (character === '\\') index++
-      else if (character === quote) quote = ''
-      continue
-    }
-    if (character === '"' || character === "'") { quote = character; continue }
-    if (character === '/' && next === '/') {
-      index = source.indexOf('\n', index + 2)
-      if (index < 0) return source.length
-      continue
-    }
-    if (character === '/' && next === '*') {
-      const close = source.indexOf('*/', index + 2)
-      if (close < 0) return source.length
-      index = close + 1
-      continue
-    }
-    if (character === '(') round++
-    else if (character === ')') round = Math.max(0, round - 1)
-    else if (character === '[') square++
-    else if (character === ']') square = Math.max(0, square - 1)
-    else if (character === '{') { curly++; sawCurly = true }
-    else if (character === '}') {
-      curly = Math.max(0, curly - 1)
-      if (sawCurly && round === 0 && square === 0 && curly === 0) return index + 1
-    } else if (character === ';' && round === 0 && square === 0 && curly === 0) return index + 1
-  }
-  return source.length
+function staticOperationId(node: CallNode): SourceOperationId {
+  return node.operationId ?? `op:legacy-offset-${node.p}`
 }
 
 function trackSource(geometry: ManifoldGeometry, node: CallNode, ctx: EvalContext) {
@@ -522,9 +572,11 @@ function trackSource(geometry: ManifoldGeometry, node: CallNode, ctx: EvalContex
   if (originalId < 0 || ctx.sourceReferences.has(originalId)) return
   ctx.sourceReferences.set(originalId, {
     id: node.p,
+    operationId: staticOperationId(node),
+    instanceId: currentEntityId(ctx),
     originalId,
     start: node.p,
-    end: findSourceCallEnd(ctx.source, node.p),
+    end: node.end,
     label: `${node.name}()`,
   })
 }
@@ -537,7 +589,7 @@ function trackedSolid(geometry: ManifoldGeometry, color: RGBA, node: CallNode, c
   // originals, so this is a no-op for them.
   const trackedGeometry = geometry.originalID() < 0 ? geometry.asOriginal() : geometry
   trackSource(trackedGeometry, node, ctx)
-  return { dimension: 3, geometry: trackedGeometry, color }
+  return { dimension: 3, geometry: trackedGeometry, color, entityId: currentEntityId(ctx) }
 }
 
 const PALETTE: RGBA[] = [
@@ -561,7 +613,58 @@ function nextColor(): RGBA { return [...PALETTE[paletteIndex++ % PALETTE.length]
 function warn(ctx: EvalContext, message: string) { if (!ctx.warnings.includes(message)) ctx.warnings.push(message) }
 function evaluationError(ctx: EvalContext, p: number, message: string): never { throw new OpenSCADParseError(ctx.source, p, message) }
 
-function evalExpression(expr: Expr, ctx: EvalContext): Value {
+function valueWeight(value: Value, ctx: EvalContext): number {
+  if (Array.isArray(value)) return ctx.valueWeights.get(value) ?? value.length + 1
+  return typeof value === 'string' ? Math.max(1, value.length) : 1
+}
+
+function valueDepth(value: Value, ctx: EvalContext): number {
+  return Array.isArray(value) ? ctx.valueDepths.get(value) ?? 1 : 0
+}
+
+function registerArrayValue<T extends Value[]>(
+  value: T,
+  ctx: EvalContext,
+  p: number,
+  limitLabel = 'Evaluated value',
+): T {
+  let weight = 1
+  let depth = 1
+  for (const item of value) {
+    weight += valueWeight(item, ctx)
+    depth = Math.max(depth, valueDepth(item, ctx) + 1)
+    if (weight > MAX_EVALUATED_VALUE_UNITS) {
+      evaluationError(ctx, p, `${limitLabel} exceeds ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} units`)
+    }
+  }
+  if (depth > MAX_EXPRESSION_DEPTH) {
+    evaluationError(ctx, p, `Evaluated value exceeds ${MAX_EXPRESSION_DEPTH} nested levels`)
+  }
+  ctx.valueBudget.used += weight
+  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
+    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
+  }
+  ctx.valueWeights.set(value, weight)
+  ctx.valueDepths.set(value, depth)
+  return value
+}
+
+function registerStringValue(value: string, ctx: EvalContext, p: number, limitLabel = 'Evaluation'): string {
+  ctx.valueBudget.used += Math.max(1, value.length)
+  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
+    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
+  }
+  return value
+}
+
+function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
+  if (++ctx.budget.ops > MAX_EVAL_OPS) {
+    evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+  }
+  if (depth >= MAX_EXPRESSION_DEPTH) {
+    evaluationError(ctx, expr.p, `Expression exceeds ${MAX_EXPRESSION_DEPTH} evaluated levels`)
+  }
+  const evaluate = (child: Expr) => evalExpression(child, ctx, depth + 1)
   switch (expr.kind) {
     case 'literal': return expr.value
     case 'identifier': {
@@ -569,11 +672,11 @@ function evalExpression(expr: Expr, ctx: EvalContext): Value {
       if (!ctx.env.has(expr.name)) evaluationError(ctx, expr.p, `Unknown variable ${expr.name}`)
       return ctx.env.get(expr.name)
     }
-    case 'vector': return expr.items.map(item => evalExpression(item, ctx))
+    case 'vector': return registerArrayValue(expr.items.map(evaluate), ctx, expr.p)
     case 'range': {
-      const start = finiteNumber(evalExpression(expr.start, ctx), ctx, expr.p, 'range start')
-      const end = finiteNumber(evalExpression(expr.end, ctx), ctx, expr.p, 'range end')
-      const step = expr.step ? finiteNumber(evalExpression(expr.step, ctx), ctx, expr.p, 'range step') : 1
+      const start = finiteNumber(evaluate(expr.start), ctx, expr.p, 'range start')
+      const end = finiteNumber(evaluate(expr.end), ctx, expr.p, 'range end')
+      const step = expr.step ? finiteNumber(evaluate(expr.step), ctx, expr.p, 'range step') : 1
       if (step === 0) evaluationError(ctx, expr.p, 'Range step cannot be zero')
       const values: number[] = []
       const forward = step > 0
@@ -581,19 +684,19 @@ function evalExpression(expr: Expr, ctx: EvalContext): Value {
         values.push(value)
         if (values.length > MAX_RANGE_ITEMS) evaluationError(ctx, expr.p, `Range exceeds ${MAX_RANGE_ITEMS.toLocaleString()} items`)
       }
-      return values
+      return registerArrayValue(values, ctx, expr.p)
     }
     case 'unary': {
-      const value = evalExpression(expr.value, ctx)
+      const value = evaluate(expr.value)
       if (expr.op === TT.Not) return !truthy(value)
       const number = finiteNumber(value, ctx, expr.p, 'unary operand')
       return expr.op === TT.Minus ? -number : number
     }
     case 'binary': {
-      if (expr.op === TT.And) return truthy(evalExpression(expr.left, ctx)) && truthy(evalExpression(expr.right, ctx))
-      if (expr.op === TT.Or) return truthy(evalExpression(expr.left, ctx)) || truthy(evalExpression(expr.right, ctx))
-      const left = evalExpression(expr.left, ctx)
-      const right = evalExpression(expr.right, ctx)
+      if (expr.op === TT.And) return truthy(evaluate(expr.left)) && truthy(evaluate(expr.right))
+      if (expr.op === TT.Or) return truthy(evaluate(expr.left)) || truthy(evaluate(expr.right))
+      const left = evaluate(expr.left)
+      const right = evaluate(expr.right)
       if (expr.op === TT.EqEq) return deepEqual(left, right)
       if (expr.op === TT.NotEq) return !deepEqual(left, right)
       if ([TT.Lt, TT.Gt, TT.LtEq, TT.GtEq].includes(expr.op)) {
@@ -616,19 +719,19 @@ function evalExpression(expr: Expr, ctx: EvalContext): Value {
       if (!Number.isFinite(result)) evaluationError(ctx, expr.p, 'Expression produced a non-finite number')
       return result
     }
-    case 'ternary': return truthy(evalExpression(expr.test, ctx)) ? evalExpression(expr.yes, ctx) : evalExpression(expr.no, ctx)
+    case 'ternary': return truthy(evaluate(expr.test)) ? evaluate(expr.yes) : evaluate(expr.no)
     case 'index': {
-      const value = evalExpression(expr.value, ctx)
-      const index = Math.trunc(finiteNumber(evalExpression(expr.index, ctx), ctx, expr.p, 'index'))
+      const value = evaluate(expr.value)
+      const index = Math.trunc(finiteNumber(evaluate(expr.index), ctx, expr.p, 'index'))
       if (Array.isArray(value) || typeof value === 'string') return value[index] as Value
       evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
     }
-    case 'call': return evalBuiltin(expr, ctx)
+    case 'call': return evalBuiltin(expr, ctx, depth)
   }
 }
 
-function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext): Value {
-  const values = expr.args.map(arg => evalExpression(arg, ctx))
+function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
+  const values = expr.args.map(arg => evalExpression(arg, ctx, depth + 1))
   const nums = () => values.map(value => finiteNumber(value, ctx, expr.p, `${expr.name} argument`))
   const radians = (degrees: number) => degrees * Math.PI / 180
   const degrees = (radiansValue: number) => radiansValue * 180 / Math.PI
@@ -663,12 +766,12 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext): V
   if (expr.name === 'concat') {
     const result = values.flatMap(value => Array.isArray(value) ? value : [value])
     if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `concat() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
-    return result
+    return registerArrayValue(result, ctx, expr.p, 'concat() result')
   }
   if (expr.name === 'str') {
     const result = values.map(value => valueToString(value)).join('')
     if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `str() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
-    return result
+    return registerStringValue(result, ctx, expr.p, 'str() result')
   }
   evaluationError(ctx, expr.p, `Unsupported function ${expr.name}()`)
 }
@@ -721,7 +824,12 @@ function evalNodes(nodes: Statement[], parent: EvalContext, scoped = true): Shap
 
 function evalNode(node: CallNode, parent: EvalContext): Shape[] {
   if (parent.depth >= MAX_EVAL_DEPTH) evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
-  const ctx = { ...parent, depth: parent.depth + 1 }
+  const operationId = staticOperationId(node)
+  const ctx: EvalContext = {
+    ...parent,
+    depth: parent.depth + 1,
+    instancePath: `${parent.instancePath}>${operationId}`,
+  }
   const childShapes = () => evalNodes(node.children, ctx)
 
   switch (node.name) {
@@ -748,7 +856,12 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'square size') : [finiteNumber(raw, ctx, node.p, 'square size')]
       const dimensions: Vec2 = [size[0] ?? 1, size[1] ?? size[0] ?? 1]
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Square dimensions must be positive')
-      return [{ dimension: 2, geometry: ctx.wasm.CrossSection.square(dimensions, arg(node, 'center', 1, false, ctx) === true), color: nextColor() }]
+      return [{
+        dimension: 2,
+        geometry: ctx.wasm.CrossSection.square(dimensions, arg(node, 'center', 1, false, ctx) === true),
+        color: nextColor(),
+        entityId: currentEntityId(ctx),
+      }]
     }
     case 'circle': {
       let radius = arg(node, 'r', 0, undefined, ctx)
@@ -756,7 +869,12 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'circle diameter') / 2
       const r = finiteNumber(radius, ctx, node.p, 'circle radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Circle radius must be positive')
-      return [{ dimension: 2, geometry: ctx.wasm.CrossSection.circle(r, segments(node, ctx, 48, 3)), color: nextColor() }]
+      return [{
+        dimension: 2,
+        geometry: ctx.wasm.CrossSection.circle(r, segments(node, ctx, 48, 3)),
+        color: nextColor(),
+        entityId: currentEntityId(ctx),
+      }]
     }
     case 'polygon': return makePolygon(node, ctx)
     case 'translate': {
@@ -798,14 +916,19 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       const cut = arg(node, 'cut', 0, false, ctx) === true
       return childShapes().map(shape => {
         if (shape.dimension !== 3) evaluationError(ctx, node.p, 'projection() requires 3D children')
-        return { dimension: 2, geometry: cut ? shape.geometry.slice(0) : shape.geometry.project(), color: shape.color }
+        return {
+          dimension: 2,
+          geometry: cut ? shape.geometry.slice(0) : shape.geometry.project(),
+          color: shape.color,
+          entityId: currentEntityId(ctx),
+        }
       })
     }
     case 'offset': {
       const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
       return childShapes().map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
-        return { ...shape, geometry: shape.geometry.offset(distance) }
+        return { ...shape, geometry: shape.geometry.offset(distance), entityId: currentEntityId(ctx) }
       })
     }
     case 'group': case 'render': return childShapes()
@@ -927,7 +1050,12 @@ function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
   }
   // EvenOdd: the default Positive fill rule silently yields an EMPTY shape
   // for clockwise-wound point lists, which are perfectly valid in OpenSCAD.
-  return [{ dimension: 2, geometry: ctx.wasm.CrossSection.ofPolygons(polygons, 'EvenOdd'), color: nextColor() }]
+  return [{
+    dimension: 2,
+    geometry: ctx.wasm.CrossSection.ofPolygons(polygons, 'EvenOdd'),
+    color: nextColor(),
+    entityId: currentEntityId(ctx),
+  }]
 }
 
 function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
@@ -983,11 +1111,11 @@ function booleanShapes(shapes: Shape[], operation: 'union' | 'intersection', ctx
   if (dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
     const geometry = operation === 'union' ? ctx.wasm.Manifold.union(solids) : ctx.wasm.Manifold.intersection(solids)
-    return [{ dimension: 3, geometry, color: shapes[0].color }]
+    return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
   const geometry = operation === 'union' ? ctx.wasm.CrossSection.union(sections) : ctx.wasm.CrossSection.intersection(sections)
-  return [{ dimension: 2, geometry, color: shapes[0].color }]
+  return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
 }
 
 function differenceChildren(node: CallNode, ctx: EvalContext): Shape[] {
@@ -997,9 +1125,19 @@ function differenceChildren(node: CallNode, ctx: EvalContext): Shape[] {
   if (base.length === 0 || cutters.length === 0) return base
   if (base[0].dimension !== cutters[0].dimension) evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
   if (base[0].dimension === 3) {
-    return [{ dimension: 3, geometry: base[0].geometry.subtract((cutters[0] as Shape3D).geometry), color: base[0].color }]
+    return [{
+      dimension: 3,
+      geometry: base[0].geometry.subtract((cutters[0] as Shape3D).geometry),
+      color: base[0].color,
+      entityId: currentEntityId(ctx),
+    }]
   }
-  return [{ dimension: 2, geometry: base[0].geometry.subtract((cutters[0] as Shape2D).geometry), color: base[0].color }]
+  return [{
+    dimension: 2,
+    geometry: base[0].geometry.subtract((cutters[0] as Shape2D).geometry),
+    color: base[0].color,
+    entityId: currentEntityId(ctx),
+  }]
 }
 
 function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
@@ -1010,7 +1148,12 @@ function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] 
     const geometry = ctx.wasm.Manifold.hull(shapes.map(shape => (shape as Shape3D).geometry))
     return [trackedSolid(geometry, shapes[0].color, node, ctx)]
   }
-  return [{ dimension: 2, geometry: ctx.wasm.CrossSection.hull(shapes.map(shape => (shape as Shape2D).geometry)), color: shapes[0].color }]
+  return [{
+    dimension: 2,
+    geometry: ctx.wasm.CrossSection.hull(shapes.map(shape => (shape as Shape2D).geometry)),
+    color: shapes[0].color,
+    entityId: currentEntityId(ctx),
+  }]
 }
 
 function linearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
@@ -1054,16 +1197,31 @@ function evalFor(node: CallNode, ctx: EvalContext): Shape[] {
   const values = evalExpression(expression, ctx)
   if (!Array.isArray(values)) evaluationError(ctx, node.p, 'for() iterator must be a vector or range')
   const output: Shape[] = []
+  const occurrences = new Map<string, number>()
   for (const value of values) {
     // Count each iteration even when the body produces no statements/shapes —
     // nested empty-bodied loops are otherwise invisible to every other limit.
     if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
     const env = new Map(ctx.env)
     env.set(name, value)
-    output.push(...evalNodes(node.children, { ...ctx, env }, false))
+    const valueKey = encodeURIComponent(identityValue(value))
+    const occurrence = occurrences.get(valueKey) ?? 0
+    occurrences.set(valueKey, occurrence + 1)
+    output.push(...evalNodes(node.children, {
+      ...ctx,
+      env,
+      instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
+    }, false))
     if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
   }
   return output
+}
+
+function identityValue(value: Value): string {
+  if (Array.isArray(value)) return `[${value.map(identityValue).join(',')}]`
+  if (value === undefined) return 'undef'
+  if (typeof value === 'string') return JSON.stringify(value)
+  return String(value)
 }
 
 function evalUserModule(call: CallNode, module: ModuleNode, ctx: EvalContext): Shape[] {
@@ -1109,6 +1267,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
   if (source.length > MAX_SOURCE_LENGTH) throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
   paletteIndex = 0
   const ast = new Parser(tokenize(source), source).parseAll()
+  assignOperationIds(ast)
   const wasm = await getWasm()
   const warnings: string[] = []
   const modules = new Map<string, ModuleNode>()
@@ -1116,7 +1275,21 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
   const env = new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]])
   const quality = options.quality ?? 'full'
   const sourceReferences = new Map<number, MeshSourceReference>()
-  const ctx: EvalContext = { wasm, source, env, modules, warnings, quality, sourceReferences, depth: 0, budget: { ops: 0 } }
+  const ctx: EvalContext = {
+    wasm,
+    source,
+    env,
+    modules,
+    warnings,
+    quality,
+    sourceReferences,
+    depth: 0,
+    budget: { ops: 0 },
+    instancePath: 'root',
+    valueBudget: { used: 0 },
+    valueWeights: new WeakMap(),
+    valueDepths: new WeakMap(),
+  }
 
   try {
     const shapes = evalNodes(ast, ctx, false)
@@ -1165,6 +1338,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
         provenance.push({ triangleStart: 0, triangleEnd: mesh.numTri, source: null, backside: false })
       }
       meshes.push({
+        entityId: shape.entityId,
         vertices,
         indices,
         bvh,

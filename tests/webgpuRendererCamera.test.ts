@@ -39,6 +39,28 @@ describe('WebGPURenderer camera history integration', () => {
     expect(states).toEqual([true, false])
   })
 
+  it('restores a captured camera without adding recovery to view history', () => {
+    const renderer = new WebGPURenderer()
+    const restored = renderer.restoreCameraState({
+      yaw: -1.2,
+      pitch: 0.4,
+      distance: 125,
+      target: [10, -20, 30],
+      projection: 'orthographic',
+    })
+
+    expect(restored).toBe(true)
+    expect(renderer.getCameraState()).toEqual({
+      yaw: -1.2,
+      pitch: 0.4,
+      distance: 125,
+      target: [10, -20, 30],
+      projection: 'orthographic',
+    })
+    expect(renderer.canGoToPreviousView).toBe(false)
+    expect(renderer.restoreCameraState(renderer.getCameraState())).toBe(false)
+  })
+
   it('keeps camera snapshots chronological when an action interrupts a drag', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as {

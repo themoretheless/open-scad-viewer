@@ -11,6 +11,7 @@ import { identity, scale, translate, type Mat4 } from '../src/services/math3d'
 import type {
   MeshData,
   MeshSourceReference,
+  SceneEntityId,
 } from '../src/services/openscadParser'
 import type { MeshTopologyDiagnostics } from '../src/services/meshTopology'
 
@@ -19,6 +20,7 @@ function makeMesh(options: {
   indices?: number[]
   transform?: Mat4
   topology?: MeshTopologyDiagnostics
+  entityId?: SceneEntityId
 } = {}): MeshData {
   const positions = options.positions ?? [
     [0, 0, 0],
@@ -27,6 +29,7 @@ function makeMesh(options: {
     [1, 1, 0],
   ]
   return {
+    ...(options.entityId ? { entityId: options.entityId } : {}),
     vertices: Float32Array.from(positions.flatMap(([x, y, z]) => [x, y, z, 0, 0, 1])),
     indices: Uint32Array.from(options.indices ?? [0, 1, 2, 1, 3, 2]),
     color: [0.5, 0.6, 0.7, 1],
@@ -59,7 +62,7 @@ describe('mesh inspection', () => {
     expect(resolveProvenance(mesh, 2)).toBeNull()
   })
 
-  it('matches preview and full meshes by provenance while preserving duplicate order', () => {
+  it('matches unique legacy provenance and rejects ambiguous duplicate keys', () => {
     const source = (id: number): MeshSourceReference => ({
       id,
       originalId: id + 100,
@@ -75,7 +78,42 @@ describe('mesh inspection', () => {
     const previous = [tagged(20), tagged(10), tagged(20), makeMesh()]
     const replacement = [tagged(10), tagged(20), tagged(20), makeMesh(), tagged(30)]
 
-    expect(matchMeshesByProvenance(previous, replacement)).toEqual([1, 0, 2, 3, -1])
+    expect(matchMeshesByProvenance(previous, replacement)).toEqual([1, -1, -1, 3, -1])
+  })
+
+  it('prefers stable entity identity when provenance is duplicated and scene order changes', () => {
+    const sharedSource: MeshSourceReference = {
+      id: 20,
+      originalId: 120,
+      start: 20,
+      end: 25,
+      label: 'cube()',
+    }
+    const tagged = (entityId: SceneEntityId) => {
+      const mesh = makeMesh({ entityId })
+      mesh.provenance = [{ triangleStart: 0, triangleEnd: 2, source: sharedSource, backside: false }]
+      return mesh
+    }
+    const first = tagged('entity:first')
+    const second = tagged('entity:second')
+
+    expect(matchMeshesByProvenance([first, second], [second, first])).toEqual([1, 0])
+  })
+
+  it('does not fall back to shared provenance when stable entity identity changed', () => {
+    const source: MeshSourceReference = {
+      id: 20,
+      originalId: 120,
+      start: 20,
+      end: 25,
+      label: 'cube()',
+    }
+    const previous = makeMesh({ entityId: 'entity:old' })
+    previous.provenance = [{ triangleStart: 0, triangleEnd: 2, source, backside: false }]
+    const replacement = makeMesh({ entityId: 'entity:new' })
+    replacement.provenance = [{ triangleStart: 0, triangleEnd: 2, source, backside: false }]
+
+    expect(matchMeshesByProvenance([previous], [replacement])).toEqual([-1])
   })
 
   it('reports counts, transformed world bounds and topology', () => {

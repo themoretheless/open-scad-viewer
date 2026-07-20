@@ -1,32 +1,264 @@
 import type { GeometryQuality, MeshData } from './openscadParser'
 
-export interface GeometryRequest {
-  id: number
-  source: string
+/**
+ * Increment this when the worker wire format changes incompatibly. Keeping the
+ * version in every message makes an old, cached worker fail visibly instead of
+ * accidentally publishing data into a newer application state.
+ */
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 2 as const
+
+export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
+export type GeometryJobId = number
+export type DocumentRevision = number
+
+export type GeometryBuildPhase = 'queued' | 'initializing' | 'compiling' | 'serializing' | 'complete'
+export type GeometryCancelReason = 'user' | 'superseded' | 'disposed' | 'worker-restart'
+
+export interface GeometryBuildError {
+  name: string
+  message: string
+  line?: number
+  column?: number
+}
+
+interface GeometryJobEnvelope {
+  protocolVersion: GeometryWorkerProtocolVersion
+  documentRevision: DocumentRevision
+  jobId: GeometryJobId
   quality: GeometryQuality
 }
 
-export interface GeometrySuccess {
-  id: number
-  ok: true
+export interface GeometryBuildRequest extends GeometryJobEnvelope {
+  type: 'build'
+  source: string
+}
+
+export interface GeometryCancelRequest extends Omit<GeometryJobEnvelope, 'quality'> {
+  type: 'cancel'
+  reason: GeometryCancelReason
+}
+
+export type GeometryWorkerRequest = GeometryBuildRequest | GeometryCancelRequest
+
+export interface GeometryBuildAccepted extends GeometryJobEnvelope {
+  status: 'accepted'
+  phase: 'queued'
+}
+
+export interface GeometryBuildStarted extends GeometryJobEnvelope {
+  status: 'started'
+  phase: 'initializing' | 'compiling'
+}
+
+export interface GeometryBuildProgress extends GeometryJobEnvelope {
+  status: 'progress'
+  phase: GeometryBuildPhase
+  /** Null means that the current kernel phase cannot report meaningful completion. */
+  progress: number | null
+}
+
+export interface GeometryBuildSuccess extends GeometryJobEnvelope {
+  status: 'succeeded'
+  phase: 'complete'
   meshes: MeshData[]
   warnings: string[]
   volume: number
   surfaceArea: number
-  quality: GeometryQuality
   durationMs: number
 }
 
-export interface GeometryFailure {
-  id: number
-  ok: false
-  error: {
-    name: string
-    message: string
-    line?: number
-    column?: number
+export interface GeometryBuildFailure extends GeometryJobEnvelope {
+  status: 'failed'
+  phase: GeometryBuildPhase
+  error: GeometryBuildError
+  durationMs: number
+}
+
+export interface GeometryBuildCancelled extends GeometryJobEnvelope {
+  status: 'cancelled'
+  phase: GeometryBuildPhase
+  reason: GeometryCancelReason
+  durationMs: number
+}
+
+export interface GeometryBuildStale extends GeometryJobEnvelope {
+  status: 'stale'
+  phase: GeometryBuildPhase
+  supersededBy?: {
+    documentRevision: DocumentRevision
+    jobId: GeometryJobId
   }
   durationMs: number
 }
 
-export type GeometryResponse = GeometrySuccess | GeometryFailure
+export type GeometryBuildTerminal =
+  | GeometryBuildSuccess
+  | GeometryBuildFailure
+  | GeometryBuildCancelled
+  | GeometryBuildStale
+
+export type GeometryWorkerEvent =
+  | GeometryBuildAccepted
+  | GeometryBuildStarted
+  | GeometryBuildProgress
+  | GeometryBuildTerminal
+
+const QUALITIES = new Set<GeometryQuality>(['preview', 'full'])
+const PHASES = new Set<GeometryBuildPhase>(['queued', 'initializing', 'compiling', 'serializing', 'complete'])
+const CANCEL_REASONS = new Set<GeometryCancelReason>(['user', 'superseded', 'disposed', 'worker-restart'])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0
+}
+
+function isNonNegativeFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+function isPhase(value: unknown): value is GeometryBuildPhase {
+  return typeof value === 'string' && PHASES.has(value as GeometryBuildPhase)
+}
+
+function isQuality(value: unknown): value is GeometryQuality {
+  return typeof value === 'string' && QUALITIES.has(value as GeometryQuality)
+}
+
+function isCancelReason(value: unknown): value is GeometryCancelReason {
+  return typeof value === 'string' && CANCEL_REASONS.has(value as GeometryCancelReason)
+}
+
+function isBuildError(value: unknown): value is GeometryBuildError {
+  if (!isRecord(value) || typeof value.name !== 'string' || typeof value.message !== 'string') return false
+  return (value.line === undefined || (isNonNegativeSafeInteger(value.line) && value.line > 0))
+    && (value.column === undefined || (isNonNegativeSafeInteger(value.column) && value.column > 0))
+}
+
+function isMeshSourceReference(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  return isNonNegativeSafeInteger(value.id)
+    && isNonNegativeSafeInteger(value.originalId)
+    && isNonNegativeSafeInteger(value.start)
+    && isNonNegativeSafeInteger(value.end)
+    && value.end >= value.start
+    && typeof value.label === 'string'
+    && (value.operationId === undefined || (typeof value.operationId === 'string' && value.operationId.startsWith('op:')))
+    && (value.instanceId === undefined || (typeof value.instanceId === 'string' && value.instanceId.startsWith('entity:')))
+}
+
+function isMeshProvenanceRun(value: unknown, triangleCount: number): boolean {
+  if (!isRecord(value)) return false
+  return isNonNegativeSafeInteger(value.triangleStart)
+    && isNonNegativeSafeInteger(value.triangleEnd)
+    && value.triangleEnd >= value.triangleStart
+    && value.triangleEnd <= triangleCount
+    && typeof value.backside === 'boolean'
+    && (value.source === null || isMeshSourceReference(value.source))
+}
+
+function isMeshData(value: unknown): value is MeshData {
+  if (!isRecord(value)) return false
+  if (!(value.vertices instanceof Float32Array)
+    || !(value.indices instanceof Uint32Array)
+    || !(value.edgeIndices instanceof Uint32Array)
+    || !(value.faceIds instanceof Uint32Array)
+    || !(value.transform instanceof Float32Array)
+    || !isRecord(value.bvh)
+    || !isRecord(value.topology)) return false
+
+  const triangleCount = value.indices.length / 3
+  const bvh = value.bvh
+  const topology = value.topology
+  return (value.entityId === undefined || (typeof value.entityId === 'string' && value.entityId.startsWith('entity:')))
+    && value.vertices.length % 6 === 0
+    && Number.isInteger(triangleCount)
+    && value.edgeIndices.length % 2 === 0
+    && value.faceIds.length === triangleCount
+    && value.transform.length === 16
+    && Array.isArray(value.color)
+    && value.color.length === 4
+    && value.color.every(component => typeof component === 'number' && Number.isFinite(component))
+    && bvh.version === 1
+    && isNonNegativeSafeInteger(bvh.vertexStride)
+    && bvh.vertexStride > 0
+    && isNonNegativeSafeInteger(bvh.leafSize)
+    && bvh.leafSize > 0
+    && isNonNegativeSafeInteger(bvh.nodeCount)
+    && bvh.bounds instanceof Float32Array
+    && bvh.nodes instanceof Uint32Array
+    && bvh.triangles instanceof Uint32Array
+    && bvh.bounds.length === bvh.nodeCount * 6
+    && bvh.nodes.length === bvh.nodeCount * 2
+    && Array.isArray(value.provenance)
+    && value.provenance.every(run => isMeshProvenanceRun(run, triangleCount))
+    && isNonNegativeSafeInteger(topology.boundary)
+    && isNonNegativeSafeInteger(topology.crease)
+    && isNonNegativeSafeInteger(topology.nonManifold)
+    && isNonNegativeSafeInteger(topology.degenerate)
+}
+
+function hasValidEventEnvelope(candidate: Record<string, unknown>): boolean {
+  return candidate.protocolVersion === GEOMETRY_WORKER_PROTOCOL_VERSION
+    && isNonNegativeSafeInteger(candidate.documentRevision)
+    && isNonNegativeSafeInteger(candidate.jobId)
+    && isQuality(candidate.quality)
+    && isPhase(candidate.phase)
+}
+
+export function isGeometryWorkerRequest(value: unknown): value is GeometryWorkerRequest {
+  if (!isRecord(value)) return false
+  const candidate = value as Partial<GeometryWorkerRequest>
+  const envelopeIsValid = candidate.protocolVersion === GEOMETRY_WORKER_PROTOCOL_VERSION
+    && (candidate.type === 'build' || candidate.type === 'cancel')
+    && isNonNegativeSafeInteger(candidate.documentRevision)
+    && isNonNegativeSafeInteger(candidate.jobId)
+  if (!envelopeIsValid) return false
+  if (candidate.type === 'build') {
+    const build = candidate as Partial<GeometryBuildRequest>
+    return typeof build.source === 'string'
+      && isQuality(build.quality)
+  }
+  const cancel = candidate as Partial<GeometryCancelRequest>
+  return isCancelReason(cancel.reason)
+}
+
+export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEvent {
+  if (!isRecord(value) || !hasValidEventEnvelope(value)) return false
+
+  switch (value.status) {
+    case 'accepted':
+      return value.phase === 'queued'
+    case 'started':
+      return value.phase === 'initializing' || value.phase === 'compiling'
+    case 'progress':
+      return value.progress === null
+        || (typeof value.progress === 'number'
+          && Number.isFinite(value.progress)
+          && value.progress >= 0
+          && value.progress <= 1)
+    case 'succeeded':
+      return value.phase === 'complete'
+        && Array.isArray(value.meshes)
+        && value.meshes.every(isMeshData)
+        && Array.isArray(value.warnings)
+        && value.warnings.every(warning => typeof warning === 'string')
+        && isNonNegativeFiniteNumber(value.volume)
+        && isNonNegativeFiniteNumber(value.surfaceArea)
+        && isNonNegativeFiniteNumber(value.durationMs)
+    case 'failed':
+      return isBuildError(value.error) && isNonNegativeFiniteNumber(value.durationMs)
+    case 'cancelled':
+      return isCancelReason(value.reason) && isNonNegativeFiniteNumber(value.durationMs)
+    case 'stale':
+      return (value.supersededBy === undefined
+          || (isRecord(value.supersededBy)
+            && isNonNegativeSafeInteger(value.supersededBy.documentRevision)
+            && isNonNegativeSafeInteger(value.supersededBy.jobId)))
+        && isNonNegativeFiniteNumber(value.durationMs)
+    default:
+      return false
+  }
+}

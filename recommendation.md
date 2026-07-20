@@ -1,42 +1,211 @@
-# Recommendations — the live backlog (post-rewrite)
+# Engineering debt register
 
-The previous content of this file cataloged defects of the pre-rewrite prototype ("Top 50 / 250 problems / 200 ideas"); the Manifold rewrite made most of it either done (real CSG, expressions/modules/loops, line-column errors, worker, components, tests) or moot. This is the actualized backlog. Sources: the 7-role panel review ([docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md)), the research passes under [docs/research/](docs/research/), and the feature-branch catalog (`recommendation.md` on `claude/top-issues-architecture-sync-00p2q9`, 500 items — still useful for ported features).
+This is the living, prioritized debt register for OpenSCAD Viewer. It replaces
+the historical hundreds-of-items wishlist, which mixed completed work, product
+ideas and obsolete prototype findings. Architecture and invariants live in
+[architecture.md](architecture.md). Evidence also comes from the
+[seven-role rewrite review](docs/review-of-main-rewrite.md) and the research
+under [`docs/research`](docs/research).
 
-Status legend: `[ ]` open · `[x]` done.
+## Status vocabulary
 
-## P0 — correctness & robustness (panel findings)
+- **Done**: implemented with focused regression coverage.
+- **In progress**: a usable foundation exists; listed acceptance remains.
+- **Open**: no complete implementation exists.
+- **Decision**: product/licensing direction must precede implementation.
 
-- [x] polyhedron winding (CW→CCW) + `mesh.merge()`; EvenOdd fill rule for polygon(); customizer valueStart corruption; evaluation-step / value-size / extrude-slices / share-hash caps; worker id NaN-guard; positioned kernel errors for extrude/revolve; STL header byte-truncation. *(fixed after the review)*
-- [ ] Persistent worker + cooperative cancellation: stop terminate-as-cancel (Manifold WASM re-instantiates on every restart); ready-handshake, depth-1 overwrite queue, abort checkpoints in the evaluator; watchdog terminate only as last resort.
-- [ ] Skip the full build when the preview reported no `$fn` clamping (halves pipeline work per edit).
-- [ ] `GeometryKernel` interface: evaluator calls the kernel through it; Manifold primary; results tagged `exact | approximate`; wrap all remaining kernel calls into positioned errors; normalize non-`Error` WASM throws.
-- [ ] Move MeshData/protocol types to a neutral `core/mesh.ts` (parser currently the type hub for renderer/export/inspection); colocate a `meshTransferables()` helper; ESLint `no-restricted-imports` guard keeping parser/kernel worker-only.
-- [ ] Extract and test the build-result reconciliation (App.vue's ~70-line selection/visibility restore) as `applyBuildResult()`.
-- [ ] SafeStorage port from the feature branch: quota-aware writes with a user-visible failure signal (current `writeStorage` swallows quota errors — silent autosave loss), schema-version key, `scad-tabs`/`scad-code` migration shim.
+P0 constrains correctness or further architecture, P1 constrains scalability or
+core product work, and P2 is important hardening/UX.
 
-## P1 — performance (verified hot spots)
+## Completed foundation
 
-- [ ] Face-hover overlays: precompute faceId→triangles in the worker; persistent pre-sized GPU buffers via `writeBuffer` (currently O(all triangles) scan + buffer destroy/create per pointer frame).
-- [ ] Bounds in the worker, cached on MeshData (kills the per-vertex allocating `measureMeshBounds` main-thread stall and the `inspectMesh` rescans in computeds).
-- [ ] Dirty-index uniform writes in `updateMeshStyles` (currently rewrites every mesh's uniform on any hover/selection change); emit hover callback only on target change.
-- [ ] Prototype-chained scopes instead of `new Map(env)` per scope/iteration in the evaluator; hoist tokenizer operator tables; single-`Float32Array` vertex interleave when `numProp === 6`.
-- [ ] Debounce caret-driven source highlighting; reuse overlay buffers; newline-offset table + binary search for line/column derivation in `sceneRows`.
-- [ ] Batch `setMeshesVisibility(bool[])` (visibility restore currently recomputes scene bounds + overlays per mesh).
+Reopen these only for a demonstrated regression.
 
-## P2 — UX & product (designer findings + ports from the feature branch)
+| Status | Capability | Evidence |
+| --- | --- | --- |
+| Done | Real CSG and geometry metrics | Manifold-backed evaluator and geometry tests in [`openscadParser.ts`](src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
+| Done | Panel-review geometry correctness fixes | Polyhedron winding/merge, EvenOdd polygon fill, positive/positioned extrusion and positioned revolution failures have regressions. |
+| Done | Input/resource hardening | Source/AST/depth/shape/triangle limits plus evaluation-step, evaluated-value, `concat`/`str`, extrusion-slice and pre-decode share-hash caps. |
+| Done | Customizer and STL boundary fixes | Structural literal offsets prevent source corruption; binary STL headers truncate encoded UTF-8 to 80 bytes. |
+| Done | Protocol-v2-only geometry builds | Runtime-validated messages and transfer payloads, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](src/services/buildCoordinator.ts). |
+| Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](src/services/workspaceDocument.ts) and revision/job envelopes. |
+| Done | Stable operation/evaluated-entity identity | Structural `SourceOperationId`, dynamic `SceneEntityId`, exact spans and ambiguity-safe replacement matching. |
+| Done | Two-level accelerated picking | Scene AABB hierarchy plus lazy exact traversal of per-mesh triangle BVHs. |
+| Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry and App-driven device-loss rehydration with focused tests. |
+| Done | One declarative command inventory | [`commandRegistry.ts`](src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
+| Done | Repeatable quality gate | Typecheck, Vitest and production build run through `npm run check` in CI. |
 
-- [ ] Wire up or remove outliner multi-select (`{additive, range}` is emitted and silently dropped — Ctrl-click does nothing).
-- [ ] ViewCube: rotate with the camera (it permanently claims ISO), ortho snap on face views, ≥24px hit targets for Back/Left/Bottom, camera tweens.
-- [ ] Viewport shortcuts: move to the global handler with modifier/input guards (Ctrl+F over canvas currently hijacked; palette advertises keys that only fire with canvas focus); one declarative command registry feeding palette + keymaps + labels (three hand-synced structures today).
-- [ ] Touch: two-pointer pinch/pan (input layer is single-pointer — mobile zoom impossible); keyboard camera (arrows orbit, +/- zoom) with `role="application"` on the canvas.
-- [ ] Dock: resizable, side-by-side Scene+Inspect (selection currently forces tab ping-pong); replace `/` `.` `×` HUD glyphs with labeled actions; outliner context menu.
-- [ ] Editor: line numbers + click-to-line from errors; customizer edits should splice text (wholesale `code.value` replacement destroys native undo); then port find/replace + undo snapshots from the feature branch; CodeMirror 6 as the end state.
-- [ ] i18n: one shared dictionary module (port the feature branch's ru/en/de/zh), kill per-component copy tables and "English / Русский" dual strings, browser-language detection, `<html lang>` sync.
-- [ ] A11y: tree semantics for the outliner, tablist for dock tabs, un-hide the shortcut legends (currently `aria-hidden` 9px), live result counts in the palette, typographic floor ≥11px, tokenize the three divergent axis-color palettes.
-- [ ] Ports by user value: multi-tab editing → themes → examples gallery → export dialog (3MF + options) → STL import (with its header-validation) → PWA/offline → keyboard cheatsheet.
+## Active register
 
-## P3 — process
+### R1 — Make cancellation cooperative inside compilation
 
-- [ ] Tests for: worker stale-id gating, Manifold error paths (empty difference, invalid polyhedron), recursion/limit budgets, STL under mirroring (normals+winding bytes), customizer comment/string edge cases, `WebGPURenderer.init()` degradation, CommandPalette component behavior (needs jsdom env).
-- [ ] ESLint flat config + lint script + CI step; coverage reporting; import-boundary rules (main thread must not value-import the parser).
-- [ ] Feature-parity checklist for retiring the feature branch; freeze it to security-only once the test suite and SafeStorage land here.
+- **Priority/status:** P0 / In progress
+- **Evidence:** `BuildCoordinator` keeps same-revision preview/full work on a
+  warm Worker and safely supersedes revisions. A synchronous Manifold call
+  cannot observe messages, so the configured grace still ends in Worker
+  replacement when no checkpoint is reached.
+- **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
+  completed intermediate work.
+- **Acceptance remaining:** cancellation checkpoints between evaluator/kernel/
+  analysis phases; depth-one latest-work queue; phase timings; hard replacement
+  only as watchdog; real-browser tests for App↔Worker publication, supersession,
+  crash and disposal.
+
+### R2 — Avoid unconditional duplicate builds
+
+- **Priority/status:** P0 / Open
+- **Evidence:** each edit schedules a reduced preview and an unconditional full
+  pass even when preview quality did not alter tessellation.
+- **Risk:** parse/evaluation/kernel/transfer work can run twice for no visible or
+  export difference.
+- **Acceptance:** preview reports whether quality clamping changed geometry;
+  skip or reuse the full pass when equivalent; content/revision/quality cache
+  rules are explicit and covered by timing/correctness tests.
+
+### R3 — Split compiler, kernel and artifact contracts
+
+- **Priority/status:** P0 / Open
+- **Evidence:** lexer/parser, scope evaluation, direct Manifold calls,
+  tessellation, provenance, topology and BVH construction remain in
+  [`openscadParser.ts`](src/services/openscadParser.ts); `MeshData` makes that
+  file the type hub for renderer/export/inspection.
+- **Risk:** language, kernel and inspection changes invalidate the entire
+  pipeline and main-thread modules depend on a Worker implementation detail.
+- **Acceptance:** typed parse→bind/diagnose→immutable operation IR→kernel→
+  tessellation→analysis phases; neutral core mesh/protocol contracts;
+  `GeometryKernel` interface with positioned error normalization; import guard
+  against main-thread parser/kernel value imports; phase tests/timing and
+  content-addressed subtree caching.
+
+### R4 — Establish one owner for scene and viewport state
+
+- **Priority/status:** P0 / Open
+- **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
+  isolation, visibility, projection and camera-related state; build-result and
+  device-recovery reconciliation are long imperative paths in
+  [`App.vue`](src/App.vue).
+- **Risk:** every rebuild/recovery manually reconstructs interaction state and
+  new tools can create synchronization bugs.
+- **Acceptance:** typed document/build/scene/viewport controllers have explicit
+  ownership; renderer consumes state/deltas and emits intents; reconciliation
+  is a pure tested service; App is composition rather than workflow logic; no
+  mirrored writable state exists without a documented adapter.
+
+### R5 — Separate scene entities from geometry artifacts
+
+- **Priority/status:** P1 / In progress
+- **Evidence:** stable entity IDs exist, but `MeshData` eagerly combines render
+  vertices, topology, provenance, semantic edges and BVH; transforms are
+  generally baked and array position is still a common render/UI index.
+- **Risk:** every build transfers and retains every artifact, repeated geometry
+  cannot be instanced, and inspection work cannot be deferred.
+- **Acceptance:** entity-keyed scene nodes reference immutable geometry assets;
+  material/transform/visibility are independent; artifacts are versioned and
+  lazily requestable; preview/full preserve entity identity.
+
+### R6 — Retain GPU resources and remove verified interaction hot paths
+
+- **Priority/status:** P1 / Open
+- **Evidence:** `setMeshes()` uploads a complete replacement and destroys old
+  buffers; bounds are rescanned; face/source overlays scan mesh data and create
+  buffers; style changes rewrite every object uniform; visibility restoration
+  updates objects one at a time.
+- **Risk:** edit and hover latency scale with the full scene and cause avoidable
+  allocation/queue pressure.
+- **Acceptance:** entity/content-keyed GPU cache and scene deltas; worker-cached
+  bounds and faceId→triangle lookup; persistent bounded overlay buffers; dirty
+  uniform writes; batch visibility API; incremental TLAS rebuild/refit;
+  benchmarks for all paths.
+
+### R7 — Decompose the renderer without changing interaction behavior
+
+- **Priority/status:** P1 / Open
+- **Evidence:** [`webgpuRenderer.ts`](src/services/webgpuRenderer.ts) owns device
+  lifecycle, pipelines/resources, camera/input, picking, visibility, selection,
+  measurements, sections and overlays.
+- **Risk:** recovery, interaction and draw changes share broad mutable state and
+  are difficult to test independently.
+- **Acceptance:** device/surface manager, retained render world, camera/input,
+  picker and overlay composer have narrow contracts and one resource owner;
+  lifecycle/camera/picker tests run without a real adapter; existing Plasticity-
+  inspired controls and invalidation-driven redraw remain stable.
+
+### R8 — Decide compatibility before multi-file semantics
+
+- **Priority/status:** P1 / Decision
+- **Evidence:** the strict subset excludes `include`, `use`, imports and user
+  functions; the workspace is single-document.
+- **Risk:** piecemeal project support can look OpenSCAD-compatible while scopes,
+  paths and dependency behavior differ.
+- **Acceptance:** record official-runtime/GPL compatibility versus a versioned
+  independent language; publish a conformance contract; then define virtual
+  filesystem, dependency resolution and sandbox rules.
+
+### R9 — Build reliable storage and a structured editor/workspace
+
+- **Priority/status:** P1 / Open; multi-file portion blocked on R8
+- **Evidence:** persistence validates/version-tags one localStorage snapshot and
+  migrates `scad-code`, but write/quota failures are returned and ignored. The
+  editor is a textarea and diagnostics are not decorations.
+- **Risk:** autosave can fail silently; customizer replacements disrupt native
+  undo; source↔geometry navigation remains caret-based.
+- **Acceptance:** quota-aware storage with visible failure/recovery, migrations
+  including feature-branch `scad-tabs`, IndexedDB snapshots, syntax-aware editor,
+  structured diagnostics/navigation and source-splice edits preserving undo.
+
+### R10 — Close verified interaction and accessibility gaps
+
+- **Priority/status:** P2 / Open
+- **Evidence:** Outliner emits additive/range selection that App drops; ViewCube
+  is static and does not snap face views to orthographic; camera input tracks one
+  pointer; several dock/outliner semantics and small targets remain weak.
+- **Risk:** controls advertise behavior they do not provide, and mobile/keyboard
+  workflows are incomplete.
+- **Acceptance:** implement or remove multi-select affordances; camera-synced
+  ViewCube with ortho snap and adequate targets; pinch/pan plus keyboard camera;
+  accessible tree/tablist/live-result semantics; resizable side-by-side
+  Scene/Inspect workflow.
+
+### R11 — Add conformance, browser and performance gates
+
+- **Priority/status:** P1 / Open
+- **Evidence:** CI runs typecheck, unit tests and build, but no real-browser
+  Worker/WebGPU flow, visual comparison, parser fuzz corpus, coverage/lint or
+  performance budget.
+- **Risk:** GPU lifecycle, focus/layout, pathological input and latency
+  regressions can pass unit tests.
+- **Acceptance:** language conformance fixtures and bounded generated inputs;
+  Playwright interaction/accessibility smoke; deterministic visual fixtures;
+  lint/import-boundary and meaningful coverage rules; budgets for rapid edits,
+  1,000 bodies, 750,000 triangles, transfer, overlays, TLAS query and GPU upload.
+
+### R12 — Define transparency and backend quality tiers
+
+- **Priority/status:** P2 / Decision
+- **Evidence:** transparent bodies are sorted back-to-front, which is adequate
+  for separated bodies but not intersecting transparent triangles; WebGPU has
+  no fallback.
+- **Risk:** overlapping x-ray geometry can be visually wrong and unsupported
+  browsers cannot display the model.
+- **Acceptance:** document a WebGPU-only support tier or add a tested fallback;
+  expose the transparency limitation; if correctness is required, implement and
+  visually test weighted OIT, depth peeling or another explicit strategy.
+
+### R13 — Converge feature work without merging competing architecture
+
+- **Priority/status:** P2 / Open
+- **Evidence:** the frozen feature branch contains SafeStorage, four-locale i18n,
+  multi-tab/undo/find, exporters/import, examples, PWA/offline and tests, but was
+  built around a competing large-component architecture. The review identifies
+  this rewrite as the structural base.
+- **Risk:** a wholesale merge restores resolved coupling and storage-schema
+  conflicts; ignoring the donor loses tested user value.
+- **Acceptance:** maintain a parity checklist; port leaf infrastructure and
+  tests through current contracts one feature per change; ship one-shot storage
+  migration; freeze and retire the donor branch after parity decisions.
+
+## Update rule
+
+Any change that materially affects an item must update its status, evidence or
+acceptance criteria here. Completed items move to the foundation table.
+Speculative product ideas belong in research or an issue tracker, not this file.

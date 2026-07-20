@@ -13,10 +13,12 @@ instead of a misleading preview.
   `children()`.
 - 3D primitives, 2D shapes, `linear_extrude()`, `rotate_extrude()`,
   `projection()`, transforms, colors, and polyhedra.
-- Cancellable preview → full geometry compilation in a dedicated Worker with
-  stale-result protection, source/AST/tessellation budgets, and transferable
-  mesh, semantic-edge, provenance, and BVH buffers.
-- Z-up WebGPU viewport with BVH-accelerated preselection/picking, point/face/
+- Versioned preview → full geometry compilation in a warm dedicated Worker,
+  with latest-result publication, hard preemption of superseded synchronous
+  work, source/AST/tessellation budgets, and transferable geometry artifacts.
+- Stable source-operation and evaluated-entity identities preserve selection,
+  isolation, and visibility across preview/full builds and safe source edits.
+- Z-up WebGPU viewport with scene-AABB + triangle-BVH preselection/picking, point/face/
   body selection modes, focus/isolate/hide, shaded/semantic-edge/x-ray display,
   bounded front-to-back click cycling, an interactive view cube, fit/reset,
   Previous View history, standard views, grid control, perspective/orthographic
@@ -27,8 +29,8 @@ instead of a misleading preview.
 - Lightweight OpenSCAD Customizer controls for top-level literal variables,
   including `// [min:step:max]` sliders and choice lists.
 - Binary STL and OBJ export with object transforms baked into the result.
-- Open/save/drag-and-drop `.scad` files, shareable source links, local draft
-  persistence, RU/EN UI, light/dark themes, and a resizable workspace.
+- Open/save/drag-and-drop `.scad` files, shareable source links, versioned local
+  workspace persistence, RU/EN UI, light/dark themes, and a resizable workspace.
 - Strict diagnostics and tests for booleans, transforms, modules, loops,
   extrusion, projection math, and all bundled examples.
 
@@ -91,22 +93,31 @@ Apache-2.0 `manifold-3d` package and implements a strict language subset.
 Currently unsupported features include `include`/`use`, user functions,
 `import()`, `surface()`, `text()`, Minkowski operations, and advanced OpenSCAD
 Customizer annotations. These fail explicitly. Complexity is bounded to protect
-the browser: source length, AST size, recursion, range size, object count,
-`$fn`, and final triangle count all have limits.
+the browser: source length, AST size, parse/evaluation depth, evaluated-value
+allocation, range size, object count, `$fn`, and final triangle count all have
+limits.
 
 ## Architecture
 
 - `src/services/openscadParser.ts`: lexer, expression/statement parser,
   evaluator, Manifold geometry conversion, diagnostics, and budgets.
+- `src/services/buildCoordinator.ts`: protocol-v2 jobs, preview/full ordering,
+  stale-result rejection, cancellation, and Worker replacement.
+- `src/services/workspaceDocument.ts`: validated, migratable single-document
+  persistence with monotonic revisions.
 - `src/workers/geometry.worker.ts`: asynchronous compilation and transferable
-  mesh response protocol.
+  protocol-v2 geometry results.
 - `src/services/webgpuRenderer.ts`: WebGPU resource lifecycle, lighting,
   camera, BVH picking/preselection, measurement and section overlays, grid,
   input, resize, and event-driven rendering.
 - `src/services/meshBvh.ts`: compact transferable triangle BVH and raycast.
+- `src/services/sceneAabbIndex.ts`: scene-level AABB hierarchy for rejecting
+  whole bodies before exact triangle traversal.
 - `src/services/meshTopology.ts`: boundary/crease/non-manifold edge extraction.
 - `src/services/meshInspection.ts`: provenance, bounds, hit, and measurement
   helpers.
+- `src/services/commandRegistry.ts`: one typed inventory for command-palette
+  metadata and scope-aware keyboard routing.
 - `src/components/`: command palette, ViewCube, Scene Outliner, Inspect, and
   Customizer panels.
 - `src/App.vue`: workspace UI, file actions, settings, stale/error state, and

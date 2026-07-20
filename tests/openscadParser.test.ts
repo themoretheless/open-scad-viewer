@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { OpenSCADParseError, parseOpenSCAD, type MeshData } from '../src/services/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
+import { matchMeshesByProvenance } from '../src/services/meshInspection'
 
 function bounds(meshes: MeshData[]) {
   const min = [Infinity, Infinity, Infinity]
@@ -56,6 +57,67 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
     expect(bounds(result.meshes).max[0]).toBeCloseTo(5, 5)
   })
 
+  it('keeps stable, distinct entity identities across quality for repeated module and loop instances', async () => {
+    const source = `
+      module peg(x = 0) {
+        translate([x, 0, 0]) sphere(r = 1, $fn = 96);
+      }
+      for (i = [2, 0, 2]) peg(i);
+      peg(6);
+      peg(6);
+    `
+    const preview = await parseOpenSCAD(source, { quality: 'preview' })
+    const full = await parseOpenSCAD(source, { quality: 'full' })
+    const previewIds = preview.meshes.map(mesh => mesh.entityId)
+    const fullIds = full.meshes.map(mesh => mesh.entityId)
+
+    expect(preview.meshes).toHaveLength(5)
+    expect(new Set(previewIds).size).toBe(5)
+    expect(fullIds).toEqual(previewIds)
+    expect(matchMeshesByProvenance(preview.meshes, full.meshes, { sameSourceSnapshot: true }))
+      .toEqual([0, 1, 2, 3, 4])
+    expect(full.meshes[0].indices.length).toBeGreaterThan(preview.meshes[0].indices.length)
+
+    const references = preview.meshes.map(mesh => mesh.provenance.find(run => run.source)?.source)
+    expect(references.every(reference => reference?.operationId && reference.instanceId)).toBe(true)
+    expect(new Set(references.map(reference => reference?.operationId)).size).toBe(1)
+    expect(new Set(references.map(reference => reference?.instanceId)).size).toBe(5)
+    expect(references.map(reference => reference?.instanceId)).toEqual(previewIds)
+  })
+
+  it('matches reordered loop values by evaluated identity rather than scene order', async () => {
+    const before = await parseOpenSCAD('for (i = [0, 2, 4]) translate([i, 0, 0]) cube(1);')
+    const after = await parseOpenSCAD('for (i = [4, 0, 2]) translate([i, 0, 0]) cube(1);')
+
+    expect(matchMeshesByProvenance(before.meshes, after.meshes)).toEqual([2, 0, 1])
+  })
+
+  it('keeps identities through whitespace edits and reordering unlike source offsets', async () => {
+    const before = await parseOpenSCAD('cube(1);\ntranslate([3, 0, 0]) sphere(1);')
+    const after = await parseOpenSCAD(`
+      // An unrelated edit moves every source offset.
+      translate([3, 0, 0]) sphere(1);
+
+      cube(2);
+    `)
+
+    expect(after.meshes.map(mesh => mesh.entityId)).toEqual([
+      before.meshes[1].entityId,
+      before.meshes[0].entityId,
+    ])
+    expect(after.meshes[1].provenance[0].source?.start).not.toBe(before.meshes[0].provenance[0].source?.start)
+    expect(matchMeshesByProvenance(before.meshes, after.meshes)).toEqual([1, 0])
+  })
+
+  it('does not claim identity for reordered same-name siblings across source snapshots', async () => {
+    const before = await parseOpenSCAD('cube(1); cube(2);')
+    const after = await parseOpenSCAD('cube(2); cube(1);')
+
+    expect(after.meshes.map(mesh => mesh.entityId)).toEqual(before.meshes.map(mesh => mesh.entityId))
+    expect(matchMeshesByProvenance(before.meshes, after.meshes)).toEqual([-1, -1])
+    expect(matchMeshesByProvenance(before.meshes, after.meshes, { sameSourceSnapshot: true })).toEqual([0, 1])
+  })
+
   it('supports 2D boolean geometry and extrusion', async () => {
     const result = await parseOpenSCAD(`
       linear_extrude(height = 5)
@@ -83,6 +145,23 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
     expect(runs.every(run => run.source?.end === source.length)).toBe(true)
   })
 
+  it('records exact parser spans for separate source operations', async () => {
+    const source = 'cube(1); /* a misleading ; and } */\n  sphere(2); // trailing comment'
+    const result = await parseOpenSCAD(source)
+    const references = result.meshes.map(mesh => mesh.provenance.find(run => run.source)?.source)
+
+    expect(references[0]).toMatchObject({
+      start: source.indexOf('cube'),
+      end: source.indexOf(';') + 1,
+      label: 'cube()',
+    })
+    expect(references[1]).toMatchObject({
+      start: source.indexOf('sphere'),
+      end: source.indexOf(';', source.indexOf('sphere')) + 1,
+      label: 'sphere()',
+    })
+  })
+
   it('reports unsupported syntax with line and column', async () => {
     await expect(parseOpenSCAD('cube(1);\ntext("nope");')).rejects.toMatchObject({
       name: 'OpenSCADParseError',
@@ -95,6 +174,31 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
     const result = await parseOpenSCAD('sphere(1, $fn = 9999);')
     expect(result.warnings[0]).toContain('clamped')
     expect(result.meshes[0].indices.length / 3).toBeLessThan(MAX_SAFE_TEST_TRIANGLES)
+  })
+
+  it('bounds expression nesting before the JavaScript stack overflows', async () => {
+    const source = `value = ${'-'.repeat(300)}1; cube(value);`
+    await expect(parseOpenSCAD(source)).rejects.toThrow('Expression exceeds 256 nested levels')
+  })
+
+  it('bounds left-associative expression evaluation before the JavaScript stack overflows', async () => {
+    const source = `value = ${Array.from({ length: 3_000 }, () => '1').join('+')}; cube(value);`
+    await expect(parseOpenSCAD(source)).rejects.toThrow('Expression exceeds 256 evaluated levels')
+  })
+
+  it('bounds nested geometry statements before recursive parsing overflows', async () => {
+    const source = `${'translate([0, 0, 0]) '.repeat(300)}cube(1);`
+    await expect(parseOpenSCAD(source)).rejects.toThrow('Model exceeds 128 nested statements')
+  })
+
+  it('bounds exponentially expanding evaluated values', async () => {
+    const source = `x = [0];\n${'x = [x, x];\n'.repeat(24)}cube(1);`
+    await expect(parseOpenSCAD(source)).rejects.toThrow(/value-allocation budget|Evaluated value exceeds/)
+  })
+
+  it('counts expression nodes as part of the syntax budget', async () => {
+    const source = `values = [${Array.from({ length: 25_000 }, () => '0').join(',')}]; cube(1);`
+    await expect(parseOpenSCAD(source)).rejects.toThrow('syntax node limit')
   })
 
   it('renders every bundled example', async () => {
