@@ -128,3 +128,9 @@ next evidence-backed implementation candidates. A third pass adds
 for model contracts, dimensional linting, printability, profiling, multi-view
 inspection, tolerance analysis, reproducible exports, assembly interference, automatic
 failure reduction, and parameter galleries.
+
+## Docs
+
+- [architecture.md](architecture.md) — the current module map, worker/kernel design, and active technical debt.
+- [recommendation.md](recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
+- [docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md) — the 7-role panel review of this rewrite: what was fixed immediately, what remains, and the convergence plan with the feature branch (`claude/top-issues-architecture-sync-00p2q9`).
