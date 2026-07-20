@@ -2,6 +2,8 @@
 
 This document describes how **OpenSCAD Viewer** is structured today, the data flow, and the planned modular refactor.
 
+> **Branch status (July 20, 2026):** `main` was rebuilt as a worker-based CAD workspace with a real Manifold CSG kernel and reviewed/hardened by a 7-role panel (`docs/review-of-main-rewrite.md` on `main`). **`main` is the structural base; this branch is the donor** — its SafeStorage, i18n (4 locales), exporters, parser guards, tests, and UI features are ported to `main` per the convergence plan rather than merged. The "Planned Refactor" phases below apply only until the corresponding subsystem is ported.
+
 ---
 
 ## Overview

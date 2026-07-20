@@ -1,5 +1,7 @@
 # 500 Suggestions, Improvements, Problems & Defects — Catalog v2 (July 2026)
 
+> **Branch status (July 20, 2026):** `main` was rebuilt as a Plasticity-inspired CAD workspace with a real Manifold CSG kernel in a Web Worker, then reviewed by a 7-role panel and hardened (see `docs/review-of-main-rewrite.md` on `main`). Per the convergence decision, **`main` is the structural base going forward and this branch is the donor line**: SafeStorage, the i18n module (ru/en/de/zh), exporters, parser guards, tests, and the ~250 UI features get ported to `main` per the parity checklist; nothing merges wholesale. Items below that describe this branch's own architecture (e.g. decomposing the 13.3k-line App.vue) are superseded by the port plan; hardening/product items remain valid as porting material.
+
 The living backlog: everything known to be done poorly, incorrectly, or not at all — plus concrete improvement ideas — ranked into 10 domains of 50. Compiled after the SOLID/DRY decomposition pass (see [ARCHITECTURE.md](./ARCHITECTURE.md) for the current module structure), superseding both the original list in this file and complementing [ISSUES.md](./ISSUES.md) (the older 500-item snapshot) and [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (the severity shortlist).
 
 Legend: items are present-tense problems or actionable suggestions. `[fixed]` marks items resolved on branch `claude/top-issues-architecture-sync-00p2q9` during the July 2026 remediation passes — kept for the record; everything unmarked is open.
