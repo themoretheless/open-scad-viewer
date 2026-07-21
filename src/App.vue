@@ -12,6 +12,8 @@ import type {
   SectionAxis,
   SourceProvenanceRow,
 } from './components/cadPanels.types'
+import type { GeometryQuality } from './core/build'
+import type { MeshData } from './core/mesh'
 import { EXAMPLES } from './data/examples'
 import type { CameraState } from './services/cameraHistory'
 import {
@@ -29,9 +31,10 @@ import {
 } from './services/commandRegistry'
 import { isPaletteCommandEnabled } from './services/commandSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
-import { inspectMesh, matchMeshesByProvenance } from './services/meshInspection'
-import type { GeometryQuality, MeshData } from './services/openscadParser'
+import { inspectMesh } from './services/meshInspection'
+import { RendererRecoveryGate } from './services/rendererRecoveryGate'
 import { extractCustomizerParameters, replaceCustomizerValue, type CustomizerValue } from './services/scadCustomizer'
+import { planScenePublication } from './services/scenePublication'
 import {
   createWorkspaceDocument,
   loadWorkspaceDocument,
@@ -357,6 +360,7 @@ let storageDebounce: ReturnType<typeof setTimeout> | null = null
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 let rendererRecoveryToken = 0
 let activeRendererRecoveryToken: number | null = null
+const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 let resizing = false
 let fitNextRender = false
@@ -403,7 +407,10 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
     isolated.value = isIsolated
     selectedHit.value = hit
   }
-  instance.onHoverChange = hit => { hoveredHit.value = hit }
+  instance.onHoverChange = hit => {
+    if (activeRendererRecoveryToken !== null) return
+    hoveredHit.value = hit
+  }
   instance.onMeasurementChange = (value, active) => {
     measurement.value = value
     measureActive.value = active
@@ -416,6 +423,7 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
 onUnmounted(() => {
   rendererRecoveryToken++
   activeRendererRecoveryToken = null
+  rendererRecoveryGate.reset()
   if (renderDebounce) clearTimeout(renderDebounce)
   if (fullRenderDebounce) clearTimeout(fullRenderDebounce)
   if (storageDebounce) {
@@ -443,7 +451,7 @@ function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycle
   if (renderer !== instance) return
   if (event.status === 'device-lost') {
     showNotice(t('gpuLost'))
-    if (activeRendererRecoveryToken === null) void recoverRenderer(instance)
+    if (rendererRecoveryGate.registerDeviceLoss() === 'start') void recoverRenderer(instance)
   } else if (event.status === 'error') {
     rendererErrorMessage = `${t('rendererError')}: ${event.error.message}`
     if (!rendering.value) error.value = rendererErrorMessage
@@ -453,58 +461,100 @@ function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycle
   }
 }
 
-async function recoverRenderer(instance: WebGPURenderer) {
+interface RendererRecoveryNavigationSnapshot {
+  camera: CameraState
+  history: ReturnType<WebGPURenderer['getCameraHistorySnapshot']>
+}
+
+async function recoverRenderer(
+  instance: WebGPURenderer,
+  navigation: RendererRecoveryNavigationSnapshot = {
+    camera: instance.getCameraState(),
+    history: instance.getCameraHistorySnapshot(),
+  },
+) {
   const canvas = canvasRef.value
-  if (!canvas || renderer !== instance) return
+  if (!canvas || renderer !== instance) {
+    rendererRecoveryGate.reset()
+    return
+  }
   const token = ++rendererRecoveryToken
   activeRendererRecoveryToken = token
-  const camera = instance.getCameraState()
-
-  const recovered = await instance.init(canvas)
-  if (token !== rendererRecoveryToken || renderer !== instance) {
-    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
-    return
-  }
-  if (!recovered) {
-    activeRendererRecoveryToken = null
-    gpuOk.value = false
-    error.value = t('gpuRecoverFailed')
-    return
-  }
+  // Triangle identities and hover ownership are renderer-local. Object
+  // selection can be restored by scene identity, but stale surface hits cannot.
+  selectedHit.value = null
+  hoveredHit.value = null
+  let ready = false
+  let failureMessage = t('gpuRecoverFailed')
 
   try {
+    const recovered = await instance.init(canvas)
+    if (token !== rendererRecoveryToken || renderer !== instance) return
+    if (!recovered) return
+    if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
+      rendererRecoveryGate.registerDeviceLoss()
+    }
+    if (rendererRecoveryGate.mustDeferReady) return
+
     instance.setDisplayMode(displayMode.value)
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
     // Builds can complete while adapter/device acquisition is pending. The CPU
     // scene and Vue state are authoritative, so re-read them after the await.
     const currentVisibility = [...meshVisibility.value]
-    const currentSelection = selectedMesh.value
-    const currentIsolation = isolated.value
+    const selectionCandidate = selectedMesh.value
+    const currentSelection = selectionCandidate !== null
+      && Number.isInteger(selectionCandidate)
+      && selectionCandidate >= 0
+      && selectionCandidate < sceneMeshes.value.length
+      && currentVisibility[selectionCandidate] !== false
+      ? selectionCandidate
+      : null
+    const currentIsolation = currentSelection !== null && isolated.value
     const currentMeasurement = measurement.value
     const currentMeasureActive = measureActive.value
+    selectedMesh.value = currentSelection
+    isolated.value = currentIsolation
     if (sceneMeshes.value.length) {
       instance.setMeshes(sceneMeshes.value)
-      currentVisibility.forEach((visible, index) => {
-        if (!visible) instance.setMeshVisibility(index, false)
-      })
-      if (currentSelection !== null && currentVisibility[currentSelection] !== false) {
+      instance.setMeshVisibilityBatch(currentVisibility)
+      if (currentSelection !== null) {
         instance.selectMesh(currentSelection)
         if (currentIsolation) instance.toggleIsolateSelection()
       }
     }
-    instance.restoreCameraState(camera)
+    instance.restoreCameraState(navigation.camera)
+    if (!instance.restoreCameraHistory(navigation.history)) throw new Error(t('gpuRecoverFailed'))
     instance.restoreMeasurement(currentMeasurement, currentMeasureActive)
     applySection()
     syncSourceHighlightFromEditor()
+    if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
+      rendererRecoveryGate.registerDeviceLoss()
+    }
+    if (!rendererRecoveryGate.mustDeferReady) ready = true
+  } catch (caught) {
+    failureMessage = caught instanceof Error ? caught.message : t('gpuRecoverFailed')
+  } finally {
+    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
+    if (token !== rendererRecoveryToken || renderer !== instance) return
+
+    const completion = rendererRecoveryGate.completeAttempt()
+    if (completion === 'retry') {
+      void recoverRenderer(instance, navigation)
+      return
+    }
+
+    if (!ready || completion === 'exhausted' || instance.currentStatus.status === 'device-lost') {
+      gpuOk.value = false
+      error.value = failureMessage
+      return
+    }
+
+    selectedHit.value = null
+    hoveredHit.value = null
     gpuOk.value = true
     if (error.value === t('gpuRecoverFailed')) error.value = ''
     showNotice(t('gpuRecovered'))
-  } catch (caught) {
-    gpuOk.value = false
-    error.value = caught instanceof Error ? caught.message : t('gpuRecoverFailed')
-  } finally {
-    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
   }
 }
 
@@ -612,37 +662,35 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
     const previousMeshes = sceneMeshes.value
     const previousVisibility = meshVisibility.value
-    const previousSelection = selectedMesh.value
-    const previousIsolation = isolated.value
     const previousMeasurement = measurement.value
     const previousMeasureActive = measureActive.value
-    const previousIndices = previousMeshes.length
-      ? matchMeshesByProvenance(previousMeshes, response.meshes, { sameSourceSnapshot })
-      : response.meshes.map(() => -1)
-
-    renderer?.setMeshes(response.meshes, { preserveMeasurement: sameSourceSnapshot })
-    sceneMeshes.value = response.meshes
-    meshVisibility.value = previousIndices.map(previousIndex => (
-      previousIndex >= 0 ? previousVisibility[previousIndex] !== false : true
-    ))
-    meshVisibility.value.forEach((visible, index) => {
-      if (!visible) renderer?.setMeshVisibility(index, false)
+    const publication = planScenePublication({
+      previousMeshes,
+      previousVisibility,
+      previousSelectedIndex: selectedMesh.value,
+      previousIsolated: isolated.value,
+      nextMeshes: response.meshes,
+      sameSourceSnapshot,
     })
+
+    renderer?.setMeshes(response.meshes, {
+      preserveMeasurement: publication.measurementMayBePreserved,
+    })
+    sceneMeshes.value = response.meshes
+    meshVisibility.value = publication.nextVisibility
+    renderer?.setMeshVisibilityBatch(meshVisibility.value)
     selectedHit.value = null
     hoveredHit.value = null
-    const replacementSelection = previousSelection === null
-      ? -1
-      : previousIndices.indexOf(previousSelection)
-    if (replacementSelection >= 0) {
-      selectedMesh.value = replacementSelection
-      isolated.value = previousIsolation
-      renderer?.selectMesh(replacementSelection)
-      if (previousIsolation) renderer?.toggleIsolateSelection()
+    selectedMesh.value = publication.nextSelectedIndex
+    isolated.value = publication.nextIsolated
+    if (publication.nextSelectedIndex !== null) {
+      renderer?.selectMesh(publication.nextSelectedIndex)
+      if (publication.nextIsolated) renderer?.toggleIsolateSelection()
     } else {
       selectedMesh.value = null
       isolated.value = false
     }
-    if (sameSourceSnapshot) {
+    if (publication.measurementMayBePreserved) {
       // The renderer may rebuild this overlay; retaining the UI value avoids a
       // preview → full flash and lets it restore the exact world-space points.
       measurement.value = previousMeasurement

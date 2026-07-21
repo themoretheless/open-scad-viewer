@@ -1,9 +1,9 @@
 import type {
   MeshData,
   MeshProvenanceRun,
-} from './openscadParser'
+  MeshTopologyDiagnostics,
+} from '../core/mesh'
 import { transformPoint, type Aabb3, type Vec3 } from './math3d'
-import type { MeshTopologyDiagnostics } from './meshTopology'
 
 const VERTEX_STRIDE = 6
 

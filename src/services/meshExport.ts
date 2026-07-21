@@ -1,4 +1,4 @@
-import type { MeshData } from './openscadParser'
+import type { MeshData } from '../core/mesh'
 import { transformPoint, type Vec3 } from './math3d'
 
 function vertex(mesh: MeshData, index: number): Vec3 | null {

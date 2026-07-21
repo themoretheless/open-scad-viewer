@@ -99,6 +99,8 @@ limits.
 
 ## Architecture
 
+- `src/core/mesh.ts` and `src/core/build.ts`: renderer-neutral geometry,
+  identity, provenance, transfer, and build-quality contracts.
 - `src/services/openscadParser.ts`: lexer, expression/statement parser,
   evaluator, Manifold geometry conversion, diagnostics, and budgets.
 - `src/services/buildCoordinator.ts`: protocol-v2 jobs, preview/full ordering,
@@ -116,13 +118,18 @@ limits.
 - `src/services/meshTopology.ts`: boundary/crease/non-manifold edge extraction.
 - `src/services/meshInspection.ts`: provenance, bounds, hit, and measurement
   helpers.
+- `src/services/scenePublication.ts`: pure identity-safe reconciliation of
+  visibility, selection, isolation, and measurement continuity between builds.
+- `src/services/cameraHistory.ts` and `src/services/rendererRecoveryGate.ts`:
+  testable navigation-history snapshots and bounded device-loss recovery policy.
 - `src/services/commandRegistry.ts`: one typed inventory for command-palette
   metadata and scope-aware keyboard routing.
 - `src/components/`: command palette, ViewCube, Scene Outliner, Inspect, and
   Customizer panels.
 - `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
   viewer controls.
-- `tests/`: mathematical and geometry golden tests.
+- `tests/`: mathematical and geometry golden tests plus protocol, contract-
+  boundary, publication, visibility, camera, and recovery unit tests.
 
 The implementation priorities came from two timestamped, non-overlapping
 comparisons covering 200 OpenSCAD, CAD, mesh, and 3D-viewer repositories. See

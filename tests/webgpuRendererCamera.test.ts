@@ -61,6 +61,26 @@ describe('WebGPURenderer camera history integration', () => {
     expect(renderer.restoreCameraState(renderer.getCameraState())).toBe(false)
   })
 
+  it('restores Previous View history after renderer lifecycle teardown', () => {
+    const renderer = new WebGPURenderer()
+    renderer.setProjection('orthographic')
+    renderer.setView('front')
+    const current = renderer.getCameraState()
+    const history = renderer.getCameraHistorySnapshot()
+    const availability: boolean[] = []
+    renderer.onCameraHistoryChange = available => availability.push(available)
+
+    renderer.destroy()
+    expect(renderer.canGoToPreviousView).toBe(false)
+    expect(renderer.restoreCameraState(current)).toBe(false)
+    expect(renderer.restoreCameraHistory(history)).toBe(true)
+
+    expect(renderer.canGoToPreviousView).toBe(true)
+    expect(renderer.previousView()).toMatchObject({ projection: 'orthographic', yaw: Math.PI / 4 })
+    expect(renderer.previousView()).toMatchObject({ projection: 'perspective' })
+    expect(availability).toEqual([false, true, true, false])
+  })
+
   it('keeps camera snapshots chronological when an action interrupts a drag', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as {

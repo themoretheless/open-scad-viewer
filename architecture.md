@@ -65,6 +65,7 @@ Published MeshData[] + diagnostics + metrics
 | Component | Current responsibility |
 | --- | --- |
 | [`src/App.vue`](src/App.vue) | Workspace composition, file/share/export actions, build publication, renderer recovery, Vue view state and orchestration. |
+| [`src/core/mesh.ts`](src/core/mesh.ts) / [`src/core/build.ts`](src/core/build.ts) | Renderer-neutral mesh, identity, provenance, transfer and quality contracts; no parser/kernel dependency. |
 | [`src/services/workspaceDocument.ts`](src/services/workspaceDocument.ts) | Versioned, validated single-document persistence and source-derived revisions, including migration from the legacy source key. |
 | [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v2 job ordering, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
 | [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, job, quality, phase, progress and terminal state. |
@@ -75,6 +76,9 @@ Published MeshData[] + diagnostics + metrics
 | [`src/services/sceneAabbIndex.ts`](src/services/sceneAabbIndex.ts) | Deterministic scene-level AABB hierarchy that rejects whole bodies before triangle traversal. |
 | [`src/services/meshTopology.ts`](src/services/meshTopology.ts) | Boundary/crease/non-manifold edge extraction and topology diagnostics. |
 | [`src/services/meshInspection.ts`](src/services/meshInspection.ts) | Identity-aware replacement matching, provenance lookup, bounds, normals and measurements. |
+| [`src/services/scenePublication.ts`](src/services/scenePublication.ts) | Pure, identity-safe visibility/selection/isolation/measurement continuity plan for replacement scenes. |
+| [`src/services/cameraHistory.ts`](src/services/cameraHistory.ts) | Validated, bounded camera navigation history with immutable snapshot/restore for renderer replacement. |
+| [`src/services/rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) | Pure device-loss policy that coalesces concurrent loss signals, permits one follow-up attempt and prevents false-ready publication. |
 | [`src/services/webgpuRenderer.ts`](src/services/webgpuRenderer.ts) | WebGPU lifecycle, pipelines/resources, camera/input, visibility, picking, overlays, measurements and sections. |
 | [`src/components`](src/components) | Command palette, ViewCube, Scene Outliner, Inspect and Customizer presentation components. |
 
@@ -132,7 +136,9 @@ only when unique on both sides; scene-array order is never an identity.
 
 ### Geometry artifact
 
-`MeshData` currently packages interleaved positions/normals, triangle and
+The neutral `core/mesh.ts` contract defines `MeshData`, identity/provenance,
+BVH/topology shapes and deduplicated transfer-buffer discovery. `MeshData`
+currently packages interleaved positions/normals, triangle and
 semantic-edge indices, transform/color, face IDs, compact provenance, topology
 diagnostics and a triangle BVH. The Worker transfers the underlying
 `ArrayBuffer` objects. Published results are immutable snapshots; the Worker
@@ -170,10 +176,14 @@ hard Worker replacement.
 
 `WebGPURenderer` owns WebGPU resources and reports typed initialization,
 unavailability, readiness, device-loss, frame-error and destruction states. A
-transient frame failure gets one bounded retry. On device loss, App reinitializes
-the renderer and rehydrates the latest CPU scene, visibility, identity-mapped
-selection/isolation, camera, measurement and section state. Teardown is
-idempotent and invalidates pending initialization and hover work.
+transient frame failure gets one bounded retry. On device loss, App coalesces
+overlapping loss signals, permits at most one follow-up recovery and never
+publishes `ready` from a device already reported lost. Recovery rehydrates the
+latest CPU scene, visibility, identity-mapped selection/isolation, current
+camera, Previous View history, measurement and section state. Renderer-local
+surface hits are deliberately cleared because their triangle ownership cannot
+survive resource replacement. Teardown is idempotent and invalidates pending
+initialization and hover work.
 
 Rendering is requested on state changes rather than running continuously.
 Opaque/transparent bodies, grid, semantic edges, selection/source overlays,
@@ -190,7 +200,8 @@ Picking uses two CPU acceleration levels:
 
 Visibility changes invalidate the scene hierarchy. Section clipping is applied
 while candidates are consumed, allowing traversal behind clipped surfaces
-without rebuilding geometry.
+without rebuilding geometry. Replacement visibility is committed as one batch,
+so bounds, TLAS invalidation, overlays and render scheduling update once.
 
 ## State ownership
 
@@ -199,6 +210,8 @@ Current ownership is explicit because its last overlap is active debt:
 - the workspace snapshot owns source, filename and geometry revision;
 - `BuildCoordinator` owns Worker lifetime and in-flight job correlation;
 - App owns the published CPU scene and user-facing build/error state;
+- `scenePublication.ts` computes replacement continuity without owning mutable
+  UI or renderer state;
 - the renderer owns GPU resources, camera mechanics and transient hit/overlay
   resources;
 - App mirrors some renderer interaction state for panels and commands.
@@ -234,14 +247,15 @@ commands flowing inward and renderer intents/events flowing outward.
   is no `GeometryKernel` interface or content-addressed subtree cache.
 - Superseding a running synchronous kernel call discards the Worker and warm
   WASM state. Each edit still schedules preview and unconditional full builds.
-- `MeshData` makes the parser a type hub and eagerly bundles render, inspection
-  and acceleration artifacts.
+- `MeshData` no longer makes the parser a type hub, but still eagerly bundles
+  render, inspection and acceleration artifacts.
 - Scene publication recreates all GPU mesh resources. Geometry instancing,
   retained entity deltas and shared GPU assets are absent.
 - Face/source overlay creation still scans mesh data and allocates GPU buffers;
   style changes update every object uniform, and bounds are rescanned.
 - `App.vue` and `webgpuRenderer.ts` retain broad responsibilities and mirror
-  selection/visibility state; build-result reconciliation remains in App.
+  selection/visibility state. Replacement continuity is now a pure service,
+  but App still applies the resulting state to both owners.
 - Persistence is versioned but single-document/localStorage based. Quota/write
   failures are not yet surfaced to the user.
 - The editor remains a textarea. Outliner additive/range selection is emitted
@@ -260,11 +274,12 @@ This is an extraction plan, not a big-bang rewrite.
 
 - separate parser, binding/diagnostics, immutable operation IR, kernel,
   tessellation and analysis contracts;
-- move mesh/protocol types to a neutral core and keep parser/kernel value
-  imports Worker-only;
+- keep neutral mesh/build contracts and the parser/kernel value import boundary
+  enforced while compilation phases are split;
 - add cooperative evaluation checkpoints and phase timing while retaining hard
   preemption as a watchdog;
-- extract build-result reconciliation and establish one scene/viewport owner.
+- build on the extracted reconciliation plan to establish one scene/viewport
+  owner.
 
 ### Phase 2 — retained scene and renderer services
 

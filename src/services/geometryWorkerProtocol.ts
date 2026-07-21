@@ -1,4 +1,5 @@
-import type { GeometryQuality, MeshData } from './openscadParser'
+import type { GeometryQuality } from '../core/build'
+import type { MeshData } from '../core/mesh'
 
 /**
  * Increment this when the worker wire format changes incompatibly. Keeping the
@@ -106,6 +107,10 @@ export type GeometryWorkerEvent =
 const QUALITIES = new Set<GeometryQuality>(['preview', 'full'])
 const PHASES = new Set<GeometryBuildPhase>(['queued', 'initializing', 'compiling', 'serializing', 'complete'])
 const CANCEL_REASONS = new Set<GeometryCancelReason>(['user', 'superseded', 'disposed', 'worker-restart'])
+const MESH_VERTEX_STRIDE = 6
+const BVH_LEAF_BIT = 0x80000000
+const BVH_LEAF_COUNT_MASK = 0x7fffffff
+const MAX_BVH_LEAF_SIZE = 64
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object'
@@ -159,6 +164,92 @@ function isMeshProvenanceRun(value: unknown, triangleCount: number): boolean {
     && (value.source === null || isMeshSourceReference(value.source))
 }
 
+function hasOnlyVertexReferences(indices: Uint32Array, vertexCount: number): boolean {
+  for (const index of indices) {
+    if (index >= vertexCount) return false
+  }
+  return true
+}
+
+/**
+ * Validate the complete BVH graph before it reaches main-thread picking.
+ * Traversal is iterative and each node may be visited only once, which rejects
+ * cycles and shared children while keeping validation bounded by nodeCount.
+ */
+function isMeshBvh(
+  value: Record<string, unknown>,
+  triangleCount: number,
+): boolean {
+  if (value.version !== 1
+    || value.vertexStride !== MESH_VERTEX_STRIDE
+    || !isNonNegativeSafeInteger(value.leafSize)
+    || value.leafSize === 0
+    || value.leafSize > MAX_BVH_LEAF_SIZE
+    || !isNonNegativeSafeInteger(value.nodeCount)
+    || !(value.bounds instanceof Float32Array)
+    || !(value.nodes instanceof Uint32Array)
+    || !(value.triangles instanceof Uint32Array)) return false
+
+  const nodeCount = value.nodeCount
+  const bounds = value.bounds
+  const nodes = value.nodes
+  const triangles = value.triangles
+  if (bounds.length !== nodeCount * 6 || nodes.length !== nodeCount * 2) return false
+  if (triangles.length > triangleCount) return false
+  if (nodeCount === 0) return triangles.length === 0
+  if (triangles.length === 0 || nodeCount > triangles.length * 2 - 1) return false
+
+  const referencedTriangles = new Uint8Array(triangleCount)
+  for (const triangle of triangles) {
+    if (triangle >= triangleCount || referencedTriangles[triangle]) return false
+    referencedTriangles[triangle] = 1
+  }
+
+  const reachedNodes = new Uint8Array(nodeCount)
+  const coveredTriangleSlots = new Uint8Array(triangles.length)
+  const stack: number[] = [0]
+  let reachedCount = 0
+  let coveredCount = 0
+
+  while (stack.length) {
+    const node = stack.pop()!
+    if (node >= nodeCount || reachedNodes[node]) return false
+    reachedNodes[node] = 1
+    reachedCount++
+
+    const boundsOffset = node * 6
+    for (let axis = 0; axis < 3; axis++) {
+      const minimum = bounds[boundsOffset + axis]
+      const maximum = bounds[boundsOffset + axis + 3]
+      if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum) return false
+    }
+
+    const dataOffset = node * 2
+    const firstOrLeft = nodes[dataOffset]
+    const metadata = nodes[dataOffset + 1]
+    if ((metadata & BVH_LEAF_BIT) !== 0) {
+      const count = metadata & BVH_LEAF_COUNT_MASK
+      if (count === 0 || count > value.leafSize
+        || firstOrLeft > triangles.length
+        || count > triangles.length - firstOrLeft) return false
+      const end = firstOrLeft + count
+      for (let slot = firstOrLeft; slot < end; slot++) {
+        if (coveredTriangleSlots[slot]) return false
+        coveredTriangleSlots[slot] = 1
+        coveredCount++
+      }
+      continue
+    }
+
+    const left = firstOrLeft
+    const right = metadata
+    if (left >= nodeCount || right >= nodeCount || left === right) return false
+    stack.push(right, left)
+  }
+
+  return reachedCount === nodeCount && coveredCount === triangles.length
+}
+
 function isMeshData(value: unknown): value is MeshData {
   if (!isRecord(value)) return false
   if (!(value.vertices instanceof Float32Array)
@@ -172,26 +263,19 @@ function isMeshData(value: unknown): value is MeshData {
   const triangleCount = value.indices.length / 3
   const bvh = value.bvh
   const topology = value.topology
+  const vertexCount = value.vertices.length / MESH_VERTEX_STRIDE
   return (value.entityId === undefined || (typeof value.entityId === 'string' && value.entityId.startsWith('entity:')))
-    && value.vertices.length % 6 === 0
+    && Number.isInteger(vertexCount)
     && Number.isInteger(triangleCount)
     && value.edgeIndices.length % 2 === 0
+    && hasOnlyVertexReferences(value.indices, vertexCount)
+    && hasOnlyVertexReferences(value.edgeIndices, vertexCount)
     && value.faceIds.length === triangleCount
     && value.transform.length === 16
     && Array.isArray(value.color)
     && value.color.length === 4
     && value.color.every(component => typeof component === 'number' && Number.isFinite(component))
-    && bvh.version === 1
-    && isNonNegativeSafeInteger(bvh.vertexStride)
-    && bvh.vertexStride > 0
-    && isNonNegativeSafeInteger(bvh.leafSize)
-    && bvh.leafSize > 0
-    && isNonNegativeSafeInteger(bvh.nodeCount)
-    && bvh.bounds instanceof Float32Array
-    && bvh.nodes instanceof Uint32Array
-    && bvh.triangles instanceof Uint32Array
-    && bvh.bounds.length === bvh.nodeCount * 6
-    && bvh.nodes.length === bvh.nodeCount * 2
+    && isMeshBvh(bvh, triangleCount)
     && Array.isArray(value.provenance)
     && value.provenance.every(run => isMeshProvenanceRun(run, triangleCount))
     && isNonNegativeSafeInteger(topology.boundary)

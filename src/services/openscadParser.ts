@@ -20,53 +20,17 @@ import {
   cleanup as cleanupManifold,
   garbageCollectManifold,
 } from 'manifold-3d/lib/garbage-collector.js'
+import type { GeometryQuality } from '../core/build'
+import type {
+  MeshData,
+  MeshProvenanceRun,
+  MeshSourceReference,
+  SceneEntityId,
+  SourceOperationId,
+} from '../core/mesh'
 import { identity, type Mat4 } from './math3d'
-import { buildMeshBvh, type MeshBvh } from './meshBvh'
-import { extractSemanticEdges, type MeshTopologyDiagnostics } from './meshTopology'
-
-export interface MeshData {
-  /** Stable identity for this evaluated scene entity, independent of tessellation quality. */
-  entityId?: SceneEntityId
-  vertices: Float32Array // interleaved position(3) + normal(3)
-  indices: Uint32Array
-  bvh: MeshBvh
-  edgeIndices: Uint32Array
-  color: [number, number, number, number]
-  transform: Mat4
-  /** Manifold coplanar-face identifier for every triangle. */
-  faceIds: Uint32Array
-  /** Compact triangle runs mapped back to the OpenSCAD source that created them. */
-  provenance: MeshProvenanceRun[]
-  topology: MeshTopologyDiagnostics
-}
-
-/** Stable identity of a static geometry operation in the parsed source tree. */
-export type SourceOperationId = `op:${string}`
-
-/** Stable identity of one evaluated operation instance in the scene. */
-export type SceneEntityId = `entity:${string}`
-
-export interface MeshSourceReference {
-  /** Legacy source-selection key. Prefer operationId/instanceId for identity. */
-  id: number
-  /** Static operation identity; stable across whitespace, quality and unrelated sibling edits. */
-  operationId?: SourceOperationId
-  /** Evaluated instance identity; distinguishes module calls and loop iterations. */
-  instanceId?: SceneEntityId
-  originalId: number
-  start: number
-  end: number
-  label: string
-}
-
-export interface MeshProvenanceRun {
-  triangleStart: number
-  triangleEnd: number
-  source: MeshSourceReference | null
-  backside: boolean
-}
-
-export type GeometryQuality = 'preview' | 'full'
+import { buildMeshBvh } from './meshBvh'
+import { extractSemanticEdges } from './meshTopology'
 
 export interface ParseOptions {
   quality?: GeometryQuality

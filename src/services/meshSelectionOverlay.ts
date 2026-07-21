@@ -1,5 +1,5 @@
 import { transformPoint, type Mat4, type Vec3 } from './math3d'
-import type { MeshProvenanceRun } from './openscadParser'
+import type { MeshProvenanceRun } from '../core/mesh'
 
 export interface FaceOverlayGeometry {
   triangles: Float32Array

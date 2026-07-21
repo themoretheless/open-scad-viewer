@@ -15,7 +15,7 @@ import {
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
 } from './geometryWorkerProtocol'
-import type { GeometryQuality } from './openscadParser'
+import type { GeometryQuality } from '../core/build'
 
 export interface WorkerLike {
   postMessage(message: GeometryWorkerRequest): void

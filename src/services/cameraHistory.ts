@@ -8,6 +8,8 @@ export interface CameraState {
   projection: CameraProjection
 }
 
+export type CameraHistorySnapshot = readonly CameraState[]
+
 function finiteCameraState(state: CameraState) {
   return [state.yaw, state.pitch, state.distance, ...state.target].every(Number.isFinite)
     && state.distance > 0
@@ -42,6 +44,19 @@ export class CameraHistory {
   }
 
   get size() { return this.entries.length }
+
+  snapshot(): CameraState[] {
+    return this.entries.map(cloneCameraState)
+  }
+
+  /** Atomically replace history from an immutable recovery snapshot. */
+  restore(snapshot: CameraHistorySnapshot): boolean {
+    if (!Array.isArray(snapshot) || snapshot.some(state => !finiteCameraState(state))) return false
+    const restored = new CameraHistory(this.limit)
+    for (const state of snapshot) restored.record(state)
+    this.entries = restored.entries
+    return true
+  }
 
   record(state: CameraState): boolean {
     if (!finiteCameraState(state)) return false

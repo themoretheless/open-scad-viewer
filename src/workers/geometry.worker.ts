@@ -1,4 +1,5 @@
 import { parseOpenSCAD, OpenSCADParseError } from '../services/openscadParser'
+import { meshTransferables } from '../core/mesh'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerRequest,
@@ -75,24 +76,6 @@ function terminalState(job: ActiveJob, phase: GeometryBuildTerminal['phase']): G
   return null
 }
 
-function transferablesFor(meshes: Awaited<ReturnType<typeof parseOpenSCAD>>['meshes']): Transferable[] {
-  const buffers = new Set<ArrayBuffer>()
-  for (const mesh of meshes) {
-    for (const buffer of [
-      mesh.vertices.buffer,
-      mesh.indices.buffer,
-      mesh.edgeIndices.buffer,
-      mesh.faceIds.buffer,
-      mesh.bvh.bounds.buffer,
-      mesh.bvh.nodes.buffer,
-      mesh.bvh.triangles.buffer,
-    ]) {
-      if (buffer instanceof ArrayBuffer) buffers.add(buffer)
-    }
-  }
-  return [...buffers]
-}
-
 async function runBuild(request: GeometryBuildRequest) {
   const job: ActiveJob = {
     request,
@@ -130,7 +113,7 @@ async function runBuild(request: GeometryBuildRequest) {
       ...result,
       durationMs: elapsed(job),
     })
-    postEvent(response, transferablesFor(result.meshes))
+    postEvent(response, meshTransferables(result.meshes))
   } catch (error) {
     const terminal = terminalState(job, 'compiling')
     if (terminal) {

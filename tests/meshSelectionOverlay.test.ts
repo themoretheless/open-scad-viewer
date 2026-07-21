@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { MeshProvenanceRun, MeshSourceReference } from '../src/core/mesh'
 import { identity, translate } from '../src/services/math3d'
 import {
   buildFaceOverlayGeometry,
@@ -6,7 +7,6 @@ import {
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
 } from '../src/services/meshSelectionOverlay'
-import type { MeshProvenanceRun, MeshSourceReference } from '../src/services/openscadParser'
 
 const vertices = new Float32Array([
   0, 0, 0, 0, 0, 1,

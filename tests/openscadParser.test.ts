@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { OpenSCADParseError, parseOpenSCAD, type MeshData } from '../src/services/openscadParser'
+import type { MeshData } from '../src/core/mesh'
+import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
 import { matchMeshesByProvenance } from '../src/services/meshInspection'
 

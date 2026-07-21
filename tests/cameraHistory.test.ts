@@ -19,6 +19,32 @@ describe('camera history', () => {
     expect(history.previous()).toBeNull()
   })
 
+  it('snapshots and atomically restores bounded history without aliasing', () => {
+    const source = new CameraHistory(2)
+    source.record(state(10))
+    source.record(state(20))
+    const snapshot = source.snapshot()
+
+    ;(snapshot[0].target as [number, number, number])[0] = 99
+    expect(source.previous()).toEqual(state(20))
+    expect(source.previous()).toEqual(state(10))
+
+    snapshot[0] = state(10)
+    const restored = new CameraHistory(2)
+    expect(restored.restore([state(5), ...snapshot, state(30)])).toBe(true)
+    ;(snapshot[1].target as [number, number, number])[0] = 77
+    expect(restored.previous()).toEqual(state(30))
+    expect(restored.previous()).toEqual(state(20))
+  })
+
+  it('rejects an invalid restore without replacing existing history', () => {
+    const history = new CameraHistory()
+    history.record(state(10))
+
+    expect(history.restore([{ ...state(20), distance: 0 }])).toBe(false)
+    expect(history.previous()).toEqual(state(10))
+  })
+
   it('deduplicates near-identical states and enforces its bound', () => {
     const history = new CameraHistory(2)
     expect(history.record(state(10))).toBe(true)

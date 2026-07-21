@@ -30,8 +30,10 @@ Reopen these only for a demonstrated regression.
 | Done | Protocol-v2-only geometry builds | Runtime-validated messages and transfer payloads, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](src/services/buildCoordinator.ts). |
 | Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](src/services/workspaceDocument.ts) and revision/job envelopes. |
 | Done | Stable operation/evaluated-entity identity | Structural `SourceOperationId`, dynamic `SceneEntityId`, exact spans and ambiguity-safe replacement matching. |
+| Done | Neutral mesh/build contract seam | [`src/core/mesh.ts`](src/core/mesh.ts) and [`src/core/build.ts`](src/core/build.ts) own contracts and deduplicated transfer discovery; a test keeps parser value imports Worker-only. |
+| Done | Tested replacement-scene continuity | [`scenePublication.ts`](src/services/scenePublication.ts) fail-closes ambiguity and preserves visibility/selection/isolation only when identity is safe. |
 | Done | Two-level accelerated picking | Scene AABB hierarchy plus lazy exact traversal of per-mesh triangle BVHs. |
-| Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry and App-driven device-loss rehydration with focused tests. |
+| Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry, coalesced device loss with one follow-up, false-ready prevention, and App-driven scene/camera/history rehydration with focused tests. |
 | Done | One declarative command inventory | [`commandRegistry.ts`](src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
 | Done | Repeatable quality gate | Typecheck, Vitest and production build run through `npm run check` in CI. |
 
@@ -62,28 +64,30 @@ Reopen these only for a demonstrated regression.
   skip or reuse the full pass when equivalent; content/revision/quality cache
   rules are explicit and covered by timing/correctness tests.
 
-### R3 — Split compiler, kernel and artifact contracts
+### R3 — Split compiler and kernel phases
 
-- **Priority/status:** P0 / Open
+- **Priority/status:** P0 / In progress
 - **Evidence:** lexer/parser, scope evaluation, direct Manifold calls,
   tessellation, provenance, topology and BVH construction remain in
-  [`openscadParser.ts`](src/services/openscadParser.ts); `MeshData` makes that
-  file the type hub for renderer/export/inspection.
+  [`openscadParser.ts`](src/services/openscadParser.ts). Neutral mesh/build
+  contracts and transfer discovery now live under [`src/core`](src/core), and
+  an import-boundary test prevents main-thread parser value imports.
 - **Risk:** language, kernel and inspection changes invalidate the entire
   pipeline and main-thread modules depend on a Worker implementation detail.
 - **Acceptance:** typed parse→bind/diagnose→immutable operation IR→kernel→
-  tessellation→analysis phases; neutral core mesh/protocol contracts;
+  tessellation→analysis phases; preserve the neutral core contracts;
   `GeometryKernel` interface with positioned error normalization; import guard
   against main-thread parser/kernel value imports; phase tests/timing and
   content-addressed subtree caching.
 
 ### R4 — Establish one owner for scene and viewport state
 
-- **Priority/status:** P0 / Open
+- **Priority/status:** P0 / In progress
 - **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
-  isolation, visibility, projection and camera-related state; build-result and
-  device-recovery reconciliation are long imperative paths in
-  [`App.vue`](src/App.vue).
+  isolation, visibility, projection and camera-related state. Replacement-scene
+  continuity is now pure and tested in
+  [`scenePublication.ts`](src/services/scenePublication.ts), but App still
+  applies the plan to both Vue and renderer owners.
 - **Risk:** every rebuild/recovery manually reconstructs interaction state and
   new tools can create synchronization bugs.
 - **Acceptance:** typed document/build/scene/viewport controllers have explicit
@@ -105,22 +109,27 @@ Reopen these only for a demonstrated regression.
 
 ### R6 — Retain GPU resources and remove verified interaction hot paths
 
-- **Priority/status:** P1 / Open
+- **Priority/status:** P1 / In progress
 - **Evidence:** `setMeshes()` uploads a complete replacement and destroys old
   buffers; bounds are rescanned; face/source overlays scan mesh data and create
-  buffers; style changes rewrite every object uniform; visibility restoration
-  updates objects one at a time.
+  buffers; style changes rewrite every object uniform. Visibility restoration
+  now uses one batched transaction for bounds, TLAS invalidation, overlays and
+  render scheduling.
 - **Risk:** edit and hover latency scale with the full scene and cause avoidable
   allocation/queue pressure.
 - **Acceptance:** entity/content-keyed GPU cache and scene deltas; worker-cached
   bounds and faceId→triangle lookup; persistent bounded overlay buffers; dirty
-  uniform writes; batch visibility API; incremental TLAS rebuild/refit;
+  uniform writes; retain the batch visibility API; incremental TLAS rebuild/refit;
   benchmarks for all paths.
 
 ### R7 — Decompose the renderer without changing interaction behavior
 
-- **Priority/status:** P1 / Open
-- **Evidence:** [`webgpuRenderer.ts`](src/services/webgpuRenderer.ts) owns device
+- **Priority/status:** P1 / In progress
+- **Evidence:** [`cameraHistory.ts`](src/services/cameraHistory.ts) and
+  [`rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) now provide
+  adapter-free tested contracts for navigation history and bounded recovery.
+  The main lifecycle workflow remains in App, while
+  [`webgpuRenderer.ts`](src/services/webgpuRenderer.ts) still owns device
   lifecycle, pipelines/resources, camera/input, picking, visibility, selection,
   measurements, sections and overlays.
 - **Risk:** recovery, interaction and draw changes share broad mutable state and

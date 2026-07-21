@@ -5,7 +5,8 @@ import {
   isGeometryWorkerRequest,
   type GeometryWorkerEvent,
 } from '../src/services/geometryWorkerProtocol'
-import { parseOpenSCAD, type MeshData } from '../src/services/openscadParser'
+import type { MeshData } from '../src/core/mesh'
+import { parseOpenSCAD } from '../src/services/openscadParser'
 
 const envelope = {
   protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -34,6 +35,69 @@ function validMesh(): MeshData {
     },
     provenance: [],
     topology: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 },
+  }
+}
+
+function triangleMesh(): MeshData {
+  return {
+    entityId: 'entity:triangle',
+    vertices: new Float32Array([
+      0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1,
+    ]),
+    indices: new Uint32Array([0, 1, 2]),
+    edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
+    faceIds: new Uint32Array([0]),
+    color: [1, 0.5, 0.25, 1],
+    transform: new Float32Array([
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ]),
+    bvh: {
+      version: 1,
+      vertexStride: 6,
+      leafSize: 8,
+      nodeCount: 1,
+      bounds: new Float32Array([0, 0, 0, 1, 1, 0]),
+      nodes: new Uint32Array([0, 0x80000001]),
+      triangles: new Uint32Array([0]),
+    },
+    provenance: [],
+    topology: { boundary: 3, crease: 0, nonManifold: 0, degenerate: 0 },
+  }
+}
+
+function twoTriangleMesh(): MeshData {
+  const mesh = triangleMesh()
+  return {
+    ...mesh,
+    vertices: new Float32Array([
+      0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1,
+      1, 1, 0, 0, 0, 1,
+    ]),
+    indices: new Uint32Array([0, 1, 2, 1, 3, 2]),
+    edgeIndices: new Uint32Array([0, 1, 1, 3, 3, 2, 2, 0]),
+    faceIds: new Uint32Array([0, 1]),
+    bvh: {
+      ...mesh.bvh,
+      nodeCount: 3,
+      bounds: new Float32Array([
+        0, 0, 0, 1, 1, 0,
+        0, 0, 0, 1, 1, 0,
+        0, 0, 0, 1, 1, 0,
+      ]),
+      nodes: new Uint32Array([
+        1, 2,
+        0, 0x80000001,
+        1, 0x80000001,
+      ]),
+      triangles: new Uint32Array([0, 1]),
+    },
   }
 }
 
@@ -140,5 +204,65 @@ describe('geometry worker protocol validation', () => {
       ...result,
       durationMs: 1,
     })).toBe(true)
+  })
+
+  it('rejects mesh indices and BVH triangle references outside their source buffers', () => {
+    const mesh = triangleMesh()
+    expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [mesh] })).toBe(true)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, indices: new Uint32Array([0, 1, 3]) }],
+    })).toBe(false)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, edgeIndices: new Uint32Array([0, 3]) }],
+    })).toBe(false)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, bvh: { ...mesh.bvh, triangles: new Uint32Array([1]) } }],
+    })).toBe(false)
+  })
+
+  it('rejects incompatible strides, invalid leaf ranges and non-finite bounds', () => {
+    const mesh = triangleMesh()
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, bvh: { ...mesh.bvh, vertexStride: 3 } }],
+    })).toBe(false)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, bvh: { ...mesh.bvh, nodes: new Uint32Array([1, 0x80000001]) } }],
+    })).toBe(false)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...mesh, bvh: { ...mesh.bvh, bounds: new Float32Array([0, 0, 0, Infinity, 1, 0]) } }],
+    })).toBe(false)
+  })
+
+  it('rejects cyclic, shared-child and unreachable BVH graphs', () => {
+    const single = triangleMesh()
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...single, bvh: { ...single.bvh, nodes: new Uint32Array([0, 0]) } }],
+    })).toBe(false)
+
+    const pair = twoTriangleMesh()
+    expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [pair] })).toBe(true)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([
+        1, 1,
+        0, 0x80000001,
+        1, 0x80000001,
+      ]) } }],
+    })).toBe(false)
+    expect(isGeometryWorkerEvent({
+      ...succeeded(),
+      meshes: [{ ...pair, bvh: { ...pair.bvh, nodes: new Uint32Array([
+        0, 0x80000002,
+        0, 0x80000001,
+        1, 0x80000001,
+      ]) } }],
+    })).toBe(false)
   })
 })

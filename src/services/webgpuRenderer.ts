@@ -6,7 +6,12 @@ import {
   transformPoint, unprojectRay,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
-import { CameraHistory, cameraStatesEqual, type CameraState } from './cameraHistory'
+import {
+  CameraHistory,
+  cameraStatesEqual,
+  type CameraHistorySnapshot,
+  type CameraState,
+} from './cameraHistory'
 import { raycastMeshBvh, type MeshBvh, type MeshBvhHit } from './meshBvh'
 import {
   buildFaceOverlayGeometry,
@@ -14,7 +19,7 @@ import {
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
 } from './meshSelectionOverlay'
-import type { MeshData, MeshProvenanceRun, MeshSourceReference } from './openscadParser'
+import type { MeshData, MeshProvenanceRun, MeshSourceReference } from '../core/mesh'
 import {
   chooseDepthCandidate,
   normalizeDepthCandidates,
@@ -811,6 +816,18 @@ export class WebGPURenderer {
     }
   }
 
+  getCameraHistorySnapshot(): CameraHistorySnapshot {
+    return this.cameraHistory.snapshot()
+  }
+
+  /** Restore Previous View entries after renderer/device re-initialization. */
+  restoreCameraHistory(snapshot: CameraHistorySnapshot): boolean {
+    const wasAvailable = this.canGoToPreviousView
+    if (!this.cameraHistory.restore(snapshot)) return false
+    if (wasAvailable !== this.canGoToPreviousView) this.emitCameraHistoryChange()
+    return true
+  }
+
   /**
    * Restore a previously captured camera without creating a navigation-history
    * entry. This is intended for renderer/device re-initialization.
@@ -949,21 +966,72 @@ export class WebGPURenderer {
   setMeshVisibility(index: number, visible: boolean) {
     const mesh = this.meshes[index]
     if (!mesh || mesh.visible === visible) return
-    this.resetDepthCycle()
     mesh.visible = visible
-    // Visibility can be toggled many times while restoring a scene. Defer the
-    // O(n log n) rebuild until the next pointer query so the batch costs once.
-    this.sceneAabbIndexDirty = true
-    if (!visible && this.selected === index) this.setSelection(null, null)
-    if (!visible && this.hovered === index) {
+    this.finishMeshVisibilityChange(
+      this.meshes.filter(candidate => candidate.visible).map(candidate => candidate.worldBounds),
+    )
+  }
+
+  /**
+   * Restore object visibility as one scene transaction. Missing array entries
+   * leave their mesh unchanged; extra entries are ignored.
+   */
+  setMeshVisibilityBatch(visibility: readonly boolean[]): boolean {
+    let changed = false
+    const visibleBounds: Bounds[] = []
+    for (let index = 0; index < this.meshes.length; index++) {
+      const mesh = this.meshes[index]
+      const nextVisible = visibility[index]
+      if (typeof nextVisible === 'boolean' && mesh.visible !== nextVisible) {
+        mesh.visible = nextVisible
+        changed = true
+      }
+      if (mesh.visible) visibleBounds.push(mesh.worldBounds)
+    }
+    if (!changed) return false
+    this.finishMeshVisibilityChange(visibleBounds)
+    return true
+  }
+
+  private finishMeshVisibilityChange(visibleBounds: Bounds[]) {
+    this.cancelPendingHover()
+    const selectionMetadataChanged = this.clearDepthCycleState()
+    let selectionChanged = selectionMetadataChanged
+    let stylesChanged = false
+    const selectedHidden = this.selected !== null && !this.meshes[this.selected]?.visible
+    const selectedHitHidden = this.selectedHit !== null
+      && !this.meshes[this.selectedHit.meshIndex]?.visible
+    if (selectedHidden) {
+      this.selected = null
+      this.selectedHit = null
+      this.isolated = false
+      selectionChanged = true
+      stylesChanged = true
+    } else if (selectedHitHidden) {
+      this.selectedHit = null
+      selectionChanged = true
+      stylesChanged = true
+    }
+
+    const hoverHidden = (this.hovered !== null && !this.meshes[this.hovered]?.visible)
+      || (this.hoveredHit !== null && !this.meshes[this.hoveredHit.meshIndex]?.visible)
+    if (hoverHidden) {
       this.hovered = null
       this.hoveredHit = null
-      this.updateMeshStyles()
-      try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+      stylesChanged = true
     }
-    this.bounds = this.combineBounds(this.meshes.filter(candidate => candidate.visible).map(candidate => candidate.worldBounds))
+
+    // Rebuild the O(n log n) index lazily on the next pointer query, even when
+    // a recovery transaction changes hundreds of object visibility flags.
+    this.sceneAabbIndexDirty = true
+    this.bounds = this.combineBounds(visibleBounds)
+    if (stylesChanged) this.updateMeshStyles()
     this.rebuildSelectionOverlays()
     this.rebuildSourceHighlightOverlay()
+    if (selectionChanged) this.emitSelectionChange()
+    if (hoverHidden) {
+      try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+    }
     this.requestRender()
   }
 
@@ -1051,7 +1119,7 @@ export class WebGPURenderer {
   }
 
   private setSelection(index: number | null, hit: PickHit | null = null) {
-    if (index !== null && !this.meshes[index]) index = null
+    if (index !== null && (!this.meshes[index] || !this.meshes[index].visible)) index = null
     if (this.selected === index && this.selectedHit === hit && (!this.isolated || index !== null)) return
     this.selected = index
     this.selectedHit = index === null ? null : hit
@@ -1124,12 +1192,17 @@ export class WebGPURenderer {
     try { this.onCameraHistoryChange?.(this.canGoToPreviousView) } catch { /* UI callbacks must not break rendering. */ }
   }
 
-  private resetDepthCycle(invalidateSelectedHit = true) {
+  private clearDepthCycleState(invalidateSelectedHit = true): boolean {
     this.depthCycleState = null
     if (!invalidateSelectedHit || !this.selectedHit
-        || (this.selectedHit.cycleIndex === undefined && this.selectedHit.cycleCount === undefined)) return
+        || (this.selectedHit.cycleIndex === undefined && this.selectedHit.cycleCount === undefined)) return false
     const { cycleIndex: _cycleIndex, cycleCount: _cycleCount, ...hit } = this.selectedHit
     this.selectedHit = hit
+    return true
+  }
+
+  private resetDepthCycle(invalidateSelectedHit = true) {
+    if (!this.clearDepthCycleState(invalidateSelectedHit)) return
     this.rebuildSelectionOverlays()
     this.emitSelectionChange()
     this.requestRender()

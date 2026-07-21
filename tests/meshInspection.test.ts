@@ -12,8 +12,8 @@ import type {
   MeshData,
   MeshSourceReference,
   SceneEntityId,
-} from '../src/services/openscadParser'
-import type { MeshTopologyDiagnostics } from '../src/services/meshTopology'
+  MeshTopologyDiagnostics,
+} from '../src/core/mesh'
 
 function makeMesh(options: {
   positions?: number[][]

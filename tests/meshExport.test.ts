@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { MeshData } from '../src/core/mesh'
 import { buildBinaryStl, buildObj } from '../src/services/meshExport'
 import { identity, translate } from '../src/services/math3d'
-import type { MeshData } from '../src/services/openscadParser'
 import { buildMeshBvh } from '../src/services/meshBvh'
 
 function triangleMesh(): MeshData {

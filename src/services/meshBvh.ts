@@ -11,17 +11,11 @@
  * indexed mesh. Invalid and exactly degenerate triangles are omitted.
  */
 
-export type Vec3Tuple = [number, number, number]
+import type { MeshBvh } from '../core/mesh'
 
-export interface MeshBvh {
-  readonly version: 1
-  readonly vertexStride: number
-  readonly leafSize: number
-  readonly nodeCount: number
-  readonly bounds: Float32Array
-  readonly nodes: Uint32Array
-  readonly triangles: Uint32Array
-}
+export type { MeshBvh } from '../core/mesh'
+
+export type Vec3Tuple = [number, number, number]
 
 export interface BuildMeshBvhOptions {
   /** Number of floats per vertex. Position must occupy the first three. */

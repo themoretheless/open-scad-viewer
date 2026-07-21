@@ -6,6 +6,10 @@
  * that topology. When they are absent we fall back to exact-position welding.
  */
 
+import type { MeshTopologyDiagnostics } from '../core/mesh'
+
+export type { MeshTopologyDiagnostics } from '../core/mesh'
+
 export interface SemanticEdgeOptions {
   /** Minimum angle between adjacent face normals that is rendered as a crease. */
   creaseAngleDegrees?: number
@@ -18,13 +22,6 @@ export interface SemanticEdgeOptions {
    * pairs. Defaults to true only when merge arrays are not supplied.
    */
   weldCoincidentVertices?: boolean
-}
-
-export interface MeshTopologyDiagnostics {
-  boundary: number
-  crease: number
-  nonManifold: number
-  degenerate: number
 }
 
 export interface SemanticEdgesResult {
