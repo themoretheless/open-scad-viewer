@@ -26,6 +26,86 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
     expect(bounds(result.meshes)).toEqual({ min: [0, 0, 0], max: [10, 5, 4] })
   })
 
+  it('supports statement assertions as transparent geometry guards', async () => {
+    const unguarded = await parseOpenSCAD('cube(1);')
+    const guarded = await parseOpenSCAD(`
+      assert(true);
+      assert(true) cube(1);
+      assert(condition = true, message = "valid") {
+        sphere(1, $fn = 8);
+        cylinder(h = 1, r = 1, $fn = 8);
+      }
+    `)
+
+    expect(guarded.meshes).toHaveLength(3)
+    expect(guarded.meshes[0].color).toEqual(unguarded.meshes[0].color)
+  })
+
+  it('evaluates assertion guards in module, loop, and children scopes', async () => {
+    const source = `
+      module guarded(ok = false) {
+        assert(ok, message = str("invalid guard: ", ok)) children();
+      }
+      for (i = [1:2]) guarded(i > 0) if (i) cube(i);
+    `
+    const preview = await parseOpenSCAD(source, { quality: 'preview' })
+    const full = await parseOpenSCAD(source, { quality: 'full' })
+
+    expect(preview.meshes).toHaveLength(2)
+    expect(full.meshes.map(mesh => mesh.entityId)).toEqual(preview.meshes.map(mesh => mesh.entityId))
+  })
+
+  it('reports positioned assertion failures and never evaluates their children', async () => {
+    const source = `cube(1);
+assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
+    const failure = parseOpenSCAD(source)
+
+    await expect(failure).rejects.toMatchObject({
+      name: 'OpenSCADParseError',
+      line: 2,
+      column: 1,
+    } satisfies Partial<OpenSCADParseError>)
+    await expect(failure).rejects.toThrow("Assertion '2 + 2 == 5' failed: dimension contract failed")
+    await expect(failure).rejects.not.toThrow('Unsupported geometry operation unsupported_child()')
+  })
+
+  it('uses OpenSCAD truthiness for assertions and conditional expressions', async () => {
+    for (const condition of ['false', '0', 'undef', '""', '[]']) {
+      await expect(parseOpenSCAD(`assert(${condition}) cube(1);`)).rejects.toThrow('Assertion')
+    }
+    for (const condition of ['true', '-1', '"false"', '[0]', '[[]]']) {
+      await expect(parseOpenSCAD(`assert(${condition}) cube(1);`)).resolves.toMatchObject({
+        meshes: [expect.any(Object)],
+      })
+    }
+
+    const conditional = await parseOpenSCAD('if ("") sphere(1); else cube(1);')
+    expect(conditional.meshes).toHaveLength(1)
+    expect(bounds(conditional.meshes).max).toEqual([1, 1, 1])
+  })
+
+  it('strictly binds assertion arguments and eagerly validates a supplied message', async () => {
+    const valid = await parseOpenSCAD(`
+      assert(message = "named", condition = true,) cube(1);
+      assert(true, message = ["mixed", 1]) sphere(1, $fn = 8);
+    `)
+    expect(valid.meshes).toHaveLength(2)
+
+    await expect(parseOpenSCAD('assert();')).rejects.toThrow('requires a condition')
+    await expect(parseOpenSCAD('assert(true, "one", "two");')).rejects.toThrow('does not accept argument _2')
+    await expect(parseOpenSCAD('assert(true, detail = "nope");')).rejects.toThrow('does not accept argument detail')
+    await expect(parseOpenSCAD('assert(_0 = true);')).rejects.toThrow('does not accept argument _0')
+    await expect(parseOpenSCAD('assert(condition = true, _1 = "nope");')).rejects.toThrow('does not accept argument _1')
+    await expect(parseOpenSCAD('assert(true, condition = true);')).rejects.toThrow('condition was provided more than once')
+    await expect(parseOpenSCAD('assert(true, "one", message = "two");')).rejects.toThrow('message was provided more than once')
+    await expect(parseOpenSCAD('assert(true, missing_message); cube(1);')).rejects.toThrow('Unknown variable missing_message')
+  })
+
+  it('rejects expression-form assert explicitly', async () => {
+    await expect(parseOpenSCAD('value = assert(true); cube(1);'))
+      .rejects.toThrow('Expression-form assert() is not supported; use statement assert()')
+  })
+
   it('performs real boolean difference', async () => {
     const result = await parseOpenSCAD(`
       difference() {

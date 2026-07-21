@@ -2,7 +2,7 @@
  * Strict, intentionally documented OpenSCAD subset backed by Manifold WASM.
  *
  * Supported language features: variables, arithmetic/boolean expressions,
- * ranges, for/if/let, user modules and children(). Supported geometry:
+ * ranges, for/if/let, statement assertions, user modules and children(). Supported geometry:
  * cube, sphere, cylinder, polyhedron, square, circle, polygon, transforms,
  * union/difference/intersection/hull, linear/rotate extrusion, projection and
  * 2D offset. Unsupported syntax fails loudly instead of rendering a wrong model.
@@ -238,6 +238,8 @@ interface CallNode {
   type: 'call'
   name: string
   args: Record<string, Expr>
+  argKinds: Record<string, 'named' | 'positional'>
+  argSpans: Record<string, { start: number; end: number }>
   children: Statement[]
   alternative: Statement[]
   p: number
@@ -361,16 +363,26 @@ class Parser {
   private call(): CallNode {
     const name = this.expect(TT.Ident)
     const args: Record<string, Expr> = {}
+    const argKinds: CallNode['argKinds'] = {}
+    const argSpans: CallNode['argSpans'] = {}
     if (this.match(TT.LParen)) {
       let positional = 0
       while (this.peek().t !== TT.RParen) {
         let key: string
+        let kind: CallNode['argKinds'][string]
         if (this.peek().t === TT.Ident && this.peek(1).t === TT.Eq) {
           key = this.advance().v
           this.advance()
-        } else key = `_${positional++}`
+          kind = 'named'
+        } else {
+          key = `_${positional++}`
+          kind = 'positional'
+        }
         if (args[key]) this.fail(this.peek(), `Duplicate argument ${key}`)
+        const start = this.peek().p
         args[key] = this.expression()
+        argKinds[key] = kind
+        argSpans[key] = { start, end: this.lastTokenEnd }
         if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
       }
       this.advance()
@@ -382,7 +394,7 @@ class Parser {
       this.advance()
       alternative = this.body(true)
     }
-    return { type: 'call', name: name.v, args, children, alternative, p: name.p, end: this.lastTokenEnd }
+    return { type: 'call', name: name.v, args, argKinds, argSpans, children, alternative, p: name.p, end: this.lastTokenEnd }
   }
 
   private body(required: boolean): Statement[] {
@@ -725,6 +737,9 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
 }
 
 function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
+  if (expr.name === 'assert') {
+    evaluationError(ctx, expr.p, 'Expression-form assert() is not supported; use statement assert()')
+  }
   const values = expr.args.map(arg => evalExpression(arg, ctx, depth + 1))
   const nums = () => values.map(value => finiteNumber(value, ctx, expr.p, `${expr.name} argument`))
   const radians = (degrees: number) => degrees * Math.PI / 180
@@ -775,7 +790,14 @@ function valueToString(value: Value): string {
   if (value === undefined) return 'undef'
   return String(value)
 }
-function truthy(value: Value) { return value !== false && value !== undefined && value !== 0 }
+/** OpenSCAD boolean conversion: false, undef, zero and empty containers are false. */
+function truthy(value: Value) {
+  return value !== false
+    && value !== undefined
+    && value !== 0
+    && value !== ''
+    && (!Array.isArray(value) || value.length > 0)
+}
 function deepEqual(a: Value, b: Value): boolean {
   if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((value, index) => deepEqual(value, b[index]))
   return a === b
@@ -791,6 +813,45 @@ function vectorValue(value: Value, ctx: EvalContext, p: number, label: string): 
 function arg(node: CallNode, name: string, position: number, fallback: Value, ctx: EvalContext): Value {
   const expression = node.args[name] ?? node.args[`_${position}`]
   return expression ? evalExpression(expression, ctx) : fallback
+}
+
+interface BoundAssertArguments {
+  condition: Expr
+  conditionText: string
+  message?: Expr
+}
+
+function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAssertArguments {
+  const keys = Object.keys(node.args)
+  const unknown = keys.find(key => node.argKinds[key] === 'named'
+    ? key !== 'condition' && key !== 'message'
+    : key !== '_0' && key !== '_1')
+  if (unknown) evaluationError(ctx, node.p, `assert() does not accept argument ${unknown}`)
+
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(node.args, key)
+  if (has('_0') && has('condition')) {
+    evaluationError(ctx, node.p, 'assert() condition was provided more than once')
+  }
+  if (has('_1') && has('message')) {
+    evaluationError(ctx, node.p, 'assert() message was provided more than once')
+  }
+
+  const conditionKey = has('condition') ? 'condition' : has('_0') ? '_0' : null
+  if (!conditionKey) evaluationError(ctx, node.p, 'assert() requires a condition')
+  const messageKey = has('message') ? 'message' : has('_1') ? '_1' : null
+  const span = node.argSpans[conditionKey]
+  const rawCondition = span ? ctx.source.slice(span.start, span.end) : 'condition'
+
+  return {
+    condition: node.args[conditionKey],
+    conditionText: compactDiagnosticText(rawCondition),
+    message: messageKey ? node.args[messageKey] : undefined,
+  }
+}
+
+function compactDiagnosticText(value: string, limit = 240): string {
+  const compact = value.replace(/\s+/g, ' ').trim()
+  return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`
 }
 
 function collectModules(nodes: Statement[], modules: Map<string, ModuleNode>) {
@@ -874,6 +935,21 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
   const childShapes = () => evalNodes(node.children, ctx)
 
   switch (node.name) {
+    case 'assert': {
+      const bound = bindAssertArguments(node, ctx)
+      const condition = evalExpression(bound.condition, ctx)
+      // OpenSCAD binds call arguments before executing the module. Evaluate a
+      // supplied message even when the assertion passes, but never evaluate
+      // child geometry when the condition fails.
+      const message = bound.message ? evalExpression(bound.message, ctx) : undefined
+      if (!truthy(condition)) {
+        const detail = bound.message
+          ? `: ${compactDiagnosticText(valueToString(message))}`
+          : ''
+        evaluationError(ctx, node.p, `Assertion '${bound.conditionText}' failed${detail}`)
+      }
+      return childShapes()
+    }
     case 'cube': {
       const raw = arg(node, 'size', 0, 1, ctx)
       const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'cube size') : [finiteNumber(raw, ctx, node.p, 'cube size')]

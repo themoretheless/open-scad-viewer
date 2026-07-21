@@ -38,7 +38,7 @@ WorkspaceDocumentSnapshot
 (documentId, source, monotonically increasing geometry revision)
         │
         ▼
-BuildCoordinator ───── protocol-v2 ordering, cancellation and Worker lifetime
+BuildCoordinator ───── protocol-v3 ordering, cancellation and Worker lifetime
         │
         ▼
 geometry.worker.ts
@@ -67,7 +67,7 @@ Published MeshData[] + diagnostics + metrics
 | [`src/App.vue`](src/App.vue) | Workspace composition, file/share/export actions, build publication, renderer recovery, Vue view state and orchestration. |
 | [`src/core/mesh.ts`](src/core/mesh.ts) / [`src/core/build.ts`](src/core/build.ts) | Renderer-neutral mesh, identity, provenance, transfer and quality contracts; no parser/kernel dependency. |
 | [`src/services/workspaceDocument.ts`](src/services/workspaceDocument.ts) | Versioned, validated single-document persistence and source-derived revisions, including migration from the legacy source key. |
-| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v2 job ordering, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
+| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v3 job ordering, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
 | [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, job, quality, phase, progress and terminal state. |
 | [`src/services/commandRegistry.ts`](src/services/commandRegistry.ts) | One typed inventory for palette metadata and deterministic, scope-aware keyboard routing. |
 | [`src/workers/geometry.worker.ts`](src/workers/geometry.worker.ts) | Isolates compilation, reports phase/checkpoint events, rejects stale work and transfers geometry buffers. |
@@ -97,12 +97,14 @@ identity.
 
 ### Build identity and publication
 
-Protocol v2 is the only App/Worker path. Every request/event contains a protocol
+Protocol v3 is the only App/Worker path. Every request/event contains a protocol
 version, document revision and job ID; build events also carry quality and a
 typed phase. Runtime guards validate both envelopes and transferred mesh shape.
 The Worker reports accepted, started, progress, succeeded, failed, cancelled
-or stale outcomes. `BuildCoordinator` exposes corresponding immutable state,
-including an explicit `stale` state.
+or stale outcomes. Successful events require `reduced`: a preview with
+`reduced=false` is byte-identical to full quality, so App promotes it to full
+and cancels the redundant scheduled build. `BuildCoordinator` exposes
+corresponding immutable state, including an explicit `stale` state.
 
 Only the latest job of each quality tier for the current revision is
 publishable. A preview may publish while a full build for the same revision is
@@ -150,6 +152,17 @@ The handwritten parser stores token-derived source spans and evaluates the
 document into Manifold solids/cross-sections. `union`, `difference`,
 `intersection` and `hull` are real kernel operations. Successful inspection
 metrics and full-quality exports are derived from the same geometry.
+
+Statement-form `assert(condition, message)` is a fail-fast language boundary.
+Arguments are bound and evaluated in the current module/loop scope; a passing
+assertion transparently evaluates its child geometry, while a failed assertion
+publishes one positioned `failed` terminal per job and never exposes partial
+geometry. Cancellation or supersession wins a race with that failure, so a job
+still has only one terminal outcome. Expression-form assertions remain
+explicitly outside the supported subset. Cooperative yields currently occur
+between top-level statements: a large child block guarded by one passing
+assertion remains synchronous until that statement ends, with hard Worker
+replacement retained as the watchdog boundary.
 
 The post-rewrite review fixed several important compatibility and safety bugs:
 

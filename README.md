@@ -9,8 +9,9 @@ instead of a misleading preview.
 ## Highlights
 
 - Real manifold `union()`, `difference()`, `intersection()`, and `hull()`.
-- Variables, expressions, ranges, `for`, `if`, `let`, user modules, and
-  `children()`.
+- Variables, expressions, ranges, `for`, `if`, `let`, user modules,
+  `children()`, and fail-fast OpenSCAD statement-form
+  `assert(condition, message)`.
 - 3D primitives, 2D shapes, `linear_extrude()`, `rotate_extrude()`,
   `projection()`, transforms, colors, and polyhedra.
 - Versioned preview → full geometry compilation in a warm dedicated Worker,
@@ -91,11 +92,11 @@ introduces GPL-2.0+ licensing requirements. This viewer instead uses the
 Apache-2.0 `manifold-3d` package and implements a strict language subset.
 
 Currently unsupported features include `include`/`use`, user functions,
-`import()`, `surface()`, `text()`, Minkowski operations, and advanced OpenSCAD
-Customizer annotations. These fail explicitly. Complexity is bounded to protect
-the browser: source length, AST size, parse/evaluation depth, evaluated-value
-allocation, range size, object count, `$fn`, and final triangle count all have
-limits.
+expression-form `assert(condition) value`, `import()`, `surface()`, `text()`,
+Minkowski operations, and advanced OpenSCAD Customizer annotations. These fail
+explicitly. Complexity is bounded to protect the browser: source length, AST
+size, parse/evaluation depth, evaluated-value allocation, range size, object
+count, `$fn`, and final triangle count all have limits.
 
 ## Architecture
 
@@ -103,12 +104,12 @@ limits.
   identity, provenance, transfer, and build-quality contracts.
 - `src/services/openscadParser.ts`: lexer, expression/statement parser,
   evaluator, Manifold geometry conversion, diagnostics, and budgets.
-- `src/services/buildCoordinator.ts`: protocol-v2 jobs, preview/full ordering,
+- `src/services/buildCoordinator.ts`: protocol-v3 jobs, preview/full ordering,
   stale-result rejection, cancellation, and Worker replacement.
 - `src/services/workspaceDocument.ts`: validated, migratable single-document
   persistence with monotonic revisions.
 - `src/workers/geometry.worker.ts`: asynchronous compilation and transferable
-  protocol-v2 geometry results.
+  protocol-v3 geometry results, including the required preview-reduction flag.
 - `src/services/webgpuRenderer.ts`: WebGPU resource lifecycle, lighting,
   camera, BVH picking/preselection, measurement and section overlays, grid,
   input, resize, and event-driven rendering.
@@ -145,7 +146,10 @@ next evidence-backed implementation candidates. A third pass adds
 [10 ideas with distinct user outcomes](docs/research/ten-new-ideas-third-pass.md)
 for model contracts, dimensional linting, printability, profiling, multi-view
 inspection, tolerance analysis, reproducible exports, assembly interference, automatic
-failure reduction, and parameter galleries.
+failure reduction, and parameter galleries. A subsequent
+[ten-agent adversarial review](docs/research/ten-agent-idea-review.md) separates
+the next safe slices from ideas that need stronger mathematical or architectural
+prerequisites.
 
 ## Docs
 

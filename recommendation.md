@@ -27,7 +27,8 @@ Reopen these only for a demonstrated regression.
 | Done | Panel-review geometry correctness fixes | Polyhedron winding/merge, EvenOdd polygon fill, positive/positioned extrusion and positioned revolution failures have regressions. |
 | Done | Input/resource hardening | Source/AST/depth/shape/triangle limits plus evaluation-step, evaluated-value, `concat`/`str`, extrusion-slice and pre-decode share-hash caps. |
 | Done | Customizer and STL boundary fixes | Structural literal offsets prevent source corruption; binary STL headers truncate encoded UTF-8 to 80 bytes. |
-| Done | Protocol-v2-only geometry builds | Runtime-validated messages and transfer payloads, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](src/services/buildCoordinator.ts). |
+| Done | Statement assertion foundation | `assert(condition, message)` uses OpenSCAD truthiness, strict argument binding, transparent child evaluation and positioned fail-fast diagnostics across the Worker boundary; expression-form assert remains unsupported. |
+| Done | Protocol-v3-only geometry builds | Runtime-validated messages and transfer payloads, required preview-reduction metadata, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](src/services/buildCoordinator.ts). |
 | Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](src/services/workspaceDocument.ts) and revision/job envelopes. |
 | Done | Stable operation/evaluated-entity identity | Structural `SourceOperationId`, dynamic `SceneEntityId`, exact spans and ambiguity-safe replacement matching. |
 | Done | Neutral mesh/build contract seam | [`src/core/mesh.ts`](src/core/mesh.ts) and [`src/core/build.ts`](src/core/build.ts) own contracts and deduplicated transfer discovery; a test keeps parser value imports Worker-only. |
@@ -43,26 +44,30 @@ Reopen these only for a demonstrated regression.
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** `BuildCoordinator` keeps same-revision preview/full work on a
-  warm Worker and safely supersedes revisions. A synchronous Manifold call
-  cannot observe messages, so the configured grace still ends in Worker
-  replacement when no checkpoint is reached.
+  warm Worker and safely supersedes revisions. The evaluator now yields between
+  top-level statements, emits throttled liveness heartbeats and checks aborts
+  again during mesh extraction. A single large statement or synchronous
+  Manifold call still cannot observe messages, so the configured grace remains
+  the hard Worker-replacement boundary.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.
-- **Acceptance remaining:** cancellation checkpoints between evaluator/kernel/
-  analysis phases; depth-one latest-work queue; phase timings; hard replacement
-  only as watchdog; real-browser tests for App↔Worker publication, supersession,
-  crash and disposal.
+- **Acceptance remaining:** deeper checkpoints inside guarded blocks, loops,
+  kernel and analysis phases; depth-one latest-work queue; phase timings; hard
+  replacement only as watchdog; real-browser tests for App↔Worker
+  supersession, crash and disposal.
 
 ### R2 — Avoid unconditional duplicate builds
 
-- **Priority/status:** P0 / Open
-- **Evidence:** each edit schedules a reduced preview and an unconditional full
-  pass even when preview quality did not alter tessellation.
-- **Risk:** parse/evaluation/kernel/transfer work can run twice for no visible or
-  export difference.
-- **Acceptance:** preview reports whether quality clamping changed geometry;
-  skip or reuse the full pass when equivalent; content/revision/quality cache
-  rules are explicit and covered by timing/correctness tests.
+- **Priority/status:** P0 / In progress
+- **Evidence:** protocol v3 requires `reduced`; the parser records whether
+  preview tessellation changed, and App promotes an equivalent preview to full
+  while cancelling the scheduled full job.
+- **Risk:** the promotion decision still lives inside App orchestration without
+  a focused policy regression; future quality controls could silently invalidate
+  the byte-equivalence rule.
+- **Acceptance remaining:** extract and directly test the promotion/cancellation
+  decision with revision/source races; document cache keys and add timing
+  evidence that equivalent models perform only one build.
 
 ### R3 — Split compiler and kernel phases
 
@@ -142,7 +147,8 @@ Reopen these only for a demonstrated regression.
 ### R8 — Decide compatibility before multi-file semantics
 
 - **Priority/status:** P1 / Decision
-- **Evidence:** the strict subset excludes `include`, `use`, imports and user
+- **Evidence:** the strict subset now includes statement-form `assert()` but
+  still excludes expression assertions, `include`, `use`, imports and user
   functions; the workspace is single-document.
 - **Risk:** piecemeal project support can look OpenSCAD-compatible while scopes,
   paths and dependency behavior differ.
@@ -152,14 +158,16 @@ Reopen these only for a demonstrated regression.
 
 ### R9 — Build reliable storage and a structured editor/workspace
 
-- **Priority/status:** P1 / Open; multi-file portion blocked on R8
-- **Evidence:** persistence validates/version-tags one localStorage snapshot and
-  migrates `scad-code`, but write/quota failures are returned and ignored. The
-  editor is a textarea and diagnostics are not decorations.
-- **Risk:** autosave can fail silently; customizer replacements disrupt native
-  undo; source↔geometry navigation remains caret-based.
-- **Acceptance:** quota-aware storage with visible failure/recovery, migrations
-  including feature-branch `scad-tabs`, IndexedDB snapshots, syntax-aware editor,
+- **Priority/status:** P1 / In progress; multi-file portion blocked on R8
+- **Evidence:** persistence validates/version-tags one localStorage snapshot,
+  migrates `scad-code`, and routes reads/writes through tested `SafeStorage`;
+  quota/write failures now surface as throttled UI notices. The editor remains
+  a textarea, diagnostics are not decorations and there is no snapshot store.
+- **Risk:** a failed write is visible but recovery is not actionable; customizer
+  replacements disrupt native undo; source↔geometry navigation remains
+  caret-based.
+- **Acceptance:** recovery controls for failed writes, migrations including
+  feature-branch `scad-tabs`, IndexedDB snapshots, syntax-aware editor,
   structured diagnostics/navigation and source-splice edits preserving undo.
 
 ### R10 — Close verified interaction and accessibility gaps
@@ -203,10 +211,11 @@ Reopen these only for a demonstrated regression.
 ### R13 — Converge feature work without merging competing architecture
 
 - **Priority/status:** P2 / Open
-- **Evidence:** the frozen feature branch contains SafeStorage, four-locale i18n,
-  multi-tab/undo/find, exporters/import, examples, PWA/offline and tests, but was
-  built around a competing large-component architecture. The review identifies
-  this rewrite as the structural base.
+- **Evidence:** `SafeStorage` has been ported through current contracts. The
+  frozen feature branch still contains four-locale i18n, multi-tab/undo/find,
+  exporters/import, examples, PWA/offline and tests, but was built around a
+  competing large-component architecture. The review identifies this rewrite
+  as the structural base.
 - **Risk:** a wholesale merge restores resolved coupling and storage-schema
   conflicts; ignoring the donor loses tested user value.
 - **Acceptance:** maintain a parity checklist; port leaf infrastructure and
