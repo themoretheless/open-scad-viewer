@@ -34,6 +34,19 @@ import { extractSemanticEdges } from './meshTopology'
 
 export interface ParseOptions {
   quality?: GeometryQuality
+  /**
+   * Cooperative cancellation probe. The top-level statement loop yields to the
+   * event loop periodically and consults this callback; when it returns true
+   * the evaluation rejects with {@link AbortedError}. Granularity is
+   * per-top-level-statement — a single giant statement will not yield.
+   */
+  shouldAbort?: () => boolean
+  /**
+   * Liveness hook invoked after each successful yield. A hosting worker can
+   * forward it as a (throttled) progress heartbeat so a watchdog can tell
+   * "alive but heavy" from "wedged" instead of killing legitimate long builds.
+   */
+  onYield?: () => void
 }
 
 export interface ParseResult {
@@ -42,6 +55,21 @@ export interface ParseResult {
   volume: number
   surfaceArea: number
   quality: GeometryQuality
+  /**
+   * True iff quality-based reduction actually altered any evaluated value
+   * (e.g. a $fn clamp that only applies to preview quality). When false, a
+   * preview-quality result is byte-identical to what a full build would
+   * produce, so callers may treat it as full and skip the full rebuild.
+   */
+  reduced: boolean
+}
+
+/** Thrown when {@link ParseOptions.shouldAbort} cancels an evaluation. */
+export class AbortedError extends Error {
+  constructor() {
+    super('Evaluation aborted: superseded by a newer request')
+    this.name = 'AbortedError'
+  }
 }
 
 const MAX_SOURCE_LENGTH = 250_000
@@ -512,6 +540,8 @@ interface EvalContext {
   depth: number
   /** Shared mutable evaluation budget — one object across all ctx spreads. */
   budget: { ops: number }
+  /** Shared mutable flag — set when preview quality actually altered a value. */
+  reduced: { value: boolean }
   instancePath: string
   valueBudget: { used: number }
   valueWeights: WeakMap<Value[], number>
@@ -786,6 +816,53 @@ function evalNodes(nodes: Statement[], parent: EvalContext, scoped = true): Shap
   return output
 }
 
+/** Yield to the event loop after this many top-level statements… */
+const YIELD_EVERY_STATEMENTS = 25
+/** …or once this much wall-clock time has elapsed since the last yield. */
+const YIELD_EVERY_MS = 50
+
+/**
+ * Top-level statement loop with cooperative cancellation. Mirrors
+ * evalNodes(nodes, ctx, false) — shared env, shared budget, cumulative shape
+ * cap — but yields to the event loop every {@link YIELD_EVERY_STATEMENTS}
+ * statements or {@link YIELD_EVERY_MS} ms so a hosting worker can receive
+ * queued messages, then consults shouldAbort. The yield must be a macrotask
+ * (setTimeout, not a resolved-promise microtask): worker message events are
+ * only delivered between macrotasks.
+ *
+ * Granularity is per-top-level-statement — a single giant statement (one huge
+ * for-loop, one enormous boolean) will not yield mid-statement. The hosting
+ * BuildCoordinator's worker-replacement grace timer remains the hard boundary
+ * for such statements.
+ */
+async function evalTopLevel(nodes: Statement[], ctx: EvalContext, shouldAbort?: () => boolean, onYield?: () => void): Promise<Shape[]> {
+  if (shouldAbort?.()) throw new AbortedError()
+  const output: Shape[] = []
+  let statementsSinceYield = 0
+  let lastYield = Date.now()
+  for (const node of nodes) {
+    // Check the clock only every N statements, and sleep only when the time
+    // budget is actually spent — an unconditional every-N yield would pay the
+    // ~4ms clamped setTimeout tax hundreds of times on statement-heavy models.
+    if (statementsSinceYield >= YIELD_EVERY_STATEMENTS) {
+      statementsSinceYield = 0
+      if (Date.now() - lastYield >= YIELD_EVERY_MS) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+        if (shouldAbort?.()) throw new AbortedError()
+        onYield?.()
+        lastYield = Date.now()
+      }
+    }
+    statementsSinceYield++
+    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+    if (node.type === 'assign') { ctx.env.set(node.name, evalExpression(node.value, ctx)); continue }
+    if (node.type === 'module') continue
+    output.push(...evalNode(node, ctx))
+    if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+  }
+  return output
+}
+
 function evalNode(node: CallNode, parent: EvalContext): Shape[] {
   if (parent.depth >= MAX_EVAL_DEPTH) evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
   const operationId = staticOperationId(node)
@@ -921,14 +998,23 @@ function segments(node: CallNode, ctx: EvalContext, fallback: number, minimum: n
   const local = arg(node, '$fn', -1, undefined, ctx)
   const global = ctx.env.get('$fn')
   const raw = local === undefined || local === 0 ? global : local
+  const requested = raw === undefined || raw === 0 ? undefined : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
   const maxSegments = ctx.quality === 'preview' ? 48 : MAX_FN
   const previewFallback = ctx.quality === 'preview' ? Math.min(fallback, 24) : fallback
-  let value = raw === undefined || raw === 0 ? previewFallback : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
+  let value = requested ?? previewFallback
   if (value > maxSegments) {
     warn(ctx, `$fn=${value} was clamped to ${maxSegments} for ${ctx.quality} rendering`)
     value = maxSegments
   }
-  return Math.max(minimum, value)
+  value = Math.max(minimum, value)
+  if (ctx.quality === 'preview') {
+    // This is the only place quality changes evaluation. Record whether the
+    // preview reduction actually altered the segment count a full-quality
+    // evaluation of the same call would have used.
+    const fullValue = Math.max(minimum, Math.min(requested ?? fallback, MAX_FN))
+    if (value !== fullValue) ctx.reduced.value = true
+  }
+  return value
 }
 
 function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
@@ -1217,11 +1303,22 @@ function parseColor(value: Value, ctx: EvalContext, p: number): RGBA {
 function clamp01(value: number) { return Math.max(0, Math.min(1, value)) }
 
 let wasmPromise: Promise<ManifoldToplevel> | undefined
-function getWasm() {
+/**
+ * Lazily load the Manifold WASM module, cached per JS realm. Exported so a
+ * hosting worker can eagerly warm it at startup instead of paying the
+ * download+compile cost on the first request. A rejected load is NOT cached:
+ * one transient network failure must not brick every future parse, so the
+ * cached promise is cleared on rejection and the next call retries.
+ */
+export function getWasm(): Promise<ManifoldToplevel> {
   if (!wasmPromise) {
-    wasmPromise = Module().then(module => {
+    const attempt = Module().then(module => {
       module.setup()
       return garbageCollectManifold(module)
+    })
+    wasmPromise = attempt
+    attempt.catch(() => {
+      if (wasmPromise === attempt) wasmPromise = undefined
     })
   }
   return wasmPromise
@@ -1239,6 +1336,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
   const env = new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]])
   const quality = options.quality ?? 'full'
   const sourceReferences = new Map<number, MeshSourceReference>()
+  const reduced = { value: false }
   const ctx: EvalContext = {
     wasm,
     source,
@@ -1249,6 +1347,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
     sourceReferences,
     depth: 0,
     budget: { ops: 0 },
+    reduced,
     instancePath: 'root',
     valueBudget: { used: 0 },
     valueWeights: new WeakMap(),
@@ -1256,7 +1355,10 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
   }
 
   try {
-    const shapes = evalNodes(ast, ctx, false)
+    const shapes = await evalTopLevel(ast, ctx, options.shouldAbort, options.onYield)
+    // Mesh extraction (normals/BVH/edges) is often the dominant cost — a
+    // superseded request must not pay it in full before the newest starts.
+    if (options.shouldAbort?.()) throw new AbortedError()
     const sections = shapes.filter(shape => shape.dimension === 2)
     if (sections.length) warn(ctx, `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`)
     const solids = shapes.filter((shape): shape is Shape3D => shape.dimension === 3 && !shape.geometry.isEmpty())
@@ -1265,6 +1367,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
     let surfaceArea = 0
     let triangleCount = 0
     for (const shape of solids) {
+      if (options.shouldAbort?.()) throw new AbortedError()
       volume += shape.geometry.volume()
       surfaceArea += shape.geometry.surfaceArea()
       const withNormals = shape.geometry.calculateNormals(0, 52.5)
@@ -1314,7 +1417,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
         topology: semanticEdges.diagnostics,
       })
     }
-    return { meshes, warnings, volume, surfaceArea, quality }
+    return { meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value }
   } finally {
     cleanupManifold()
   }

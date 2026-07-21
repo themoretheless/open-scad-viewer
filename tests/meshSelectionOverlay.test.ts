@@ -3,6 +3,7 @@ import type { MeshProvenanceRun, MeshSourceReference } from '../src/core/mesh'
 import { identity, translate } from '../src/services/math3d'
 import {
   buildFaceOverlayGeometry,
+  buildFaceTriangleIndex,
   buildSourceOverlayGeometry,
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
@@ -42,6 +43,61 @@ describe('mesh selection overlays', () => {
     const overlay = buildFaceOverlayGeometry(vertices, indices, new Uint32Array([1, 1]), identity(), 1, 1, 1)
     expect(Array.from(overlay.triangles)).toEqual([1, 0, 0, 1, 1, 0, 0, 1, 0])
     expect(overlay.boundaryLines.length).toBe(18)
+  })
+
+  it('groups triangles by face id in ascending CSR rows', () => {
+    const index = buildFaceTriangleIndex(new Uint32Array([3, 5, 3, 9]), 4)
+    expect(index).not.toBeNull()
+    expect(index!.triangleCount).toBe(4)
+    const rowOf = (faceId: number) => Array.from(
+      index!.triangles.subarray(index!.offsets[faceId], index!.offsets[faceId + 1]),
+    )
+    expect(rowOf(3)).toEqual([0, 2])
+    expect(rowOf(5)).toEqual([1])
+    expect(rowOf(9)).toEqual([3])
+    expect(rowOf(4)).toEqual([])
+    expect(buildFaceTriangleIndex(new Uint32Array([]), 0)).toBeNull()
+    expect(buildFaceTriangleIndex(new Uint32Array([1]), 2)).toBeNull()
+  })
+
+  it('produces identical overlay geometry through the CSR face index', () => {
+    const gridVertices = new Float32Array([
+      0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1,
+      1, 1, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1,
+      2, 0, 0, 0, 0, 1,
+      2, 1, 0, 0, 0, 1,
+    ])
+    const gridIndices = new Uint32Array([0, 1, 2, 0, 2, 3, 1, 4, 5, 1, 5, 2])
+    const gridFaceIds = new Uint32Array([3, 3, 5, 9])
+    const transform = translate(identity(), [1, 2, 3])
+    const index = buildFaceTriangleIndex(gridFaceIds, 4)
+    expect(index).not.toBeNull()
+
+    for (let triangle = 0; triangle < 4; triangle++) {
+      const faceId = gridFaceIds[triangle]
+      const direct = buildFaceOverlayGeometry(gridVertices, gridIndices, gridFaceIds, transform, triangle, faceId)
+      const viaIndex = buildFaceOverlayGeometry(
+        gridVertices, gridIndices, gridFaceIds, transform, triangle, faceId, undefined, index,
+      )
+      expect(Array.from(viaIndex.triangles)).toEqual(Array.from(direct.triangles))
+      expect(Array.from(viaIndex.boundaryLines)).toEqual(Array.from(direct.boundaryLines))
+      expect(direct.triangles.length).toBeGreaterThan(0)
+    }
+
+    // Over-limit faces fall back to the picked triangle on both paths.
+    const directCapped = buildFaceOverlayGeometry(gridVertices, gridIndices, gridFaceIds, transform, 1, 3, 1)
+    const indexedCapped = buildFaceOverlayGeometry(gridVertices, gridIndices, gridFaceIds, transform, 1, 3, 1, index)
+    expect(Array.from(indexedCapped.triangles)).toEqual(Array.from(directCapped.triangles))
+    expect(Array.from(indexedCapped.boundaryLines)).toEqual(Array.from(directCapped.boundaryLines))
+    expect(directCapped.triangles.length).toBe(9)
+
+    // Unknown face ids fall back to the picked triangle on both paths.
+    const directUnknown = buildFaceOverlayGeometry(gridVertices, gridIndices, gridFaceIds, transform, 0, 4)
+    const indexedUnknown = buildFaceOverlayGeometry(gridVertices, gridIndices, gridFaceIds, transform, 0, 4, undefined, index)
+    expect(Array.from(indexedUnknown.triangles)).toEqual(Array.from(directUnknown.triangles))
+    expect(Array.from(indexedUnknown.boundaryLines)).toEqual(Array.from(directUnknown.boundaryLines))
   })
 
   it('snaps a point overlay to the corner with the largest barycentric weight', () => {

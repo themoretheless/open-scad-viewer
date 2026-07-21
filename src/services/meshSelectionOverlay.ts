@@ -6,6 +6,19 @@ export interface FaceOverlayGeometry {
   boundaryLines: Float32Array
 }
 
+/**
+ * CSR (compressed sparse row) mapping from kernel face id to the triangles
+ * that carry it: the triangles of face `f` are
+ * `triangles[offsets[f] .. offsets[f + 1])`, ascending. Built once per mesh so
+ * a face-mode hover costs O(face) instead of an O(scene) faceIds scan.
+ */
+export interface FaceTriangleIndex {
+  /** Triangle count the index was built for; guards against stale indices. */
+  triangleCount: number
+  offsets: Uint32Array
+  triangles: Uint32Array
+}
+
 export interface SourceOverlayGeometry extends FaceOverlayGeometry {
   triangleCount: number
   truncated: boolean
@@ -47,6 +60,41 @@ function worldVertex(vertices: Float32Array, transform: Mat4, vertexIndex: numbe
   return world.every(Number.isFinite) ? world : null
 }
 
+/**
+ * Builds the faceId → triangle CSR index with one counting-sort pass.
+ * Returns null when no index can be built (empty mesh, short faceIds array) or
+ * when the id space is so sparse that the offsets table would dwarf the mesh;
+ * callers fall back to the direct scan in that case.
+ */
+export function buildFaceTriangleIndex(
+  faceIds: Uint32Array,
+  triangleCount: number,
+): FaceTriangleIndex | null {
+  const count = Number.isInteger(triangleCount) ? triangleCount : 0
+  if (count < 1 || faceIds.length < count) return null
+
+  let maxId = 0
+  for (let triangle = 0; triangle < count; triangle++) {
+    const id = faceIds[triangle]
+    if (id > maxId) maxId = id
+  }
+  // Manifold face ids are bounded by the halfedge count (3 × triangles); a
+  // pathologically sparse id space would make the offsets table quadratic.
+  if (maxId > count * 4 + 1024) return null
+
+  const offsets = new Uint32Array(maxId + 2)
+  for (let triangle = 0; triangle < count; triangle++) offsets[faceIds[triangle] + 1]++
+  for (let id = 0; id <= maxId; id++) offsets[id + 1] += offsets[id]
+
+  const triangles = new Uint32Array(count)
+  const cursor = new Uint32Array(maxId + 1)
+  for (let triangle = 0; triangle < count; triangle++) {
+    const id = faceIds[triangle]
+    triangles[offsets[id] + cursor[id]++] = triangle
+  }
+  return { triangleCount: count, offsets, triangles }
+}
+
 function provenanceRunBounds(run: MeshProvenanceRun, triangleCount: number): [number, number] | null {
   if (!Number.isFinite(run.triangleStart) || !Number.isFinite(run.triangleEnd)) return null
   const start = Math.max(0, Math.min(triangleCount, Math.floor(run.triangleStart)))
@@ -68,22 +116,32 @@ export function buildFaceOverlayGeometry(
   triangleIndex: number,
   faceId: number | null,
   maxFaceTriangles = 20_000,
+  faceIndex: FaceTriangleIndex | null = null,
 ): FaceOverlayGeometry {
   if (!triangleVertexIndices(indices, triangleIndex) || maxFaceTriangles < 1) return EMPTY_FACE_OVERLAY
 
   const triangleCount = Math.floor(indices.length / 3)
-  const faceTriangles: number[] = []
+  let faceTriangles: ArrayLike<number> & Iterable<number> = []
   if (faceId !== null && faceIds.length >= triangleCount) {
-    for (let triangle = 0; triangle < triangleCount; triangle++) {
-      if (faceIds[triangle] !== faceId) continue
-      faceTriangles.push(triangle)
-      if (faceTriangles.length > maxFaceTriangles) break
+    if (faceIndex && faceIndex.triangleCount === triangleCount) {
+      // O(face) path: the CSR rows hold the same ascending triangle order the
+      // direct scan produces, so the generated geometry is identical.
+      const start = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId] : 0
+      const end = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId + 1] : 0
+      if (end > start && end - start <= maxFaceTriangles) {
+        faceTriangles = faceIndex.triangles.subarray(start, end)
+      }
+    } else {
+      const scanned: number[] = []
+      for (let triangle = 0; triangle < triangleCount; triangle++) {
+        if (faceIds[triangle] !== faceId) continue
+        scanned.push(triangle)
+        if (scanned.length > maxFaceTriangles) break
+      }
+      if (scanned.length && scanned.length <= maxFaceTriangles) faceTriangles = scanned
     }
   }
-  if (!faceTriangles.length || faceTriangles.length > maxFaceTriangles) {
-    faceTriangles.length = 0
-    faceTriangles.push(triangleIndex)
-  }
+  if (!faceTriangles.length) faceTriangles = [triangleIndex]
 
   const trianglePositions: number[] = []
   const edges = new Map<string, EdgeUse>()

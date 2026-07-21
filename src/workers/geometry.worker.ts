@@ -1,4 +1,4 @@
-import { parseOpenSCAD, OpenSCADParseError } from '../services/openscadParser'
+import { AbortedError, getWasm, parseOpenSCAD, OpenSCADParseError } from '../services/openscadParser'
 import { meshTransferables } from '../core/mesh'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -20,6 +20,11 @@ const activeJobs = new Map<number, ActiveJob>()
 const latestByQuality = new Map<GeometryBuildRequest['quality'], GeometryBuildRequest>()
 let latestDocumentRevision = -1
 
+// Eagerly warm the Manifold WASM at startup so the first build does not pay
+// the download+compile cost. A warm-up failure is not fatal: getWasm() does
+// not cache rejections, so the first real build simply retries the load.
+void getWasm().catch(() => undefined)
+
 function postEvent(event: GeometryWorkerEvent, transfer: Transferable[] = []) {
   self.postMessage(event, { transfer })
 }
@@ -40,6 +45,9 @@ function jobEvent<T extends Omit<GeometryWorkerEvent, 'protocolVersion' | 'docum
 function elapsed(job: ActiveJob) {
   return performance.now() - job.startedAt
 }
+
+/** Minimum spacing between mid-parse liveness heartbeat progress events. */
+const HEARTBEAT_THROTTLE_MS = 1000
 
 function staleReplacement(request: GeometryBuildRequest) {
   if (request.documentRevision !== latestDocumentRevision) {
@@ -95,11 +103,28 @@ async function runBuild(request: GeometryBuildRequest) {
   postEvent(jobEvent(request, { status: 'started', phase: 'initializing' }))
   postEvent(jobEvent(request, { status: 'progress', phase: 'compiling', progress: null }))
 
+  let lastHeartbeat = performance.now()
   try {
-    // parseOpenSCAD/Manifold is synchronous after WASM initialization. A
-    // cancel message cannot interrupt that section of the worker event loop;
-    // BuildCoordinator therefore uses worker replacement for hard preemption.
-    const result = await parseOpenSCAD(request.source, { quality: request.quality })
+    // The parser's top-level statement loop yields to the event loop
+    // periodically, so queued cancel messages are delivered mid-parse and
+    // shouldAbort stops a superseded/cancelled evaluation cooperatively — the
+    // warm worker (and its cached WASM) survives. A single wedged statement
+    // still cannot yield; BuildCoordinator's grace timer replaces the worker
+    // in that case and remains the hard cancellation boundary.
+    const result = await parseOpenSCAD(request.source, {
+      quality: request.quality,
+      shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,
+      onYield: () => {
+        // Throttled liveness heartbeat: the build is alive (just heavy). The
+        // main thread can distinguish honest long builds from a wedged worker
+        // instead of killing them at a fixed timeout.
+        const now = performance.now()
+        if (now - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
+          lastHeartbeat = now
+          postEvent(jobEvent(request, { status: 'progress', phase: 'compiling', progress: null }))
+        }
+      },
+    })
     const terminal = terminalState(job, 'compiling')
     if (terminal) {
       postEvent(terminal)
@@ -118,6 +143,18 @@ async function runBuild(request: GeometryBuildRequest) {
     const terminal = terminalState(job, 'compiling')
     if (terminal) {
       postEvent(terminal)
+      return
+    }
+    if (error instanceof AbortedError) {
+      // shouldAbort only returns true when the job was cancelled or
+      // superseded, so terminalState above covers this in practice. Guard the
+      // race anyway: an aborted evaluation must never surface as a build error.
+      postEvent(jobEvent(request, {
+        status: 'cancelled',
+        phase: 'compiling',
+        reason: 'superseded',
+        durationMs: elapsed(job),
+      }))
       return
     }
     postEvent(jobEvent(request, {
@@ -151,11 +188,12 @@ function acceptBuild(request: GeometryBuildRequest) {
 function cancelBuild(request: Extract<GeometryWorkerRequest, { type: 'cancel' }>) {
   const job = activeJobs.get(request.jobId)
   if (!job || job.request.documentRevision !== request.documentRevision || job.cancelled) return
-  // Cancellation is only acknowledged here. In particular, do not publish a
-  // terminal event while parseOpenSCAD may still be initializing or executing
-  // synchronous Manifold work. runBuild publishes cancellation after the next
-  // real checkpoint; if it cannot reach one, BuildCoordinator's grace timer
-  // replaces this worker and establishes the hard cancellation boundary.
+  // Cancellation is only acknowledged here. Do not publish a terminal event
+  // directly: the running evaluation observes this flag through shouldAbort at
+  // its next cooperative yield (or checkpoint) and runBuild publishes the
+  // cancellation there. If the evaluation is wedged inside one statement and
+  // never yields, BuildCoordinator's grace timer replaces this worker and
+  // establishes the hard cancellation boundary.
   job.cancelled = request.reason
 }
 

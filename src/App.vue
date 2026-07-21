@@ -33,6 +33,14 @@ import { isPaletteCommandEnabled } from './services/commandSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
+import {
+  setStorageFailureHandler,
+  storageGet,
+  storageGetEnum,
+  storageGetJSON,
+  storageSet,
+  storageSetJSON,
+} from './services/safeStorage'
 import { extractCustomizerParameters, replaceCustomizerValue, type CustomizerValue } from './services/scadCustomizer'
 import { planScenePublication } from './services/scenePublication'
 import {
@@ -78,6 +86,8 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
     opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
     workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
+    workerRestarted: 'Сборка не отвечала 30 секунд — Worker перезапущен',
+    storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
     gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
     gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
     commands: 'Команды', commandHelp: 'Поиск действий', display: 'Отображение',
@@ -115,6 +125,8 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Link copied', copyFailed: 'Link added to the address bar',
     opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
     workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
+    workerRestarted: 'Build was unresponsive for 30 seconds — worker restarted',
+    storageFailed: 'Could not save data: browser storage is unavailable or full',
     gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
     gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
     commands: 'Commands', commandHelp: 'Search actions', display: 'Display',
@@ -132,19 +144,36 @@ const L: Record<Language, Record<string, string>> = {
   },
 }
 
-const lang = ref<Language>(readStorage('scad-lang') === 'en' ? 'en' : 'ru')
-const isDark = ref(readStorage('scad-theme') !== 'light')
+const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
+const isDark = ref(storageGetEnum('scad-theme', ['dark', 'light'], 'dark') !== 'light')
 const sharedCode = readSharedCode()
-const storedWorkspace = typeof localStorage === 'undefined'
-  ? createWorkspaceDocument(EXAMPLES.basic)
-  : loadWorkspaceDocument(localStorage, EXAMPLES.basic)
+/**
+ * All workspace persistence flows through SafeStorage: reads never throw and
+ * failed writes surface through the registered failure handler instead of
+ * silently dropping user data. setItem still throws on failure so
+ * saveWorkspaceDocument's boolean contract stays truthful.
+ */
+const workspaceStorage = {
+  getItem: storageGet,
+  setItem(key: string, value: string) {
+    if (!storageSet(key, value)) throw new Error(`Could not persist ${key}`)
+  },
+}
+const storedWorkspace = loadWorkspaceDocument(workspaceStorage, EXAMPLES.basic)
 const initialWorkspace = sharedCode === null
   ? storedWorkspace
   : createWorkspaceDocument(sharedCode, { fileName: 'shared-model.scad' })
+if (sharedCode !== null) {
+  // Successful #code= import: clear the hash so a reload doesn't re-import the
+  // shared snapshot over whatever the user edits and saves afterwards. The
+  // imported code is persisted immediately in onMounted (persistWorkspaceNow),
+  // so a plain reload keeps showing the shared model instead of an old draft.
+  history.replaceState(null, '', location.pathname + location.search)
+}
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(initialWorkspace)
 const code = ref(initialWorkspace.source)
-const autoRender = ref(readStorage('scad-auto') !== 'false')
-const editorWidth = ref(clamp(Number(readStorage('scad-editor-width')) || 440, 300, 820))
+const autoRender = ref(storageGet('scad-auto') !== 'false')
+const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 300, 820))
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
@@ -169,6 +198,10 @@ const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
 const standardView = ref<StandardView>('iso')
 const activeView = ref<StandardView | 'custom'>('iso')
+const cameraYaw = ref(Math.PI / 4)
+const cameraPitch = ref(Math.atan(1 / Math.sqrt(2)))
+/** Projection to restore once the camera leaves an orthographic face-view snap. */
+const projectionBeforeFaceSnap = ref<ProjectionMode | null>(null)
 const displayMode = ref<DisplayMode>('shaded')
 const selectedMesh = ref<number | null>(null)
 const selectedHit = ref<PickHit | null>(null)
@@ -352,8 +385,18 @@ const paletteCommands = computed(() => {
   })
 })
 
+/** Last-resort watchdog: a building coordinator that stays completely silent
+ * (no state change, no progress heartbeat) for this long is assumed wedged
+ * inside one statement; the worker is replaced and the build retried once. */
+const WATCHDOG_TIMEOUT_MS = 30_000
+/** Rate limit for the storage-write-failure notice. */
+const STORAGE_NOTICE_THROTTLE_MS = 10_000
+
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
+let watchdogTimer: ReturnType<typeof setTimeout> | null = null
+let watchdogRetried = false
+let lastStorageNotice = 0
 let renderDebounce: ReturnType<typeof setTimeout> | null = null
 let fullRenderDebounce: ReturnType<typeof setTimeout> | null = null
 let storageDebounce: ReturnType<typeof setTimeout> | null = null
@@ -370,8 +413,17 @@ const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 onMounted(async () => {
+  setStorageFailureHandler(() => {
+    // Throttled: a burst of failed writes (e.g. debounced code saves against a
+    // full quota) must not spam the notice channel.
+    const now = Date.now()
+    if (now - lastStorageNotice < STORAGE_NOTICE_THROTTLE_MS) return
+    lastStorageNotice = now
+    showNotice(t('storageFailed'))
+  })
   applyPreferences()
-  // Give a migrated legacy draft a durable document ID even if no edit follows.
+  // Give a migrated legacy draft (or a freshly imported #code= share) a
+  // durable persisted document even if no edit follows.
   persistWorkspaceNow()
   window.addEventListener('pagehide', flushWorkspacePersistence)
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -416,8 +468,10 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
     measureActive.value = active
   }
   instance.onCameraHistoryChange = available => { canPreviousView.value = available }
+  instance.onCameraChange = syncCameraState
   instance.onStatusChange = event => handleRendererStatus(instance, event)
   canPreviousView.value = instance.canGoToPreviousView
+  syncCameraState(instance.getCameraState())
 }
 
 onUnmounted(() => {
@@ -431,6 +485,8 @@ onUnmounted(() => {
     persistWorkspaceNow()
   }
   if (noticeTimeout) clearTimeout(noticeTimeout)
+  disarmWatchdog()
+  setStorageFailureHandler(null)
   buildCoordinator?.dispose()
   buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
@@ -441,6 +497,7 @@ onUnmounted(() => {
     renderer.onHoverChange = null
     renderer.onMeasurementChange = null
     renderer.onCameraHistoryChange = null
+    renderer.onCameraChange = null
     renderer.onStatusChange = null
   }
   renderer?.destroy()
@@ -562,6 +619,10 @@ watch(code, value => {
   // Provenance belongs to the last compiled source revision. Never retain a
   // reverse highlight while the editor has moved ahead of that revision.
   if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
+  // A #code= hash left by shareSource() goes stale the moment the code
+  // diverges — on reload it would win over the newer saved draft and
+  // silently discard the post-share edits.
+  if (location.hash.startsWith('#code=')) history.replaceState(null, '', location.pathname + location.search)
   workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { source: value })
   scheduleWorkspacePersistence()
   if (autoRender.value) scheduleRender()
@@ -573,7 +634,7 @@ watch(fileName, value => {
 })
 
 watch(autoRender, enabled => {
-  writeStorage('scad-auto', String(enabled))
+  storageSet('scad-auto', String(enabled))
   if (enabled) scheduleRender(0)
   else {
     if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
@@ -595,7 +656,7 @@ function scheduleWorkspacePersistence() {
 
 function persistWorkspaceNow() {
   storageDebounce = null
-  if (typeof localStorage !== 'undefined') saveWorkspaceDocument(localStorage, workspaceDocument.value)
+  saveWorkspaceDocument(workspaceStorage, workspaceDocument.value)
 }
 
 function flushWorkspacePersistence() {
@@ -611,8 +672,14 @@ function startBuildCoordinator() {
   if (buildCoordinator) return
   buildCoordinator = new BuildCoordinator({
     workerFactory: () => new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
-    supersedeGraceMs: 40,
+    // The parser cancels cooperatively at its yield points (every ~50ms), so a
+    // superseded build normally reports `cancelled` well inside this grace
+    // window and the warm worker — with its cached ~541 kB WASM — survives.
+    // The grace timer stays as the hard boundary for statements that never
+    // reach a yield point.
+    supersedeGraceMs: 300,
     onPublish: handleGeometryResponse,
+    onProgress: armWatchdog,
     onStateChange: handleBuildState,
   })
 }
@@ -640,6 +707,44 @@ function handleBuildState(state: BuildCoordinatorState) {
   rendering.value = state.status === 'building'
   if (state.requestedQuality) renderingQuality.value = state.requestedQuality
   if (!rendering.value && rendererErrorMessage && !error.value) error.value = rendererErrorMessage
+  // The watchdog observes coordinator liveness: every state change (including
+  // the worker's throttled mid-parse progress heartbeats) re-arms it, so it
+  // only fires on genuine silence — a build wedged inside one statement.
+  if (rendering.value) armWatchdog()
+  else disarmWatchdog()
+}
+
+function armWatchdog() {
+  if (watchdogTimer) clearTimeout(watchdogTimer)
+  watchdogTimer = setTimeout(handleWatchdogTimeout, WATCHDOG_TIMEOUT_MS)
+}
+
+function disarmWatchdog() {
+  if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
+}
+
+/**
+ * Last-resort recovery. Cooperative cancellation is per-top-level-statement,
+ * so a single wedged statement can hang the worker forever without ever
+ * being superseded. If the coordinator reports no liveness within the
+ * watchdog window, replace the worker through the coordinator's hard
+ * cancellation boundary (accepting the cold-WASM reload) and retry the
+ * current source once. A second consecutive timeout gives up with an error
+ * instead of restarting in a loop.
+ */
+function handleWatchdogTimeout() {
+  watchdogTimer = null
+  if (!rendering.value || !buildCoordinator) return
+  const quality = renderingQuality.value
+  buildCoordinator.cancel('worker-restart')
+  if (watchdogRetried) {
+    watchdogRetried = false
+    error.value = t('workerError')
+    return
+  }
+  watchdogRetried = true
+  showNotice(t('workerRestarted'))
+  doRender(quality)
 }
 
 function handleGeometryResponse(response: PublishedGeometryBuild) {
@@ -647,6 +752,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
   if (response.documentRevision !== workspaceDocument.value.revision) return
+  watchdogRetried = false
   renderDuration.value = response.durationMs
   const source = buildSources.get(response.documentRevision) ?? code.value
   for (const revision of buildSources.keys()) {
@@ -656,6 +762,17 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   if (response.status === 'failed') {
     error.value = response.error.message
     return
+  }
+
+  // Preview-skip: when preview-quality reduction altered nothing, this result
+  // is identical to what the scheduled full build would produce — publish it
+  // as 'full' (stale clears, export allowed) and cancel that full build. Only
+  // valid while the editor still matches the source this preview was built
+  // from; otherwise the source watcher owns the next build.
+  let effectiveQuality = response.quality
+  if (response.quality === 'preview' && !response.reduced && source === code.value) {
+    effectiveQuality = 'full'
+    if (fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
   }
 
   try {
@@ -709,7 +826,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     surfaceArea.value = response.surfaceArea
     warnings.value = response.warnings
     renderedSource.value = source
-    renderedQuality.value = response.quality
+    renderedQuality.value = effectiveQuality
     syncSourceHighlightFromEditor()
     sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
     applySection()
@@ -720,6 +837,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
 function handleWorkerError(caught?: unknown) {
   rendering.value = false
+  disarmWatchdog()
   buildCoordinator?.dispose()
   buildCoordinator = null
   error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
@@ -727,7 +845,7 @@ function handleWorkerError(caught?: unknown) {
 
 function toggleLang() {
   lang.value = lang.value === 'ru' ? 'en' : 'ru'
-  writeStorage('scad-lang', lang.value)
+  storageSet('scad-lang', lang.value)
   document.documentElement.lang = lang.value
 }
 
@@ -740,7 +858,7 @@ function applyPreferences() {
   document.documentElement.dataset.theme = isDark.value ? 'dark' : 'light'
   document.documentElement.lang = lang.value
   document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
-  writeStorage('scad-theme', isDark.value ? 'dark' : 'light')
+  storageSet('scad-theme', isDark.value ? 'dark' : 'light')
 }
 
 function loadExample() {
@@ -834,11 +952,14 @@ function fitView() { renderer?.fitView() }
 function resetView() {
   standardView.value = 'iso'
   activeView.value = 'iso'
+  restoreProjectionAfterFaceSnap()
   renderer?.resetView()
 }
 function previousView() {
   const state = renderer?.previousView()
   if (!state) return
+  // History restores an explicit projection; a pending face-snap restore is obsolete.
+  projectionBeforeFaceSnap.value = null
   projection.value = state.projection
   const restoredView = standardViewForCamera(state)
   if (restoredView) {
@@ -846,6 +967,29 @@ function previousView() {
     activeView.value = restoredView
   } else {
     activeView.value = 'custom'
+  }
+}
+
+const FACE_VIEWS: readonly StandardView[] = ['front', 'back', 'left', 'right', 'top', 'bottom']
+
+/** Mirrors the renderer camera into the UI so the view cube stays truthful. */
+function syncCameraState(state: CameraState) {
+  cameraYaw.value = state.yaw
+  cameraPitch.value = state.pitch
+  const matched = standardViewForCamera(state)
+  activeView.value = matched ?? 'custom'
+  if (matched) standardView.value = matched
+  // Orbiting away from a snapped face view (or landing on ISO) restores the
+  // projection the user had before the orthographic snap.
+  if (matched === null || matched === 'iso') restoreProjectionAfterFaceSnap()
+}
+
+function restoreProjectionAfterFaceSnap() {
+  const previous = projectionBeforeFaceSnap.value
+  projectionBeforeFaceSnap.value = null
+  if (previous !== null && projection.value !== previous) {
+    projection.value = previous
+    renderer?.setProjection(previous)
   }
 }
 
@@ -869,6 +1013,8 @@ function toggleIsolate() {
   isolated.value = renderer?.toggleIsolateSelection() ?? false
 }
 function toggleProjection() {
+  // An explicit projection choice cancels any pending face-snap restore.
+  projectionBeforeFaceSnap.value = null
   projection.value = projection.value === 'perspective' ? 'orthographic' : 'perspective'
   renderer?.setProjection(projection.value)
 }
@@ -877,15 +1023,25 @@ function toggleGrid() {
   renderer?.setGridVisible(gridVisible.value)
 }
 function changeStandardView() {
-  activeView.value = standardView.value
-  renderer?.setView(standardView.value)
+  const view = standardView.value
+  activeView.value = view
+  if (FACE_VIEWS.includes(view)) {
+    // Face views snap to orthographic; remember what to restore on orbit-away/ISO.
+    if (projectionBeforeFaceSnap.value === null && projection.value === 'perspective') {
+      projectionBeforeFaceSnap.value = 'perspective'
+    }
+    if (projection.value !== 'orthographic') {
+      projection.value = 'orthographic'
+      renderer?.setProjection('orthographic')
+    }
+  } else {
+    restoreProjectionAfterFaceSnap()
+  }
+  renderer?.setView(view)
 }
 function setStandardView(view: StandardView) {
   standardView.value = view
   changeStandardView()
-}
-function markCustomView(event: PointerEvent) {
-  if ((event.buttons & 1) !== 0 && !event.shiftKey) activeView.value = 'custom'
 }
 function setDisplayMode(mode: DisplayMode) {
   displayMode.value = mode
@@ -1118,7 +1274,7 @@ function executeCommand(id: string) {
 function recordCommandUsage(id: string) {
   const next = [id, ...commandMru.value.filter(candidate => candidate !== id)].slice(0, 12)
   commandMru.value = next
-  writeStorage('scad-command-mru', JSON.stringify(next))
+  storageSetJSON('scad-command-mru', next)
 }
 
 function handleEditorKey(event: KeyboardEvent) {
@@ -1159,7 +1315,7 @@ function moveResize(event: PointerEvent) { if (resizing) resizeEditor(event.clie
 function stopResize() {
   if (!resizing) return
   resizing = false
-  writeStorage('scad-editor-width', String(Math.round(editorWidth.value)))
+  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
 }
 function resizeEditor(clientX: number) {
   const rect = mainRef.value?.getBoundingClientRect()
@@ -1170,7 +1326,7 @@ function resizeEditorWithKeyboard(event: KeyboardEvent) {
   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
   event.preventDefault()
   editorWidth.value = clamp(editorWidth.value + (event.key === 'ArrowRight' ? 20 : -20), 300, 820)
-  writeStorage('scad-editor-width', String(Math.round(editorWidth.value)))
+  storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
 }
 
 function showNotice(message: string) {
@@ -1179,19 +1335,9 @@ function showNotice(message: string) {
   noticeTimeout = setTimeout(() => { notice.value = '' }, 2200)
 }
 
-function readStorage(key: string): string | null {
-  try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key) }
-  catch { return null }
-}
 function readCommandMru(): string[] {
-  try {
-    const value: unknown = JSON.parse(readStorage('scad-command-mru') ?? '[]')
-    if (!Array.isArray(value)) return []
-    return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
-  } catch { return [] }
-}
-function writeStorage(key: string, value: string) {
-  try { localStorage.setItem(key, value) } catch { /* storage can be unavailable or full */ }
+  const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
+  return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
 function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.scad.*$/i, '.scad') }
@@ -1381,11 +1527,10 @@ function readSharedCode() {
           role="application"
           tabindex="0"
           :aria-label="t('viewport')"
-          @pointermove="markCustomView"
           @keydown="handleViewportKey"
         />
         <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }">
-          <ViewCube :active-view="activeView" @view="setStandardView" />
+          <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
         </div>
         <div v-if="dockOpen" class="cad-dock">
           <div class="dock-tabs" :aria-label="t('sidebar')">
@@ -1682,7 +1827,8 @@ button, select { color: inherit; }
   .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--border); }
   .view-btn span { display: none; }
   .viewer-toolbar { left: 8px; right: 8px; transform: none; justify-content: center; }
-  .view-cube-wrap { top: 55px; right: 8px; transform: scale(.86); transform-origin: top right; }
+  /* No downscale: badge hit targets must stay at least 24x24 CSS px here. */
+  .view-cube-wrap { top: 55px; right: 8px; }
   .view-cube-wrap.with-dock { display: none; }
   .selection-modes { top: 53px; left: 8px; }
   .selection-hud { top: 91px; left: 8px; }

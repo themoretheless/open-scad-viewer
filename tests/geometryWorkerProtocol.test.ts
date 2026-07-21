@@ -110,6 +110,7 @@ function succeeded(): GeometryWorkerEvent {
     warnings: [],
     volume: 0,
     surfaceArea: 0,
+    reduced: false,
     durationMs: 1,
   }
 }
@@ -173,6 +174,9 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent({ ...succeeded(), warnings: [42] })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [{}] })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), durationMs: -1 })).toBe(false)
+    expect(isGeometryWorkerEvent({ ...succeeded(), reduced: undefined })).toBe(false)
+    expect(isGeometryWorkerEvent({ ...succeeded(), reduced: 1 })).toBe(false)
+    expect(isGeometryWorkerEvent({ ...succeeded(), reduced: true })).toBe(true)
   })
 
   it('rejects negative identifiers in requests and events', () => {

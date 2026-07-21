@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import type { StandardView } from '../services/webgpuRenderer'
+import { computed } from 'vue'
+import { projectAxesToScreen, type StandardView } from '../services/webgpuRenderer'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   activeView: StandardView | 'custom'
-}>()
+  /** Camera orbit angles; the axis triad rotates live with them. */
+  yaw?: number
+  pitch?: number
+}>(), {
+  yaw: Math.PI / 4,
+  pitch: Math.atan(1 / Math.sqrt(2)),
+})
 
 const emit = defineEmits<{
   view: [view: StandardView]
@@ -19,6 +26,45 @@ const labels: Record<StandardView, string> = {
   bottom: 'Bottom / Снизу',
 }
 
+const TRIAD_CENTER_X = 64
+const TRIAD_CENTER_Y = 62
+const TRIAD_LENGTH = 52
+const TRIAD_LABEL_OFFSET = 9
+/** Below this projected length an axis points (almost) straight at the viewer. */
+const TRIAD_MIN_VISIBLE_LENGTH = 0.22
+
+interface TriadAxis {
+  name: 'x' | 'y' | 'z'
+  label: 'X' | 'Y' | 'Z'
+  x2: number
+  y2: number
+  labelX: number
+  labelY: number
+  lineOpacity: number
+  visible: boolean
+}
+
+const triadAxes = computed<TriadAxis[]>(() => {
+  const projected = projectAxesToScreen(props.yaw, props.pitch)
+  return (['x', 'y', 'z'] as const).map(name => {
+    const axis = projected[name]
+    const length = Math.hypot(axis.x, axis.y)
+    const unitX = length > 1e-6 ? axis.x / length : 0
+    const unitY = length > 1e-6 ? axis.y / length : 0
+    const tip = length * TRIAD_LENGTH
+    return {
+      name,
+      label: name.toUpperCase() as TriadAxis['label'],
+      x2: TRIAD_CENTER_X + unitX * tip,
+      y2: TRIAD_CENTER_Y - unitY * tip,
+      labelX: TRIAD_CENTER_X + unitX * (tip + TRIAD_LABEL_OFFSET),
+      labelY: TRIAD_CENTER_Y - unitY * (tip + TRIAD_LABEL_OFFSET) + 2.5,
+      lineOpacity: axis.depth < 0 ? 0.45 : 0.85,
+      visible: length >= TRIAD_MIN_VISIBLE_LENGTH,
+    }
+  })
+})
+
 function choose(view: StandardView) {
   emit('view', view)
 }
@@ -28,12 +74,25 @@ function choose(view: StandardView) {
   <div class="view-cube" role="group" aria-label="View orientation / Ориентация вида">
     <svg class="cube-svg" viewBox="0 0 128 132" aria-hidden="false">
       <g class="axes" aria-hidden="true">
-        <path class="axis axis-z" d="M64 62V5" />
-        <path class="axis axis-y" d="M64 62 11 94" />
-        <path class="axis axis-x" d="m64 62 53 32" />
-        <text class="axis-label axis-z-label" x="64" y="8">Z</text>
-        <text class="axis-label axis-y-label" x="7" y="101">Y</text>
-        <text class="axis-label axis-x-label" x="121" y="101">X</text>
+        <template v-for="axis in triadAxes" :key="axis.name">
+          <line
+            v-if="axis.visible"
+            class="axis"
+            :class="`axis-${axis.name}`"
+            :x1="TRIAD_CENTER_X"
+            :y1="TRIAD_CENTER_Y"
+            :x2="axis.x2"
+            :y2="axis.y2"
+            :opacity="axis.lineOpacity"
+          />
+          <text
+            v-if="axis.visible"
+            class="axis-label"
+            :class="`axis-${axis.name}-label`"
+            :x="axis.labelX"
+            :y="axis.labelY"
+          >{{ axis.label }}</text>
+        </template>
       </g>
 
       <g
@@ -96,6 +155,7 @@ function choose(view: StandardView) {
         @keydown.space.prevent="choose('back')"
       >
         <title>{{ labels.back }}</title>
+        <rect class="hit" x="93.5" y="3" width="34" height="34" />
         <rect class="badge" x="96" y="10" width="29" height="20" rx="7" />
         <text class="badge-label" x="110.5" y="23.5">BK</text>
       </g>
@@ -112,6 +172,7 @@ function choose(view: StandardView) {
         @keydown.space.prevent="choose('left')"
       >
         <title>{{ labels.left }}</title>
+        <rect class="hit" x="-1.5" y="46" width="34" height="34" />
         <rect class="badge" x="3" y="52" width="25" height="22" rx="7" />
         <text class="badge-label" x="15.5" y="67">L</text>
       </g>
@@ -128,6 +189,7 @@ function choose(view: StandardView) {
         @keydown.space.prevent="choose('bottom')"
       >
         <title>{{ labels.bottom }}</title>
+        <rect class="hit" x="47" y="100" width="34" height="32" />
         <rect class="badge" x="51" y="108" width="26" height="21" rx="7" />
         <text class="badge-label" x="64" y="122.5">B</text>
       </g>
@@ -144,6 +206,7 @@ function choose(view: StandardView) {
         @keydown.space.prevent="choose('iso')"
       >
         <title>{{ labels.iso }}</title>
+        <circle class="hit" cx="64" cy="62" r="17" />
         <circle class="iso-button" cx="64" cy="62" r="15" />
         <text class="iso-label" x="64" y="65.5">ISO</text>
       </g>
@@ -172,7 +235,6 @@ function choose(view: StandardView) {
   fill: none;
   stroke-width: 1.4;
   stroke-linecap: round;
-  opacity: 0.82;
 }
 .axis-x { stroke: #ef5b59; }
 .axis-y { stroke: #59c978; }
@@ -192,6 +254,13 @@ function choose(view: StandardView) {
 .cube-action {
   cursor: pointer;
   outline: none;
+}
+
+/* Invisible enlarged hit target (>= 24x24 CSS px at every breakpoint). */
+.hit {
+  fill: none;
+  stroke: none;
+  pointer-events: all;
 }
 
 .face,

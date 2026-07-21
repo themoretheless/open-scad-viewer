@@ -6,7 +6,7 @@ import type { MeshData } from '../core/mesh'
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 2 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 3 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -65,6 +65,12 @@ export interface GeometryBuildSuccess extends GeometryJobEnvelope {
   warnings: string[]
   volume: number
   surfaceArea: number
+  /**
+   * True iff quality-based reduction altered any evaluated value. A preview
+   * result with reduced=false is byte-identical to the full build of the same
+   * source, so the application may publish it as full and skip the rebuild.
+   */
+  reduced: boolean
   durationMs: number
 }
 
@@ -331,6 +337,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
         && value.warnings.every(warning => typeof warning === 'string')
         && isNonNegativeFiniteNumber(value.volume)
         && isNonNegativeFiniteNumber(value.surfaceArea)
+        && typeof value.reduced === 'boolean'
         && isNonNegativeFiniteNumber(value.durationMs)
     case 'failed':
       return isBuildError(value.error) && isNonNegativeFiniteNumber(value.durationMs)

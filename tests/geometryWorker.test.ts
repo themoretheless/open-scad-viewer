@@ -7,10 +7,13 @@ import {
 } from '../src/services/geometryWorkerProtocol'
 
 const parseOpenSCADMock = vi.hoisted(() => vi.fn())
+// The worker eagerly warms the WASM at startup; stub the loader so this unit
+// test does not download/compile Manifold for every vi.resetModules() cycle.
+const getWasmMock = vi.hoisted(() => vi.fn(() => Promise.resolve({})))
 
 vi.mock('../src/services/openscadParser', async importOriginal => {
   const original = await importOriginal<typeof import('../src/services/openscadParser')>()
-  return { ...original, parseOpenSCAD: parseOpenSCADMock }
+  return { ...original, parseOpenSCAD: parseOpenSCADMock, getWasm: getWasmMock }
 })
 
 class FakeWorkerScope {
@@ -93,6 +96,101 @@ describe('geometry Worker cancellation', () => {
       status: 'cancelled',
       phase: 'compiling',
       reason: 'superseded',
+    })
+  })
+
+  it('stops a running parse cooperatively when a cancel message arrives mid-build', async () => {
+    const { AbortedError } = await import('../src/services/openscadParser')
+    parseOpenSCADMock.mockImplementation(async (
+      _source: string,
+      options?: { shouldAbort?: () => boolean },
+    ) => {
+      // Simulate the parser's cooperative yield loop: spin macrotasks so the
+      // queued cancel message is delivered, then honor shouldAbort.
+      for (let spins = 0; spins < 200; spins++) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+        if (options?.shouldAbort?.()) throw new AbortedError()
+      }
+      throw new Error('the cancel request never became visible to shouldAbort')
+    })
+
+    const scope = new FakeWorkerScope()
+    vi.stubGlobal('self', scope)
+    await import('../src/workers/geometry.worker')
+
+    scope.dispatchMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build',
+      documentRevision: 1,
+      jobId: 1,
+      source: 'cube(1);',
+      quality: 'full',
+    })
+    scope.dispatchMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'cancel',
+      documentRevision: 1,
+      jobId: 1,
+      reason: 'user',
+    })
+
+    await vi.waitFor(() => {
+      expect(scope.events.at(-1)).toMatchObject({
+        status: 'cancelled',
+        phase: 'compiling',
+        reason: 'user',
+        jobId: 1,
+      })
+    })
+  })
+
+  it('supersedes a running parse cooperatively when a newer build arrives', async () => {
+    const { AbortedError } = await import('../src/services/openscadParser')
+    parseOpenSCADMock.mockImplementation(async (
+      source: string,
+      options?: { shouldAbort?: () => boolean },
+    ) => {
+      for (let spins = 0; spins < 200; spins++) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+        if (options?.shouldAbort?.()) throw new AbortedError()
+      }
+      return {
+        meshes: [],
+        warnings: [],
+        volume: source.length,
+        surfaceArea: 0,
+        quality: 'full' as const,
+        reduced: false,
+      }
+    })
+
+    const scope = new FakeWorkerScope()
+    vi.stubGlobal('self', scope)
+    await import('../src/workers/geometry.worker')
+
+    scope.dispatchMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build',
+      documentRevision: 1,
+      jobId: 1,
+      source: 'cube(1);',
+      quality: 'full',
+    })
+    scope.dispatchMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build',
+      documentRevision: 2,
+      jobId: 2,
+      source: 'cube(2);',
+      quality: 'full',
+    })
+
+    await vi.waitFor(() => {
+      const job1Terminal = scope.events.find(event => event.jobId === 1
+        && (event.status === 'stale' || event.status === 'cancelled'))
+      expect(job1Terminal).toMatchObject({ status: 'stale' })
+      const job2Terminal = scope.events.find(event => event.jobId === 2 && event.status === 'succeeded')
+      expect(job2Terminal).toBeDefined()
     })
   })
 })

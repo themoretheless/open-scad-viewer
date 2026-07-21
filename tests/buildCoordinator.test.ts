@@ -95,6 +95,7 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
     warnings: [],
     volume: request.documentRevision,
     surfaceArea: 0,
+    reduced: false,
     durationMs: 10,
   }
 }

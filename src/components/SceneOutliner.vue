@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  select: [meshId: MeshKey, options: { additive: boolean; range: boolean }]
+  select: [meshId: MeshKey]
   'clear-selection': []
   'toggle-visibility': [meshId: MeshKey, visible: boolean]
   preselect: [meshId: MeshKey | null]
@@ -131,12 +131,10 @@ function toggleAllExpanded() {
   )
 }
 
-function selectMesh(event: MouseEvent | KeyboardEvent, mesh: SceneMeshRow) {
+// Single-select only: multi-select needs a renderer selection-model change first (recommendation.md P2).
+function selectMesh(mesh: SceneMeshRow) {
   if (mesh.locked || mesh.disabled) return
-  emit('select', mesh.id, {
-    additive: event.ctrlKey || event.metaKey,
-    range: event.shiftKey,
-  })
+  emit('select', mesh.id)
 }
 
 function focusRow(index: number) {
@@ -166,7 +164,7 @@ function handleRowKeydown(event: KeyboardEvent, mesh: SceneMeshRow, index: numbe
     toggleExpanded(mesh.id)
   } else if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    selectMesh(event, mesh)
+    selectMesh(mesh)
   }
 }
 
@@ -391,7 +389,7 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
             :tabindex="rowTabIndex(mesh, index)"
             :aria-pressed="isSelected(mesh)"
             :aria-disabled="mesh.locked || mesh.disabled || undefined"
-            @click="selectMesh($event, mesh)"
+            @click="selectMesh(mesh)"
             @dblclick="emit('focus', mesh.id)"
             @keydown="handleRowKeydown($event, mesh, index)"
           >

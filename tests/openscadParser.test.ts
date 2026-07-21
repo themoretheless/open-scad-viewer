@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
+import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
 import { matchMeshesByProvenance } from '../src/services/meshInspection'
 
@@ -246,3 +246,48 @@ describe('OpenSCAD parser and Manifold evaluator', () => {
 })
 
 const MAX_SAFE_TEST_TRIANGLES = 150_000
+
+describe('cooperative cancellation (shouldAbort)', () => {
+  it('rejects with an AbortedError once shouldAbort turns true mid-evaluation', async () => {
+    // >25 top-level statements so the loop reaches at least one yield point.
+    const source = Array.from({ length: 120 }, (_, i) => `cube([1, 1, ${i + 1}]);`).join('\n')
+    let calls = 0
+    // False on the initial probe, true at every later (post-yield) check.
+    const promise = parseOpenSCAD(source, { shouldAbort: () => calls++ > 0 })
+    await expect(promise).rejects.toBeInstanceOf(AbortedError)
+    await expect(promise).rejects.toMatchObject({ name: 'AbortedError' })
+    expect(calls).toBeGreaterThan(1)
+  })
+
+  it('still succeeds with an always-false shouldAbort', async () => {
+    const result = await parseOpenSCAD('x = 2; cube([x, x, x]);', { shouldAbort: () => false })
+    expect(result.meshes).toHaveLength(1)
+    expect(result.volume).toBeCloseTo(8, 5)
+  })
+})
+
+describe('preview reduction flag', () => {
+  it('reports reduced=true when preview clamps a large $fn, false under full', async () => {
+    const source = 'sphere(r = 5, $fn = 96);'
+    const preview = await parseOpenSCAD(source, { quality: 'preview' })
+    expect(preview.reduced).toBe(true)
+    const full = await parseOpenSCAD(source, { quality: 'full' })
+    expect(full.reduced).toBe(false)
+  })
+
+  it('reports reduced=false under both qualities when $fn is below the preview clamp', async () => {
+    const source = 'sphere(r = 5, $fn = 16);'
+    const preview = await parseOpenSCAD(source, { quality: 'preview' })
+    expect(preview.reduced).toBe(false)
+    const full = await parseOpenSCAD(source, { quality: 'full' })
+    expect(full.reduced).toBe(false)
+  })
+
+  it('reports reduced=true when the preview default fallback is lower than the full one', async () => {
+    // No $fn: sphere() falls back to 32 segments under full but 24 under preview.
+    const preview = await parseOpenSCAD('sphere(r = 5);', { quality: 'preview' })
+    expect(preview.reduced).toBe(true)
+    const full = await parseOpenSCAD('sphere(r = 5);', { quality: 'full' })
+    expect(full.reduced).toBe(false)
+  })
+})
