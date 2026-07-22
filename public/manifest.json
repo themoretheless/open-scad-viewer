@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "OpenSCAD 3D Viewer",
+  "short_name": "OpenSCAD Viewer",
+  "description": "OpenSCAD editor with WebGPU 3D rendering",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141416",
+  "theme_color": "#4a9eff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='64' fill='%23141416'/%3E%3Cpath d='M256 96l140 80v160l-140 80-140-80V176z' fill='none' stroke='%234a9eff' stroke-width='24'/%3E%3Cpath d='M256 96v160m0 0l140-80m-140 80l-140-80' stroke='%234a9eff' stroke-width='16' opacity='0.6'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

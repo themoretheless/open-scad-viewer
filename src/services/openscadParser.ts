@@ -32,6 +32,9 @@ import { identity, type Mat4 } from './math3d'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
 
+// Compatibility for exporters that consume the parser's public mesh type.
+export type { MeshData } from '../core/mesh'
+
 export interface ParseOptions {
   quality?: GeometryQuality
   /**
@@ -48,7 +51,6 @@ export interface ParseOptions {
    */
   onYield?: () => void
 }
-
 export interface ParseResult {
   meshes: MeshData[]
   warnings: string[]

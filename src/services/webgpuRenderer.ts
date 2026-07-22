@@ -51,7 +51,6 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
   let wn = normalize((ob.nmat * vec4f(norm,0)).xyz);
   return V(sc.vp * vec4f(wp,1), wn, wp);
 }
-
 @fragment fn fs(v: V) -> @location(0) vec4f {
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
   let N = normalize(v.n);
