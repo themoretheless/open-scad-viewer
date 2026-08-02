@@ -107,7 +107,7 @@ const manifoldExecutionSchema = z.object({
     kernel_fingerprint: z.literal('manifold-wasm-v1'),
     semantic_program_version: z.literal('legacy-direct-evaluator-v1'),
     capability_manifest_version: z.literal('manifold-node-v1'),
-    manifest_digest: z.literal('117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645'),
+    manifest_digest: z.literal('ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c'),
     representation: z.literal('mesh'),
     evidence: z.enum(['planned', 'runtime']),
     effective_limits: z.object({
@@ -137,7 +137,7 @@ const legacyBackfillCommonShape = {
   kernel_fingerprint: z.literal('manifold-wasm-v1'),
   semantic_program_version: z.literal('legacy-direct-evaluator-v1'),
   capability_manifest_version: z.literal('manifold-node-v1'),
-  manifest_digest: z.literal('117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645'),
+  manifest_digest: z.literal('ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c'),
   representation: z.literal('mesh'),
   evidence: z.literal('legacy-backfill'),
   effective_limits: z.object({}).strict(),
