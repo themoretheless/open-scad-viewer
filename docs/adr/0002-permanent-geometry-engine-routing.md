@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-08-01
 - Contract: `geometry-routing-contract-v1`
-- Frozen matrix SHA-256: `990fe89df7d316d01468f3377f18cfa4e57db64c901d2b84ec1397e440f835aa`
+- Frozen matrix SHA-256: `3bb84d80ad89d9efdcde2ff0d678ab5357bc91312e852fced087427528c1d1c7`
 
 ## Decision
 

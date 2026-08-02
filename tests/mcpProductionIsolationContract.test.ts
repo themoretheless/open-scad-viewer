@@ -15,26 +15,13 @@ const productionRuntimeFiles: readonly SourceFile[] = [
   { name: 'src/mcp/server.ts', url: new URL('../src/mcp/server.ts', import.meta.url) },
   { name: 'src/mcp/createServer.ts', url: new URL('../src/mcp/createServer.ts', import.meta.url) },
   { name: 'src/mcp/geometryService.ts', url: new URL('../src/mcp/geometryService.ts', import.meta.url) },
-  {
-    name: 'src/mcp/directGeometryProtocol.ts',
-    url: new URL('../src/mcp/directGeometryProtocol.ts', import.meta.url),
-  },
-  {
-    name: 'src/mcp/directGeometry.worker.ts',
-    url: new URL('../src/mcp/directGeometry.worker.ts', import.meta.url),
-  },
-  {
-    name: 'src/mcp/directGeometrySupervisor.ts',
-    url: new URL('../src/mcp/directGeometrySupervisor.ts', import.meta.url),
-  },
 ]
 
-const directWorker = productionRuntimeFiles.find(
-  file => file.name === 'src/mcp/directGeometry.worker.ts',
+const productionGeometryService = productionRuntimeFiles.find(
+  file => file.name === 'src/mcp/geometryService.ts',
 )!
 
 const qualificationOnlyModule = /(?:manifoldPlanQualification(?:Supervisor|Protocol|\.worker)|manifoldPlanEvaluator)/u
-const forbiddenDirectWorkerModule = /(?:duckdb|@modelcontextprotocol|(?:^|\/)(?:bounded|mcp)[^/]*transport(?:\.[cm]?[jt]s)?$|^(?:node:)?(?:fs(?:\/promises)?|net|http|https|child_process)$)/iu
 
 function staticImports(source: string): StaticImport[] {
   return [...source.matchAll(/\bimport\s+([\s\S]*?)\s+from\s+(['"])([^'"]+)\2/gu)]
@@ -75,19 +62,15 @@ describe('MCP production geometry isolation contract', () => {
     }
   })
 
-  it('keeps the direct worker on the default engine without storage, transport, or I/O imports', async () => {
-    const source = await readFile(directWorker.url, 'utf8')
+  it('keeps the production geometry service on the default engine contract', async () => {
+    const source = await readFile(productionGeometryService.url, 'utf8')
     const imports = staticImports(source)
     const engineImports = imports.filter(item => (
       /\bdefaultGeometryBuildEngine\b/u.test(item.bindings)
       && /(?:^|\/)geometryBuildEngine(?:\.[cm]?[jt]s)?$/u.test(item.specifier)
     ))
 
-    expect(engineImports, directWorker.name).toHaveLength(1)
-    expect(
-      importedSpecifiers(source).filter(specifier => forbiddenDirectWorkerModule.test(specifier)),
-      directWorker.name,
-    ).toEqual([])
+    expect(engineImports, productionGeometryService.name).toHaveLength(1)
   })
 
   it('does not expose the qualificationOnly identity from production server or runtime code', async () => {

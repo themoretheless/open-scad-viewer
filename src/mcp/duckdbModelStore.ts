@@ -1364,7 +1364,7 @@ export class DuckDbModelStore implements ModelStore {
                'kernelFingerprint', 'manifold-wasm-v1',
                'semanticProgramVersion', 'legacy-direct-evaluator-v1',
                'capabilityManifestVersion', 'manifold-node-v1',
-               'manifestDigest', '117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645',
+               'manifestDigest', 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
                'purpose', build.quality,
                'quality', build.quality,
                'representation', 'mesh',
@@ -1453,7 +1453,7 @@ export class DuckDbModelStore implements ModelStore {
                  'kernelFingerprint', 'manifold-wasm-v1',
                  'semanticProgramVersion', 'legacy-direct-evaluator-v1',
                  'capabilityManifestVersion', 'manifold-node-v1',
-                 'manifestDigest', '117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645',
+                 'manifestDigest', 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
                  'purpose', build.quality,
                  'quality', build.quality,
                  'representation', 'mesh',
@@ -1501,7 +1501,7 @@ export class DuckDbModelStore implements ModelStore {
         json_object(
           'manifestDigest',
           CASE json_extract_string(execution_json, '$.capabilityManifestVersion')
-            WHEN 'manifold-node-v1' THEN '117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645'
+            WHEN 'manifold-node-v1' THEN 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c'
             WHEN 'brep-contract-v1' THEN 'c4eefdbf1ff0add1e1705413d6ab766774487db0cb5a1d1434ab6c25f4ef1964'
             ELSE NULL
           END

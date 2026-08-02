@@ -290,7 +290,7 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
       version: '3.5.1',
       licenseExpression: 'Apache-2.0',
       sbomRef: 'THIRD_PARTY_NOTICES.md',
-      sbomSha256: '243db8a2635028391f4d46ff1f14c5319abebae88a1e9497bd6c842fc5a34db5',
+      sbomSha256: 'e4a858f5dff28f544db1a126657ca096cf49ec855cfdbf071f053268b313786f',
       lockfileSha256: 'b4fc02ba7ec6cb446763577536cdef9f830797852886f15a9af174b21edc9f2f',
     },
     rollbackCompatibility: {
@@ -299,7 +299,7 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
       crossEngineFallback: false,
       minimumCatalogSchema: 3,
     },
-    manifestDigest: '117bc5f8792f5d9d3b70ed80f66419070289c1ea4757f9fe1a7f268ab2b58645',
+    manifestDigest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
     automaticFallback: false,
   } satisfies GeometryEngineStaticManifest),
   'brep-contract-v1': deepFreeze({

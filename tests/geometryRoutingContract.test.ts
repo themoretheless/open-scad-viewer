@@ -84,7 +84,7 @@ interface RoutingMatrix {
 const matrixUrl = new URL('../docs/qualification/geometry-routing-contract-v1.json', import.meta.url)
 const matrixBytes = readFileSync(matrixUrl)
 const matrix = JSON.parse(matrixBytes.toString('utf8')) as RoutingMatrix
-const MATRIX_SHA256 = '990fe89df7d316d01468f3377f18cfa4e57db64c901d2b84ec1397e440f835aa'
+const MATRIX_SHA256 = '3bb84d80ad89d9efdcde2ff0d678ab5357bc91312e852fced087427528c1d1c7'
 const request = { quality: 'full', purpose: 'analysis' } as const
 
 function materialize(input: MatrixInput): string {

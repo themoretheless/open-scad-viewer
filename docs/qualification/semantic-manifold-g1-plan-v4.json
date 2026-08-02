@@ -327,8 +327,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "243db8a2635028391f4d46ff1f14c5319abebae88a1e9497bd6c842fc5a34db5",
-          "byteLength": 676,
+          "value": "e4a858f5dff28f544db1a126657ca096cf49ec855cfdbf071f053268b313786f",
+          "byteLength": 2416,
           "verifiedBy": "qualification artifact validator recomputes exact file bytes"
         }
       },
@@ -419,7 +419,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "f3a60d5675e5ed908304baaeb2ae149217032d89c63c25e2ce46896630e83eb9",
+          "value": "8117ed24698e40ff9db7d1d81053801fe6e5f5b1ea32567ce5298700c5a62380",
           "byteLength": 2868,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -501,7 +501,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "0ac9bb7638250a683e5d323bf28079d610a50b7329bc5f8986c0ed010c691e21",
+          "value": "a7815d99eb3501fcfbd543f1a5325596bab6bb4d29126e0dff8371b2a5fff600",
           "byteLength": 723,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }

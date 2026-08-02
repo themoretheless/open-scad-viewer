@@ -63,6 +63,7 @@
     { "code": "invalid_argument", "retryable": false },
     { "code": "quota_exceeded", "retryable": false },
     { "code": "server_busy", "retryable": true },
+    { "code": "deadline_exceeded", "retryable": true },
     { "code": "cancelled", "retryable": true },
     { "code": "internal_error", "retryable": true }
   ],
