@@ -10,6 +10,7 @@ import {
   ArtifactSizeError,
   CustomizerValueError,
   GeometryBusyError,
+  GeometryDeadlineExceededError,
   InvalidGeometryError,
 } from '../src/mcp/geometryService'
 import { CatalogQuotaError, ModelRevisionConflictError } from '../src/mcp/modelStore'
@@ -36,6 +37,7 @@ describe('MCP public errors', () => {
       [new CustomizerValueError('invalid'), 'invalid_argument', false],
       [new CatalogQuotaError('full', 'models', 1), 'quota_exceeded', false],
       [new GeometryBusyError(10), 'server_busy', true],
+      [new GeometryDeadlineExceededError(30_000), 'deadline_exceeded', true],
       [new AbortedError(), 'cancelled', true],
       [new Error('unexpected'), 'internal_error', true],
     ]
@@ -68,6 +70,11 @@ describe('MCP public errors', () => {
       code: 'server_busy',
       retryable: true,
       details: { retry_after_ms: 400 },
+    })
+    expect(publicToolError(new GeometryDeadlineExceededError(30_000)).error).toMatchObject({
+      code: 'deadline_exceeded',
+      retryable: true,
+      details: { deadline_ms: 30_000 },
     })
     expect(publicToolError(new CustomizerValueError('Parameter size is invalid')).error).toMatchObject({
       code: 'invalid_argument',

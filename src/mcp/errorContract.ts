@@ -10,6 +10,7 @@ export const PUBLIC_ERROR_CODES = Object.freeze([
   'invalid_argument',
   'quota_exceeded',
   'server_busy',
+  'deadline_exceeded',
   'cancelled',
   'internal_error',
 ] as const)
@@ -27,6 +28,7 @@ const FIXED_RETRY_POLICY: Readonly<Partial<Record<PublicErrorCode, boolean>>> = 
   invalid_argument: false,
   quota_exceeded: false,
   server_busy: true,
+  deadline_exceeded: true,
   cancelled: true,
   internal_error: true,
 })

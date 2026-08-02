@@ -142,6 +142,13 @@ export class GeometryBusyError extends Error {
   }
 }
 
+export class GeometryDeadlineExceededError extends Error {
+  constructor(readonly deadlineMs: number) {
+    super(`Geometry evaluation exceeded its ${deadlineMs.toLocaleString()} ms deadline`)
+    this.name = 'GeometryDeadlineExceededError'
+  }
+}
+
 export class CustomizerValueError extends RangeError {
   constructor(message: string) {
     super(message)
