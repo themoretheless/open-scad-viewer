@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   COMMAND_REGISTRY,
+  buildShortcutHelpGroups,
+  formatKeyboardBinding,
   buildPaletteDescriptors,
   isEditableTarget,
   matchesKeyboardBinding,
@@ -21,14 +23,34 @@ describe('command registry', () => {
     const ids = COMMAND_REGISTRY.map(command => command.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(ids).toEqual(expect.arrayContaining([
-      'render', 'open', 'save', 'export-stl', 'export-obj', 'share',
+      'render', 'open', 'save', 'find', 'replace', 'export-stl', 'export-obj', 'share',
       'focus', 'fit', 'isolate', 'deselect', 'previous-view', 'projection',
       'grid', 'shaded', 'edges', 'xray', 'select-point', 'select-face',
       'select-object', 'measure', 'section', 'sidebar', 'iso', 'front',
       'right', 'top', 'back', 'left', 'bottom', 'theme',
       'command-palette', 'cancel-measure', 'flip-section', 'hide-selected',
       'cycle-selection-mode',
+      'shortcut-help',
     ] satisfies CommandId[]))
+  })
+
+  it('derives complete grouped shortcut help from routed command metadata', () => {
+    const groups = buildShortcutHelpGroups(key => `label:${key}`)
+    const rows = groups.flatMap(group => group.rows)
+    const displayed = COMMAND_REGISTRY.filter(command => 'bindings' in command && command.bindings?.length)
+    expect(rows.map(row => row.id).sort()).toEqual(displayed.map(command => command.id).sort())
+    expect(new Set(rows.map(row => row.id)).size).toBe(rows.length)
+    expect(groups.map(group => group.id)).toEqual([
+      'workspace', 'editor', 'navigation', 'selection', 'inspection', 'display',
+    ])
+    expect(rows.find(row => row.id === 'shortcut-help')).toMatchObject({ shortcuts: ['?'] })
+  })
+
+  it('formats actual bindings for macOS, Windows/Linux and neutral help', () => {
+    expect(formatKeyboardBinding({ key: 'Enter', primary: true, scope: 'editor' }, 'mac')).toBe('⌘Enter')
+    expect(formatKeyboardBinding({ key: 'f', meta: true, alt: true, scope: 'editor' }, 'mac')).toBe('⌘⌥F')
+    expect(formatKeyboardBinding({ code: 'Digit1', scope: 'viewport' }, 'windows-linux')).toBe('1')
+    expect(formatKeyboardBinding({ key: 'k', primary: true, scope: 'global' }, 'unknown')).toBe('Ctrl/⌘+K')
   })
 
   it('builds localized palette descriptors with dynamic state and MRU ranks', () => {
@@ -111,9 +133,15 @@ describe('keyboard command routing', () => {
 
   it('routes the existing editor, viewport, and global shortcuts', () => {
     expect(resolveKeyboardCommand(key('Enter', { ctrlKey: true }), 'editor')).toBe('render')
+    expect(resolveKeyboardCommand(key('f', { ctrlKey: true }), 'editor')).toBe('find')
+    expect(resolveKeyboardCommand(key('h', { ctrlKey: true }), 'editor')).toBe('replace')
+    expect(resolveKeyboardCommand(key('f', { metaKey: true, altKey: true }), 'editor')).toBe('replace')
+    expect(resolveKeyboardCommand(key('h', { metaKey: true }), 'editor')).toBeNull()
     expect(resolveKeyboardCommand(key('s', { metaKey: true }), 'editor')).toBe('save')
     expect(resolveKeyboardCommand(key('=', { code: 'Equal', ctrlKey: true }), 'viewport')).toBe('measure')
+    expect(resolveKeyboardCommand(key('=', { code: 'Equal', ctrlKey: true, target: { tagName: 'TEXTAREA' } }), 'editor')).toBeNull()
     expect(resolveKeyboardCommand(key('b', { ctrlKey: true, shiftKey: true }), 'global')).toBe('sidebar')
+    expect(resolveKeyboardCommand(key('?', { code: 'Slash', shiftKey: true }), 'global')).toBe('shortcut-help')
     expect(resolveKeyboardCommand(key('[', { code: 'BracketLeft' }), 'viewport')).toBe('previous-view')
     expect(resolveKeyboardCommand(key('m', { code: 'KeyM', shiftKey: true }), 'viewport')).toBe('cycle-selection-mode')
     expect(resolveKeyboardCommand(key('h', { code: 'KeyH' }), 'viewport')).toBe('hide-selected')
@@ -131,6 +159,7 @@ describe('keyboard command routing', () => {
     expect(isEditableTarget({ tagName: 'CANVAS' })).toBe(false)
 
     expect(resolveKeyboardCommand(key('f', { target: textarea }), 'viewport')).toBeNull()
+    expect(resolveKeyboardCommand(key('?', { code: 'Slash', shiftKey: true, target: textarea }), 'editor')).toBeNull()
     expect(resolveKeyboardCommand(key('s', { ctrlKey: true, target: textarea }), 'editor')).toBe('save')
     expect(resolveKeyboardCommand(key('Enter', { ctrlKey: true, target: textarea }), 'editor')).toBe('render')
   })
@@ -138,5 +167,7 @@ describe('keyboard command routing', () => {
   it('ignores prevented and composing keyboard events', () => {
     expect(resolveKeyboardCommand(key('g', { defaultPrevented: true }), 'viewport')).toBeNull()
     expect(resolveKeyboardCommand(key('g', { isComposing: true }), 'viewport')).toBeNull()
+    expect(resolveKeyboardCommand(key('g', { repeat: true }), 'viewport')).toBeNull()
+    expect(resolveKeyboardCommand(key('s', { ctrlKey: true, metaKey: true }), 'global')).toBeNull()
   })
 })

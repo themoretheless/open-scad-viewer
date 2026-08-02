@@ -4,6 +4,8 @@ import {
   storageGet,
   storageGetEnum,
   storageGetJSON,
+  storageKeys,
+  storageRemove,
   storageSet,
   storageSetJSON,
 } from '../src/services/safeStorage'
@@ -14,6 +16,8 @@ function stubStorage(overrides: Partial<Pick<Storage, 'getItem' | 'setItem' | 'r
     getItem: (key: string) => backing.get(key) ?? null,
     setItem: (key: string, value: string) => { backing.set(key, String(value)) },
     removeItem: (key: string) => { backing.delete(key) },
+    get length() { return backing.size },
+    key: (index: number) => [...backing.keys()][index] ?? null,
     ...overrides,
   })
   return backing
@@ -49,6 +53,18 @@ describe('safeStorage', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(backing.get('scad-lang')).toBe('en')
     expect(backing.get('scad-command-mru')).toBe('["render"]')
+    expect(storageRemove('scad-lang')).toBe(true)
+    expect(backing.has('scad-lang')).toBe(false)
+    expect(storageKeys('scad-')).toEqual(['scad-command-mru'])
+  })
+
+  it('reports failed removals through the storage failure handler', () => {
+    stubStorage({ removeItem: () => { throw new Error('storage blocked') } })
+    const handler = vi.fn()
+    setStorageFailureHandler(handler)
+
+    expect(storageRemove('open-scad-viewer.workspace')).toBe(false)
+    expect(handler).toHaveBeenCalledWith('open-scad-viewer.workspace', expect.any(Error))
   })
 
   it('reads fall back safely when storage throws or holds malformed data', () => {

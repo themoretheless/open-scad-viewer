@@ -57,6 +57,7 @@ const expandedIds = ref<Set<MeshKey>>(new Set())
 const panelRef = ref<HTMLElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
 const rowRefs = ref<HTMLButtonElement[]>([])
+const activeMeshId = ref<MeshKey | null>(null)
 const hoveredSourceId = ref<number | null>(null)
 const focusedSourceId = ref<number | null>(null)
 
@@ -87,6 +88,11 @@ const filteredMeshes = computed(() => {
 
 const filteredHasSelection = computed(() => filteredMeshes.value.some(mesh => isSelected(mesh)))
 
+watch(filteredMeshes, meshes => {
+  if (meshes.some(mesh => mesh.id === activeMeshId.value)) return
+  activeMeshId.value = meshes.find(mesh => isSelected(mesh))?.id ?? meshes[0]?.id ?? null
+}, { immediate: true })
+
 const allExpanded = computed(() => {
   const expandable = filteredMeshes.value.filter(mesh => mesh.sources?.length)
   return expandable.length > 0 && expandable.every(mesh => expandedIds.value.has(mesh.id))
@@ -107,6 +113,7 @@ function isSelected(mesh: SceneMeshRow) {
 }
 
 function rowTabIndex(mesh: SceneMeshRow, index: number) {
+  if (activeMeshId.value !== null) return activeMeshId.value === mesh.id ? 0 : -1
   return isSelected(mesh) || (!filteredHasSelection.value && index === 0) ? 0 : -1
 }
 
@@ -140,7 +147,9 @@ function selectMesh(mesh: SceneMeshRow) {
 function focusRow(index: number) {
   const rows = rowRefs.value
   if (!rows.length) return
-  rows[Math.max(0, Math.min(rows.length - 1, index))]?.focus()
+  const nextIndex = Math.max(0, Math.min(rows.length - 1, index))
+  activeMeshId.value = filteredMeshes.value[nextIndex]?.id ?? null
+  rows[nextIndex]?.focus()
 }
 
 function handleRowKeydown(event: KeyboardEvent, mesh: SceneMeshRow, index: number) {
@@ -275,6 +284,7 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
     class="outliner"
     tabindex="-1"
     :aria-label="text.title"
+    aria-describedby="scene-selection-help"
     @keydown="handlePanelKeydown"
   >
     <header class="panel-header">
@@ -335,7 +345,7 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
       <span class="section-count">{{ filteredMeshes.length }}</span>
     </div>
 
-    <div class="mesh-list" :aria-busy="busy">
+    <div class="mesh-list" role="tree" :aria-label="text.meshes" :aria-busy="busy" aria-multiselectable="false">
       <div
         v-for="(mesh, index) in filteredMeshes"
         :key="mesh.id"
@@ -387,8 +397,14 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
             class="mesh-name"
             type="button"
             :tabindex="rowTabIndex(mesh, index)"
-            :aria-pressed="isSelected(mesh)"
+            role="treeitem"
+            :aria-level="1"
+            :aria-posinset="index + 1"
+            :aria-setsize="filteredMeshes.length"
+            :aria-selected="isSelected(mesh)"
+            :aria-expanded="mesh.sources?.length ? expandedIds.has(mesh.id) : undefined"
             :aria-disabled="mesh.locked || mesh.disabled || undefined"
+            @focus="activeMeshId = mesh.id"
             @click="selectMesh(mesh)"
             @dblclick="emit('focus', mesh.id)"
             @keydown="handleRowKeydown($event, mesh, index)"
@@ -404,10 +420,14 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
           </button>
         </div>
 
-        <ul v-if="mesh.sources?.length && expandedIds.has(mesh.id)" class="source-list" :aria-label="text.sources">
-          <li v-for="source in mesh.sources" :key="source.id">
+        <ul v-if="mesh.sources?.length && expandedIds.has(mesh.id)" class="source-list" role="group" :aria-label="text.sources">
+          <li v-for="(source, sourceIndex) in mesh.sources" :key="source.id" role="none">
             <button
               type="button"
+              role="treeitem"
+              aria-level="2"
+              :aria-posinset="sourceIndex + 1"
+              :aria-setsize="mesh.sources.length"
               @pointerenter="hoverSource(source)"
               @pointerleave="leaveSource(mesh.id)"
               @focus="focusSource(source)"
@@ -435,7 +455,7 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
       <p v-else-if="!filteredMeshes.length" class="empty-state">{{ text.noResults }}</p>
     </div>
 
-    <footer class="panel-footer" aria-hidden="true">{{ text.selectionHelp }}</footer>
+    <footer id="scene-selection-help" class="panel-footer">{{ text.selectionHelp }}</footer>
   </aside>
 </template>
 
@@ -712,6 +732,11 @@ button { color: inherit; font: inherit; }
 @media (max-width: 680px) {
   .outliner { width: 100%; max-height: 42dvh; border-radius: 8px; }
   .panel-footer { display: none; }
+}
+
+@media (pointer: coarse) {
+  .disclosure, .visibility-button, .icon-button, .search-wrap button { min-width: 44px; min-height: 44px; }
+  .mesh-name, .source-list button { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

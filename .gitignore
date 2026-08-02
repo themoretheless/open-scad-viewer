@@ -8,3 +8,5 @@ src/**/*.js
 coverage
 .env*
 .vscode/*.log
+.open-scad-viewer.duckdb*
+/tmp/

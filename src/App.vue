@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
+import ExampleGallery from './components/ExampleGallery.vue'
 import InspectPanel from './components/InspectPanel.vue'
+import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import SceneOutliner from './components/SceneOutliner.vue'
 import ViewCube from './components/ViewCube.vue'
 import type {
@@ -14,7 +16,8 @@ import type {
 } from './components/cadPanels.types'
 import type { GeometryQuality } from './core/build'
 import type { MeshData } from './core/mesh'
-import { EXAMPLES } from './data/examples'
+import { EXAMPLE_CATALOG, EXAMPLES } from './data/examples'
+import { assertExampleCatalog } from './services/exampleCatalog'
 import type { CameraState } from './services/cameraHistory'
 import {
   BuildCoordinator,
@@ -23,6 +26,7 @@ import {
 } from './services/buildCoordinator'
 import {
   buildPaletteDescriptors,
+  buildShortcutHelpGroups,
   resolveKeyboardCommand,
   type CommandId,
   type CommandScope,
@@ -30,9 +34,21 @@ import {
   type PaletteCommandRuntimeState,
 } from './services/commandRegistry'
 import { isPaletteCommandEnabled } from './services/commandSearch'
+import { backendQuality } from './services/backendQuality'
+import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
+import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
+import {
+  findLiteralMatches,
+  replaceAllLiteral,
+  replaceExpectedMatch,
+  wrappedMatchIndex,
+} from './services/textSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
+import { SceneController } from './services/sceneController'
+import { standardViewForCamera } from './services/viewportModel'
+import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
 import {
   setStorageFailureHandler,
   storageGet,
@@ -41,32 +57,57 @@ import {
   storageSet,
   storageSetJSON,
 } from './services/safeStorage'
-import { extractCustomizerParameters, replaceCustomizerValue, type CustomizerValue } from './services/scadCustomizer'
+import { encodeCustomizerValue, extractCustomizerParameters, type CustomizerValue } from './services/scadCustomizer'
+import { applySourceSplice } from './services/sourceSplice'
 import { planScenePublication } from './services/scenePublication'
 import {
-  createWorkspaceDocument,
-  loadWorkspaceDocument,
-  saveWorkspaceDocument,
+  geometryExportEligibility,
+  planGeometryPublication,
+} from './services/buildPromotionPolicy'
+import {
+  MAX_WORKSPACE_FILE_NAME_LENGTH,
+  MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,
+  workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
 } from './services/workspaceDocument'
+import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
+import { encodeWorkspaceShare } from './services/workspaceShare'
+import { WebGPURenderer } from './services/webgpuRenderer'
 import {
-  WebGPURenderer,
-  type DisplayMode,
-  type DistanceMeasurement,
-  type PickHit,
-  type ProjectionMode,
-  type RendererLifecycleEvent,
-  type SelectionMode,
-  type StandardView,
-} from './services/webgpuRenderer'
+  assertThemeCatalog,
+  resolveTheme,
+  themeCanvasColor,
+  THEME_CATALOG,
+  THEME_SELECTIONS,
+  type ThemeSelection,
+} from './services/themePreferences'
+import type {
+  DisplayMode,
+  DistanceMeasurement,
+  PickHit,
+  ProjectionMode,
+  RendererLifecycleEvent,
+  SelectionMode,
+  StandardView,
+} from './services/rendererContracts'
 
 type Language = 'ru' | 'en'
+
+assertExampleCatalog(EXAMPLE_CATALOG)
+assertThemeCatalog(THEME_CATALOG)
+
+const props = defineProps<{
+  initialWorkspace: WorkspaceDocumentSnapshot
+  initialWorkspaceDurable: boolean
+  initialSharedImportPending: boolean
+  workspacePersistence: BrowserWorkspacePersistence
+}>()
 
 const L: Record<Language, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD Viewer',
-    render: 'Собрать', auto: 'Авто', examples: 'Пример',
+    render: 'Собрать', auto: 'Авто', examples: 'Примеры',
     basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
     open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
     exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
@@ -74,8 +115,13 @@ const L: Record<Language, Record<string, string>> = {
     openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
     meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
     hint: 'Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
-    noGpu: 'WebGPU недоступен. Откройте приложение в актуальном Chrome, Edge, Firefox или Safari.',
-    theme: 'Тема', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
+    noGpu: 'WebGPU недоступен: редактор, сборка и экспорт работают, интерактивная 3D-сцена отключена.',
+    backendWebGpu: 'WebGPU · интерактивный', backendHeadless: 'CPU · без 3D', transparencySorted: 'прозрачность по объектам',
+    initializingViewport: 'Запускаем WebGPU…', retryRenderer: 'Повторить запуск 3D',
+    find: 'Найти', replace: 'Заменить', replaceAll: 'Заменить все', matchCase: 'Учитывать регистр',
+    previousMatch: 'Предыдущее совпадение', nextMatch: 'Следующее совпадение', closeSearch: 'Закрыть поиск',
+    noMatches: 'Нет совпадений', tooManyMatches: 'Слишком много совпадений — уточните запрос',
+    theme: 'Тема', systemTheme: 'Как в системе', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
     language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
     fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
     grid: 'Сетка', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
@@ -88,14 +134,17 @@ const L: Record<Language, Record<string, string>> = {
     workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
     workerRestarted: 'Сборка не отвечала 30 секунд — Worker перезапущен',
     storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
+    unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
+    storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
     gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
     gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
-    commands: 'Команды', commandHelp: 'Поиск действий', display: 'Отображение',
+    commands: 'Команды', commandHelp: 'Поиск действий', shortcuts: 'Горячие клавиши', display: 'Отображение',
     shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
     selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
     unisolate: 'Показать всё', deselect: 'Снять выбор',
     scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
-    selectionMode: 'Режим выбора', sidebar: 'Боковая панель', measure: 'Измерить расстояние',
+    selectionMode: 'Режим выбора', sidebar: 'Боковая панель', closeSidebar: 'Закрыть боковую панель', measure: 'Измерить расстояние',
+    cancelMeasure: 'Отменить измерение', flipSection: 'Перевернуть сечение', hideSelected: 'Скрыть выбранное', cycleSelectionMode: 'Следующий режим выбора',
     section: 'Сечение', hidden: 'Скрыт',
     sourceStale: 'Сначала дождитесь сборки текущего исходника',
     needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
@@ -105,7 +154,7 @@ const L: Record<Language, Record<string, string>> = {
   },
   en: {
     title: 'OpenSCAD Viewer',
-    render: 'Render', auto: 'Auto', examples: 'Example',
+    render: 'Render', auto: 'Auto', examples: 'Examples',
     basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
     open: 'Open', save: 'Save', share: 'Share',
     exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
@@ -113,8 +162,13 @@ const L: Record<Language, Record<string, string>> = {
     openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
     meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
     hint: 'Click: select · repeat click: cycle deeper · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
-    noGpu: 'WebGPU is unavailable. Open the app in a current Chrome, Edge, Firefox, or Safari.',
-    theme: 'Theme', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
+    noGpu: 'WebGPU is unavailable: editing, builds, and export still work; the interactive 3D viewport is disabled.',
+    backendWebGpu: 'WebGPU · interactive', backendHeadless: 'CPU · no 3D', transparencySorted: 'object-sorted transparency',
+    initializingViewport: 'Starting WebGPU…', retryRenderer: 'Retry 3D viewport',
+    find: 'Find', replace: 'Replace', replaceAll: 'Replace all', matchCase: 'Match case',
+    previousMatch: 'Previous match', nextMatch: 'Next match', closeSearch: 'Close search',
+    noMatches: 'No matches', tooManyMatches: 'Too many matches — refine the query',
+    theme: 'Theme', systemTheme: 'System', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
     language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
     fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
     grid: 'Grid', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
@@ -127,14 +181,17 @@ const L: Record<Language, Record<string, string>> = {
     workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
     workerRestarted: 'Build was unresponsive for 30 seconds — worker restarted',
     storageFailed: 'Could not save data: browser storage is unavailable or full',
+    unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
+    storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
     gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
     gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
-    commands: 'Commands', commandHelp: 'Search actions', display: 'Display',
+    commands: 'Commands', commandHelp: 'Search actions', shortcuts: 'Keyboard shortcuts', display: 'Display',
     shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
     selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
     unisolate: 'Show all', deselect: 'Deselect',
     scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
-    selectionMode: 'Selection mode', sidebar: 'Sidebar', measure: 'Measure distance',
+    selectionMode: 'Selection mode', sidebar: 'Sidebar', closeSidebar: 'Close sidebar', measure: 'Measure distance',
+    cancelMeasure: 'Cancel measurement', flipSection: 'Flip section', hideSelected: 'Hide selected', cycleSelectionMode: 'Next selection mode',
     section: 'Section', hidden: 'Hidden',
     sourceStale: 'Wait for the current source to finish building first',
     needsModel: 'Build a model first', needsSelection: 'Select an object first',
@@ -145,55 +202,46 @@ const L: Record<Language, Record<string, string>> = {
 }
 
 const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
-const isDark = ref(storageGetEnum('scad-theme', ['dark', 'light'], 'dark') !== 'light')
-const sharedCode = readSharedCode()
-/**
- * All workspace persistence flows through SafeStorage: reads never throw and
- * failed writes surface through the registered failure handler instead of
- * silently dropping user data. setItem still throws on failure so
- * saveWorkspaceDocument's boolean contract stays truthful.
- */
-const workspaceStorage = {
-  getItem: storageGet,
-  setItem(key: string, value: string) {
-    if (!storageSet(key, value)) throw new Error(`Could not persist ${key}`)
-  },
-}
-const storedWorkspace = loadWorkspaceDocument(workspaceStorage, EXAMPLES.basic)
-const initialWorkspace = sharedCode === null
-  ? storedWorkspace
-  : createWorkspaceDocument(sharedCode, { fileName: 'shared-model.scad' })
-if (sharedCode !== null) {
-  // Successful #code= import: clear the hash so a reload doesn't re-import the
-  // shared snapshot over whatever the user edits and saves afterwards. The
-  // imported code is persisted immediately in onMounted (persistWorkspaceNow),
-  // so a plain reload keeps showing the shared model instead of an old draft.
-  history.replaceState(null, '', location.pathname + location.search)
-}
-const workspaceDocument = ref<WorkspaceDocumentSnapshot>(initialWorkspace)
-const code = ref(initialWorkspace.source)
+const legacyThemeRaw = storageGet('scad-theme')
+const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
+const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
+const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
+const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+const systemPrefersDark = ref(themeMediaQuery.matches)
+const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
+const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
+const code = ref(props.initialWorkspace.source)
 const autoRender = ref(storageGet('scad-auto') !== 'false')
 const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 300, 820))
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
+const findInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
+const editorDiagnostic = ref<EditorDiagnostic | null>(null)
 const warnings = ref<string[]>([])
 const meshCount = ref(0)
 const triangleCount = ref(0)
 const volume = ref(0)
 const surfaceArea = ref(0)
 const renderDuration = ref(0)
-const gpuOk = ref(true)
+const gpuOk = ref(false)
+const rendererInitializing = ref(false)
+const rendererUnavailableMessage = ref('')
+const currentBackendQuality = computed(() => backendQuality(gpuOk.value, displayMode.value))
 const rendering = ref(false)
 const renderingQuality = ref<GeometryQuality>('full')
 const renderedQuality = ref<GeometryQuality>('full')
 const renderedSource = ref('')
 const notice = ref('')
-const fileName = ref(initialWorkspace.fileName)
-const selectedExample = ref('')
+const fileName = ref(props.initialWorkspace.fileName)
+const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
+  props.initialWorkspaceDurable ? 'saved' : 'error',
+)
+const workspaceConflict = ref(props.workspacePersistence.hasConflict)
+const exampleGalleryOpen = ref(false)
 const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
 const standardView = ref<StandardView>('iso')
@@ -203,15 +251,34 @@ const cameraPitch = ref(Math.atan(1 / Math.sqrt(2)))
 /** Projection to restore once the camera leaves an orthographic face-view snap. */
 const projectionBeforeFaceSnap = ref<ProjectionMode | null>(null)
 const displayMode = ref<DisplayMode>('shaded')
-const selectedMesh = ref<number | null>(null)
-const selectedHit = ref<PickHit | null>(null)
+const sceneController = new SceneController<PickHit>()
+const sceneState = shallowRef(sceneController.state)
+sceneController.subscribe(state => { sceneState.value = state })
+const selectedMesh = computed({
+  get: () => sceneState.value.selectedIndex,
+  set: (selectedIndex: number | null) => { sceneController.update({ selectedIndex }) },
+})
+const selectedHit = computed({
+  get: () => sceneState.value.selectedHit,
+  set: (selectedHit: PickHit | null) => { sceneController.update({ selectedHit }) },
+})
 const hoveredHit = ref<PickHit | null>(null)
-const isolated = ref(false)
+const isolated = computed({
+  get: () => sceneState.value.isolated,
+  set: (isolated: boolean) => { sceneController.update({ isolated }) },
+})
 const paletteOpen = ref(false)
+const shortcutHelpOpen = ref(false)
 const canPreviousView = ref(false)
 const commandMru = ref<string[]>(readCommandMru())
-const sceneMeshes = ref<MeshData[]>([])
-const meshVisibility = ref<boolean[]>([])
+const sceneMeshes = computed({
+  get: () => sceneState.value.meshes,
+  set: (meshes: MeshData[]) => { sceneController.update({ meshes }) },
+})
+const meshVisibility = computed({
+  get: () => sceneState.value.visibility,
+  set: (visibility: boolean[]) => { sceneController.update({ visibility }) },
+})
 const selectionMode = ref<SelectionMode>('face')
 const measurement = ref<DistanceMeasurement | null>(null)
 const measureActive = ref(false)
@@ -221,16 +288,53 @@ const sectionOffset = ref(0)
 const sectionFlip = ref(false)
 const dockTab = ref<'scene' | 'inspect' | 'parameters'>('scene')
 const dockOpen = ref(true)
+const findOpen = ref(false)
+const replaceOpen = ref(false)
+const findQuery = ref('')
+const findReplacement = ref('')
+const findCaseSensitive = ref(false)
+const activeFindIndex = ref(-1)
+const findResult = computed(() => findLiteralMatches(code.value, findQuery.value, {
+  caseSensitive: findCaseSensitive.value,
+}))
+const findStatus = computed(() => {
+  if (findResult.value.truncated) return t('tooManyMatches')
+  const count = findResult.value.matches.length
+  return count ? `${Math.max(0, activeFindIndex.value) + 1}/${count}` : t('noMatches')
+})
+watch([findQuery, findCaseSensitive, code], () => {
+  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+})
+const dockToggleRef = ref<HTMLButtonElement | null>(null)
+const editorMaxWidth = ref(820)
+
+const dockTabs = ['scene', 'inspect', 'parameters'] as const
+function handleDockTabKeydown(event: KeyboardEvent) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const current = dockTabs.indexOf(dockTab.value)
+  const next = nextRovingIndex(current, dockTabs.length, event.key as RovingFocusKey)
+  dockTab.value = dockTabs[next]
+  void nextTick(() => document.getElementById(`dock-tab-${dockTab.value}`)?.focus())
+}
+
+function closeDock() {
+  dockOpen.value = false
+  void nextTick(() => dockToggleRef.value?.focus())
+}
 
 const customizerParameters = computed(() => extractCustomizerParameters(code.value))
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
 const sourceMatchesEditor = computed(() => renderedSource.value !== '' && renderedSource.value === code.value)
-const canExport = computed(() => (
-  sceneMeshes.value.length > 0
-  && !rendering.value
-  && renderedQuality.value === 'full'
-  && renderedSource.value === code.value
-))
+const exportEligibility = computed(() => geometryExportEligibility({
+  meshCount: sceneMeshes.value.length,
+  rendering: rendering.value,
+  hasError: Boolean(error.value),
+  renderedQuality: renderedQuality.value,
+  renderedSource: renderedSource.value,
+  currentSource: code.value,
+}))
+const canExport = computed(() => exportEligibility.value.allowed)
 const statusText = computed(() => rendering.value
   ? t('compiling')
   : error.value ? t('failed') : stale.value ? t('stale') : t('ready'))
@@ -384,6 +488,8 @@ const paletteCommands = computed(() => {
     mru: commandMru.value,
   })
 })
+const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
+const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
 /** Last-resort watchdog: a building coordinator that stays completely silent
  * (no state change, no progress heartbeat) for this long is assumed wedged
@@ -395,17 +501,28 @@ const STORAGE_NOTICE_THROTTLE_MS = 10_000
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
 let watchdogTimer: ReturnType<typeof setTimeout> | null = null
+let watchdogToken = 0
 let watchdogRetried = false
 let lastStorageNotice = 0
 let renderDebounce: ReturnType<typeof setTimeout> | null = null
-let fullRenderDebounce: ReturnType<typeof setTimeout> | null = null
+let buildGeneration = 0
 let storageDebounce: ReturnType<typeof setTimeout> | null = null
+let workspaceEditGeneration = 0
+let durableWorkspaceGeneration = props.initialWorkspaceDurable ? 0 : -1
+let workspaceSourceValid = true
+let workspaceFileNameValid = true
+let beforeUnloadAttached = false
+let sharedImportPending = props.initialSharedImportPending
+let restoringWorkspace = false
+let applyingWorkspaceReplacement = false
+let componentActive = true
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 let rendererRecoveryToken = 0
 let activeRendererRecoveryToken: number | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 let resizing = false
+let layoutResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
 const buildSources = new Map<number, string>()
 
@@ -413,51 +530,79 @@ const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 onMounted(async () => {
-  setStorageFailureHandler(() => {
-    // Throttled: a burst of failed writes (e.g. debounced code saves against a
-    // full quota) must not spam the notice channel.
-    const now = Date.now()
-    if (now - lastStorageNotice < STORAGE_NOTICE_THROTTLE_MS) return
-    lastStorageNotice = now
-    showNotice(t('storageFailed'))
-  })
+  setStorageFailureHandler(reportStorageFailure)
+  themeMediaQuery.addEventListener('change', handleSystemThemeChange)
   applyPreferences()
-  // Give a migrated legacy draft (or a freshly imported #code= share) a
-  // durable persisted document even if no edit follows.
-  persistWorkspaceNow()
+  updateBeforeUnloadGuard()
   window.addEventListener('pagehide', flushWorkspacePersistence)
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  if (!canvasRef.value) return
-
-  const nextRenderer = new WebGPURenderer()
-  renderer = nextRenderer
-  bindRendererCallbacks(nextRenderer)
-  const ok = await nextRenderer.init(canvasRef.value)
-  if (!ok) {
-    gpuOk.value = false
-    nextRenderer.onStatusChange = null
-    renderer = null
-    return
+  if (mainRef.value) {
+    const syncEditorBounds = () => {
+      const width = mainRef.value?.getBoundingClientRect().width ?? 0
+      const bounds = editorWidthBounds(width)
+      editorMaxWidth.value = bounds.max
+      editorWidth.value = clampEditorWidth(editorWidth.value, width)
+    }
+    syncEditorBounds()
+    layoutResizeObserver = new ResizeObserver(syncEditorBounds)
+    layoutResizeObserver.observe(mainRef.value)
   }
-
-  nextRenderer.setDisplayMode(displayMode.value)
-  nextRenderer.setSelectionMode(selectionMode.value)
   window.addEventListener('keydown', handleGlobalKey)
-
   try {
     startBuildCoordinator()
     doRender('full')
   } catch {
     error.value = t('workerError')
   }
+  await initializeViewportRenderer()
 })
+
+async function initializeViewportRenderer() {
+  const canvas = canvasRef.value
+  if (!canvas || !componentActive || rendererInitializing.value) return
+  rendererInitializing.value = true
+  rendererUnavailableMessage.value = ''
+  const nextRenderer = new WebGPURenderer()
+  const ok = await nextRenderer.init(canvas)
+  if (!componentActive) {
+    nextRenderer.destroy()
+    return
+  }
+  if (!ok) {
+    const status = nextRenderer.currentStatus
+    rendererUnavailableMessage.value = status.status === 'unavailable'
+      ? status.message
+      : status.status === 'error' ? status.error.message : t('noGpu')
+    nextRenderer.destroy()
+    renderer = null
+    gpuOk.value = false
+    rendererInitializing.value = false
+    return
+  }
+
+  renderer?.destroy()
+  renderer = nextRenderer
+  bindRendererCallbacks(nextRenderer)
+  nextRenderer.setDisplayMode(displayMode.value)
+  nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+  nextRenderer.setSelectionMode(selectionMode.value)
+  nextRenderer.setGridVisible(gridVisible.value)
+  if (sceneMeshes.value.length) {
+    nextRenderer.setMeshes(sceneMeshes.value)
+    nextRenderer.setMeshVisibilityBatch(meshVisibility.value)
+    if (selectedMesh.value !== null) nextRenderer.selectMesh(selectedMesh.value)
+    applySection()
+    syncSourceHighlightFromEditor()
+    nextRenderer.fitView()
+  }
+  gpuOk.value = true
+  rendererInitializing.value = false
+}
 
 function bindRendererCallbacks(instance: WebGPURenderer) {
   instance.onSelectionChange = (index, isIsolated, hit) => {
     if (activeRendererRecoveryToken !== null) return
-    selectedMesh.value = index
-    isolated.value = isIsolated
-    selectedHit.value = hit
+    sceneController.applyRendererSelection(index, isIsolated, hit)
   }
   instance.onHoverChange = hit => {
     if (activeRendererRecoveryToken !== null) return
@@ -475,22 +620,26 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
 }
 
 onUnmounted(() => {
+  layoutResizeObserver?.disconnect()
+  layoutResizeObserver = null
   rendererRecoveryToken++
   activeRendererRecoveryToken = null
   rendererRecoveryGate.reset()
   if (renderDebounce) clearTimeout(renderDebounce)
-  if (fullRenderDebounce) clearTimeout(fullRenderDebounce)
   if (storageDebounce) {
     clearTimeout(storageDebounce)
-    persistWorkspaceNow()
+    void persistWorkspaceNow()
   }
+  componentActive = false
   if (noticeTimeout) clearTimeout(noticeTimeout)
   disarmWatchdog()
   setStorageFailureHandler(null)
   buildCoordinator?.dispose()
   buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
+  themeMediaQuery.removeEventListener('change', handleSystemThemeChange)
   window.removeEventListener('pagehide', flushWorkspacePersistence)
+  detachBeforeUnloadGuard()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (renderer) {
     renderer.onSelectionChange = null
@@ -502,6 +651,7 @@ onUnmounted(() => {
   }
   renderer?.destroy()
   renderer = null
+  void props.workspacePersistence.close()
 })
 
 function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycleEvent) {
@@ -554,6 +704,7 @@ async function recoverRenderer(
     if (rendererRecoveryGate.mustDeferReady) return
 
     instance.setDisplayMode(displayMode.value)
+    instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
     // Builds can complete while adapter/device acquisition is pending. The CPU
@@ -616,20 +767,57 @@ async function recoverRenderer(
 }
 
 watch(code, value => {
+  if (applyingWorkspaceReplacement) return
+  editorDiagnostic.value = null
+  // Persistence revisions are local to one WorkspaceDocument and can move
+  // backwards when another document is restored. Geometry jobs instead use a
+  // process-local monotonic generation, so old results can never alias a new
+  // document that happens to have the same revision number.
+  buildGeneration++
   // Provenance belongs to the last compiled source revision. Never retain a
   // reverse highlight while the editor has moved ahead of that revision.
   if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
-  // A #code= hash left by shareSource() goes stale the moment the code
-  // diverges — on reload it would win over the newer saved draft and
-  // silently discard the post-share edits.
-  if (location.hash.startsWith('#code=')) history.replaceState(null, '', location.pathname + location.search)
-  workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { source: value })
+  // A #code= hash left by shareSource() goes stale when code diverges. An
+  // imported hash that is still the only durable copy is retained until the
+  // replacement draft reaches IDB or the synchronous recovery journal.
+  if (!sharedImportPending && location.hash.startsWith('#code=')) {
+    history.replaceState(null, '', location.pathname + location.search)
+  }
+  if (restoringWorkspace) {
+    if (autoRender.value) scheduleRender(0)
+    return
+  }
+  try {
+    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { source: value })
+    workspaceSourceValid = true
+  } catch {
+    workspaceSourceValid = false
+    workspaceEditGeneration++
+    workspacePersistenceStatus.value = 'error'
+    updateBeforeUnloadGuard()
+    reportStorageFailure()
+    return
+  }
+  workspaceEditGeneration++
   scheduleWorkspacePersistence()
   if (autoRender.value) scheduleRender()
 })
 
 watch(fileName, value => {
-  workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { fileName: value })
+  if (applyingWorkspaceReplacement) return
+  if (restoringWorkspace) return
+  try {
+    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { fileName: value })
+    workspaceFileNameValid = true
+  } catch {
+    workspaceFileNameValid = false
+    workspaceEditGeneration++
+    workspacePersistenceStatus.value = 'error'
+    updateBeforeUnloadGuard()
+    reportStorageFailure()
+    return
+  }
+  workspaceEditGeneration++
   scheduleWorkspacePersistence()
 })
 
@@ -638,34 +826,177 @@ watch(autoRender, enabled => {
   if (enabled) scheduleRender(0)
   else {
     if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
-    if (fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
   }
 })
 
 function scheduleRender(delay = 450) {
   if (renderDebounce) clearTimeout(renderDebounce)
-  if (fullRenderDebounce) clearTimeout(fullRenderDebounce)
   renderDebounce = setTimeout(() => doRender('preview'), Math.min(delay, 180))
-  fullRenderDebounce = setTimeout(() => doRender('full'), Math.max(delay + 500, 780))
 }
 
 function scheduleWorkspacePersistence() {
   if (storageDebounce) clearTimeout(storageDebounce)
-  storageDebounce = setTimeout(persistWorkspaceNow, 300)
+  workspacePersistenceStatus.value = 'saving'
+  updateBeforeUnloadGuard()
+  storageDebounce = setTimeout(() => { void persistWorkspaceNow() }, 300)
 }
 
-function persistWorkspaceNow() {
+async function persistWorkspaceNow(retryIndexedDb = false): Promise<boolean> {
   storageDebounce = null
-  saveWorkspaceDocument(workspaceStorage, workspaceDocument.value)
+  if (!workspaceSourceValid || !workspaceFileNameValid) {
+    workspacePersistenceStatus.value = 'error'
+    updateBeforeUnloadGuard()
+    return false
+  }
+  const generation = workspaceEditGeneration
+  const snapshot = workspaceDocument.value
+  workspacePersistenceStatus.value = 'saving'
+  updateBeforeUnloadGuard()
+  let saved = false
+  try {
+    if (retryIndexedDb) {
+      const result = await props.workspacePersistence.retry(snapshot)
+      saved = result.saved
+      if (result.restoredDocument) {
+        const editorUnchanged = generation === workspaceEditGeneration
+          && workspaceDocumentsEqual(workspaceDocument.value, snapshot)
+          && code.value === snapshot.source
+          && fileName.value === snapshot.fileName
+        if (editorUnchanged) await restoreWorkspaceDocument(result.restoredDocument)
+        else saved = false
+      }
+    } else {
+      saved = await props.workspacePersistence.save(snapshot)
+    }
+  } catch {
+    saved = false
+  }
+  workspaceConflict.value = props.workspacePersistence.hasConflict
+  if (!componentActive) return saved
+  if (saved) {
+    durableWorkspaceGeneration = Math.max(durableWorkspaceGeneration, generation)
+    if (sharedImportPending && location.hash.startsWith('#code=')) {
+      if (props.workspacePersistence.backend === 'indexeddb') {
+        history.replaceState(null, '', location.pathname + location.search)
+        sharedImportPending = false
+      } else {
+        replaceSharedRecoveryHash(code.value)
+      }
+    }
+    workspacePersistenceStatus.value = durableWorkspaceGeneration >= workspaceEditGeneration
+      ? 'saved'
+      : 'saving'
+  } else {
+    workspacePersistenceStatus.value = 'error'
+    reportStorageFailure()
+  }
+  updateBeforeUnloadGuard()
+  return saved
 }
 
 function flushWorkspacePersistence() {
   if (storageDebounce) clearTimeout(storageDebounce)
-  persistWorkspaceNow()
+  if (!workspaceSourceValid || !workspaceFileNameValid) return
+  if (sharedImportPending && location.hash.startsWith('#code=')) replaceSharedRecoveryHash(code.value)
+  // localStorage is synchronous and therefore remains reliable during
+  // pagehide/freeze where the browser may terminate an unfinished IDB task.
+  if (!props.workspacePersistence.stageRecovery(workspaceDocument.value)) reportStorageFailure()
+  void persistWorkspaceNow()
 }
 
 function handleVisibilityChange() {
   if (document.visibilityState === 'hidden' && storageDebounce) flushWorkspacePersistence()
+}
+
+function retryWorkspacePersistence() {
+  if (storageDebounce) {
+    clearTimeout(storageDebounce)
+    storageDebounce = null
+  }
+  void persistWorkspaceNow(true)
+}
+
+async function resolveWorkspaceConflict(preferCurrentDraft: boolean) {
+  const generation = workspaceEditGeneration
+  const snapshot = workspaceDocument.value
+  workspacePersistenceStatus.value = 'saving'
+  let result: WorkspaceRetryResult
+  try {
+    result = await props.workspacePersistence.resolveConflict(preferCurrentDraft, snapshot)
+  } catch {
+    result = { saved: false }
+  }
+  workspaceConflict.value = props.workspacePersistence.hasConflict
+  const editorUnchanged = generation === workspaceEditGeneration
+    && workspaceDocumentsEqual(workspaceDocument.value, snapshot)
+    && code.value === snapshot.source
+    && fileName.value === snapshot.fileName
+  if (result.restoredDocument && editorUnchanged) {
+    await restoreWorkspaceDocument(result.restoredDocument)
+  } else if (!editorUnchanged) {
+    scheduleWorkspacePersistence()
+    return
+  }
+  if (result.saved) {
+    durableWorkspaceGeneration = workspaceEditGeneration
+    workspacePersistenceStatus.value = 'saved'
+    if (sharedImportPending && props.workspacePersistence.backend === 'indexeddb') {
+      history.replaceState(null, '', location.pathname + location.search)
+      sharedImportPending = false
+    }
+  } else {
+    workspacePersistenceStatus.value = 'error'
+    reportStorageFailure()
+  }
+  updateBeforeUnloadGuard()
+}
+
+function reportStorageFailure() {
+  const now = Date.now()
+  if (now - lastStorageNotice < STORAGE_NOTICE_THROTTLE_MS) return
+  lastStorageNotice = now
+  showNotice(t('storageFailed'))
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (durableWorkspaceGeneration >= workspaceEditGeneration
+    && workspacePersistenceStatus.value !== 'error') return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+function updateBeforeUnloadGuard() {
+  const needed = durableWorkspaceGeneration < workspaceEditGeneration
+    || workspacePersistenceStatus.value === 'error'
+  if (needed && !beforeUnloadAttached) {
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    beforeUnloadAttached = true
+  } else if (!needed && beforeUnloadAttached) {
+    detachBeforeUnloadGuard()
+  }
+}
+
+function detachBeforeUnloadGuard() {
+  if (!beforeUnloadAttached) return
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  beforeUnloadAttached = false
+}
+
+async function restoreWorkspaceDocument(document: WorkspaceDocumentSnapshot) {
+  restoringWorkspace = true
+  workspaceSourceValid = true
+  workspaceFileNameValid = true
+  workspaceDocument.value = document
+  code.value = document.source
+  fileName.value = document.fileName
+  exampleGalleryOpen.value = false
+  renderer?.setSourceHighlight(null)
+  await nextTick()
+  restoringWorkspace = false
+  props.workspacePersistence.stageRecovery(document)
+  workspaceEditGeneration++
+  durableWorkspaceGeneration = workspaceEditGeneration
+  fitNextRender = true
 }
 
 function startBuildCoordinator() {
@@ -687,10 +1018,9 @@ function startBuildCoordinator() {
 function doRender(quality: GeometryQuality = 'full') {
   if (!renderer) return
   if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
-  if (quality === 'full' && fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
   try {
     startBuildCoordinator()
-    const documentRevision = workspaceDocument.value.revision
+    const documentRevision = buildGeneration
     const source = code.value
     buildSources.clear()
     buildSources.set(documentRevision, source)
@@ -700,6 +1030,7 @@ function doRender(quality: GeometryQuality = 'full') {
     return
   }
   error.value = ''
+  editorDiagnostic.value = null
   warnings.value = []
 }
 
@@ -716,10 +1047,12 @@ function handleBuildState(state: BuildCoordinatorState) {
 
 function armWatchdog() {
   if (watchdogTimer) clearTimeout(watchdogTimer)
-  watchdogTimer = setTimeout(handleWatchdogTimeout, WATCHDOG_TIMEOUT_MS)
+  const token = ++watchdogToken
+  watchdogTimer = setTimeout(() => handleWatchdogTimeout(token), WATCHDOG_TIMEOUT_MS)
 }
 
 function disarmWatchdog() {
+  watchdogToken++
   if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
 }
 
@@ -732,7 +1065,9 @@ function disarmWatchdog() {
  * current source once. A second consecutive timeout gives up with an error
  * instead of restarting in a loop.
  */
-function handleWatchdogTimeout() {
+function handleWatchdogTimeout(token: number) {
+  if (token !== watchdogToken) return
+  watchdogToken++
   watchdogTimer = null
   if (!rendering.value || !buildCoordinator) return
   const quality = renderingQuality.value
@@ -751,7 +1086,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   // The editor revision advances before its debounced preview is submitted.
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
-  if (response.documentRevision !== workspaceDocument.value.revision) return
+  if (response.documentRevision !== buildGeneration) return
   watchdogRetried = false
   renderDuration.value = response.durationMs
   const source = buildSources.get(response.documentRevision) ?? code.value
@@ -761,19 +1096,18 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
   if (response.status === 'failed') {
     error.value = response.error.message
+    editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
     return
   }
 
-  // Preview-skip: when preview-quality reduction altered nothing, this result
-  // is identical to what the scheduled full build would produce — publish it
-  // as 'full' (stale clears, export allowed) and cancel that full build. Only
-  // valid while the editor still matches the source this preview was built
-  // from; otherwise the source watcher owns the next build.
-  let effectiveQuality = response.quality
-  if (response.quality === 'preview' && !response.reduced && source === code.value) {
-    effectiveQuality = 'full'
-    if (fullRenderDebounce) { clearTimeout(fullRenderDebounce); fullRenderDebounce = null }
-  }
+  const publicationPlan = planGeometryPublication({
+    buildGeneration: response.documentRevision,
+    source,
+    quality: response.quality,
+    reduced: response.reduced,
+  }, { buildGeneration, source: code.value })
+  if (!publicationPlan.publish) return
+  const effectiveQuality = publicationPlan.effectiveQuality
 
   try {
     const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
@@ -793,19 +1127,19 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     renderer?.setMeshes(response.meshes, {
       preserveMeasurement: publication.measurementMayBePreserved,
     })
-    sceneMeshes.value = response.meshes
-    meshVisibility.value = publication.nextVisibility
+    sceneController.publish({
+      meshes: response.meshes,
+      visibility: publication.nextVisibility,
+      selectedIndex: publication.nextSelectedIndex,
+      isolated: publication.nextIsolated,
+    })
     renderer?.setMeshVisibilityBatch(meshVisibility.value)
-    selectedHit.value = null
     hoveredHit.value = null
-    selectedMesh.value = publication.nextSelectedIndex
-    isolated.value = publication.nextIsolated
     if (publication.nextSelectedIndex !== null) {
       renderer?.selectMesh(publication.nextSelectedIndex)
       if (publication.nextIsolated) renderer?.toggleIsolateSelection()
     } else {
-      selectedMesh.value = null
-      isolated.value = false
+      sceneController.applyRendererSelection(null, false, null)
     }
     if (publication.measurementMayBePreserved) {
       // The renderer may rebuild this overlay; retaining the UI value avoids a
@@ -830,6 +1164,11 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     syncSourceHighlightFromEditor()
     sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
     applySection()
+    // Auto builds are sequential: request full only after preview proves it
+    // used a reduced quality decision. Equivalent models therefore compile
+    // exactly once and reduced models retain the warm Worker for their full
+    // continuation.
+    if (publicationPlan.requestFull) doRender('full')
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught)
   }
@@ -850,23 +1189,61 @@ function toggleLang() {
 }
 
 function toggleTheme() {
-  isDark.value = !isDark.value
+  themeSelection.value = isDark.value ? 'light' : 'dark'
   applyPreferences()
 }
 
-function applyPreferences() {
-  document.documentElement.dataset.theme = isDark.value ? 'dark' : 'light'
-  document.documentElement.lang = lang.value
-  document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
-  storageSet('scad-theme', isDark.value ? 'dark' : 'light')
+function handleSystemThemeChange(event: MediaQueryListEvent) {
+  systemPrefersDark.value = event.matches
+  if (themeSelection.value === 'system') applyPreferences()
 }
 
-function loadExample() {
-  const example = EXAMPLES[selectedExample.value]
+function applyPreferences() {
+  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
+  document.documentElement.dataset.theme = theme.scheme
+  document.documentElement.dataset.themePreset = themeSelection.value
+  document.documentElement.lang = lang.value
+  document.documentElement.style.colorScheme = theme.scheme
+  for (const [token, value] of Object.entries(theme.tokens)) {
+    document.documentElement.style.setProperty(token, value)
+  }
+  renderer?.setBackgroundColor(themeCanvasColor(theme))
+  storageSet('scad-theme-v1', themeSelection.value)
+  storageSet('scad-theme', theme.scheme)
+}
+
+async function loadExample(id: string) {
+  const example = EXAMPLES[id]
   if (!example) return
-  code.value = example
-  fileName.value = `${selectedExample.value}.scad`
+  applyingWorkspaceReplacement = true
+  buildGeneration++
+  editorDiagnostic.value = null
+  renderer?.setSourceHighlight(null)
+  if (!sharedImportPending && location.hash.startsWith('#code=')) {
+    history.replaceState(null, '', location.pathname + location.search)
+  }
+  const nextFileName = `${id}.scad`
+  workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, {
+    source: example,
+    fileName: nextFileName,
+  })
+  workspaceSourceValid = true
+  workspaceFileNameValid = true
+  const editor = editorRef.value
+  if (editor) {
+    editor.setRangeText(example, 0, editor.value.length, 'select')
+    code.value = editor.value
+  } else {
+    code.value = example
+  }
+  fileName.value = nextFileName
+  workspaceEditGeneration++
+  scheduleWorkspacePersistence()
+  if (autoRender.value) scheduleRender()
   fitNextRender = true
+  await nextTick()
+  applyingWorkspaceReplacement = false
+  editor?.focus({ preventScroll: true })
 }
 
 function triggerOpen() { fileInputRef.value?.click() }
@@ -884,12 +1261,18 @@ async function handleDrop(event: DragEvent) {
 }
 
 async function openFile(file: File) {
-  if (file.size > 250_000) {
+  if (file.size > MAX_WORKSPACE_SOURCE_LENGTH) {
     error.value = t('fileTooLarge')
     return
   }
-  code.value = await file.text()
-  fileName.value = file.name.endsWith('.scad') ? file.name : `${file.name}.scad`
+  const source = await file.text()
+  if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) {
+    error.value = t('fileTooLarge')
+    return
+  }
+  code.value = source
+  const requestedName = file.name.endsWith('.scad') ? file.name : `${file.name}.scad`
+  fileName.value = requestedName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH)
   fitNextRender = true
   showNotice(t('opened'))
 }
@@ -932,13 +1315,24 @@ function exportObj() {
 function updateCustomizer(name: string, value: CustomizerValue) {
   const parameter = customizerParameters.value.find(candidate => candidate.name === name)
   if (!parameter) return
-  code.value = replaceCustomizerValue(code.value, parameter, value)
-  selectedExample.value = ''
+  const encoded = encodeCustomizerValue(value)
+  const applied = applySourceSplice(code.value, {
+    from: parameter.valueStart,
+    to: parameter.valueEnd,
+    insert: encoded,
+    expected: code.value.slice(parameter.valueStart, parameter.valueEnd),
+    origin: 'customizer',
+  })
+  const editor = editorRef.value
+  if (editor) {
+    editor.setRangeText(encoded, parameter.valueStart, parameter.valueEnd, 'select')
+    code.value = editor.value
+  } else code.value = applied.source
 }
 
 async function shareSource() {
   const url = new URL(window.location.href)
-  url.hash = `code=${encodeBase64(code.value)}`
+  url.hash = `code=${encodeWorkspaceShare(code.value)}`
   history.replaceState(null, '', url)
   try {
     await navigator.clipboard.writeText(url.toString())
@@ -946,6 +1340,12 @@ async function shareSource() {
   } catch {
     showNotice(t('copyFailed'))
   }
+}
+
+function replaceSharedRecoveryHash(source: string) {
+  const url = new URL(window.location.href)
+  url.hash = `code=${encodeWorkspaceShare(source)}`
+  history.replaceState(null, '', url)
 }
 
 function fitView() { renderer?.fitView() }
@@ -976,6 +1376,7 @@ const FACE_VIEWS: readonly StandardView[] = ['front', 'back', 'left', 'right', '
 function syncCameraState(state: CameraState) {
   cameraYaw.value = state.yaw
   cameraPitch.value = state.pitch
+  projection.value = state.projection
   const matched = standardViewForCamera(state)
   activeView.value = matched ?? 'custom'
   if (matched) standardView.value = matched
@@ -993,18 +1394,6 @@ function restoreProjectionAfterFaceSnap() {
   }
 }
 
-function standardViewForCamera(state: CameraState): StandardView | null {
-  const orientations: Array<[StandardView, number, number]> = [
-    ['iso', Math.PI / 4, Math.atan(1 / Math.sqrt(2))],
-    ['front', 0, 0], ['back', Math.PI, 0],
-    ['left', -Math.PI / 2, 0], ['right', Math.PI / 2, 0],
-    ['top', 0, Math.PI / 2], ['bottom', 0, -Math.PI / 2],
-  ]
-  const angularDistance = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)))
-  return orientations.find(([, yaw, pitch]) => (
-    angularDistance(state.yaw, yaw) <= 1e-7 && Math.abs(state.pitch - pitch) <= 1e-7
-  ))?.[0] ?? null
-}
 function focusSelection() {
   if (!renderer?.fitSelection()) renderer?.fitView()
 }
@@ -1032,12 +1421,13 @@ function changeStandardView() {
     }
     if (projection.value !== 'orthographic') {
       projection.value = 'orthographic'
-      renderer?.setProjection('orthographic')
     }
   } else {
-    restoreProjectionAfterFaceSnap()
+    const previous = projectionBeforeFaceSnap.value
+    projectionBeforeFaceSnap.value = null
+    if (previous !== null) projection.value = previous
   }
-  renderer?.setView(view)
+  renderer?.setCameraPreset(view, projection.value)
 }
 function setStandardView(view: StandardView) {
   standardView.value = view
@@ -1071,7 +1461,7 @@ function selectSceneMesh(id: number | string) {
 function setSceneMeshVisibility(id: number | string, visible: boolean) {
   const index = meshIndex(id)
   if (index === null) return
-  meshVisibility.value = meshVisibility.value.map((value, candidate) => candidate === index ? visible : value)
+  sceneController.setVisibility(index, visible)
   renderer?.setMeshVisibility(index, visible)
 }
 
@@ -1143,10 +1533,99 @@ function highlightSource(sourceId: number | null) {
 }
 
 function handleEditorInput() {
-  selectedExample.value = ''
+  editorDiagnostic.value = null
   // The v-model update precedes this handler, so this also clears stale
   // geometry immediately instead of waiting for the next Worker response.
   syncSourceHighlightFromEditor()
+}
+
+function openEditorFind(withReplace = false) {
+  const editor = editorRef.value
+  if (!findOpen.value && editor && editor.selectionStart !== editor.selectionEnd) {
+    findQuery.value = editor.value.slice(editor.selectionStart, editor.selectionEnd)
+  }
+  findOpen.value = true
+  replaceOpen.value = withReplace
+  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+  // The command palette restores its opener after closing. A second render
+  // turn makes the explicit Find target win that documented focus handoff.
+  void nextTick(() => nextTick(() => {
+    findInputRef.value?.focus()
+    findInputRef.value?.select()
+    revealFindMatch()
+  }))
+}
+
+function closeEditorFind() {
+  findOpen.value = false
+  replaceOpen.value = false
+  void nextTick(() => editorRef.value?.focus())
+}
+
+function revealFindMatch() {
+  const match = findResult.value.matches[activeFindIndex.value]
+  if (!match || !editorRef.value) return
+  editorRef.value.setSelectionRange(match.start, match.end)
+}
+
+function navigateFind(direction: 1 | -1) {
+  activeFindIndex.value = wrappedMatchIndex(
+    activeFindIndex.value,
+    findResult.value.matches.length,
+    direction,
+  )
+  revealFindMatch()
+}
+
+function handleFindKeydown(event: KeyboardEvent) {
+  if (event.isComposing) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeEditorFind()
+  } else if (event.key === 'Enter') {
+    event.preventDefault()
+    navigateFind(event.shiftKey ? -1 : 1)
+  }
+}
+
+function replaceCurrentFindMatch() {
+  const editor = editorRef.value
+  const match = findResult.value.matches[activeFindIndex.value]
+  if (!editor || !match) return
+  if (replaceExpectedMatch(code.value, match, findReplacement.value) === null) {
+    activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+    revealFindMatch()
+    return
+  }
+  editor.setRangeText(findReplacement.value, match.start, match.end, 'select')
+  code.value = editor.value
+  handleEditorInput()
+  activeFindIndex.value = findResult.value.matches.length
+    ? Math.min(activeFindIndex.value, findResult.value.matches.length - 1)
+    : -1
+  revealFindMatch()
+}
+
+function replaceAllFindMatches() {
+  const editor = editorRef.value
+  if (!editor) return
+  const result = replaceAllLiteral(code.value, findQuery.value, findReplacement.value, {
+    caseSensitive: findCaseSensitive.value,
+  })
+  if (result.status === 'too-many' || result.status === 'too-large') {
+    showNotice(t('tooManyMatches'))
+    return
+  }
+  if (result.status !== 'replaced') return
+  editor.setRangeText(result.source, 0, editor.value.length, 'preserve')
+  code.value = editor.value
+  handleEditorInput()
+  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+  revealFindMatch()
+}
+
+function revealCurrentDiagnostic() {
+  if (editorRef.value && editorDiagnostic.value) revealDiagnostic(editorRef.value, editorDiagnostic.value)
 }
 
 function startMeasure() {
@@ -1230,6 +1709,9 @@ function executeCommand(id: string) {
     case 'render': doRender('full'); break
     case 'open': triggerOpen(); break
     case 'save': saveSource(); break
+    case 'find': openEditorFind(false); break
+    case 'replace': openEditorFind(true); break
+    case 'shortcut-help': shortcutHelpOpen.value = true; break
     case 'export-stl': exportStl(); break
     case 'export-obj': exportObj(); break
     case 'share': void shareSource(); break
@@ -1292,6 +1774,7 @@ function handleGlobalKey(event: KeyboardEvent) {
 function dispatchKeyboardCommand(event: KeyboardEvent, scope: CommandScope) {
   const id = resolveKeyboardCommand(event, scope, { isEnabled: isCommandEnabled })
   if (!id) return
+  if (shortcutHelpOpen.value || exampleGalleryOpen.value) return
   if (paletteOpen.value && id !== 'command-palette') return
   event.preventDefault()
   executeCommand(id)
@@ -1320,12 +1803,18 @@ function stopResize() {
 function resizeEditor(clientX: number) {
   const rect = mainRef.value?.getBoundingClientRect()
   if (!rect) return
-  editorWidth.value = clamp(clientX - rect.left, 300, Math.max(300, Math.min(820, rect.width - 320)))
+  editorMaxWidth.value = editorWidthBounds(rect.width).max
+  editorWidth.value = clampEditorWidth(clientX - rect.left, rect.width)
 }
 function resizeEditorWithKeyboard(event: KeyboardEvent) {
-  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
   event.preventDefault()
-  editorWidth.value = clamp(editorWidth.value + (event.key === 'ArrowRight' ? 20 : -20), 300, 820)
+  const width = mainRef.value?.getBoundingClientRect().width ?? 0
+  const bounds = editorWidthBounds(width)
+  editorMaxWidth.value = bounds.max
+  if (event.key === 'Home') editorWidth.value = bounds.min
+  else if (event.key === 'End') editorWidth.value = bounds.max
+  else editorWidth.value = clampEditorWidth(editorWidth.value + (event.key === 'ArrowRight' ? 20 : -20), width)
   storageSet('scad-editor-width', String(Math.round(editorWidth.value)))
 }
 
@@ -1342,30 +1831,6 @@ function readCommandMru(): string[] {
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
 function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.scad.*$/i, '.scad') }
 
-function encodeBase64(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  let binary = ''
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
-function decodeBase64(value: string) {
-  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
-  const binary = atob(normalized)
-  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
-  return new TextDecoder().decode(bytes)
-}
-function readSharedCode() {
-  try {
-    if (!location.hash.startsWith('#code=')) return null
-    // Size-cap BEFORE decoding: a crafted multi-MB #code= link would
-    // otherwise force large synchronous atob/TextDecoder allocations (and
-    // an O(n^2) customizer parse) on page load. ~1.4M base64 chars ≈ 1 MB.
-    if (location.hash.length > 1_400_000) return null
-    return decodeBase64(location.hash.slice(6))
-  } catch { return null }
-}
 </script>
 
 <template>
@@ -1377,23 +1842,60 @@ function readSharedCode() {
         </svg>
         <span class="brand">{{ t('title') }}</span>
         <span class="kernel-badge">Manifold</span>
+        <span class="kernel-badge" :title="currentBackendQuality.transparency === 'object-sorted-alpha' ? t('transparencySorted') : undefined">
+          {{ currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}
+        </span>
       </div>
       <div class="topbar-right">
+        <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
+          <span>⚠ {{ t('storageConflict') }}</span>
+          <button type="button" @click="saveSource">{{ t('exportDraft') }}</button>
+          <button type="button" @click="resolveWorkspaceConflict(false)">{{ t('useIndexed') }}</button>
+          <button type="button" @click="resolveWorkspaceConflict(true)">{{ t('restoreDraft') }}</button>
+        </div>
+        <button
+          v-else-if="workspacePersistenceStatus === 'error'"
+          class="persistence-status persistence-error"
+          type="button"
+          :title="t('retrySave')"
+          @click="retryWorkspacePersistence"
+        >⚠ {{ t('unsavedDraft') }}</button>
+        <span
+          v-else-if="workspacePersistenceStatus === 'saving'"
+          class="persistence-status"
+          role="status"
+        >{{ t('savingDraft') }}</span>
         <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="paletteOpen = true">
           <span aria-hidden="true">⌘</span> {{ t('commands') }} <kbd>Ctrl K</kbd>
         </button>
+        <button
+          class="icon-btn"
+          type="button"
+          :title="t('shortcuts')"
+          aria-keyshortcuts="?"
+          aria-haspopup="dialog"
+          :aria-expanded="shortcutHelpOpen"
+          @click="shortcutHelpOpen = true"
+        >?</button>
         <button class="icon-btn lang-btn" type="button" :aria-label="t('language')" @click="toggleLang">
           {{ lang === 'ru' ? 'RU' : 'EN' }}
         </button>
+        <label class="theme-picker">
+          <span class="sr-only">{{ t('theme') }}</span>
+          <select v-model="themeSelection" :aria-label="t('theme')" @change="applyPreferences">
+            <option value="system">{{ t('systemTheme') }}</option>
+            <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">
+              {{ theme.name[lang] }}
+            </option>
+          </select>
+        </label>
         <button class="icon-btn" type="button" :aria-label="isDark ? t('lightTheme') : t('darkTheme')" :aria-pressed="isDark" @click="toggleTheme">
           <span aria-hidden="true">{{ isDark ? '☾' : '☀' }}</span>
         </button>
       </div>
     </nav>
 
-    <main v-if="!gpuOk" class="no-gpu" role="alert">{{ t('noGpu') }}</main>
-
-    <main v-else ref="mainRef" class="main">
+    <main ref="mainRef" class="main">
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
@@ -1401,16 +1903,7 @@ function readSharedCode() {
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
           <span class="toolbar-divider" aria-hidden="true" />
-          <label class="select-label">
-            <span class="sr-only">{{ t('examples') }}</span>
-            <select v-model="selectedExample" class="select" :aria-label="t('examples')" @change="loadExample">
-              <option disabled value="">{{ t('examples') }}</option>
-              <option value="basic">{{ t('basic') }}</option>
-              <option value="csg">{{ t('csg') }}</option>
-              <option value="house">{{ t('house') }}</option>
-              <option value="tower">{{ t('tower') }}</option>
-            </select>
-          </label>
+          <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
         </div>
 
         <div class="toolbar file-toolbar">
@@ -1423,6 +1916,34 @@ function readSharedCode() {
           <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
         </div>
 
+        <div v-if="findOpen" class="find-bar" role="search" @keydown="handleFindKeydown">
+          <input
+            ref="findInputRef"
+            v-model="findQuery"
+            type="search"
+            autocomplete="off"
+            maxlength="4096"
+            :aria-label="t('find')"
+            :placeholder="t('find')"
+          >
+          <input
+            v-if="replaceOpen"
+            v-model="findReplacement"
+            type="text"
+            autocomplete="off"
+            :maxlength="MAX_WORKSPACE_SOURCE_LENGTH"
+            :aria-label="t('replace')"
+            :placeholder="t('replace')"
+          >
+          <span class="find-status" role="status" aria-live="polite">{{ findStatus }}</span>
+          <button type="button" :aria-label="t('previousMatch')" @click="navigateFind(-1)">↑</button>
+          <button type="button" :aria-label="t('nextMatch')" @click="navigateFind(1)">↓</button>
+          <label class="find-case"><input v-model="findCaseSensitive" type="checkbox"> {{ t('matchCase') }}</label>
+          <button v-if="replaceOpen" type="button" :disabled="activeFindIndex < 0" @click="replaceCurrentFindMatch">{{ t('replace') }}</button>
+          <button v-if="replaceOpen" type="button" :disabled="!findResult.matches.length || findResult.truncated" @click="replaceAllFindMatches">{{ t('replaceAll') }}</button>
+          <button type="button" :aria-label="t('closeSearch')" @click="closeEditorFind">×</button>
+        </div>
+
         <textarea
           ref="editorRef"
           v-model="code"
@@ -1432,6 +1953,7 @@ function readSharedCode() {
           autocomplete="off"
           autocorrect="off"
           autocapitalize="off"
+          :maxlength="MAX_WORKSPACE_SOURCE_LENGTH"
           @input="handleEditorInput"
           @select="syncSourceHighlightFromEditor"
           @click="syncSourceHighlightFromEditor"
@@ -1440,7 +1962,12 @@ function readSharedCode() {
           @keydown="handleEditorKey"
         />
 
-        <div v-if="error" class="message error" role="alert" aria-live="assertive">{{ error }}</div>
+        <div v-if="error" class="message error" role="alert" aria-live="assertive">
+          <button v-if="editorDiagnostic" type="button" class="diagnostic-link" @click="revealCurrentDiagnostic">
+            {{ error }} · {{ editorDiagnostic.line }}:{{ editorDiagnostic.column }}
+          </button>
+          <template v-else>{{ error }}</template>
+        </div>
         <div v-if="warnings.length" class="message warning" role="status">
           <div v-for="warning in warnings" :key="warning">⚠ {{ warning }}</div>
         </div>
@@ -1462,11 +1989,12 @@ function readSharedCode() {
         :aria-label="t('resize')"
         :aria-valuenow="Math.round(editorWidth)"
         aria-valuemin="300"
-        aria-valuemax="820"
+        :aria-valuemax="editorMaxWidth"
         @pointerdown="startResize"
         @pointermove="moveResize"
         @pointerup="stopResize"
         @pointercancel="stopResize"
+        @lostpointercapture="stopResize"
         @keydown="resizeEditorWithKeyboard"
       ><span /></div>
 
@@ -1486,7 +2014,7 @@ function readSharedCode() {
             {{ projection === 'perspective' ? t('perspective') : t('orthographic') }}
           </button>
           <button class="view-btn" type="button" :aria-pressed="gridVisible" @click="toggleGrid"># {{ t('grid') }}</button>
-          <button class="view-btn icon-only" type="button" :aria-pressed="dockOpen" :title="t('sidebar')" @click="dockOpen = !dockOpen">▥</button>
+          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">▥</button>
           <label class="view-select-label">
             <span class="sr-only">{{ t('display') }}</span>
             <select v-model="displayMode" class="view-select display-select" :aria-label="t('display')" @change="changeDisplayMode">
@@ -1509,7 +2037,7 @@ function readSharedCode() {
           </label>
         </div>
 
-        <div class="selection-modes" :aria-label="t('selectionMode')">
+        <div class="selection-modes" role="group" :aria-label="t('selectionMode')">
           <button type="button" :class="{ active: selectionMode === 'point' }" :aria-pressed="selectionMode === 'point'" :title="`${t('point')} · 1`" @click="setSelectionMode('point')">
             <span class="mode-point" aria-hidden="true" /> <span>{{ t('point') }}</span><kbd>1</kbd>
           </button>
@@ -1529,16 +2057,21 @@ function readSharedCode() {
           :aria-label="t('viewport')"
           @keydown="handleViewportKey"
         />
+        <div v-if="!gpuOk" class="no-gpu" role="alert">
+          <span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span>
+          <button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button>
+        </div>
         <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }">
           <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
         </div>
-        <div v-if="dockOpen" class="cad-dock">
-          <div class="dock-tabs" :aria-label="t('sidebar')">
-            <button type="button" :aria-pressed="dockTab === 'scene'" :class="{ active: dockTab === 'scene' }" @click="dockTab = 'scene'">{{ t('scene') }}</button>
-            <button type="button" :aria-pressed="dockTab === 'inspect'" :class="{ active: dockTab === 'inspect' }" @click="dockTab = 'inspect'">{{ t('inspect') }}</button>
-            <button type="button" :aria-pressed="dockTab === 'parameters'" :class="{ active: dockTab === 'parameters' }" @click="dockTab = 'parameters'">{{ t('parameters') }}</button>
-            <button class="dock-close" type="button" :aria-label="t('sidebar')" @click="dockOpen = false">×</button>
+        <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
+          <div class="dock-tabs" role="tablist" :aria-label="t('sidebar')" @keydown="handleDockTabKeydown">
+            <button id="dock-tab-scene" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'scene'" :tabindex="dockTab === 'scene' ? 0 : -1" :class="{ active: dockTab === 'scene' }" @click="dockTab = 'scene'">{{ t('scene') }}</button>
+            <button id="dock-tab-inspect" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'inspect'" :tabindex="dockTab === 'inspect' ? 0 : -1" :class="{ active: dockTab === 'inspect' }" @click="dockTab = 'inspect'">{{ t('inspect') }}</button>
+            <button id="dock-tab-parameters" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'parameters'" :tabindex="dockTab === 'parameters' ? 0 : -1" :class="{ active: dockTab === 'parameters' }" @click="dockTab = 'parameters'">{{ t('parameters') }}</button>
+            <button class="dock-close" type="button" :aria-label="t('closeSidebar')" @click="closeDock">×</button>
           </div>
+          <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
           <SceneOutliner
             v-if="dockTab === 'scene'"
             :meshes="sceneRows"
@@ -1588,6 +2121,7 @@ function readSharedCode() {
               @change="updateCustomizer"
             />
           </div>
+          </div>
         </div>
         <div v-if="selectedMesh !== null || isolated" class="selection-hud" role="status">
           <span v-if="selectedMesh !== null">
@@ -1612,8 +2146,23 @@ function readSharedCode() {
     <CommandPalette
       :open="paletteOpen"
       :commands="paletteCommands"
+      :restore-focus="!shortcutHelpOpen"
       @close="paletteOpen = false"
       @execute="executeCommand"
+    />
+    <ExampleGallery
+      :open="exampleGalleryOpen"
+      :examples="EXAMPLE_CATALOG"
+      :locale="lang"
+      @close="exampleGalleryOpen = false"
+      @select="loadExample"
+      @download-current="saveSource"
+    />
+    <KeyboardShortcuts
+      :open="shortcutHelpOpen"
+      :groups="shortcutHelpGroups"
+      :locale="lang"
+      @close="shortcutHelpOpen = false"
     />
   </div>
 </template>
@@ -1681,12 +2230,23 @@ button, select { color: inherit; }
   padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
   border-radius: 999px; color: var(--accent); font-size: 0.68rem; font-weight: 650;
 }
+.persistence-status {
+  border: 0; background: transparent; color: var(--text-dim); font-size: .7rem; white-space: nowrap;
+}
+.persistence-error { color: var(--danger); cursor: pointer; }
+.persistence-error:hover { text-decoration: underline; }
+.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: .68rem; }
+.persistence-conflict button {
+  border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised);
+  color: var(--text); padding: 3px 6px; cursor: pointer;
+}
 .icon-btn, .btn, .view-btn {
   min-height: 30px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-raised);
   color: var(--text); cursor: pointer; transition: background .12s, border-color .12s, transform .12s;
 }
 .icon-btn { min-width: 34px; padding: 4px 8px; }
 .command-btn { display: flex; align-items: center; gap: 6px; padding-inline: 9px; font-size: .72rem; }
+.theme-picker select { max-width: 116px; min-height: 30px; padding: 4px 7px; color: inherit; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; font-size: .7rem; }
 .command-btn kbd {
   padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px;
   color: var(--text-dim); background: var(--bg); font: .62rem ui-monospace, monospace;
@@ -1697,7 +2257,7 @@ button, select { color: inherit; }
 .view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible {
   outline: 2px solid var(--focus); outline-offset: 2px;
 }
-.no-gpu { flex: 1; display: grid; place-items: center; color: var(--danger); font-size: 1rem; padding: 40px; text-align: center; }
+.no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .editor-panel {
   min-width: 300px; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
@@ -1720,6 +2280,18 @@ button, select { color: inherit; }
 }
 .file-name { min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: .7rem; }
 .export-btn { padding-inline: 7px; color: var(--text-dim); font-size: .65rem; font-weight: 720; letter-spacing: .04em; }
+.find-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 8px;
+  border-bottom: 1px solid var(--border); background: var(--surface-raised); font-size: .68rem;
+}
+.find-bar > input[type="search"], .find-bar > input[type="text"] {
+  min-width: 90px; flex: 1 1 110px; height: 28px; padding: 3px 7px; border: 1px solid var(--border);
+  border-radius: 5px; background: var(--bg); color: var(--text);
+}
+.find-bar button { min-width: 28px; min-height: 28px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.find-bar button:disabled { opacity: .45; cursor: default; }
+.find-status { min-width: 42px; color: var(--text-dim); text-align: center; }
+.find-case { display: flex; align-items: center; gap: 4px; color: var(--text-dim); white-space: nowrap; }
 .code {
   flex: 1; width: 100%; min-height: 120px; resize: none; border: 0; outline: 0; padding: 14px 15px;
   background: var(--bg); color: var(--text); caret-color: var(--accent);
@@ -1727,6 +2299,8 @@ button, select { color: inherit; }
   tab-size: 2; white-space: pre; overflow: auto;
 }
 .message { margin: 7px 9px 0; padding: 8px 10px; border-radius: 7px; font: .74rem/1.45 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diagnostic-link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.diagnostic-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
 .error { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
 .warning { max-height: 88px; overflow: auto; color: var(--warning); background: color-mix(in srgb, var(--warning) 9%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); }
 .stats { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; min-height: 31px; padding: 5px 10px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: .68rem; }
@@ -1739,6 +2313,7 @@ button, select { color: inherit; }
   position: relative; z-index: 4; width: 7px; flex: 0 0 7px; cursor: col-resize;
   background: var(--surface); border-inline: 1px solid var(--border); touch-action: none;
 }
+.splitter::before { content: ''; position: absolute; inset: 0 -9px; }
 .splitter span { position: absolute; width: 2px; height: 34px; inset: 50% auto auto 50%; transform: translate(-50%, -50%); border-radius: 2px; background: var(--border); }
 .splitter:hover span, .splitter:focus-visible span { background: var(--accent); }
 .canvas-panel { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas-bg); }
@@ -1784,7 +2359,8 @@ button, select { color: inherit; }
 .dock-tabs button:hover { color: var(--text); background: var(--hover); }
 .dock-tabs button.active { color: var(--text); background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
 .dock-tabs .dock-close { font-size: 1rem; }
-.cad-dock > :deep(.outliner), .cad-dock > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0 0 9px 9px; }
+.dock-panel { min-height: 0; display: flex; flex: 1; flex-direction: column; }
+.dock-panel > :deep(.outliner), .dock-panel > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0 0 9px 9px; }
 .customizer-card { min-height: 0; flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: 0 0 9px 9px; background: var(--surface); }
 .selection-hud {
   position: absolute; z-index: 3; top: 98px; left: 12px; display: flex; align-items: center; gap: 7px;
@@ -1846,6 +2422,7 @@ button, select { color: inherit; }
   .display-select { max-width: 66px; }
   .command-btn kbd, .command-btn > span { display: none; }
   .command-btn { padding-inline: 7px; }
+  .theme-picker select { max-width: 86px; }
   .view-cube-wrap { display: none; }
   .selection-modes button > span:not(.mode-point, .mode-face, .mode-body), .selection-modes kbd { display: none; }
   .selection-hud { max-width: calc(100% - 16px); }
@@ -1854,5 +2431,11 @@ button, select { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+@media (forced-colors: active) {
+  * { forced-color-adjust: auto; }
+  button, select, input, textarea { border: 1px solid ButtonText !important; }
+  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
 }
 </style>

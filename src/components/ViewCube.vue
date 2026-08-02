@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { projectAxesToScreen, type StandardView } from '../services/webgpuRenderer'
+import { projectAxesToScreen, type StandardView } from '../services/viewportModel'
 
 const props = withDefaults(defineProps<{
   activeView: StandardView | 'custom'

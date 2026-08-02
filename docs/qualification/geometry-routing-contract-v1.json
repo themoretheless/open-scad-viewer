@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 2,
+  "contractId": "geometry-routing-contract-v1",
+  "status": "frozen",
+  "languageRoutes": [
+    {
+      "languageContract": "legacy/current",
+      "engineClass": "manifold",
+      "fallback": "never"
+    },
+    {
+      "languageContract": "openscad-viewer/brep-1",
+      "engineClass": "brep",
+      "fallback": "never"
+    }
+  ],
+  "automaticFallback": false,
+  "sourceLimits": {
+    "characters": 250000,
+    "requiredCapabilities": 32,
+    "capabilityIdentifierCharacters": 128,
+    "lineEndings": ["LF", "CRLF", "CR"],
+    "directiveCase": "lowercase-only"
+  },
+  "errorPrecedence": [
+    "source-envelope-and-digest",
+    "leading-routing-header",
+    "cancellation-staleness-and-queue",
+    "static-capability-admission",
+    "manifest-revocation",
+    "deployment-and-provider-presence",
+    "provider-readiness",
+    "selected-provider-execution",
+    "serialization-export-and-persistence"
+  ],
+  "providerAdmissionReasonCodes": [
+    "manifest-integrity-failed",
+    "legacy-exact-exception",
+    "qualification-incomplete",
+    "runtime-not-deployable",
+    "dependency-attestation-incomplete",
+    "qualified"
+  ],
+  "publicDiagnostics": [
+    { "code": "model_not_found", "retryable": false },
+    { "code": "revision_conflict", "retryable": true },
+    { "code": "source_syntax_error", "retryable": false },
+    { "code": "language_contract_unsupported", "retryable": false },
+    {
+      "code": "engine_unavailable",
+      "retryableByAvailabilityCause": {
+        "not-deployed": false,
+        "provider-missing": false,
+        "readiness-timeout": true,
+        "readiness-failed": true,
+        "revoked": false,
+        "quarantined": false
+      }
+    },
+    { "code": "capability_unavailable", "retryable": false },
+    { "code": "artifact_too_large", "retryable": true },
+    { "code": "invalid_geometry", "retryable": false },
+    { "code": "invalid_argument", "retryable": false },
+    { "code": "quota_exceeded", "retryable": false },
+    { "code": "server_busy", "retryable": true },
+    { "code": "cancelled", "retryable": true },
+    { "code": "internal_error", "retryable": true }
+  ],
+  "retryPolicy": {
+    "attemptsPerBuild": 1,
+    "automaticSameEngineRetry": false,
+    "automaticCrossEngineFallback": false,
+    "futureSameEngineRetryIdentity": [
+      "engineClass",
+      "engineKey",
+      "kernelFingerprint",
+      "capabilityManifestVersion",
+      "manifestDigest"
+    ]
+  },
+  "revocationPolicy": {
+    "preserveLanguageRoute": true,
+    "startRevokedProvider": false,
+    "crossEngineFallback": false,
+    "preserveHistoricalProvenance": true
+  },
+  "cases": [
+    {
+      "id": "empty-defaults-to-legacy",
+      "input": { "kind": "literal", "value": "" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "ordinary-source-defaults-to-legacy",
+      "input": { "kind": "literal", "value": "cube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "explicit-legacy",
+      "input": { "kind": "literal", "value": "// @language legacy/current\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "explicit-brep",
+      "input": { "kind": "literal", "value": "// @language openscad-viewer/brep-1\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "requiredCapabilities": [] }
+    },
+    {
+      "id": "bom-and-crlf",
+      "input": { "kind": "literal", "value": "\ufeff// @language openscad-viewer/brep-1\r\n// @requires topology.stable-ids, geometry.brep\r\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "requiredCapabilities": ["geometry.brep", "topology.stable-ids"] }
+    },
+    {
+      "id": "bare-cr-is-a-line-ending",
+      "input": { "kind": "literal", "value": "// @language openscad-viewer/brep-1\r// @requires geometry.brep\rcube(1);" },
+      "expected": { "kind": "route", "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "requiredCapabilities": ["geometry.brep"] }
+    },
+    {
+      "id": "leading-comments-and-blank-lines",
+      "input": { "kind": "literal", "value": "\n// ordinary comment\n\n// @language openscad-viewer/brep-1\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "requiredCapabilities": [] }
+    },
+    {
+      "id": "requires-union-deduplicates-and-sorts",
+      "input": { "kind": "literal", "value": "// @requires zeta,geometry.mesh zeta\n// @requires analysis.metrics\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": ["analysis.metrics", "geometry.mesh", "zeta"] }
+    },
+    {
+      "id": "maximum-capability-count",
+      "input": { "kind": "requiredCapabilityCount", "count": 32 },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilityCount": 32 }
+    },
+    {
+      "id": "maximum-capability-id-length",
+      "input": { "kind": "requiredCapabilityId", "length": 128 },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilityCount": 1 }
+    },
+    {
+      "id": "block-comment-shields-directive",
+      "input": { "kind": "literal", "value": "/*\n// @language openscad-viewer/brep-1\n*/\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "multiline-string-shields-directive",
+      "input": { "kind": "literal", "value": "note = \"first\\\n// @language openscad-viewer/brep-1\nlast\";\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "unknown-header-comment-is-not-reserved",
+      "input": { "kind": "literal", "value": "// @owner geometry-team\ncube(1);" },
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+    },
+    {
+      "id": "direct-engine-is-forbidden",
+      "input": { "kind": "literal", "value": "// @engine brep\ncube(1);" },
+      "expected": { "kind": "error", "message": "The source cannot select an engine directly; choose a versioned @language contract.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "engine-colon-is-malformed",
+      "input": { "kind": "literal", "value": "// @engine: brep\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @engine directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "engine-equals-is-malformed",
+      "input": { "kind": "literal", "value": "// @engine=brep\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @engine directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "mixed-case-engine-fails-closed",
+      "input": { "kind": "literal", "value": "// @Engine brep\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @engine directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "missing-language-value",
+      "input": { "kind": "literal", "value": "// @language\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @language directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "unknown-language",
+      "input": { "kind": "literal", "value": "// @language future/unknown\ncube(1);" },
+      "expected": { "kind": "error", "message": "Unsupported geometry language contract future/unknown.", "reportedContract": "future/unknown", "line": 1 }
+    },
+    {
+      "id": "language-trailing-token",
+      "input": { "kind": "literal", "value": "// @language legacy/current trailing\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @language directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "duplicate-language",
+      "input": { "kind": "literal", "value": "// @language legacy/current\n// @language openscad-viewer/brep-1\ncube(1);" },
+      "expected": { "kind": "error", "message": "The @language directive is duplicated (first declared on line 1).", "reportedContract": "openscad-viewer/brep-1", "line": 2 }
+    },
+    {
+      "id": "language-after-body",
+      "input": { "kind": "literal", "value": "cube(1);\n// @language openscad-viewer/brep-1" },
+      "expected": { "kind": "error", "message": "The @language directive must be in the leading source header.", "reportedContract": "openscad-viewer/brep-1", "line": 2 }
+    },
+    {
+      "id": "language-after-inline-code",
+      "input": { "kind": "literal", "value": "cube(1); // @language openscad-viewer/brep-1" },
+      "expected": { "kind": "error", "message": "The @language directive must be in the leading source header.", "reportedContract": "openscad-viewer/brep-1", "line": 1 }
+    },
+    {
+      "id": "mixed-case-language-fails-closed",
+      "input": { "kind": "literal", "value": "// @Language openscad-viewer/brep-1\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @language directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "missing-requires-value",
+      "input": { "kind": "literal", "value": "// @requires\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @requires directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "invalid-capability-id",
+      "input": { "kind": "literal", "value": "// @requires .nurbs\ncube(1);" },
+      "expected": { "kind": "error", "message": "The @requires directive contains an invalid capability identifier.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "capability-id-too-long",
+      "input": { "kind": "requiredCapabilityId", "length": 129 },
+      "expected": { "kind": "error", "message": "The @requires directive contains an invalid capability identifier.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "too-many-capabilities",
+      "input": { "kind": "requiredCapabilityCount", "count": 33 },
+      "expected": { "kind": "error", "message": "The source may require at most 32 capabilities.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "requires-after-body",
+      "input": { "kind": "literal", "value": "cube(1);\n// @requires geometry.mesh" },
+      "expected": { "kind": "error", "message": "The @requires directive must be in the leading source header.", "reportedContract": "legacy/current", "line": 2 }
+    },
+    {
+      "id": "mixed-case-requires-fails-closed",
+      "input": { "kind": "literal", "value": "// @REQUIRES geometry.mesh\ncube(1);" },
+      "expected": { "kind": "error", "message": "Malformed @requires directive.", "reportedContract": "legacy/current", "line": 1 }
+    },
+    {
+      "id": "invalid-unicode",
+      "input": { "kind": "utf16CodeUnits", "values": [55296] },
+      "expected": { "kind": "error", "message": "Geometry source must contain well-formed Unicode.", "reportedContract": null, "line": null }
+    },
+    {
+      "id": "source-too-large",
+      "input": { "kind": "repeatedSource", "value": "x", "count": 250001 },
+      "expected": { "kind": "error", "message": "Geometry source exceeds 250,000 characters.", "reportedContract": null, "line": null }
+    }
+  ],
+  "runtimeCases": [
+    {
+      "id": "missing-manifold-provider",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine manifold is unavailable: No qualified runtime provider is registered.",
+      "availabilityCause": "provider-missing",
+      "publicCode": "engine_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "manifold", "availability_cause": "provider-missing", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "undeployed-brep",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine brep is unavailable: The Rust B-rep/NURBS runtime is not deployed; the shared SemanticProgram boundary and qualification gates are still required.",
+      "availabilityCause": "not-deployed",
+      "publicCode": "engine_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "brep", "availability_cause": "not-deployed", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "unsupported-capability-before-readiness",
+      "expectedError": "GeometryCapabilityUnavailableError",
+      "expectedMessage": "Geometry engine manifold does not provide required capabilities: nurbs.surfaces",
+      "missingCapabilities": ["nurbs.surfaces"],
+      "publicCode": "capability_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "manifold", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "malformed-header-before-revocation",
+      "expectedError": "GeometryLanguageContractError",
+      "expectedMessage": "The source cannot select an engine directly; choose a versioned @language contract.",
+      "publicCode": "language_contract_unsupported",
+      "retryable": false,
+      "publicDetails": { "reported_contract": "legacy/current" },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "capability-before-revocation",
+      "expectedError": "GeometryCapabilityUnavailableError",
+      "expectedMessage": "Geometry engine manifold does not provide required capabilities: nurbs.surfaces",
+      "missingCapabilities": ["nurbs.surfaces"],
+      "publicCode": "capability_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "manifold", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "revocation-before-provider-missing",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine manifold is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
+      "availabilityCause": "revoked",
+      "publicCode": "engine_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "manifold", "availability_cause": "revoked", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "revoked-manifold-manifest",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine manifold is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
+      "availabilityCause": "revoked",
+      "publicCode": "engine_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "manifold", "availability_cause": "revoked", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "revoked-brep-never-runs-manifold",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine brep is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
+      "availabilityCause": "revoked",
+      "publicCode": "engine_unavailable",
+      "retryable": false,
+      "publicDetails": { "engine_class": "brep", "availability_cause": "revoked", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "openscad-viewer/brep-1", "engineClass": "brep", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "readiness-failure-is-not-retried",
+      "expectedError": "GeometryEngineUnavailableError",
+      "expectedMessage": "Geometry engine manifold is unavailable: The qualified provider failed its runtime readiness check.",
+      "availabilityCause": "readiness-failed",
+      "publicCode": "engine_unavailable",
+      "retryable": true,
+      "publicDetails": { "engine_class": "manifold", "availability_cause": "readiness-failed", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "warmCalls": 1, "buildCalls": 0, "manifoldCallsForBrep": 0
+    },
+    {
+      "id": "provider-failure-has-no-retry",
+      "expectedError": "RangeError",
+      "expectedMessage": "provider failure",
+      "publicCode": "internal_error",
+      "retryable": true,
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "runtime", "automaticFallback": false },
+      "warmCalls": 1, "buildCalls": 1, "manifoldCallsForBrep": 0
+    }
+  ],
+  "surfaceCases": [
+    {
+      "id": "worker-envelope-source-digest-replay",
+      "stage": "source-envelope-and-digest",
+      "surface": "worker-coordinator",
+      "expectedOutcome": "ProtocolError/no-publication",
+      "evidenceFile": "tests/buildCoordinator.test.ts",
+      "evidenceTest": "rejects a same-route terminal replayed for different exact source bytes"
+    },
+    {
+      "id": "malformed-header-before-stale",
+      "stage": "leading-routing-header",
+      "surface": "worker",
+      "expectedOutcome": "LANGUAGE_CONTRACT_UNSUPPORTED/no-warm",
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "does not let a malformed newer revision supersede valid running work"
+    },
+    {
+      "id": "cancelled-request-remains-queue-admitted",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp-transport",
+      "expectedOutcome": "server_busy/single-settlement",
+      "evidenceFile": "tests/mcpBoundedTransport.test.ts",
+      "evidenceTest": "keeps a cancelled request admitted until its handler actually settles"
+    },
+    {
+      "id": "capability-before-readiness",
+      "stage": "static-capability-admission",
+      "surface": "facade",
+      "expectedOutcome": "capability_unavailable/no-warm",
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "unsupported-capability-before-readiness"
+    },
+    {
+      "id": "revocation-before-provider",
+      "stage": "manifest-revocation",
+      "surface": "facade",
+      "expectedOutcome": "engine_unavailable:revoked/no-warm",
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "revocation-before-provider-missing"
+    },
+    {
+      "id": "undeployed-brep-no-manifold",
+      "stage": "deployment-and-provider-presence",
+      "surface": "worker",
+      "expectedOutcome": "engine_unavailable:not-deployed/no-manifold",
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "refuses an unavailable B-rep source without invoking the Manifold parser"
+    },
+    {
+      "id": "readiness-no-retry",
+      "stage": "provider-readiness",
+      "surface": "facade",
+      "expectedOutcome": "engine_unavailable:readiness-failed/one-warm",
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "readiness-failure-is-not-retried"
+    },
+    {
+      "id": "provider-execution-no-retry",
+      "stage": "selected-provider-execution",
+      "surface": "facade",
+      "expectedOutcome": "original-error/one-build",
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "provider-failure-has-no-retry"
+    },
+    {
+      "id": "serialization-retains-runtime-provenance",
+      "stage": "serialization-export-and-persistence",
+      "surface": "worker",
+      "expectedOutcome": "failed/runtime-provenance",
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "keeps runtime provenance when success serialization fails after the build"
+    },
+    {
+      "id": "failed-current-source-is-not-exportable",
+      "stage": "serialization-export-and-persistence",
+      "surface": "browser-export",
+      "expectedOutcome": "read-only-last-known-good",
+      "evidenceFile": "tests/buildPromotionPolicy.test.ts",
+      "evidenceTest": "exports only a current error-free full result"
+    },
+    {
+      "id": "persistence-failure-retains-runtime-provenance",
+      "stage": "serialization-export-and-persistence",
+      "surface": "mcp-duckdb",
+      "expectedOutcome": "internal_error/runtime-provenance",
+      "evidenceFile": "tests/mcpServer.test.ts",
+      "evidenceTest": "keeps runtime provenance when persistence fails after geometry completed"
+    },
+    {
+      "id": "late-abort-preserves-original-cause",
+      "stage": "serialization-export-and-persistence",
+      "surface": "mcp",
+      "expectedOutcome": "original-failure-not-cancelled",
+      "evidenceFile": "tests/mcpServer.test.ts",
+      "evidenceTest": "does not rewrite an unrelated late failure as cancellation after the request signal aborts"
+    },
+    {
+      "id": "persisted-diagnostic-v1",
+      "stage": "serialization-export-and-persistence",
+      "surface": "duckdb",
+      "expectedOutcome": "frozen-code-retry-policy",
+      "evidenceFile": "tests/duckdbModelStore.test.ts",
+      "evidenceTest": "requires versioned diagnostics from new writes and enforces the frozen retry policy"
+    }
+  ]
+}

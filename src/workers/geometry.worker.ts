@@ -1,8 +1,18 @@
-import { AbortedError, getWasm, parseOpenSCAD, OpenSCADParseError } from '../services/openscadParser'
+import {
+  defaultGeometryBuildEngine,
+  geometryExecutionForError,
+  GeometryCapabilityUnavailableError,
+  GeometryEngineUnavailableError,
+  GeometryLanguageContractError,
+} from '../services/geometryBuildEngine'
+import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
 import { meshTransferables } from '../core/mesh'
+import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
+  isGeometryWorkerEvent,
   isGeometryWorkerRequest,
+  type GeometryBuildError,
   type GeometryBuildRequest,
   type GeometryBuildTerminal,
   type GeometryCancelReason,
@@ -19,17 +29,28 @@ interface ActiveJob {
 const activeJobs = new Map<number, ActiveJob>()
 const latestByQuality = new Map<GeometryBuildRequest['quality'], GeometryBuildRequest>()
 let latestDocumentRevision = -1
+// BuildCoordinator emits monotonically increasing ids over a FIFO MessagePort.
+// A bounded high-water tombstone prevents both active and post-terminal replay
+// without retaining an unbounded set of completed jobs for the Worker lifetime.
+let highestAcceptedJobId = -1
 
-// Eagerly warm the Manifold WASM at startup so the first build does not pay
-// the download+compile cost. A warm-up failure is not fatal: getWasm() does
-// not cache rejections, so the first real build simply retries the load.
-void getWasm().catch(() => undefined)
+const UNPUBLISHABLE_RESULT_ERROR = Object.freeze({
+  name: 'GeometryWorkerProtocolError',
+  code: 'WORKER_RESULT_UNPUBLISHABLE',
+  message: 'Geometry result cannot be published under protocol v5',
+} satisfies GeometryBuildError)
 
 function postEvent(event: GeometryWorkerEvent, transfer: Transferable[] = []) {
   self.postMessage(event, { transfer })
 }
 
-function jobEvent<T extends Omit<GeometryWorkerEvent, 'protocolVersion' | 'documentRevision' | 'jobId' | 'quality'>>(
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, Extract<keyof T, K>> : never
+type GeometryJobEventPayload = DistributiveOmit<
+  GeometryWorkerEvent,
+  'protocolVersion' | 'documentRevision' | 'jobId' | 'quality' | 'sourceSha256'
+>
+
+function jobEvent<T extends GeometryJobEventPayload>(
   request: GeometryBuildRequest,
   event: T,
 ): GeometryWorkerEvent {
@@ -38,12 +59,40 @@ function jobEvent<T extends Omit<GeometryWorkerEvent, 'protocolVersion' | 'docum
     documentRevision: request.documentRevision,
     jobId: request.jobId,
     quality: request.quality,
+    sourceSha256: request.sourceSha256,
     ...event,
   } as GeometryWorkerEvent
 }
 
 function elapsed(job: ActiveJob) {
   return performance.now() - job.startedAt
+}
+
+function serializedBuildError(error: unknown): GeometryBuildError {
+  const base = {
+    name: error instanceof Error ? error.name : 'Error',
+    message: error instanceof Error ? error.message : String(error),
+  }
+  if (error instanceof OpenSCADParseError) {
+    return {
+      ...base,
+      ...(error.code === undefined ? {} : { code: error.code }),
+      start: error.start,
+      end: error.end,
+      line: error.line,
+      column: error.column,
+    }
+  }
+  if (error instanceof GeometryEngineUnavailableError) return { ...base, code: 'ENGINE_UNAVAILABLE' }
+  if (error instanceof GeometryCapabilityUnavailableError) return { ...base, code: 'CAPABILITY_UNAVAILABLE' }
+  if (error instanceof GeometryLanguageContractError) {
+    return {
+      ...base,
+      code: 'LANGUAGE_CONTRACT_UNSUPPORTED',
+      ...(error.line === null ? {} : { line: error.line }),
+    }
+  }
+  return base
 }
 
 /** Minimum spacing between mid-parse liveness heartbeat progress events. */
@@ -62,12 +111,28 @@ function staleReplacement(request: GeometryBuildRequest) {
     : undefined
 }
 
-function terminalState(job: ActiveJob, phase: GeometryBuildTerminal['phase']): GeometryBuildTerminal | null {
+function plannedExecution(request: GeometryBuildRequest) {
+  try {
+    return defaultGeometryBuildEngine.planSource(request.source, {
+      quality: request.quality,
+      purpose: request.quality,
+    })
+  } catch {
+    return undefined
+  }
+}
+
+function terminalState(
+  job: ActiveJob,
+  phase: GeometryBuildTerminal['phase'],
+  execution = plannedExecution(job.request),
+): GeometryBuildTerminal | null {
   const { request } = job
   if (job.cancelled) {
     return jobEvent(request, {
       status: 'cancelled',
       phase,
+      ...(execution ? { execution } : {}),
       reason: job.cancelled,
       durationMs: elapsed(job),
     }) as GeometryBuildTerminal
@@ -77,6 +142,7 @@ function terminalState(job: ActiveJob, phase: GeometryBuildTerminal['phase']): G
     return jobEvent(request, {
       status: 'stale',
       phase,
+      ...(execution ? { execution } : {}),
       supersededBy,
       durationMs: elapsed(job),
     }) as GeometryBuildTerminal
@@ -84,7 +150,10 @@ function terminalState(job: ActiveJob, phase: GeometryBuildTerminal['phase']): G
   return null
 }
 
-async function runBuild(request: GeometryBuildRequest) {
+async function runBuild(
+  request: GeometryBuildRequest,
+  planned: GeometryExecutionDescriptor,
+) {
   const job: ActiveJob = {
     request,
     startedAt: performance.now(),
@@ -93,7 +162,7 @@ async function runBuild(request: GeometryBuildRequest) {
   activeJobs.set(request.jobId, job)
   postEvent(jobEvent(request, { status: 'accepted', phase: 'queued' }))
 
-  const alreadyStale = terminalState(job, 'queued')
+  const alreadyStale = terminalState(job, 'queued', planned)
   if (alreadyStale) {
     postEvent(alreadyStale)
     activeJobs.delete(request.jobId)
@@ -104,6 +173,7 @@ async function runBuild(request: GeometryBuildRequest) {
   postEvent(jobEvent(request, { status: 'progress', phase: 'compiling', progress: null }))
 
   let lastHeartbeat = performance.now()
+  let completedExecution: GeometryExecutionDescriptor | undefined
   try {
     // The parser's top-level statement loop yields to the event loop
     // periodically, so queued cancel messages are delivered mid-parse and
@@ -111,8 +181,10 @@ async function runBuild(request: GeometryBuildRequest) {
     // warm worker (and its cached WASM) survives. A single wedged statement
     // still cannot yield; BuildCoordinator's grace timer replaces the worker
     // in that case and remains the hard cancellation boundary.
-    const result = await parseOpenSCAD(request.source, {
+    const built = await defaultGeometryBuildEngine.buildSource(request.source, {
       quality: request.quality,
+      purpose: request.quality,
+    }, {
       shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,
       onYield: () => {
         // Throttled liveness heartbeat: the build is alive (just heavy). The
@@ -125,7 +197,9 @@ async function runBuild(request: GeometryBuildRequest) {
         }
       },
     })
-    const terminal = terminalState(job, 'compiling')
+    completedExecution = built.execution
+    const result = built.result
+    const terminal = terminalState(job, 'compiling', built.execution)
     if (terminal) {
       postEvent(terminal)
       return
@@ -135,12 +209,28 @@ async function runBuild(request: GeometryBuildRequest) {
     const response = jobEvent(request, {
       status: 'succeeded',
       phase: 'complete',
+      execution: built.execution,
       ...result,
       durationMs: elapsed(job),
     })
+    // Validate the complete success packet while every ArrayBuffer is still
+    // Worker-owned. In particular, a legacy identity longer than v5's frozen
+    // 256-code-unit limit must never cross the boundary as an invalid success
+    // (and must never be truncated or replaced with a synthetic alias).
+    if (!isGeometryWorkerEvent(response)) {
+      postEvent(jobEvent(request, {
+        status: 'failed',
+        phase: 'serializing',
+        execution: built.execution,
+        error: UNPUBLISHABLE_RESULT_ERROR,
+        durationMs: elapsed(job),
+      }))
+      return
+    }
     postEvent(response, meshTransferables(result.meshes))
   } catch (error) {
-    const terminal = terminalState(job, 'compiling')
+    const attachedExecution = geometryExecutionForError(error) ?? completedExecution
+    const terminal = terminalState(job, 'compiling', attachedExecution ?? plannedExecution(request))
     if (terminal) {
       postEvent(terminal)
       return
@@ -152,20 +242,22 @@ async function runBuild(request: GeometryBuildRequest) {
       postEvent(jobEvent(request, {
         status: 'cancelled',
         phase: 'compiling',
+        ...(attachedExecution ? { execution: attachedExecution } : {}),
         reason: 'superseded',
         durationMs: elapsed(job),
       }))
       return
     }
+    const execution = attachedExecution
+      ?? (error instanceof GeometryEngineUnavailableError
+      || error instanceof GeometryCapabilityUnavailableError
+      ? error.execution
+      : undefined)
     postEvent(jobEvent(request, {
       status: 'failed',
       phase: 'compiling',
-      error: {
-        name: error instanceof Error ? error.name : 'Error',
-        message: error instanceof Error ? error.message : String(error),
-        line: error instanceof OpenSCADParseError ? error.line : undefined,
-        column: error instanceof OpenSCADParseError ? error.column : undefined,
-      },
+      ...(execution ? { execution } : {}),
+      error: serializedBuildError(error),
       durationMs: elapsed(job),
     }))
   } finally {
@@ -174,6 +266,31 @@ async function runBuild(request: GeometryBuildRequest) {
 }
 
 function acceptBuild(request: GeometryBuildRequest) {
+  // A job id is admitted at most once for the entire Worker lifetime. The
+  // high-water rule also rejects out-of-order lower ids, which cannot occur on
+  // the legitimate FIFO Coordinator channel.
+  if (request.jobId <= highestAcceptedJobId) return
+  highestAcceptedJobId = request.jobId
+
+  // Validate routing before touching revision/queue state. A malformed newer
+  // request must not supersede valid work already running, and planning never
+  // warms either provider.
+  let planned: GeometryExecutionDescriptor
+  const startedAt = performance.now()
+  try {
+    planned = defaultGeometryBuildEngine.planSource(request.source, {
+      quality: request.quality,
+      purpose: request.quality,
+    })
+  } catch (error) {
+    postEvent(jobEvent(request, {
+      status: 'failed',
+      phase: 'queued',
+      error: serializedBuildError(error),
+      durationMs: performance.now() - startedAt,
+    }))
+    return
+  }
   if (request.documentRevision > latestDocumentRevision) {
     latestDocumentRevision = request.documentRevision
     latestByQuality.clear()
@@ -182,7 +299,7 @@ function acceptBuild(request: GeometryBuildRequest) {
     const previous = latestByQuality.get(request.quality)
     if (!previous || request.jobId > previous.jobId) latestByQuality.set(request.quality, request)
   }
-  void runBuild(request)
+  void runBuild(request, planned)
 }
 
 function cancelBuild(request: Extract<GeometryWorkerRequest, { type: 'cancel' }>) {

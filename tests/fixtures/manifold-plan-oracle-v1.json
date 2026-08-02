@@ -1,0 +1,1228 @@
+{
+  "schema": "manifold-plan-oracle",
+  "version": 1,
+  "comparison": {
+    "meshFrame": "LME1",
+    "sceneFrame": "LSE1",
+    "exact": [
+      "outcome/error literal and span",
+      "warning order and text",
+      "quality and reduced",
+      "LME1 mesh bytes including identities/provenance",
+      "LSE1 scene bytes including identities/inspection"
+    ],
+    "metrics": {
+      "volume": {
+        "absolute": 1e-9,
+        "relative": 1e-9
+      },
+      "surfaceArea": {
+        "absolute": 1e-9,
+        "relative": 1e-9
+      }
+    }
+  },
+  "corpusSha256": "c58ff48a7f174cb547b4f8aad8ada72a30816d5009a87d046d4f78d634db7482",
+  "cases": [
+    {
+      "name": "colored transform",
+      "source": "color(\"#336699cc\") translate([1,2,3]) cube([2,3,4]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "f30cbfb0f82d8fe340e963907edd3cd875c7cf5374195838d0191e9a7e023a6c",
+        "lme1ByteLength": 2718,
+        "lse1Sha256": "173da4b643da29f5bec5dc7d7636801e7f25729888fc0274f9c80a571453953f",
+        "lse1ByteLength": 2950,
+        "warnings": [],
+        "volume": 24,
+        "surfaceArea": 52,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "transparent color provenance",
+      "source": "color(\"red\") cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "53315dd837668140c6b393ef86d1d922f0ece442b853444f855c92aaf8839101",
+        "lme1ByteLength": 2518,
+        "lse1Sha256": "10a3362b17a35575fb9ea6caadb96b1a049e51a17d325255d3982259cfee61eb",
+        "lse1ByteLength": 2750,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "transparent assertion provenance",
+      "source": "assert(true) cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "a26555122b21bb638f92a178d808f113296934e391d241504b8a7bf73c8193a0",
+        "lme1ByteLength": 2523,
+        "lse1Sha256": "5ec5cadbfedef47a8c8b7e4bc1e70b17ddf14c0e0d19fb0bed0f37bda523df60",
+        "lse1ByteLength": 2755,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "boolean difference",
+      "source": "difference(){ cube([4,4,4],center=true); sphere(r=1,$fn=16); }",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "c95e85c859f377d4ca4747183c18b157d95f759e0ed6e7d14ff463c9b354bfb8",
+        "lme1ByteLength": 8679,
+        "lse1Sha256": "b72ae9da0030fe05010c1cfa979ba958852c18e42c3a6b051f18f4a3c8b04905",
+        "lse1ByteLength": 8913,
+        "warnings": [],
+        "volume": 60.16968259019412,
+        "surfaceArea": 107.97276157095422,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "repeated loop identity",
+      "source": "module peg(x=0){translate([x,0,0]) sphere(r=1,$fn=12);} for(i=[0,2,0]) peg(i);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "1268389d42122d7bd1c5be3afaec1d6f20b2feab53d0cda6c5c4419cff607924",
+        "lme1ByteLength": 15444,
+        "lse1Sha256": "54b63b5e67e5b84e4a6b8030c950bd5a332ee05c7115fbcc912fda81c6fe93c2",
+        "lse1ByteLength": 13925,
+        "warnings": [],
+        "volume": 10.732050807568879,
+        "surfaceArea": 34.62594122623781,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 3,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 3
+      }
+    },
+    {
+      "name": "multi children through color",
+      "source": "module o(){color(\"red\") children();} o(){cube(1);sphere(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "beab39d4925a64f52d06c253e467d33e7f1dd2543ac300ad0380aa17e6504e19",
+        "lme1ByteLength": 24961,
+        "lse1Sha256": "3ab7e5fd984e94921fa83d4e296bc08ae998f151695ab351b62a44fed2373c05",
+        "lse1ByteLength": 25321,
+        "warnings": [],
+        "volume": 5.095220100788306,
+        "surfaceArea": 18.41327288120215,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "multi children through transform",
+      "source": "module o(){translate([1,0,0]) children();} o(){cube(1);sphere(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "72188f4ffd7bd6a403fa2b36cce5b681b19d9952a5fd5d652076c5e884d39a5c",
+        "lme1ByteLength": 24993,
+        "lse1Sha256": "e803be9aa63e0b3cb40f0fab61d933a65c7d0f02ddac6b04af5a4b65abdf6605",
+        "lse1ByteLength": 25353,
+        "warnings": [],
+        "volume": 5.095220100788306,
+        "surfaceArea": 18.41327288120215,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "direct multi children through color",
+      "source": "color(\"red\"){cube(1);sphere(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "2a4c8e50d29035f7ee8ed9d4dae438b750bfcca0a0d3b74a0656bb8f6b409614",
+        "lme1ByteLength": 24525,
+        "lse1Sha256": "d802544cdb41785e8faf6cb345d25cb75b44d3fd1ec36e305c0b1dc297c353b9",
+        "lse1ByteLength": 24885,
+        "warnings": [],
+        "volume": 5.095220100788306,
+        "surfaceArea": 18.41327288120215,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "direct multi children through transform",
+      "source": "translate([1,0,0]){cube(1);sphere(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "0f746810433433a4d084a0f874220dec03fc3c2f7c5110f6979ace2fd4008a08",
+        "lme1ByteLength": 24565,
+        "lse1Sha256": "8a7f843a2233c6c06fe7cf6a07238fdc019982fb8670c97ab1062e0c8eab2f83",
+        "lse1ByteLength": 24925,
+        "warnings": [],
+        "volume": 5.095220100788306,
+        "surfaceArea": 18.41327288120215,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "direct multi children through assertion",
+      "source": "assert(true){cube(1);sphere(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "00e94424fd90afc5126deb336a9ff5ab581326c1d86dff5218bebd0f9ec2912e",
+        "lme1ByteLength": 24535,
+        "lse1Sha256": "c6c60d9e6c0837ea318a60f7bdfb28a8e7b787a9a479ec099ca38acea6315731",
+        "lse1ByteLength": 24895,
+        "warnings": [],
+        "volume": 5.095220100788306,
+        "surfaceArea": 18.41327288120215,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "preview reduction",
+      "source": "sphere(r=5,$fn=96);",
+      "quality": "preview",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "5485602e24e6eee188bcbfab134b7357c3245ac57bd2623d8ae6089bec7cab21",
+        "lme1ByteLength": 54658,
+        "lse1Sha256": "dc5a0f0e6fadcb2d1029f3b9088e9abdca9c85d73121d548298bce27e055a61b",
+        "lse1ByteLength": 54894,
+        "warnings": [
+          "$fn=96 was clamped to 48 for preview rendering"
+        ],
+        "volume": 518.3575814600293,
+        "surfaceArea": 312.44811598393443,
+        "quality": "preview",
+        "reduced": true,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "union",
+      "source": "union(){cube(2);translate([1,1,1]) sphere(1,$fn=12);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "7fdac5bfade1d9e5aee3ea7264a068996d5ced120d8eef2edccfa5fed380e645",
+        "lme1ByteLength": 2468,
+        "lse1Sha256": "9355ac3d0b4eec58c62452d2760546dae8719ecf3cf269d23ea2852a2c7bc0a0",
+        "lse1ByteLength": 2700,
+        "warnings": [],
+        "volume": 8,
+        "surfaceArea": 24,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "hull",
+      "source": "hull(){cube(1);translate([2,0,0]) sphere(1,$fn=12);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "d6d6b93997e9deb5c27836383f60c45eca88440aba5512398cebee6bdd2c46af",
+        "lme1ByteLength": 4078,
+        "lse1Sha256": "2fdc8a8d3f97eac90e6e69c1c3d0078ca5a9b7adab996a122d0200f06c9d604a",
+        "lse1ByteLength": 4310,
+        "warnings": [],
+        "volume": 6.0584754935143135,
+        "surfaceArea": 17.944289561048127,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "zero-bottom cone",
+      "source": "cylinder(h=3,r1=0,r2=2,$fn=12);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "e327052ed18f65e83bc34cc7f4a6050a0e458d07e57191d7504bdeeaaef9e875",
+        "lme1ByteLength": 3743,
+        "lse1Sha256": "03b22ef611b3d7e747b6e62c99a48e37389eec8cac8f9f138e6045630efc62bf",
+        "lse1ByteLength": 3976,
+        "warnings": [],
+        "volume": 12,
+        "surfaceArea": 34.16443442523935,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "polyhedron",
+      "source": "polyhedron(points=[[0,0,0],[2,0,0],[0,2,0],[0,0,2]],faces=[[0,1,2],[0,3,1],[0,2,3],[1,3,2]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "9815ecd214ed7f0da4edcfb58206fa5539f45ee2f8700820faa5257e83fbc801",
+        "lme1ByteLength": 1853,
+        "lse1Sha256": "422466b58a3a5501bb6ec8dd72252579291aa90155d2765085843e14a4719acb",
+        "lse1ByteLength": 2084,
+        "warnings": [],
+        "volume": 1.3333333333333333,
+        "surfaceArea": 9.464101615137753,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "empty polyhedron palette",
+      "source": "polyhedron(points=[],faces=[]); cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "f67e6e81e75412b4ecc92158854f68558c77bed1ddc622e72703ecb0cb7532ad",
+        "lme1ByteLength": 2390,
+        "lse1Sha256": "5656ac0378114d7dd37db7d5e4a02541c63d3d6c81126c10884ed2a209b844e0",
+        "lse1ByteLength": 2622,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "empty polyhedron union operand",
+      "source": "union(){polyhedron(points=[],faces=[]);cube(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "30ba723c0b2158a874f79057196194f081b86a2da8fd243f40b04a2ac51a5c66",
+        "lme1ByteLength": 2468,
+        "lse1Sha256": "3dce6c081bf4019df3ace769fb14a501d5f21ebd00e305bf33dc682b0e97c6e8",
+        "lse1ByteLength": 2700,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "empty polyhedron intersection operand",
+      "source": "intersection(){polyhedron(points=[],faces=[]);cube(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "empty polyhedron difference cutter",
+      "source": "difference(){cube(1);polyhedron(points=[],faces=[]);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "107c6d9ed055f4b9df234bd73f5c9170ab34a0e8543ebc390be78670ad3035d4",
+        "lme1ByteLength": 2488,
+        "lse1Sha256": "79860c51139d90804615cfd3c586ea282fc3b0067c2433184f2a397de8dd4efd",
+        "lse1ByteLength": 2720,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "empty polyhedron hull operand",
+      "source": "hull(){polyhedron(points=[],faces=[]);cube(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "ec21ae6a1fd519cdb7a8d5f30ed6c7bfb3b06cc00b4a4e9580ee50099567df2b",
+        "lme1ByteLength": 2390,
+        "lse1Sha256": "465a5c85e7883146e91a5a7e3b01402df34c857e1cba0bfd570bb2197bdce429",
+        "lse1ByteLength": 2622,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "nested empty polyhedron operand",
+      "source": "union(){intersection(){polyhedron(points=[],faces=[]);cube(1);}sphere(1,$fn=12);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "7f8a1c5ab6a8e7be7decd684077a4755d47f1d957c435307902b3d798194224f",
+        "lme1ByteLength": 4810,
+        "lse1Sha256": "2fe7c8058f49dba561688090d0c53df33b91f6cc3896ffa5bc03edc03663c3d2",
+        "lse1ByteLength": 5042,
+        "warnings": [],
+        "volume": 3.577350269189626,
+        "surfaceArea": 11.541980408745937,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "two-point empty polygon",
+      "source": "polygon([[0,0],[1,0]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [
+          "1 top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()"
+        ],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "empty polygon union operand",
+      "source": "linear_extrude(1) union(){polygon([[0,0],[1,0],[0,0]]);square(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "1c93a0fafe4bc3c6696817b6d8eae766447a160d48af6705a107a18c7cd31fc3",
+        "lme1ByteLength": 2430,
+        "lse1Sha256": "dbbd3ae63224124770b2e75673ad3a3b4af5280b7b07cf8fe3c87d3191156779",
+        "lse1ByteLength": 2662,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "empty polygon difference cutter",
+      "source": "linear_extrude(1) difference(){square(1);polygon([[0,0],[1,0],[0,0]]);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "0137c299bbedf67abc238ce9723431b9128bbee539dadc11493a174308977c7b",
+        "lme1ByteLength": 2430,
+        "lse1Sha256": "ab2d9653e97ebef396c679f330c15dff21dd47cc2afc83085f4c35a52a1f554a",
+        "lse1ByteLength": 2662,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "legacy non-affine fourth row",
+      "source": "multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[1,2,3,9]]) cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "9bebed7d13dc5d61dbd1ff1cf15d334140df630114e271c60610139e697a5231",
+        "lme1ByteLength": 2543,
+        "lse1Sha256": "3eb7e91f4ecbd26616d1f2a25893520d9397c3ede7c4630664d1219e949cd914",
+        "lse1ByteLength": 2775,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "linear extrusion",
+      "source": "linear_extrude(height=3,twist=45,slices=3,scale=[.5,1]) square([2,3],center=true);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "d2b9e4d7d4c6b4b1c851f24a339c6f3ec744137619b32c02228a7f89cd1ef086",
+        "lme1ByteLength": 3951,
+        "lse1Sha256": "57b807215712bdd3a99cf5e383d4ff118aab42c045c12a625a8e747427b36285",
+        "lse1ByteLength": 4184,
+        "warnings": [],
+        "volume": 14.26448519696576,
+        "surfaceArea": 36.851220334144315,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "rotate extrusion",
+      "source": "rotate_extrude(angle=270,$fn=16) translate([2,0]) square([1,1]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "a5e329ed43deb086c04018e16f1843e583194b4a651ba23410b4b9001fa5d551",
+        "lme1ByteLength": 9344,
+        "lse1Sha256": "e9820260c6101d644132093f41d7f5d533a661e049ae192cf1c351195527d04c",
+        "lse1ByteLength": 9578,
+        "warnings": [],
+        "volume": 11.611387090178495,
+        "surfaceArea": 48.69965009321487,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "projection",
+      "source": "linear_extrude(height=2) projection() rotate([20,0,0]) cube(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "0b25afb2db12519f830c0f9d52c7e96165cdaa41ae93a8e1981a4557e881fc2b",
+        "lme1ByteLength": 2942,
+        "lse1Sha256": "b803a1e233b6fd47f61a4561ae48b5e083bdbf9662819e201f0a349eaa2ad12a",
+        "lse1ByteLength": 3174,
+        "warnings": [],
+        "volume": 10.253702104091644,
+        "surfaceArea": 28.50740420818329,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "cut projection",
+      "source": "linear_extrude(height=2) projection(cut=true) translate([0,0,-1]) cube(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "dbbaa541e28ba6ee85099dd2b4be5d1721dc39014c8bc8513f54026962627939",
+        "lme1ByteLength": 3326,
+        "lse1Sha256": "8c5243156061b40b4e400a1d3ea18213bbf0cb2db7f3cebae68f6bc318e3db1d",
+        "lse1ByteLength": 3558,
+        "warnings": [],
+        "volume": 7.999999999999999,
+        "surfaceArea": 24,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "offset",
+      "source": "linear_extrude(height=1) offset(delta=.5) square(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "deef79776a48da01804343c25e8f2167f94924152e1065694e05278012adb47a",
+        "lme1ByteLength": 3166,
+        "lse1Sha256": "c0eaece705925bd297e1fa911d4e882ca3f72a0312a1143e54810a1c56679c2b",
+        "lse1ByteLength": 3398,
+        "warnings": [],
+        "volume": 8.5,
+        "surfaceArea": 27.82842712474619,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "top-level 2D warning",
+      "source": "square([2,3]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [
+          "1 top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()"
+        ],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "empty polygon warning",
+      "source": "polygon(points=[[0,0],[1,0],[0,0]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [
+          "1 top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()"
+        ],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "deduplicated warnings",
+      "source": "sphere(1,$fn=96); sphere(2,$fn=96);",
+      "quality": "preview",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "bc432a02f7ed8c5a8dc6d61d0236387d27a16f7233668ef66f21a8a6108e2dcf",
+        "lme1ByteLength": 109307,
+        "lse1Sha256": "44bcac63f580e3e46af6896b1ebe0b6393451caaf0f59d9306e505a46f041694",
+        "lse1ByteLength": 109673,
+        "warnings": [
+          "$fn=96 was clamped to 48 for preview rendering"
+        ],
+        "volume": 37.32174586512212,
+        "surfaceArea": 62.48962319678689,
+        "quality": "preview",
+        "reduced": true,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "2D mirror ignores z",
+      "source": "linear_extrude(height=1) mirror([1,0,1]) translate([1,0]) square([1,1]);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "19c4ba90548dc9d0f922f15bc4f22eea9436883e9a0d5bb8f55d064b2bad44a8",
+        "lme1ByteLength": 2430,
+        "lse1Sha256": "a79fedeb5ebe9b265743d150577f9622df2a8d9396fa64c0084a448af1a8a184",
+        "lse1ByteLength": 2662,
+        "warnings": [],
+        "volume": 1,
+        "surfaceArea": 6,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "zero 2D mirror",
+      "source": "linear_extrude(1) mirror([0,0,1]) square(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "zero 3D mirror",
+      "source": "mirror([0,0,0]) cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "singular multmatrix remains distinct",
+      "source": "multmatrix([[1,0,0,0],[0,1,0,0],[0,0,0,0],[0,0,0,1]]) cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "13669e1278824e236bf74131e50e91e8d5f0912d62829cf70432b520c88fb016",
+        "lme1ByteLength": 2703,
+        "lse1Sha256": "575c393a132253bca565ba70ade3a71fb2cf942a1d706d9a4ba2732efc23dc44",
+        "lse1ByteLength": 2935,
+        "warnings": [],
+        "volume": 0,
+        "surfaceArea": 2,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "legacy nested children out-of-range terminates",
+      "source": "module m(){children();}m() children(9);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "b8835e6ef1d5c3412b5598d25a7c5a92c2e449ecd2b32df7920fbf39e34ecf6d",
+        "lme1ByteLength": 9,
+        "lse1Sha256": "30ec624bae1b4f1455566a8859a31e6a98ec2d7708132b75eb19bed316a6f0a0",
+        "lse1ByteLength": 115,
+        "warnings": [],
+        "volume": 0,
+        "surfaceArea": 0,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 0,
+        "sceneAssetCount": 0,
+        "sceneEntityCount": 0
+      }
+    },
+    {
+      "name": "legacy nested children selects a sibling",
+      "source": "module m(){children();}m(){children(1);cube(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "431648c35fbc0d270b4b3cc9cf1074a84cba2d53795a31551d148d2966460a1d",
+        "lme1ByteLength": 5279,
+        "lse1Sha256": "c7cdb5edb9cdc8a116bc33b5c6d3a087150e99ae4d262b0333f00ae1a18b4bb0",
+        "lse1ByteLength": 4690,
+        "warnings": [],
+        "volume": 2,
+        "surfaceArea": 12,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "discarded cutter union preserves later original IDs",
+      "source": "difference(){if(false)cube(1);cube(1);sphere(1,$fn=12);}cube(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "29af3bc8f50bc9d6705dc6fd552f3f2a9575254ff26ff7c88d016fa929d02e3d",
+        "lme1ByteLength": 2390,
+        "lse1Sha256": "5da4e0a94261d1f98e8fbf3271c09d11fa1e19bbdab752265c1a3f3c9fdcf087",
+        "lse1ByteLength": 2622,
+        "warnings": [],
+        "volume": 8,
+        "surfaceArea": 24,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "assignment first child still leaves eager cutter effect",
+      "source": "difference(){x=1;cube(1);}cube(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "2cf7bd5b7b289651204fb45abe27f95e6aa35272b4e42b2be57232452f730e7e",
+        "lme1ByteLength": 2390,
+        "lse1Sha256": "50e96051eca82a4314637355794694b795152098c737eb25e388134761d8fe6b",
+        "lse1ByteLength": 2622,
+        "warnings": [],
+        "volume": 8,
+        "surfaceArea": 24,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "materialized empty survives discarded cutter union",
+      "source": "difference(){if(false)cube(1);polyhedron(points=[],faces=[]);cube(1);}cube(2);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "81dcf034692beffdbcfea3669b3457e081dd56edb55861d3f22f58372f3093f0",
+        "lme1ByteLength": 2390,
+        "lse1Sha256": "df50ccae01eb35a9c1113944c20249bcecb19f25196016475d450ea9bd88dd40",
+        "lse1ByteLength": 2622,
+        "warnings": [],
+        "volume": 8,
+        "surfaceArea": 24,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 1,
+        "sceneAssetCount": 1,
+        "sceneEntityCount": 1
+      }
+    },
+    {
+      "name": "difference partitions repeated loop activations by authored statement",
+      "source": "difference(){for(i=[0:2]) cube(i+1);for(i=[0:2]) sphere(i+1);}cube(9);",
+      "quality": "full",
+      "expected": {
+        "tag": "success",
+        "lme1Sha256": "d7abd9e68ef3188012b3630066075be44b0abd748525330db9200e416f95de88",
+        "lme1ByteLength": 9694,
+        "lse1Sha256": "62b8625e2f8711cf4e368ae5ffa4f7269db76a3979db8d4888c88d4894c5898f",
+        "lse1ByteLength": 10054,
+        "warnings": [],
+        "volume": 742.1786321598395,
+        "surfaceArea": 532.8951772136106,
+        "quality": "full",
+        "reduced": false,
+        "meshCount": 2,
+        "sceneAssetCount": 2,
+        "sceneEntityCount": 2
+      }
+    },
+    {
+      "name": "unsupported",
+      "source": "cube(1);\ntext(\"nope\");",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 2, column 1: Unsupported geometry operation text()\ntext(\"nope\");\n^",
+        "code": null,
+        "line": 2,
+        "column": 1,
+        "start": 9,
+        "end": 10
+      }
+    },
+    {
+      "name": "assertion",
+      "source": "cube(1);\nassert(false, \"oracle failed\") sphere(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 2, column 1: Assertion 'false' failed: oracle failed\nassert(false, \"oracle failed\") sphere(1);\n^",
+        "code": null,
+        "line": 2,
+        "column": 1,
+        "start": 9,
+        "end": 10
+      }
+    },
+    {
+      "name": "negative cube",
+      "source": "cube([-1,2,3]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Cube dimensions must be positive\ncube([-1,2,3]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "post-child partial map terminal",
+      "source": "rotate(a=1,v=[0,0,0]){square(1);cube(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Rotation axis cannot be zero\nrotate(a=1,v=[0,0,0]){square(1);cube(1);}\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "long source-bound diagnostic",
+      "source": "/*xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/ cube(-1);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1006: Cube dimensions must be positive\n/*xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/ cube(-1);\n                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ^",
+        "code": null,
+        "line": 1,
+        "column": 1006,
+        "start": 1005,
+        "end": 1006
+      }
+    },
+    {
+      "name": "empty polygon paths",
+      "source": "polygon(points=[[0,0],[1,0],[0,1]],paths=[]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "TypeError",
+        "message": "Cannot read properties of undefined (reading 'length')",
+        "code": null,
+        "line": null,
+        "column": null,
+        "start": null,
+        "end": null
+      }
+    },
+    {
+      "name": "empty polygon default path",
+      "source": "polygon([]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "TypeError",
+        "message": "Cannot read properties of undefined (reading 'length')",
+        "code": null,
+        "line": null,
+        "column": null,
+        "start": null,
+        "end": null
+      }
+    },
+    {
+      "name": "three-point polyhedron",
+      "source": "polyhedron(points=[[0,0,0],[1,0,0],[0,1,0]],faces=[[0,1,2]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Invalid manifold polyhedron: Not manifold\npolyhedron(points=[[0,0,0],[1,0,0],[0,1,0]],faces=[[0,1,2]]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "empty polyhedron validates face indices first",
+      "source": "polyhedron(points=[],faces=[[0,1,2]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Polyhedron face index is out of bounds\npolyhedron(points=[],faces=[[0,1,2]]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "repeated-index polyhedron reaches legacy kernel",
+      "source": "polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,0,1]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Invalid manifold polyhedron: Not manifold\npolyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,0,1]]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "negative-zero polyhedron index reaches legacy kernel",
+      "source": "polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[-0.1,1,2]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Invalid manifold polyhedron: Not manifold\npolyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[-0.1,1,2]]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "open polyhedron kernel failure",
+      "source": "polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Invalid manifold polyhedron: Not manifold\npolyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "linear extrusion requires 2D",
+      "source": "linear_extrude(1) cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: linear_extrude() requires 2D children\nlinear_extrude(1) cube(1);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "rotate extrusion requires 2D",
+      "source": "rotate_extrude() cube(1);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: rotate_extrude() requires 2D children\nrotate_extrude() cube(1);\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "let bindings use the outer environment",
+      "source": "let(x=2,y=x+1) cube([x,y,1]);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 11: Unknown variable x\nlet(x=2,y=x+1) cube([x,y,1]);\n          ^",
+        "code": null,
+        "line": 1,
+        "column": 11,
+        "start": 10,
+        "end": 11
+      }
+    },
+    {
+      "name": "children validates an index without caller children",
+      "source": "children(\"x\");",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: children index must be a finite number\nchildren(\"x\");\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "legacy nested children preserves pinned recursion",
+      "source": "module m(){children();} module n(){m() children();} n(){cube(1);sphere(1,$fn=7);}",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 40: Evaluation exceeds 128 nested calls\nmodule m(){children();} module n(){m() children();} n(){cube(1);sphere(1,$fn=7);}\n                                       ^",
+        "code": null,
+        "line": 1,
+        "column": 40,
+        "start": 39,
+        "end": 40
+      }
+    },
+    {
+      "name": "bounded depth",
+      "source": "value = ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------1; cube(value);",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 264: Expression exceeds 256 nested levels\nvalue = ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------1; cube(value);\n                                                                                                                                                                                                                                                                       ^",
+        "code": null,
+        "line": 1,
+        "column": 264,
+        "start": 263,
+        "end": 264
+      }
+    },
+    {
+      "name": "difference evaluates cutters after empty base",
+      "source": "difference(){ if(false) cube(1); assert(false, \"cutter evaluated\") sphere(1); }",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 34: Assertion 'false' failed: cutter evaluated\ndifference(){ if(false) cube(1); assert(false, \"cutter evaluated\") sphere(1); }\n                                 ^",
+        "code": null,
+        "line": 1,
+        "column": 34,
+        "start": 33,
+        "end": 34
+      }
+    },
+    {
+      "name": "discarded cutter kernel failure remains observable",
+      "source": "difference(){if(false)cube(1);polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);}",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 31: Invalid manifold polyhedron: Not manifold\ndifference(){if(false)cube(1);polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);}\n                              ^",
+        "code": null,
+        "line": 1,
+        "column": 31,
+        "start": 30,
+        "end": 31
+      }
+    },
+    {
+      "name": "earlier kernel failure wins over later language terminal",
+      "source": "polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);assert(false,\"later\");",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: Invalid manifold polyhedron: Not manifold\npolyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]);assert(false,\"later\");\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    },
+    {
+      "name": "mixed-dimension discarded cutters retain exact union diagnostic",
+      "source": "difference(){if(false)cube(1);cube(1);square(1);}",
+      "quality": "full",
+      "expected": {
+        "tag": "error",
+        "name": "OpenSCADParseError",
+        "message": "Line 1, column 1: union() cannot mix 2D and 3D children\ndifference(){if(false)cube(1);cube(1);square(1);}\n^",
+        "code": null,
+        "line": 1,
+        "column": 1,
+        "start": 0,
+        "end": 1
+      }
+    }
+  ]
+}

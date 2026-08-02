@@ -1,0 +1,1300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-scad-viewer.invalid/schemas/qualification-plan-v1.schema.json",
+  "title": "OpenSCAD Viewer QualificationPlan",
+  "description": "Immutable, pre-execution qualification plan. Results are separate artifacts and never mutate this document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "schemaVersion",
+    "planId",
+    "gate",
+    "lifecycle",
+    "processDeviation",
+    "claimBoundary",
+    "scope",
+    "bindings",
+    "environments",
+    "oracle",
+    "comparator",
+    "identifierBoundaries",
+    "matrix",
+    "resourceBudgets",
+    "executionProtocol",
+    "resetPolicy",
+    "approvals",
+    "cutoverPolicy",
+    "unresolvedRows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./qualification-plan.schema.json"
+    },
+    "schema": {
+      "const": "open-scad-viewer/qualification-plan"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "planId": {
+      "$ref": "#/$defs/id"
+    },
+    "gate": {
+      "$ref": "#/$defs/gate"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/lifecycle"
+    },
+    "processDeviation": {
+      "$ref": "#/$defs/processDeviation"
+    },
+    "processAmendment": {
+      "$ref": "#/$defs/processAmendment"
+    },
+    "claimBoundary": {
+      "$ref": "#/$defs/claimBoundary"
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "bindings": {
+      "$ref": "#/$defs/bindings"
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/environment"
+      }
+    },
+    "oracle": {
+      "$ref": "#/$defs/oracle"
+    },
+    "comparator": {
+      "$ref": "#/$defs/comparator"
+    },
+    "identifierBoundaries": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifierBoundary"
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/matrixRow"
+      }
+    },
+    "resourceBudgets": {
+      "$ref": "#/$defs/resourceBudgets"
+    },
+    "executionProtocol": {
+      "$ref": "#/$defs/executionProtocol"
+    },
+    "resetPolicy": {
+      "$ref": "#/$defs/resetPolicy"
+    },
+    "approvals": {
+      "$ref": "#/$defs/approvals"
+    },
+    "cutoverPolicy": {
+      "$ref": "#/$defs/cutoverPolicy"
+    },
+    "unresolvedRows": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/unresolvedRow"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "seed": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{16}$"
+    },
+    "hashBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "algorithm", "value", "byteLength", "verifiedBy"],
+          "properties": {
+            "state": {
+              "const": "frozen"
+            },
+            "algorithm": {
+              "const": "sha256"
+            },
+            "value": {
+              "$ref": "#/$defs/sha256"
+            },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "verifiedBy": {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "algorithm", "value", "token", "reason", "requiredBefore"],
+          "properties": {
+            "state": {
+              "const": "unresolved-placeholder"
+            },
+            "algorithm": {
+              "const": "sha256"
+            },
+            "value": {
+              "type": "null"
+            },
+            "token": {
+              "type": "string",
+              "pattern": "^__ROOT_FREEZE_[A-Z0-9_]+__$"
+            },
+            "reason": {
+              "$ref": "#/$defs/nonEmptyText"
+            },
+            "requiredBefore": {
+              "const": "execution-admission"
+            }
+          }
+        }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "purpose", "sha256"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "purpose": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hashBinding"
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "paths", "canonicalization", "sha256"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
+        },
+        "canonicalization": {
+          "const": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hashBinding"
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "capability", "version"],
+      "properties": {
+        "id": {
+          "const": "g1"
+        },
+        "name": {
+          "const": "neutral-semantic-manifold-seam"
+        },
+        "capability": {
+          "const": "semantic-program-to-manifold-plan"
+        },
+        "version": {
+          "const": 1
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "qualificationClaim",
+        "executionAdmission",
+        "frozenContent",
+        "resultsArtifactPolicy"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "draft",
+            "frozen-pending-execution",
+            "executing",
+            "qualified",
+            "rejected",
+            "superseded"
+          ]
+        },
+        "qualificationClaim": {
+          "enum": ["none", "qualified"]
+        },
+        "executionAdmission": {
+          "enum": ["blocked-unresolved-bindings", "ready-clean-rerun", "closed"]
+        },
+        "frozenContent": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "scope",
+              "matrix",
+              "oracle",
+              "comparator",
+              "budgets",
+              "seeds",
+              "work-units",
+              "clean-runs",
+              "reset-policy",
+              "claim-boundary"
+            ]
+          }
+        },
+        "resultsArtifactPolicy": {
+          "const": "append-only-separate-artifact"
+        }
+      }
+    },
+    "processDeviation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementationTiming",
+        "priorEvidenceClassification",
+        "priorEvidenceEligible",
+        "requiredRemediation",
+        "rationale"
+      ],
+      "properties": {
+        "implementationTiming": {
+          "enum": ["plan-before-implementation", "implementation-before-plan"]
+        },
+        "priorEvidenceClassification": {
+          "enum": ["not-applicable", "discovery-only"]
+        },
+        "priorEvidenceEligible": {
+          "type": "boolean"
+        },
+        "requiredRemediation": {
+          "enum": ["none", "clean-rerun-after-freeze"]
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "implementationTiming": {
+                "const": "implementation-before-plan"
+              }
+            },
+            "required": ["implementationTiming"]
+          },
+          "then": {
+            "properties": {
+              "priorEvidenceClassification": {
+                "const": "discovery-only"
+              },
+              "priorEvidenceEligible": {
+                "const": false
+              },
+              "requiredRemediation": {
+                "const": "clean-rerun-after-freeze"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "processAmendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "previousPlanId",
+        "previousPlanSha256",
+        "reason",
+        "changes",
+        "preserved",
+        "priorEvidenceTreatment",
+        "qualificationClaim"
+      ],
+      "properties": {
+        "kind": {
+          "const": "post-freeze-harness-amendment"
+        },
+        "previousPlanId": {
+          "$ref": "#/$defs/id"
+        },
+        "previousPlanSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "changes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "preserved": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "priorEvidenceTreatment": {
+          "const": "discovery-only"
+        },
+        "qualificationClaim": {
+          "const": "none"
+        }
+      }
+    },
+    "claimBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateClaim", "successMeaning", "forbiddenClaims"],
+      "properties": {
+        "candidateClaim": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "successMeaning": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "forbiddenClaims": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        }
+      }
+    },
+    "scopeItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "enforcement", "evidenceRows"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "enforcement": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "evidenceRows": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "reason", "enforcement"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "enforcement": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included", "excluded"],
+      "properties": {
+        "included": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/scopeItem"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/exclusion"
+          }
+        }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts", "bundles", "placeholderPolicy"],
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "bundles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/bundle"
+          }
+        },
+        "placeholderPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["executionAdmission", "qualificationClaim", "replacementAuthority"],
+          "properties": {
+            "executionAdmission": {
+              "const": "reject-if-any-unresolved-placeholder"
+            },
+            "qualificationClaim": {
+              "const": "forbidden-if-any-unresolved-placeholder"
+            },
+            "replacementAuthority": {
+              "const": "root-after-all-bound-files-settle"
+            }
+          }
+        }
+      }
+    },
+    "binaryIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "sha256"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "version": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hashBinding"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "class", "os", "architecture", "runtime", "browser"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "class": {
+          "enum": ["node", "vite-browser"]
+        },
+        "os": {
+          "enum": ["ubuntu-24.04", "macos-15", "windows-2025"]
+        },
+        "architecture": {
+          "enum": ["x86_64", "aarch64"]
+        },
+        "runtime": {
+          "$ref": "#/$defs/binaryIdentity"
+        },
+        "browser": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["engine", "distribution", "version", "sha256"],
+              "properties": {
+                "engine": {
+                  "enum": ["chromium", "firefox", "webkit"]
+                },
+                "distribution": {
+                  "const": "playwright-managed"
+                },
+                "version": {
+                  "const": "bound-by-frozen-binary-sha256"
+                },
+                "sha256": {
+                  "$ref": "#/$defs/hashBinding"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestArtifactId",
+        "referenceImplementationArtifactId",
+        "schema",
+        "version",
+        "corpusSha256",
+        "caseCount",
+        "productionImportsAllowed",
+        "allowedInputs"
+      ],
+      "properties": {
+        "manifestArtifactId": {
+          "$ref": "#/$defs/id"
+        },
+        "referenceImplementationArtifactId": {
+          "$ref": "#/$defs/id"
+        },
+        "schema": {
+          "const": "manifold-plan-oracle"
+        },
+        "version": {
+          "const": 1
+        },
+        "corpusSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "caseCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "productionImportsAllowed": {
+          "const": false
+        },
+        "allowedInputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        }
+      }
+    },
+    "metricTolerance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absolute", "relative"],
+      "properties": {
+        "absolute": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "relative": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target", "operation", "expectedDetection"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "target": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "operation": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "expectedDetection": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "comparator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exactFields", "normalizedFields", "validateOnlyFields", "metricTolerance", "mutations"],
+      "properties": {
+        "exactFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "normalizedFields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "validateOnlyFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "metricTolerance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["volume", "surfaceArea"],
+          "properties": {
+            "volume": {
+              "$ref": "#/$defs/metricTolerance"
+            },
+            "surfaceArea": {
+              "$ref": "#/$defs/metricTolerance"
+            }
+          }
+        },
+        "mutations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/mutation"
+          }
+        }
+      }
+    },
+    "identifierBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "field", "utf16CodeUnits", "expected", "surfaces", "generation"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "field": {
+          "enum": ["entityId", "instanceId", "operationId"]
+        },
+        "utf16CodeUnits": {
+          "enum": [256, 257]
+        },
+        "expected": {
+          "enum": ["publish-success", "typed-bounded-refusal-before-success-publication"]
+        },
+        "surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["node-worker", "vite-browser-worker", "mcp-worker"]
+          }
+        },
+        "generation": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "entrypoints", "command", "isolation"],
+      "properties": {
+        "kind": {
+          "enum": ["vitest", "node-stdio", "vite-browser", "resource-probe", "static-audit"]
+        },
+        "entrypoints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
+        },
+        "command": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "isolation": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "unitsPerCleanRun", "cleanRunsRequired", "seeds", "plannedUnits"],
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "unitsPerCleanRun": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cleanRunsRequired": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seeds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/seed"
+          }
+        },
+        "plannedUnits": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["terminal", "assertions", "failureDisposition"],
+      "properties": {
+        "terminal": {
+          "enum": ["pass", "mixed-success-and-typed-refusal"]
+        },
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "failureDisposition": {
+          "enum": ["block-g1", "reset-and-block-g1"]
+        }
+      }
+    },
+    "matrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "claim",
+        "surface",
+        "executionEnvironmentIds",
+        "harness",
+        "work",
+        "expected",
+        "evidenceState",
+        "blocksQualification"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "claim": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "surface": {
+          "enum": [
+            "semantic-differential",
+            "comparator",
+            "node-worker",
+            "vite-browser",
+            "mcp-supervisor",
+            "mcp-stdio-store",
+            "memory",
+            "dependency-boundary"
+          ]
+        },
+        "executionEnvironmentIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "harness": {
+          "$ref": "#/$defs/harness"
+        },
+        "work": {
+          "$ref": "#/$defs/work"
+        },
+        "expected": {
+          "$ref": "#/$defs/expected"
+        },
+        "evidenceState": {
+          "const": "not-executed-clean-post-freeze"
+        },
+        "blocksQualification": {
+          "const": true
+        }
+      }
+    },
+    "memoryExperiment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "environmentIds",
+        "warmupJobs",
+        "measuredJobsPerEnvironment",
+        "sampleEveryJobs",
+        "cleanRuns",
+        "samplingPoint",
+        "gcPolicy",
+        "gcPassesPerSample",
+        "slopeMethod",
+        "slopeBytesPerJobMax",
+        "endpointDriftBytesMax"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "environmentIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "warmupJobs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measuredJobsPerEnvironment": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "sampleEveryJobs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cleanRuns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "samplingPoint": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "gcPolicy": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "gcPassesPerSample": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "slopeMethod": {
+          "enum": [
+            "ordinary-least-squares over every measured sample indexed from zero; pass each metric and clean run independently",
+            "ordinary-least-squares over recorded post-warmup samples using measured job ordinal as x; pass each metric and clean run independently"
+          ]
+        },
+        "slopeBytesPerJobMax": {
+          "$ref": "#/$defs/memoryMetricBudgets"
+        },
+        "endpointDriftBytesMax": {
+          "$ref": "#/$defs/memoryMetricBudgets"
+        }
+      }
+    },
+    "memoryMetricBudgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "required": ["rss"],
+      "properties": {
+        "rss": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "heapUsed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "external": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "arrayBuffers": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "resourceBudgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limits", "responsiveness", "memoryExperiments"],
+      "properties": {
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sourceUtf16CodeUnits",
+            "identityUtf16CodeUnits",
+            "qualificationIpcBytes",
+            "mcpStartupTimeoutMs",
+            "mcpExecutionDeadlineMs",
+            "mcpTerminationJoinTimeoutMs",
+            "browserStartupTimeoutMs",
+            "browserExecutionDeadlineMs",
+            "browserHangFixtureDeadlineMs"
+          ],
+          "properties": {
+            "sourceUtf16CodeUnits": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "identityUtf16CodeUnits": {
+              "const": 256
+            },
+            "qualificationIpcBytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mcpStartupTimeoutMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mcpExecutionDeadlineMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mcpTerminationJoinTimeoutMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "browserStartupTimeoutMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "browserExecutionDeadlineMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "browserHangFixtureDeadlineMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "responsiveness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["probe", "sampleCountPerCleanRun", "p99MaxMs", "maxSingleMs"],
+          "properties": {
+            "probe": {
+              "const": "concurrent MCP ping and tools/list while shadow child is confirmed executing"
+            },
+            "sampleCountPerCleanRun": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "p99MaxMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxSingleMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "memoryExperiments": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/memoryExperiment"
+          }
+        }
+      }
+    },
+    "executionProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateRunId",
+        "priorResultsMayBeImported",
+        "cleanRunDefinition",
+        "globalSeeds",
+        "plannedWorkUnits",
+        "concurrencyPolicy",
+        "resultPath",
+        "admissionRule",
+        "passRule"
+      ],
+      "properties": {
+        "candidateRunId": {
+          "$ref": "#/$defs/id"
+        },
+        "priorResultsMayBeImported": {
+          "const": false
+        },
+        "cleanRunDefinition": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        },
+        "globalSeeds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/seed"
+          }
+        },
+        "plannedWorkUnits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "concurrencyPolicy": {
+          "const": "one qualification row per fresh process; memory rows serial; no shared worker realm between units"
+        },
+        "resultPath": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "admissionRule": {
+          "const": "all bindings frozen, no unresolved rows that block execution, and execution authorization recorded"
+        },
+        "passRule": {
+          "const": "every matrix row passes every required clean run within frozen budgets; zero false-complete; no skipped unit; no result reuse"
+        }
+      }
+    },
+    "resetTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "condition", "action"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "condition": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "action": {
+          "enum": [
+            "discard-entire-candidate-run-and-start-new-plan-version",
+            "discard-entire-candidate-run-and-restart-same-frozen-plan",
+            "reject-candidate"
+          ]
+        }
+      }
+    },
+    "resetPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unitFailure", "infrastructureFailure", "mutationsAfterFreeze", "triggers"],
+      "properties": {
+        "unitFailure": {
+          "const": "reject-candidate; no rerun-to-green within the same candidate run"
+        },
+        "infrastructureFailure": {
+          "const": "invalidate the entire clean run; one documented restart allowed only after proving candidate code did not execute"
+        },
+        "mutationsAfterFreeze": {
+          "const": "any scoped source, oracle, comparator, harness, dependency, seed, threshold, or environment change requires a new plan version and resets all counters"
+        },
+        "triggers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/resetTrigger"
+          }
+        }
+      }
+    },
+    "approvalRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "principal", "principalType", "organizationallyIndependent", "status"],
+      "properties": {
+        "role": {
+          "enum": [
+            "plan-owner",
+            "candidate-owner",
+            "oracle-reviewer",
+            "qualification-executor",
+            "internal-critic",
+            "organizationally-independent-reviewer",
+            "release-authority"
+          ]
+        },
+        "principal": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "principalType": {
+          "enum": ["agent", "human", "organization", "unassigned"]
+        },
+        "organizationallyIndependent": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": ["recorded-nonapproval", "pending", "approved", "rejected"]
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["independenceClassification", "qualificationApproval", "records"],
+      "properties": {
+        "independenceClassification": {
+          "enum": [
+            "role-separated-agents-not-organizationally-independent",
+            "organizationally-independent"
+          ]
+        },
+        "qualificationApproval": {
+          "enum": ["not-approved", "approved", "rejected"]
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/approvalRecord"
+          }
+        }
+      }
+    },
+    "cutoverPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productionCutoverAuthorized",
+        "productionRegistryMutationAllowed",
+        "productBehaviorChangeAllowed",
+        "automaticFallbackChangeAllowed",
+        "qualificationMayActivateProvider",
+        "nextAuthorization"
+      ],
+      "properties": {
+        "productionCutoverAuthorized": {
+          "const": false
+        },
+        "productionRegistryMutationAllowed": {
+          "const": false
+        },
+        "productBehaviorChangeAllowed": {
+          "const": false
+        },
+        "automaticFallbackChangeAllowed": {
+          "const": false
+        },
+        "qualificationMayActivateProvider": {
+          "const": false
+        },
+        "nextAuthorization": {
+          "const": "separate approved post-G1 plan"
+        }
+      }
+    },
+    "unresolvedRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "status", "blocksExecutionAdmission", "blocksQualification", "resolution", "ownerRole"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": ["binding", "harness", "evidence", "approval", "environment"]
+        },
+        "status": {
+          "const": "open"
+        },
+        "blocksExecutionAdmission": {
+          "type": "boolean"
+        },
+        "blocksQualification": {
+          "const": true
+        },
+        "resolution": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "ownerRole": {
+          "enum": [
+            "root-freeze-authority",
+            "qualification-harness-owner",
+            "qualification-executor",
+            "organizationally-independent-reviewer",
+            "release-authority"
+          ]
+        }
+      }
+    }
+  }
+}

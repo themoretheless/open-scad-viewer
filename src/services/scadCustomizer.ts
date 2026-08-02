@@ -21,37 +21,9 @@ function decodeLiteral(raw: string): CustomizerValue {
     try { return JSON.parse(raw) as string }
     catch { return raw.slice(1, -1) }
   }
-  return Number(raw)
-}
-
-function bracesBefore(source: string, end: number): number {
-  let depth = 0
-  let quote = ''
-  for (let index = 0; index < end; index++) {
-    const character = source[index]
-    const next = source[index + 1]
-    if (quote) {
-      if (character === '\\') index++
-      else if (character === quote) quote = ''
-      continue
-    }
-    if (character === '"' || character === "'") { quote = character; continue }
-    if (character === '/' && next === '/') {
-      const newline = source.indexOf('\n', index + 2)
-      if (newline < 0 || newline >= end) break
-      index = newline
-      continue
-    }
-    if (character === '/' && next === '*') {
-      const close = source.indexOf('*/', index + 2)
-      if (close < 0 || close >= end) break
-      index = close + 1
-      continue
-    }
-    if (character === '{') depth++
-    else if (character === '}') depth = Math.max(0, depth - 1)
-  }
-  return depth
+  const value = Number(raw)
+  if (!Number.isFinite(value)) throw new RangeError('Customizer numeric literals must be finite')
+  return value
 }
 
 function parseMetadata(raw: string, value: CustomizerValue): Pick<CustomizerParameter, 'min' | 'max' | 'step' | 'options'> {
@@ -77,9 +49,59 @@ function parseMetadata(raw: string, value: CustomizerValue): Pick<CustomizerPara
 /** Extract OpenSCAD Customizer-style top-level literal assignments. */
 export function extractCustomizerParameters(source: string): CustomizerParameter[] {
   const parameters: CustomizerParameter[] = []
+  let cursor = 0
+  let depth = 0
+  let quote = ''
+  let lineComment = false
+  let blockComment = false
+
+  // Assignment matches are ordered. Advancing this lexer only once avoids the
+  // former O(assignments * source length) prefix rescan on large parameter sets.
+  const advanceTo = (end: number) => {
+    while (cursor < end) {
+      const character = source[cursor]
+      const next = source[cursor + 1]
+      if (lineComment) {
+        if (character === '\n') lineComment = false
+        cursor++
+        continue
+      }
+      if (blockComment) {
+        if (character === '*' && next === '/') {
+          blockComment = false
+          cursor += 2
+        } else cursor++
+        continue
+      }
+      if (quote) {
+        if (character === '\\') cursor += Math.min(2, end - cursor)
+        else {
+          if (character === quote) quote = ''
+          cursor++
+        }
+        continue
+      }
+      if (character === '"' || character === "'") {
+        quote = character
+        cursor++
+      } else if (character === '/' && next === '/') {
+        lineComment = true
+        cursor += 2
+      } else if (character === '/' && next === '*') {
+        blockComment = true
+        cursor += 2
+      } else {
+        if (character === '{') depth++
+        else if (character === '}') depth = Math.max(0, depth - 1)
+        cursor++
+      }
+    }
+  }
+
   for (const match of source.matchAll(ASSIGNMENT)) {
     const statementStart = (match.index ?? 0) + match[1].length
-    if (bracesBefore(source, statementStart) !== 0) continue
+    advanceTo(statementStart)
+    if (depth !== 0 || quote || lineComment || blockComment) continue
     const name = match[3]
     if (name.startsWith('$')) continue
     const rawValue = match[5]
@@ -102,6 +124,10 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
 }
 
 export function replaceCustomizerValue(source: string, parameter: CustomizerParameter, value: CustomizerValue): string {
-  const encoded = typeof value === 'string' ? JSON.stringify(value) : String(value)
+  const encoded = encodeCustomizerValue(value)
   return source.slice(0, parameter.valueStart) + encoded + source.slice(parameter.valueEnd)
+}
+
+export function encodeCustomizerValue(value: CustomizerValue): string {
+  return typeof value === 'string' ? JSON.stringify(value) : String(value)
 }

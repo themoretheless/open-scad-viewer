@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "structuralBase": "main@f64b444+d9bca2a",
+  "donor": "origin/claude/extract-openscad-viewer-q3BT0",
+  "policy": "Port leaf capabilities through current contracts; never merge the donor application architecture.",
+  "items": [
+    { "id": "safe-storage", "status": "ported", "decision": "Keep the bounded storage adapter.", "evidence": ["src/services/safeStorage.ts", "tests/safeStorage.test.ts"] },
+    { "id": "workspace-migration", "status": "partial", "decision": "Import the active donor tab only when authoritative state is absent; retain both the original keys and an exact backup until every tab is user-addressable.", "evidence": ["src/services/workspaceDocument.ts", "src/services/workspacePersistence.ts", "tests/workspaceIndexedDb.test.ts"] },
+    { "id": "i18n-four-locales", "status": "partial", "decision": "RU/EN ship; DE/ZH require extracted message catalogs before porting.", "evidence": ["src/App.vue"] },
+    { "id": "multi-tab-editor", "status": "deferred", "decision": "Wait for the versioned multi-file workspace/VFS document contract.", "evidence": ["src/services/virtualFileSystem.ts", "src/services/workspaceDocument.ts"] },
+    { "id": "undo-redo", "status": "partial", "decision": "Native textarea undo is preserved; explicit bounded history waits for structured editor state.", "evidence": ["src/services/sourceSplice.ts", "tests/sourceSplice.test.ts"] },
+    { "id": "find-replace", "status": "ported", "decision": "A bounded literal UTF-16 service and inline accessible bar replace the donor App-local implementation.", "evidence": ["src/services/textSearch.ts", "tests/textSearch.test.ts", "src/services/commandRegistry.ts"] },
+    { "id": "exporters", "status": "partial", "decision": "STL/OBJ ship; 3MF/ZIP require explicit artifact contracts and tests.", "evidence": ["src/services/meshExport.ts", "tests/meshExport.test.ts"] },
+    { "id": "stl-import", "status": "partial", "decision": "A bounded binary parser now adapts into a complete imported scene entity; worker isolation and authoritative imported-scene UX precede file-picker publication.", "evidence": ["src/services/stlImport.ts", "tests/stlImport.test.ts", "src/core/scene.ts"] },
+    { "id": "examples-gallery", "status": "ported", "decision": "A single bounded RU/EN catalog drives browser and MCP; the accessible searchable gallery uses an explicit cancel/download/replace transaction instead of donor-style immediate overwrite.", "evidence": ["src/data/examples.ts", "src/services/exampleCatalog.ts", "src/components/ExampleGallery.vue", "tests/exampleCatalog.test.ts"] },
+    { "id": "pwa-offline", "status": "deferred", "decision": "Add only after cache/version/update semantics cover Worker and WASM artifacts.", "evidence": ["scripts/verify-dist.mjs"] },
+    { "id": "keyboard-cheatsheet", "status": "ported", "decision": "The platform-aware RU/EN help dialog is derived from the exact routed bindings, includes keyboard-only commands, and is reachable from the toolbar, palette and guarded ? binding.", "evidence": ["src/services/commandRegistry.ts", "src/components/KeyboardShortcuts.vue", "tests/commandRegistry.test.ts"] },
+    { "id": "editor-themes", "status": "partial", "decision": "System, Dark, Light, Nord and Solarized ship through a closed contrast-validated token catalog; arbitrary persisted CSS and donor custom-theme editing remain deliberately excluded.", "evidence": ["src/services/themePreferences.ts", "tests/themePreferences.test.ts", "src/App.vue", "src/services/webgpuRenderer.ts"] }
+  ]
+}

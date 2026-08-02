@@ -37,6 +37,8 @@ Reopen these only for a demonstrated regression.
 | Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry, coalesced device loss with one follow-up, false-ready prevention, and App-driven scene/camera/history rehydration with focused tests. |
 | Done | One declarative command inventory | [`commandRegistry.ts`](src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
 | Done | Repeatable quality gate | Typecheck, Vitest and production build run through `npm run check` in CI. |
+| Done | One-build preview promotion | Auto builds run preview first and request full only when the versioned reduction policy reports a real quality change; a pure policy and byte-level equivalence corpus cover promotion and stale targets. A process-local monotonic build generation prevents restored documents from aliasing persistence revisions. |
+| Done | Versioned independent language decision | `openscad-viewer-subset@1`, compatibility/contributor policy and third-party notices explicitly exclude bundled official OpenSCAD runtime code. The project VFS is host/network-isolated, Unicode-canonical, traversal-safe and globally budgeted; `include`/`use` remain coded unsupported features until a future contract version defines semantics. |
 
 ## Active register
 
@@ -44,88 +46,96 @@ Reopen these only for a demonstrated regression.
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** `BuildCoordinator` keeps same-revision preview/full work on a
-  warm Worker and safely supersedes revisions. The evaluator now yields between
-  top-level statements, emits throttled liveness heartbeats and checks aborts
-  again during mesh extraction. A single large statement or synchronous
-  Manifold call still cannot observe messages, so the configured grace remains
-  the hard Worker-replacement boundary.
+  warm Worker, coalesces identical active requests and bounds pending work by
+  revision/quality. The evaluator yields between top-level statements, forces
+  a macrotask checkpoint before extraction, polls cancellation through chunked
+  publication work, and reports required parse/initialize/evaluate/analyze
+  timings. A tokenized watchdog prevents stale timers from cancelling newer
+  work. Synchronous Manifold, BVH and topology calls still cannot observe
+  messages, so Worker replacement remains the final cancellation boundary.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.
-- **Acceptance remaining:** deeper checkpoints inside guarded blocks, loops,
-  kernel and analysis phases; depth-one latest-work queue; phase timings; hard
-  replacement only as watchdog; real-browser tests for App↔Worker
-  supersession, crash and disposal.
-
-### R2 — Avoid unconditional duplicate builds
-
-- **Priority/status:** P0 / In progress
-- **Evidence:** protocol v3 requires `reduced`; the parser records whether
-  preview tessellation changed, and App promotes an equivalent preview to full
-  while cancelling the scheduled full job.
-- **Risk:** the promotion decision still lives inside App orchestration without
-  a focused policy regression; future quality controls could silently invalidate
-  the byte-equivalence rule.
-- **Acceptance remaining:** extract and directly test the promotion/cancellation
-  decision with revision/source races; document cache keys and add timing
-  evidence that equivalent models perform only one build.
+- **Acceptance remaining:** deeper checkpoints inside guarded blocks and loops;
+  cooperative/async kernel, BVH and topology phases; real-browser tests for
+  App↔Worker supersession, watchdog recovery, crash and disposal.
 
 ### R3 — Split compiler and kernel phases
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** lexer/parser, scope evaluation, direct Manifold calls,
-  tessellation, provenance, topology and BVH construction remain in
-  [`openscadParser.ts`](src/services/openscadParser.ts). Neutral mesh/build
-  contracts and transfer discovery now live under [`src/core`](src/core), and
-  an import-boundary test prevents main-thread parser value imports.
+  tessellation, provenance, topology and BVH construction previously shared
+  one module. The pure [`openscadCompiler.ts`](src/services/openscadCompiler.ts)
+  now owns tokenization, parsing and stable operation identity and returns a
+  deeply frozen, structured-clone-safe operation IR without importing
+  Manifold. [`geometryKernel.ts`](src/services/geometryKernel.ts) defines the
+  lifecycle port, while [`manifoldGeometryKernel.ts`](src/services/manifoldGeometryKernel.ts)
+  exclusively owns WASM bootstrap, retry and GC-session disposal. The public
+  facade and serialized lifetime remain compatible and parity-covered.
 - **Risk:** language, kernel and inspection changes invalidate the entire
   pipeline and main-thread modules depend on a Worker implementation detail.
-- **Acceptance:** typed parse→bind/diagnose→immutable operation IR→kernel→
+- **Acceptance remaining:** split binding from syntax and evaluation from the
+  facade; route solid/section operations through opaque kernel handles;
+  normalize immediate and deferred kernel errors to source positions; typed
+  parse→bind/diagnose→immutable operation IR→kernel→
   tessellation→analysis phases; preserve the neutral core contracts;
-  `GeometryKernel` interface with positioned error normalization; import guard
-  against main-thread parser/kernel value imports; phase tests/timing and
-  content-addressed subtree caching.
+  transitive import guards; exclusive phase tests/timing and content-addressed
+  subtree caching.
 
 ### R4 — Establish one owner for scene and viewport state
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
-  isolation, visibility, projection and camera-related state. Replacement-scene
-  continuity is now pure and tested in
-  [`scenePublication.ts`](src/services/scenePublication.ts), but App still
-  applies the plan to both Vue and renderer owners.
+  isolation, visibility, projection and camera-related state. The canonical
+  CPU-side meshes/visibility/selection/isolation snapshot now lives in
+  [`sceneController.ts`](src/services/sceneController.ts); Vue exposes computed
+  projections and renderer callbacks are typed intents into that owner.
+  Replacement-scene publication commits atomically through the controller,
+  hidden selections fail closed, and camera face presets now apply orientation
+  plus projection as one history action. Renderer GPU resources remain a
+  deliberate disposable projection of semantic state.
 - **Risk:** every rebuild/recovery manually reconstructs interaction state and
   new tools can create synchronization bugs.
-- **Acceptance:** typed document/build/scene/viewport controllers have explicit
-  ownership; renderer consumes state/deltas and emits intents; reconciliation
-  is a pure tested service; App is composition rather than workflow logic; no
-  mirrored writable state exists without a documented adapter.
+- **Acceptance remaining:** extend controller ownership to measurement,
+  section and hover generation; add a navigation controller for camera/history
+  and recovery-revision fencing; renderer consumes explicit state deltas and
+  emits generation-tagged intents; App becomes composition rather than
+  workflow logic.
 
 ### R5 — Separate scene entities from geometry artifacts
 
 - **Priority/status:** P1 / In progress
 - **Evidence:** stable entity IDs exist, but `MeshData` eagerly combines render
-  vertices, topology, provenance, semantic edges and BVH; transforms are
-  generally baked and array position is still a common render/UI index.
+  vertices, topology, provenance, semantic edges and BVH. A versioned neutral
+  [`GeometryScene`](src/core/scene.ts) contract now separates content-addressed
+  vertex/index assets from entity identity, transform, material and explicitly
+  staged inspection artifacts. Zero-copy legacy adapters preserve current wire
+  behavior, shared tessellation transfers once, and validators reject duplicate
+  entities/assets, dangling references, invalid indices and unsafe partial
+  backing-buffer views.
 - **Risk:** every build transfers and retains every artifact, repeated geometry
   cannot be instanced, and inspection work cannot be deferred.
-- **Acceptance:** entity-keyed scene nodes reference immutable geometry assets;
-  material/transform/visibility are independent; artifacts are versioned and
-  lazily requestable; preview/full preserve entity identity.
+- **Acceptance remaining:** migrate Worker protocol, renderer, exporters and
+  MCP compilation to the normalized scene contract; key selection/picking by
+  entity rather than array index; retain/refcount GPU assets; implement the
+  artifact request/coalescing provider and preview/full asset reuse policy.
 
 ### R6 — Retain GPU resources and remove verified interaction hot paths
 
 - **Priority/status:** P1 / In progress
 - **Evidence:** `setMeshes()` uploads a complete replacement and destroys old
-  buffers; bounds are rescanned; face/source overlays scan mesh data and create
-  buffers; style changes rewrite every object uniform. Visibility restoration
-  now uses one batched transaction for bounds, TLAS invalidation, overlays and
-  render scheduling.
+  buffers unless a verified `geometryAssetId` matches. The renderer now retains
+  and shares exact VB/IB payloads across replacement publications/instances,
+  rolls back failed entity staging without touching live geometry, deduplicates
+  destruction, and has fake-GPU allocation regressions. Style writes were
+  already dirty-tracked and overlay slots capacity-retained; growth now swaps
+  only after successful allocation/upload. Ordinary selection changes no longer
+  rebuild source overlays unless isolation changed effective visibility.
 - **Risk:** edit and hover latency scale with the full scene and cause avoidable
   allocation/queue pressure.
-- **Acceptance:** entity/content-keyed GPU cache and scene deltas; worker-cached
-  bounds and faceId→triangle lookup; persistent bounded overlay buffers; dirty
-  uniform writes; retain the batch visibility API; incremental TLAS rebuild/refit;
-  benchmarks for all paths.
+- **Acceptance remaining:** explicit refcounted/LRU asset cache and scene deltas;
+  share lazy edge buffers; worker-cached bounds; typed-array overlay staging;
+  capacity-retained measurement buffer; incremental TLAS rebuild/refit and
+  counter/browser benchmarks for 1,000 entities and deep picking.
 
 ### R7 — Decompose the renderer without changing interaction behavior
 
@@ -133,94 +143,158 @@ Reopen these only for a demonstrated regression.
 - **Evidence:** [`cameraHistory.ts`](src/services/cameraHistory.ts) and
   [`rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) now provide
   adapter-free tested contracts for navigation history and bounded recovery.
-  The main lifecycle workflow remains in App, while
+  Neutral public types now live in
+  [`rendererContracts.ts`](src/services/rendererContracts.ts), canonical view
+  orientation/projection in [`viewportModel.ts`](src/services/viewportModel.ts),
+  and orbit/pan/pinch/wheel math in
+  [`cameraGestures.ts`](src/services/cameraGestures.ts). App and ViewCube no
+  longer depend on the WebGPU monolith for model/types, while compatibility
+  re-exports preserve callers. The main lifecycle workflow remains in App, while
   [`webgpuRenderer.ts`](src/services/webgpuRenderer.ts) still owns device
   lifecycle, pipelines/resources, camera/input, picking, visibility, selection,
   measurements, sections and overlays.
 - **Risk:** recovery, interaction and draw changes share broad mutable state and
   are difficult to test independently.
-- **Acceptance:** device/surface manager, retained render world, camera/input,
+- **Acceptance remaining:** device/surface manager, retained render world,
+  camera history controller, DOM input adapter,
   picker and overlay composer have narrow contracts and one resource owner;
   lifecycle/camera/picker tests run without a real adapter; existing Plasticity-
   inspired controls and invalidation-driven redraw remain stable.
-
-### R8 — Decide compatibility before multi-file semantics
-
-- **Priority/status:** P1 / Decision
-- **Evidence:** the strict subset now includes statement-form `assert()` but
-  still excludes expression assertions, `include`, `use`, imports and user
-  functions; the workspace is single-document.
-- **Risk:** piecemeal project support can look OpenSCAD-compatible while scopes,
-  paths and dependency behavior differ.
-- **Acceptance:** record official-runtime/GPL compatibility versus a versioned
-  independent language; publish a conformance contract; then define virtual
-  filesystem, dependency resolution and sandbox rules.
 
 ### R9 — Build reliable storage and a structured editor/workspace
 
 - **Priority/status:** P1 / In progress; multi-file portion blocked on R8
 - **Evidence:** persistence validates/version-tags one localStorage snapshot,
-  migrates `scad-code`, and routes reads/writes through tested `SafeStorage`;
-  quota/write failures now surface as throttled UI notices. The editor remains
-  a textarea, diagnostics are not decorations and there is no snapshot store.
+  migrates `scad-code`, journals causal per-tab recovery and commits CAS-guarded
+  IndexedDB snapshots. Conflict UI can export the open draft before choosing a
+  winner. Worker errors retain stable diagnostic codes and positioned ranges;
+  clickable diagnostics focus/select the exact textarea token. Customizer edits
+  use stale-safe reversible source-splice transactions and `setRangeText`,
+  preserving native undo rather than replacing the whole control value.
 - **Risk:** a failed write is visible but recovery is not actionable; customizer
   replacements disrupt native undo; source↔geometry navigation remains
   caret-based.
-- **Acceptance:** recovery controls for failed writes, migrations including
-  feature-branch `scad-tabs`, IndexedDB snapshots, syntax-aware editor,
-  structured diagnostics/navigation and source-splice edits preserving undo.
+- **Acceptance remaining:** full conflict review/diff and bounded losing-copy
+  backups; typed sequential migration outcomes including unsupported-newer;
+  syntax highlighting/completion and multi-file tabs after VFS semantics ship;
+  multi-diagnostic decorations and bounded explicit undo/redo history.
 
 ### R10 — Close verified interaction and accessibility gaps
 
-- **Priority/status:** P2 / Open
-- **Evidence:** Outliner emits additive/range selection that App drops; ViewCube
-  is static and does not snap face views to orthographic; camera input tracks one
-  pointer; several dock/outliner semantics and small targets remain weak.
+- **Priority/status:** P2 / In progress; verified accessibility foundation shipped
+- **Evidence:** additive/range affordances were removed until the scene model can
+  own multi-selection. Camera gestures support two-pointer pinch plus midpoint
+  pan; face presets atomically snap to orthographic, and the live camera drives
+  the ViewCube compass. The dock now implements tablist/tab/tabpanel semantics,
+  wrapping arrow/Home/End navigation and close-focus restoration. Outliner mesh
+  rows expose tree/treeitem/group structure, single selection, expansion and a
+  stable roving tab stop; shortcut help is screen-reader-visible and coarse
+  pointer targets expand to 44 px. Splitter pointer, keyboard, persisted and
+  responsive bounds share one tested policy, expose a dynamic ARIA maximum and
+  stop on lost pointer capture.
 - **Risk:** controls advertise behavior they do not provide, and mobile/keyboard
   workflows are incomplete.
-- **Acceptance:** implement or remove multi-select affordances; camera-synced
-  ViewCube with ortho snap and adequate targets; pinch/pan plus keyboard camera;
-  accessible tree/tablist/live-result semantics; resizable side-by-side
-  Scene/Inspect workflow.
+- **Acceptance remaining:** identity-based object multi-selection across scene,
+  renderer and publication; keyboard orbit/pan/dolly; a truly camera-projected
+  cube (or honest preset/compass naming); bounded live-result announcements;
+  browser/AT verification and a resizable side-by-side Scene/Inspect workflow.
 
 ### R11 — Add conformance, browser and performance gates
 
-- **Priority/status:** P1 / Open
-- **Evidence:** CI runs typecheck, unit tests and build, but no real-browser
-  Worker/WebGPU flow, visual comparison, parser fuzz corpus, coverage/lint or
-  performance budget.
+- **Priority/status:** P1 / In progress; deterministic PR gates shipped
+- **Evidence:** CI now cancels superseded runs and executes a version-pinned,
+  team-authored language corpus whose positive/negative feature coverage must
+  exactly match the public contract. A fixed-seed 256-case compiler mutation
+  gate accepts only clone-safe IR or positioned domain diagnostics. Deterministic
+  scale tests exercise a 1,000-body scene index and the zero-copy 750,000-
+  triangle transfer path. Worker success payloads receive allocation-free
+  mesh/triangle/byte/warning preflight before deep graph validation. Production
+  builds verify required HTML/CSS/JS/WASM artifacts and generous size ceilings.
 - **Risk:** GPU lifecycle, focus/layout, pathological input and latency
   regressions can pass unit tests.
-- **Acceptance:** language conformance fixtures and bounded generated inputs;
-  Playwright interaction/accessibility smoke; deterministic visual fixtures;
-  lint/import-boundary and meaningful coverage rules; budgets for rapid edits,
-  1,000 bodies, 750,000 triangles, transfer, overlays, TLAS query and GPU upload.
+- **Acceptance remaining:** Playwright interaction/accessibility and real Worker
+  smoke after a deterministic no-GPU shell/test-renderer seam; deterministic
+  visual fixtures; measured coverage/lint baselines; operation counters for
+  protocol validation, BVH/TLAS/overlays and retained GPU uploads; non-blocking
+  benchmark telemetry before any wall-clock threshold becomes a PR gate.
 
 ### R12 — Define transparency and backend quality tiers
 
-- **Priority/status:** P2 / Decision
-- **Evidence:** transparent bodies are sorted back-to-front, which is adequate
-  for separated bodies but not intersecting transparent triangles; WebGPU has
-  no fallback.
+- **Priority/status:** P2 / In progress; honest tiers and degraded shell shipped
+- **Evidence:** an immutable UI-facing backend contract distinguishes full CPU
+  geometry builds from the interactive WebGPU viewport and labels X-ray as
+  approximate object-sorted alpha, not OIT. All normalized alpha values below
+  1 now use the transparent pass (removing the old 0.99 quality cliff), and the
+  Worker protocol rejects RGBA outside [0,1]. If WebGPU/adapter/context startup
+  fails, the editor, persistence, Worker builds and exports remain mounted; only
+  the viewport shows the exact failure with a bounded retry action, and a retry
+  hydrates the latest CPU scene. The active backend tier is visible in the UI.
 - **Risk:** overlapping x-ray geometry can be visually wrong and unsupported
   browsers cannot display the model.
+- **Acceptance remaining:** extract a pure frame plan and pipeline descriptor
+  tests; add pixel-budgeted weighted blended OIT with transactional attachments
+  and sorted-alpha downgrade; browser visual fixtures for self-overlap,
+  intersections, opaque occlusion and overlays; keep a WebGL/CPU raster backend
+  as a separate product decision.
 - **Acceptance:** document a WebGPU-only support tier or add a tested fallback;
   expose the transparency limitation; if correctness is required, implement and
   visually test weighted OIT, depth peeling or another explicit strategy.
 
 ### R13 — Converge feature work without merging competing architecture
 
-- **Priority/status:** P2 / Open
+- **Priority/status:** P2 / In progress; executable parity ledger and safe donor discovery shipped
 - **Evidence:** `SafeStorage` has been ported through current contracts. The
-  frozen feature branch still contains four-locale i18n, multi-tab/undo/find,
+  donor branch still contains RU/EN plus partial ZH/DE strings, multi-tab/undo/find,
   exporters/import, examples, PWA/offline and tests, but was built around a
   competing large-component architecture. The review identifies this rewrite
   as the structural base.
+- **Current evidence:** [`docs/feature-parity.json`](docs/feature-parity.json)
+  pins the donor ref and records an explicit port/partial/defer decision with
+  current-file evidence for every reviewed capability; CI rejects duplicate or
+  evidence-free entries. Audit found the donor does not actually contain a
+  complete German UI catalog, so parity no longer repeats that claim. A bounded
+  whole-array `scad-tabs` reader can recover the selected donor tab ahead of a
+  stale `scad-code`; after durable commit it preserves the original multi-tab
+  keys and an exact backup because the current single-document schema cannot
+  honestly claim lossless migration of every tab.
+- **Imported geometry evidence:** a strict binary-STL boundary validates the
+  exact little-endian container and a conservative 250,000-facet allocation
+  cap before decoding, rejects non-finite positions, ignores advisory file
+  normals, preserves winding, filters only exact degenerates and adapts the
+  result into content-addressed geometry with BVH, semantic edges, face IDs and
+  null-source provenance. Text STL and malformed/trailing payloads fail with
+  stable error codes. File-picker publication remains intentionally gated on a
+  worker-backed imported-scene state so late source builds cannot overwrite it.
+- **Example-gallery evidence:** browser and MCP now consume one validated,
+  stable-ID RU/EN catalog. The editor toolbar opens a searchable modal with
+  labelled controls, trapped focus, Escape/backdrop close, focus restoration,
+  responsive cards and an explicit cancel/download-current/replace decision.
+  Replacement advances source and filename in one workspace mutation and one
+  build/persistence generation; the donor's incompatible extension examples
+  and parallel registries were not copied.
+- **Shortcut-help evidence:** the visible RU/EN keyboard guide is generated
+  from the same exact bindings and scopes used by event routing, including
+  keyboard-only conditional actions and platform-aware modifier formatting.
+  It opens from the toolbar, command palette or `?`, never hijacks editable
+  fields, traps and restores focus, and suppresses commands behind open modal
+  surfaces. Palette-to-help handoff explicitly prevents stale focus restoration.
+- **Theme evidence:** a versioned enum selects System, Dark, Light, Nord or
+  Solarized from a closed, complete token catalog. Core text, muted text,
+  control boundary, focus and primary-button contrast are checked in CI;
+  arbitrary CSS values never cross storage. The palette is applied before the
+  asynchronous workspace bootstrap, System follows OS changes without changing
+  document/build state, native controls receive the resolved color scheme, and
+  the WebGPU clear color follows the same validated canvas token. Forced-colors
+  and reduced-motion retain explicit fallbacks. Donor custom-theme JSON remains
+  excluded until a bounded seed-color schema and full component contrast audit exist.
 - **Risk:** a wholesale merge restores resolved coupling and storage-schema
   conflicts; ignoring the donor loses tested user value.
-- **Acceptance:** maintain a parity checklist; port leaf infrastructure and
-  tests through current contracts one feature per change; ship one-shot storage
-  migration; freeze and retire the donor branch after parity decisions.
+- **Acceptance remaining:** make every donor tab user-addressable through a
+  versioned multi-file workspace before retiring its keys; add typed migration
+  receipts/outcomes and recovery UI; port approved leaf features one at a time;
+  archive the exact donor SHA under an immutable tag, fix the remote default
+  branch (currently points at the donor), decide service-worker retirement, and
+  retire the donor only after the ledger has no unreviewed decisions.
 
 ## Update rule
 

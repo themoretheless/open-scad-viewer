@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-01",
+  "review_subject": {
+    "description": "All fourteen user-facing roadmap stages for the permanent Manifold and Rust B-rep/NURBS engine architecture",
+    "stages": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+  },
+  "final_synthesis": {
+    "path": "docs/design/brep-nurbs-14-stage-master-plan.md",
+    "sha256": "c3daa23607bb27da8b35c2fb2976c2f016f09ba72e73f2c795db475888704a8d"
+  },
+  "aligned_specifications": [
+    {
+      "path": "docs/design/rust-brep-nurbs-kernel.md",
+      "sha256": "df87da05982c960f27071f09d7c51aadc57029a3d128a45451a936cb34e94c33"
+    },
+    {
+      "path": "architecture.md",
+      "sha256": "2a8c9597c7a40d345fc802a6bf8d8411e5b4dcea0ba809da48b857d3c070c0c6"
+    }
+  ],
+  "review_method": {
+    "agent_reports": 9,
+    "primary_synthesis": 1,
+    "total_lenses": 10,
+    "each_lens_assessed_all_stages": true,
+    "role_separated": true,
+    "organizationally_independent": false,
+    "formal_qualification_evidence": false,
+    "note": "The reports are separate agent tasks in one system. They are design evidence, not external approval, legal advice, or a substitute for independent certificate verifiers."
+  },
+  "reviewers": [
+    {
+      "id": "R01",
+      "lens": "primary synthesis and product feasibility red-team",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; NO-GO G1+"
+    },
+    {
+      "id": "R02",
+      "lens": "system architecture and backend contracts",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; NO-GO parallel G1-G3"
+    },
+    {
+      "id": "R03",
+      "lens": "compiler and language semantics",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; executable semantic seam missing"
+    },
+    {
+      "id": "R04",
+      "lens": "NURBS and computational geometry",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 then G1 sequentially; bounded capability matrices required"
+    },
+    {
+      "id": "R05",
+      "lens": "B-rep topology, snapshots, transactions, and identity",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; topology and identity ADRs block G2"
+    },
+    {
+      "id": "R06",
+      "lens": "intersections, trimming, classification, and Boolean",
+      "scope": "stages 1-14",
+      "verdict": "GO strict gate order only; false Complete is a kill criterion"
+    },
+    {
+      "id": "R07",
+      "lens": "numerical robustness, degeneracies, sewing, and healing",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; qualification must precede every implementation gate"
+    },
+    {
+      "id": "R08",
+      "lens": "tessellation, scene ABI, rendering, and browser Worker",
+      "scope": "stages 1-14",
+      "verdict": "SHIP G0 only; current v5 cannot carry B-rep scene identity"
+    },
+    {
+      "id": "R09",
+      "lens": "Rust/WASM runtime, security, supply chain, licensing, and MCP deployment",
+      "scope": "stages 1-14",
+      "verdict": "GO G0 only; runtime and external release remain blocked"
+    },
+    {
+      "id": "R10",
+      "lens": "verification, qualification, and program delivery red-team",
+      "scope": "stages 1-14",
+      "verdict": "GO limited G0 only; NO-GO G1+, activation, and rollout"
+    }
+  ],
+  "consensus": {
+    "g0_contract_work": "10/10 GO",
+    "g1_or_later_now": "10/10 NO-GO",
+    "cross_engine_fallback": "10/10 forbidden",
+    "automatic_healing": "10/10 forbidden",
+    "qualification_timing": "10/10 before every G1+ gate"
+  },
+  "findings_and_dispositions": [
+    {
+      "id": "F01",
+      "severity": "P0",
+      "finding": "Competing canonical shell-role authority models",
+      "disposition": "resolved",
+      "resolution": "SolidShellUse owns outer/cavity role; Shell has no canonical role; reverse ownership is derived"
+    },
+    {
+      "id": "F02",
+      "severity": "P1",
+      "finding": "Current/future worker protocol was named v3, v4, v5, and v6 in different specifications",
+      "disposition": "resolved",
+      "resolution": "Current protocol is v5 and the only planned incompatible successor is v6"
+    },
+    {
+      "id": "F03",
+      "severity": "P1",
+      "finding": "semanticHash and programHash were ambiguous aliases and topology/mesh preimages were incomplete",
+      "disposition": "resolved",
+      "resolution": "programHash is the sole semantic-program name; domain-separated TopologySnapshotId and MeshAssetId preimages are normative in the master plan"
+    },
+    {
+      "id": "F04",
+      "severity": "P1",
+      "finding": "Ten agent reviews could be mistaken for formal independent qualification evidence",
+      "disposition": "resolved",
+      "resolution": "The plan and this manifest explicitly classify them as role-separated design evidence, not organizationally independent approval or qualification"
+    }
+  ],
+  "open_blockers": [
+    "G0 contract pack is not complete",
+    "Executable SemanticProgram and Manifold differential adapter do not exist",
+    "Rust workspace and B-rep runtime do not exist",
+    "Independent certificate verifiers and frozen qualification corpora do not exist",
+    "Project-wide Rust licensing, inbound contribution, provenance, supervisor, and release policies are not approved"
+  ]
+}

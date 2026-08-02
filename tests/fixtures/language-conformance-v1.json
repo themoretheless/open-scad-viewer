@@ -1,0 +1,34 @@
+{
+  "contract": "openscad-viewer-subset",
+  "version": 1,
+  "semanticsRevision": "1.0.0",
+  "compile": [
+    { "name": "primitive", "source": "cube([2, 3, 4]);", "topLevel": ["cube"], "covers": ["3d-primitives"] },
+    { "name": "transform-chain", "source": "translate([1, 2, 3]) rotate([0, 0, 45]) sphere(r = 2, $fn = 16);", "topLevel": ["translate"], "covers": ["transforms"] },
+    { "name": "module-and-loop", "source": "module peg(x) { translate([x, 0, 0]) children(); } for (i = [0:2]) peg(i) cube(1);", "topLevel": ["module", "for"], "covers": ["ranges", "for", "user-modules", "children"] },
+    { "name": "disabled-modifier", "source": "*cube(1); sphere(1);", "topLevel": ["sphere"], "covers": [] }
+  ],
+  "evaluate": [
+    { "name": "variables-expressions", "source": "x = 2; cube([x, 1 + 2, 4]);", "meshCount": 1, "volume": 24, "covers": ["variables", "expressions"] },
+    { "name": "loop-cardinality", "source": "for (i = [0:2]) translate([i * 2, 0, 0]) cube(1);", "meshCount": 3, "volume": 3, "covers": [] },
+    { "name": "control-flow", "source": "assert(true) if (true) let(x = 2) cube(x);", "meshCount": 1, "volume": 8, "covers": ["if", "let", "assert-statement"] },
+    { "name": "two-dimensional-csg-extrude", "source": "linear_extrude(height = 4) difference() { square([2, 3]); translate([0.5, 0.5]) square([1, 1]); }", "meshCount": 1, "volume": 20, "covers": ["2d-primitives", "boolean-csg", "linear-extrude"] },
+    { "name": "hull", "source": "hull() { cube(1); translate([2, 0, 0]) cube(1); }", "meshCount": 1, "covers": ["hull"] },
+    { "name": "rotate-extrude", "source": "rotate_extrude($fn = 16) translate([2, 0]) square([1, 1]);", "meshCount": 1, "covers": ["rotate-extrude"] },
+    { "name": "projection-offset", "source": "linear_extrude(height = 1) offset(r = 0.1) projection() cube(1);", "meshCount": 1, "covers": ["projection", "offset"] }
+  ],
+  "reject": [
+    { "name": "include", "source": "include <part.scad>", "code": "E_FEATURE_INCLUDE", "covers": ["include"] },
+    { "name": "use", "source": "use <part.scad>", "code": "E_FEATURE_USE", "covers": ["use"] },
+    { "name": "user-function", "source": "function f(x) = x; cube(f(1));", "code": "E_FEATURE_USER_FUNCTION", "covers": ["user-functions"] },
+    { "name": "viewport-modifier", "source": "#cube(1);", "code": "E_FEATURE_VIEWPORT_MODIFIER", "covers": [] }
+  ],
+  "evaluateReject": [
+    { "name": "expression-assert", "source": "x = assert(true); cube(1);", "covers": ["expression-assert"] },
+    { "name": "surface", "source": "surface(file = \"height.dat\");", "covers": ["surface"] },
+    { "name": "import", "source": "import(\"part.stl\");", "covers": ["import"] },
+    { "name": "text", "source": "text(\"CAD\");", "covers": ["text"] },
+    { "name": "minkowski", "source": "minkowski() { cube(1); sphere(1); }", "covers": ["minkowski"] },
+    { "name": "runtime-extension", "source": "echo(\"hello\"); cube(1);", "covers": ["official-runtime-extensions"] }
+  ]
+}

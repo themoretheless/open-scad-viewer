@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
@@ -93,6 +93,27 @@ function isServiceModule(specifier: string): boolean {
   return withoutQuery.split('/').includes('services')
 }
 
+function isWithin(root: string, candidate: string): boolean {
+  const pathFromRoot = relative(root, candidate)
+  return pathFromRoot === ''
+    || (!isAbsolute(pathFromRoot) && pathFromRoot !== '..' && !pathFromRoot.startsWith(`..${sep}`))
+}
+
+function isForbiddenBrowserImport(importer: string, specifier: string, mcpRoot: string): boolean {
+  const withoutQuery = specifier.replace(/[?#].*$/, '')
+  if (withoutQuery.startsWith('node:')) return true
+  if (withoutQuery === '@duckdb/node-api' || withoutQuery.startsWith('@duckdb/node-api/')) return true
+  if (withoutQuery === '@modelcontextprotocol/server'
+    || withoutQuery.startsWith('@modelcontextprotocol/server/')) return true
+  if (withoutQuery.startsWith('.')) {
+    return isWithin(mcpRoot, resolve(dirname(importer), withoutQuery))
+  }
+  return withoutQuery === 'src/mcp'
+    || withoutQuery.startsWith('src/mcp/')
+    || withoutQuery === '/src/mcp'
+    || withoutQuery.startsWith('/src/mcp/')
+}
+
 describe('core mesh publication', () => {
   it('includes every independently owned publication buffer', () => {
     const mesh = fixtureMesh()
@@ -133,7 +154,7 @@ describe('core mesh publication', () => {
     expect(specifiers.every(isParserModule)).toBe(true)
   })
 
-  it('keeps parser execution behind the worker boundary', () => {
+  it('keeps parser execution behind explicit browser-worker and engine-facade boundaries', () => {
     const testDir = dirname(fileURLToPath(import.meta.url))
     const sourceRoot = join(testDir, '..', 'src')
     const parserConsumers = sourceFiles(sourceRoot)
@@ -146,7 +167,25 @@ describe('core mesh publication', () => {
         .map(specifier => `${relative(sourceRoot, path)} -> ${specifier}`))
       .sort()
 
-    expect(parserConsumers).toEqual(['workers/geometry.worker.ts'])
+    expect(parserConsumers).toEqual(['services/geometryBuildEngine.ts', 'workers/geometry.worker.ts'])
     expect(coreServiceImports).toEqual([])
+  })
+
+  it('keeps Node, DuckDB, and MCP server imports out of browser source', () => {
+    const testDir = dirname(fileURLToPath(import.meta.url))
+    const sourceRoot = join(testDir, '..', 'src')
+    const mcpRoot = join(sourceRoot, 'mcp')
+    const violations = sourceFiles(sourceRoot)
+      .filter(path => !isWithin(mcpRoot, path))
+      .flatMap(path => moduleSpecifiers(path)
+        .filter(specifier => isForbiddenBrowserImport(path, specifier, mcpRoot))
+        .map(specifier => `${relative(sourceRoot, path)} -> ${specifier}`))
+      .sort()
+
+    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), './mcp/createServer', mcpRoot)).toBe(true)
+    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), 'node:fs', mcpRoot)).toBe(true)
+    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), '@duckdb/node-api', mcpRoot)).toBe(true)
+    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), '@modelcontextprotocol/server/stdio', mcpRoot)).toBe(true)
+    expect(violations).toEqual([])
   })
 })

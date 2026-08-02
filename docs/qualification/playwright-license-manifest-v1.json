@@ -1,0 +1,116 @@
+{
+  "schema": "open-scad-viewer/playwright-license-manifest",
+  "version": 1,
+  "qualificationClaim": "none",
+  "sourceLock": {
+    "path": "tools/browser-qualification/package-lock.json",
+    "sha256": "0a2e7f09703398ff090367d55e1f39b88b363e5267126edf699a2e78fedc471f"
+  },
+  "packages": [
+    {
+      "name": "playwright",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "integrity": "sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==",
+      "licenseFiles": [
+        {
+          "path": "LICENSE",
+          "byteLength": 11601,
+          "sha256": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb"
+        },
+        {
+          "path": "NOTICE",
+          "byteLength": 254,
+          "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+        },
+        {
+          "path": "ThirdPartyNotices.txt",
+          "byteLength": 705,
+          "sha256": "b17ac0bd6f4b8207e440639cc8e0ba1bf1d9eaf9b12236764ab93b346c7abd8e"
+        },
+        {
+          "path": "lib/matchers/expect.js.LICENSE",
+          "byteLength": 36528,
+          "sha256": "78b2f60563d28cb3f9ea17e4cdc0657681e641e2f72766771d9e2da9ca94c065"
+        },
+        {
+          "path": "lib/transform/babelBundle.js.LICENSE",
+          "byteLength": 123004,
+          "sha256": "6e396aded640f0bd2671d57442575ce8172aa1371b2dece6c5d4048f2f38f34c"
+        },
+        {
+          "path": "lib/transform/esmLoader.js.LICENSE",
+          "byteLength": 17406,
+          "sha256": "3cec0c446526a449e4613b0defee0adb585f88f1d7fdba919421226d69be078e"
+        }
+      ]
+    },
+    {
+      "name": "playwright-core",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "integrity": "sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==",
+      "licenseFiles": [
+        {
+          "path": "LICENSE",
+          "byteLength": 11601,
+          "sha256": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb"
+        },
+        {
+          "path": "NOTICE",
+          "byteLength": 254,
+          "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+        },
+        {
+          "path": "ThirdPartyNotices.txt",
+          "byteLength": 676,
+          "sha256": "a549d329bad8806fe279f0ecae0fc0270dec7e7c2dc8ec10f90e394f7c32b144"
+        },
+        {
+          "path": "lib/serverRegistry.js.LICENSE",
+          "byteLength": 18617,
+          "sha256": "5cf540fe55a2ba9bcf0eb76e739b454faa8581e2f1a0f777602ef0855534302e"
+        },
+        {
+          "path": "lib/utilsBundle.js.LICENSE",
+          "byteLength": 122225,
+          "sha256": "57945338cba4878e373646733528017fbe3db1503ec2b431fd30d2a390c70c33"
+        },
+        {
+          "path": "lib/webp_codec.LICENSE",
+          "byteLength": 8841,
+          "sha256": "995c7ee35aceb7666829b7a501ca89c0864e12b493c1174b155774ab1e03d831"
+        }
+      ]
+    },
+    {
+      "name": "fsevents",
+      "version": "2.3.2",
+      "license": "MIT",
+      "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
+      "optionalFor": "darwin",
+      "licenseFiles": [
+        {
+          "path": "LICENSE",
+          "byteLength": 1133,
+          "sha256": "2a8a5d6197bb97a018b8a190dd3ed853d750ca87c8e80c17aad41d6c6ff448e1"
+        }
+      ]
+    }
+  ],
+  "provisioningCli": {
+    "name": "npm",
+    "version": "10.9.8",
+    "license": "Artistic-2.0",
+    "identityState": "unresolved-u02"
+  },
+  "browserArtifacts": {
+    "state": "unresolved-u03",
+    "requiredEvidence": [
+      "engine revision and reported version",
+      "canonical provision-root tree or archive digest",
+      "executable and helper/resource digests",
+      "browser, ffmpeg, and helper license/notice digests"
+    ]
+  }
+}
