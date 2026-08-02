@@ -58,6 +58,21 @@ export const COMMAND_REGISTRY = [
     bindings: [{ key: 's', primary: true, scope: 'global', allowInEditable: true }],
   },
   {
+    id: 'find', labelKey: 'find', aliasKeys: ['find'],
+    shortcutDisplay: 'Ctrl/⌘+F', keywords: ['search', 'editor', 'text'],
+    scopes: ['editor'], palette: true,
+    bindings: [{ key: 'f', primary: true, scope: 'editor', allowInEditable: true }],
+  },
+  {
+    id: 'replace', labelKey: 'replace', aliasKeys: ['replace'],
+    shortcutDisplay: 'Ctrl+H / ⌘⌥F', keywords: ['search', 'editor', 'text'],
+    scopes: ['editor'], palette: true,
+    bindings: [
+      { key: 'h', ctrl: true, scope: 'editor', allowInEditable: true },
+      { key: 'f', meta: true, alt: true, scope: 'editor', allowInEditable: true },
+    ],
+  },
+  {
     id: 'export-stl', labelKey: 'exportStl', aliasKeys: ['exportStl'],
     keywords: ['mesh', 'manufacturing', 'print'], scopes: ['global'], palette: true,
   },
@@ -155,8 +170,8 @@ export const COMMAND_REGISTRY = [
   {
     id: 'measure', labelKey: 'measure', aliasKeys: ['measure'],
     shortcutDisplay: 'Ctrl/⌘+=', keywords: ['inspect', 'distance', 'dimension'],
-    scopes: ['global', 'viewport'], palette: true,
-    bindings: [{ code: 'Equal', primary: true, scope: 'global', allowInEditable: true }],
+    scopes: ['viewport'], palette: true,
+    bindings: [{ code: 'Equal', primary: true, scope: 'viewport' }],
   },
   {
     id: 'section', labelKey: 'section', aliasKeys: ['section'],
@@ -205,6 +220,12 @@ export const COMMAND_REGISTRY = [
     keywords: ['dark', 'light'], scopes: ['global'], palette: true,
   },
   {
+    id: 'shortcut-help', labelKey: 'shortcuts', aliasKeys: ['commandHelp'],
+    shortcutDisplay: '?', keywords: ['keyboard', 'help', 'hotkeys'],
+    scopes: ['global'], palette: true,
+    bindings: [{ key: '?', scope: 'global' }],
+  },
+  {
     id: 'command-palette', labelKey: 'commandHelp', aliasKeys: ['commands'],
     shortcutDisplay: 'Ctrl/⌘+K', keywords: ['command', 'search'],
     scopes: ['global'], palette: false,
@@ -213,24 +234,24 @@ export const COMMAND_REGISTRY = [
   {
     // Conditional Escape action. Enable only while a measurement is active;
     // otherwise the lower-priority Deselect binding wins.
-    id: 'cancel-measure', labelKey: 'measure', aliasKeys: ['measure'],
+    id: 'cancel-measure', labelKey: 'cancelMeasure', aliasKeys: ['measure'],
     keywords: ['cancel', 'escape'], scopes: ['viewport'], palette: false,
     bindings: [{ key: 'Escape', scope: 'viewport', priority: 100 }],
   },
   {
-    id: 'flip-section', labelKey: 'section', aliasKeys: ['section'],
+    id: 'flip-section', labelKey: 'flipSection', aliasKeys: ['section'],
     shortcutDisplay: 'Shift+F', keywords: ['flip', 'clipping', 'plane'],
     scopes: ['viewport'], palette: false,
     bindings: [{ key: 'f', shift: true, scope: 'viewport', priority: 10 }],
   },
   {
-    id: 'hide-selected', labelKey: 'hidden', aliasKeys: ['hidden'],
+    id: 'hide-selected', labelKey: 'hideSelected', aliasKeys: ['hidden'],
     shortcutDisplay: 'H', keywords: ['hide', 'visibility', 'selection'],
     scopes: ['viewport'], palette: false,
     bindings: [{ key: 'h', scope: 'viewport' }],
   },
   {
-    id: 'cycle-selection-mode', labelKey: 'selectionMode', aliasKeys: ['selectionMode'],
+    id: 'cycle-selection-mode', labelKey: 'cycleSelectionMode', aliasKeys: ['selectionMode'],
     shortcutDisplay: 'Shift+M', keywords: ['selection', 'cycle', 'mode'],
     scopes: ['viewport'], palette: false,
     bindings: [{ key: 'm', shift: true, scope: 'viewport' }],
@@ -245,6 +266,91 @@ export type CommandLabelKey = CommandDefinition['labelKey'] | CommandDefinition[
 
 export interface CommandPaletteDescriptor extends Omit<PaletteCommand, 'id'> {
   id: PaletteCommandId
+}
+
+export type ShortcutHelpGroupId = 'workspace' | 'editor' | 'navigation' | 'selection' | 'inspection' | 'display'
+
+export interface ShortcutHelpRow {
+  readonly id: CommandId
+  readonly label: string
+  readonly shortcuts: readonly string[]
+  readonly scopes: readonly CommandScope[]
+}
+
+export interface ShortcutHelpGroup {
+  readonly id: ShortcutHelpGroupId
+  readonly rows: readonly ShortcutHelpRow[]
+}
+
+/** Build the help surface from the same definitions used by event routing. */
+export function buildShortcutHelpGroups(
+  resolveLabel: (key: CommandLabelKey) => string,
+  platform: ShortcutPlatform = 'unknown',
+): ShortcutHelpGroup[] {
+  const order: readonly ShortcutHelpGroupId[] = [
+    'workspace', 'editor', 'navigation', 'selection', 'inspection', 'display',
+  ]
+  const grouped = new Map<ShortcutHelpGroupId, ShortcutHelpRow[]>()
+  for (const definition of COMMAND_REGISTRY) {
+    if (!('bindings' in definition) || !definition.bindings?.length) continue
+    const id = helpGroupFor(definition)
+    const rows = grouped.get(id) ?? []
+    rows.push({
+      id: definition.id,
+      label: resolveLabel(definition.labelKey),
+      shortcuts: definition.bindings.map(binding => formatKeyboardBinding(binding, platform)),
+      scopes: definition.scopes,
+    })
+    grouped.set(id, rows)
+  }
+  return order.flatMap(id => {
+    const rows = grouped.get(id)
+    return rows?.length ? [{ id, rows }] : []
+  })
+}
+
+export type ShortcutPlatform = 'mac' | 'windows-linux' | 'unknown'
+
+/** Platform-aware visual formatter for the actual binding matcher contract. */
+export function formatKeyboardBinding(
+  binding: CommandKeybinding,
+  platform: ShortcutPlatform,
+): string {
+  const mac = platform === 'mac'
+  const modifiers: string[] = []
+  if (binding.primary) modifiers.push(platform === 'unknown' ? 'Ctrl/⌘' : (mac ? '⌘' : 'Ctrl'))
+  if (binding.ctrl) modifiers.push(mac ? '⌃' : 'Ctrl')
+  if (binding.meta) modifiers.push(mac ? '⌘' : 'Meta')
+  if (binding.alt) modifiers.push(mac ? '⌥' : 'Alt')
+  const key = bindingKeyLabel(binding)
+  // The question-mark glyph already communicates Shift+/ on common layouts.
+  if (binding.shift && key !== '?') modifiers.push(mac ? '⇧' : 'Shift')
+  return mac
+    ? `${modifiers.join('')}${key}`
+    : [...modifiers, key].join('+')
+}
+
+function bindingKeyLabel(binding: CommandKeybinding): string {
+  const codeLabels: Record<string, string> = {
+    BracketLeft: '[', Equal: '=', Numpad0: 'Num 0', Numpad1: 'Num 1',
+    Numpad3: 'Num 3', Numpad7: 'Num 7', Digit1: '1', Digit3: '3',
+    Digit4: '4', Digit5: '5', Slash: '/',
+  }
+  if (binding.code) return codeLabels[binding.code] ?? binding.code
+  const key = binding.key ?? ''
+  if (key.length === 1 && /[a-z]/i.test(key)) return key.toLocaleUpperCase('en-US')
+  return normalizeKey(key) === 'escape' ? 'Esc' : key
+}
+
+function helpGroupFor(definition: CommandDefinition): ShortcutHelpGroupId {
+  const keywords = new Set<string>(definition.keywords)
+  const scopes = definition.scopes as readonly CommandScope[]
+  if (keywords.has('inspect') || keywords.has('distance') || keywords.has('clipping')) return 'inspection'
+  if (keywords.has('selection') || keywords.has('visibility') || keywords.has('vertex') || keywords.has('surface')) return 'selection'
+  if (keywords.has('camera') || keywords.has('view') || keywords.has('projection') || keywords.has('history')) return 'navigation'
+  if (scopes.includes('editor')) return 'editor'
+  if (scopes.includes('global')) return 'workspace'
+  return 'display'
 }
 
 export interface PaletteCommandRuntimeState {
@@ -348,7 +454,7 @@ export function matchesKeyboardBinding(
   event: NormalizedKeyboardEvent,
   binding: CommandKeybinding,
 ): boolean {
-  if (event.defaultPrevented || event.composing) return false
+  if (event.defaultPrevented || event.composing || event.repeat) return false
   if (event.editableTarget && !binding.allowInEditable) return false
 
   if (binding.code) {
@@ -360,7 +466,8 @@ export function matchesKeyboardBinding(
   }
 
   if (binding.primary) {
-    if (!event.primary) return false
+    // Accept one platform primary modifier, never the ambiguous Ctrl+Meta pair.
+    if (!event.primary || event.ctrl === event.meta) return false
   } else {
     if (event.ctrl !== Boolean(binding.ctrl)) return false
     if (event.meta !== Boolean(binding.meta)) return false
@@ -457,7 +564,7 @@ export function isEditableTarget(target: unknown): boolean {
 function normalizeKey(key: string): string {
   if (key === 'Esc') return 'escape'
   if (key === 'Spacebar' || key === 'Space') return ' '
-  return key.toLocaleLowerCase()
+  return key.toLowerCase()
 }
 
 function getBindings(definition: CommandDefinition): readonly CommandKeybinding[] {

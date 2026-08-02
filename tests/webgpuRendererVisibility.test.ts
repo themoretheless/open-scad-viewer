@@ -15,6 +15,30 @@ const hit = (meshIndex: number): PickHit => ({
 })
 
 describe('WebGPURenderer batched visibility', () => {
+  it('does not rebuild source overlays for selection changes unless isolation changes effective visibility', () => {
+    const renderer = new WebGPURenderer()
+    const internal = renderer as unknown as {
+      meshes: Array<{ visible: boolean }>
+      updateMeshStyles(): void
+      rebuildSelectionOverlays(): void
+      rebuildSourceHighlightOverlay(): void
+    }
+    internal.meshes = [{ visible: true }, { visible: true }]
+    internal.updateMeshStyles = vi.fn()
+    internal.rebuildSelectionOverlays = vi.fn()
+    const rebuildSource = vi.fn()
+    internal.rebuildSourceHighlightOverlay = rebuildSource
+    vi.spyOn(renderer, 'requestRender').mockImplementation(() => undefined)
+
+    renderer.selectMesh(0)
+    renderer.selectMesh(1)
+    expect(rebuildSource).not.toHaveBeenCalled()
+    renderer.toggleIsolateSelection()
+    expect(rebuildSource).toHaveBeenCalledTimes(1)
+    renderer.selectMesh(0)
+    expect(rebuildSource).toHaveBeenCalledTimes(2)
+  })
+
   it('commits visibility, bounds, overlays, and hidden interaction state once', () => {
     const renderer = new WebGPURenderer()
     const firstBounds = {

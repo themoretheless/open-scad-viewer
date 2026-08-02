@@ -46,6 +46,8 @@ export interface MeshTopologyDiagnostics {
 export interface MeshData {
   /** Stable identity for this evaluated scene entity, independent of tessellation quality. */
   entityId?: SceneEntityId
+  /** Verified identity of the exact vertex/index payload, independent of entity presentation. */
+  geometryAssetId?: `asset:${string}`
   /** Interleaved position(3) + normal(3). */
   vertices: Float32Array
   indices: Uint32Array

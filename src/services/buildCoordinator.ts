@@ -15,7 +15,12 @@ import {
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
 } from './geometryWorkerProtocol'
+import { sha256Hex } from '../core/sha256'
 import type { GeometryQuality } from '../core/build'
+import {
+  parseGeometrySourceRoutingHeader,
+  planGeometrySourceExecution,
+} from '../core/geometryExecution'
 
 export interface WorkerLike {
   postMessage(message: GeometryWorkerRequest): void
@@ -80,6 +85,48 @@ interface WorkerBinding {
   generation: number
   messageListener: EventListener
   errorListener: EventListener
+}
+
+function sourceSpansFit(source: string, event: GeometryWorkerEvent): boolean {
+  const isBoundary = (offset: number) => offset === 0
+    || offset === source.length
+    || !(source.charCodeAt(offset - 1) >= 0xd800
+      && source.charCodeAt(offset - 1) <= 0xdbff
+      && source.charCodeAt(offset) >= 0xdc00
+      && source.charCodeAt(offset) <= 0xdfff)
+  const spanFits = (start: number, end: number) => start <= end
+    && end <= source.length
+    && isBoundary(start)
+    && isBoundary(end)
+  if (event.status === 'failed') {
+    const { start, end } = event.error
+    return (start === undefined && end === undefined)
+      || (start !== undefined && end !== undefined && spanFits(start, end))
+  }
+  if (event.status !== 'succeeded') return true
+  return event.meshes.every(mesh => mesh.provenance.every(run => (
+    run.source === null || spanFits(run.source.start, run.source.end)
+  )))
+}
+
+function deepFreezeWorkerSnapshot(value: unknown, seen = new WeakSet<object>()): void {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return
+  seen.add(value)
+  if (ArrayBuffer.isView(value)) {
+    Object.freeze(value.buffer)
+    return
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor && Object.hasOwn(descriptor, 'value')) deepFreezeWorkerSnapshot(descriptor.value, seen)
+  }
+  Object.freeze(value)
+}
+
+function freezeAttestedWorkerEvent(event: GeometryWorkerEvent): GeometryWorkerEvent {
+  const snapshot = structuredClone(event) as GeometryWorkerEvent
+  deepFreezeWorkerSnapshot(snapshot)
+  return snapshot
 }
 
 const DEFAULT_TIMERS: CoordinatorTimers = {
@@ -167,12 +214,23 @@ export class BuildCoordinator {
       throw new Error('A document revision must identify exactly one source snapshot')
     }
 
+    const existingJobId = this.latestJobByQuality.get(input.quality)
+    const existing = existingJobId === undefined ? undefined : this.jobs.get(existingJobId)
+    if (existing
+      && existing.request.documentRevision === input.documentRevision
+      && existing.request.source === input.source
+      && existing.lifecycle !== 'terminal'
+      && existing.lifecycle !== 'superseded') {
+      return existing.request.jobId
+    }
+
     const request: GeometryBuildRequest = {
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       type: 'build',
       documentRevision: input.documentRevision,
       jobId: this.nextJobId++,
       source: input.source,
+      sourceSha256: sha256Hex(input.source),
       quality: input.quality,
     }
     const record: JobRecord = {
@@ -190,7 +248,7 @@ export class BuildCoordinator {
     if (isNewRevision && this.hasPostedWork()) {
       this.supersedePostedWork(request.jobId)
     } else if (this.hardRestartTimer !== null) {
-      this.pendingJobIds.push(request.jobId)
+      this.queuePending(request.jobId)
     } else {
       this.postJob(record)
     }
@@ -275,7 +333,7 @@ export class BuildCoordinator {
   }
 
   private supersedePostedWork(newJobId: GeometryJobId) {
-    this.pendingJobIds.push(newJobId)
+    this.queuePending(newJobId)
     for (const jobId of this.supersededWorkerJobs) {
       const record = this.jobs.get(jobId)
       if (record) this.postCancel(record, 'superseded')
@@ -320,6 +378,27 @@ export class BuildCoordinator {
     }
   }
 
+  private queuePending(jobId: GeometryJobId) {
+    const record = this.jobs.get(jobId)
+    if (!record || record.lifecycle !== 'queued') return
+    for (let index = this.pendingJobIds.length - 1; index >= 0; index--) {
+      const pendingId = this.pendingJobIds[index]
+      const pending = this.jobs.get(pendingId)
+      if (!pending
+        || pending.request.documentRevision !== record.request.documentRevision
+        || pending.request.quality !== record.request.quality) continue
+      this.pendingJobIds.splice(index, 1)
+      pending.lifecycle = 'terminal'
+      this.jobs.delete(pendingId)
+    }
+    this.pendingJobIds.push(jobId)
+  }
+
+  private isLatestPending(record: JobRecord) {
+    return record.request.documentRevision === this.latestRevision
+      && this.latestJobByQuality.get(record.request.quality) === record.request.jobId
+  }
+
   private ensureWorker(record: JobRecord): WorkerBinding | null {
     if (this.binding) return this.binding
     try {
@@ -356,7 +435,7 @@ export class BuildCoordinator {
     const pending = this.pendingJobIds.splice(0)
     for (const jobId of pending) {
       const record = this.jobs.get(jobId)
-      if (record && record.request.documentRevision === this.latestRevision) this.postJob(record)
+      if (record && this.isLatestPending(record)) this.postJob(record)
     }
     if (this.activeJobIds().length > 0) this.updateBuildingState()
   }
@@ -366,7 +445,7 @@ export class BuildCoordinator {
     const pending = this.pendingJobIds.splice(0)
     for (const jobId of pending) {
       const record = this.jobs.get(jobId)
-      if (record && record.request.documentRevision === this.latestRevision) this.postJob(record)
+      if (record && this.isLatestPending(record)) this.postJob(record)
     }
     if (this.activeJobIds().length > 0) this.updateBuildingState()
   }
@@ -377,7 +456,15 @@ export class BuildCoordinator {
       this.handleProtocolFailure(generation)
       return
     }
-    const event = data
+    let event: GeometryWorkerEvent
+    try {
+      // Snapshot immediately after admission. The clone owns every transferable
+      // ArrayBuffer and severs aliases held by same-realm worker test doubles.
+      event = freezeAttestedWorkerEvent(data)
+    } catch {
+      this.handleProtocolFailure(generation)
+      return
+    }
     const record = this.jobs.get(event.jobId)
     if (!record || record.workerGeneration !== generation) return
     if (event.documentRevision !== record.request.documentRevision || event.quality !== record.request.quality) {
@@ -386,6 +473,57 @@ export class BuildCoordinator {
         message: `Geometry Worker event correlation mismatch for job ${event.jobId}`,
       })
       return
+    }
+    if (event.sourceSha256 !== record.request.sourceSha256
+      || event.sourceSha256 !== sha256Hex(record.request.source)) {
+      this.failForWorker(record, {
+        name: 'ProtocolError',
+        message: `Geometry Worker source attestation mismatch for job ${event.jobId}`,
+      })
+      return
+    }
+    if (!sourceSpansFit(record.request.source, event)) {
+      this.failForWorker(record, {
+        name: 'ProtocolError',
+        message: `Geometry Worker source span exceeds the attested source for job ${event.jobId}`,
+      })
+      return
+    }
+    if ('execution' in event && event.execution !== undefined) {
+      const execution = event.execution
+      let routeMatches = false
+      try {
+        const route = parseGeometrySourceRoutingHeader(record.request.source)
+        routeMatches = route.languageContract === execution.languageContract
+          && route.requiredCapabilities.length === execution.requiredCapabilities.length
+          && route.requiredCapabilities.every((capability, index) => (
+            capability === execution.requiredCapabilities[index]
+          ))
+      } catch {
+        routeMatches = false
+      }
+      if (!routeMatches) {
+        this.failForWorker(record, {
+          name: 'ProtocolError',
+          message: `Geometry Worker execution provenance mismatch for job ${event.jobId}`,
+        })
+        return
+      }
+    }
+    if (event.status === 'failed' && event.execution === undefined) {
+      try {
+        planGeometrySourceExecution(record.request.source, {
+          quality: record.request.quality,
+          purpose: record.request.quality,
+        })
+        this.failForWorker(record, {
+          name: 'ProtocolError',
+          message: `Geometry Worker omitted execution provenance for job ${event.jobId}`,
+        })
+        return
+      } catch {
+        // A malformed routing header cannot produce a selected-engine descriptor.
+      }
     }
 
     if (event.status === 'succeeded' || event.status === 'failed' || event.status === 'cancelled' || event.status === 'stale') {
@@ -539,16 +677,27 @@ export class BuildCoordinator {
   private failForWorker(record: JobRecord, error: GeometryBuildError) {
     const effectiveRecord = this.primaryCurrentJob() ?? record
     const generation = record.workerGeneration
-    const event: GeometryBuildFailure = {
+    let execution: GeometryBuildFailure['execution']
+    try {
+      execution = planGeometrySourceExecution(effectiveRecord.request.source, {
+        quality: effectiveRecord.request.quality,
+        purpose: effectiveRecord.request.quality,
+      })
+    } catch {
+      execution = undefined
+    }
+    const event = freezeAttestedWorkerEvent({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       status: 'failed',
       phase: effectiveRecord.lifecycle === 'queued' ? 'queued' : 'compiling',
       documentRevision: effectiveRecord.request.documentRevision,
       jobId: effectiveRecord.request.jobId,
       quality: effectiveRecord.request.quality,
+      sourceSha256: effectiveRecord.request.sourceSha256,
+      ...(execution ? { execution } : {}),
       error,
       durationMs: Math.max(0, this.now() - effectiveRecord.requestedAt),
-    }
+    } satisfies GeometryBuildFailure) as GeometryBuildFailure
     for (const candidate of this.jobs.values()) {
       if (generation === null || candidate.workerGeneration === generation) candidate.lifecycle = 'terminal'
     }

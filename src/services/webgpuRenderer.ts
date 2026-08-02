@@ -22,6 +22,46 @@ import {
   type FaceTriangleIndex,
 } from './meshSelectionOverlay'
 import type { MeshData, MeshProvenanceRun, MeshSourceReference } from '../core/mesh'
+import type { GeometryAssetId } from '../core/scene'
+import {
+  ISO_PITCH,
+  ISO_YAW,
+  standardViewOrientation,
+  type ProjectionMode,
+  type StandardView,
+} from './viewportModel'
+export { projectAxesToScreen } from './viewportModel'
+export type { ProjectionMode, StandardView } from './viewportModel'
+import type {
+  CameraChangeHandler,
+  CameraHistoryChangeHandler,
+  DisplayMode,
+  DistanceMeasurement,
+  HoverChangeHandler,
+  MeasurementChangeHandler,
+  PickHit,
+  RendererLifecycleEvent,
+  RendererStatusChangeHandler,
+  SelectionChangeHandler,
+  SelectionMode,
+  SetMeshesOptions,
+} from './rendererContracts'
+export type {
+  DisplayMode,
+  DistanceMeasurement,
+  PickHit,
+  RendererLifecycleEvent,
+  SelectionMode,
+} from './rendererContracts'
+import {
+  clampGestureDistance,
+  computeOrbitUpdate,
+  computePanUpdate,
+  computePinchUpdate,
+  computeWheelDistance,
+} from './cameraGestures'
+export { computePinchUpdate } from './cameraGestures'
+export type { PinchCameraState, PinchPoint } from './cameraGestures'
 import {
   chooseDepthCandidate,
   normalizeDepthCandidates,
@@ -34,6 +74,7 @@ import {
   type SceneAabbIndex,
 } from './sceneAabbIndex'
 import { sortTransparentBackToFront } from './transparentOrdering'
+import { effectiveDisplayAlpha, isTransparentAlpha } from './backendQuality'
 
 /* ── WGSL shaders ─────────────────────────────────── */
 
@@ -142,6 +183,7 @@ struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
 /* ── GPU mesh handle ──────────────────────────────── */
 
 interface GMesh {
+  assetId?: GeometryAssetId
   vb: GPUBuffer; ib: GPUBuffer; ic: number
   ub: GPUBuffer; bg: GPUBindGroup
   edgeIB: GPUBuffer | null; edgeIC: number
@@ -179,62 +221,14 @@ interface Bounds {
   max: [number, number, number]
 }
 
-export type ProjectionMode = 'perspective' | 'orthographic'
-export type StandardView = 'iso' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom'
-export type DisplayMode = 'shaded' | 'edges' | 'xray'
-export type SelectionMode = 'object' | 'face' | 'point'
-export interface PickHit {
-  meshIndex: number
-  triangleIndex: number
-  faceId: number | null
-  point: Vec3
-  normal: Vec3
-  barycentric: Vec3
-  source: MeshSourceReference | null
-  backside: boolean
-  /** Zero-based position in the current front-to-back click cycle. */
-  cycleIndex?: number
-  /** Number of selectable targets currently under the pointer. */
-  cycleCount?: number
-}
-export interface DistanceMeasurement {
-  points: Vec3[]
-  distance: number | null
-}
-export type SelectionChangeHandler = (selectedIndex: number | null, isIsolated: boolean, hit: PickHit | null) => void
-export type HoverChangeHandler = (hit: PickHit | null) => void
-export type MeasurementChangeHandler = (measurement: DistanceMeasurement | null, active: boolean) => void
-export type CameraHistoryChangeHandler = (canGoBack: boolean) => void
-export type CameraChangeHandler = (state: CameraState) => void
-export type RendererLifecycleEvent =
-  | { readonly status: 'idle' }
-  | { readonly status: 'initializing' }
-  | { readonly status: 'ready' }
-  | {
-      readonly status: 'unavailable'
-      readonly reason: 'webgpu' | 'adapter' | 'context'
-      readonly message: string
-    }
-  | {
-      readonly status: 'device-lost'
-      readonly reason: GPUDeviceLostReason
-      readonly message: string
-    }
-  | {
-      readonly status: 'error'
-      readonly phase: 'initialization' | 'frame'
-      readonly error: Error
-    }
-  | { readonly status: 'destroyed' }
-export type RendererStatusChangeHandler = (event: RendererLifecycleEvent) => void
-export interface SetMeshesOptions {
-  /** Keep world-space inspection measurements while swapping equivalent geometry. */
-  preserveMeasurement?: boolean
+function sameTypedArray(left: Float32Array | Uint32Array, right: Float32Array | Uint32Array) {
+  if (left.constructor !== right.constructor || left.length !== right.length) return false
+  for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false
+  return true
 }
 
+
 const FOV_Y = Math.PI / 4
-const ISO_YAW = Math.PI / 4
-const ISO_PITCH = Math.atan(1 / Math.sqrt(2))
 const DEFAULT_DISTANCE = 50
 const MIN_DISTANCE = 0.01
 const MAX_DISTANCE = 1e12
@@ -250,109 +244,9 @@ const MAX_DEPTH_CONTINUATIONS = 256
 const WHEEL_HISTORY_IDLE_MS = 250
 
 function clampDistanceValue(distance: number) {
-  return Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, Number.isFinite(distance) ? distance : DEFAULT_DISTANCE))
+  return clampGestureDistance(distance)
 }
 
-/* ── Two-pointer gesture math ─────────────────────── */
-
-export interface PinchPoint { x: number; y: number }
-
-export interface PinchCameraState {
-  yaw: number
-  pitch: number
-  dist: number
-  tx: number
-  ty: number
-  tz: number
-}
-
-/**
- * Pure two-pointer gesture step. The pointer-pair distance ratio drives dolly
- * (one step is clamped to the same e^±1 factor as a wheel step) and midpoint
- * movement drives the same world-space pan as a one-pointer right drag.
- * `prevA`/`curA` and `prevB`/`curB` must refer to the same physical pointers.
- */
-export function computePinchUpdate(
-  prevA: PinchPoint,
-  prevB: PinchPoint,
-  curA: PinchPoint,
-  curB: PinchPoint,
-  state: PinchCameraState,
-  viewportHeight: number,
-): PinchCameraState {
-  const prevSpan = Math.hypot(prevB.x - prevA.x, prevB.y - prevA.y)
-  const curSpan = Math.hypot(curB.x - curA.x, curB.y - curA.y)
-  let dist = state.dist
-  if (prevSpan > 1e-6 && curSpan > 1e-6) {
-    const ratio = Math.max(Math.exp(-1), Math.min(Math.exp(1), prevSpan / curSpan))
-    dist = clampDistanceValue(state.dist * ratio)
-  }
-
-  const dx = (curA.x + curB.x - prevA.x - prevB.x) / 2
-  const dy = (curA.y + curB.y - prevA.y - prevB.y) / 2
-  const scale = 2 * dist * Math.tan(FOV_Y / 2) / Math.max(1, viewportHeight)
-  const cy = Math.cos(state.yaw), sy = Math.sin(state.yaw)
-  const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch)
-  const rx = cy, ry = sy
-  const ux = -sp * sy, uy = sp * cy, uz = cp
-  return {
-    yaw: state.yaw,
-    pitch: state.pitch,
-    dist,
-    tx: state.tx + (-dx * rx + dy * ux) * scale,
-    ty: state.ty + (-dx * ry + dy * uy) * scale,
-    tz: state.tz + dy * uz * scale,
-  }
-}
-
-/* ── View-cube axis triad projection ──────────────── */
-
-export interface AxisScreenVector {
-  /** Screen-space x component in [-1, 1]; positive points right. */
-  x: number
-  /** Screen-space y component in [-1, 1]; positive points up (SVG consumers must flip). */
-  y: number
-  /** Positive when the world axis points toward the viewer. */
-  depth: number
-}
-
-export interface AxesScreenProjection {
-  x: AxisScreenVector
-  y: AxisScreenVector
-  z: AxisScreenVector
-}
-
-/**
- * Projects the world X/Y/Z unit axes into screen space for this renderer's
- * orbit camera (Z-up; eye = target + dist·(cosP·sinY, −cosP·cosY, sinP)).
- * Each projected 2D vector already includes foreshortening, so an axis
- * pointing at (or away from) the viewer collapses toward zero length.
- */
-export function projectAxesToScreen(yaw: number, pitch: number): AxesScreenProjection {
-  const cy = Math.cos(yaw), sy = Math.sin(yaw)
-  const cp = Math.cos(pitch), sp = Math.sin(pitch)
-  // Exactly at the Top/Bottom poles the renderer's lookAt() hits its
-  // degenerate-up fallback (secondary up = +Y regardless of yaw). Mirror it
-  // here, or the triad shows X/Y flipped 180° at the Bottom view — the one
-  // pose where an orientation gizmo matters most. The trigger threshold
-  // matches lookAt()'s cross-length epsilon (|cp| < 1e-10).
-  if (Math.abs(cp) < 1e-10) {
-    const s = sp >= 0 ? 1 : -1
-    // fz = (0,0,s); fx = (0,1,0)×fz = (s,0,0); fy = fz×fx = (0,1,0).
-    return {
-      x: { x: s, y: 0, depth: 0 },
-      y: { x: 0, y: 1, depth: 0 },
-      z: { x: 0, y: 0, depth: s },
-    }
-  }
-  // Camera basis (see cameraState()/computePinchUpdate):
-  // right = (cy, sy, 0), up = (−sp·sy, sp·cy, cp), toViewer = (cp·sy, −cp·cy, sp).
-  return {
-    x: { x: cy, y: -sp * sy, depth: cp * sy },
-    y: { x: sy, y: sp * cy, depth: -cp * cy },
-    z: { x: 0, y: cp, depth: sp },
-  }
-}
 
 /* ── Renderer class ───────────────────────────────── */
 
@@ -361,6 +255,7 @@ export class WebGPURenderer {
   private dev: GPUDevice | null = null
   private ctx: GPUCanvasContext | null = null
   private fmt: GPUTextureFormat = 'bgra8unorm'
+  private backgroundColor: [number, number, number] = [0.09, 0.09, 0.11]
 
   private meshPipe!: GPURenderPipeline
   private meshPipeT!: GPURenderPipeline
@@ -763,6 +658,16 @@ export class WebGPURenderer {
     const dev = this.dev
     if (!dev || !this.initialized || this.dead || this.lost) return
 
+    const previous = this.meshes
+    const previousSet = new Set(previous)
+    const reusableByAsset = new Map<GeometryAssetId, GMesh[]>()
+    for (const mesh of previous) {
+      if (!mesh.assetId) continue
+      const candidates = reusableByAsset.get(mesh.assetId) ?? []
+      candidates.push(mesh)
+      reusableByAsset.set(mesh.assetId, candidates)
+    }
+    const retainedGeometryBuffers = new Set<GPUBuffer>()
     const next: GMesh[] = []
     try {
       for (const m of meshes) {
@@ -776,17 +681,26 @@ export class WebGPURenderer {
         const transform = new Float32Array(m.transform)
         const inverseTransform = invert(transform)
 
-        let vb: GPUBuffer | null = null
-        let ib: GPUBuffer | null = null
+        const reusable = m.geometryAssetId
+          ? reusableByAsset.get(m.geometryAssetId)?.find(candidate => (
+              sameTypedArray(candidate.vertices, m.vertices)
+              && sameTypedArray(candidate.indices, m.indices)
+            ))
+          : undefined
+        let vb: GPUBuffer | null = reusable?.vb ?? null
+        let ib: GPUBuffer | null = reusable?.ib ?? null
         let ub: GPUBuffer | null = null
+        const ownsGeometryBuffers = !reusable
         try {
-          vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
-          ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
+          if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+          if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
           ub = dev.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-          const initialAlpha = this.displayMode === 'xray' ? Math.min(m.color[3], 0.24) : m.color[3]
+          const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
-          dev.queue.writeBuffer(vb, 0, m.vertices)
-          dev.queue.writeBuffer(ib, 0, m.indices)
+          if (ownsGeometryBuffers) {
+            dev.queue.writeBuffer(vb, 0, m.vertices)
+            dev.queue.writeBuffer(ib, 0, m.indices)
+          }
           dev.queue.writeBuffer(ub, 0, transpose(transform))
           // Column-major bytes for inverse-transpose(row-major model).
           dev.queue.writeBuffer(ub, 64, inverseTransform)
@@ -797,8 +711,10 @@ export class WebGPURenderer {
             entries: [{ binding: 0, resource: { buffer: ub } }],
           })
           next.push({
+            assetId: m.geometryAssetId,
             vb, ib, ic: m.indices.length, ub, bg,
-            edgeIB: null, edgeIC: 0,
+            edgeIB: reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices) ? reusable.edgeIB : null,
+            edgeIC: reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices) ? reusable.edgeIC : 0,
             vertices: m.vertices, indices: m.indices,
             edgeIndices: m.edgeIndices, faceIds: m.faceIds, bvh: m.bvh,
             provenance: m.provenance,
@@ -813,18 +729,29 @@ export class WebGPURenderer {
             styleEdge: initialEdge,
             styleHovered: 0,
           })
+          const added = next[next.length - 1]
+          if (added.assetId) {
+            const candidates = reusableByAsset.get(added.assetId) ?? []
+            candidates.push(added)
+            reusableByAsset.set(added.assetId, candidates)
+          }
+          if (reusable && previousSet.has(reusable)) {
+            retainedGeometryBuffers.add(reusable.vb)
+            retainedGeometryBuffers.add(reusable.ib)
+            if (reusable.edgeIB && added.edgeIB === reusable.edgeIB) retainedGeometryBuffers.add(reusable.edgeIB)
+          }
         } catch (error) {
-          vb?.destroy(); ib?.destroy(); ub?.destroy()
+          if (ownsGeometryBuffers) { vb?.destroy(); ib?.destroy() }
+          ub?.destroy()
           throw error
         }
       }
     } catch (error) {
-      this.destroyMeshes(next)
+      this.destroyMeshes(next, retainedGeometryBuffers)
       throw error
     }
 
     const nextBounds = this.combineBounds(next.map(mesh => mesh.worldBounds))
-    const previous = this.meshes
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.meshes = next
@@ -845,7 +772,7 @@ export class WebGPURenderer {
     this.sourceHighlightId = null
     this.clearSourceHighlightOverlayBuffers()
     this.emitMeasurementChange()
-    this.destroyMeshes(previous)
+    this.destroyMeshes(previous, retainedGeometryBuffers)
     if (this.displayMode === 'edges') {
       for (const mesh of next) this.ensureEdgeBuffer(mesh)
     }
@@ -1032,15 +959,24 @@ export class WebGPURenderer {
     this.requestRender()
   }
 
+  setBackgroundColor(color: readonly [number, number, number]) {
+    if (!color.every(value => Number.isFinite(value) && value >= 0 && value <= 1)) {
+      throw new RangeError('Renderer background channels must be finite values in [0, 1]')
+    }
+    this.backgroundColor = [...color]
+    this.requestRender()
+  }
+
   clearSelection() {
     if (this.selected === null && !this.isolated) return
+    const sourceVisibilityChanged = this.isolated
     this.resetDepthCycle(false)
     this.selected = null
     this.selectedHit = null
     this.isolated = false
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
-    this.rebuildSourceHighlightOverlay()
+    if (sourceVisibilityChanged) this.rebuildSourceHighlightOverlay()
     this.emitSelectionChange()
     this.requestRender()
   }
@@ -1320,7 +1256,7 @@ export class WebGPURenderer {
       const mesh = this.meshes[index]
       const selected = this.usesObjectSelectionStyle(index) ? 1 : 0
       const hovered = this.usesObjectHoverStyle(index) && !selected ? 1 : 0
-      const alpha = this.displayMode === 'xray' ? Math.min(mesh.color[3], 0.24) : mesh.color[3]
+      const alpha = effectiveDisplayAlpha(mesh.color[3], this.displayMode)
       const edgeOpacity = selected || hovered ? 1 : this.displayMode === 'edges' ? 0.7 : 0
       mesh.alpha = alpha
       if (mesh.styleAlpha === alpha && mesh.styleSelected === selected
@@ -1341,12 +1277,16 @@ export class WebGPURenderer {
   private setSelection(index: number | null, hit: PickHit | null = null) {
     if (index !== null && (!this.meshes[index] || !this.meshes[index].visible)) index = null
     if (this.selected === index && this.selectedHit === hit && (!this.isolated || index !== null)) return
+    const previousSelected = this.selected
+    const wasIsolated = this.isolated
     this.selected = index
     this.selectedHit = index === null ? null : hit
     if (index === null) this.isolated = false
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
-    this.rebuildSourceHighlightOverlay()
+    if (wasIsolated && (this.selected !== previousSelected || !this.isolated)) {
+      this.rebuildSourceHighlightOverlay()
+    }
     this.emitSelectionChange()
     this.requestRender()
   }
@@ -1369,16 +1309,14 @@ export class WebGPURenderer {
   }
 
   setView(view: StandardView) {
+    this.setCameraPreset(view, this.projection)
+  }
+
+  /** Apply orientation and projection as one history-bearing camera action. */
+  setCameraPreset(view: StandardView, projection: ProjectionMode) {
     this.commitCameraChange(() => {
-      switch (view) {
-        case 'iso': this.yaw = ISO_YAW; this.pitch = ISO_PITCH; break
-        case 'front': this.yaw = 0; this.pitch = 0; break
-        case 'back': this.yaw = Math.PI; this.pitch = 0; break
-        case 'left': this.yaw = -Math.PI / 2; this.pitch = 0; break
-        case 'right': this.yaw = Math.PI / 2; this.pitch = 0; break
-        case 'top': this.yaw = 0; this.pitch = Math.PI / 2; break
-        case 'bottom': this.yaw = 0; this.pitch = -Math.PI / 2; break
-      }
+      this.projection = projection
+      ;[this.yaw, this.pitch] = standardViewOrientation(view)
     })
   }
 
@@ -1530,7 +1468,12 @@ export class WebGPURenderer {
     const pass = enc.beginRenderPass({
       colorAttachments: [{
         view: ctx.getCurrentTexture().createView(),
-        clearValue: { r: 0.09, g: 0.09, b: 0.11, a: 1 },
+        clearValue: {
+          r: this.backgroundColor[0],
+          g: this.backgroundColor[1],
+          b: this.backgroundColor[2],
+          a: 1,
+        },
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
@@ -1556,7 +1499,7 @@ export class WebGPURenderer {
     pass.setBindGroup(0, this.sceneBG)
     for (let index = 0; index < this.meshes.length; index++) {
       const g = this.meshes[index]
-      if (!this.isMeshVisible(index) || g.alpha < 0.99) continue
+      if (!this.isMeshVisible(index) || isTransparentAlpha(g.alpha)) continue
       pass.setBindGroup(1, g.bg)
       pass.setVertexBuffer(0, g.vb)
       pass.setIndexBuffer(g.ib, 'uint32')
@@ -1567,7 +1510,7 @@ export class WebGPURenderer {
     pass.setBindGroup(0, this.sceneBG)
     const transparentOrder = sortTransparentBackToFront(
       this.meshes.flatMap((mesh, index) => (
-        this.isMeshVisible(index) && mesh.alpha < 0.99
+        this.isMeshVisible(index) && isTransparentAlpha(mesh.alpha)
           ? [{ index, center: mesh.worldBounds.center }]
           : []
       )),
@@ -2035,18 +1978,21 @@ export class WebGPURenderer {
     const maxBytes = Math.min(MAX_OVERLAY_BUFFER_BYTES, dev.limits.maxBufferSize)
     if (data.byteLength > maxBytes) return
     if (!slot.buffer || slot.capacity < data.byteLength) {
-      slot.buffer?.destroy()
-      slot.buffer = null
-      slot.capacity = 0
       const capacity = Math.min(maxBytes, Math.max(4096, data.byteLength * 2))
+      let replacement: GPUBuffer | null = null
       try {
-        slot.buffer = dev.createBuffer({ size: capacity, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
-        slot.capacity = capacity
+        replacement = dev.createBuffer({ size: capacity, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+        dev.queue.writeBuffer(replacement, 0, data)
       } catch {
-        slot.buffer = null
-        slot.capacity = 0
+        replacement?.destroy()
         return
       }
+      const previous = slot.buffer
+      slot.buffer = replacement
+      slot.capacity = capacity
+      slot.count = values.length / 7
+      previous?.destroy()
+      return
     }
     try {
       dev.queue.writeBuffer(slot.buffer, 0, data)
@@ -2262,20 +2208,12 @@ export class WebGPURenderer {
     // A camera move between wheel events starts a new chronological segment;
     // it must not be swallowed by the previous wheel burst's coalescing window.
     if (dx !== 0 || dy !== 0) this.lastWheelHistoryAt = -Infinity
-    if (this.pan) {
-      const scale = 2 * this.dist * Math.tan(FOV_Y / 2) / Math.max(1, this.canvas?.clientHeight || 1)
-      const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw)
-      const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch)
-      const rx = cy, ry = sy
-      const ux = -sp*sy, uy = sp*cy, uz = cp
-      this.tx += (-dx*rx + dy*ux) * scale
-      this.ty += (-dx*ry + dy*uy) * scale
-      this.tz += dy*uz * scale
-    } else {
-      this.yaw -= dx * 0.005
-      if (this.yaw > Math.PI || this.yaw < -Math.PI) this.yaw = ((this.yaw + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI
-      this.pitch = Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, this.pitch + dy * 0.005))
-    }
+    const camera = { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
+    const next = this.pan
+      ? computePanUpdate(camera, dx, dy, this.canvas?.clientHeight || 1)
+      : computeOrbitUpdate(camera, dx, dy)
+    this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
+    this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
     this.requestRender()
   }
   private onPointerEnd = (e: PointerEvent) => {
@@ -2329,8 +2267,7 @@ export class WebGPURenderer {
     const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
       : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? Math.max(1, this.canvas?.clientHeight || 1)
       : 1
-    const delta = Math.max(-1000, Math.min(1000, e.deltaY * unit))
-    const nextDistance = this.clampDistance(this.dist * Math.exp(delta * 0.001))
+    const nextDistance = computeWheelDistance(this.dist, e.deltaY * unit)
     if (nextDistance === this.dist) return
     this.flushActiveGestureCameraSnapshot()
     const now = typeof performance === 'undefined' ? Date.now() : performance.now()
@@ -2373,10 +2310,16 @@ export class WebGPURenderer {
     this.resizeObserver.observe(this.canvas)
   }
 
-  private destroyMeshes(meshes: GMesh[]) {
+  private destroyMeshes(meshes: GMesh[], preserved: ReadonlySet<GPUBuffer> = new Set()) {
+    const destroyed = new Set<GPUBuffer>()
+    const destroy = (buffer: GPUBuffer | null) => {
+      if (!buffer || preserved.has(buffer) || destroyed.has(buffer)) return
+      destroyed.add(buffer)
+      buffer.destroy()
+    }
     for (const g of meshes) {
-      g.edgeIB?.destroy()
-      g.vb.destroy(); g.ib.destroy(); g.ub.destroy()
+      destroy(g.edgeIB)
+      destroy(g.vb); destroy(g.ib); destroy(g.ub)
     }
   }
 

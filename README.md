@@ -30,8 +30,14 @@ instead of a misleading preview.
 - Lightweight OpenSCAD Customizer controls for top-level literal variables,
   including `// [min:step:max]` sliders and choice lists.
 - Binary STL and OBJ export with object transforms baked into the result.
-- Open/save/drag-and-drop `.scad` files, shareable source links, versioned local
-  workspace persistence, RU/EN UI, light/dark themes, and a resizable workspace.
+- Optional local MCP server with typed OpenSCAD tools/resources and a
+  persistent DuckDB catalog for models, revisions, builds, and bounded exports.
+- Open/save/drag-and-drop `.scad` files, shareable source links, and a validated
+  IndexedDB workspace with ordered autosaves plus a synchronous crash-recovery
+  journal per live tab, each carrying its exact causal IDB base. UI preferences
+  remain in `localStorage`; cross-tab conflicts require an explicit IndexedDB/local-draft
+  choice instead of last-writer-wins. RU/EN UI, light/dark themes, and a
+  resizable workspace are included.
 - Strict diagnostics and tests for booleans, transforms, modules, loops,
   extrusion, projection math, and all bundled examples.
 
@@ -56,6 +62,114 @@ Production preview:
 npm run build
 npm run preview
 ```
+
+## MCP and DuckDB
+
+The optional Node-side MCP server exposes the same strict OpenSCAD compiler
+without adding a backend to the browser app. It uses stdio and stores its
+catalog in DuckDB:
+
+```bash
+npm run --silent mcp
+# or choose the database explicitly
+npm run --silent mcp -- --db /absolute/path/.open-scad-viewer.duckdb
+# ephemeral test session
+npm run --silent mcp -- --memory
+```
+
+`--silent` keeps npm output away from MCP's stdout JSON-RPC channel. The
+database defaults to `.open-scad-viewer.duckdb` in the server working directory;
+`OPENSCAD_VIEWER_DUCKDB` provides another default path.
+
+Example MCP client configuration (replace the repository path):
+
+```json
+{
+  "mcpServers": {
+    "open-scad-viewer": {
+      "command": "npm",
+      "args": [
+        "--prefix",
+        "/absolute/path/to/open-scad-viewer",
+        "run",
+        "--silent",
+        "mcp",
+        "--",
+        "--db",
+        "/absolute/path/to/open-scad-viewer/.open-scad-viewer.duckdb"
+      ]
+    }
+  }
+}
+```
+
+Available tools:
+
+- `openscad_save_model`, `openscad_get_model`, `openscad_list_models`, and
+  `openscad_list_model_revisions` —
+  model catalog with source-sensitive revisions and optimistic revision checks.
+  A revision increases only when source changes; name-only updates keep the same
+  revision, and `expected_revision` guards that source revision;
+- `openscad_check` — read-only preview/full validation that does not add a build
+  record; saved inputs can be pinned to an immutable `revision`;
+- `openscad_compare` — read-only metric, dimension, and topology deltas between
+  two inline sources or saved revisions (not an exact geometric boolean diff);
+- `openscad_analyze` — full/preview compilation with metrics, bounds, topology,
+  source provenance, and Customizer metadata; results are recorded as builds;
+- `openscad_customize` — validated parameter replacement without an implicit
+  database write;
+- `openscad_customize_model` — one-call Customizer update and model save guarded
+  by `expected_revision`;
+- `openscad_export` — bounded full-quality STL/OBJ export returned as an MCP
+  resource link and persisted in DuckDB;
+- `openscad_build_history` — recent DuckDB-backed build results;
+- `openscad_catalog_stats` — model/revision/build/artifact counts, stored bytes,
+  build outcomes, and current retention limits without exposing SQL.
+
+Saved sources (including immutable revisions), build summaries, artifacts, and
+bundled examples are also available under `openscad://models/...`, `openscad://builds/...`,
+`openscad://artifacts/...`, and `openscad://examples/...` resources. Arbitrary
+SQL is deliberately not exposed. DuckDB external access and extension
+autoload/install are disabled in the server process.
+
+`openscad://capabilities` describes the supported OpenSCAD subset, protocol
+versions, active wire/work limits, and the deliberate IndexedDB/DuckDB boundary.
+The server also advertises `openscad_review_model` and
+`openscad_customize_workflow` prompts plus concise usage instructions. It serves
+both MCP `2026-07-28` (`server/discover`) and legacy clients; modern discovery,
+tools, prompts, and immutable resources carry conservative cache hints.
+The MCP server SDK is pinned exactly to `2.0.0`: request lifecycle accounting
+uses its current outer-dispatch registry seam, including handlers installed by
+the modern stdio host after server creation, and exact wire tests guard that
+integration before any SDK upgrade.
+Expected failures use stable machine-readable codes such as
+`model_not_found`, `revision_conflict`, `source_syntax_error`,
+`artifact_too_large`, `quota_exceeded`, and `server_busy`. Unexpected failures
+are redacted and include a correlation ID.
+
+The catalog applies logical retention: at most 500 models, 256 source revisions
+per model / 5,000 overall, and 64 MiB of saved revision source; the latest 500
+unreferenced builds; and at most 100 artifacts / 64 MiB of artifact data. One
+artifact is capped at 6 MiB (4 MiB by default) so
+its base64 MCP resource remains within the stdio frame budget. Old artifacts
+and unreferenced builds are pruned transactionally; DuckDB may retain allocated
+pages for reuse, so long-running installations should still monitor the file.
+On POSIX systems the database and WAL are hardened to owner-only permissions.
+Use `--memory` for fully disposable sessions.
+
+The stdio host admits at most eight concurrent MCP requests, serializes writes,
+keeps cancelled work admitted until its actual handler settles, permits at most
+eight modern subscriptions, and keeps separate bounded queues for normal output
+and small overload replies. String JSON-RPC request IDs are capped at 128
+characters so overload responses cannot amplify an attacker-sized ID.
+Inbound notifications are coalesced to the single initialization event and one
+cancellation per active request or subscription; unrelated notifications and
+client-originated responses are dropped before they can accumulate in the SDK.
+Within it, at most eight headless geometry requests may be active or queued;
+additional calls fail fast with retry guidance. These limits bound request and
+response accumulation, but a single synchronous Manifold kernel call still
+cannot be preempted. A worker-thread watchdog remains the next hard-isolation
+step for hostile workloads.
 
 ## Controls
 
@@ -107,7 +221,13 @@ count, `$fn`, and final triangle count all have limits.
 - `src/services/buildCoordinator.ts`: protocol-v3 jobs, preview/full ordering,
   stale-result rejection, cancellation, and Worker replacement.
 - `src/services/workspaceDocument.ts`: validated, migratable single-document
-  persistence with monotonic revisions.
+  snapshot contract with separate monotonic geometry and persistence revisions.
+- `src/services/workspaceIndexedDb.ts`: browser-only active-workspace repository
+  with runtime validation, compare-and-swap commits, and bounded open failure.
+- `src/services/workspacePersistence.ts`: pre-mount hydration, legacy migration,
+  ordered autosaves, IndexedDB fallback, CAS conflict detection, and atomic
+  per-writer synchronous recovery envelopes.
+- `src/services/workspaceShare.ts`: bounded URL-safe source-link codec.
 - `src/workers/geometry.worker.ts`: asynchronous compilation and transferable
   protocol-v3 geometry results, including the required preview-reduction flag.
 - `src/services/webgpuRenderer.ts`: WebGPU resource lifecycle, lighting,
@@ -127,6 +247,9 @@ count, `$fn`, and final triangle count all have limits.
   metadata and scope-aware keyboard routing.
 - `src/components/`: command palette, ViewCube, Scene Outliner, Inspect, and
   Customizer panels.
+- `src/mcp/`: optional stdio MCP host, headless analysis/export facade, and the
+  Node-only DuckDB repository. It is excluded from the browser TypeScript/Vite
+  graph and checked separately by `tsconfig.mcp.json`.
 - `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
   viewer controls.
 - `tests/`: mathematical and geometry golden tests plus protocol, contract-
@@ -149,14 +272,12 @@ inspection, tolerance analysis, reproducible exports, assembly interference, aut
 failure reduction, and parameter galleries. A subsequent
 [ten-agent adversarial review](docs/research/ten-agent-idea-review.md) separates
 the next safe slices from ideas that need stronger mathematical or architectural
-prerequisites.
+prerequisites. The MCP sidecar has its own
+[ten-agent protocol/product/security synthesis](docs/research/mcp-ten-agent-review.md).
 
 ## Docs
 
 - [architecture.md](architecture.md) — the current module map, worker/kernel design, and active technical debt.
 - [recommendation.md](recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
 - [docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md) — the 7-role panel review of this rewrite: what was fixed immediately, what remains, and the convergence plan with the feature branch (`claude/top-issues-architecture-sync-00p2q9`).
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+- [docs/research/mcp-ten-agent-review.md](docs/research/mcp-ten-agent-review.md) — ten MCP reviews, implemented decisions, rejected scope, and the ranked next stage.

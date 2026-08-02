@@ -35,6 +35,31 @@ export function storageSet(key: string, value: string): boolean {
   }
 }
 
+/** Remove a key; reports failures through the same storage error channel. */
+export function storageRemove(key: string): boolean {
+  try {
+    localStorage.removeItem(key)
+    return true
+  } catch (error) {
+    onWriteFailure?.(key, error)
+    return false
+  }
+}
+
+/** Enumerate this origin's keys without exposing a throwing Storage object. */
+export function storageKeys(prefix = ''): string[] {
+  try {
+    const keys: string[] = []
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index)
+      if (key !== null && key.startsWith(prefix)) keys.push(key)
+    }
+    return keys.sort()
+  } catch {
+    return []
+  }
+}
+
 /** JSON read with fallback and optional shape validation. */
 export function storageGetJSON<T>(key: string, fallback: T, validate?: (value: unknown) => boolean): T {
   const raw = storageGet(key)

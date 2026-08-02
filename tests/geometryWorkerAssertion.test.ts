@@ -5,6 +5,7 @@ import {
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
 } from '../src/services/geometryWorkerProtocol'
+import { sha256Hex } from '../src/core/sha256'
 
 class IntegrationWorkerScope {
   readonly events: GeometryWorkerEvent[] = []
@@ -47,6 +48,7 @@ describe('geometry Worker assertion integration', () => {
       documentRevision: 13,
       jobId: 21,
       source,
+      sourceSha256: sha256Hex(source),
       quality: 'full',
     }
     scope.dispatchMessage(request)

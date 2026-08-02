@@ -7,20 +7,17 @@
  * union/difference/intersection/hull, linear/rotate extrusion, projection and
  * 2D offset. Unsupported syntax fails loudly instead of rendering a wrong model.
  */
-import Module, {
-  type CrossSection as CrossSectionGeometry,
-  type Manifold as ManifoldGeometry,
-  type ManifoldToplevel,
-  type Mat4 as ManifoldMatrix,
-  type Polygons,
-  type Vec2,
-  type Vec3,
+import type {
+  CrossSection as CrossSectionGeometry,
+  Manifold as ManifoldGeometry,
+  ManifoldToplevel,
+  Mat4 as ManifoldMatrix,
+  Polygons,
+  Vec2,
+  Vec3,
 } from 'manifold-3d/manifold'
-import {
-  cleanup as cleanupManifold,
-  garbageCollectManifold,
-} from 'manifold-3d/lib/garbage-collector.js'
-import type { GeometryQuality } from '../core/build'
+import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
+import { geometryAssetId } from '../core/scene'
 import type {
   MeshData,
   MeshProvenanceRun,
@@ -31,6 +28,19 @@ import type {
 import { identity, type Mat4 } from './math3d'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
+import { AbortedError, OpenSCADParseError } from './openscadErrors'
+import {
+  TT,
+  compileOpenSCAD,
+  type CallNode,
+  type Expr,
+  type ModuleNode,
+  type Statement,
+  type Value,
+} from './openscadCompiler'
+import { defaultGeometryKernel } from './manifoldGeometryKernel'
+
+export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
 // Compatibility for exporters that consume the parser's public mesh type.
 export type { MeshData } from '../core/mesh'
@@ -50,29 +60,14 @@ export interface ParseOptions {
    * "alive but heavy" from "wedged" instead of killing legitimate long builds.
    */
   onYield?: () => void
-}
-export interface ParseResult {
-  meshes: MeshData[]
-  warnings: string[]
-  volume: number
-  surfaceArea: number
-  quality: GeometryQuality
-  /**
-   * True iff quality-based reduction actually altered any evaluated value
-   * (e.g. a $fn clamp that only applies to preview quality). When false, a
-   * preview-quality result is byte-identical to what a full build would
-   * produce, so callers may treat it as full and skip the full rebuild.
-   */
-  reduced: boolean
+  /** Injectable monotonic clock for deterministic phase-timing tests. */
+  now?: () => number
+  /** Injectable macrotask yield used by cooperative-cancellation tests. */
+  yieldControl?: () => Promise<void>
 }
 
-/** Thrown when {@link ParseOptions.shouldAbort} cancels an evaluation. */
-export class AbortedError extends Error {
-  constructor() {
-    super('Evaluation aborted: superseded by a newer request')
-    this.name = 'AbortedError'
-  }
-}
+/** @deprecated Prefer the kernel-neutral GeometryEvaluationResult contract. */
+export type ParseResult = GeometryEvaluationResult
 
 const MAX_SOURCE_LENGTH = 250_000
 const MAX_AST_NODES = 25_000
@@ -93,454 +88,6 @@ const MAX_VALUE_ELEMENTS = 1_000_000
 /** Cap on linear_extrude slices — passed straight into the Manifold kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 const MAX_EXTRUDE_SLICES = 512
-
-type Value = number | string | boolean | undefined | Value[]
-
-enum TT {
-  Num, Str, Ident,
-  LParen, RParen, LBrace, RBrace, LBracket, RBracket,
-  Comma, Semi, Eq, Plus, Minus, Star, Slash, Percent, Caret,
-  Hash, Dollar, Dot, Colon, Question,
-  Lt, Gt, LtEq, GtEq, EqEq, NotEq, Not, And, Or,
-  Eof,
-}
-
-interface Token { t: TT; v: string; p: number; end: number }
-
-export class OpenSCADParseError extends Error {
-  readonly line: number
-  readonly column: number
-
-  constructor(source: string, position: number, message: string) {
-    const safePosition = Math.max(0, Math.min(position, source.length))
-    const before = source.slice(0, safePosition)
-    const line = before.split('\n').length
-    const lineStart = before.lastIndexOf('\n') + 1
-    const lineEnd = source.indexOf('\n', safePosition)
-    const excerpt = source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd)
-    const column = safePosition - lineStart + 1
-    super(`Line ${line}, column ${column}: ${message}\n${excerpt}\n${' '.repeat(Math.max(0, column - 1))}^`)
-    this.name = 'OpenSCADParseError'
-    this.line = line
-    this.column = column
-  }
-}
-
-function tokenize(source: string): Token[] {
-  const out: Token[] = []
-  let i = 0
-  while (i < source.length) {
-    const ch = source[i]
-    if (ch <= ' ') { i++; continue }
-    if (ch === '/' && source[i + 1] === '/') {
-      while (i < source.length && source[i] !== '\n') i++
-      continue
-    }
-    if (ch === '/' && source[i + 1] === '*') {
-      const start = i
-      i += 2
-      while (i < source.length - 1 && !(source[i] === '*' && source[i + 1] === '/')) i++
-      if (i >= source.length - 1) throw new OpenSCADParseError(source, start, 'Unterminated block comment')
-      i += 2
-      continue
-    }
-
-    const p = i
-    if (ch === '"') {
-      i++
-      let value = ''
-      let closed = false
-      while (i < source.length) {
-        if (source[i] === '"') { i++; closed = true; break }
-        if (source[i] === '\\') {
-          i++
-          const escaped = source[i]
-          if (escaped == null) break
-          value += escaped === 'n' ? '\n' : escaped === 't' ? '\t' : escaped
-          i++
-        } else {
-          value += source[i++]
-        }
-      }
-      if (!closed) throw new OpenSCADParseError(source, p, 'Unterminated string')
-      out.push({ t: TT.Str, v: value, p, end: i })
-      continue
-    }
-
-    if (isDigit(ch) || (ch === '.' && isDigit(source[i + 1]))) {
-      let value = ''
-      while (isDigit(source[i])) value += source[i++]
-      if (source[i] === '.') {
-        value += source[i++]
-        while (isDigit(source[i])) value += source[i++]
-      }
-      if (source[i] === 'e' || source[i] === 'E') {
-        value += source[i++]
-        if (source[i] === '+' || source[i] === '-') value += source[i++]
-        if (!isDigit(source[i])) throw new OpenSCADParseError(source, p, 'Invalid exponent')
-        while (isDigit(source[i])) value += source[i++]
-      }
-      out.push({ t: TT.Num, v: value, p, end: i })
-      continue
-    }
-
-    if (isIdentStart(ch)) {
-      let value = ''
-      while (isIdentPart(source[i])) value += source[i++]
-      out.push({ t: TT.Ident, v: value, p, end: i })
-      continue
-    }
-
-    const two = source.slice(i, i + 2)
-    const doubles: Record<string, TT> = {
-      '<=': TT.LtEq, '>=': TT.GtEq, '==': TT.EqEq, '!=': TT.NotEq,
-      '&&': TT.And, '||': TT.Or,
-    }
-    if (doubles[two] !== undefined) {
-      out.push({ t: doubles[two], v: two, p, end: i + 2 })
-      i += 2
-      continue
-    }
-
-    const singles: Record<string, TT> = {
-      '(': TT.LParen, ')': TT.RParen, '{': TT.LBrace, '}': TT.RBrace,
-      '[': TT.LBracket, ']': TT.RBracket, ',': TT.Comma, ';': TT.Semi,
-      '=': TT.Eq, '+': TT.Plus, '-': TT.Minus, '*': TT.Star, '/': TT.Slash,
-      '%': TT.Percent, '^': TT.Caret, '#': TT.Hash, '$': TT.Dollar,
-      '.': TT.Dot, ':': TT.Colon, '?': TT.Question, '<': TT.Lt, '>': TT.Gt,
-      '!': TT.Not,
-    }
-    const tokenType = singles[ch]
-    if (tokenType === undefined) throw new OpenSCADParseError(source, p, `Unexpected character ${JSON.stringify(ch)}`)
-    out.push({ t: tokenType, v: ch, p, end: i + 1 })
-    i++
-  }
-  out.push({ t: TT.Eof, v: '', p: source.length, end: source.length })
-  return out
-}
-
-function isDigit(ch: string | undefined) { return ch !== undefined && ch >= '0' && ch <= '9' }
-function isIdentStart(ch: string | undefined) {
-  return ch !== undefined && ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$')
-}
-function isIdentPart(ch: string | undefined) { return isIdentStart(ch) || isDigit(ch) }
-
-type Expr =
-  | { kind: 'literal'; value: Value; p: number }
-  | { kind: 'identifier'; name: string; p: number }
-  | { kind: 'vector'; items: Expr[]; p: number }
-  | { kind: 'range'; start: Expr; step?: Expr; end: Expr; p: number }
-  | { kind: 'unary'; op: TT; value: Expr; p: number }
-  | { kind: 'binary'; op: TT; left: Expr; right: Expr; p: number }
-  | { kind: 'ternary'; test: Expr; yes: Expr; no: Expr; p: number }
-  | { kind: 'call'; name: string; args: Expr[]; p: number }
-  | { kind: 'index'; value: Expr; index: Expr; p: number }
-
-interface CallNode {
-  type: 'call'
-  name: string
-  args: Record<string, Expr>
-  argKinds: Record<string, 'named' | 'positional'>
-  argSpans: Record<string, { start: number; end: number }>
-  children: Statement[]
-  alternative: Statement[]
-  p: number
-  end: number
-  operationId?: SourceOperationId
-}
-
-interface AssignNode { type: 'assign'; name: string; value: Expr; p: number; end: number }
-interface ModuleParam { name: string; defaultValue?: Expr }
-interface ModuleNode {
-  type: 'module'
-  name: string
-  params: ModuleParam[]
-  children: Statement[]
-  p: number
-  end: number
-}
-type Statement = CallNode | AssignNode | ModuleNode
-
-class Parser {
-  private pos = 0
-  private nodes = 0
-  private expressionDepth = 0
-  private statementDepth = 0
-  private lastTokenEnd = 0
-
-  constructor(private readonly tokens: Token[], private readonly source: string) {}
-
-  parseAll(): Statement[] {
-    const result: Statement[] = []
-    while (this.peek().t !== TT.Eof) {
-      const statement = this.statement()
-      if (statement) result.push(statement)
-    }
-    return result
-  }
-
-  private peek(offset = 0) { return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1] }
-  private advance() {
-    const token = this.tokens[this.pos++]
-    this.lastTokenEnd = token.end
-    return token
-  }
-  private match(type: TT) { if (this.peek().t === type) { this.advance(); return true } return false }
-  private expect(type: TT, message?: string) {
-    const token = this.advance()
-    if (token.t !== type) this.fail(token, message ?? `Expected ${TT[type]}, got ${token.v || TT[token.t]}`)
-    return token
-  }
-  private fail(token: Token, message: string): never { throw new OpenSCADParseError(this.source, token.p, message) }
-  private countNode() {
-    this.nodes++
-    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString()} syntax node limit`)
-  }
-  private expressionNode<T extends Expr>(node: T): T {
-    this.countNode()
-    return node
-  }
-  private descendExpression<T>(position: number, parse: () => T): T {
-    if (this.expressionDepth >= MAX_EXPRESSION_DEPTH) {
-      throw new OpenSCADParseError(this.source, position, `Expression exceeds ${MAX_EXPRESSION_DEPTH} nested levels`)
-    }
-    this.expressionDepth++
-    try { return parse() } finally { this.expressionDepth-- }
-  }
-
-  private statement(): Statement | null {
-    if (this.statementDepth >= MAX_EVAL_DEPTH) {
-      this.fail(this.peek(), `Model exceeds ${MAX_EVAL_DEPTH} nested statements`)
-    }
-    this.statementDepth++
-    try {
-      return this.parseStatement()
-    } finally {
-      this.statementDepth--
-    }
-  }
-
-  private parseStatement(): Statement | null {
-    if (this.match(TT.Semi)) return null
-    let disabled = false
-    while ([TT.Hash, TT.Percent, TT.Star, TT.Not].includes(this.peek().t)) {
-      if (this.advance().t === TT.Star) disabled = true
-    }
-    if (this.peek().t !== TT.Ident) this.fail(this.peek(), 'Expected a variable, module, or geometry call')
-
-    let node: Statement
-    if (this.peek().v === 'module') node = this.moduleDefinition()
-    else if (this.peek().v === 'function' || this.peek().v === 'include' || this.peek().v === 'use') {
-      this.fail(this.peek(), `${this.peek().v} is not supported by the permissive browser subset`)
-    } else if (this.peek(1).t === TT.Eq) node = this.assignment()
-    else node = this.call()
-    this.countNode()
-    return disabled ? null : node
-  }
-
-  private assignment(): AssignNode {
-    const name = this.expect(TT.Ident)
-    this.expect(TT.Eq)
-    const value = this.expression()
-    const terminator = this.expect(TT.Semi, 'Expected ; after assignment')
-    return { type: 'assign', name: name.v, value, p: name.p, end: terminator.end }
-  }
-
-  private moduleDefinition(): ModuleNode {
-    const keyword = this.advance()
-    const name = this.expect(TT.Ident, 'Expected module name')
-    this.expect(TT.LParen, 'Expected ( after module name')
-    const params: ModuleParam[] = []
-    while (this.peek().t !== TT.RParen) {
-      const param = this.expect(TT.Ident, 'Expected parameter name')
-      const defaultValue = this.match(TT.Eq) ? this.expression() : undefined
-      params.push({ name: param.v, defaultValue })
-      if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
-    }
-    this.advance()
-    const children = this.body(true)
-    return { type: 'module', name: name.v, params, children, p: keyword.p, end: this.lastTokenEnd }
-  }
-
-  private call(): CallNode {
-    const name = this.expect(TT.Ident)
-    const args: Record<string, Expr> = {}
-    const argKinds: CallNode['argKinds'] = {}
-    const argSpans: CallNode['argSpans'] = {}
-    if (this.match(TT.LParen)) {
-      let positional = 0
-      while (this.peek().t !== TT.RParen) {
-        let key: string
-        let kind: CallNode['argKinds'][string]
-        if (this.peek().t === TT.Ident && this.peek(1).t === TT.Eq) {
-          key = this.advance().v
-          this.advance()
-          kind = 'named'
-        } else {
-          key = `_${positional++}`
-          kind = 'positional'
-        }
-        if (args[key]) this.fail(this.peek(), `Duplicate argument ${key}`)
-        const start = this.peek().p
-        args[key] = this.expression()
-        argKinds[key] = kind
-        argSpans[key] = { start, end: this.lastTokenEnd }
-        if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
-      }
-      this.advance()
-    }
-
-    const children = this.body(false)
-    let alternative: Statement[] = []
-    if (name.v === 'if' && this.peek().t === TT.Ident && this.peek().v === 'else') {
-      this.advance()
-      alternative = this.body(true)
-    }
-    return { type: 'call', name: name.v, args, argKinds, argSpans, children, alternative, p: name.p, end: this.lastTokenEnd }
-  }
-
-  private body(required: boolean): Statement[] {
-    if (this.match(TT.LBrace)) {
-      const children: Statement[] = []
-      while (this.peek().t !== TT.RBrace && this.peek().t !== TT.Eof) {
-        const child = this.statement()
-        if (child) children.push(child)
-      }
-      this.expect(TT.RBrace, 'Expected }')
-      return children
-    }
-    if (this.match(TT.Semi)) return []
-    if (!required && [TT.RBrace, TT.Eof].includes(this.peek().t)) return []
-    const child = this.statement()
-    return child ? [child] : []
-  }
-
-  private expression(): Expr { return this.descendExpression(this.peek().p, () => this.ternary()) }
-
-  private ternary(): Expr {
-    const test = this.binaryOr()
-    if (!this.match(TT.Question)) return test
-    const yes = this.expression()
-    this.expect(TT.Colon, 'Expected : in conditional expression')
-    return this.expressionNode({ kind: 'ternary', test, yes, no: this.expression(), p: test.p })
-  }
-
-  private binaryOr(): Expr { return this.binary(() => this.binaryAnd(), [TT.Or]) }
-  private binaryAnd(): Expr { return this.binary(() => this.comparison(), [TT.And]) }
-  private comparison(): Expr { return this.binary(() => this.additive(), [TT.Lt, TT.Gt, TT.LtEq, TT.GtEq, TT.EqEq, TT.NotEq]) }
-  private additive(): Expr { return this.binary(() => this.multiplicative(), [TT.Plus, TT.Minus]) }
-  private multiplicative(): Expr { return this.binary(() => this.power(), [TT.Star, TT.Slash, TT.Percent]) }
-
-  private power(): Expr {
-    const left = this.unary()
-    if (!this.match(TT.Caret)) return left
-    return this.expressionNode({
-      kind: 'binary', op: TT.Caret, left,
-      right: this.descendExpression(this.peek().p, () => this.power()),
-      p: left.p,
-    })
-  }
-
-  private binary(next: () => Expr, operators: TT[]): Expr {
-    let left = next()
-    while (operators.includes(this.peek().t)) {
-      const op = this.advance()
-      left = this.expressionNode({ kind: 'binary', op: op.t, left, right: next(), p: op.p })
-    }
-    return left
-  }
-
-  private unary(): Expr {
-    if ([TT.Plus, TT.Minus, TT.Not].includes(this.peek().t)) {
-      const op = this.advance()
-      return this.expressionNode({
-        kind: 'unary', op: op.t,
-        value: this.descendExpression(op.p, () => this.unary()),
-        p: op.p,
-      })
-    }
-    return this.postfix()
-  }
-
-  private postfix(): Expr {
-    let value = this.primary()
-    while (this.match(TT.LBracket)) {
-      const p = value.p
-      const index = this.expression()
-      this.expect(TT.RBracket, 'Expected ] after index')
-      value = this.expressionNode({ kind: 'index', value, index, p })
-    }
-    return value
-  }
-
-  private primary(): Expr {
-    const token = this.peek()
-    if (this.match(TT.Num)) return this.expressionNode({ kind: 'literal', value: Number(token.v), p: token.p })
-    if (this.match(TT.Str)) return this.expressionNode({ kind: 'literal', value: token.v, p: token.p })
-    if (this.match(TT.LParen)) {
-      const value = this.expression()
-      this.expect(TT.RParen, 'Expected )')
-      return value
-    }
-    if (this.match(TT.LBracket)) return this.vectorOrRange(token.p)
-    if (this.match(TT.Ident)) {
-      if (token.v === 'true' || token.v === 'false') return this.expressionNode({ kind: 'literal', value: token.v === 'true', p: token.p })
-      if (token.v === 'undef') return this.expressionNode({ kind: 'literal', value: undefined, p: token.p })
-      if (!this.match(TT.LParen)) return this.expressionNode({ kind: 'identifier', name: token.v, p: token.p })
-      const args: Expr[] = []
-      while (this.peek().t !== TT.RParen) {
-        args.push(this.expression())
-        if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
-      }
-      this.advance()
-      return this.expressionNode({ kind: 'call', name: token.v, args, p: token.p })
-    }
-    this.fail(token, `Expected expression, got ${token.v || TT[token.t]}`)
-  }
-
-  private vectorOrRange(p: number): Expr {
-    if (this.match(TT.RBracket)) return this.expressionNode({ kind: 'vector', items: [], p })
-    const first = this.expression()
-    if (this.match(TT.Colon)) {
-      const second = this.expression()
-      let step: Expr | undefined
-      let end = second
-      if (this.match(TT.Colon)) { step = second; end = this.expression() }
-      this.expect(TT.RBracket, 'Expected ] after range')
-      return this.expressionNode({ kind: 'range', start: first, step, end, p })
-    }
-    const items = [first]
-    while (this.match(TT.Comma)) {
-      if (this.peek().t === TT.RBracket) break
-      items.push(this.expression())
-    }
-    this.expect(TT.RBracket, 'Expected ]')
-    return this.expressionNode({ kind: 'vector', items, p })
-  }
-}
-
-/**
- * Give call sites structural identities after parsing. Occurrences are counted
- * per operation name, so whitespace, comments, unrelated siblings and quality
- * changes do not move an existing identity. Identical same-name siblings remain
- * positional because the language has no persistent user-authored node IDs.
- */
-function assignOperationIds(nodes: Statement[], parent: readonly string[] = ['root']) {
-  const occurrences = new Map<string, number>()
-  for (const node of nodes) {
-    const key = `${node.type}:${node.name}`
-    const occurrence = occurrences.get(key) ?? 0
-    occurrences.set(key, occurrence + 1)
-    const path = [...parent, `${key}#${occurrence}`]
-    if (node.type === 'call') {
-      node.operationId = `op:${path.map(encodeURIComponent).join('/')}`
-      assignOperationIds(node.children, [...path, 'children'])
-      assignOperationIds(node.alternative, [...path, 'alternative'])
-    } else if (node.type === 'module') {
-      assignOperationIds(node.children, [...path, 'body'])
-    }
-  }
-}
 
 interface EvalContext {
   wasm: ManifoldToplevel
@@ -856,7 +403,7 @@ function compactDiagnosticText(value: string, limit = 240): string {
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`
 }
 
-function collectModules(nodes: Statement[], modules: Map<string, ModuleNode>) {
+function collectModules(nodes: readonly Statement[], modules: Map<string, ModuleNode>) {
   for (const node of nodes) {
     if (node.type === 'module') modules.set(node.name, node)
     if (node.type === 'call') {
@@ -866,7 +413,7 @@ function collectModules(nodes: Statement[], modules: Map<string, ModuleNode>) {
   }
 }
 
-function evalNodes(nodes: Statement[], parent: EvalContext, scoped = true): Shape[] {
+function evalNodes(nodes: readonly Statement[], parent: EvalContext, scoped = true): Shape[] {
   const ctx: EvalContext = { ...parent, env: scoped ? new Map(parent.env) : parent.env }
   const output: Shape[] = []
   for (const node of nodes) {
@@ -884,6 +431,35 @@ const YIELD_EVERY_STATEMENTS = 25
 /** …or once this much wall-clock time has elapsed since the last yield. */
 const YIELD_EVERY_MS = 50
 
+class CooperativeCheckpoint {
+  private lastYield: number
+  private readonly enabled: boolean
+
+  constructor(
+    private readonly shouldAbort?: () => boolean,
+    private readonly onYield?: () => void,
+    private readonly now: () => number = () => performance.now(),
+    private readonly yieldControl: () => Promise<void> = () => new Promise(resolve => setTimeout(resolve, 0)),
+  ) {
+    this.lastYield = now()
+    this.enabled = shouldAbort !== undefined || onYield !== undefined
+  }
+
+  poll(): void {
+    if (this.shouldAbort?.()) throw new AbortedError()
+  }
+
+  async yieldIfDue(force = false): Promise<void> {
+    if (!this.enabled) return
+    const current = this.now()
+    if (!force && current - this.lastYield < YIELD_EVERY_MS) return
+    await this.yieldControl()
+    this.poll()
+    this.onYield?.()
+    this.lastYield = this.now()
+  }
+}
+
 /**
  * Top-level statement loop with cooperative cancellation. Mirrors
  * evalNodes(nodes, ctx, false) — shared env, shared budget, cumulative shape
@@ -898,23 +474,17 @@ const YIELD_EVERY_MS = 50
  * BuildCoordinator's worker-replacement grace timer remains the hard boundary
  * for such statements.
  */
-async function evalTopLevel(nodes: Statement[], ctx: EvalContext, shouldAbort?: () => boolean, onYield?: () => void): Promise<Shape[]> {
-  if (shouldAbort?.()) throw new AbortedError()
+async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, control: CooperativeCheckpoint): Promise<Shape[]> {
+  control.poll()
   const output: Shape[] = []
   let statementsSinceYield = 0
-  let lastYield = Date.now()
   for (const node of nodes) {
     // Check the clock only every N statements, and sleep only when the time
     // budget is actually spent — an unconditional every-N yield would pay the
     // ~4ms clamped setTimeout tax hundreds of times on statement-heavy models.
     if (statementsSinceYield >= YIELD_EVERY_STATEMENTS) {
       statementsSinceYield = 0
-      if (Date.now() - lastYield >= YIELD_EVERY_MS) {
-        await new Promise(resolve => setTimeout(resolve, 0))
-        if (shouldAbort?.()) throw new AbortedError()
-        onYield?.()
-        lastYield = Date.now()
-      }
+      await control.yieldIfDue()
     }
     statementsSinceYield++
     if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
@@ -1380,7 +950,6 @@ function parseColor(value: Value, ctx: EvalContext, p: number): RGBA {
 }
 function clamp01(value: number) { return Math.max(0, Math.min(1, value)) }
 
-let wasmPromise: Promise<ManifoldToplevel> | undefined
 /**
  * Lazily load the Manifold WASM module, cached per JS realm. Exported so a
  * hosting worker can eagerly warm it at startup instead of paying the
@@ -1389,25 +958,18 @@ let wasmPromise: Promise<ManifoldToplevel> | undefined
  * cached promise is cleared on rejection and the next call retries.
  */
 export function getWasm(): Promise<ManifoldToplevel> {
-  if (!wasmPromise) {
-    const attempt = Module().then(module => {
-      module.setup()
-      return garbageCollectManifold(module)
-    })
-    wasmPromise = attempt
-    attempt.catch(() => {
-      if (wasmPromise === attempt) wasmPromise = undefined
-    })
-  }
-  return wasmPromise
+  return defaultGeometryKernel.warm()
 }
 
 async function parseInternal(source: string, options: ParseOptions): Promise<ParseResult> {
+  const now = options.now ?? (() => performance.now())
+  const startedAt = now()
   if (source.length > MAX_SOURCE_LENGTH) throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
   paletteIndex = 0
-  const ast = new Parser(tokenize(source), source).parseAll()
-  assignOperationIds(ast)
-  const wasm = await getWasm()
+  const ast = compileOpenSCAD(source)
+  const parsedAt = now()
+  const kernelSession = await defaultGeometryKernel.openSession()
+  const wasm = kernelSession.module
   const warnings: string[] = []
   const modules = new Map<string, ModuleNode>()
   collectModules(ast, modules)
@@ -1431,9 +993,15 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
     valueWeights: new WeakMap(),
     valueDepths: new WeakMap(),
   }
+  const initializedAt = now()
+  const control = new CooperativeCheckpoint(options.shouldAbort, options.onYield, now, options.yieldControl)
 
   try {
-    const shapes = await evalTopLevel(ast, ctx, options.shouldAbort, options.onYield)
+    const shapes = await evalTopLevel(ast, ctx, control)
+    // A single giant statement may occupy a whole macrotask. Always yield
+    // before post-processing so a queued cancel can skip mesh extraction.
+    await control.yieldIfDue(true)
+    const evaluatedAt = now()
     // Mesh extraction (normals/BVH/edges) is often the dominant cost — a
     // superseded request must not pay it in full before the newest starts.
     if (options.shouldAbort?.()) throw new AbortedError()
@@ -1450,6 +1018,7 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
       surfaceArea += shape.geometry.surfaceArea()
       const withNormals = shape.geometry.calculateNormals(0, 52.5)
       const mesh = withNormals.getMesh()
+      await control.yieldIfDue()
       triangleCount += mesh.numTri
       if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
       if (mesh.numProp < 6) evaluationError(ctx, 0, 'Geometry kernel did not produce normals')
@@ -1458,14 +1027,17 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
         const sourceOffset = vertex * mesh.numProp
         const targetOffset = vertex * 6
         for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]
+        if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
       }
       const indices = new Uint32Array(mesh.triVerts)
       const bvh = buildMeshBvh(vertices, indices)
+      await control.yieldIfDue()
       const semanticEdges = extractSemanticEdges(vertices, indices, {
         creaseAngleDegrees: 30,
         mergeFromVert: mesh.mergeFromVert,
         mergeToVert: mesh.mergeToVert,
       })
+      await control.yieldIfDue()
       const provenance: MeshProvenanceRun[] = []
       for (let run = 0; run < mesh.runOriginalID.length; run++) {
         const triangleStart = (mesh.runIndex[run] ?? 0) / 3
@@ -1478,12 +1050,14 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
           source: sourceReferences.get(originalId) ?? null,
           backside: ((mesh.runFlags[run] ?? 0) & 1) !== 0,
         })
+        if ((run & 0x1fff) === 0x1fff) await control.yieldIfDue()
       }
       if (provenance.length === 0 && mesh.numTri > 0) {
         provenance.push({ triangleStart: 0, triangleEnd: mesh.numTri, source: null, backside: false })
       }
       meshes.push({
         entityId: shape.entityId,
+        geometryAssetId: geometryAssetId(vertices, indices),
         vertices,
         indices,
         bvh,
@@ -1494,10 +1068,20 @@ async function parseInternal(source: string, options: ParseOptions): Promise<Par
         provenance,
         topology: semanticEdges.diagnostics,
       })
+      await control.yieldIfDue()
     }
-    return { meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value }
+    const analyzedAt = now()
+    return {
+      meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
+      timings: {
+        parseMs: Math.max(0, parsedAt - startedAt),
+        initializeMs: Math.max(0, initializedAt - parsedAt),
+        evaluateMs: Math.max(0, evaluatedAt - initializedAt),
+        analyzeMs: Math.max(0, analyzedAt - evaluatedAt),
+      },
+    }
   } finally {
-    cleanupManifold()
+    kernelSession.dispose()
   }
 }
 

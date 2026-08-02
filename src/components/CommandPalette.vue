@@ -8,10 +8,11 @@ import {
   type PaletteCommand,
 } from '../services/commandSearch'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   open: boolean
   commands: readonly PaletteCommand[]
-}>()
+  restoreFocus?: boolean
+}>(), { restoreFocus: true })
 
 const emit = defineEmits<{
   execute: [id: string]
@@ -42,9 +43,10 @@ watch(() => props.open, async open => {
     await nextTick()
     inputRef.value?.focus()
     inputRef.value?.select()
-  } else if (previousFocus?.isConnected) {
+  } else {
+    const target = previousFocus
     await nextTick()
-    previousFocus.focus({ preventScroll: true })
+    if (props.restoreFocus && target?.isConnected) target.focus({ preventScroll: true })
     previousFocus = null
   }
 })

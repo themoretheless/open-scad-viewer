@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { LEGACY_MANIFOLD_EXECUTION } from '../src/core/geometryExecution'
 import {
   BuildCoordinator,
   type CoordinatorTimers,
@@ -13,6 +14,7 @@ import {
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
 } from '../src/services/geometryWorkerProtocol'
+import type { MeshData } from '../src/core/mesh'
 
 class FakeWorker implements WorkerLike {
   readonly messages: GeometryWorkerRequest[] = []
@@ -91,11 +93,20 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
     documentRevision: request.documentRevision,
     jobId: request.jobId,
     quality: request.quality,
+    sourceSha256: request.sourceSha256,
+    execution: {
+      ...LEGACY_MANIFOLD_EXECUTION,
+      purpose: request.quality,
+      quality: request.quality,
+      evidence: 'runtime',
+      effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
+    },
     meshes: [],
     warnings: [],
     volume: request.documentRevision,
     surfaceArea: 0,
     reduced: false,
+    timings: { parseMs: 1, initializeMs: 1, evaluateMs: 2, analyzeMs: 6 },
     durationMs: 10,
   }
 }
@@ -108,6 +119,44 @@ function accepted(request: GeometryBuildRequest): GeometryWorkerEvent {
     documentRevision: request.documentRevision,
     jobId: request.jobId,
     quality: request.quality,
+    sourceSha256: request.sourceSha256,
+  }
+}
+
+function emptyMeshWithSourceEnd(end: number): MeshData {
+  return {
+    entityId: 'entity:span-test',
+    vertices: new Float32Array([
+      0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1,
+    ]),
+    indices: new Uint32Array([0, 1, 2]),
+    edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
+    faceIds: new Uint32Array([0]),
+    color: [1, 1, 1, 1],
+    transform: new Float32Array([
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ]),
+    bvh: {
+      version: 1,
+      vertexStride: 6,
+      leafSize: 8,
+      nodeCount: 1,
+      bounds: new Float32Array([0, 0, 0, 1, 1, 0]),
+      nodes: new Uint32Array([0, 0x80000001]),
+      triangles: new Uint32Array([0]),
+    },
+    provenance: [{
+      triangleStart: 0,
+      triangleEnd: 1,
+      backside: false,
+      source: { id: 1, originalId: 1, start: 0, end, label: 'span' },
+    }],
+    topology: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 },
   }
 }
 
@@ -129,18 +178,18 @@ function harness(options: { grace?: number; timers?: FakeTimers } = {}) {
 }
 
 describe('BuildCoordinator', () => {
-  it('publishes only the latest same-quality job', () => {
+  it('coalesces repeated exact build keys without growing the worker queue', () => {
     const { coordinator, workers, published } = harness()
-    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' })
-    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' })
+    const jobIds = Array.from({ length: 100 }, () => (
+      coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' })
+    ))
 
-    const [first, second] = buildRequests(workers[0])
-    workers[0].emitMessage(success(first))
-    expect(published).toEqual([])
-    expect(coordinator.state.status).toBe('building')
+    expect(new Set(jobIds)).toEqual(new Set([jobIds[0]]))
+    const [onlyRequest] = buildRequests(workers[0])
+    expect(buildRequests(workers[0])).toHaveLength(1)
 
-    workers[0].emitMessage(success(second))
-    expect(published.map(result => result.jobId)).toEqual([second.jobId])
+    workers[0].emitMessage(success(onlyRequest))
+    expect(published.map(result => result.jobId)).toEqual([onlyRequest.jobId])
     expect(coordinator.state).toMatchObject({ status: 'ready', documentRevision: 1, publishedQuality: 'preview' })
   })
 
@@ -242,6 +291,7 @@ describe('BuildCoordinator', () => {
       documentRevision: request.documentRevision,
       jobId: request.jobId,
       quality: request.quality,
+      sourceSha256: request.sourceSha256,
       durationMs: 4,
     } satisfies GeometryWorkerEvent)
 
@@ -268,7 +318,15 @@ describe('BuildCoordinator', () => {
     coordinator.requestBuild({ documentRevision: 3, source: 'cube(3);', quality: 'preview' })
     const request = buildRequests(workers[0])[0]
 
-    workers[0].emitMessage({ ...success(request), ...mismatch })
+    const event = success(request)
+    if (mismatch.quality) {
+      event.execution = {
+        ...event.execution,
+        purpose: mismatch.quality,
+        quality: mismatch.quality,
+      }
+    }
+    workers[0].emitMessage({ ...event, ...mismatch })
 
     expect(workers[0].terminated).toBe(true)
     expect(published).toHaveLength(1)
@@ -278,5 +336,193 @@ describe('BuildCoordinator', () => {
       quality: 'preview',
       error: { name: 'ProtocolError', message: expect.stringContaining('correlation mismatch') },
     })
+  })
+
+  it('rejects worker provenance that does not match the requested source route', () => {
+    const { coordinator, workers, published } = harness()
+    coordinator.requestBuild({
+      documentRevision: 9,
+      source: '// @requires geometry.mesh\ncube(1);',
+      quality: 'full',
+    })
+    const request = buildRequests(workers[0])[0]
+    workers[0].emitMessage(success(request))
+
+    expect(workers[0].terminated).toBe(true)
+    expect(published).toHaveLength(1)
+    expect(published[0]).toMatchObject({
+      status: 'failed',
+      error: { name: 'ProtocolError', message: expect.stringContaining('provenance mismatch') },
+    })
+  })
+
+  it('rejects a same-route terminal replayed for different exact source bytes', () => {
+    const { coordinator, workers, published } = harness()
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    const first = buildRequests(workers[0])[0]
+    const replay = success(first)
+    workers[0].emitMessage(replay)
+    expect(published.at(-1)?.status).toBe('succeeded')
+
+    coordinator.requestBuild({ documentRevision: 2, source: 'sphere(1);', quality: 'full' })
+    const second = buildRequests(workers[0]).at(-1)!
+    workers[0].emitMessage({
+      ...replay,
+      documentRevision: second.documentRevision,
+      jobId: second.jobId,
+    })
+
+    expect(workers[0].terminated).toBe(true)
+    expect(published.at(-1)).toMatchObject({
+      status: 'failed',
+      error: { name: 'ProtocolError', message: expect.stringContaining('source attestation mismatch') },
+    })
+  })
+
+  it('rejects provenance spans outside the exact attested source', () => {
+    const { coordinator, workers, published } = harness()
+    coordinator.requestBuild({ documentRevision: 5, source: 'cube(1);', quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    workers[0].emitMessage({
+      ...success(request),
+      meshes: [emptyMeshWithSourceEnd(request.source.length + 1)],
+    })
+
+    expect(workers[0].terminated).toBe(true)
+    expect(published.at(-1)).toMatchObject({
+      status: 'failed',
+      error: { name: 'ProtocolError', message: expect.stringContaining('source span') },
+    })
+  })
+
+  it('rejects failed diagnostic spans outside the exact attested source', () => {
+    const { coordinator, workers, published } = harness()
+    const source = 'cube(1);'
+    coordinator.requestBuild({ documentRevision: 6, source, quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    const failed: GeometryBuildFailure = {
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      status: 'failed',
+      phase: 'compiling',
+      documentRevision: request.documentRevision,
+      jobId: request.jobId,
+      quality: request.quality,
+      sourceSha256: request.sourceSha256,
+      execution: success(request).execution,
+      error: { name: 'ParseError', message: 'bad span', start: 0, end: source.length + 1 },
+      durationMs: 1,
+    }
+    workers[0].emitMessage(failed)
+
+    expect(workers[0].terminated).toBe(true)
+    expect(published.at(-1)).toMatchObject({
+      status: 'failed',
+      error: { name: 'ProtocolError', message: expect.stringContaining('source span') },
+    })
+  })
+
+  it('rejects source spans that split a UTF-16 surrogate pair', () => {
+    const { coordinator, workers, published } = harness()
+    const source = '🙂'
+    coordinator.requestBuild({ documentRevision: 61, source, quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    workers[0].emitMessage({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      status: 'failed',
+      phase: 'compiling',
+      documentRevision: request.documentRevision,
+      jobId: request.jobId,
+      quality: request.quality,
+      sourceSha256: request.sourceSha256,
+      execution: success(request).execution,
+      error: { name: 'ParseError', message: 'split surrogate', start: 1, end: 1 },
+      durationMs: 1,
+    } satisfies GeometryBuildFailure)
+
+    expect(workers[0].terminated).toBe(true)
+    expect(published.at(-1)).toMatchObject({
+      status: 'failed',
+      error: { name: 'ProtocolError', message: expect.stringContaining('source span') },
+    })
+  })
+
+  it('publishes a deeply frozen snapshot with exclusively owned mesh buffers', () => {
+    const { coordinator, workers, published } = harness()
+    const source = 'cube(1);'
+    coordinator.requestBuild({ documentRevision: 62, source, quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    const originalMesh = emptyMeshWithSourceEnd(source.length)
+    const terminal = { ...success(request), meshes: [originalMesh] }
+    workers[0].emitMessage(terminal)
+
+    const outcome = published.at(-1) as GeometryBuildSuccess
+    expect(outcome.status).toBe('succeeded')
+    expect(outcome.meshes[0].vertices.buffer).not.toBe(originalMesh.vertices.buffer)
+    expect(Object.isFrozen(outcome)).toBe(true)
+    expect(Object.isFrozen(outcome.meshes)).toBe(true)
+    expect(Object.isFrozen(outcome.meshes[0])).toBe(true)
+    expect(Object.isFrozen(outcome.meshes[0].bvh)).toBe(true)
+    expect(Object.isFrozen(outcome.meshes[0].provenance)).toBe(true)
+    expect(Object.isFrozen(outcome.meshes[0].provenance[0].source)).toBe(true)
+    originalMesh.vertices[0] = 99
+    originalMesh.provenance[0].source!.label = 'mutated'
+    expect(outcome.meshes[0].vertices[0]).toBe(0)
+    expect(outcome.meshes[0].provenance[0].source?.label).toBe('span')
+  })
+
+  it('rejects accessor-based terminal payloads without evaluating the accessor', () => {
+    const { coordinator, workers, published } = harness()
+    coordinator.requestBuild({ documentRevision: 63, source: 'cube(1);', quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    const terminal = success(request) as GeometryBuildSuccess & Record<string, unknown>
+    let reads = 0
+    Object.defineProperty(terminal, 'durationMs', {
+      enumerable: true,
+      get() {
+        reads++
+        return reads === 1 ? 1 : -1
+      },
+    })
+    workers[0].emitMessage(terminal)
+
+    expect(reads).toBe(0)
+    expect(workers[0].terminated).toBe(true)
+    expect(published.at(-1)).toMatchObject({ status: 'failed', error: { name: 'ProtocolError' } })
+  })
+
+  it('accepts an exact EOF diagnostic span and re-freezes execution provenance', () => {
+    const { coordinator, workers, published } = harness()
+    const source = 'cube(1);'
+    coordinator.requestBuild({ documentRevision: 7, source, quality: 'full' })
+    const request = buildRequests(workers[0])[0]
+    const failed: GeometryBuildFailure = {
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      status: 'failed',
+      phase: 'compiling',
+      documentRevision: request.documentRevision,
+      jobId: request.jobId,
+      quality: request.quality,
+      sourceSha256: request.sourceSha256,
+      execution: success(request).execution,
+      error: {
+        name: 'OpenSCADParseError', message: 'at EOF', start: source.length, end: source.length,
+      },
+      durationMs: 1,
+    }
+    workers[0].emitMessage(failed)
+
+    const outcome = published.at(-1)!
+    expect(outcome).toMatchObject({ status: 'failed', error: { message: 'at EOF' } })
+    expect(Object.isFrozen(outcome)).toBe(true)
+    expect(Object.isFrozen((outcome as GeometryBuildFailure).error)).toBe(true)
+    expect(Object.isFrozen(outcome.execution)).toBe(true)
+    expect(Object.isFrozen(outcome.execution?.requiredCapabilities)).toBe(true)
+    expect(Object.isFrozen(outcome.execution?.effectiveLimits)).toBe(true)
+    expect(() => {
+      ;(outcome as GeometryBuildFailure).execution = {
+        ...success(request).execution,
+        engineClass: 'brep',
+      }
+    }).toThrow(TypeError)
   })
 })

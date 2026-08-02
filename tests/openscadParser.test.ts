@@ -344,9 +344,48 @@ describe('cooperative cancellation (shouldAbort)', () => {
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(8, 5)
   })
+
+  it('delivers a queued cancel at the forced post-evaluation macrotask before extraction', async () => {
+    let cancelled = false
+    let yields = 0
+    const result = parseOpenSCAD('for (i = [0:200]) cube([1, 1, i + 1]);', {
+      shouldAbort: () => cancelled,
+      yieldControl: async () => { yields++; cancelled = true },
+    })
+
+    await expect(result).rejects.toBeInstanceOf(AbortedError)
+    expect(yields).toBe(1)
+  })
 })
 
 describe('preview reduction flag', () => {
+  it.each([
+    'cube([1, 2, 3]);',
+    'sphere(r = 5, $fn = 16);',
+    'module peg(x) { translate([x, 0, 0]) cylinder(h=4, r=1, $fn=12); } union() { peg(0); peg(2); }',
+  ])('produces full-equivalent authoritative output whenever reduced=false: %s', async source => {
+    const preview = await parseOpenSCAD(source, { quality: 'preview' })
+    const full = await parseOpenSCAD(source, { quality: 'full' })
+    const normalizeEphemeralKernelIds = (result: typeof preview) => ({
+      ...result,
+      quality: 'full' as const,
+      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      meshes: result.meshes.map(mesh => ({
+        ...mesh,
+        provenance: mesh.provenance.map(run => ({
+          ...run,
+          source: run.source ? { ...run.source, originalId: 0 } : null,
+        })),
+      })),
+    })
+
+    expect(preview.reduced).toBe(false)
+    // Manifold run IDs are process-global allocation handles and intentionally
+    // differ across independent builds; stable source/evaluated identities and
+    // every authoritative output byte must still match.
+    expect(normalizeEphemeralKernelIds(preview)).toEqual(normalizeEphemeralKernelIds(full))
+  })
+
   it('reports reduced=true when preview clamps a large $fn, false under full', async () => {
     const source = 'sphere(r = 5, $fn = 96);'
     const preview = await parseOpenSCAD(source, { quality: 'preview' })

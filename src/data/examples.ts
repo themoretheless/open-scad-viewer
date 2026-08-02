@@ -74,3 +74,45 @@ translate([0, 0, levels * level_h + 5])
   cylinder(h = 14, r1 = 2, r2 = 0, $fn = 16);
 `,
 }
+
+export type ExampleId = keyof typeof EXAMPLES
+
+export interface ExampleCatalogEntry {
+  readonly id: string
+  readonly title: Readonly<Record<'ru' | 'en', string>>
+  readonly description: Readonly<Record<'ru' | 'en', string>>
+  readonly tags: readonly string[]
+  readonly source: string
+}
+
+/** Curated metadata stays separate from source identity used by MCP callers. */
+export const EXAMPLE_CATALOG: readonly ExampleCatalogEntry[] = Object.freeze([
+  {
+    id: 'basic',
+    title: { ru: 'Примитивы', en: 'Primitives' },
+    description: { ru: 'Куб, сфера и варианты цилиндра.', en: 'Cube, sphere and cylinder variants.' },
+    tags: ['beginner', 'primitives', '3d'],
+    source: EXAMPLES.basic,
+  },
+  {
+    id: 'csg',
+    title: { ru: 'Настоящий CSG', en: 'Real CSG' },
+    description: { ru: 'Разность и пересечение объёмных тел.', en: 'Difference and intersection of solid bodies.' },
+    tags: ['csg', 'boolean', 'intermediate'],
+    source: EXAMPLES.csg,
+  },
+  {
+    id: 'house',
+    title: { ru: 'Дом с модулями', en: 'Modular house' },
+    description: { ru: 'Переменные, модуль окна и составная модель.', en: 'Variables, a window module and a composed model.' },
+    tags: ['modules', 'variables', 'architecture'],
+    source: EXAMPLES.house,
+  },
+  {
+    id: 'tower',
+    title: { ru: 'Параметрическая башня', en: 'Parametric tower' },
+    description: { ru: 'Цикл, вычисляемые размеры и уровни.', en: 'A loop, computed dimensions and repeated levels.' },
+    tags: ['parametric', 'loops', 'intermediate'],
+    source: EXAMPLES.tower,
+  },
+])

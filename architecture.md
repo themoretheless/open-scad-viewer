@@ -7,8 +7,12 @@ debt and acceptance criteria live in [recommendation.md](recommendation.md).
 
 ## Product boundary
 
-OpenSCAD Viewer is a client-only Vue 3 + TypeScript application. Geometry
-compilation and rendering stay in the browser; there is no application backend.
+The OpenSCAD Viewer product remains a client-only Vue 3 + TypeScript
+application: geometry compilation and rendering stay in the browser and there
+is no application backend. The repository also ships an optional local Node
+process that exposes headless compiler operations over MCP stdio and persists
+its own catalog in DuckDB. The MCP process is a sidecar/tooling surface, not a
+runtime dependency of the browser app.
 
 The project implements a **strict, independent OpenSCAD subset**. It does not
 embed the official OpenSCAD compiler. Supported constructs produce real
@@ -35,10 +39,13 @@ Vue workspace / file actions / textarea
         ├─ commandRegistry.ts: palette metadata + scoped keyboard routing
         ▼
 WorkspaceDocumentSnapshot
-(documentId, source, monotonically increasing geometry revision)
+(documentId, source, geometry revision, persistence mutation)
+        │
+        ├─ IndexedDB active head (validated compare-and-swap commits)
+        └─ per-writer localStorage recovery journals + causal IDB bases
         │
         ▼
-BuildCoordinator ───── protocol-v3 ordering, cancellation and Worker lifetime
+BuildCoordinator ───── protocol-v5 ordering, cancellation and Worker lifetime
         │
         ▼
 geometry.worker.ts
@@ -60,17 +67,39 @@ Published MeshData[] + diagnostics + metrics
               └─ per-mesh BVH exact picking
 ```
 
+The optional headless path shares pure compiler/inspection/export services but
+does not enter the Vue or WebGPU graph:
+
+```text
+MCP client
+    │ stdio
+    ▼
+BoundedTransport ── request admission + serialized bounded writes
+    │
+    ▼
+createOpenScadMcpServer
+    ├─ HeadlessGeometryService ── parseOpenSCAD / inspect / STL / OBJ
+    ├─ typed tools + openscad:// resources
+    └─ DuckDbModelStore
+          ├─ versioned models
+          ├─ build results
+          └─ bounded STL/OBJ artifacts
+```
+
 ## Current components
 
 | Component | Current responsibility |
 | --- | --- |
-| [`src/App.vue`](src/App.vue) | Workspace composition, file/share/export actions, build publication, renderer recovery, Vue view state and orchestration. |
+| [`src/App.vue`](src/App.vue) | Workspace composition, file/share/export actions, explicit recovery-conflict choice, build publication, renderer recovery, Vue view state and orchestration. |
 | [`src/core/mesh.ts`](src/core/mesh.ts) / [`src/core/build.ts`](src/core/build.ts) | Renderer-neutral mesh, identity, provenance, transfer and quality contracts; no parser/kernel dependency. |
-| [`src/services/workspaceDocument.ts`](src/services/workspaceDocument.ts) | Versioned, validated single-document persistence and source-derived revisions, including migration from the legacy source key. |
-| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v3 job ordering, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
-| [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, job, quality, phase, progress and terminal state. |
+| [`src/services/workspaceDocument.ts`](src/services/workspaceDocument.ts) | Versioned, validated single-document contract with separate geometry revision and monotonic persistence mutation, including legacy migration. |
+| [`src/services/workspaceIndexedDb.ts`](src/services/workspaceIndexedDb.ts) | Browser-only active-head repository with runtime validation, compare-and-swap writes, upgrade handling and bounded open failure. |
+| [`src/services/workspacePersistence.ts`](src/services/workspacePersistence.ts) | Pre-mount hydration, ordered autosaves, causal IDB/per-writer-journal reconciliation, CAS conflict handling, and crash journal lifecycle. |
+| [`src/services/workspaceShare.ts`](src/services/workspaceShare.ts) | Bounded URL-safe codec for shared source imports. |
+| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v5 job ordering, exact-source/route/span re-attestation, post-clone provenance freezing, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
+| [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, monotonic job, exact source digest, quality, phase, bounded sorted provenance, progress and terminal state. |
 | [`src/services/commandRegistry.ts`](src/services/commandRegistry.ts) | One typed inventory for palette metadata and deterministic, scope-aware keyboard routing. |
-| [`src/workers/geometry.worker.ts`](src/workers/geometry.worker.ts) | Isolates compilation, reports phase/checkpoint events, rejects stale work and transfers geometry buffers. |
+| [`src/workers/geometry.worker.ts`](src/workers/geometry.worker.ts) | Isolates compilation, validates routing before queue state, rejects replay/stale work, warms only the selected provider, reports checkpoints and transfers geometry buffers. |
 | [`src/services/openscadParser.ts`](src/services/openscadParser.ts) | Strict lexer/parser/evaluator, identity assignment, Manifold calls, mesh conversion, provenance and resource budgets. |
 | [`src/services/meshBvh.ts`](src/services/meshBvh.ts) | Compact transferable per-mesh triangle BVH and exact ray intersection. |
 | [`src/services/sceneAabbIndex.ts`](src/services/sceneAabbIndex.ts) | Deterministic scene-level AABB hierarchy that rejects whole bodies before triangle traversal. |
@@ -81,6 +110,11 @@ Published MeshData[] + diagnostics + metrics
 | [`src/services/rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) | Pure device-loss policy that coalesces concurrent loss signals, permits one follow-up attempt and prevents false-ready publication. |
 | [`src/services/webgpuRenderer.ts`](src/services/webgpuRenderer.ts) | WebGPU lifecycle, pipelines/resources, camera/input, visibility, picking, overlays, measurements and sections. |
 | [`src/components`](src/components) | Command palette, ViewCube, Scene Outliner, Inspect and Customizer presentation components. |
+| [`src/mcp/geometryService.ts`](src/mcp/geometryService.ts) | Headless compiler summary, validated Customizer replacement, size-bounded STL/OBJ export, and a process-wide bounded pending-job gate. This is the only MCP-side parser execution boundary. |
+| [`src/mcp/boundedTransport.ts`](src/mcp/boundedTransport.ts) | Process-wide MCP request admission tied to actual handler settlement, bounded modern subscriptions, inbound notification coalescing/filtering, fail-fast busy responses, serialized stdio writes, and bounded outbound backpressure. |
+| [`src/mcp/duckdbModelStore.ts`](src/mcp/duckdbModelStore.ts) | Node-only, parameterized DuckDB repository with schema-v5 source-attestation classes, versioned diagnostics, immutable source revisions, retention quotas, catalog statistics, and owner-only POSIX file permissions; external access and extension loading are disabled. |
+| [`src/mcp/createServer.ts`](src/mcp/createServer.ts) / [`src/mcp/server.ts`](src/mcp/server.ts) | Dual-era typed MCP tools/resources/prompts, reproducible revision selectors, cache hints, guided instructions, and the local stdio/bootstrap lifecycle. |
+| [`src/mcp/errorContract.ts`](src/mcp/errorContract.ts) / [`src/mcp/publicError.ts`](src/mcp/publicError.ts) | Frozen public MCP error taxonomy/retry policy, versioned persisted diagnostics, correlation IDs, and redaction of source excerpts/internal failures before persistence or wire output. |
 
 The parser, renderer and App remain broad modules. This table describes real
 boundaries, not an assertion that the separation is finished.
@@ -92,14 +126,23 @@ boundaries, not an assertion that the separation is finished.
 `WorkspaceDocumentSnapshot` is the durable document boundary. `documentId`
 persists across edits. `revision` increases only when geometry source changes;
 filename-only metadata updates persist without invalidating an identical
-in-flight build. The revision, not the source string, is the asynchronous build
-identity.
+in-flight build. `mutation` increases for every source or metadata change and
+orders edits within one causal branch without depending on wall-clock
+monotonicity. Recovery replay additionally requires its recorded base to match
+the current IndexedDB head. The geometry revision, not the source string, is
+the asynchronous build identity.
 
 ### Build identity and publication
 
-Protocol v3 is the only App/Worker path. Every request/event contains a protocol
-version, document revision and job ID; build events also carry quality and a
-typed phase. Runtime guards validate both envelopes and transferred mesh shape.
+Protocol v5 is the only App/Worker path. Every request/event contains a protocol
+version, document revision, job ID and SHA-256 of the exact UTF-8 source;
+build events also carry quality and a typed phase. Runtime guards validate the
+digest on both sides, reject same-route replay, bound all transferred text and
+mesh data, require non-empty sorted/non-overlapping provenance runs, and
+validate mesh and failed-diagnostic spans against the attested source. The
+Coordinator re-freezes execution provenance after structured clone and before
+calling publication hooks. Worker job IDs use a bounded monotonic high-water
+tombstone, so an active or completed ID cannot be replayed.
 The Worker reports accepted, started, progress, succeeded, failed, cancelled
 or stale outcomes. Successful events require `reduced`: a preview with
 `reduced=false` is byte-identical to full quality, so App promotes it to full
@@ -109,11 +152,19 @@ corresponding immutable state, including an explicit `stale` state.
 Only the latest job of each quality tier for the current revision is
 publishable. A preview may publish while a full build for the same revision is
 pending, but it can never downgrade a published full result. Preview→full for
-one revision shares the warm Worker. When a newer revision supersedes running
+one revision shares the warm Worker. Worker import itself does not warm
+Manifold; warm/build happens only after the source-selected provider passes
+admission. When a newer revision supersedes running
 synchronous work, the coordinator requests cancellation and replaces the
 Worker after a configurable grace period if no real checkpoint is reached.
 App performs a final revision check before publishing. Export is allowed only
-from a full build of the current source.
+from an error-free full build of the current source; a retained last-known-good
+mesh after failure is visual context, not a current exportable result.
+
+Engine selection follows the accepted source-only contract in
+[`ADR 0002`](docs/adr/0002-permanent-geometry-engine-routing.md). The frozen
+negative/precedence oracle is
+[`geometry-routing-contract-v1.json`](docs/qualification/geometry-routing-contract-v1.json).
 
 ### Source and scene identity
 
@@ -221,6 +272,9 @@ so bounds, TLAS invalidation, overlays and render scheduling update once.
 Current ownership is explicit because its last overlap is active debt:
 
 - the workspace snapshot owns source, filename and geometry revision;
+- the MCP DuckDB catalog independently owns only models explicitly saved
+  through MCP; it does not mirror or mutate the browser's IndexedDB or recovery
+  journal;
 - `BuildCoordinator` owns Worker lifetime and in-flight job correlation;
 - App owns the published CPU scene and user-facing build/error state;
 - `scenePublication.ts` computes replacement continuity without owning mutable
@@ -250,6 +304,28 @@ commands flowing inward and renderer intents/events flowing outward.
    resources/listeners are released on teardown.
 8. **Full-build exports.** Preview tessellation is never silently exported as
    authoritative geometry.
+9. **Browser/server import separation.** Native DuckDB and MCP packages stay
+   outside the Vite graph; only the Node-side MCP boundary imports them.
+10. **No arbitrary database execution.** MCP exposes typed repository methods,
+    not user-supplied DuckDB SQL; external access and extension loading remain
+    disabled.
+11. **Bounded MCP persistence and wire output.** Source history, build history,
+    artifact count/bytes, diagnostic strings, analysis detail and stdio-sized
+    resource payloads have explicit limits; pruning is transactional. Inbound
+    notifications are reduced to lifecycle events for active work before the
+    SDK queue.
+12. **Reproducible MCP reads.** Check, compare, analyze, customize and export can
+    select an immutable saved revision; read-only check/compare operations never
+    add build history, while mutation remains guarded by expected revision.
+13. **Machine-actionable MCP failure.** Expected tool failures expose stable
+    codes and recovery details; new persisted failures/cancellations require
+    diagnostic contract v1 with an attested retry class, while pre-contract
+    rows are explicitly `legacy-unattested`. Unexpected errors expose only a
+    correlation ID.
+14. **Pinned MCP lifecycle seam.** The server SDK stays exact-pinned while
+    admission settlement wraps its request registry, including handlers added
+    by the modern stdio host after factory creation; wire regressions gate an
+    SDK upgrade.
 
 ## Current limitations
 
@@ -269,13 +345,23 @@ commands flowing inward and renderer intents/events flowing outward.
 - `App.vue` and `webgpuRenderer.ts` retain broad responsibilities and mirror
   selection/visibility state. Replacement continuity is now a pure service,
   but App still applies the resulting state to both owners.
-- Persistence is versioned but single-document/localStorage based. Quota/write
-  failures are not yet surfaced to the user.
-- The editor remains a textarea. Outliner additive/range selection is emitted
-  but not implemented; ViewCube does not follow the live camera; touch input is
-  single-pointer.
-- Transparency is object-sorted alpha blending rather than OIT; WebGPU has no
-  fallback backend.
+- Browser persistence is versioned and IndexedDB-first, with a synchronous
+  localStorage recovery journal, but remains single-document and independent
+  from the optional MCP/DuckDB catalog.
+- MCP compilation currently calls the shared parser in the stdio process. A
+  bounded gate prevents unbounded request accumulation and cancellation is
+  observed at parser checkpoints, but one synchronous Manifold kernel call can
+  still delay cancellation; a Node worker-thread watchdog is the next isolation
+  step for adversarially heavy MCP requests.
+- The editor remains a textarea and scene selection remains single-object.
+  Dead additive/range affordances are removed; the ViewCube compass follows the
+  live camera, face presets snap to orthographic, and two-pointer pinch plus
+  midpoint pan are supported. The dock and Outliner now expose tab/tree ARIA
+  contracts, while keyboard camera motion and browser/AT verification remain.
+- Transparency is explicitly reported as approximate object-sorted alpha rather
+  than OIT. WebGPU has no raster fallback, but its failure no longer removes the
+  workspace: CPU/WASM builds, editing, persistence and export remain available
+  in a typed headless-geometry tier while the viewport offers a retry.
 - CI has no real-browser GPU/accessibility smoke, visual regression,
   fuzz/conformance corpus or performance budget.
 
@@ -306,8 +392,8 @@ This is an extraction plan, not a big-bang rewrite.
 ### Phase 3 — workspace and editor
 
 - replace the textarea with a syntax-aware editor and structured diagnostics;
-- add quota-aware IndexedDB persistence, recovery snapshots and a versioned
-  virtual filesystem;
+- evolve the active-head IndexedDB store and recovery journal into a versioned
+  virtual filesystem with browsable recovery/history snapshots;
 - decide official-runtime compatibility versus a versioned independent language
   before defining multi-file `include`/`use` semantics;
 - port selected feature-branch capabilities through documented adapters, never
@@ -329,3 +415,4 @@ This is an extraction plan, not a big-bang rewrite.
 - [Plasticity interaction patterns](docs/research/plasticity-patterns.md)
 - [Geometry-pipeline literature review](docs/research/geometry-pipeline-literature.md)
 - [CAD/HCI literature review](docs/research/cad-hci-literature.md)
+- [Ten-agent MCP synthesis](docs/research/mcp-ten-agent-review.md)

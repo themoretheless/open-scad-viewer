@@ -28,6 +28,16 @@ describe('WebGPURenderer camera history integration', () => {
     expect(renderer.previousView()).toBeNull()
   })
 
+  it('applies a face orientation and projection as one history action', () => {
+    const renderer = new WebGPURenderer()
+    const initial = renderer.getCameraState()
+
+    renderer.setCameraPreset('front', 'orthographic')
+    expect(renderer.getCameraState()).toMatchObject({ yaw: 0, pitch: 0, projection: 'orthographic' })
+    expect(renderer.previousView()).toEqual(initial)
+    expect(renderer.canGoToPreviousView).toBe(false)
+  })
+
   it('notifies consumers when history becomes available or empty', () => {
     const renderer = new WebGPURenderer()
     const states: boolean[] = []
