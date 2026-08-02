@@ -2,7 +2,7 @@
 
 A comprehensive, concrete catalog of things done badly or incorrectly, produced by a 5-domain deep audit (parser, renderer, app/state, UX/CSS/a11y, build/security/i18n/exports). Each item cites a file, approximate line, and the actual problem.
 
-Synced with: [README.md](./README.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) (limitations) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) (fixes mapped to phases) · [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (severity-ranked shortlist).
+Synced with: [README.md](./README.md) · [architecture.md](./architecture.md) (limitations) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) (fixes mapped to phases) · [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) (severity-ranked shortlist).
 
 > In a hurry? Start with [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — the 50 highest-severity items curated from this catalog.
 
@@ -557,4 +557,4 @@ These are the highest-impact correctness/security items pulled from the full lis
   - **C (app state)** → **Phase 1**
   - **D (UX/CSS/a11y)** → **Phase 1** (components) + **Phase 4.4–4.5**
   - **E (build/security/i18n/exports)** → **Phase 3** + **Phase 4.6–4.7**
-- The geometry-correctness items (fake CSG, extrude/offset approximations) are the documented limitations in [ARCHITECTURE.md](./ARCHITECTURE.md#known-limitations).
+- The geometry-correctness items (fake CSG, extrude/offset approximations) are the documented limitations in [architecture.md](./architecture.md#known-limitations).

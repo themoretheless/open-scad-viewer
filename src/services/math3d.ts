@@ -7,6 +7,7 @@ export interface Ray3 {
   origin: Vec3
   direction: Vec3
 }
+
 export interface Aabb3 {
   min: Vec3
   max: Vec3

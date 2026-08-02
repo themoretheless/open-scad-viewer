@@ -2,7 +2,7 @@
 
 A severity-ranked shortlist curated from the full [ISSUES.md](./ISSUES.md) (500 items) plus a second, independent audit pass. These are the ones to fix first — highest blast radius for correctness, security, data loss, performance, and architecture.
 
-Synced with: [README.md](./README.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [ISSUES.md](./ISSUES.md)
+Synced with: [README.md](./README.md) · [architecture.md](./architecture.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [ISSUES.md](./ISSUES.md)
 
 Each row: rank · `file:line` · problem · **why it matters** · → Recommendations phase.
 
@@ -124,4 +124,4 @@ Each row: rank · `file:line` · problem · **why it matters** · → Recommenda
 5. **Architecture** — items 19–24, 27, 32, 34, 37, 38 (decompose `App.vue`, de-globalize the parser, split `render()`/`renderScaled()`, fix WebGPU depth convention — the multi-session refactor tracked in [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) Phases 1, 2 and 4.1–4.3).
 6. **A11y/CSS/polish** — items 39–50.
 
-> Note: true boolean CSG (`difference`/`intersection`/`minkowski`) remains a large, separately-tracked backlog item — see [ARCHITECTURE.md](./ARCHITECTURE.md#known-limitations). It did not place in this pass's top 50 only because the *interim honest-labeling* fix from Pass 1 (the "CSG: visual preview" badge) already prevents it from silently misleading users; the underlying geometry is still wrong and export of a "subtracted" model is still unprintable.
+> Note: true boolean CSG (`difference`/`intersection`/`minkowski`) remains a large, separately-tracked backlog item — see [architecture.md](./architecture.md#known-limitations). It did not place in this pass's top 50 only because the *interim honest-labeling* fix from Pass 1 (the "CSG: visual preview" badge) already prevents it from silently misleading users; the underlying geometry is still wrong and export of a "subtracted" model is still unprintable.

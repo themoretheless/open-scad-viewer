@@ -42,9 +42,6 @@ import { defaultGeometryKernel } from './manifoldGeometryKernel'
 
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
-// Compatibility for exporters that consume the parser's public mesh type.
-export type { MeshData } from '../core/mesh'
-
 export interface ParseOptions {
   quality?: GeometryQuality
   /**
