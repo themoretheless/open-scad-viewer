@@ -20,11 +20,10 @@ import {
 } from '../src/services/manifoldPlanQualificationProtocol'
 
 const liveWorkers = new Set<Worker>()
-const harnessUrl = new URL('./fixtures/web-worker-node-harness.ts', import.meta.url)
+const harnessUrl = new URL('./fixtures/web-worker-node-harness.mjs', import.meta.url)
 
 function spawnWebWorker(entryUrl: URL, announceReady = true): Worker {
   const worker = new Worker(harnessUrl, {
-    execArgv: ['--import', 'tsx'],
     workerData: { entryUrl: entryUrl.href, announceReady },
   })
   liveWorkers.add(worker)

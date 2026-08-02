@@ -184,8 +184,7 @@ function boundedInteger(
 }
 
 function defaultWorkerFactory(_workerEpoch: number): Worker {
-  return new Worker(new URL('./directGeometry.worker.ts', import.meta.url), {
-    execArgv: ['--import', 'tsx'],
+  return new Worker(new URL('./directGeometry.worker.mjs', import.meta.url), {
     // Geometry source never needs host credentials or configuration. An empty
     // environment keeps accidental dependency reads from inheriting secrets.
     env: {},

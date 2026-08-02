@@ -7,7 +7,7 @@ import {
 } from '../src/mcp/manifoldPlanQualificationSupervisor'
 
 const fixtureUrl = new URL('./fixtures/mcp-manifold-plan-qualification.worker.mjs', import.meta.url)
-const webWorkerHarnessUrl = new URL('./fixtures/web-worker-node-harness.ts', import.meta.url)
+const webWorkerHarnessUrl = new URL('./fixtures/web-worker-node-harness.mjs', import.meta.url)
 const controlledIdentityWorkerUrl = new URL(
   './fixtures/browser-qualification.worker.ts',
   import.meta.url,
@@ -33,7 +33,6 @@ function fixtureSupervisor(
 function controlledIdentitySupervisor(): McpManifoldPlanQualificationSupervisor {
   return new McpManifoldPlanQualificationSupervisor({
     workerFactory: () => new Worker(webWorkerHarnessUrl, {
-      execArgv: ['--import', 'tsx'],
       workerData: { entryUrl: controlledIdentityWorkerUrl.href, announceReady: false },
       stdout: true,
       stderr: true,
