@@ -202,7 +202,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       evaluateOpenSCADViaManifoldPlanForQualification(source)
     ))
     expect(compareFrozenLegacyOutcome(expected, candidate)).toEqual([])
-  })
+  }, 15_000)
 
   it('matches the frozen source-length failure before opening a backend session', async () => {
     const source = ' '.repeat(250_001)

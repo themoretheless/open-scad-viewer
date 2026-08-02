@@ -94,8 +94,7 @@ function boundedDuration(value: number, label: string, maximum: number, allowZer
 }
 
 function defaultWorkerFactory(_workerEpoch: number): Worker {
-  return new Worker(new URL('./manifoldPlanQualification.worker.ts', import.meta.url), {
-    execArgv: ['--import', 'tsx'],
+  return new Worker(new URL('./manifoldPlanQualification.worker.mjs', import.meta.url), {
     stdout: true,
     stderr: true,
   })

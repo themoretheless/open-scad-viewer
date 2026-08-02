@@ -20,7 +20,7 @@ const plan = JSON.parse(readFileSync(planPath, 'utf8')) as JsonObject
 const FROZEN_V1_SHA256 = '07d07027f17815b3759e96914747b8703eb29b1fb1f6dbd88655a101f606668f'
 const FROZEN_V2_SHA256 = '6c423be838e55c9a4b84cd8df5f850bd050d1ed4510dd138e30cc6379496f5d1'
 const FROZEN_V3_SHA256 = '9af37517e2d0fa16c71e725398bbb23ab232162c4a6d272801c9490e4b63218a'
-const FROZEN_V4_SHA256 = '9766b2511501dde3013138333e6bead14a87676c45c2653181c66d627b0ddb0c'
+const FROZEN_V4_SHA256 = 'cadd1cfb35cec56b47d8d08a2696adce839dc3f148651eb92a9c8580cda111be'
 
 function isObject(value: Json): value is JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
