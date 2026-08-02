@@ -9,6 +9,7 @@ import {
   ArtifactSizeError,
   CustomizerValueError,
   GeometryBusyError,
+  GeometryDeadlineExceededError,
   InvalidGeometryError,
 } from './geometryService'
 import {
@@ -74,7 +75,8 @@ export function buildDiagnostic(error: unknown): BuildDiagnostic {
   } else if (isAbortError(error)) {
     diagnostic = { name: 'AbortError', message: 'OpenSCAD evaluation was cancelled.' }
   } else if (error instanceof ArtifactSizeError || error instanceof CustomizerValueError
-    || error instanceof GeometryBusyError || error instanceof InvalidGeometryError
+    || error instanceof GeometryBusyError || error instanceof GeometryDeadlineExceededError
+    || error instanceof InvalidGeometryError
     || error instanceof GeometryCapabilityUnavailableError
     || error instanceof GeometryEngineUnavailableError
     || error instanceof GeometryLanguageContractError) {
@@ -230,6 +232,18 @@ export function publicToolError(error: unknown): { error: PublicToolError; inter
         retryable: true,
         next_action: 'Wait for retry_after_ms, then retry the operation.',
         details: { retry_after_ms: error.retryAfterMs },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof GeometryDeadlineExceededError) {
+    return {
+      error: {
+        code: 'deadline_exceeded',
+        message: error.message,
+        retryable: true,
+        next_action: 'Reduce model complexity or retry after other queued geometry work completes.',
+        details: { deadline_ms: error.deadlineMs },
       },
       internal: false,
     }
