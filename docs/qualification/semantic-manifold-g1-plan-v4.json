@@ -501,7 +501,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "a7815d99eb3501fcfbd543f1a5325596bab6bb4d29126e0dff8371b2a5fff600",
+          "value": "26e9899e6bda7fa80ef9e666f2b1bb5f2136e63340bb81e715ef3f862d956b3f",
           "byteLength": 723,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }

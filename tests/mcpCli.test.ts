@@ -1,8 +1,15 @@
 import { spawn } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
-import { parseMcpCliOptions } from '../src/mcp/server'
+import { InMemoryTransport } from '@modelcontextprotocol/server'
+import { describe, expect, it, vi } from 'vitest'
+import { BoundedTransport } from '../src/mcp/boundedTransport'
+import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
+import {
+  parseMcpCliOptions,
+  runMcpServer,
+  type RunMcpServerDependencies,
+} from '../src/mcp/server'
 
 const testDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(testDirectory, '..')
@@ -302,4 +309,113 @@ describe('MCP CLI', () => {
     expect(run.busyResponses).toBeGreaterThan(0)
     expect(run.stderr).not.toContain('MCP transport error')
   }, 15_000)
+
+  it('closes the stdio handle and geometry runtime before the store, exactly once', async () => {
+    const events: string[] = []
+    const store = await DuckDbModelStore.open(':memory:')
+    const originalStoreClose = store.close.bind(store)
+    const storeClose = vi.spyOn(store, 'close').mockImplementation(async () => {
+      events.push('store')
+      await originalStoreClose()
+    })
+    const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
+      capabilities: vi.fn(async () => { throw new Error('not used') }),
+      build: vi.fn(async () => { throw new Error('not used') }),
+      close: vi.fn(async () => { events.push('runtime') }),
+    }
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    const transport = new BoundedTransport(serverTransport)
+    const handleClose = vi.fn(async () => { events.push('handle') })
+    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as
+      RunMcpServerDependencies['startServer']
+
+    const running = await runMcpServer({ databasePath: ':memory:', showHelp: false }, {
+      openStore: async () => store,
+      createGeometryRuntime: () => runtime,
+      createTransport: () => transport,
+      startServer,
+    })
+    await Promise.all([running.close(), running.close()])
+    await clientTransport.close()
+
+    expect(handleClose).toHaveBeenCalledTimes(1)
+    expect(runtime.close).toHaveBeenCalledTimes(1)
+    expect(storeClose).toHaveBeenCalledTimes(1)
+    expect(events.slice(0, 2).sort()).toEqual(['handle', 'runtime'])
+    expect(events[2]).toBe('store')
+  })
+
+  it('closes transport, geometry runtime, and store when bootstrap fails', async () => {
+    const store = await DuckDbModelStore.open(':memory:')
+    const originalStoreClose = store.close.bind(store)
+    const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
+    const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
+      capabilities: vi.fn(async () => { throw new Error('not used') }),
+      build: vi.fn(async () => { throw new Error('not used') }),
+      close: vi.fn(async () => undefined),
+    }
+    const [, serverTransport] = InMemoryTransport.createLinkedPair()
+    const transport = new BoundedTransport(serverTransport)
+    const transportClose = vi.spyOn(transport, 'close')
+    const startupError = new Error('synthetic bootstrap failure')
+    const startServer = vi.fn(() => { throw startupError }) as unknown as
+      RunMcpServerDependencies['startServer']
+
+    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
+      openStore: async () => store,
+      createGeometryRuntime: () => runtime,
+      createTransport: () => transport,
+      startServer,
+    })).rejects.toBe(startupError)
+
+    expect(transportClose).toHaveBeenCalledTimes(1)
+    expect(runtime.close).toHaveBeenCalledTimes(1)
+    expect(storeClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the store when geometry runtime construction fails', async () => {
+    const store = await DuckDbModelStore.open(':memory:')
+    const originalStoreClose = store.close.bind(store)
+    const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
+    const startupError = new Error('synthetic geometry runtime construction failure')
+
+    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
+      openStore: async () => store,
+      createGeometryRuntime: () => { throw startupError },
+    })).rejects.toBe(startupError)
+
+    expect(storeClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('still closes the store when both host shutdown operations fail', async () => {
+    const store = await DuckDbModelStore.open(':memory:')
+    const originalStoreClose = store.close.bind(store)
+    const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
+    const runtimeError = new Error('synthetic runtime close failure')
+    const handleError = new Error('synthetic handle close failure')
+    const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
+      capabilities: vi.fn(async () => { throw new Error('not used') }),
+      build: vi.fn(async () => { throw new Error('not used') }),
+      close: vi.fn(async () => { throw runtimeError }),
+    }
+    const [, serverTransport] = InMemoryTransport.createLinkedPair()
+    const transport = new BoundedTransport(serverTransport)
+    const handleClose = vi.fn(async () => { throw handleError })
+    const startServer = vi.fn(() => ({ close: handleClose })) as unknown as
+      RunMcpServerDependencies['startServer']
+    const running = await runMcpServer({ databasePath: ':memory:', showHelp: false }, {
+      openStore: async () => store,
+      createGeometryRuntime: () => runtime,
+      createTransport: () => transport,
+      startServer,
+    })
+
+    const error = await running.close().catch(reason => reason) as AggregateError
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect([...error.errors]).toEqual([handleError, runtimeError])
+    expect(handleClose).toHaveBeenCalledTimes(1)
+    expect(runtime.close).toHaveBeenCalledTimes(1)
+    expect(storeClose).toHaveBeenCalledTimes(1)
+  })
 })

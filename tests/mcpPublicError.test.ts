@@ -20,6 +20,10 @@ import {
   PUBLIC_ERROR_CODES,
   publicToolError,
 } from '../src/mcp/publicError'
+import {
+  DirectGeometryJoinError,
+  DirectGeometryQuarantinedError,
+} from '../src/mcp/directGeometrySupervisor'
 
 describe('MCP public errors', () => {
   it('maps every frozen public code to its exact retry class', () => {
@@ -146,6 +150,34 @@ describe('MCP public errors', () => {
       retryable: true,
       details: { availability_cause: 'readiness-timeout', automatic_fallback: false },
     })
+  })
+
+  it('requires an MCP restart after the disposable Worker host is quarantined', () => {
+    for (const error of [
+      new DirectGeometryJoinError(7, 1_000),
+      new DirectGeometryQuarantinedError(7),
+    ]) {
+      expect(publicToolError(error)).toMatchObject({
+        internal: false,
+        error: {
+          code: 'engine_unavailable',
+          retryable: false,
+          next_action: 'Restart the local MCP server before retrying geometry operations.',
+          details: {
+            availability_cause: 'quarantined',
+            runtime_boundary: 'worker-thread',
+            restart_required: true,
+            automatic_fallback: false,
+          },
+        },
+      })
+      expect(buildDiagnostic(error)).toMatchObject({
+        contractVersion: 1,
+        code: 'engine_unavailable',
+        retryable: false,
+        details: { restart_required: true },
+      })
+    }
   })
 
   it('does not expose source excerpts through current or persisted diagnostics', () => {

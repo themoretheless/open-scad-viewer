@@ -2,13 +2,42 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio'
+import { defaultGeometryBuildEngine } from '../services/geometryBuildEngine'
 import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from './boundedTransport'
 import { createOpenScadMcpServer } from './createServer'
+import { DirectGeometrySupervisor } from './directGeometrySupervisor'
 import { DuckDbModelStore } from './duckdbModelStore'
+import {
+  HeadlessGeometryService,
+  type McpGeometryBuildRuntime,
+} from './geometryService'
+import type { ModelStore } from './modelStore'
 
 export interface McpCliOptions {
   databasePath: string
   showHelp: boolean
+}
+
+interface ClosableModelStore extends ModelStore {
+  close(): Promise<void>
+}
+
+interface ClosableGeometryRuntime extends McpGeometryBuildRuntime {
+  close(): Promise<void>
+}
+
+export interface RunMcpServerDependencies {
+  openStore(databasePath: string): Promise<ClosableModelStore>
+  createGeometryRuntime(): ClosableGeometryRuntime
+  createTransport(): BoundedTransport
+  startServer: typeof serveStdio
+}
+
+const defaultDependencies: RunMcpServerDependencies = {
+  openStore: databasePath => DuckDbModelStore.open(databasePath),
+  createGeometryRuntime: () => new DirectGeometrySupervisor(),
+  createTransport: () => new BoundedTransport(new StdioServerTransport()),
+  startServer: serveStdio,
 }
 
 export function parseMcpCliOptions(
@@ -53,17 +82,24 @@ Environment:
 `
 }
 
-export async function runMcpServer(options: McpCliOptions): Promise<{ close(): Promise<void> }> {
-  const store = await DuckDbModelStore.open(options.databasePath)
+export async function runMcpServer(
+  options: McpCliOptions,
+  dependencyOverrides: Partial<RunMcpServerDependencies> = {},
+): Promise<{ close(): Promise<void> }> {
+  const dependencies = { ...defaultDependencies, ...dependencyOverrides }
+  const store = await dependencies.openStore(options.databasePath)
+  let runtime: ClosableGeometryRuntime | null = null
+  let transport: BoundedTransport | null = null
   let handle: ReturnType<typeof serveStdio> | null = null
   let closePromise: Promise<void> | null = null
   const close = () => {
     closePromise ??= (async () => {
-      const results = await Promise.allSettled([
-        handle?.close() ?? Promise.resolve(),
-        store.close(),
+      const hostResults = await Promise.allSettled([
+        handle?.close() ?? transport?.close() ?? Promise.resolve(),
+        runtime?.close() ?? Promise.resolve(),
       ])
-      const errors = results
+      const storeResult = await Promise.allSettled([store.close()])
+      const errors = [...hostResults, ...storeResult]
         .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
         .map(result => result.reason)
       if (errors.length) throw new AggregateError(errors, 'MCP server shutdown failed')
@@ -71,13 +107,17 @@ export async function runMcpServer(options: McpCliOptions): Promise<{ close(): P
     return closePromise
   }
   try {
-    const transport = new BoundedTransport(new StdioServerTransport())
-    handle = serveStdio(() => createOpenScadMcpServer({
+    runtime = dependencies.createGeometryRuntime()
+    const geometry = new HeadlessGeometryService(defaultGeometryBuildEngine, runtime)
+    const activeTransport = dependencies.createTransport()
+    transport = activeTransport
+    handle = dependencies.startServer(() => createOpenScadMcpServer({
       store,
-      onRequestSettled: requestId => transport.settleRequest(requestId),
-      onRequestCancelled: requestId => transport.cancelRequest(requestId),
+      geometry,
+      onRequestSettled: requestId => activeTransport.settleRequest(requestId),
+      onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
     }), {
-      transport,
+      transport: activeTransport,
       maxSubscriptions: MAX_MCP_SUBSCRIPTIONS,
       onerror: error => {
         console.error('MCP transport error:', error)
@@ -88,7 +128,14 @@ export async function runMcpServer(options: McpCliOptions): Promise<{ close(): P
       },
     })
   } catch (error) {
-    await store.close()
+    try {
+      await close()
+    } catch (closeError) {
+      throw new AggregateError(
+        [error, closeError],
+        'Could not start or clean up the OpenSCAD Viewer MCP server',
+      )
+    }
     throw error
   }
   console.error(`OpenSCAD Viewer MCP server ready (DuckDB: ${options.databasePath})`)

@@ -47,11 +47,12 @@ unavailable provider никогда не запускают другой кла�
 но публикует только contract-authoritative result. Он не является
 третьим language contract и не разрешает fallback.
 
-Текущая матрица до deployment supervisor публикуется без прикрашивания:
+Текущая матрица после deployment production watchdog публикуется без
+прикрас и отделяет immutable engine identity от mutable host isolation:
 
 | Engine class | Provider status | MCP isolation сейчас | Результат запроса |
 | --- | --- | --- | --- |
-| `manifold` | available, production legacy | синхронный in-process call под process-wide serialized queue | authoritative для `legacy/current`; cancel не hard-kill |
+| `manifold` | available, production legacy | disposable Node Worker на job, queue-inclusive deadline и hard terminate/join | authoritative для `legacy/current`; timeout/cancel не блокирует stdio event loop |
 | `brep` | unavailable, contract/design | provider не развернут | `engine_unavailable`, без fake execution и Manifold fallback |
 
 Присутствие `brep` в registry и discovery не означает регистрацию
@@ -91,6 +92,10 @@ unavailable provider никогда не запускают другой кла�
   ссылается на corpus/version, fingerprint, policy и последнюю qualification.
   Манифест также фиксирует exact limits/isolation, dependency/SBOM reference
   и rollback compatibility конкретного engine artifact.
+- `openscad://capabilities` и parity отдельно публикуют
+  `mcp-geometry-host-isolation-v1`: Worker lifecycle, admission/deadline/startup/
+  cancel/join limits и quarantine policy. Эти mutable host facts не входят в
+  immutable engine manifest и не меняют его digest.
 - Добавлены prompts для review и безопасного customize workflow.
 - Instructions и cache hints помогают агенту отличать immutable ресурсы от
   изменяемого catalog head.
@@ -134,13 +139,22 @@ unavailable provider никогда не запускают другой кла�
 - До SDK-очереди доходят только нужная инициализация и одна отмена на реально
   активную операцию или подписку; остальные notifications и входящие responses
   coalesce/drop до накопления в памяти.
-- Геометрическая очередь имеет отдельный process-wide предел.
+- Геометрическая очередь имеет отдельный process-wide предел. Production stdio
+  выполняет каждый job в новом Worker, включает queue time в 30-секундный
+  deadline, после 25 ms cancel grace делает hard terminate и допускает следующий
+  job только после join. Startup ограничен пятью секундами, join — одной;
+  незавершившийся join навсегда quarantines supervisor и unrefs зависший realm,
+  чтобы тот не удерживал shutdown процесса.
+
+Закрытый P1 не равен process sandbox: Worker threads делят адресное пространство
+с MCP host, а OS-enforced memory ceiling для WASM/native allocations пока нет.
+Subprocess/cgroup/job-object isolation остаётся отдельным residual risk.
 
 ## Ранжированный следующий этап
 
 | Приоритет | Идея | Зачем | Критерий готовности |
 | --- | --- | --- | --- |
-| P1 | Dual-engine geometry supervisor/watchdog | Один синхронный Manifold call пока блокирует stdio loop и не реагирует на cancel; будущий B-rep provider нельзя встраивать в stdio process. | Main process владеет только stdio/admission/DuckDB; оба provider изолированы в Worker/subprocess, имеют раздельные queues/quotas/watchdogs, без network/filesystem/secrets; deadline hard-kill перезапускает child; допустим только same-engine retry с тем же fingerprint/policy; MCP/DuckDB остаются живы. N-API требует отдельного review. |
+| P1 residual | Subprocess/OS memory isolation | Worker watchdog уже закрывает event-loop blocking, deadline и non-cooperative cancel, но Worker делит process memory с stdio/DuckDB. | Provider запускается в subprocess с OS-enforced RSS/address-space ceiling, bounded pipes и тем же exact protocol; kill/join не повреждает MCP/DuckDB, а N-API/native loading проходит отдельный review. |
 | P2 | Content-addressed compile cache | Повторные check/analyze/compare сейчас заново компилируют одинаковый source. | Ключ включает точный source hash, language contract, engine class/fingerprint, `SemanticProgram` и capability-manifest versions, purpose/quality, policy и effective budgets; cache bounded/LRU; persisted build semantics не меняются. |
 | P2 | Явный browser ↔ MCP handoff bundle | Vue workspace в IndexedDB и MCP catalog в DuckDB сознательно независимы, но пользователю нужен безопасный перенос. | Только явные export/import; bundle содержит source, document/revision metadata, hash, language contract и required capabilities; конфликт никогда не решается last-writer-wins, а imported execution record не переопределяет route. |
 | P2 | Bounded parameter sweep | Агент сможет подобрать допустимые Customizer варианты и сравнить метрики. | Лимит комбинаций/времени/triangles; preview-first; отмена; лучшие кандидаты возвращаются без implicit save. |

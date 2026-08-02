@@ -63,6 +63,14 @@ export function isAbortError(error: unknown): boolean {
     || (error instanceof Error && error.name === 'AbortError')
 }
 
+function isQuarantinedGeometryHostError(
+  error: unknown,
+): error is Error & { code: 'E_DIRECT_GEOMETRY_JOIN' | 'E_DIRECT_GEOMETRY_QUARANTINED' } {
+  if (!(error instanceof Error)) return false
+  const code = (error as Error & { code?: unknown }).code
+  return code === 'E_DIRECT_GEOMETRY_JOIN' || code === 'E_DIRECT_GEOMETRY_QUARANTINED'
+}
+
 export function buildDiagnostic(error: unknown): BuildDiagnostic {
   let diagnostic: Omit<BuildDiagnostic, 'contractVersion' | 'code' | 'retryable'>
   if (error instanceof OpenSCADParseError) {
@@ -79,7 +87,8 @@ export function buildDiagnostic(error: unknown): BuildDiagnostic {
     || error instanceof InvalidGeometryError
     || error instanceof GeometryCapabilityUnavailableError
     || error instanceof GeometryEngineUnavailableError
-    || error instanceof GeometryLanguageContractError) {
+    || error instanceof GeometryLanguageContractError
+    || isQuarantinedGeometryHostError(error)) {
     const positioned = error as Error & { line?: unknown; column?: unknown }
     diagnostic = {
       name: truncateWellFormed(error.name || 'Error', MAX_STORED_DIAGNOSTIC_NAME_LENGTH),
@@ -189,6 +198,23 @@ export function publicToolError(error: unknown): { error: PublicToolError; inter
           engine_class: error.execution.engineClass,
           engine_key: error.execution.engineKey,
           availability_cause: error.availabilityCause,
+          automatic_fallback: false,
+        },
+      },
+      internal: false,
+    }
+  }
+  if (isQuarantinedGeometryHostError(error)) {
+    return {
+      error: {
+        code: 'engine_unavailable',
+        message: 'The isolated geometry runtime is quarantined after a Worker shutdown failure.',
+        retryable: false,
+        next_action: 'Restart the local MCP server before retrying geometry operations.',
+        details: {
+          availability_cause: 'quarantined',
+          runtime_boundary: 'worker-thread',
+          restart_required: true,
           automatic_fallback: false,
         },
       },

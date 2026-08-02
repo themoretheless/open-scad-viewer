@@ -78,7 +78,11 @@ BoundedTransport ── request admission + serialized bounded writes
     │
     ▼
 createOpenScadMcpServer
-    ├─ HeadlessGeometryService ── parseOpenSCAD / inspect / STL / OBJ
+    ├─ HeadlessGeometryService ── inspect / STL / OBJ
+    │     │
+    │     └─ DirectGeometrySupervisor ── bounded FIFO + deadline/cancel watchdog
+    │              │ one disposable Node Worker per job
+    │              └─ directGeometry.worker.ts ── parser + Manifold provider
     ├─ typed tools + openscad:// resources
     └─ DuckDbModelStore
           ├─ versioned models
@@ -110,7 +114,9 @@ createOpenScadMcpServer
 | [`src/services/rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) | Pure device-loss policy that coalesces concurrent loss signals, permits one follow-up attempt and prevents false-ready publication. |
 | [`src/services/webgpuRenderer.ts`](src/services/webgpuRenderer.ts) | WebGPU lifecycle, pipelines/resources, camera/input, visibility, picking, overlays, measurements and sections. |
 | [`src/components`](src/components) | Command palette, ViewCube, Scene Outliner, Inspect and Customizer presentation components. |
-| [`src/mcp/geometryService.ts`](src/mcp/geometryService.ts) | Headless compiler summary, validated Customizer replacement, size-bounded STL/OBJ export, and a process-wide bounded pending-job gate. This is the only MCP-side parser execution boundary. |
+| [`src/mcp/geometryService.ts`](src/mcp/geometryService.ts) | Headless summary, validated Customizer replacement, size-bounded STL/OBJ export, and a process-wide bounded pending-job gate. Production injects the direct Worker runtime; deterministic unit tests may retain the in-process engine. |
+| [`src/mcp/directGeometryProtocol.ts`](src/mcp/directGeometryProtocol.ts) / [`src/mcp/directGeometry.worker.ts`](src/mcp/directGeometry.worker.ts) | Exact, source-hash-correlated Worker envelopes and the disposable production realm that invokes build/capability work on the direct default geometry engine. The child has no DuckDB, MCP transport, filesystem, network or subprocess dependency. |
+| [`src/mcp/directGeometrySupervisor.ts`](src/mcp/directGeometrySupervisor.ts) | One-at-a-time FIFO admission, queue-inclusive deadline, startup/cancel/join watchdogs, hard Worker termination, join-before-settlement and permanent quarantine after an unjoined child. |
 | [`src/mcp/boundedTransport.ts`](src/mcp/boundedTransport.ts) | Process-wide MCP request admission tied to actual handler settlement, bounded modern subscriptions, inbound notification coalescing/filtering, fail-fast busy responses, serialized stdio writes, and bounded outbound backpressure. |
 | [`src/mcp/duckdbModelStore.ts`](src/mcp/duckdbModelStore.ts) | Node-only, parameterized DuckDB repository with schema-v5 source-attestation classes, versioned diagnostics, immutable source revisions, retention quotas, catalog statistics, and owner-only POSIX file permissions; external access and extension loading are disabled. |
 | [`src/mcp/createServer.ts`](src/mcp/createServer.ts) / [`src/mcp/server.ts`](src/mcp/server.ts) | Dual-era typed MCP tools/resources/prompts, reproducible revision selectors, cache hints, guided instructions, and the local stdio/bootstrap lifecycle. |
@@ -326,6 +332,10 @@ commands flowing inward and renderer intents/events flowing outward.
     admission settlement wraps its request registry, including handlers added
     by the modern stdio host after factory creation; wire regressions gate an
     SDK upgrade.
+15. **MCP provider realm disposal.** Production stdio never calls the direct
+    geometry provider in its event-loop realm. Every job owns one Worker;
+    terminal publication and next-job admission wait for its join. Mutable host
+    isolation/limits are advertised separately from immutable engine manifests.
 
 ## Current limitations
 
@@ -348,11 +358,11 @@ commands flowing inward and renderer intents/events flowing outward.
 - Browser persistence is versioned and IndexedDB-first, with a synchronous
   localStorage recovery journal, but remains single-document and independent
   from the optional MCP/DuckDB catalog.
-- MCP compilation currently calls the shared parser in the stdio process. A
-  bounded gate prevents unbounded request accumulation and cancellation is
-  observed at parser checkpoints, but one synchronous Manifold kernel call can
-  still delay cancellation; a Node worker-thread watchdog is the next isolation
-  step for adversarially heavy MCP requests.
+- MCP production compilation now runs behind a disposable Worker watchdog, so
+  a synchronous Manifold call cannot block stdio and deadline/cancel can hard
+  terminate its realm. Worker threads still share the host process and the
+  current contract has no OS-enforced memory ceiling for WASM/native
+  allocation; subprocess/cgroup/job-object containment remains residual risk.
 - The editor remains a textarea and scene selection remains single-object.
   Dead additive/range affordances are removed; the ViewCube compass follows the
   live camera, face presets snap to orthographic, and two-pointer pinch plus

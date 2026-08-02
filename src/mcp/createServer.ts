@@ -39,6 +39,13 @@ import {
   type McpGeometryService,
 } from './geometryService'
 import {
+  DIRECT_GEOMETRY_CANCEL_GRACE_MS,
+  DIRECT_GEOMETRY_JOB_DEADLINE_MS,
+  DIRECT_GEOMETRY_JOIN_TIMEOUT_MS,
+  DIRECT_GEOMETRY_MAX_ADMITTED_JOBS,
+  DIRECT_GEOMETRY_STARTUP_TIMEOUT_MS,
+} from './directGeometrySupervisor'
+import {
   assertGeometryManifestArchive,
   canonicalJson,
   engineManifestUri,
@@ -84,6 +91,45 @@ Preview geometry can be reduced; use full quality for authoritative measurements
 
 const CACHE_FIVE_MINUTES = 5 * 60 * 1_000
 const CACHE_ONE_DAY = 24 * 60 * 60 * 1_000
+
+/**
+ * Mutable host/runtime facts deliberately kept outside immutable engine
+ * manifests. Moving an unchanged provider behind a watchdog must not rewrite
+ * its capability manifest or digest.
+ */
+export const MCP_GEOMETRY_HOST_CONTRACT = Object.freeze({
+  id: 'mcp-geometry-host-isolation-v1' as const,
+  contract_version: 1 as const,
+  scope: 'node-mcp-stdio' as const,
+  boundary: 'worker-thread' as const,
+  provider_lifecycle: 'disposable-worker-per-job' as const,
+  limits: Object.freeze({
+    max_admitted_jobs: DIRECT_GEOMETRY_MAX_ADMITTED_JOBS,
+    max_concurrent_workers: 1 as const,
+    job_deadline_ms: DIRECT_GEOMETRY_JOB_DEADLINE_MS,
+    startup_timeout_ms: DIRECT_GEOMETRY_STARTUP_TIMEOUT_MS,
+    cancellation_grace_ms: DIRECT_GEOMETRY_CANCEL_GRACE_MS,
+    worker_join_timeout_ms: DIRECT_GEOMETRY_JOIN_TIMEOUT_MS,
+  }),
+  enforcement: Object.freeze({
+    queue_time_in_deadline: true as const,
+    hard_terminate_after_cancel_grace: true as const,
+    worker_terminal_settles_only_after_join: true as const,
+    next_job_only_after_worker_join: true as const,
+    join_timeout_rejects_and_quarantines: true as const,
+    unjoined_worker_unref_on_quarantine: true as const,
+    host_environment_inherited: false as const,
+    quarantine_after_join_timeout: true as const,
+    worker_reuse: false as const,
+  }),
+  residual_risks: Object.freeze({
+    subprocess_boundary: false as const,
+    os_enforced_memory_limit: false as const,
+    filesystem_sandbox: false as const,
+    network_sandbox: false as const,
+    worker_threads_share_process: true as const,
+  }),
+})
 
 const idSchema = z.string().min(1).max(MAX_MODEL_ID_LENGTH)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/)
@@ -1470,6 +1516,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
         server: { name: 'open-scad-viewer', version: '0.1.0' },
         protocol_versions: ['2026-07-28', ...SUPPORTED_PROTOCOL_VERSIONS],
         geometry_engines: geometryEngines,
+        geometry_host: MCP_GEOMETRY_HOST_CONTRACT,
         parity_resource_uri: 'openscad://parity',
         compiler: {
           language_scope: 'strict OpenSCAD subset',
@@ -1581,8 +1628,9 @@ First call openscad_check in preview quality and inspect its declared top-level 
         mimeType: 'application/json',
         text: JSON.stringify({
         contract_version: 1,
-        definition: 'Same source revision, language contract, engine class and fingerprint, policy, limits, and declared tolerances across browser and MCP.',
+        definition: 'Same source revision, language contract, engine class and fingerprint, policy, engine limits, and declared tolerances across browser and MCP. Mutable MCP host isolation is reported separately from immutable engine identity.',
         cross_engine_geometric_equivalence: false,
+        mcp_host: MCP_GEOMETRY_HOST_CONTRACT,
         policy: {
           id: 'engine-routing-contract-v1',
           digest_algorithm: 'sha256',
@@ -1604,13 +1652,22 @@ First call openscad_check in preview quality and inspect its declared top-level 
           kernel_fingerprint: engine.kernelFingerprint,
           runtime_availability: engine.availability,
           browser_target: engine.deployment === 'not-deployed' ? 'not-deployed' : 'wasm-worker',
-          mcp_target: engine.deployment === 'not-deployed' ? 'not-deployed' : 'node-wasm-in-process',
+          mcp_target: engine.deployment === 'not-deployed'
+            ? 'not-deployed'
+            : 'node-wasm-disposable-worker',
           browser_mcp_status: engine.deployment === 'not-deployed'
             ? 'not-deployed'
             : engine.qualification.status === 'qualified'
               ? 'qualified'
               : 'qualification-pending',
           mcp_isolation: engine.isolation,
+          mcp_provider_manifest_isolation: engine.isolation,
+          mcp_host_isolation: engine.deployment === 'not-deployed'
+            ? 'not-deployed'
+            : MCP_GEOMETRY_HOST_CONTRACT.provider_lifecycle,
+          mcp_host_contract_id: engine.deployment === 'not-deployed'
+            ? null
+            : MCP_GEOMETRY_HOST_CONTRACT.id,
           qualification: {
             status: engine.qualification.status,
             record_id: engine.qualification.recordId,

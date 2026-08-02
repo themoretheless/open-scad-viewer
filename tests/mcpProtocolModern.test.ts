@@ -284,6 +284,16 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
     expect(capabilities._meta).toMatchObject({
       'io.modelcontextprotocol/serverInfo': { name: 'open-scad-viewer', version: '0.1.0' },
     })
+    const capabilityDocument = JSON.parse((capabilities.contents as Array<{ text: string }>)[0].text)
+    expect(capabilityDocument).toMatchObject({
+      geometry_host: {
+        id: 'mcp-geometry-host-isolation-v1',
+        boundary: 'worker-thread',
+        provider_lifecycle: 'disposable-worker-per-job',
+        limits: { job_deadline_ms: 30_000, max_concurrent_workers: 1 },
+        residual_risks: { subprocess_boundary: false, os_enforced_memory_limit: false },
+      },
+    })
 
     await expect(request('tools/list')).rejects.toThrow(/protocolVersion|_meta|Invalid/i)
   })

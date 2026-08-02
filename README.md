@@ -134,6 +134,10 @@ autoload/install are disabled in the server process.
 
 `openscad://capabilities` describes the supported OpenSCAD subset, protocol
 versions, active wire/work limits, and the deliberate IndexedDB/DuckDB boundary.
+It reports the mutable stdio host/watchdog contract separately from immutable
+engine manifests, so moving an unchanged provider behind a Worker does not
+rewrite its engine identity or digest. `openscad://parity` uses the same
+separation when comparing browser and MCP targets.
 The server also advertises `openscad_review_model` and
 `openscad_customize_workflow` prompts plus concise usage instructions. It serves
 both MCP `2026-07-28` (`server/discover`) and legacy clients; modern discovery,
@@ -167,9 +171,16 @@ cancellation per active request or subscription; unrelated notifications and
 client-originated responses are dropped before they can accumulate in the SDK.
 Within it, at most eight headless geometry requests may be active or queued;
 additional calls fail fast with retry guidance. These limits bound request and
-response accumulation, but a single synchronous Manifold kernel call still
-cannot be preempted. A worker-thread watchdog remains the next hard-isolation
-step for hostile workloads.
+response accumulation. Production stdio geometry runs in one disposable Node
+Worker per job: the queue-inclusive deadline is 30 seconds, startup is bounded
+to five seconds, cancellation gets a 25 ms cooperative grace period, and the
+Worker is then terminated. A result settles and the next FIFO job starts only
+after the previous Worker joins; a one-second join failure permanently
+quarantines the supervisor and unrefs the stuck realm so it cannot pin process
+shutdown. This closes the event-loop blocking/cancellation
+P1. It is not a subprocess sandbox: Worker threads share the MCP process and no
+OS-enforced memory limit contains WASM/native allocation, so hostile-memory
+isolation remains residual work.
 
 ## Controls
 

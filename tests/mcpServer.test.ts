@@ -184,7 +184,8 @@ describe('OpenSCAD MCP server', () => {
     const capabilities = await request('resources/read', {
       uri: 'openscad://capabilities',
     }) as { contents: Array<{ text: string }> }
-    expect(JSON.parse(capabilities.contents[0].text)).toMatchObject({
+    const capabilitiesJson = JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
+    expect(capabilitiesJson).toMatchObject({
       protocol_versions: expect.arrayContaining(['2026-07-28', '2025-11-25']),
       geometry_engines: {
         source_directed_routing: true,
@@ -193,6 +194,39 @@ describe('OpenSCAD MCP server', () => {
           { engine_class: 'manifold', permanent: true, availability: 'available' },
           { engine_class: 'brep', permanent: true, availability: 'unavailable' },
         ],
+      },
+      geometry_host: {
+        id: 'mcp-geometry-host-isolation-v1',
+        contract_version: 1,
+        scope: 'node-mcp-stdio',
+        boundary: 'worker-thread',
+        provider_lifecycle: 'disposable-worker-per-job',
+        limits: {
+          max_admitted_jobs: 8,
+          max_concurrent_workers: 1,
+          job_deadline_ms: 30_000,
+          startup_timeout_ms: 5_000,
+          cancellation_grace_ms: 25,
+          worker_join_timeout_ms: 1_000,
+        },
+        enforcement: {
+          queue_time_in_deadline: true,
+          hard_terminate_after_cancel_grace: true,
+          worker_terminal_settles_only_after_join: true,
+          next_job_only_after_worker_join: true,
+          join_timeout_rejects_and_quarantines: true,
+          unjoined_worker_unref_on_quarantine: true,
+          host_environment_inherited: false,
+          quarantine_after_join_timeout: true,
+          worker_reuse: false,
+        },
+        residual_risks: {
+          subprocess_boundary: false,
+          os_enforced_memory_limit: false,
+          filesystem_sandbox: false,
+          network_sandbox: false,
+          worker_threads_share_process: true,
+        },
       },
       limits: { pending_geometry_jobs: 8 },
       persistence: { arbitrary_sql: false, browser_indexeddb_synchronized: false },
@@ -266,9 +300,12 @@ describe('OpenSCAD MCP server', () => {
     const manifoldManifest = await request('resources/read', {
       uri: 'openscad://engines/manifold/capabilities/manifold-node-v1',
     }) as { contents: Array<{ text: string }> }
-    expect(JSON.parse(manifoldManifest.contents[0].text)).toMatchObject({
+    const manifoldManifestJson = JSON.parse(manifoldManifest.contents[0].text) as
+      Record<string, unknown>
+    expect(manifoldManifestJson).toMatchObject({
       engine_class: 'manifold',
-      manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
+      isolation: 'in-process-serialized',
       dependency: {
         package_name: 'manifold-3d',
         version: '3.5.1',
@@ -278,6 +315,8 @@ describe('OpenSCAD MCP server', () => {
         lockfile_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       },
     })
+    expect(manifoldManifestJson).not.toHaveProperty('geometry_host')
+    expect(manifoldManifestJson).not.toHaveProperty('mcp_host_contract_id')
     await expect(request('resources/read', {
       uri: 'openscad://engines/brep/capabilities/manifold-node-v1',
     })).rejects.toThrow(/not found/i)
@@ -295,6 +334,15 @@ describe('OpenSCAD MCP server', () => {
     }
     expect(parityJson).toMatchObject({
       cross_engine_geometric_equivalence: false,
+      mcp_host: {
+        id: 'mcp-geometry-host-isolation-v1',
+        boundary: 'worker-thread',
+        provider_lifecycle: 'disposable-worker-per-job',
+        residual_risks: {
+          subprocess_boundary: false,
+          os_enforced_memory_limit: false,
+        },
+      },
       policy: { id: 'engine-routing-contract-v1', sha256: expect.stringMatching(/^[a-f0-9]{64}$/) },
       corpus: {
         id: 'browser-mcp-engine-parity',
@@ -309,17 +357,27 @@ describe('OpenSCAD MCP server', () => {
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
           kernel_fingerprint: 'manifold-wasm-v1',
           browser_mcp_status: 'qualification-pending',
+          mcp_target: 'node-wasm-disposable-worker',
+          mcp_isolation: 'in-process-serialized',
+          mcp_provider_manifest_isolation: 'in-process-serialized',
+          mcp_host_isolation: 'disposable-worker-per-job',
+          mcp_host_contract_id: 'mcp-geometry-host-isolation-v1',
         },
         {
           engine_class: 'brep',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
           kernel_fingerprint: 'not-deployed',
           browser_mcp_status: 'not-deployed',
+          mcp_provider_manifest_isolation: 'not-deployed',
+          mcp_host_isolation: 'not-deployed',
+          mcp_host_contract_id: null,
         },
       ],
     })
     expect(createHash('sha256').update(canonicalJson(parityJson.policy.payload)).digest('hex'))
       .toBe(parityJson.policy.sha256)
+    expect(parityJson.policy.payload).not.toHaveProperty('mcp_host')
+    expect(parityJson.policy.payload).not.toHaveProperty('geometry_host')
     const advertisedEngines = listed.structuredContent.geometry_engines.engines
     expect(parityJson.engines.map(engine => ({
       engine_class: engine.engine_class,
