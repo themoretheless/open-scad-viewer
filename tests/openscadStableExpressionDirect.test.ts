@@ -4,6 +4,32 @@ import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParse
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 
 describe('direct independent OpenSCAD 2021.01 expression semantics', () => {
+  it('uses represented range sequences for equality and ordering', async () => {
+    const result = await parseOpenSCAD(`
+      if (
+        [0:1:2] == [0:1:2.5]
+        && [0:1:2.5] <= [0:1:2]
+        && [0:1:2] < [0:2:4]
+        && [1:1:2] > [0:2:4]
+      ) cube(1); else cube(2);
+    `, stableProfile)
+
+    expect(result.warnings).toEqual([])
+    expect(result.volume).toBeCloseTo(1, 6)
+  })
+
+  it('uses exact degree trigonometry for observable branch decisions', async () => {
+    const result = await parseOpenSCAD(`
+      if (sin(180) == 0 && tan(90) == 1 / 0)
+        cube(1);
+      else
+        cube(2);
+    `, stableProfile)
+
+    expect(result.warnings).toEqual([])
+    expect(result.volume).toBeCloseTo(1, 6)
+  })
+
   it('evaluates wrappers, comprehensions, tagged ranges and shared value operations', async () => {
     const result = await parseOpenSCAD(`
       echo(

@@ -7,7 +7,7 @@ import {
   OpenScadProject,
   type OpenScadProjectFileInput,
 } from '../services/openScadProject'
-import { parseOpenSCAD, parseOpenScadProject } from '../services/openscadParser'
+import { parseOpenScadProject } from '../services/openscadParser'
 
 export type IndependentOpenScadProjectFile = Readonly<{
   path: string
@@ -68,18 +68,13 @@ export async function executeIndependentOpenScad(
     animationTime: input.time,
     shouldAbort: () => input.signal?.aborted ?? false,
   } as const
-  const result = input.files.length === 0
-    ? await parseOpenSCAD(input.source, {
-        ...parseOptions,
-        languageProfile: 'openscad/stable-2021.01',
-      })
-    : await parseOpenScadProject(new OpenScadProject({
-        entrypoint: 'main.scad',
-        files: [
-          { kind: 'source', path: 'main.scad', source: input.source },
-          ...input.files.map(projectFile),
-        ],
-      }), parseOptions)
+  const result = await parseOpenScadProject(new OpenScadProject({
+    entrypoint: 'main.scad',
+    files: [
+      { kind: 'source', path: 'main.scad', source: input.source },
+      ...input.files.map(projectFile),
+    ],
+  }), parseOptions)
   throwIfAborted(input.signal)
   return {
     result,

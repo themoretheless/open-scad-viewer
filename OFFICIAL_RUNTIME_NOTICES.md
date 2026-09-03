@@ -10,6 +10,7 @@ only by the explicit `npm run setup:openscad` command into the gitignored
 - Artifact: `OpenSCAD-2026.09.01-WebAssembly-node.zip`
 - Source: <https://files.openscad.org/snapshots/OpenSCAD-2026.09.01-WebAssembly-node.zip>
 - Pinned archive SHA-256: `82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888`
+- Deterministically patched runtime SHA-256: `80a6e6129ddf58e8262c8ff3023ee68afc93937b5a5d1afa54b054415c7b768c`
 - Project source: <https://github.com/openscad/openscad>
 - License: GPL-2.0-or-later
 - License text: <https://github.com/openscad/openscad/blob/master/COPYING>

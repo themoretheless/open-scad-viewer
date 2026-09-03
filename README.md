@@ -104,8 +104,10 @@ The setup command explicitly downloads the official OpenSCAD 2026.09.01 Node
 WebAssembly snapshot, verifies archive SHA-256
 `82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888`, and
 creates a deterministic NODERAWFS-disabled patched copy under the gitignored
-`.open-scad-runtime/` directory. The same explicit setup downloads the pinned
-Basic Regular font and its SIL Open Font License 1.1 text, verifies both
+`.open-scad-runtime/` directory, whose installed SHA-256 is also pinned and
+verified independently of the writable cache manifest. The same explicit setup
+downloads the pinned Basic Regular font and its SIL Open Font License 1.1 text,
+verifies both
 SHA-256 digests, and records them in the runtime manifest so `text()` has a
 deterministic default font. The GPL runtime, font, and license are not fetched
 by `npm install` or committed or bundled into the web app; exact identities and
@@ -274,8 +276,9 @@ in fresh subprocesses with Node permissions, no inherited application
 environment (only `NODE_NO_WARNINGS` is supplied), NODERAWFS disabled, and an
 in-memory virtual project. Host-file read permission is limited to the runner,
 verified patched runtime, and verified Basic font; host-file writes are denied.
-The supervisor bounds the project, arguments, logs, result, and wall time; it
-admits one official job and rejects concurrent official work as busy
+The supervisor bounds the project, serialized child request, arguments, logs,
+result, and wall time; it admits one official job and rejects concurrent
+official work as busy
 instead of maintaining an internal queue. Cancellation or deadline kills and
 joins the child before the slot becomes available again. SCAD code receives no
 host path and the runner exposes no network API, but Node's permission model

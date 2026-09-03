@@ -88,6 +88,41 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(evaluate('norm', [[3, 4]])).toBe(5)
   })
 
+  it('matches exact 2021.01 degree-trigonometry reductions and special values', () => {
+    expect(evaluate('sin', [30])).toBe(0.5)
+    expect(evaluate('sin', [45])).toBe(Math.SQRT1_2)
+    expect(evaluate('sin', [60])).toBe(0.8660254037844386)
+    expect(Object.is(evaluate('sin', [180]), -0)).toBe(true)
+    expect(evaluate('sin', [360])).toBe(0)
+    expect(Object.is(evaluate('sin', [-180]), -0)).toBe(true)
+
+    expect(evaluate('cos', [60])).toBe(0.5)
+    expect(evaluate('cos', [90])).toBe(0)
+    expect(evaluate('cos', [180])).toBe(-1)
+    expect(evaluate('cos', [360])).toBe(1)
+    expect(Object.is(evaluate('cos', [270]), -0)).toBe(true)
+
+    expect(evaluate('tan', [30])).toBe(0.5773502691896257)
+    expect(evaluate('tan', [45])).toBe(1)
+    expect(evaluate('tan', [60])).toBe(Math.sqrt(3))
+    expect(evaluate('tan', [90])).toBe(Infinity)
+    expect(evaluate('tan', [-90])).toBe(-Infinity)
+    expect(Object.is(evaluate('tan', [180]), -0)).toBe(true)
+    expect(Object.is(evaluate('tan', [360]), 0)).toBe(true)
+
+    expect(evaluate('asin', [0.5])).toBe(30)
+    expect(evaluate('acos', [0.5])).toBe(60)
+    expect(evaluate('atan', [1])).toBe(45)
+    expect(evaluate('atan2', [1, 1])).toBe(45)
+    expect(evaluate('atan2', [1, -1])).toBe(135)
+
+    const hugeAngle = 360 * 2 ** 52
+    expect(evaluate('sin', [hugeAngle])).toBeNaN()
+    expect(evaluate('cos', [Infinity])).toBeNaN()
+    expect(evaluate('tan', [Number.NaN])).toBeNaN()
+    expect(evaluate('asin', [2])).toBeNaN()
+  })
+
   it('uses the injected random stream when unseeded and a repeatable local stream when seeded', () => {
     expect(evaluate('rands', [0, 8, 3], context({ random: () => 0.25 }).value)).toEqual([2, 2, 2])
     expect(evaluate('rands', [4, 4, 3], context({ random: () => { throw new Error('must not run') } }).value))
@@ -204,6 +239,9 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
       0x10ffff,
       0x110000,
     ], state.value)).toBe(`ABC${String.fromCodePoint(0x10ffff)}`)
+    expect(evaluate('chr', [
+      { kind: 'range-value', start: 65, step: 0, end: 65 },
+    ], state.value)).toBe('')
     expect(evaluate('ord', [], state.value)).toBeUndefined()
     expect(state.warnings).toEqual([])
     expect(evaluate('ord', ['😀x'], state.value)).toBe(0x1f600)
@@ -241,7 +279,7 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
 
   it('exposes the pinned language version, vector products, stack lookup and all type predicates', () => {
     const state = context()
-    expect(evaluate('version', [], state.value)).toEqual([2021, 1])
+    expect(evaluate('version', [], state.value)).toEqual([2021, 1, 0])
     expect(evaluate('version_num', [], state.value)).toBe(20210100)
     expect(evaluate('version_num', [[2021, 1]], state.value)).toBe(20210100)
     expect(evaluate('cross', [[1, 0], [0, 1]], state.value)).toBe(1)
@@ -263,7 +301,7 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
   })
 
   it('matches silent/surplus version rules, norm overflow and the historical 2D cross coercion', () => {
-    expect(evaluate('version', [1, 'ignored'])).toEqual([2021, 1])
+    expect(evaluate('version', [1, 'ignored'])).toEqual([2021, 1, 0])
     expect(evaluate('version_num', [[2021, 1, 2], 'ignored'])).toBe(20210102)
     expect(evaluate('version_num', [[2021]])).toBeUndefined()
     expect(evaluate('version_num', ['2021.01'])).toBeUndefined()

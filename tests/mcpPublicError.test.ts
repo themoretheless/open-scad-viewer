@@ -14,6 +14,8 @@ import {
   InvalidGeometryError,
 } from '../src/mcp/geometryService'
 import { CatalogQuotaError, ModelRevisionConflictError } from '../src/mcp/modelStore'
+import { OpenScadProjectError } from '../src/services/openScadProject'
+import { OpenScadProjectCompileError } from '../src/services/openScadProjectCompiler'
 import {
   buildDiagnostic,
   ModelNotFoundError,
@@ -87,6 +89,47 @@ describe('MCP public errors', () => {
     expect(publicToolError(new CatalogQuotaError('Catalog full', 'models', 500)).error).toMatchObject({
       code: 'quota_exceeded',
       details: { quota: 'models', limit: 500 },
+    })
+  })
+
+  it('exposes bounded project and dependency failures as actionable source diagnostics', () => {
+    expect(publicToolError(new OpenScadProjectCompileError(
+      'E_PROJECT_DEPENDENCY_MISSING',
+      'include from main.scad refers to missing project file lib/part.scad.',
+      {
+        directive: 'include',
+        importer: 'main.scad',
+        specifier: 'lib/part.scad',
+        path: 'lib/part.scad',
+      },
+    ))).toMatchObject({
+      internal: false,
+      error: {
+        code: 'source_syntax_error',
+        retryable: false,
+        details: {
+          diagnostic_code: 'E_PROJECT_DEPENDENCY_MISSING',
+          directive: 'include',
+          source_path: 'main.scad',
+          specifier: 'lib/part.scad',
+          dependency_path: 'lib/part.scad',
+        },
+      },
+    })
+    expect(publicToolError(new OpenScadProjectError(
+      'E_PROJECT_PATH_ESCAPE',
+      'OpenSCAD dependency path escapes the project root.',
+      { path: '../../outside.scad' },
+    ))).toMatchObject({
+      internal: false,
+      error: {
+        code: 'source_syntax_error',
+        retryable: false,
+        details: {
+          diagnostic_code: 'E_PROJECT_PATH_ESCAPE',
+          path: '../../outside.scad',
+        },
+      },
     })
   })
 

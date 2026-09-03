@@ -11,8 +11,11 @@ import {
   OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
+  OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
   isOfficialOpenScadRuntimeManifest,
+  matchesOfficialOpenScadRuntimeIntegrity,
   sha256Buffer,
+  type OfficialOpenScadRuntimeIntegrity,
   type OfficialOpenScadRuntimeManifest,
 } from './officialOpenScadRuntimePatch'
 import {
@@ -29,11 +32,13 @@ import {
   OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
   OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
   OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
+  OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
   OFFICIAL_OPENSCAD_PROTOCOL_VERSION,
   isOfficialOpenScadWireRequest,
   isOfficialOpenScadWireTerminal,
   isWellFormedOfficialOpenScadText,
   normalizeOfficialOpenScadProjectPath,
+  officialOpenScadProjectPathsConflict,
   type OfficialOpenScadBackend,
   type OfficialOpenScadExperimentalFeature,
   type OfficialOpenScadExportFormat,
@@ -140,6 +145,7 @@ export interface OfficialOpenScadCapabilities {
     readonly projectFiles: number
     readonly projectFileBytes: number
     readonly projectBytes: number
+    readonly wireRequestBytes: number
     readonly outputBytes: number
     readonly logBytes: number
     readonly logEntries: number
@@ -165,6 +171,7 @@ export type OfficialOpenScadSupervisorErrorCode =
   | 'E_OFFICIAL_OPENSCAD_CANCELLED'
   | 'E_OFFICIAL_OPENSCAD_DEADLINE'
   | 'E_OFFICIAL_OPENSCAD_PROTOCOL'
+  | 'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT'
   | 'E_OFFICIAL_OPENSCAD_CHILD_CRASH'
   | 'E_OFFICIAL_OPENSCAD_CLOSED'
 
@@ -198,6 +205,8 @@ export interface OfficialOpenScadRuntimeSupervisorOptions {
   readonly runnerPath?: string
   readonly maxConcurrentJobs?: number
   readonly childFactory?: OfficialOpenScadChildFactory
+  /** Test seam for synthetic runtime fixtures. Production callers must omit this. */
+  readonly testOnlyExpectedIntegrity?: OfficialOpenScadRuntimeIntegrity
 }
 
 export interface OfficialOpenScadChildFactoryInput {
@@ -238,14 +247,27 @@ function defaultRunnerPath(): string {
   return fileURLToPath(new URL('./officialOpenScadRuntimeRunner.mjs', import.meta.url))
 }
 
+type NodePermissionFlag = '--permission' | '--experimental-permission'
+
+function nodePermissionFlag(): NodePermissionFlag | null {
+  if (process.allowedNodeEnvironmentFlags.has('--permission')) return '--permission'
+  if (process.allowedNodeEnvironmentFlags.has('--experimental-permission')) {
+    return '--experimental-permission'
+  }
+  return null
+}
+
 function permissionModelAvailable(): boolean {
-  return process.allowedNodeEnvironmentFlags.has('--experimental-permission')
-    || process.allowedNodeEnvironmentFlags.has('--permission')
+  return nodePermissionFlag() !== null
 }
 
 function defaultChildFactory(input: OfficialOpenScadChildFactoryInput): ChildProcessWithoutNullStreams {
+  const permissionFlag = nodePermissionFlag()
+  if (permissionFlag === null) {
+    throw new Error('The current Node.js runtime does not provide the permission model')
+  }
   return spawn(process.execPath, [
-    '--experimental-permission',
+    permissionFlag,
     '--max-old-space-size=512',
     `--allow-fs-read=${input.runnerPath}`,
     `--allow-fs-read=${input.runtimePath}`,
@@ -322,6 +344,7 @@ function capabilitiesShape(
       projectFiles: OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
       projectFileBytes: OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
       projectBytes: OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+      wireRequestBytes: OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
       outputBytes: OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
       logBytes: OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
       logEntries: OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
@@ -344,7 +367,10 @@ async function readBoundedFile(path: string, maximumBytes: number, label: string
   return data
 }
 
-async function verifyInstallation(cacheRoot: string): Promise<VerifiedInstallation> {
+async function verifyInstallation(
+  cacheRoot: string,
+  expectedIntegrity: OfficialOpenScadRuntimeIntegrity,
+): Promise<VerifiedInstallation> {
   const manifestPath = join(cacheRoot, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME)
   const manifestBytes = await readBoundedFile(manifestPath, MAX_MANIFEST_BYTES, 'Official OpenSCAD manifest')
   let manifest: unknown
@@ -357,6 +383,11 @@ async function verifyInstallation(cacheRoot: string): Promise<VerifiedInstallati
   }
   if (!isOfficialOpenScadRuntimeManifest(manifest)) {
     throw Object.assign(new Error('Official OpenSCAD manifest does not match the pinned runtime'), {
+      verificationStage: 'manifest',
+    })
+  }
+  if (!matchesOfficialOpenScadRuntimeIntegrity(manifest, expectedIntegrity)) {
+    throw Object.assign(new Error('Official OpenSCAD manifest does not match the pinned runtime integrity'), {
       verificationStage: 'manifest',
     })
   }
@@ -436,7 +467,9 @@ function encodeFiles(sourceBytes: number, files: readonly OfficialOpenScadProjec
   return files.map(file => {
     if (!file || typeof file !== 'object') throw new TypeError('Official OpenSCAD project file must be an object')
     const path = normalizeOfficialOpenScadProjectPath(file.path)
-    if (paths.has(path)) throw new TypeError(`Duplicate OpenSCAD project path: ${path}`)
+    if ([...paths].some(existing => officialOpenScadProjectPathsConflict(existing, path))) {
+      throw new TypeError(`Conflicting OpenSCAD project path: ${path}`)
+    }
     paths.add(path)
     let data: Uint8Array
     if (typeof file.data === 'string') {
@@ -506,6 +539,14 @@ function buildRequest(
     }),
   })
   if (!isOfficialOpenScadWireRequest(request)) throw new TypeError('Official OpenSCAD request failed protocol validation')
+  const wireBytes = Buffer.byteLength(JSON.stringify(request))
+  if (wireBytes > OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES) {
+    throw new OfficialOpenScadSupervisorError(
+      'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT',
+      `Official OpenSCAD serialized request exceeds ${OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES} bytes`,
+      jobId,
+    )
+  }
   return request
 }
 
@@ -524,6 +565,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
   private readonly runnerPath: string
   private readonly maxConcurrentJobs: number
   private readonly childFactory: OfficialOpenScadChildFactory
+  private readonly expectedIntegrity: OfficialOpenScadRuntimeIntegrity
   private readonly active = new Map<number, ActiveChild>()
   private admittedJobs = 0
   private nextJobId = 1
@@ -543,6 +585,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
       MAX_CONCURRENT_JOBS,
     )
     this.childFactory = options.childFactory ?? defaultChildFactory
+    this.expectedIntegrity = options.testOnlyExpectedIntegrity ?? OFFICIAL_OPENSCAD_PINNED_INTEGRITY
   }
 
   snapshot(): OfficialOpenScadSupervisorSnapshot {
@@ -558,7 +601,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
   async capabilities(): Promise<OfficialOpenScadCapabilities> {
     if (!permissionModelAvailable()) return unavailableCapabilities('permission-model-unavailable')
     try {
-      const installation = await verifyInstallation(this.cacheRoot)
+      const installation = await verifyInstallation(this.cacheRoot, this.expectedIntegrity)
       return capabilitiesShape(
         true,
         null,
@@ -677,7 +720,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
     }
     let installation: VerifiedInstallation
     try {
-      installation = await verifyInstallation(this.cacheRoot)
+      installation = await verifyInstallation(this.cacheRoot, this.expectedIntegrity)
     } catch (error) {
       throw new OfficialOpenScadSupervisorError(
         'E_OFFICIAL_OPENSCAD_UNAVAILABLE',

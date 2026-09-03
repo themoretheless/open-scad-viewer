@@ -43,9 +43,11 @@ published, bounded feature name.
 
 Installation is explicit. A setup command downloads the archive from the
 official OpenSCAD snapshot host, verifies the digest before extraction, applies
-a deterministic local MEMFS isolation patch, and writes the result under the
-gitignored `.open-scad-runtime/` cache. Neither the archive nor the patched GPL
-runtime is committed or included in the browser build. The same command
+a deterministic local MEMFS isolation patch, verifies the pinned digest of that
+patched runtime independently of the writable manifest, and writes the result
+under the gitignored `.open-scad-runtime/` cache. Neither the archive nor the
+patched GPL runtime is committed or included in the browser build. The same
+command
 downloads the checksum-pinned OFL Basic Regular font and its license text; all
 three installed files are bound into the verified manifest. Exact identities
 and redistribution obligations are recorded in

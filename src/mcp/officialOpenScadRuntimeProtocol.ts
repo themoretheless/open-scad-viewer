@@ -6,6 +6,7 @@ export const OFFICIAL_OPENSCAD_MAX_PROJECT_FILES = 128
 export const OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES = 4 * 1024 * 1024
 export const OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES = 6 * 1024 * 1024
 export const OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES = 6 * 1024 * 1024
+export const OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES = 10 * 1024 * 1024
 export const OFFICIAL_OPENSCAD_MAX_LOG_BYTES = 64 * 1024
 export const OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES = 128
 export const OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES = 2 * 1024
@@ -176,16 +177,24 @@ export function normalizeOfficialOpenScadProjectPath(value: string): string {
   if (segments.some(segment => segment.length === 0 || segment === '.' || segment === '..')) {
     throw new TypeError('Project file path must not contain empty, dot, or parent segments')
   }
-  if (value === 'main.scad' || value === 'fonts/Basic-Regular.ttf'
-    || value === 'fonts/fonts.conf' || value.startsWith('__open_scad_result.')) {
+  if (value === 'main.scad' || value.startsWith('main.scad/')
+    || value === 'fonts'
+    || value === 'fonts/Basic-Regular.ttf' || value.startsWith('fonts/Basic-Regular.ttf/')
+    || value === 'fonts/fonts.conf' || value.startsWith('fonts/fonts.conf/')
+    || value === 'home' || value.startsWith('home/')
+    || value.startsWith('__open_scad_result.')) {
     throw new TypeError('Project file path is reserved by the official OpenSCAD runner')
   }
   return value
 }
 
-function strictBase64(value: unknown): Buffer | null {
+export function officialOpenScadProjectPathsConflict(left: string, right: string): boolean {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
+}
+
+function strictBase64(value: unknown, maximumBytes: number): Buffer | null {
   if (typeof value !== 'string' || value.length % 4 !== 0
-    || value.length > Math.ceil(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES / 3) * 4) return null
+    || value.length > Math.ceil(maximumBytes / 3) * 4) return null
   const paddingIndex = value.indexOf('=')
   if (paddingIndex >= 0 && (paddingIndex < value.length - 2
     || !/^={1,2}$/u.test(value.slice(paddingIndex)))) return null
@@ -261,15 +270,17 @@ export function isOfficialOpenScadWireRequest(value: unknown): value is Official
     const file = record(valueFile)
     if (file === null || !exactKeys(file, FILE_KEYS) || typeof file.path !== 'string'
       || !validSha(file.sha256)) return false
+    const path = file.path
     try {
-      if (normalizeOfficialOpenScadProjectPath(file.path) !== file.path || paths.has(file.path)) return false
+      if (normalizeOfficialOpenScadProjectPath(path) !== path
+        || [...paths].some(existing => officialOpenScadProjectPathsConflict(existing, path))) return false
     } catch {
       return false
     }
-    const data = strictBase64(file.dataBase64)
+    const data = strictBase64(file.dataBase64, OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES)
     if (data === null || data.byteLength > OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES
       || sha256Buffer(data) !== file.sha256) return false
-    paths.add(file.path)
+    paths.add(path)
     projectBytes += data.byteLength
     if (projectBytes > OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES) return false
   }
@@ -332,7 +343,7 @@ export function isOfficialOpenScadWireTerminal(
     || !nonNegativeSafeInteger(output.byteLength) || output.byteLength > OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES
     || !validSha(output.sha256)) return false
   if (request.operation === 'check') return output.dataBase64 === null
-  const data = strictBase64(output.dataBase64)
+  const data = strictBase64(output.dataBase64, OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES)
   return data !== null && data.byteLength === output.byteLength
     && sha256Buffer(data) === output.sha256
 }

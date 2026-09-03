@@ -2,7 +2,7 @@
   "$schema": "./qualification-plan.schema.json",
   "schema": "open-scad-viewer/qualification-plan",
   "schemaVersion": 1,
-  "planId": "semantic-manifold-g1-plan-v4",
+  "planId": "semantic-manifold-g1-plan-v5",
   "gate": {
     "id": "g1",
     "name": "neutral-semantic-manifold-seam",
@@ -36,18 +36,19 @@
   },
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
-    "previousPlanId": "semantic-manifold-g1-plan-v3",
-    "previousPlanSha256": "9af37517e2d0fa16c71e725398bbb23ab232162c4a6d272801c9490e4b63218a",
-    "reason": "QualificationPlan v3 left all final repository artifact and bundle hashes unresolved and still described Playwright as part of the product dependency graph. Version 4 freezes the settled repository bytes, isolates Playwright in a qualification-only package, and binds the outer Linux process-group supervisor without importing any prior result.",
+    "previousPlanId": "semantic-manifold-g1-plan-v4",
+    "previousPlanSha256": "cadd1cfb35cec56b47d8d08a2696adce839dc3f148651eb92a9c8580cda111be",
+    "reason": "QualificationPlan v4 froze the earlier candidate. The independent OpenSCAD 2021 MCP engine and subsequent oracle-aligned semantic corrections changed scoped product, candidate, qualification, MCP-support, and legacy-support bytes. Version 5 binds the settled replacement bytes without importing any prior result.",
     "changes": [
-      "freeze every repository artifact and disjoint source bundle required by the G1 candidate, static dependency audit, qualification harness, MCP support, and pinned legacy support",
-      "move exact Playwright 1.62.1 into a qualification-only package with independently frozen manifest, lock, upstream license-file manifest, and notice",
-      "route every actual-browser and browser-memory fragment through a Linux detached-process-group supervisor with a frozen outer deadline, hard kill, join, bounded output, and empty-group publication check",
-      "bind LF normalization for all text source and configuration artifacts so the recorded byte hashes are checkout-stable",
-      "remove u01-final-artifact-bindings only; keep runtime, browser-distribution, clean-run, independent-review, and release-decision blockers open"
+      "bind the root manifest, lockfile, and third-party notice bytes after adding the independent OpenSCAD engine dependencies",
+      "rebind the G1 candidate bundle after stable-language parser, value, and evaluation corrections",
+      "rebind the qualification harness, MCP-support, and pinned-legacy-support bundles after the new MCP routes and regression coverage",
+      "expand the static dependency audit bundle to cover the new canonical OpenSCAD 2021 contract",
+      "discard every pre-v5 candidate execution and keep all prior results discovery-only; only clean v5 runs after admission may become evidence",
+      "keep runtime, browser-distribution, clean-run, independent-review, and release-decision blockers open"
     ],
     "preserved": [
-      "all v3 matrix semantics, budgets, seeds, 6270 planned work units, and clean-run counts",
+      "all v4 matrix semantics, budgets, seeds, 6270 planned work units, and clean-run counts",
       "all six independently controlled entityId, instanceId, and operationId 256/257 cases",
       "actual Chromium, Firefox, and WebKit execution remains unexecuted post-freeze evidence",
       "three clean runs remain required per actual-browser and browser-memory matrix row",
@@ -255,8 +256,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "94d784d6c52d7e726f0167989ff67ad57b1a60dad1a65305c190beb8b3a6f39f",
-          "byteLength": 1135,
+          "value": "b3673fc094c039c19b530ec61884b28366a22ed76dfe50d8fed16aaa7fd20f6f",
+          "byteLength": 1603,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -267,8 +268,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "b4fc02ba7ec6cb446763577536cdef9f830797852886f15a9af174b21edc9f2f",
-          "byteLength": 105810,
+          "value": "e66b694dab2fe923d4b7ef66cd433a00ebdfda919a5887370ee2c85084d8a043",
+          "byteLength": 106133,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright-node absence"
         }
       },
@@ -327,8 +328,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "e4a858f5dff28f544db1a126657ca096cf49ec855cfdbf071f053268b313786f",
-          "byteLength": 2416,
+          "value": "23ebf2a0384beb79d5d7854a74736d2ee07821be7544065081916ddd418137be",
+          "byteLength": 2996,
           "verifiedBy": "qualification artifact validator recomputes exact file bytes"
         }
       },
@@ -419,7 +420,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "ca58ec0cb8f734d7e3abe4e38b829d787efe920a357f1866bedbefa50966d458",
+          "value": "12d9593d936a3aae81c94db2ba9f3c5d0dd87a2854aef2dd1096c2a87ab99ad7",
           "byteLength": 2868,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -435,14 +436,15 @@
           "src/components/SceneOutliner.vue",
           "src/components/ViewCube.vue",
           "src/components/cadPanels.types.ts",
+          "src/core/openScad2021Contract.ts",
           "src/core/qualityTargets.ts"
         ],
         "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "335b46000e82b57312f3ca61aecf6d878bc731e832e121ddac8254def8ad3527",
-          "byteLength": 879,
+          "value": "ef7227d00a04233fcad0a753c5fea9de1784fce3a2635bb25da32bffe0bd5854",
+          "byteLength": 977,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },
@@ -480,7 +482,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "852043a6f0afb7568311a2aad20811eb1e57cb507d09835bd39b88755d1d63c1",
+          "value": "7d25b5c3565cdfdf7afac3b0e927dedf7368d7ff98b9bcbd608de37bbf7dc030",
           "byteLength": 2866,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -501,7 +503,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "26e9899e6bda7fa80ef9e666f2b1bb5f2136e63340bb81e715ef3f862d956b3f",
+          "value": "ee99446cc94b4cd5d81640e7fab399bc1dfa80ae5d2cd39b890144fab36edbfe",
           "byteLength": 723,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -523,7 +525,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "da3f61765cd19473235c30c8d03b693a94075dfdc75a793e7962d7d63766cda6",
+          "value": "fcbba2dd88320818edb3b898e4c0ab06e405fd694346d71bd745094f3d74fdd9",
           "byteLength": 863,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -1546,10 +1548,10 @@
     ]
   },
   "executionProtocol": {
-    "candidateRunId": "semantic-manifold-g1-candidate-run-v4",
+    "candidateRunId": "semantic-manifold-g1-candidate-run-v5",
     "priorResultsMayBeImported": false,
     "cleanRunDefinition": [
-      "Start from exact v4 frozen artifact and disjoint bundle digests in a clean checkout; generated result files and this plan's validator test are outside every source bundle.",
+      "Start from exact v5 frozen artifact and disjoint bundle digests in a clean checkout; generated result files and this plan's validator test are outside every source bundle.",
       "Before install, delete root and qualification-only node_modules, build outputs, Vite and Vitest caches, temporary browser profiles, DuckDB files, provisioned browser trees, and prior qualification results.",
       "Construct a sanitized environment from the u02 frozen allowlist; reject NODE_OPTIONS, NODE_PATH, npm override variables, preload hooks, proxies, Playwright browser-path/download overrides, and every unlisted variable.",
       "Verify the u02 exact Node binary, npm CLI 10.9.8 binary and package bytes, Ubuntu 24.04 image, architecture, platform-native DuckDB and esbuild artifacts, and registry identity before importing candidate code.",
@@ -1575,7 +1577,7 @@
     ],
     "plannedWorkUnits": 6270,
     "concurrencyPolicy": "one qualification row per fresh process; memory rows serial; no shared worker realm between units",
-    "resultPath": "output/qualification/semantic-manifold-g1-candidate-run-v4/result.json",
+    "resultPath": "output/qualification/semantic-manifold-g1-candidate-run-v5/result.json",
     "admissionRule": "all bindings frozen, no unresolved rows that block execution, and execution authorization recorded",
     "passRule": "every matrix row passes every required clean run within frozen budgets; zero false-complete; no skipped unit; no result reuse"
   },

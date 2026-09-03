@@ -51,6 +51,7 @@ import {
 } from './openscadCompiler'
 import { AbortedError, OpenSCADParseError } from './openscadErrors'
 import {
+  createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
   type OpenScadBuiltinValue,
 } from './openScadBuiltinFunctions'
@@ -1522,7 +1523,7 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, de
   if (!isStableProfile(ctx) && expr.args.some(argument => argument.name !== undefined)) {
     evaluationError(ctx, expr.p, `${name}() does not accept named arguments in this engine revision`)
   }
-  const values = expr.args.map(argument => {
+  const evaluateArgument = (argument: ExpressionArgument): Value => {
     // OpenSCAD deliberately permits probing an undeclared bare name with
     // is_undef() without emitting the ordinary unknown-variable warning.
     if (isStableProfile(ctx) && name === 'is_undef' && expr.args.length === 1
@@ -1532,7 +1533,13 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, de
       return resolved.found ? resolved.value : undefined
     }
     return evalExpression(argument.value, ctx, depth + 1)
-  })
+  }
+  const values = isStableProfile(ctx)
+    ? createDeferredOpenScadBuiltinArguments(
+        expr.args.length,
+        index => evaluateArgument(expr.args[index]),
+      )
+    : expr.args.map(evaluateArgument)
   let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>
   try {
     result = evaluateOpenScadBuiltinFunction(

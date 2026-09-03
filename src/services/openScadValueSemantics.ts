@@ -23,7 +23,7 @@ export function isOpenScadFunction(value: Value): value is FunctionValue {
 
 export function openScadTruthy(value: Value): boolean {
   if (value === undefined || value === false) return false
-  if (typeof value === 'number') return value !== 0 && !Number.isNaN(value)
+  if (typeof value === 'number') return value !== 0
   if (typeof value === 'string') return value.length > 0
   if (Array.isArray(value)) return value.length > 0
   // The range object remains truthy even when its direction makes iteration
@@ -97,8 +97,12 @@ export function openScadBinary(
     if (typeof left === 'number' && typeof right === 'number') {
       return operator === TT.Plus ? left + right : left - right
     }
-    if (Array.isArray(left) && Array.isArray(right) && left.length === right.length) {
-      return register(left.map((item, index) => openScadBinary(operator, item, right[index], context)), 'vector arithmetic', context)
+    if (Array.isArray(left) && Array.isArray(right)) {
+      const length = Math.min(left.length, right.length)
+      return register(Array.from(
+        { length },
+        (_, index) => openScadBinary(operator, left[index], right[index], context),
+      ), 'vector arithmetic', context)
     }
     return undefinedOperation(operator, left, right, context)
   }
@@ -141,9 +145,10 @@ export function openScadIndex(
   if (Array.isArray(value)) return value[index]
   if (typeof value === 'string') return Array.from(value)[index]
   if (isOpenScadRange(value)) {
-    const candidate = value.start + value.step * index
-    if (value.step > 0 ? candidate > value.end : candidate < value.end) return undefined
-    return candidate
+    if (index === 0) return value.start
+    if (index === 1) return value.step
+    if (index === 2) return value.end
+    return undefined
   }
   context.warn(`Undefined index operation on ${openScadType(value)}`)
   return undefined
@@ -169,8 +174,14 @@ export function openScadDeepEqual(left: Value, right: Value): boolean {
       && left.every((value, index) => openScadDeepEqual(value, right[index]))
   }
   if (isOpenScadRange(left) || isOpenScadRange(right)) {
-    return isOpenScadRange(left) && isOpenScadRange(right)
-      && left.start === right.start && left.step === right.step && left.end === right.end
+    if (!isOpenScadRange(left) || !isOpenScadRange(right)) return false
+    const leftCount = rangeItemCount(left)
+    const rightCount = rangeItemCount(right)
+    if (leftCount === 0) return rightCount === 0
+    return rightCount !== 0
+      && left.start === right.start
+      && left.step === right.step
+      && leftCount === rightCount
   }
   return left === right
 }
@@ -308,7 +319,42 @@ function compareValues(left: Value, right: Value): number | undefined {
     }
     return left.length - right.length
   }
+  if (isOpenScadRange(left) && isOpenScadRange(right)) {
+    const leftCount = rangeItemCount(left)
+    const rightCount = rangeItemCount(right)
+    if (leftCount === 0 || rightCount === 0) {
+      return leftCount === rightCount ? 0 : leftCount === 0 ? -1 : 1
+    }
+    if (left.start !== right.start) return left.start < right.start ? -1 : 1
+    if (left.step !== right.step) return left.step < right.step ? -1 : 1
+    return leftCount - rightCount
+  }
   return undefined
+}
+
+const MAX_UINT32 = 0xffff_ffff
+
+function nextUp(value: number): number {
+  if (Number.isNaN(value) || value === Infinity) return value
+  if (value === 0) return Number.MIN_VALUE
+  const buffer = new ArrayBuffer(8)
+  const view = new DataView(buffer)
+  view.setFloat64(0, value, false)
+  let bits = view.getBigUint64(0, false)
+  bits = value > 0 ? bits + 1n : bits - 1n
+  view.setBigUint64(0, bits, false)
+  return view.getFloat64(0, false)
+}
+
+function rangeItemCount(range: RangeValue): number {
+  const { start, step, end } = range
+  if ([start, step, end].some(Number.isNaN)) return 0
+  if ((step < 0 && start < end) || (step >= 0 && start > end)) return 0
+  if (start === end || !Number.isFinite(step)) return 1
+  if (!Number.isFinite(start) || !Number.isFinite(end) || step === 0) return MAX_UINT32
+  const steps = Math.floor(nextUp((end - start) / step))
+  if (!Number.isFinite(steps) || steps >= MAX_UINT32) return MAX_UINT32
+  return Math.max(0, steps + 1)
 }
 
 function undefinedOperation(

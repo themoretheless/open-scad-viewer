@@ -31,6 +31,7 @@ import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
 import { AbortedError, OpenSCADParseError } from './openscadErrors'
 import {
+  createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
   type OpenScadBuiltinValue,
 } from './openScadBuiltinFunctions'
@@ -1046,7 +1047,7 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, de
   if (!isStableProfile(ctx) && expr.args.some(argument => argument.name !== undefined)) {
     evaluationError(ctx, expr.p, `${name}() does not accept named arguments in this engine revision`)
   }
-  const values = expr.args.map(arg => {
+  const evaluateArgument = (arg: ExpressionArgument): Value => {
     // OpenSCAD deliberately permits probing an undeclared bare name with
     // is_undef() without emitting the ordinary unknown-variable warning.
     if (isStableProfile(ctx) && name === 'is_undef' && expr.args.length === 1
@@ -1056,7 +1057,13 @@ function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, de
       return resolved.found ? resolved.value : undefined
     }
     return evalExpression(arg.value, ctx, depth + 1)
-  })
+  }
+  const values = isStableProfile(ctx)
+    ? createDeferredOpenScadBuiltinArguments(
+        expr.args.length,
+        index => evaluateArgument(expr.args[index]),
+      )
+    : expr.args.map(evaluateArgument)
   let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>
   try {
     result = evaluateOpenScadBuiltinFunction(
@@ -3721,7 +3728,9 @@ async function parseInternal(
 ): Promise<ParseResult> {
   const now = options.now ?? (() => performance.now())
   const startedAt = now()
-  if (source.length > MAX_SOURCE_LENGTH) throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
+  if (project === undefined && source.length > MAX_SOURCE_LENGTH) {
+    throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
+  }
   paletteIndex = 0
   const ast = compileAst()
   const forcedImportAssets = project === undefined

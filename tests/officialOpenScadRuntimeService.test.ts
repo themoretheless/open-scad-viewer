@@ -10,6 +10,11 @@ import {
   createOfficialOpenScadRuntimeManifest,
 } from '../src/mcp/officialOpenScadRuntimePatch'
 import {
+  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
+} from '../src/mcp/officialOpenScadRuntimeProtocol'
+import {
   OfficialOpenScadRemoteError,
   OfficialOpenScadRuntimeSupervisor,
   OfficialOpenScadSupervisorError,
@@ -24,7 +29,7 @@ async function createRoot(): Promise<string> {
   return root
 }
 
-async function installStub(root: string): Promise<Buffer> {
+async function installStub(root: string) {
   const runtime = await readFile(stubRuntimeUrl)
   const font = Buffer.from('fixture Basic Regular font')
   const fontLicense = Buffer.from('fixture OFL license')
@@ -36,7 +41,14 @@ async function installStub(root: string): Promise<Buffer> {
     join(root, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME),
     `${JSON.stringify(manifest)}\n`,
   )
-  return runtime
+  return {
+    runtime,
+    expectedIntegrity: {
+      runtimeSha256: manifest.runtimeSha256,
+      fontSha256: manifest.fontSha256,
+      fontLicenseSha256: manifest.fontLicenseSha256,
+    },
+  }
 }
 
 afterEach(async () => {
@@ -46,8 +58,8 @@ afterEach(async () => {
 describe('official OpenSCAD runtime supervisor', () => {
   it('reports opt-in installation state and verifies the runtime hash without executing it', async () => {
     const root = await createRoot()
-    const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
-    await expect(supervisor.capabilities()).resolves.toMatchObject({
+    const missingSupervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
+    await expect(missingSupervisor.capabilities()).resolves.toMatchObject({
       available: false,
       unavailableReason: 'not-installed',
       expectedRuntimeVersion: '2026.09.01',
@@ -64,8 +76,13 @@ describe('official OpenSCAD runtime supervisor', () => {
         processModel: 'one-shot',
       },
     })
+    await missingSupervisor.close()
 
-    const runtime = await installStub(root)
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
     const available = await supervisor.capabilities()
     expect(available).toMatchObject({
       available: true,
@@ -77,7 +94,10 @@ describe('official OpenSCAD runtime supervisor', () => {
     })
     expect(available.runtimeSha256).toMatch(/^[0-9a-f]{64}$/)
 
-    await writeFile(join(root, OFFICIAL_OPENSCAD_RUNTIME_FILENAME), Buffer.concat([runtime, Buffer.from('tamper')]))
+    await writeFile(
+      join(root, OFFICIAL_OPENSCAD_RUNTIME_FILENAME),
+      Buffer.concat([installation.runtime, Buffer.from('tamper')]),
+    )
     await expect(supervisor.capabilities()).resolves.toMatchObject({
       available: false,
       unavailableReason: 'runtime-integrity-failed',
@@ -86,10 +106,26 @@ describe('official OpenSCAD runtime supervisor', () => {
     await supervisor.close()
   })
 
-  it('runs semantic CSG checks and strict exports in fresh permission-model children', async () => {
+  it('does not trust a self-consistent manifest with unpinned runtime and asset digests', async () => {
     const root = await createRoot()
     await installStub(root)
     const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
+
+    await expect(supervisor.capabilities()).resolves.toMatchObject({
+      available: false,
+      unavailableReason: 'manifest-invalid',
+    })
+    expect(supervisor.snapshot()).toMatchObject({ jobsStarted: 0, jobsJoined: 0 })
+    await supervisor.close()
+  })
+
+  it('runs semantic CSG checks and strict exports in fresh permission-model children', async () => {
+    const root = await createRoot()
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
 
     const checked = await supervisor.check(
       'include <lib/helpers.scad>; function f(x) = x * x; cube(f(size));',
@@ -162,8 +198,11 @@ describe('official OpenSCAD runtime supervisor', () => {
 
   it('keeps experiments off and semantic warnings fatal by default', async () => {
     const root = await createRoot()
-    await installStub(root)
-    const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
 
     const exported = await supervisor.export('cube(1);', 'csg')
     const evidence = JSON.parse(new TextDecoder().decode(exported.data)) as { args: string[] }
@@ -187,8 +226,11 @@ describe('official OpenSCAD runtime supervisor', () => {
 
   it('denies host filesystem reads in the child permission boundary', async () => {
     const root = await createRoot()
-    await installStub(root)
-    const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
 
     await expect(supervisor.export('TRY_HOST_READ;', 'csg')).rejects.toMatchObject({
       code: 'ERR_ACCESS_DENIED',
@@ -200,8 +242,11 @@ describe('official OpenSCAD runtime supervisor', () => {
 
   it('hard-kills and joins non-cooperative children on deadline and cancellation', async () => {
     const root = await createRoot()
-    await installStub(root)
-    const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root })
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
 
     await expect(supervisor.check('HANG_FOREVER;', { timeoutMs: 40 })).rejects.toMatchObject({
       code: 'E_OFFICIAL_OPENSCAD_DEADLINE',
@@ -225,13 +270,40 @@ describe('official OpenSCAD runtime supervisor', () => {
 
   it('bounds admission, project paths, source size, and retained logs', async () => {
     const root = await createRoot()
-    await installStub(root)
-    const supervisor = new OfficialOpenScadRuntimeSupervisor({ cacheRoot: root, maxConcurrentJobs: 1 })
+    const installation = await installStub(root)
+    const supervisor = new OfficialOpenScadRuntimeSupervisor({
+      cacheRoot: root,
+      maxConcurrentJobs: 1,
+      testOnlyExpectedIntegrity: installation.expectedIntegrity,
+    })
 
     await expect(supervisor.check('cube(1);', {
       files: [{ path: '../host.scad', data: 'cube(1);' }],
     })).rejects.toThrow(/path|segments/)
+    await expect(supervisor.check('cube(1);', {
+      files: [
+        { path: 'lib', data: 'not a directory' },
+        { path: 'lib/part.scad', data: 'cube(1);' },
+      ],
+    })).rejects.toThrow(/conflicting/i)
+    await expect(supervisor.check('cube(1);', {
+      files: [{ path: 'home/cache.dat', data: 'reserved runtime state' }],
+    })).rejects.toThrow(/reserved/i)
     await expect(supervisor.check('x'.repeat(1_048_577))).rejects.toThrow(/exceeds/)
+    expect(supervisor.snapshot()).toMatchObject({ jobsStarted: 0, jobsJoined: 0 })
+
+    const maximumFile = new Uint8Array(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES)
+    const remainingFile = new Uint8Array(
+      OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES
+        - OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES
+        - OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+    )
+    await expect(supervisor.check('\0'.repeat(OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES), {
+      files: [
+        { path: 'large-a.bin', data: maximumFile },
+        { path: 'large-b.bin', data: remainingFile },
+      ],
+    })).rejects.toMatchObject({ code: 'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT' })
     expect(supervisor.snapshot()).toMatchObject({ jobsStarted: 0, jobsJoined: 0 })
 
     const controller = new AbortController()

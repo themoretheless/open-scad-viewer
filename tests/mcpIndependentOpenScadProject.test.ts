@@ -121,6 +121,25 @@ describe('independent OpenSCAD project execution through MCP', () => {
     expect(upstream.export).not.toHaveBeenCalled()
   })
 
+  it('accepts entrypoint source above the legacy model limit but within the advertised project limit', async () => {
+    const called = await request('tools/call', {
+      name: 'openscad_independent_check',
+      arguments: {
+        source: `${' '.repeat(250_000)}cube(1);`,
+        quality: 'full',
+      },
+    }) as {
+      isError?: boolean
+      structuredContent?: { check: { volume: number } }
+    }
+
+    expect(called.isError).not.toBe(true)
+    expect(called.structuredContent?.check.volume).toBeCloseTo(1, 6)
+    expect(upstream.capabilities).not.toHaveBeenCalled()
+    expect(upstream.check).not.toHaveBeenCalled()
+    expect(upstream.export).not.toHaveBeenCalled()
+  })
+
   it('loads module-relative DAT and PNG surface assets without any upstream runtime call', async () => {
     const dat = await request('tools/call', {
       name: 'openscad_independent_check',

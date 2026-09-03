@@ -6,6 +6,8 @@ export const OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_URL =
 export const OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256 =
   '82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888' as const
 export const OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION = 2 as const
+export const OFFICIAL_OPENSCAD_RUNTIME_SHA256 =
+  '80a6e6129ddf58e8262c8ff3023ee68afc93937b5a5d1afa54b054415c7b768c' as const
 export const OFFICIAL_OPENSCAD_RUNTIME_FILENAME = 'openscad.patched.cjs' as const
 export const OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME = 'runtime-manifest.json' as const
 export const OFFICIAL_OPENSCAD_FONT_FAMILY = 'Basic' as const
@@ -19,6 +21,18 @@ export const OFFICIAL_OPENSCAD_FONT_LICENSE_URL =
   'https://raw.githubusercontent.com/SorkinType/Basic/202e65ac93bd6977e83b2f10db6b1467e0b348db/OFL.txt' as const
 export const OFFICIAL_OPENSCAD_FONT_LICENSE_SHA256 =
   '25be5240815dc880cfad3606b03c9f05125252e9ce542f733cbbf87837ac810f' as const
+
+export interface OfficialOpenScadRuntimeIntegrity {
+  readonly runtimeSha256: string
+  readonly fontSha256: string
+  readonly fontLicenseSha256: string
+}
+
+export const OFFICIAL_OPENSCAD_PINNED_INTEGRITY: OfficialOpenScadRuntimeIntegrity = Object.freeze({
+  runtimeSha256: OFFICIAL_OPENSCAD_RUNTIME_SHA256,
+  fontSha256: OFFICIAL_OPENSCAD_FONT_SHA256,
+  fontLicenseSha256: OFFICIAL_OPENSCAD_FONT_LICENSE_SHA256,
+})
 
 const MODULE_BOOTSTRAP = 'var Module=typeof Module!="undefined"?Module:{};'
 const MODULE_BOOTSTRAP_PATCH = [
@@ -160,4 +174,13 @@ export function isOfficialOpenScadRuntimeManifest(
     && manifest.fontLicenseUrl === OFFICIAL_OPENSCAD_FONT_LICENSE_URL
     && typeof manifest.fontLicenseSha256 === 'string'
     && /^[0-9a-f]{64}$/.test(manifest.fontLicenseSha256)
+}
+
+export function matchesOfficialOpenScadRuntimeIntegrity(
+  manifest: OfficialOpenScadRuntimeManifest,
+  expected: OfficialOpenScadRuntimeIntegrity = OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
+): boolean {
+  return manifest.runtimeSha256 === expected.runtimeSha256
+    && manifest.fontSha256 === expected.fontSha256
+    && manifest.fontLicenseSha256 === expected.fontLicenseSha256
 }

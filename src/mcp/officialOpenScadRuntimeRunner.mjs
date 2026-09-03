@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 // one-shot process read access only to this file and the verified runtime.
 const PROTOCOL_VERSION = 1
 const RUNTIME_VERSION = '2026.09.01'
+// Keep in sync with OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES in the parent protocol.
 const MAX_STDIN_BYTES = 10 * 1024 * 1024
 const MAX_SOURCE_BYTES = 1_048_576
 const MAX_FILES = 128
@@ -60,8 +61,16 @@ function normalizedPath(value) {
     || value.startsWith('/')) return false
   const segments = value.split('/')
   return !segments.some(segment => segment.length === 0 || segment === '.' || segment === '..')
-    && value !== 'main.scad' && value !== 'fonts/Basic-Regular.ttf'
-    && value !== 'fonts/fonts.conf' && !value.startsWith('__open_scad_result.')
+    && value !== 'main.scad' && !value.startsWith('main.scad/')
+    && value !== 'fonts'
+    && value !== 'fonts/Basic-Regular.ttf' && !value.startsWith('fonts/Basic-Regular.ttf/')
+    && value !== 'fonts/fonts.conf' && !value.startsWith('fonts/fonts.conf/')
+    && value !== 'home' && !value.startsWith('home/')
+    && !value.startsWith('__open_scad_result.')
+}
+
+function pathsConflict(left, right) {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
 }
 
 function decodeStrictBase64(value) {
@@ -111,7 +120,8 @@ function validateRequest(value) {
   const paths = new Set()
   for (const file of value.files) {
     if (file === null || Array.isArray(file) || typeof file !== 'object'
-      || !normalizedPath(file.path) || paths.has(file.path)) {
+      || !normalizedPath(file.path)
+      || [...paths].some(path => pathsConflict(path, file.path))) {
       throw new Error('Official OpenSCAD child received an invalid project path')
     }
     const data = decodeStrictBase64(file.dataBase64)

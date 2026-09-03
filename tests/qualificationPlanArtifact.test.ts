@@ -11,16 +11,19 @@ const schemaPath = resolve(repositoryRoot, 'docs/qualification/qualification-pla
 const v1PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v1.json')
 const v2PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v2.json')
 const v3PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v3.json')
-const planPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v4.json')
+const v4PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v4.json')
+const planPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v5.json')
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as JsonObject
 const v1Plan = JSON.parse(readFileSync(v1PlanPath, 'utf8')) as JsonObject
 const v2Plan = JSON.parse(readFileSync(v2PlanPath, 'utf8')) as JsonObject
 const v3Plan = JSON.parse(readFileSync(v3PlanPath, 'utf8')) as JsonObject
+const v4Plan = JSON.parse(readFileSync(v4PlanPath, 'utf8')) as JsonObject
 const plan = JSON.parse(readFileSync(planPath, 'utf8')) as JsonObject
 const FROZEN_V1_SHA256 = '07d07027f17815b3759e96914747b8703eb29b1fb1f6dbd88655a101f606668f'
 const FROZEN_V2_SHA256 = '6c423be838e55c9a4b84cd8df5f850bd050d1ed4510dd138e30cc6379496f5d1'
 const FROZEN_V3_SHA256 = '9af37517e2d0fa16c71e725398bbb23ab232162c4a6d272801c9490e4b63218a'
-const FROZEN_V4_SHA256 = 'f0b4a5c46c15876fa5e669725e6821db9277536c16e0b8c549d01635f76a49d3'
+const FROZEN_V4_SHA256 = 'cadd1cfb35cec56b47d8d08a2696adce839dc3f148651eb92a9c8580cda111be'
+const FROZEN_V5_SHA256 = '7db34075e9417481050c23bc91ed6211c070730eee8bcc88ee0270d0c9f3612a'
 
 function isObject(value: Json): value is JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -243,18 +246,21 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     expect(validateJsonSchema(schema, v1Plan)).toEqual([])
     expect(validateJsonSchema(schema, v2Plan)).toEqual([])
     expect(validateJsonSchema(schema, v3Plan)).toEqual([])
+    expect(validateJsonSchema(schema, v4Plan)).toEqual([])
     expect(validateJsonSchema(schema, plan)).toEqual([])
   })
 
-  it('keeps the v1 -> v2 -> v3 -> v4 amendment chain byte-immutable', () => {
+  it('keeps the v1 -> v2 -> v3 -> v4 -> v5 amendment chain byte-immutable', () => {
     expect(createHash('sha256').update(readFileSync(v1PlanPath)).digest('hex'))
       .toBe(FROZEN_V1_SHA256)
     expect(createHash('sha256').update(readFileSync(v2PlanPath)).digest('hex'))
       .toBe(FROZEN_V2_SHA256)
     expect(createHash('sha256').update(readFileSync(v3PlanPath)).digest('hex'))
       .toBe(FROZEN_V3_SHA256)
-    expect(createHash('sha256').update(readFileSync(planPath)).digest('hex'))
+    expect(createHash('sha256').update(readFileSync(v4PlanPath)).digest('hex'))
       .toBe(FROZEN_V4_SHA256)
+    expect(createHash('sha256').update(readFileSync(planPath)).digest('hex'))
+      .toBe(FROZEN_V5_SHA256)
     expect(v1Plan).toMatchObject({
       planId: 'semantic-manifold-g1-plan-v1',
       executionProtocol: {
@@ -290,7 +296,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
         resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v3/result.json',
       },
     })
-    expect(plan).toMatchObject({
+    expect(v4Plan).toMatchObject({
       planId: 'semantic-manifold-g1-plan-v4',
       processAmendment: {
         kind: 'post-freeze-harness-amendment',
@@ -302,6 +308,20 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       executionProtocol: {
         candidateRunId: 'semantic-manifold-g1-candidate-run-v4',
         resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v4/result.json',
+      },
+    })
+    expect(plan).toMatchObject({
+      planId: 'semantic-manifold-g1-plan-v5',
+      processAmendment: {
+        kind: 'post-freeze-harness-amendment',
+        previousPlanId: 'semantic-manifold-g1-plan-v4',
+        previousPlanSha256: FROZEN_V4_SHA256,
+        priorEvidenceTreatment: 'discovery-only',
+        qualificationClaim: 'none',
+      },
+      executionProtocol: {
+        candidateRunId: 'semantic-manifold-g1-candidate-run-v5',
+        resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v5/result.json',
       },
     })
     expect(arrayProperty(v1Plan, 'unresolvedRows').map(item => item.id))
@@ -320,8 +340,14 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       .find(item => item.id === 'g1-qualification-harness-bundle')
     const v3Harness = arrayProperty(objectProperty(v3Plan, 'bindings'), 'bundles')
       .find(item => item.id === 'g1-qualification-harness-bundle')
-    const v4Harness = arrayProperty(objectProperty(plan, 'bindings'), 'bundles')
+    const v4Harness = arrayProperty(objectProperty(v4Plan, 'bindings'), 'bundles')
       .find(item => item.id === 'g1-qualification-harness-bundle')
+    const v5Harness = arrayProperty(objectProperty(plan, 'bindings'), 'bundles')
+      .find(item => item.id === 'g1-qualification-harness-bundle')
+    const v4StaticAudit = arrayProperty(objectProperty(v4Plan, 'bindings'), 'bundles')
+      .find(item => item.id === 'g1-static-dependency-audit-bundle')
+    const v5StaticAudit = arrayProperty(objectProperty(plan, 'bindings'), 'bundles')
+      .find(item => item.id === 'g1-static-dependency-audit-bundle')
     expect(v1Harness?.paths).toEqual([
       'tests/fixtures/browser-qualification.html',
       'tests/fixtures/browser-qualification.ts',
@@ -356,6 +382,13 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       'tests/fixtures/browser-qualification-supervisor-child.mjs',
       'tests/fixtures/web-worker-node-harness.ts',
     ]))
+    expect(v5Harness?.paths).toEqual(v4Harness?.paths)
+    if (!Array.isArray(v4StaticAudit?.paths)) throw new Error('Expected v4 static-audit paths')
+    expect(v4StaticAudit?.paths).not.toContain('src/core/openScad2021Contract.ts')
+    expect(v5StaticAudit?.paths).toEqual([
+      ...v4StaticAudit.paths.map(String),
+      'src/core/openScad2021Contract.ts',
+    ].sort())
     const historicalLockBinding = arrayProperty(objectProperty(v3Plan, 'bindings'), 'artifacts')
       .find(item => item.id === 'npm-lockfile')
     expect(historicalLockBinding).toMatchObject({
@@ -396,21 +429,17 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }
   })
 
-  it('recomputes every frozen artifact and disjoint bundle before rejecting unresolved execution', () => {
-    for (const candidatePlan of [v1Plan, v2Plan, v3Plan, plan]) {
-      const bindings = objectProperty(candidatePlan, 'bindings')
-      const artifacts = arrayProperty(bindings, 'artifacts')
-      for (const artifact of artifacts) {
-        const hash = objectProperty(artifact, 'sha256')
-        if (hash.state !== 'frozen') continue
-        expect(frozenFileDigest(String(artifact.path))).toEqual({
-          value: hash.value,
-          byteLength: hash.byteLength,
-        })
-      }
-    }
+  it('recomputes every current frozen artifact and disjoint bundle before rejecting unresolved execution', () => {
     const bindings = objectProperty(plan, 'bindings')
     const artifacts = arrayProperty(bindings, 'artifacts')
+    for (const artifact of artifacts) {
+      const hash = objectProperty(artifact, 'sha256')
+      if (hash.state !== 'frozen') continue
+      expect(frozenFileDigest(String(artifact.path))).toEqual({
+        value: hash.value,
+        byteLength: hash.byteLength,
+      })
+    }
     const bundles = arrayProperty(bindings, 'bundles')
     expect(artifacts).toHaveLength(15)
     expect(bundles).toHaveLength(5)
@@ -427,7 +456,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }
     const allBoundPaths = boundPaths(plan)
     expect(new Set(allBoundPaths).size).toBe(allBoundPaths.length)
-    expect(allBoundPaths).not.toContain('docs/qualification/semantic-manifold-g1-plan-v4.json')
+    expect(allBoundPaths).not.toContain('docs/qualification/semantic-manifold-g1-plan-v5.json')
     expect(allBoundPaths).not.toContain('tests/qualificationPlanArtifact.test.ts')
     for (const path of allBoundPaths) {
       expect(path).toMatch(/^[\x20-\x7e]+$/u)

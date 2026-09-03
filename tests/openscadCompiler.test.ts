@@ -90,6 +90,14 @@ describe('OpenSCAD compiler front-end', () => {
     expect(allFrozen(program)).toBe(true)
   })
 
+  it('requires an argument list for full-profile module instantiations', () => {
+    expect(() => compileOpenSCAD('cube;', FULL_PROFILE)).toThrow(
+      expect.objectContaining({ message: expect.stringContaining('Expected ( after module name cube') }),
+    )
+    // The versioned legacy subset retains its historical parentheses-optional grammar.
+    expect(compileOpenSCAD('cube;')).toMatchObject([{ type: 'call', name: 'cube' }])
+  })
+
   it('parses the stage-one full-profile forms by canonical 2021.01 syntax ID', () => {
     const cases: readonly {
       id: CanonicalSyntaxId

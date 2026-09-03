@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
 import { OpenScadImportPositionedError } from '../services/openScadImport'
+import { OpenScadProjectError } from '../services/openScadProject'
+import { OpenScadProjectCompileError } from '../services/openScadProjectCompiler'
 import { OpenScadSurfaceError } from '../services/openScadSurface'
 import { OpenScadTextPositionedError } from '../services/openScadText'
 import {
@@ -27,7 +29,10 @@ import {
   OfficialOpenScadRemoteError,
   OfficialOpenScadSupervisorError,
 } from './officialOpenScadRuntimeService'
-import { OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES } from './officialOpenScadRuntimeProtocol'
+import {
+  OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
+  OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
+} from './officialOpenScadRuntimeProtocol'
 
 export { PUBLIC_ERROR_CODES, type PublicErrorCode } from './errorContract'
 
@@ -165,6 +170,21 @@ export function publicToolError(error: unknown): { error: PublicToolError; inter
     }
   }
   if (error instanceof OfficialOpenScadSupervisorError) {
+    if (error.code === 'E_OFFICIAL_OPENSCAD_REQUEST_LIMIT') {
+      return {
+        error: {
+          code: 'invalid_argument',
+          message: 'The serialized official OpenSCAD request exceeds the transport limit.',
+          retryable: false,
+          next_action: 'Reduce source or project-file content and retry.',
+          details: {
+            max_bytes: OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
+            runtime: 'official-openscad',
+          },
+        },
+        internal: false,
+      }
+    }
     if (error.code === 'E_OFFICIAL_OPENSCAD_BUSY') {
       return {
         error: {
@@ -325,6 +345,46 @@ export function publicToolError(error: unknown): { error: PublicToolError; inter
           source_path: error.details.sourcePath,
           ...(error.details.specifier === undefined ? {} : { specifier: error.details.specifier }),
           ...(error.details.assetPath === undefined ? {} : { asset_path: error.details.assetPath }),
+          ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
+          ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
+        },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof OpenScadProjectCompileError) {
+    return {
+      error: {
+        code: 'source_syntax_error',
+        message: error.message,
+        retryable: false,
+        next_action: 'Correct the include/use dependency graph or project source files, then retry.',
+        details: {
+          diagnostic_code: error.code,
+          ...(error.details.directive === undefined ? {} : { directive: error.details.directive }),
+          ...(error.details.importer === undefined ? {} : { source_path: error.details.importer }),
+          ...(error.details.specifier === undefined ? {} : { specifier: error.details.specifier }),
+          ...(error.details.path === undefined ? {} : { dependency_path: error.details.path }),
+          ...(error.details.chain === undefined ? {} : { dependency_chain: error.details.chain.join(' -> ') }),
+          ...(error.details.metric === undefined ? {} : { metric: error.details.metric }),
+          ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
+          ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
+          ...(error.details.modifier === undefined ? {} : { modifier: error.details.modifier }),
+        },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof OpenScadProjectError) {
+    return {
+      error: {
+        code: 'source_syntax_error',
+        message: error.message,
+        retryable: false,
+        next_action: 'Correct the bounded project file or dependency path, then retry.',
+        details: {
+          diagnostic_code: error.code,
+          ...(error.details.path === undefined ? {} : { path: error.details.path }),
           ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
           ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
         },

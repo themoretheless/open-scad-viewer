@@ -6,6 +6,7 @@ import { inflateRawSync } from 'node:zlib'
 import {
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_URL,
+  OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
   OFFICIAL_OPENSCAD_FONT_FILENAME,
   OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME,
   OFFICIAL_OPENSCAD_FONT_LICENSE_SHA256,
@@ -15,9 +16,11 @@ import {
   OFFICIAL_OPENSCAD_RUNTIME_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
+  OFFICIAL_OPENSCAD_RUNTIME_SHA256,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
   createOfficialOpenScadRuntimeManifest,
   isOfficialOpenScadRuntimeManifest,
+  matchesOfficialOpenScadRuntimeIntegrity,
   patchOfficialOpenScadRuntimeSource,
   sha256Buffer,
 } from '../src/mcp/officialOpenScadRuntimePatch.ts'
@@ -25,6 +28,7 @@ import {
 export {
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_URL,
+  OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
   OFFICIAL_OPENSCAD_FONT_FILENAME,
   OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME,
   OFFICIAL_OPENSCAD_FONT_LICENSE_SHA256,
@@ -34,9 +38,11 @@ export {
   OFFICIAL_OPENSCAD_RUNTIME_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
+  OFFICIAL_OPENSCAD_RUNTIME_SHA256,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
   createOfficialOpenScadRuntimeManifest,
   isOfficialOpenScadRuntimeManifest,
+  matchesOfficialOpenScadRuntimeIntegrity,
   patchOfficialOpenScadRuntimeSource,
   sha256Buffer,
 }
@@ -57,6 +63,7 @@ export const OFFICIAL_OPENSCAD_RUNTIME = Object.freeze({
   version: OFFICIAL_OPENSCAD_RUNTIME_VERSION,
   sourceUrl: OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_URL,
   archiveSha256: OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
+  runtimeSha256: OFFICIAL_OPENSCAD_RUNTIME_SHA256,
   archiveEntry: ARCHIVE_ENTRY,
   runtimeFilename: OFFICIAL_OPENSCAD_RUNTIME_FILENAME,
   manifestFile: OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
@@ -387,7 +394,7 @@ function installationPaths(cacheRoot) {
   return { runtimePath, manifestPath, fontPath, fontLicensePath }
 }
 
-function parseAndValidateManifest(rawManifest) {
+function parseAndValidateManifest(rawManifest, expectedIntegrity = OFFICIAL_OPENSCAD_PINNED_INTEGRITY) {
   let manifest
   try {
     manifest = JSON.parse(rawManifest)
@@ -398,6 +405,9 @@ function parseAndValidateManifest(rawManifest) {
   }
   if (!isOfficialOpenScadRuntimeManifest(manifest)) {
     throw new Error('Official OpenSCAD runtime manifest does not match the pinned runtime schema')
+  }
+  if (!matchesOfficialOpenScadRuntimeIntegrity(manifest, expectedIntegrity)) {
+    throw new Error('Official OpenSCAD runtime manifest does not match the pinned runtime integrity')
   }
   return manifest
 }
@@ -411,7 +421,10 @@ export async function verifyInstalledOfficialOpenScadRuntime(options = {}) {
     MAXIMUM_MANIFEST_BYTES,
     'Official OpenSCAD runtime manifest',
   )
-  const manifest = parseAndValidateManifest(manifestBytes.toString('utf8'))
+  const manifest = parseAndValidateManifest(
+    manifestBytes.toString('utf8'),
+    options.testOnlyExpectedIntegrity ?? OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
+  )
 
   const expectedRuntimePath = join(cacheRoot, manifest.runtimeFilename)
   if (expectedRuntimePath !== runtimePath) {
@@ -454,7 +467,13 @@ export async function getOfficialOpenScadRuntimeStatus(options = {}) {
     }
   }
   try {
-    return { status: 'installed', ...(await verifyInstalledOfficialOpenScadRuntime({ cacheRoot })) }
+    return {
+      status: 'installed',
+      ...(await verifyInstalledOfficialOpenScadRuntime({
+        cacheRoot,
+        testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+      })),
+    }
   } catch (error) {
     return {
       status: 'invalid',
@@ -467,7 +486,10 @@ export async function getOfficialOpenScadRuntimeStatus(options = {}) {
 
 export async function installOfficialOpenScadRuntime(options = {}) {
   const cacheRoot = resolveOfficialOpenScadCacheRoot(options.cacheRoot)
-  const existing = await getOfficialOpenScadRuntimeStatus({ cacheRoot })
+  const existing = await getOfficialOpenScadRuntimeStatus({
+    cacheRoot,
+    testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+  })
   if (existing.status === 'installed') return { ...existing, installState: 'already-installed' }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch
@@ -497,6 +519,9 @@ export async function installOfficialOpenScadRuntime(options = {}) {
   const originalRuntime = extractSingleZipEntry(archive, ARCHIVE_ENTRY)
   const patchedRuntime = patchOfficialOpenScadRuntime(originalRuntime)
   const manifest = createOfficialOpenScadRuntimeManifest(patchedRuntime, font, fontLicense)
+  if (!matchesOfficialOpenScadRuntimeIntegrity(manifest)) {
+    throw new Error('Patched official OpenSCAD runtime does not match its pinned installed digest')
+  }
   const { runtimePath, manifestPath, fontPath, fontLicensePath } = installationPaths(cacheRoot)
 
   await assertDirectoryWithoutSymlink(cacheRoot, 'Official OpenSCAD cache', true)
@@ -532,7 +557,10 @@ export async function installOfficialOpenScadRuntime(options = {}) {
     ])
   }
 
-  const verified = await verifyInstalledOfficialOpenScadRuntime({ cacheRoot })
+  const verified = await verifyInstalledOfficialOpenScadRuntime({
+    cacheRoot,
+    testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+  })
   return { status: 'installed', ...verified, installState: existing.status === 'invalid' ? 'repaired' : 'installed' }
 }
 
@@ -565,7 +593,11 @@ export async function runOfficialOpenScadRuntimeCli(argv, options = {}) {
     return 2
   }
   if (command === 'install') {
-    const result = await installOfficialOpenScadRuntime({ cacheRoot, fetchImpl: options.fetchImpl })
+    const result = await installOfficialOpenScadRuntime({
+      cacheRoot,
+      fetchImpl: options.fetchImpl,
+      testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+    })
     const verb = result.installState === 'already-installed'
       ? 'Already verified'
       : result.installState === 'repaired'
@@ -577,13 +609,19 @@ export async function runOfficialOpenScadRuntimeCli(argv, options = {}) {
     return 0
   }
   if (command === 'verify') {
-    const result = await verifyInstalledOfficialOpenScadRuntime({ cacheRoot })
+    const result = await verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+    })
     log(`Verified official OpenSCAD ${result.manifest.runtimeVersion} runtime at ${result.runtimePath}`)
     log(`Installed runtime SHA-256 ${result.manifest.runtimeSha256}`)
     return 0
   }
 
-  const status = await getOfficialOpenScadRuntimeStatus({ cacheRoot })
+  const status = await getOfficialOpenScadRuntimeStatus({
+    cacheRoot,
+    testOnlyExpectedIntegrity: options.testOnlyExpectedIntegrity,
+  })
   if (status.status === 'installed') {
     log(`Official OpenSCAD ${status.manifest.runtimeVersion} runtime is installed and verified at ${status.runtimePath}`)
     return 0

@@ -27,6 +27,8 @@ function binary(operator: TT, left: Value, right: Value) {
 describe('shared OpenSCAD 2021.01 value semantics', () => {
   it('implements scalar, vector and matrix arithmetic observed from the oracle', () => {
     expect(binary(TT.Plus, [1, 2], [3, 4]).value).toEqual([4, 6])
+    expect(binary(TT.Plus, [1, 2, 3], [4, 5]).value).toEqual([5, 7])
+    expect(binary(TT.Minus, [5, 7], [1, 2, 99]).value).toEqual([4, 5])
     expect(binary(TT.Star, [1, 2], [3, 4]).value).toBe(11)
     expect(binary(TT.Star, 2, [3, 4]).value).toEqual([6, 8])
     expect(binary(TT.Star, [[1, 2], [3, 4]], [5, 6]).value).toEqual([17, 39])
@@ -53,11 +55,31 @@ describe('shared OpenSCAD 2021.01 value semantics', () => {
     const { context } = harness()
     expect(formatOpenScadValue(range)).toBe('[0 : 1 : 2]')
     expect(materializeOpenScadRange(range, context)).toEqual([0, 1, 2])
+    expect(openScadIndex(range, 0, context)).toBe(0)
     expect(openScadIndex(range, 1.9, context)).toBe(1)
+    expect(openScadIndex(range, 2, context)).toBe(2)
+    expect(openScadIndex(range, 3, context)).toBeUndefined()
+    const nonUnitRange: RangeValue = { kind: 'range-value', start: 1, step: 2, end: 9 }
+    expect(openScadIndex(nonUnitRange, 1, context)).toBe(2)
+    expect(openScadIndex(nonUnitRange, 2, context)).toBe(9)
     expect(openScadIndex([10, 20], 1.9, context)).toBe(20)
     expect(openScadIndex('💩x', 0, context)).toBe('💩')
     expect(openScadIndex('💩x', 1, context)).toBe('x')
     expect(openScadTruthy({ kind: 'range-value', start: 1, step: 1, end: 0 })).toBe(true)
+  })
+
+  it('compares ranges by begin, step and represented item count', () => {
+    const range = (start: number, step: number, end: number): RangeValue => ({
+      kind: 'range-value', start, step, end,
+    })
+
+    expect(binary(TT.EqEq, range(0, 1, 2), range(0, 1, 2.5)).value).toBe(true)
+    expect(binary(TT.NotEq, range(0, 1, 2), range(0, 1, 2.5)).value).toBe(false)
+    expect(binary(TT.EqEq, range(3, 1, 1), range(4, 1, 2)).value).toBe(true)
+    expect(binary(TT.Lt, range(3, 1, 1), range(0, 1, 1)).value).toBe(true)
+    expect(binary(TT.Lt, range(0, 1, 2), range(0, 2, 4)).value).toBe(true)
+    expect(binary(TT.LtEq, range(0, 1, 2.5), range(0, 1, 2)).value).toBe(true)
+    expect(binary(TT.Gt, range(1, 1, 2), range(0, 2, 4)).value).toBe(true)
   })
 
   it('preserves inf/nan values instead of turning them into fatal evaluator errors', () => {
@@ -65,6 +87,7 @@ describe('shared OpenSCAD 2021.01 value semantics', () => {
     expect(binary(TT.Slash, -1, 0).value).toBe(-Infinity)
     expect(Number.isNaN(binary(TT.Slash, 0, 0).value)).toBe(true)
     expect(Number.isNaN(binary(TT.Percent, 1, 0).value)).toBe(true)
+    expect(openScadTruthy(Number.NaN)).toBe(true)
     expect(formatOpenScadValue(Number.NaN)).toBe('nan')
     expect(formatOpenScadValue(1 / 3)).toBe('0.333333')
     expect(formatOpenScadValue(0.000000123456789)).toBe('1.23457e-7')

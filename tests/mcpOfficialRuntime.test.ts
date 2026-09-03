@@ -37,6 +37,7 @@ import {
   OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
   OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
   OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
+  OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
   type OfficialOpenScadExportFormat,
 } from '../src/mcp/officialOpenScadRuntimeProtocol'
 
@@ -97,6 +98,7 @@ const CAPABILITIES: OfficialOpenScadCapabilities = Object.freeze({
     projectFiles: OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
     projectFileBytes: OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
     projectBytes: OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+    wireRequestBytes: OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
     outputBytes: OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
     logBytes: OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
     logEntries: OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
@@ -223,6 +225,7 @@ describe('official OpenSCAD MCP facade', () => {
   it('classifies every official runtime failure without exposing internal messages', () => {
     const supervisorCases = [
       ['E_OFFICIAL_OPENSCAD_UNAVAILABLE', 'engine_unavailable', false],
+      ['E_OFFICIAL_OPENSCAD_REQUEST_LIMIT', 'invalid_argument', false],
       ['E_OFFICIAL_OPENSCAD_BUSY', 'server_busy', true],
       ['E_OFFICIAL_OPENSCAD_CANCELLED', 'cancelled', true],
       ['E_OFFICIAL_OPENSCAD_DEADLINE', 'deadline_exceeded', true],
@@ -461,6 +464,11 @@ describe('official OpenSCAD MCP facade', () => {
         source: 'cube(1);',
         files: [{ path: 'same.scad', text: '' }, { path: 'same.scad', text: '' }],
       },
+      {
+        source: 'cube(1);',
+        files: [{ path: 'lib', text: '' }, { path: 'lib/part.scad', text: 'cube(1);' }],
+      },
+      { source: 'cube(1);', files: [{ path: 'home/cache.dat', text: '' }] },
       { source: 'cube(1);', unexpected: true },
     ]) {
       const rejected = await request('tools/call', {

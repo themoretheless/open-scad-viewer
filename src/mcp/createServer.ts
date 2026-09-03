@@ -131,6 +131,7 @@ import {
   OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
   normalizeOfficialOpenScadProjectPath,
   officialOpenScadMimeType,
+  officialOpenScadProjectPathsConflict,
 } from './officialOpenScadRuntimeProtocol'
 import {
   OFFICIAL_OPENSCAD_FONT_FAMILY,
@@ -346,11 +347,11 @@ function officialToolInputSchema<T extends z.ZodRawShape>(extra: T) {
     const paths = new Set<string>()
     let bytes = utf8Encoder.encode(project.source).byteLength
     for (const [index, file] of project.files.entries()) {
-      if (paths.has(file.path)) {
+      if ([...paths].some(path => officialOpenScadProjectPathsConflict(path, file.path))) {
         context.addIssue({
           code: 'custom',
           path: ['files', index, 'path'],
-          message: 'Project file paths must be unique',
+          message: 'Project file paths must not duplicate or contain one another',
         })
       }
       paths.add(file.path)
@@ -432,6 +433,7 @@ const officialCapabilitiesSchema = z.object({
     project_files: z.number().int().positive(),
     project_file_bytes: z.number().int().positive(),
     project_bytes: z.number().int().positive(),
+    wire_request_bytes: z.number().int().positive(),
     output_bytes: z.number().int().positive(),
     log_bytes: z.number().int().positive(),
     log_entries: z.number().int().positive(),
@@ -728,7 +730,7 @@ const analysisSchema = z.object({
   details_truncated: z.boolean(),
 })
 const independentProjectInputShape = {
-  source: sourceSchema,
+  source: independentProjectTextSchema,
   files: z.array(independentProjectFileSchema).max(OPENSCAD_PROJECT_MAX_FILES - 1).default([])
     .describe('Bounded project files; each contains exactly one of text or canonical data_base64.'),
 }
@@ -1155,6 +1157,7 @@ function officialCapabilitiesToWire(capabilities: OfficialOpenScadCapabilities) 
       project_files: capabilities.limits.projectFiles,
       project_file_bytes: capabilities.limits.projectFileBytes,
       project_bytes: capabilities.limits.projectBytes,
+      wire_request_bytes: capabilities.limits.wireRequestBytes,
       output_bytes: capabilities.limits.outputBytes,
       log_bytes: capabilities.limits.logBytes,
       log_entries: capabilities.limits.logEntries,

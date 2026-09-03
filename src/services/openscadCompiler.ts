@@ -602,6 +602,8 @@ class Parser {
         if (!this.match(TT.Comma) && this.peek().t !== TT.RParen) this.fail(this.peek(), 'Expected , or )')
       }
       this.advance()
+    } else if (this.languageProfile === 'openscad/stable-2021.01') {
+      this.fail(this.peek(), `Expected ( after module name ${name.v}`)
     }
 
     const children = this.body(false)

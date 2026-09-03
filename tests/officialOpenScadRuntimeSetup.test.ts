@@ -96,7 +96,20 @@ async function writeVerifiedFixtureInstallation(cacheRoot: string) {
   await writeFile(fontPath, font)
   await writeFile(fontLicensePath, fontLicense)
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
-  return { fontPath, fontLicensePath, manifest, manifestPath, original, patched, runtimePath }
+  return {
+    fontPath,
+    fontLicensePath,
+    manifest,
+    manifestPath,
+    original,
+    patched,
+    runtimePath,
+    testOnlyExpectedIntegrity: {
+      runtimeSha256: manifest.runtimeSha256,
+      fontSha256: manifest.fontSha256,
+      fontLicenseSha256: manifest.fontLicenseSha256,
+    },
+  }
 }
 
 describe('official OpenSCAD runtime setup', () => {
@@ -110,6 +123,7 @@ describe('official OpenSCAD runtime setup', () => {
       version: '2026.09.01',
       sourceUrl: 'https://files.openscad.org/snapshots/OpenSCAD-2026.09.01-WebAssembly-node.zip',
       archiveSha256: '82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888',
+      runtimeSha256: '80a6e6129ddf58e8262c8ff3023ee68afc93937b5a5d1afa54b054415c7b768c',
       archiveEntry: 'openscad.js',
       runtimeFilename: 'openscad.patched.cjs',
       manifestFile: 'runtime-manifest.json',
@@ -185,7 +199,10 @@ describe('official OpenSCAD runtime setup', () => {
       fontFilename: 'Basic-Regular.ttf',
       fontLicenseFilename: 'Basic-OFL.txt',
     })
-    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot })).resolves.toMatchObject({
+    await expect(verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).resolves.toMatchObject({
       cacheRoot,
       manifestPath: installation.manifestPath,
       runtimePath: installation.runtimePath,
@@ -193,25 +210,52 @@ describe('official OpenSCAD runtime setup', () => {
       fontLicensePath: installation.fontLicensePath,
       manifest: installation.manifest,
     })
-    await expect(getOfficialOpenScadRuntimeStatus({ cacheRoot })).resolves.toMatchObject({ status: 'installed' })
+    await expect(getOfficialOpenScadRuntimeStatus({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).resolves.toMatchObject({ status: 'installed' })
 
     await writeFile(installation.runtimePath, 'tampered')
-    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot })).rejects.toThrow(/checksum mismatch/)
-    await expect(getOfficialOpenScadRuntimeStatus({ cacheRoot })).resolves.toMatchObject({ status: 'invalid' })
+    await expect(verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).rejects.toThrow(/checksum mismatch/)
+    await expect(getOfficialOpenScadRuntimeStatus({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).resolves.toMatchObject({ status: 'invalid' })
+  })
+
+  it('rejects a self-consistent cache manifest whose digests are not the pinned installation', async () => {
+    const cacheRoot = await temporaryDirectory()
+    await writeVerifiedFixtureInstallation(cacheRoot)
+
+    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot }))
+      .rejects.toThrow(/pinned runtime integrity/)
+    await expect(getOfficialOpenScadRuntimeStatus({ cacheRoot })).resolves.toMatchObject({
+      status: 'invalid',
+      error: expect.stringMatching(/pinned runtime integrity/),
+    })
   })
 
   it('rejects unexpected manifest fields and symlinked runtime files', async () => {
     const cacheRoot = await temporaryDirectory()
     const installation = await writeVerifiedFixtureInstallation(cacheRoot)
     await writeFile(installation.manifestPath, `${JSON.stringify({ ...installation.manifest, runtimePath: '../escape.cjs' })}\n`)
-    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot })).rejects.toThrow(/pinned runtime schema/)
+    await expect(verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).rejects.toThrow(/pinned runtime schema/)
 
     await writeFile(installation.manifestPath, `${JSON.stringify(installation.manifest)}\n`)
     const target = join(await temporaryDirectory(), 'target.cjs')
     await writeFile(target, installation.patched)
     await rm(installation.runtimePath)
     await symlink(target, installation.runtimePath)
-    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot })).rejects.toThrow(/regular file, not a symlink/)
+    await expect(verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).rejects.toThrow(/regular file, not a symlink/)
   })
 
   it('makes repeated install idempotent without downloading an already verified runtime', async () => {
@@ -219,12 +263,19 @@ describe('official OpenSCAD runtime setup', () => {
     const installation = await writeVerifiedFixtureInstallation(cacheRoot)
     const fetchImpl = vi.fn(() => { throw new Error('network must not be used') })
 
-    await expect(installOfficialOpenScadRuntime({ cacheRoot, fetchImpl })).resolves.toMatchObject({
+    await expect(installOfficialOpenScadRuntime({
+      cacheRoot,
+      fetchImpl,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).resolves.toMatchObject({
       installState: 'already-installed',
       runtimePath: installation.runtimePath,
     })
     expect(fetchImpl).not.toHaveBeenCalled()
-    await expect(verifyInstalledOfficialOpenScadRuntime({ cacheRoot })).resolves.toMatchObject({
+    await expect(verifyInstalledOfficialOpenScadRuntime({
+      cacheRoot,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    })).resolves.toMatchObject({
       runtimePath: installation.runtimePath,
     })
   })
@@ -237,13 +288,19 @@ describe('official OpenSCAD runtime setup', () => {
     await expect(runOfficialOpenScadRuntimeCli(['status'], { cacheRoot, log, errorLog })).resolves.toBe(1)
     expect(errorLog).toHaveBeenLastCalledWith(expect.stringContaining('not installed'))
 
-    await writeVerifiedFixtureInstallation(cacheRoot)
-    await expect(runOfficialOpenScadRuntimeCli(['verify'], { cacheRoot, log, errorLog })).resolves.toBe(0)
-    await expect(runOfficialOpenScadRuntimeCli(['--status'], { cacheRoot, log, errorLog })).resolves.toBe(0)
+    const installation = await writeVerifiedFixtureInstallation(cacheRoot)
+    const cliOptions = {
+      cacheRoot,
+      log,
+      errorLog,
+      testOnlyExpectedIntegrity: installation.testOnlyExpectedIntegrity,
+    }
+    await expect(runOfficialOpenScadRuntimeCli(['verify'], cliOptions)).resolves.toBe(0)
+    await expect(runOfficialOpenScadRuntimeCli(['--status'], cliOptions)).resolves.toBe(0)
     expect(log).toHaveBeenCalledWith(expect.stringContaining('installed and verified'))
 
     await writeFile(join(cacheRoot, runtimeContract.OFFICIAL_OPENSCAD_RUNTIME_FILENAME), 'tampered')
-    await expect(runOfficialOpenScadRuntimeCli(['status'], { cacheRoot, log, errorLog })).resolves.toBe(1)
+    await expect(runOfficialOpenScadRuntimeCli(['status'], cliOptions)).resolves.toBe(1)
     expect(errorLog).toHaveBeenLastCalledWith(expect.stringContaining('installation is invalid'))
   })
 

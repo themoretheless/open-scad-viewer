@@ -63,6 +63,28 @@ export type OpenScadBuiltinFunctionResult =
   | Readonly<{ recognized: false }>
   | Readonly<{ recognized: true; value: OpenScadBuiltinValue }>
 
+/**
+ * Preserve OpenSCAD's call-by-name boundary for built-ins. The reference
+ * runtime exposes argument expressions through EvalContext and evaluates an
+ * expression every time the selected built-in reads that position. An actual
+ * Array keeps the existing handler API and iteration semantics while accessor
+ * slots defer those reads to the host evaluator.
+ */
+export function createDeferredOpenScadBuiltinArguments(
+  count: number,
+  evaluate: (index: number) => OpenScadBuiltinValue,
+): readonly OpenScadBuiltinValue[] {
+  const values = new Array<OpenScadBuiltinValue>(count)
+  for (let index = 0; index < count; index++) {
+    Object.defineProperty(values, index, {
+      configurable: false,
+      enumerable: true,
+      get: () => evaluate(index),
+    })
+  }
+  return Object.freeze(values)
+}
+
 const NOT_RECOGNIZED: OpenScadBuiltinFunctionResult = Object.freeze({ recognized: false })
 const MAX_GENERATED_ITEMS = 1_000_000
 const MAX_CHR_RANGE_ITEMS = 10_000
@@ -151,19 +173,115 @@ function unaryNumber(name: string, operation: (value: number) => number): Builti
 function binaryNumber(name: string, operation: (left: number, right: number) => number): BuiltinHandler {
   return (args, context) => {
     expectCount(context, name, args, [2])
+    // The 2021.01 built-ins read both expressions before validating either
+    // value, so side effects in the right slot remain observable.
+    const left = args[0]
+    const right = args[1]
     return operation(
-      numberValue(context, name, args[0], 0),
-      numberValue(context, name, args[1], 1),
+      numberValue(context, name, left, 0),
+      numberValue(context, name, right, 1),
     )
   }
 }
 
-function degreesToRadians(value: number): number {
-  return value * Math.PI / 180
+// OpenSCAD's public 2021.01 behavior requires exact results at common degree
+// angles. Normalize once, solve a first-quadrant pair, and restore the signs
+// by quadrant so those values also remain exact after full rotations.
+const DEG_TO_RAD = 0.017453292519943295769
+const RAD_TO_DEG = 57.2957795130823208767
+const SQRT_THREE_QUARTERS = 0.86602540378443859659
+const SQRT_ONE_THIRD = 0.57735026918962573106
+const TRIG_HUGE_VALUE = 360 * 2 ** 52
+
+interface ReducedDegrees {
+  readonly angle: number
+  readonly cycles: number
 }
 
-function radiansToDegrees(value: number): number {
-  return value * 180 / Math.PI
+function reduceDegrees(value: number, period: number): ReducedDegrees | undefined {
+  if (!(value < TRIG_HUGE_VALUE && value > -TRIG_HUGE_VALUE)) return undefined
+  if (value >= 0 && value < period) return { angle: value, cycles: 0 }
+  const cycles = Math.floor(value / period)
+  return { angle: value - cycles * period, cycles }
+}
+
+function firstQuadrantComponents(angle: number): readonly [sin: number, cos: number] {
+  if (angle === 30) return [0.5, SQRT_THREE_QUARTERS]
+  if (angle === 45) return [Math.SQRT1_2, Math.SQRT1_2]
+  if (angle === 60) return [SQRT_THREE_QUARTERS, 0.5]
+  if (angle < 45) {
+    const radians = angle * DEG_TO_RAD
+    return [Math.sin(radians), Math.cos(radians)]
+  }
+  const complement = (90 - angle) * DEG_TO_RAD
+  return [Math.cos(complement), Math.sin(complement)]
+}
+
+function unitCircleComponents(value: number): readonly [sin: number, cos: number] | undefined {
+  const reduced = reduceDegrees(value, 360)
+  if (reduced === undefined) return undefined
+  const { angle } = reduced
+  if (angle === 0) return [angle, 1]
+  if (angle === 90) return [1, 0]
+  if (angle === 180) return [-0, -1]
+  if (angle === 270) return [-1, -0]
+
+  const quadrant = Math.floor(angle / 90)
+  const [sin, cos] = firstQuadrantComponents(angle - quadrant * 90)
+  if (quadrant === 0) return [sin, cos]
+  if (quadrant === 1) return [cos, -sin]
+  if (quadrant === 2) return [-sin, -cos]
+  return [-cos, sin]
+}
+
+function sinDegrees(value: number): number {
+  return unitCircleComponents(value)?.[0] ?? Number.NaN
+}
+
+function cosDegrees(value: number): number {
+  return unitCircleComponents(value)?.[1] ?? Number.NaN
+}
+
+function tanDegrees(value: number): number {
+  const reduced = reduceDegrees(value, 180)
+  if (reduced === undefined) return Number.NaN
+  if (reduced.angle === 0) return reduced.cycles % 2 === 0 ? 0 : -0
+  if (reduced.angle === 90) return reduced.cycles % 2 === 0 ? Infinity : -Infinity
+
+  const oppose = reduced.angle > 90
+  const acute = oppose ? 180 - reduced.angle : reduced.angle
+  const magnitude = acute === 30
+    ? SQRT_ONE_THIRD
+    : acute === 45
+      ? 1
+      : acute === 60
+        ? Math.sqrt(3)
+        : Math.tan(acute * DEG_TO_RAD)
+  return oppose ? -magnitude : magnitude
+}
+
+function asinDegrees(value: number): number {
+  const degrees = Math.asin(value) * RAD_TO_DEG
+  const whole = roundAwayFromZero(degrees)
+  return sinDegrees(whole) === value ? whole : degrees
+}
+
+function acosDegrees(value: number): number {
+  const degrees = Math.acos(value) * RAD_TO_DEG
+  const whole = roundAwayFromZero(degrees)
+  return cosDegrees(whole) === value ? whole : degrees
+}
+
+function atanDegrees(value: number): number {
+  const degrees = Math.atan(value) * RAD_TO_DEG
+  const whole = roundAwayFromZero(degrees)
+  return tanDegrees(whole) === value ? whole : degrees
+}
+
+function atan2Degrees(y: number, x: number): number {
+  const degrees = Math.atan2(y, x) * RAD_TO_DEG
+  const whole = roundAwayFromZero(degrees)
+  return Math.abs(degrees - whole) < 3e-14 ? whole : degrees
 }
 
 /** C++ std::round semantics: halfway cases round away from zero. */
@@ -388,8 +506,9 @@ function equalValues(left: OpenScadBuiltinValue, right: OpenScadBuiltinValue): b
 function minMax(name: 'min' | 'max'): BuiltinHandler {
   return (args, context) => {
     if (args.length === 0) return fail(context, name, 'expects at least 1 argument')
-    if (args.length === 1 && Array.isArray(args[0])) {
-      const values = args[0]
+    const first = args[0]
+    if (args.length === 1 && Array.isArray(first)) {
+      const values = first
       if (values.length === 0) return fail(context, name, 'expects at least 1 vector element')
       let selected = values[0]
       for (let index = 1; index < values.length; index++) {
@@ -400,7 +519,7 @@ function minMax(name: 'min' | 'max'): BuiltinHandler {
       }
       return selected
     }
-    let selected = numberValue(context, name, args[0], 0)
+    let selected = numberValue(context, name, first, 0)
     for (let index = 1; index < args.length; index++) {
       const value = numberValue(context, name, args[index], index)
       if ((name === 'min' && value < selected) || (name === 'max' && value > selected)) selected = value
@@ -489,24 +608,24 @@ function seededRandom(seed: number): () => number {
 
 const rands: BuiltinHandler = (args, context) => {
   expectCount(context, 'rands', args, [3, 4])
-  if (typeof args[0] !== 'number' || typeof args[1] !== 'number'
-    || typeof args[2] !== 'number' || (args.length === 4 && typeof args[3] !== 'number')) {
-    // 2021.01 returns undef without an additional conversion diagnostic for
-    // typed rands() parameters.
-    return undefined
-  }
-  let minimum = args[0]
+  const minimumValue = args[0]
+  if (typeof minimumValue !== 'number') return undefined
+  let minimum = minimumValue
   if (!Number.isFinite(minimum)) {
     warn(context, 'rands', 'range minimum is non-finite; using a bounded minimum')
     minimum = -HALF_MAX_DOUBLE
   }
-  let maximum = args[1]
+  const maximumValue = args[1]
+  if (typeof maximumValue !== 'number') return undefined
+  let maximum = maximumValue
   if (!Number.isFinite(maximum)) {
     warn(context, 'rands', 'range maximum is non-finite; using a bounded maximum')
     maximum = HALF_MAX_DOUBLE
   }
   if (maximum < minimum) [minimum, maximum] = [maximum, minimum]
-  let requestedCount = Math.abs(args[2])
+  const countValue = args[2]
+  if (typeof countValue !== 'number') return undefined
+  let requestedCount = Math.abs(countValue)
   if (!Number.isFinite(requestedCount)) {
     warn(context, 'rands', 'result count is non-finite; using one result')
     requestedCount = 1
@@ -515,9 +634,12 @@ const rands: BuiltinHandler = (args, context) => {
   if (!Number.isSafeInteger(count) || count > MAX_GENERATED_ITEMS) {
     return fail(context, 'rands', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString()} items`)
   }
-  const random = args.length === 4
-    ? seededRandom(args[3] as number)
-    : context.random
+  let random = context.random
+  if (args.length === 4) {
+    const seed = args[3]
+    if (typeof seed !== 'number') return undefined
+    random = seededRandom(seed)
+  }
   const result: number[] = []
   for (let index = 0; index < count; index++) {
     if (minimum === maximum) {
@@ -535,8 +657,9 @@ const rands: BuiltinHandler = (args, context) => {
 
 const len: BuiltinHandler = (args, context) => {
   expectCount(context, 'len', args, [1])
-  if (typeof args[0] === 'string') return Array.from(args[0]).length
-  if (Array.isArray(args[0])) return args[0].length
+  const value = args[0]
+  if (typeof value === 'string') return Array.from(value).length
+  if (Array.isArray(value)) return value.length
   return fail(context, 'len', 'argument 1 must be a string or vector')
 }
 
@@ -568,6 +691,9 @@ function characterString(
       warn(context, 'chr', `range exceeds the ${MAX_CHR_RANGE_ITEMS.toLocaleString()}-item character limit`)
       return ''
     }
+    // RangeType::numValues() reports one item when all three fields are equal,
+    // but its 2021.01 iterator is nevertheless empty for every zero step.
+    if (value.step === 0) return ''
     let result = ''
     for (let index = 0; index < count; index++) {
       result += characterString(value.start + value.step * index, context)
@@ -595,9 +721,10 @@ function isWellFormedUnicode(value: string): boolean {
 const ord: BuiltinHandler = (args, context) => {
   if (args.length === 0) return undefined
   if (args.length !== 1) return fail(context, 'ord', 'expects 1 argument')
-  if (typeof args[0] !== 'string') return fail(context, 'ord', 'argument 1 must be a string')
-  if (!isWellFormedUnicode(args[0])) return fail(context, 'ord', 'argument 1 must be valid Unicode')
-  const first = Array.from(args[0])[0]
+  const value = args[0]
+  if (typeof value !== 'string') return fail(context, 'ord', 'argument 1 must be a string')
+  if (!isWellFormedUnicode(value)) return fail(context, 'ord', 'argument 1 must be valid Unicode')
+  const first = Array.from(value)[0]
   return first === undefined ? undefined : first.codePointAt(0)
 }
 
@@ -619,9 +746,23 @@ const concat: BuiltinHandler = (args, context) => {
 
 const lookup: BuiltinHandler = (args, context) => {
   expectCount(context, 'lookup', args, [2])
-  const position = finiteNumberValue(context, 'lookup', args[0], 0)
-  if (!Array.isArray(args[1]) || args[1].length === 0) return undefined
-  const rows = args[1]
+  const positionValue = args[0]
+  if (typeof positionValue !== 'number' || !Number.isFinite(positionValue)) {
+    // The reference diagnostic formats a second evaluation of the first
+    // expression and never reads the table on this path.
+    void args[0]
+    return fail(
+      context,
+      'lookup',
+      typeof positionValue === 'number'
+        ? 'argument 1 must be finite'
+        : 'argument 1 must be a number',
+    )
+  }
+  const position = positionValue
+  const table = args[1]
+  if (!Array.isArray(table) || table.length === 0) return undefined
+  const rows = table
   const first = rows[0]
   if (!Array.isArray(first) || first.length !== 2
     || typeof first[0] !== 'number' || typeof first[1] !== 'number') return undefined
@@ -717,14 +858,14 @@ function searchStringRows(
 
 const search: BuiltinHandler = (args, context) => {
   if (args.length < 2) return fail(context, 'search', 'expects at least 2 arguments')
+  const needle = args[0]
+  const table = args[1]
   const maximum = args.length > 2
     ? unsignedSearchParameter(args[2])
     : 1
   const column = args.length > 3
     ? unsignedSearchParameter(args[3])
     : 0
-  const needle = args[0]
-  const table = args[1]
 
   if (typeof needle === 'string' && typeof table === 'string') {
     const tableCharacters = Array.from(table)
@@ -765,15 +906,15 @@ const search: BuiltinHandler = (args, context) => {
 
 const version: BuiltinHandler = (args, context) => {
   // The pinned 2021.01 implementation ignores surplus arguments.
-  // Official release builds use VERSION=2021.01; the optional day element is
-  // present only in dated development snapshots.
-  return registerArray(context, 'version', [2021, 1])
+  // The official 2021.01 release reports an explicit zero day component.
+  return registerArray(context, 'version', [2021, 1, 0])
 }
 
 const versionNum: BuiltinHandler = (args, context) => {
   if (args.length === 0) return 20210100
-  if (!Array.isArray(args[0])) return undefined
-  const parts = args[0]
+  const value = args[0]
+  if (!Array.isArray(value)) return undefined
+  const parts = value
   if (parts.length !== 2 && parts.length !== 3) return undefined
   if (typeof parts[0] !== 'number' || typeof parts[1] !== 'number'
     || (parts.length === 3 && typeof parts[2] !== 'number')) return undefined
@@ -785,8 +926,9 @@ const versionNum: BuiltinHandler = (args, context) => {
 
 const norm: BuiltinHandler = (args, context) => {
   expectCount(context, 'norm', args, [1])
-  if (!Array.isArray(args[0])) return undefined
-  const vector = args[0]
+  const value = args[0]
+  if (!Array.isArray(value)) return undefined
+  const vector = value
   let result = 0
   for (let index = 0; index < vector.length; index++) {
     const value = numberValue(context, 'norm', vector[index], index)
@@ -797,8 +939,10 @@ const norm: BuiltinHandler = (args, context) => {
 
 const cross: BuiltinHandler = (args, context) => {
   expectCount(context, 'cross', args, [2])
-  const left = arrayValue(context, 'cross', args[0], 0)
-  const right = arrayValue(context, 'cross', args[1], 1)
+  const leftValue = args[0]
+  const rightValue = args[1]
+  const left = arrayValue(context, 'cross', leftValue, 0)
+  const right = arrayValue(context, 'cross', rightValue, 1)
   if (left.length !== right.length || (left.length !== 2 && left.length !== 3)) {
     return fail(context, 'cross', 'arguments must be matching 2D or 3D vectors')
   }
@@ -822,8 +966,9 @@ const cross: BuiltinHandler = (args, context) => {
 
 const parentModule: BuiltinHandler = (args, context) => {
   expectCount(context, 'parent_module', args, [0, 1])
-  if (args.length === 1 && typeof args[0] !== 'number') return undefined
-  const rawDepth = args.length === 0 ? 1 : args[0] as number
+  const value = args.length === 0 ? 1 : args[0]
+  if (typeof value !== 'number') return undefined
+  const rawDepth = value
   const depth = Number.isNaN(rawDepth)
     ? 0
     : rawDepth === Infinity
@@ -853,13 +998,13 @@ const HANDLERS: Readonly<Record<OpenScadBuiltinFunctionName, BuiltinHandler>> = 
   rands,
   min: minMax('min'),
   max: minMax('max'),
-  sin: unaryNumber('sin', value => Math.sin(degreesToRadians(value))),
-  cos: unaryNumber('cos', value => Math.cos(degreesToRadians(value))),
-  asin: unaryNumber('asin', value => radiansToDegrees(Math.asin(value))),
-  acos: unaryNumber('acos', value => radiansToDegrees(Math.acos(value))),
-  tan: unaryNumber('tan', value => Math.tan(degreesToRadians(value))),
-  atan: unaryNumber('atan', value => radiansToDegrees(Math.atan(value))),
-  atan2: binaryNumber('atan2', (y, x) => radiansToDegrees(Math.atan2(y, x))),
+  sin: unaryNumber('sin', sinDegrees),
+  cos: unaryNumber('cos', cosDegrees),
+  asin: unaryNumber('asin', asinDegrees),
+  acos: unaryNumber('acos', acosDegrees),
+  tan: unaryNumber('tan', tanDegrees),
+  atan: unaryNumber('atan', atanDegrees),
+  atan2: binaryNumber('atan2', atan2Degrees),
   round: unaryNumber('round', roundAwayFromZero),
   ceil: unaryNumber('ceil', Math.ceil),
   floor: unaryNumber('floor', Math.floor),
