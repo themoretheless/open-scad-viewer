@@ -1,6 +1,7 @@
 import type { GeometryQuality } from '../core/build'
 import {
   canonicalJson,
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   MAX_GEOMETRY_SOURCE_CHARACTERS,
@@ -29,23 +30,26 @@ import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
 
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
-const legacyManifest = GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1']
+const currentManifoldManifest = GEOMETRY_MANIFEST_ARCHIVE[
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold
+]
 
 /**
- * The identity is the already-shipped legacy direct evaluator. Host isolation
- * is an independent boundary fact and does not mutate its immutable manifest.
+ * The identity is the current immutable package snapshot of the legacy direct
+ * evaluator. Host isolation is an independent boundary fact and does not
+ * mutate that manifest; archived snapshots remain catalog-readable only.
  */
 export const DIRECT_GEOMETRY_IDENTITY = Object.freeze({
   boundaryVersion: 'mcp-direct-geometry-v1' as const,
   executionPath: 'legacy-direct-production' as const,
-  engineClass: legacyManifest.engineClass,
-  engineKey: legacyManifest.engineKey,
-  kernelFingerprint: legacyManifest.kernelFingerprint,
-  semanticProgramVersion: legacyManifest.semanticProgramVersion,
-  capabilityManifestVersion: legacyManifest.capabilityManifestVersion,
-  manifestDigest: legacyManifest.manifestDigest,
-  inputContract: legacyManifest.inputContract,
-  manifestIsolation: legacyManifest.isolation,
+  engineClass: currentManifoldManifest.engineClass,
+  engineKey: currentManifoldManifest.engineKey,
+  kernelFingerprint: currentManifoldManifest.kernelFingerprint,
+  semanticProgramVersion: currentManifoldManifest.semanticProgramVersion,
+  capabilityManifestVersion: currentManifoldManifest.capabilityManifestVersion,
+  manifestDigest: currentManifoldManifest.manifestDigest,
+  inputContract: currentManifoldManifest.inputContract,
+  manifestIsolation: currentManifoldManifest.isolation,
   hostIsolation: 'disposable-node-worker-per-job' as const,
   automaticFallback: false as const,
 })
@@ -546,8 +550,8 @@ export function isDirectGeometryCapabilities(
       || candidate.engines.length !== 2) return false
 
     const manifests = [
-      GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
-      GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
+      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
+      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep],
     ] as const
     return candidate.engines.every((engineValue, index) => {
       const engine = record(engineValue)

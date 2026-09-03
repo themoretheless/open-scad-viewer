@@ -167,7 +167,11 @@ describe('core mesh publication', () => {
         .map(specifier => `${relative(sourceRoot, path)} -> ${specifier}`))
       .sort()
 
-    expect(parserConsumers).toEqual(['services/geometryBuildEngine.ts', 'workers/geometry.worker.ts'])
+    expect(parserConsumers).toEqual([
+      'mcp/independentOpenScadExecution.ts',
+      'services/geometryBuildEngine.ts',
+      'workers/geometry.worker.ts',
+    ])
     expect(coreServiceImports).toEqual([])
   })
 

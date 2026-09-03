@@ -66,12 +66,16 @@ unrelated failure as cancellation.
 Changing `availability` is insufficient to make a provider executable.
 Admission evaluates the immutable archived manifest.
 
-There is one narrow grandfathered exception for the exact
-`manifold-node-v1` digest, fingerprint and target already used by the legacy
-product. Browser-safe core code recomputes the canonical digest over every
-immutable manifest field before either the exception or qualification path is
-considered; changing any field while retaining the old digest fails integrity
-admission. Every other provider requires all of the following:
+There is one narrow grandfathered evaluator exception, represented by an
+exact immutable allowlist. `manifold-node-v1` remains the historical catalog
+identity with its original digest and dependency evidence;
+`manifold-node-v2` is the current package snapshot after the repository lockfile
+and notices gained the independent text engine dependency. Both entries bind
+the same legacy evaluator key, fingerprint, semantics and target. Browser-safe
+core code recomputes the canonical digest over every immutable manifest field
+before either allowlist or qualification admission is considered; changing any
+field while retaining an archived digest fails integrity admission. Every
+other provider requires all of the following:
 
 - production maturity and a deployed isolation mode;
 - `qualification.status = qualified` with non-null record and corpus IDs;

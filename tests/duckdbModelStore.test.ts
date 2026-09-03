@@ -17,6 +17,7 @@ import {
 import {
   GEOMETRY_MANIFEST_ARCHIVE,
   LEGACY_MANIFOLD_EXECUTION,
+  planGeometrySourceExecution,
   type GeometryExecutionDescriptor,
 } from '../src/core/geometryExecution'
 
@@ -85,9 +86,8 @@ function runtimeExecution(
   overrides: Partial<GeometryExecutionDescriptor> = {},
 ): GeometryExecutionDescriptor {
   return {
-    ...LEGACY_MANIFOLD_EXECUTION,
+    ...planGeometrySourceExecution('cube(1);', { quality: 'full', purpose: 'full' }),
     evidence: 'runtime',
-    effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
     ...overrides,
   }
 }

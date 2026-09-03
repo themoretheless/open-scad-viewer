@@ -14,22 +14,29 @@ process that exposes headless compiler operations over MCP stdio and persists
 its own catalog in DuckDB. The MCP process is a sidecar/tooling surface, not a
 runtime dependency of the browser app.
 
-The project implements a **strict, independent OpenSCAD subset**. It does not
-embed the official OpenSCAD compiler. Supported constructs produce real
-geometry through the Apache-2.0 [`manifold-3d`](https://github.com/elalish/manifold)
-package. Unsupported syntax must fail with a source diagnostic rather than
-produce an approximate or misleading model.
+The browser and original MCP geometry lane implement a **strict, independent
+OpenSCAD subset**, while a versioned repository-owned full-profile lane is being
+qualified against `openscad/stable-2021.01`. Neither embeds or delegates to the
+official compiler. Supported constructs produce real geometry through the Apache-2.0
+[`manifold-3d`](https://github.com/elalish/manifold) package; unsupported syntax
+must fail with a source diagnostic rather than produce an approximate result.
+The MCP sidecar also has a separate, opt-in official-runtime lane used only as
+a differential oracle and reference exporter. Its GPL runtime is explicitly
+downloaded into a local gitignored cache and never enters the browser graph,
+independent evaluator, or production router.
 
 This boundary is intentional:
 
-- full OpenSCAD compatibility would be better served by the official runtime,
-  subject to its GPL-2.0+ distribution requirements;
+- official OpenSCAD execution is served by an explicit oracle MCP boundary,
+  subject to its GPL-2.0+ requirements, and is not the product engine;
 - subset additions must not silently diverge from documented semantics;
+- official execution must never be mislabeled as an independent Manifold/B-rep
+  build or used as an implicit fallback;
 - WebGPU is currently the only renderer backend;
 - the current workspace contains one `.scad` document and persists locally.
 
 The supported language and limits are documented in
-[README.md](README.md#supported-subset-and-limits).
+[README.md](README.md#browserindependent-subset-and-full-mcp-profile).
 
 ## System map
 
@@ -78,11 +85,18 @@ BoundedTransport ── request admission + serialized bounded writes
     │
     ▼
 createOpenScadMcpServer
+    ├─ Independent stable-2021.01 evaluator ── check / full STL / OBJ
+    │     └─ bounded project VFS + session-local SHA-256 artifact cache
     ├─ HeadlessGeometryService ── inspect / STL / OBJ
     │     │
     │     └─ DirectGeometrySupervisor ── bounded FIFO + deadline/cancel watchdog
     │              │ one disposable Node Worker per job
     │              └─ directGeometry.worker.ts ── parser + Manifold provider
+    ├─ OfficialOpenScadRuntimeSupervisor ── differential oracle / reference exports
+    │     │ one permission-model subprocess per job
+    │     └─ officialOpenScadRuntimeRunner.mjs
+    │           ├─ verified patched snapshot + pinned Basic font
+    │           └─ bounded project-relative MEMFS only
     ├─ typed tools + openscad:// resources
     └─ DuckDbModelStore
           ├─ versioned models
@@ -117,6 +131,10 @@ createOpenScadMcpServer
 | [`src/mcp/geometryService.ts`](src/mcp/geometryService.ts) | Headless summary, validated Customizer replacement, size-bounded STL/OBJ export, and a process-wide bounded pending-job gate. Production injects the direct Worker runtime; deterministic unit tests may retain the in-process engine. |
 | [`src/mcp/directGeometryProtocol.ts`](src/mcp/directGeometryProtocol.ts) / [`src/mcp/directGeometry.worker.ts`](src/mcp/directGeometry.worker.ts) | Exact, source-hash-correlated Worker envelopes and the disposable production realm that invokes build/capability work on the direct default geometry engine. The child has no DuckDB, MCP transport, filesystem, network or subprocess dependency. |
 | [`src/mcp/directGeometrySupervisor.ts`](src/mcp/directGeometrySupervisor.ts) | One-at-a-time FIFO admission, queue-inclusive deadline, startup/cancel/join watchdogs, hard Worker termination, join-before-settlement and permanent quarantine after an unjoined child. |
+| [`src/mcp/officialOpenScadRuntimeProtocol.ts`](src/mcp/officialOpenScadRuntimeProtocol.ts) / [`src/mcp/officialOpenScadRuntimeRunner.mjs`](src/mcp/officialOpenScadRuntimeRunner.mjs) | Exact bounded project/result envelopes and the dependency-free one-shot child that mounts source/assets in Emscripten MEMFS and calls the verified official runtime. |
+| [`src/mcp/officialOpenScadRuntimeService.ts`](src/mcp/officialOpenScadRuntimeService.ts) | Runtime/font/license-manifest verification, one-at-a-time subprocess admission, Node host-file permission boundary, deadline/cancel/kill/join lifecycle, explicit network/WASM-memory residuals, and stable-language check/export API. |
+| [`src/mcp/independentOpenScadExecution.ts`](src/mcp/independentOpenScadExecution.ts) / [`src/mcp/independentArtifactCache.ts`](src/mcp/independentArtifactCache.ts) | Shared bounded execution path for independent check/full-quality export and a per-session byte-SHA-256 STL/OBJ resource cache that deliberately bypasses legacy DuckDB provenance. |
+| [`src/core/openScad2021Contract.ts`](src/core/openScad2021Contract.ts) | Frozen stable OpenSCAD 2021.01 inventory, exact source revision, functions/modules, language surface, file semantics, compatibility tail, smoke programs, and the separately named execution snapshot. |
 | [`src/mcp/boundedTransport.ts`](src/mcp/boundedTransport.ts) | Process-wide MCP request admission tied to actual handler settlement, bounded modern subscriptions, inbound notification coalescing/filtering, fail-fast busy responses, serialized stdio writes, and bounded outbound backpressure. |
 | [`src/mcp/duckdbModelStore.ts`](src/mcp/duckdbModelStore.ts) | Node-only, parameterized DuckDB repository with schema-v5 source-attestation classes, versioned diagnostics, immutable source revisions, retention quotas, catalog statistics, and owner-only POSIX file permissions; external access and extension loading are disabled. |
 | [`src/mcp/createServer.ts`](src/mcp/createServer.ts) / [`src/mcp/server.ts`](src/mcp/server.ts) | Dual-era typed MCP tools/resources/prompts, reproducible revision selectors, cache hints, guided instructions, and the local stdio/bootstrap lifecycle. |
@@ -242,6 +260,50 @@ but the kernel section is synchronous within its Worker. Cancellation can be
 observed at Worker checkpoints; an already-running kernel call still requires
 hard Worker replacement.
 
+### Upstream oracle execution boundary
+
+The upstream oracle is intentionally not another provider in the frozen or
+independent production geometry router. An explicit setup command downloads the pinned official
+WebAssembly artifact, verifies the archive digest before extraction, replaces
+the Node raw-filesystem overlay with injected MEMFS, and records the patched
+runtime digest in a strict colocated manifest. The same command downloads and
+verifies the pinned OFL Basic Regular font plus its license text. The cache is
+local and ignored by Git.
+
+MCP accepts source plus a bounded list of project-relative text/base64 files.
+The parent and child independently validate canonical paths, duplicate names,
+digests, aggregate bytes, defines, experimental feature names, and the exact
+wire envelope. Every operation then starts a fresh Node subprocess with the
+permission model enabled and host-file read access limited to the child runner,
+verified runtime, and verified font; host-file writes are denied. The child
+mounts only `/project` in MEMFS, injects the Basic font through a minimal
+Fontconfig configuration, and resolves SCAD file paths inside that virtual
+filesystem rather than on the host.
+
+The supervisor admits one official job at a time and rejects concurrent
+official work as busy; it has no internal job queue. It bounds both child
+streams and kills/joins the process on cancellation, timeout, malformed
+protocol, or oversized output. The admission slot is released only after that
+child joins. Official diagnostics and `ECHO` messages are returned as bounded
+ordered logs. Successful exports enter a content-addressed per-session cache
+and are exposed as MCP resources. They do not enter DuckDB because the current
+persisted descriptor can attest only the independent router. The runner exposes
+no network API to SCAD, but Node's permission model does not enforce a network
+sandbox. Its V8 old-space setting also does not cap WebAssembly linear memory;
+OS-level network isolation and hostile-memory containment are residual risks
+outside this boundary.
+
+The stable compatibility source of truth is the versioned OpenSCAD 2021.01
+contract. The repository-owned engine implements that target; the optional
+oracle uses the named official 2026.09.01 snapshot. Experimental snapshot
+features are off by default. The versioned registry names the compatibility
+target and its relationship to the oracle snapshot. Its immutable
+`openscad://language/openscad-2021.01` resource publishes the full contract;
+capabilities, status, checks, and exports carry the derived stable-language
+summary. MCP capability resources also expose runtime/patch/font/license
+digests, declared isolation flags and fail-closed setup state; they do not
+derive the stable inventory from the newer runtime.
+
 ## Rendering and interaction
 
 `WebGPURenderer` owns WebGPU resources and reports typed initialization,
@@ -315,32 +377,42 @@ commands flowing inward and renderer intents/events flowing outward.
 10. **No arbitrary database execution.** MCP exposes typed repository methods,
     not user-supplied DuckDB SQL; external access and extension loading remain
     disabled.
-11. **Bounded MCP persistence and wire output.** Source history, build history,
+11. **No profile laundering.** Official execution and artifacts are never
+    labeled as independent Manifold/B-rep results, persisted under their engine
+    attestations, or used as an automatic fallback.
+12. **Official files are virtual.** Official MCP requests can resolve only the
+    bounded project bundle mounted in MEMFS, never ambient host paths.
+13. **Bounded MCP persistence and wire output.** Source history, build history,
     artifact count/bytes, diagnostic strings, analysis detail and stdio-sized
     resource payloads have explicit limits; pruning is transactional. Inbound
     notifications are reduced to lifecycle events for active work before the
     SDK queue.
-12. **Reproducible MCP reads.** Check, compare, analyze, customize and export can
+14. **Reproducible MCP reads.** Check, compare, analyze, customize and export can
     select an immutable saved revision; read-only check/compare operations never
     add build history, while mutation remains guarded by expected revision.
-13. **Machine-actionable MCP failure.** Expected tool failures expose stable
+15. **Machine-actionable MCP failure.** Expected tool failures expose stable
     codes and recovery details; new persisted failures/cancellations require
     diagnostic contract v1 with an attested retry class, while pre-contract
     rows are explicitly `legacy-unattested`. Unexpected errors expose only a
     correlation ID.
-14. **Pinned MCP lifecycle seam.** The server SDK stays exact-pinned while
+16. **Pinned MCP lifecycle seam.** The server SDK stays exact-pinned while
     admission settlement wraps its request registry, including handlers added
     by the modern stdio host after factory creation; wire regressions gate an
     SDK upgrade.
-15. **MCP provider realm disposal.** Production stdio never calls the direct
+17. **MCP provider realm disposal.** Production stdio never calls the direct
     geometry provider in its event-loop realm. Every job owns one Worker;
     terminal publication and next-job admission wait for its join. Mutable host
     isolation/limits are advertised separately from immutable engine manifests.
 
 ## Current limitations
 
-- This is not full OpenSCAD. `include`/`use`, user functions, imports, text,
-  surfaces, Minkowski and advanced Customizer behavior are unsupported.
+- The frozen browser/legacy route is not full OpenSCAD. The separate
+  repository-owned stable-profile route now has user functions, all 38 stable
+  value functions, bounded `include`/`use`, and most stable modules, but it is
+  still under qualification: expression/scoping semantics and file-backed
+  `import` and `text` remain release blockers. Bounded DAT/PNG `surface()` is
+  implemented through the project VFS. The upstream oracle
+  can diagnose differences but is never a product fallback.
 - Parser, scope/evaluation logic, direct Manifold calls, tessellation and
   artifact construction remain concentrated in one full-rebuild module; there
   is no `GeometryKernel` interface or content-addressed subtree cache.
@@ -363,6 +435,10 @@ commands flowing inward and renderer intents/events flowing outward.
   terminate its realm. Worker threads still share the host process and the
   current contract has no OS-enforced memory ceiling for WASM/native
   allocation; subprocess/cgroup/job-object containment remains residual risk.
+- Official-runtime jobs use fresh subprocesses and a permission-limited host
+  filesystem, but there is no enforced network sandbox or WebAssembly
+  linear-memory ceiling. The one-shot process, bounded wire data, deadline and
+  hard kill reduce exposure without claiming OS-level hostile-code containment.
 - The editor remains a textarea and scene selection remains single-object.
   Dead additive/range affordances are removed; the ViewCube compass follows the
   live camera, face presets snap to orthographic, and two-pointer pinch plus
@@ -372,8 +448,10 @@ commands flowing inward and renderer intents/events flowing outward.
   than OIT. WebGPU has no raster fallback, but its failure no longer removes the
   workspace: CPU/WASM builds, editing, persistence and export remain available
   in a typed headless-geometry tier while the viewport offers a retry.
-- CI has no real-browser GPU/accessibility smoke, visual regression,
-  fuzz/conformance corpus or performance budget.
+- CI has exact upstream-oracle stable-inventory conformance and growing
+  independent-profile gates, but no real-browser
+  GPU/accessibility smoke, visual regression, differential/fuzz corpus, or
+  performance budget.
 
 ## Phased target architecture
 
@@ -404,8 +482,8 @@ This is an extraction plan, not a big-bang rewrite.
 - replace the textarea with a syntax-aware editor and structured diagnostics;
 - evolve the active-head IndexedDB store and recovery journal into a versioned
   virtual filesystem with browsable recovery/history snapshots;
-- decide official-runtime compatibility versus a versioned independent language
-  before defining multi-file `include`/`use` semantics;
+- preserve the explicit oracle boundary while evolving the independent project
+  VFS into the browser workspace filesystem;
 - port selected feature-branch capabilities through documented adapters, never
   by merging its competing architecture wholesale.
 

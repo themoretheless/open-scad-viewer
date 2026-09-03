@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
+import { OpenScadImportPositionedError } from '../services/openScadImport'
+import { OpenScadSurfaceError } from '../services/openScadSurface'
+import { OpenScadTextPositionedError } from '../services/openScadText'
 import {
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
@@ -20,6 +23,11 @@ import {
   type BuildDiagnostic,
 } from './modelStore'
 import { type PublicErrorCode } from './errorContract'
+import {
+  OfficialOpenScadRemoteError,
+  OfficialOpenScadSupervisorError,
+} from './officialOpenScadRuntimeService'
+import { OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES } from './officialOpenScadRuntimeProtocol'
 
 export { PUBLIC_ERROR_CODES, type PublicErrorCode } from './errorContract'
 
@@ -152,6 +160,174 @@ export function publicToolError(error: unknown): { error: PublicToolError; inter
         retryable: false,
         next_action: 'Inspect openscad_catalog_stats and archive or remove catalog data before retrying.',
         details: { quota: error.quota, limit: error.limit },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof OfficialOpenScadSupervisorError) {
+    if (error.code === 'E_OFFICIAL_OPENSCAD_BUSY') {
+      return {
+        error: {
+          code: 'server_busy',
+          message: 'The official OpenSCAD runtime is at its concurrency limit.',
+          retryable: true,
+          next_action: 'Wait briefly, then retry the official OpenSCAD operation.',
+          details: { retry_after_ms: 250, runtime: 'official-openscad' },
+        },
+        internal: false,
+      }
+    }
+    if (error.code === 'E_OFFICIAL_OPENSCAD_CANCELLED') {
+      return {
+        error: {
+          code: 'cancelled',
+          message: 'The official OpenSCAD operation was cancelled.',
+          retryable: true,
+          next_action: 'Retry if the result is still needed.',
+          details: { runtime: 'official-openscad' },
+        },
+        internal: false,
+      }
+    }
+    if (error.code === 'E_OFFICIAL_OPENSCAD_DEADLINE') {
+      return {
+        error: {
+          code: 'deadline_exceeded',
+          message: 'The official OpenSCAD operation exceeded its deadline.',
+          retryable: true,
+          next_action: 'Reduce model complexity, increase timeout_ms within the advertised limit, or retry later.',
+          details: { runtime: 'official-openscad' },
+        },
+        internal: false,
+      }
+    }
+    if (error.code === 'E_OFFICIAL_OPENSCAD_UNAVAILABLE') {
+      return {
+        error: {
+          code: 'engine_unavailable',
+          message: 'The opt-in official OpenSCAD runtime is unavailable.',
+          retryable: false,
+          next_action: 'Read openscad://official-runtime and run its setup_command, then restart or retry the MCP server.',
+          details: {
+            availability_cause: 'provider-missing',
+            runtime: 'official-openscad',
+            automatic_fallback: false,
+          },
+        },
+        internal: false,
+      }
+    }
+    if (error.code === 'E_OFFICIAL_OPENSCAD_CLOSED') {
+      return {
+        error: {
+          code: 'engine_unavailable',
+          message: 'The official OpenSCAD runtime is closed.',
+          retryable: false,
+          next_action: 'Restart the local MCP server before retrying official OpenSCAD operations.',
+          details: {
+            availability_cause: 'revoked',
+            runtime: 'official-openscad',
+            automatic_fallback: false,
+          },
+        },
+        internal: false,
+      }
+    }
+    // Protocol violations and child crashes are internal faults. They fall
+    // through to the redacted, correlation-id-bearing internal error below.
+  }
+  if (error instanceof OfficialOpenScadRemoteError) {
+    if (error.code === 'E_OPENSCAD_OUTPUT_LIMIT') {
+      return {
+        error: {
+          code: 'artifact_too_large',
+          message: 'The official OpenSCAD export exceeded the advertised output limit.',
+          retryable: true,
+          next_action: 'Reduce model complexity or choose a more compact export format.',
+          details: {
+            estimated_bytes: null,
+            max_bytes: OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
+            runtime: 'official-openscad',
+          },
+        },
+        internal: false,
+      }
+    }
+    if (error.code === 'E_OPENSCAD_COMPILE' || error.code === 'E_OPENSCAD_NO_OUTPUT') {
+      return {
+        error: {
+          code: 'source_syntax_error',
+          message: 'The official OpenSCAD runtime rejected the source project.',
+          retryable: false,
+          next_action: 'Inspect the bounded logs returned by openscad_official_check, correct the source or project files, and retry.',
+          details: { runtime: 'official-openscad' },
+        },
+        internal: false,
+      }
+    }
+    // Unknown remote codes are runner faults, not user-facing diagnostics.
+  }
+  if (error instanceof OpenScadImportPositionedError) {
+    return {
+      error: {
+        code: 'source_syntax_error',
+        message: parseErrorMessage(error),
+        retryable: false,
+        next_action: 'Correct the import() project asset or path at the reported location, then retry.',
+        line: error.line,
+        column: error.column,
+        details: {
+          diagnostic_code: error.importCode,
+          source_path: error.sourcePath,
+          ...(error.specifier.length === 0 ? {} : { specifier: error.specifier }),
+          ...(error.assetPath === undefined ? {} : { asset_path: error.assetPath }),
+          ...(error.format === undefined ? {} : { format: error.format }),
+          ...(error.limit === undefined ? {} : { limit: error.limit }),
+          ...(error.actual === undefined ? {} : { actual: error.actual }),
+        },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof OpenScadTextPositionedError) {
+    return {
+      error: {
+        code: 'source_syntax_error',
+        message: parseErrorMessage(error),
+        retryable: false,
+        next_action: 'Correct the text() parameters or provide the requested font in the bounded project files, then retry.',
+        line: error.line,
+        column: error.column,
+        details: {
+          diagnostic_code: error.textCode,
+          source_path: error.sourcePath,
+          ...(error.font === undefined ? {} : { font: error.font }),
+          ...(error.fontPath === undefined ? {} : { font_path: error.fontPath }),
+          ...(error.faceIndex === undefined ? {} : { face_index: error.faceIndex }),
+          ...(error.limit === undefined ? {} : { limit: error.limit }),
+          ...(error.actual === undefined ? {} : { actual: error.actual }),
+        },
+      },
+      internal: false,
+    }
+  }
+  if (error instanceof OpenScadSurfaceError) {
+    return {
+      error: {
+        code: 'source_syntax_error',
+        message: parseErrorMessage(error),
+        retryable: false,
+        next_action: 'Correct the surface() project file or path at the reported location, then retry.',
+        line: error.line,
+        column: error.column,
+        details: {
+          diagnostic_code: error.code,
+          source_path: error.details.sourcePath,
+          ...(error.details.specifier === undefined ? {} : { specifier: error.details.specifier }),
+          ...(error.details.assetPath === undefined ? {} : { asset_path: error.details.assetPath }),
+          ...(error.details.limit === undefined ? {} : { limit: error.details.limit }),
+          ...(error.details.actual === undefined ? {} : { actual: error.details.actual }),
+        },
       },
       internal: false,
     }

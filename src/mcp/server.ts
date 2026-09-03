@@ -12,6 +12,10 @@ import {
   type McpGeometryBuildRuntime,
 } from './geometryService'
 import type { ModelStore } from './modelStore'
+import {
+  OfficialOpenScadRuntimeSupervisor,
+  type OfficialOpenScadRuntimeService,
+} from './officialOpenScadRuntimeService'
 
 export interface McpCliOptions {
   databasePath: string
@@ -29,6 +33,7 @@ interface ClosableGeometryRuntime extends McpGeometryBuildRuntime {
 export interface RunMcpServerDependencies {
   openStore(databasePath: string): Promise<ClosableModelStore>
   createGeometryRuntime(): ClosableGeometryRuntime
+  createOfficialRuntime(): OfficialOpenScadRuntimeService
   createTransport(): BoundedTransport
   startServer: typeof serveStdio
 }
@@ -36,6 +41,7 @@ export interface RunMcpServerDependencies {
 const defaultDependencies: RunMcpServerDependencies = {
   openStore: databasePath => DuckDbModelStore.open(databasePath),
   createGeometryRuntime: () => new DirectGeometrySupervisor(),
+  createOfficialRuntime: () => new OfficialOpenScadRuntimeSupervisor(),
   createTransport: () => new BoundedTransport(new StdioServerTransport()),
   startServer: serveStdio,
 }
@@ -89,6 +95,7 @@ export async function runMcpServer(
   const dependencies = { ...defaultDependencies, ...dependencyOverrides }
   const store = await dependencies.openStore(options.databasePath)
   let runtime: ClosableGeometryRuntime | null = null
+  let officialRuntime: OfficialOpenScadRuntimeService | null = null
   let transport: BoundedTransport | null = null
   let handle: ReturnType<typeof serveStdio> | null = null
   let closePromise: Promise<void> | null = null
@@ -97,6 +104,7 @@ export async function runMcpServer(
       const hostResults = await Promise.allSettled([
         handle?.close() ?? transport?.close() ?? Promise.resolve(),
         runtime?.close() ?? Promise.resolve(),
+        officialRuntime?.close() ?? Promise.resolve(),
       ])
       const storeResult = await Promise.allSettled([store.close()])
       const errors = [...hostResults, ...storeResult]
@@ -108,12 +116,15 @@ export async function runMcpServer(
   }
   try {
     runtime = dependencies.createGeometryRuntime()
+    const activeOfficialRuntime = dependencies.createOfficialRuntime()
+    officialRuntime = activeOfficialRuntime
     const geometry = new HeadlessGeometryService(defaultGeometryBuildEngine, runtime)
     const activeTransport = dependencies.createTransport()
     transport = activeTransport
     handle = dependencies.startServer(() => createOpenScadMcpServer({
       store,
       geometry,
+      officialRuntime: activeOfficialRuntime,
       onRequestSettled: requestId => activeTransport.settleRequest(requestId),
       onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
     }), {

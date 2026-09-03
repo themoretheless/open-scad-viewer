@@ -64,5 +64,19 @@ redistributed runtime copy.
 The installed package carries its `LICENSE` file, which must remain with any
 redistributed runtime copy.
 
+## HarfBuzz.js
+
+- Package: `harfbuzzjs`
+- Version: `0.10.3`
+- Source: <https://github.com/harfbuzz/harfbuzzjs/tree/0.10.3>
+- License: MIT for the project, with Apache-licensed Zephyr libc and Emscripten
+  implementation files as identified by the distributed license
+- License text: <https://unpkg.com/harfbuzzjs@0.10.3/LICENSE>
+
+The independent `text()` implementation uses the packaged HarfBuzz WebAssembly
+module for OpenType shaping and glyph outlines. Release packaging must retain
+the complete distributed `LICENSE` file alongside the JavaScript and WebAssembly
+artifacts.
+
 No official OpenSCAD executable, WebAssembly module, parser or runtime code is
 included in this application.

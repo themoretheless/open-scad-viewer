@@ -71,15 +71,18 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'unexpected-build',
       kernelFingerprint: 'unexpected-build',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn(),
     }])).toThrow(/identity does not match/)
   })
 
-  it('admits only the exact legacy exception or a complete qualified manifest', () => {
+  it('admits only the exact legacy-evaluator allowlist or a complete qualified manifest', () => {
     expect(geometryProviderAdmissionForManifest(
       GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+    )).toMatchObject({ allowed: true, mode: 'legacy-grandfathered' })
+    expect(geometryProviderAdmissionForManifest(
+      GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'],
     )).toMatchObject({ allowed: true, mode: 'legacy-grandfathered' })
     expect(geometryProviderAdmissionForManifest(
       GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
@@ -192,7 +195,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm,
       build,
     }])
@@ -216,7 +219,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm,
       build: vi.fn(),
     }])
@@ -239,7 +242,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }
@@ -265,7 +268,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }])
@@ -283,7 +286,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue(failure),
     }])
@@ -303,7 +306,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue(reused),
     }])
@@ -316,7 +319,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue('primitive failure'),
     }])
@@ -330,7 +333,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockResolvedValue({
         meshes: [],
@@ -378,7 +381,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }], { revocations })
@@ -387,7 +390,7 @@ describe('GeometryBuildEngine', () => {
     await vi.waitFor(() => expect(build).toHaveBeenCalledTimes(1))
     revocations.apply(createGeometryManifestRevocationRecord({
       epoch: 1,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'].manifestDigest,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest,
       reason: 'qualification withdrawn',
       effectiveAt: '2026-08-01T00:00:00.000Z',
       authority: 'test-policy',
@@ -430,7 +433,7 @@ describe('GeometryBuildEngine', () => {
       engineClass: 'manifold',
       engineKey: 'manifold-wasm-v1',
       kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v1',
+      capabilityManifestVersion: 'manifold-node-v2',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }])
@@ -456,7 +459,7 @@ describe('GeometryBuildEngine', () => {
     const registry = new GeometryManifestRevocationRegistry()
     const record = createGeometryManifestRevocationRecord({
       epoch: 1,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'].manifestDigest,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest,
       reason: 'test',
       effectiveAt: '2026-08-01T00:00:00.000Z',
       authority: 'test-policy',

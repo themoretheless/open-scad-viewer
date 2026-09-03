@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
+import { OPENSCAD_2021_01_BUILTIN_MODULES } from '../src/core/openScad2021Contract'
 import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
 import { matchMeshesByProvenance } from '../src/services/meshInspection'
@@ -136,6 +137,26 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     expect(result.meshes).toHaveLength(3)
     expect(result.volume).toBeGreaterThan(18)
     expect(bounds(result.meshes).max[0]).toBeCloseTo(5, 5)
+  })
+
+  it('evaluates recursive, defaulted, named and anonymous functions in the full profile', async () => {
+    const result = await parseOpenSCAD(`
+      function factorial(n, acc = 1) = n <= 1 ? acc : factorial(n - 1, acc * n);
+      callback = function(value) value + 1;
+      cube([factorial(4), callback(2), [2, 3, 4].z]);
+    `, { languageProfile: 'openscad/stable-2021.01' })
+
+    expect(result.meshes).toHaveLength(1)
+    expect(result.volume).toBeCloseTo(24 * 3 * 4, 5)
+    expect(bounds(result.meshes)).toEqual({ min: [0, 0, 0], max: [24, 3, 4] })
+  })
+
+  it('uses OpenSCAD exponent, unary and right-associative precedence in the full profile', async () => {
+    const result = await parseOpenSCAD(
+      'cube([-2^2 + 5, 2^-2 * 4, 2^3^2 / 512]);',
+      { languageProfile: 'openscad/stable-2021.01' },
+    )
+    expect(bounds(result.meshes)).toEqual({ min: [0, 0, 0], max: [1, 1, 1] })
   })
 
   it('keeps stable, distinct entity identities across quality for repeated module and loop instances', async () => {
@@ -296,6 +317,17 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     const result = await parseOpenSCAD(
       'polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]], faces=[[0,1,2],[0,2,3],[0,3,1],[1,3,2]]);',
     )
+    expect(result.meshes).toHaveLength(1)
+    expect(result.volume).toBeCloseTo(1 / 6, 3)
+  })
+
+  it('executes the canonical polyhedron smoke with a positive physical volume', async () => {
+    const source = OPENSCAD_2021_01_BUILTIN_MODULES
+      .find(entry => entry.name === 'polyhedron')!.smoke.source
+    const result = await parseOpenSCAD(source, {
+      languageProfile: 'openscad/stable-2021.01',
+    })
+
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(1 / 6, 3)
   })

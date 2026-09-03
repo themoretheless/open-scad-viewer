@@ -4,6 +4,7 @@ import type { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GeometryQuality } from '../src/core/build'
 import {
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   planGeometrySourceExecution,
@@ -164,7 +165,7 @@ function capabilitiesSnapshot(): GeometryEngineRegistrySnapshot {
     routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
     engines: [
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
         availability: 'available',
         unavailableReason: null,
       },

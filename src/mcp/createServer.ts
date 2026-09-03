@@ -12,7 +12,15 @@ import type {
   GeometryEngineRegistrySnapshot,
   GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
-import { GEOMETRY_MANIFEST_ARCHIVE } from '../core/geometryExecution'
+import {
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
+  GEOMETRY_MANIFEST_ARCHIVE,
+  LEGACY_MANIFOLD_EXECUTION,
+} from '../core/geometryExecution'
+import {
+  OPENSCAD_2021_01_CONTRACT,
+  OPENSCAD_2021_01_INDEPENDENT_ENGINE,
+} from '../core/openScad2021Contract'
 import { EXAMPLE_CATALOG, EXAMPLES } from '../data/examples'
 import {
   attachGeometryExecutionToError,
@@ -23,6 +31,15 @@ import {
 } from '../services/geometryBuildEngine'
 import type { CustomizerValue } from '../services/scadCustomizer'
 import {
+  OPENSCAD_PROJECT_MAX_BLOB_BYTES,
+  OPENSCAD_PROJECT_MAX_FILES,
+  OPENSCAD_PROJECT_MAX_PATH_BYTES,
+  OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
+  OPENSCAD_PROJECT_MAX_TOTAL_BYTES,
+  normalizeOpenScadProjectPath,
+} from '../services/openScadProject'
+import { buildBinaryStl, buildObj } from '../services/meshExport'
+import {
   DEFAULT_MAX_IN_FLIGHT_REQUESTS,
   DEFAULT_MAX_PENDING_CONTROL_MESSAGES,
   DEFAULT_MAX_PENDING_OUTBOUND_MESSAGES,
@@ -30,6 +47,7 @@ import {
   MAX_MCP_STRING_REQUEST_ID_LENGTH,
 } from './boundedTransport'
 import {
+  ArtifactSizeError,
   DEFAULT_MAX_ARTIFACT_BYTES,
   GeometryBusyError,
   HeadlessGeometryService,
@@ -38,6 +56,19 @@ import {
   type GeometryAnalysis,
   type McpGeometryService,
 } from './geometryService'
+import {
+  IndependentArtifactCache,
+  MAX_INDEPENDENT_ARTIFACT_CACHE_BYTES,
+  MAX_INDEPENDENT_ARTIFACT_CACHE_ENTRIES,
+  independentArtifactMimeType,
+  type IndependentArtifactSummary,
+  type IndependentArtifactFormat,
+} from './independentArtifactCache'
+import {
+  executeIndependentOpenScad,
+  INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION,
+  independentOpenScadMetrics,
+} from './independentOpenScadExecution'
 import {
   DIRECT_GEOMETRY_CANCEL_GRACE_MS,
   DIRECT_GEOMETRY_JOB_DEADLINE_MS,
@@ -71,26 +102,91 @@ import {
   PUBLIC_ERROR_CODES,
   publicToolError,
 } from './publicError'
+import {
+  OfficialArtifactCache,
+  type OfficialArtifactSummary,
+} from './officialArtifactCache'
+import {
+  OfficialOpenScadRemoteError,
+  OfficialOpenScadRuntimeSupervisor,
+  type OfficialOpenScadCapabilities,
+  type OfficialOpenScadCheckResult,
+  type OfficialOpenScadExportResult,
+  type OfficialOpenScadRunOptions,
+  type OfficialOpenScadRuntimeService,
+} from './officialOpenScadRuntimeService'
+import {
+  OFFICIAL_OPENSCAD_DEFAULT_TIMEOUT_MS,
+  OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES,
+  OFFICIAL_OPENSCAD_EXPORT_FORMATS,
+  OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_DEFINES,
+  OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
+  OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
+  OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
+  OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
+  OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
+  normalizeOfficialOpenScadProjectPath,
+  officialOpenScadMimeType,
+} from './officialOpenScadRuntimeProtocol'
+import {
+  OFFICIAL_OPENSCAD_FONT_FAMILY,
+  OFFICIAL_OPENSCAD_FONT_FILENAME,
+  OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME,
+  OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
+  OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
+  OFFICIAL_OPENSCAD_RUNTIME_VERSION,
+} from './officialOpenScadRuntimePatch'
 
 export interface CreateOpenScadMcpServerOptions {
   store: ModelStore
   geometry?: McpGeometryService
+  /** Optional upstream oracle used only by the explicitly named official tools. */
+  officialRuntime?: OfficialOpenScadRuntimeService
   /** Releases transport admission only after an SDK request handler settles. */
   onRequestSettled?: (requestId: RequestId) => void
   /** Mirrors the SDK handler AbortSignal after protocol validation. */
   onRequestCancelled?: (requestId: RequestId) => void
 }
 
-const SERVER_INSTRUCTIONS = `Use openscad_check for read-only validation and fast iteration; it does not write build history.
-Use openscad_analyze when a durable build record is useful, and openscad_export only when an STL or OBJ artifact is required.
+const SERVER_INSTRUCTIONS = `Use openscad_check for the frozen legacy route and openscad_independent_check for the independent OpenSCAD 2021.01 engine under qualification; neither writes build history.
+Use openscad_independent_export for a full-quality STL/OBJ from that repository-owned engine. Its content-addressed artifacts are session-local and do not enter the legacy DuckDB build schema. Use openscad_analyze when a durable legacy build record is useful, and openscad_export only for a legacy-route artifact.
+The openscad_official_* tools are an upstream compatibility oracle only; they are not the production engine. Use them for differential qualification and reference exports. The upstream runtime is opt-in and reports a setup command when unavailable.
+Read openscad://language/openscad-2021.01 for the immutable stable built-in inventory and compatibility-tail policy; official tool results identify this language contract separately from the newer execution snapshot.
 Use openscad_compare for bounded metric/topology deltas; it is not an exact geometric boolean diff.
 Geometry is routed by the source's leading @language contract: legacy/current uses Manifold and openscad-viewer/brep-1 uses the Rust B-rep/NURBS engine. Callers cannot override that route. Both engine classes are permanent, and an unavailable engine returns a typed error without cross-engine fallback.
 For saved models, list or get the model first and pass expected_revision when saving changes. Use openscad_customize_model for an atomic Customizer update. Pass revision to check, analyze, customize, or export an immutable historical snapshot.
-Customizer operations only replace declared top-level parameters. The compiler intentionally rejects unsupported OpenSCAD features such as include, use, import, text, surface, Minkowski, and user-defined functions.
+Customizer operations only replace declared top-level parameters. The independent development compiler accepts bounded include/use projects plus import(), surface(), and VFS-font text() assets through openscad_independent_check files; the official oracle remains available only for differential qualification and incomplete compatibility behavior.
 Preview geometry can be reduced; use full quality for authoritative measurements and exports. DuckDB is independent from the browser IndexedDB workspace, so no browser draft is modified implicitly.`
 
 const CACHE_FIVE_MINUTES = 5 * 60 * 1_000
 const CACHE_ONE_DAY = 24 * 60 * 60 * 1_000
+const OFFICIAL_LANGUAGE_RESOURCE_URI = 'openscad://language/openscad-2021.01' as const
+const INDEPENDENT_ENGINE_ID = OPENSCAD_2021_01_INDEPENDENT_ENGINE.engineId
+const CURRENT_MANIFOLD_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold
+]
+const CURRENT_BREP_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep
+]
+const ARCHIVED_MANIFOLD_V1_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1']
+
+const OFFICIAL_LANGUAGE_SUMMARY = Object.freeze({
+  id: OPENSCAD_2021_01_CONTRACT.id,
+  release: OPENSCAD_2021_01_CONTRACT.languageTarget.release,
+  tag: OPENSCAD_2021_01_CONTRACT.languageTarget.tag,
+  commit: OPENSCAD_2021_01_CONTRACT.languageTarget.commit,
+  scope: 'stable-builtins-38-functions-35-modules' as const,
+  function_count: OPENSCAD_2021_01_CONTRACT.builtins.functions.length,
+  module_count: OPENSCAD_2021_01_CONTRACT.builtins.modules.length,
+  functions: Object.freeze(OPENSCAD_2021_01_CONTRACT.builtins.functions.map(entry => entry.name)),
+  modules: Object.freeze(OPENSCAD_2021_01_CONTRACT.builtins.modules.map(entry => entry.name)),
+  compatibility_tail_policy: OPENSCAD_2021_01_CONTRACT.executionRuntime.compatibilityTailPolicy,
+  resource_uri: OFFICIAL_LANGUAGE_RESOURCE_URI,
+})
 
 /**
  * Mutable host/runtime facts deliberately kept outside immutable engine
@@ -137,6 +233,257 @@ const sourceSchema = z.string().max(MAX_MODEL_SOURCE_LENGTH)
   .refine(isWellFormedUnicode, 'Source must contain well-formed Unicode')
 const qualitySchema = z.enum(['preview', 'full'])
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/)
+const officialFormatSchema = z.enum(OFFICIAL_OPENSCAD_EXPORT_FORMATS)
+const officialExperimentalFeatureSchema = z.enum(OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES)
+const utf8Encoder = new TextEncoder()
+const officialSourceSchema = z.string().max(OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES)
+  .refine(isWellFormedUnicode, 'Source must contain well-formed Unicode')
+  .refine(
+    value => utf8Encoder.encode(value).byteLength <= OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
+    `Source must not exceed ${OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES} UTF-8 bytes`,
+  )
+const officialProjectPathSchema = z.string().min(1).max(1_024)
+  .refine(value => {
+    try {
+      return normalizeOfficialOpenScadProjectPath(value) === value
+    } catch {
+      return false
+    }
+  }, 'Path must be a normalized relative POSIX project path')
+const strictBase64Schema = z.string()
+  .max(Math.ceil(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES / 3) * 4)
+  .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+  .refine(value => Buffer.from(value, 'base64').toString('base64') === value, 'Data must use canonical base64')
+  .refine(
+    value => Buffer.from(value, 'base64').byteLength <= OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+    `Decoded data must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES} bytes`,
+  )
+const officialProjectFileSchema = z.union([
+  z.object({
+    path: officialProjectPathSchema,
+    text: z.string().max(OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES)
+      .refine(isWellFormedUnicode, 'Text file must contain well-formed Unicode')
+      .refine(
+        value => utf8Encoder.encode(value).byteLength <= OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
+        `Text file must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES} UTF-8 bytes`,
+      ),
+    data_base64: z.never().optional(),
+  }).strict(),
+  z.object({
+    path: officialProjectPathSchema,
+    text: z.never().optional(),
+    data_base64: strictBase64Schema,
+  }).strict(),
+])
+const independentProjectPathSchema = z.string().min(1).max(OPENSCAD_PROJECT_MAX_PATH_BYTES)
+  .refine(value => {
+    try {
+      return normalizeOpenScadProjectPath(value) === value
+    } catch {
+      return false
+    }
+  }, 'Path must be a normalized relative POSIX project path')
+const independentProjectTextSchema = z.string().max(OPENSCAD_PROJECT_MAX_SOURCE_BYTES)
+  .refine(isWellFormedUnicode, 'Text file must contain well-formed Unicode')
+  .refine(
+    value => utf8Encoder.encode(value).byteLength <= OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
+    `Text file must not exceed ${OPENSCAD_PROJECT_MAX_SOURCE_BYTES} UTF-8 bytes`,
+  )
+const independentProjectBase64Schema = z.string()
+  .max(Math.ceil(OPENSCAD_PROJECT_MAX_BLOB_BYTES / 3) * 4)
+  .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+  .refine(value => Buffer.from(value, 'base64').toString('base64') === value, 'Data must use canonical base64')
+  .refine(
+    value => Buffer.from(value, 'base64').byteLength <= OPENSCAD_PROJECT_MAX_BLOB_BYTES,
+    `Decoded data must not exceed ${OPENSCAD_PROJECT_MAX_BLOB_BYTES} bytes`,
+  )
+const independentProjectFileSchema = z.union([
+  z.object({
+    path: independentProjectPathSchema,
+    text: independentProjectTextSchema,
+    data_base64: z.never().optional(),
+  }).strict(),
+  z.object({
+    path: independentProjectPathSchema,
+    text: z.never().optional(),
+    data_base64: independentProjectBase64Schema,
+  }).strict(),
+])
+const officialDefinesSchema = z.array(
+  z.string().max(OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES)
+    .refine(isWellFormedUnicode, 'Definition must contain well-formed Unicode')
+    .regex(/^[$A-Za-z_][$A-Za-z0-9_]*\s*=[^\r\n\0]*$/, 'Definition must be a single-line name=value expression'),
+).max(OFFICIAL_OPENSCAD_MAX_DEFINES)
+  .refine(
+    values => values.reduce((bytes, value) => bytes + utf8Encoder.encode(value).byteLength, 0)
+      <= OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES,
+    `Definitions must not exceed ${OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES} UTF-8 bytes in total`,
+  )
+const officialRunInputShape = {
+  source: officialSourceSchema.describe('OpenSCAD source mounted as /project/main.scad in isolated MEMFS.'),
+  files: z.array(officialProjectFileSchema).max(OFFICIAL_OPENSCAD_MAX_PROJECT_FILES).default([])
+    .describe('Relative project files mounted in MEMFS; each file contains exactly one of text or data_base64.'),
+  experimental_features: z.array(officialExperimentalFeatureSchema)
+    .max(OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES.length)
+    .refine(values => new Set(values).size === values.length, 'Experimental features must be unique')
+    .default([]),
+  defines: officialDefinesSchema.default([]),
+  time: z.number().finite().min(0).max(1).optional(),
+  backend: z.enum(['Manifold', 'CGAL']).default('Manifold'),
+  hard_warnings: z.boolean().default(true),
+  check_parameters: z.boolean().default(true),
+  check_parameter_ranges: z.boolean().default(true),
+  timeout_ms: z.number().int().min(1).max(OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS)
+    .default(OFFICIAL_OPENSCAD_DEFAULT_TIMEOUT_MS),
+}
+
+function officialToolInputSchema<T extends z.ZodRawShape>(extra: T) {
+  return z.object({ ...officialRunInputShape, ...extra }).strict().superRefine((input, context) => {
+    const project = input as unknown as {
+      source: string
+      files: Array<{ path: string; text?: string; data_base64?: string }>
+    }
+    const paths = new Set<string>()
+    let bytes = utf8Encoder.encode(project.source).byteLength
+    for (const [index, file] of project.files.entries()) {
+      if (paths.has(file.path)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['files', index, 'path'],
+          message: 'Project file paths must be unique',
+        })
+      }
+      paths.add(file.path)
+      bytes += file.text !== undefined
+        ? utf8Encoder.encode(file.text).byteLength
+        : Buffer.from(file.data_base64!, 'base64').byteLength
+    }
+    if (bytes > OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES) {
+      context.addIssue({
+        code: 'custom',
+        path: ['files'],
+        message: `Project must not exceed ${OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES} bytes`,
+      })
+    }
+  })
+}
+
+const officialLogEntrySchema = z.string().max(OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES)
+  .refine(
+    value => utf8Encoder.encode(value).byteLength <= OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES,
+    `Log entry must not exceed ${OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES} UTF-8 bytes`,
+  )
+const officialLogsSchema = z.object({
+  stdout: z.array(officialLogEntrySchema).max(OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES),
+  stderr: z.array(officialLogEntrySchema).max(OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES),
+  truncated: z.boolean(),
+}).strict().superRefine((logs, context) => {
+  if (logs.stdout.length + logs.stderr.length > OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES) {
+    context.addIssue({ code: 'custom', message: 'Combined log entry count exceeds the official runtime limit' })
+  }
+  const bytes = [...logs.stdout, ...logs.stderr]
+    .reduce((total, entry) => total + utf8Encoder.encode(entry).byteLength, 0)
+  if (bytes > OFFICIAL_OPENSCAD_MAX_LOG_BYTES) {
+    context.addIssue({ code: 'custom', message: 'Combined log bytes exceed the official runtime limit' })
+  }
+})
+const officialCapabilitiesSchema = z.object({
+  provider_role: z.literal('qualification-oracle'),
+  available: z.boolean(),
+  unavailable_reason: z.enum([
+    'not-installed',
+    'manifest-invalid',
+    'runtime-integrity-failed',
+    'permission-model-unavailable',
+  ]).nullable(),
+  expected_runtime_version: z.literal(OFFICIAL_OPENSCAD_RUNTIME_VERSION),
+  runtime_version: z.literal(OFFICIAL_OPENSCAD_RUNTIME_VERSION).nullable(),
+  archive_sha256: z.literal(OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256),
+  runtime_sha256: sha256Schema.nullable(),
+  patch_version: z.literal(OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION),
+  default_font: z.object({
+    family: z.literal(OFFICIAL_OPENSCAD_FONT_FAMILY),
+    filename: z.literal(OFFICIAL_OPENSCAD_FONT_FILENAME),
+    sha256: sha256Schema.nullable(),
+    license_filename: z.literal(OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME),
+    license_sha256: sha256Schema.nullable(),
+  }).strict(),
+  isolation: z.object({
+    filesystem: z.literal('MEMFS'),
+    node_permission_model: z.literal(true),
+    scad_host_file_read: z.literal(false),
+    scad_host_file_write: z.literal(false),
+    network_api_exposed: z.literal(false),
+    network_sandbox_enforced: z.literal(false),
+    wasm_memory_limit_enforced: z.literal(false),
+    process_model: z.literal('one-shot'),
+  }).strict(),
+  formats: z.array(officialFormatSchema),
+  experimental_features: z.array(officialExperimentalFeatureSchema),
+  defaults: z.object({
+    backend: z.literal('Manifold'),
+    hard_warnings: z.literal(true),
+    check_parameters: z.literal(true),
+    check_parameter_ranges: z.literal(true),
+    experiments_enabled: z.literal(false),
+  }).strict(),
+  limits: z.object({
+    source_bytes: z.number().int().positive(),
+    project_files: z.number().int().positive(),
+    project_file_bytes: z.number().int().positive(),
+    project_bytes: z.number().int().positive(),
+    output_bytes: z.number().int().positive(),
+    log_bytes: z.number().int().positive(),
+    log_entries: z.number().int().positive(),
+    timeout_ms: z.number().int().positive(),
+  }).strict(),
+  setup_command: z.string().min(1),
+}).strict()
+const officialLanguageSummarySchema = z.object({
+  id: z.literal(OPENSCAD_2021_01_CONTRACT.id),
+  release: z.literal(OPENSCAD_2021_01_CONTRACT.languageTarget.release),
+  tag: z.literal(OPENSCAD_2021_01_CONTRACT.languageTarget.tag),
+  commit: z.literal(OPENSCAD_2021_01_CONTRACT.languageTarget.commit),
+  scope: z.literal('stable-builtins-38-functions-35-modules'),
+  function_count: z.literal(OPENSCAD_2021_01_CONTRACT.builtins.functions.length),
+  module_count: z.literal(OPENSCAD_2021_01_CONTRACT.builtins.modules.length),
+  functions: z.array(z.string()).length(OPENSCAD_2021_01_CONTRACT.builtins.functions.length),
+  modules: z.array(z.string()).length(OPENSCAD_2021_01_CONTRACT.builtins.modules.length),
+  compatibility_tail_policy: z.literal(
+    OPENSCAD_2021_01_CONTRACT.executionRuntime.compatibilityTailPolicy,
+  ),
+  resource_uri: z.literal(OFFICIAL_LANGUAGE_RESOURCE_URI),
+}).strict()
+const officialCheckSchema = z.object({
+  provider_role: z.literal('qualification-oracle'),
+  language_contract: officialLanguageSummarySchema,
+  runtime_version: z.literal(OFFICIAL_OPENSCAD_RUNTIME_VERSION),
+  source_sha256: sha256Schema,
+  csg_sha256: sha256Schema,
+  csg_bytes: z.number().int().nonnegative(),
+  duration_ms: z.number().finite().nonnegative(),
+  logs: officialLogsSchema,
+  experimental_features: z.array(officialExperimentalFeatureSchema),
+}).strict()
+const officialExportSchema = z.object({
+  provider_role: z.literal('qualification-oracle'),
+  language_contract: officialLanguageSummarySchema,
+  runtime_version: z.literal(OFFICIAL_OPENSCAD_RUNTIME_VERSION),
+  source_sha256: sha256Schema,
+  format: officialFormatSchema,
+  duration_ms: z.number().finite().nonnegative(),
+  logs: officialLogsSchema,
+  experimental_features: z.array(officialExperimentalFeatureSchema),
+}).strict()
+const officialArtifactSchema = z.object({
+  id: sha256Schema,
+  resource_uri: z.string(),
+  file_name: z.string(),
+  format: officialFormatSchema,
+  mime_type: z.string(),
+  sha256: sha256Schema,
+  byte_length: z.number().int().nonnegative(),
+}).strict()
 const capabilityIdSchema = z.string().max(128)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/)
 const executionCommonShape = {
@@ -145,15 +492,18 @@ const executionCommonShape = {
   quality: qualitySchema,
   automatic_fallback: z.literal(false),
 }
-const manifoldExecutionSchema = z.object({
+function manifoldExecutionSchemaForManifest(
+  manifest: typeof CURRENT_MANIFOLD_MANIFEST | typeof ARCHIVED_MANIFOLD_V1_MANIFEST,
+) {
+  return z.object({
     ...executionCommonShape,
     language_contract: z.literal('legacy/current'),
-    engine_class: z.literal('manifold'),
-    engine_key: z.literal('manifold-wasm-v1'),
-    kernel_fingerprint: z.literal('manifold-wasm-v1'),
-    semantic_program_version: z.literal('legacy-direct-evaluator-v1'),
-    capability_manifest_version: z.literal('manifold-node-v1'),
-    manifest_digest: z.literal('ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c'),
+    engine_class: z.literal(manifest.engineClass),
+    engine_key: z.literal(manifest.engineKey),
+    kernel_fingerprint: z.literal(manifest.kernelFingerprint),
+    semantic_program_version: z.literal(manifest.semanticProgramVersion),
+    capability_manifest_version: z.literal(manifest.capabilityManifestVersion),
+    manifest_digest: z.literal(manifest.manifestDigest),
     representation: z.literal('mesh'),
     evidence: z.enum(['planned', 'runtime']),
     effective_limits: z.object({
@@ -161,29 +511,36 @@ const manifoldExecutionSchema = z.object({
       triangles: z.literal(750_000),
     }),
   })
+}
+const currentManifoldExecutionSchema = manifoldExecutionSchemaForManifest(
+  CURRENT_MANIFOLD_MANIFEST,
+)
+const archivedManifoldV1ExecutionSchema = manifoldExecutionSchemaForManifest(
+  ARCHIVED_MANIFOLD_V1_MANIFEST,
+)
 const brepExecutionSchema = z.object({
     ...executionCommonShape,
     language_contract: z.literal('openscad-viewer/brep-1'),
     engine_class: z.literal('brep'),
-    engine_key: z.literal('rust-brep-reserved-v1'),
-    kernel_fingerprint: z.literal('not-deployed'),
-    semantic_program_version: z.literal('semantic-program-contract-v1'),
-    capability_manifest_version: z.literal('brep-contract-v1'),
-    manifest_digest: z.literal('c4eefdbf1ff0add1e1705413d6ab766774487db0cb5a1d1434ab6c25f4ef1964'),
+    engine_key: z.literal(CURRENT_BREP_MANIFEST.engineKey),
+    kernel_fingerprint: z.literal(CURRENT_BREP_MANIFEST.kernelFingerprint),
+    semantic_program_version: z.literal(CURRENT_BREP_MANIFEST.semanticProgramVersion),
+    capability_manifest_version: z.literal(CURRENT_BREP_MANIFEST.capabilityManifestVersion),
+    manifest_digest: z.literal(CURRENT_BREP_MANIFEST.manifestDigest),
     representation: z.enum(['brep', 'mesh']),
     evidence: z.literal('planned'),
     effective_limits: z.object({ sourceCharacters: z.literal(250_000) }),
   })
-const currentExecutionSchema = z.union([manifoldExecutionSchema, brepExecutionSchema])
+const currentExecutionSchema = z.union([currentManifoldExecutionSchema, brepExecutionSchema])
 const legacyBackfillCommonShape = {
   language_contract: z.literal('legacy/current'),
   required_capabilities: z.array(z.never()).length(0),
   engine_class: z.literal('manifold'),
-  engine_key: z.literal('manifold-wasm-v1'),
-  kernel_fingerprint: z.literal('manifold-wasm-v1'),
-  semantic_program_version: z.literal('legacy-direct-evaluator-v1'),
-  capability_manifest_version: z.literal('manifold-node-v1'),
-  manifest_digest: z.literal('ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c'),
+  engine_key: z.literal(LEGACY_MANIFOLD_EXECUTION.engineKey),
+  kernel_fingerprint: z.literal(LEGACY_MANIFOLD_EXECUTION.kernelFingerprint),
+  semantic_program_version: z.literal(LEGACY_MANIFOLD_EXECUTION.semanticProgramVersion),
+  capability_manifest_version: z.literal(LEGACY_MANIFOLD_EXECUTION.capabilityManifestVersion),
+  manifest_digest: z.literal(LEGACY_MANIFOLD_EXECUTION.manifestDigest),
   representation: z.literal('mesh'),
   evidence: z.literal('legacy-backfill'),
   effective_limits: z.object({}).strict(),
@@ -201,8 +558,18 @@ const legacyBackfillExecutionSchema = z.union([
     quality: z.literal('full'),
   }).strict(),
 ])
-const executionSchema = z.union([currentExecutionSchema, legacyBackfillExecutionSchema])
-const runtimeExecutionSchema = manifoldExecutionSchema.extend({ evidence: z.literal('runtime') })
+const executionSchema = z.union([
+  currentExecutionSchema,
+  archivedManifoldV1ExecutionSchema,
+  legacyBackfillExecutionSchema,
+])
+const runtimeExecutionSchema = currentManifoldExecutionSchema.extend({
+  evidence: z.literal('runtime'),
+})
+const persistedRuntimeExecutionSchema = z.union([
+  runtimeExecutionSchema,
+  archivedManifoldV1ExecutionSchema.extend({ evidence: z.literal('runtime') }),
+])
 const engineManifestCommonShape = {
   display_name: z.string(),
   permanent: z.literal(true),
@@ -241,10 +608,14 @@ const manifoldEngineManifestSchema = z.object({
   ...engineManifestCommonShape,
   engine_class: z.literal('manifold'),
   maturity: z.literal('production'),
-  engine_key: z.literal('manifold-wasm-v1'),
-  kernel_fingerprint: z.literal('manifold-wasm-v1'),
-  semantic_program_version: z.literal('legacy-direct-evaluator-v1'),
-  capability_manifest_version: z.literal('manifold-node-v1'),
+  engine_key: z.literal(CURRENT_MANIFOLD_MANIFEST.engineKey),
+  kernel_fingerprint: z.literal(CURRENT_MANIFOLD_MANIFEST.kernelFingerprint),
+  semantic_program_version: z.literal(CURRENT_MANIFOLD_MANIFEST.semanticProgramVersion),
+  capability_manifest_version: z.literal(CURRENT_MANIFOLD_MANIFEST.capabilityManifestVersion),
+  manifest_digest: z.literal(CURRENT_MANIFOLD_MANIFEST.manifestDigest),
+  manifest_resource_uri: z.literal(
+    `openscad://engines/manifold/capabilities/${CURRENT_MANIFOLD_MANIFEST.capabilityManifestVersion}`,
+  ),
   language_contracts: z.tuple([z.literal('legacy/current')]),
   input_contract: z.literal('legacy-source-direct'),
   representations: z.tuple([z.literal('mesh')]),
@@ -261,10 +632,14 @@ const brepEngineManifestSchema = z.object({
   engine_class: z.literal('brep'),
   availability: z.literal('unavailable'),
   maturity: z.literal('contract'),
-  engine_key: z.literal('rust-brep-reserved-v1'),
-  kernel_fingerprint: z.literal('not-deployed'),
-  semantic_program_version: z.literal('semantic-program-contract-v1'),
-  capability_manifest_version: z.literal('brep-contract-v1'),
+  engine_key: z.literal(CURRENT_BREP_MANIFEST.engineKey),
+  kernel_fingerprint: z.literal(CURRENT_BREP_MANIFEST.kernelFingerprint),
+  semantic_program_version: z.literal(CURRENT_BREP_MANIFEST.semanticProgramVersion),
+  capability_manifest_version: z.literal(CURRENT_BREP_MANIFEST.capabilityManifestVersion),
+  manifest_digest: z.literal(CURRENT_BREP_MANIFEST.manifestDigest),
+  manifest_resource_uri: z.literal(
+    `openscad://engines/brep/capabilities/${CURRENT_BREP_MANIFEST.capabilityManifestVersion}`,
+  ),
   language_contracts: z.tuple([z.literal('openscad-viewer/brep-1')]),
   input_contract: z.literal('semantic-program-required'),
   capabilities: z.array(z.never()).length(0),
@@ -352,6 +727,106 @@ const analysisSchema = z.object({
   objects_truncated: z.boolean(),
   details_truncated: z.boolean(),
 })
+const independentProjectInputShape = {
+  source: sourceSchema,
+  files: z.array(independentProjectFileSchema).max(OPENSCAD_PROJECT_MAX_FILES - 1).default([])
+    .describe('Bounded project files; each contains exactly one of text or canonical data_base64.'),
+}
+
+function validateIndependentProjectInput(
+  input: {
+    source: string
+    files: Array<{ path: string; text?: string; data_base64?: string }>
+  },
+  context: z.core.$RefinementCtx,
+): void {
+  const paths = new Set<string>(['main.scad'])
+  let bytes = utf8Encoder.encode(input.source).byteLength
+  for (const [index, file] of input.files.entries()) {
+    if (paths.has(file.path)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['files', index, 'path'],
+        message: file.path === 'main.scad'
+          ? 'main.scad is reserved for the source entrypoint'
+          : 'Project file paths must be unique',
+      })
+    }
+    paths.add(file.path)
+    bytes += file.text !== undefined
+      ? utf8Encoder.encode(file.text).byteLength
+      : Buffer.from(file.data_base64!, 'base64').byteLength
+  }
+  if (bytes > OPENSCAD_PROJECT_MAX_TOTAL_BYTES) {
+    context.addIssue({
+      code: 'custom',
+      path: ['files'],
+      message: `Project must not exceed ${OPENSCAD_PROJECT_MAX_TOTAL_BYTES} bytes`,
+    })
+  }
+}
+
+const independentCheckInputSchema = z.object({
+  ...independentProjectInputShape,
+  quality: qualitySchema.default('full'),
+  time: z.number().finite().min(0).max(1).default(0),
+}).strict().superRefine(validateIndependentProjectInput)
+const independentExportFormatSchema = z.enum(['stl', 'obj'])
+const independentExportFileNameSchema = z.string().min(1).max(255)
+  .refine(isWellFormedUnicode, 'File name must contain well-formed Unicode')
+  .refine(value => value.trim().length > 0, 'File name must contain a non-whitespace character')
+  .refine(value => !/[/\\\0]/.test(value), 'File name must not contain path separators or NUL')
+const independentExportInputSchema = z.object({
+  ...independentProjectInputShape,
+  format: independentExportFormatSchema,
+  file_name: independentExportFileNameSchema.optional(),
+  max_bytes: z.number().int().positive().max(MAX_ARTIFACT_BYTES).default(DEFAULT_MAX_ARTIFACT_BYTES),
+  quality: z.literal('full').default('full'),
+  time: z.number().finite().min(0).max(1).default(0),
+}).strict().superRefine(validateIndependentProjectInput)
+const independentEngineAttestationSchema = z.object({
+  id: z.literal(INDEPENDENT_ENGINE_ID),
+  stage: z.literal('development'),
+  language_contract: z.literal(OPENSCAD_2021_01_CONTRACT.id),
+  upstream_runtime_used: z.literal(false),
+  production_authoritative: z.literal(false),
+  complete_language_claim: z.literal(false),
+  stable_function_inventory: z.literal(OPENSCAD_2021_01_CONTRACT.builtins.functions.length),
+  stable_module_inventory: z.literal(OPENSCAD_2021_01_CONTRACT.builtins.modules.length),
+}).strict()
+const independentMetricsSchema = z.object({
+  mesh_count: z.number().int().nonnegative(),
+  vertex_count: z.number().int().nonnegative(),
+  triangle_count: z.number().int().nonnegative(),
+  volume: z.number().finite().nonnegative(),
+  surface_area: z.number().finite().nonnegative(),
+}).strict()
+const independentCheckSchema = z.object({
+  engine: independentEngineAttestationSchema,
+  source_sha256: sha256Schema,
+  quality: qualitySchema,
+  duration_ms: z.number().finite().nonnegative(),
+  ...independentMetricsSchema.shape,
+  warnings: z.array(z.string()),
+}).strict()
+const independentExportSchema = z.object({
+  engine: independentEngineAttestationSchema,
+  source_sha256: sha256Schema,
+  quality: z.literal('full'),
+  format: independentExportFormatSchema,
+  duration_ms: z.number().finite().nonnegative(),
+  metrics: independentMetricsSchema,
+  warnings: z.array(z.string()),
+}).strict()
+const independentArtifactSchema = z.object({
+  id: sha256Schema,
+  resource_uri: z.string(),
+  file_name: independentExportFileNameSchema,
+  format: independentExportFormatSchema,
+  mime_type: z.enum(['model/stl', 'model/obj']),
+  sha256: sha256Schema,
+  byte_length: z.number().int().nonnegative(),
+}).strict()
 const modelMetadataSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -406,7 +881,7 @@ const buildMetricsSchema = z.object({
 const buildSchema = z.union([
   z.object({
     ...buildCommonShape,
-    execution: z.union([runtimeExecutionSchema, legacyBackfillExecutionSchema]),
+    execution: z.union([persistedRuntimeExecutionSchema, legacyBackfillExecutionSchema]),
     status: z.literal('succeeded'),
     metrics: buildMetricsSchema,
     error: z.null(),
@@ -516,6 +991,15 @@ function toolOutputSchema<T extends z.ZodType>(success: T) {
   return z.union([success, toolErrorResultSchema])
 }
 
+const officialToolErrorResultSchema = toolErrorResultSchema.extend({
+  official_logs: officialLogsSchema.optional(),
+  duration_ms: z.number().finite().nonnegative().optional(),
+}).strict()
+
+function officialToolOutputSchema<T extends z.ZodType>(success: T) {
+  return z.union([success, officialToolErrorResultSchema])
+}
+
 const sourceSelectorFields = {
   source: sourceSchema.describe('Inline OpenSCAD source; mutually exclusive with model_id.').optional(),
   model_id: idSchema.describe('Saved DuckDB model id; mutually exclusive with source.').optional(),
@@ -580,6 +1064,158 @@ function buildUri(id: string): string {
 
 function artifactUri(id: string): string {
   return `openscad://artifacts/${encodeURIComponent(id)}`
+}
+
+function independentArtifactUri(id: string): string {
+  return `openscad://independent-artifacts/${id}`
+}
+
+function officialArtifactUri(id: string): string {
+  return `openscad://official-artifacts/${id}`
+}
+
+interface OfficialToolRunInput {
+  source: string
+  files: Array<{
+    path: string
+    text?: string
+    data_base64?: string
+  }>
+  experimental_features: Array<typeof OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES[number]>
+  defines: string[]
+  time?: number
+  backend: 'Manifold' | 'CGAL'
+  hard_warnings: boolean
+  check_parameters: boolean
+  check_parameter_ranges: boolean
+  timeout_ms: number
+}
+
+function officialRunOptions(
+  input: OfficialToolRunInput,
+  signal: AbortSignal | undefined,
+): OfficialOpenScadRunOptions {
+  return {
+    files: input.files.map(file => ({
+      path: file.path,
+      data: file.text !== undefined
+        ? file.text
+        : new Uint8Array(Buffer.from(file.data_base64!, 'base64')),
+    })),
+    experimentalFeatures: input.experimental_features,
+    defines: input.defines,
+    time: input.time,
+    backend: input.backend,
+    hardWarnings: input.hard_warnings,
+    checkParameters: input.check_parameters,
+    checkParameterRanges: input.check_parameter_ranges,
+    timeoutMs: input.timeout_ms,
+    signal,
+  }
+}
+
+function officialCapabilitiesToWire(capabilities: OfficialOpenScadCapabilities) {
+  return {
+    provider_role: 'qualification-oracle' as const,
+    available: capabilities.available,
+    unavailable_reason: capabilities.unavailableReason,
+    expected_runtime_version: capabilities.expectedRuntimeVersion,
+    runtime_version: capabilities.runtimeVersion,
+    archive_sha256: capabilities.archiveSha256,
+    runtime_sha256: capabilities.runtimeSha256,
+    patch_version: capabilities.patchVersion,
+    default_font: {
+      family: capabilities.defaultFont.family,
+      filename: capabilities.defaultFont.filename,
+      sha256: capabilities.defaultFont.sha256,
+      license_filename: capabilities.defaultFont.licenseFilename,
+      license_sha256: capabilities.defaultFont.licenseSha256,
+    },
+    isolation: {
+      filesystem: capabilities.isolation.filesystem,
+      node_permission_model: capabilities.isolation.nodePermissionModel,
+      scad_host_file_read: capabilities.isolation.scadHostFileRead,
+      scad_host_file_write: capabilities.isolation.scadHostFileWrite,
+      network_api_exposed: capabilities.isolation.networkApiExposed,
+      network_sandbox_enforced: capabilities.isolation.networkSandboxEnforced,
+      wasm_memory_limit_enforced: capabilities.isolation.wasmMemoryLimitEnforced,
+      process_model: capabilities.isolation.processModel,
+    },
+    formats: capabilities.formats,
+    experimental_features: capabilities.experimentalFeatures,
+    defaults: {
+      backend: capabilities.defaults.backend,
+      hard_warnings: capabilities.defaults.hardWarnings,
+      check_parameters: capabilities.defaults.checkParameters,
+      check_parameter_ranges: capabilities.defaults.checkParameterRanges,
+      experiments_enabled: capabilities.defaults.experimentsEnabled,
+    },
+    limits: {
+      source_bytes: capabilities.limits.sourceBytes,
+      project_files: capabilities.limits.projectFiles,
+      project_file_bytes: capabilities.limits.projectFileBytes,
+      project_bytes: capabilities.limits.projectBytes,
+      output_bytes: capabilities.limits.outputBytes,
+      log_bytes: capabilities.limits.logBytes,
+      log_entries: capabilities.limits.logEntries,
+      timeout_ms: capabilities.limits.timeoutMs,
+    },
+    setup_command: capabilities.setupCommand,
+  }
+}
+
+function officialCheckToWire(result: OfficialOpenScadCheckResult) {
+  return {
+    provider_role: 'qualification-oracle' as const,
+    language_contract: OFFICIAL_LANGUAGE_SUMMARY,
+    runtime_version: result.runtimeVersion,
+    source_sha256: result.sourceSha256,
+    csg_sha256: result.csgSha256,
+    csg_bytes: result.csgBytes,
+    duration_ms: result.durationMs,
+    logs: result.logs,
+    experimental_features: result.experimentalFeatures,
+  }
+}
+
+function officialExportToWire(result: OfficialOpenScadExportResult) {
+  return {
+    provider_role: 'qualification-oracle' as const,
+    language_contract: OFFICIAL_LANGUAGE_SUMMARY,
+    runtime_version: result.runtimeVersion,
+    source_sha256: result.sourceSha256,
+    format: result.format,
+    duration_ms: result.durationMs,
+    logs: result.logs,
+    experimental_features: result.experimentalFeatures,
+  }
+}
+
+function officialArtifactToWire(
+  artifact: OfficialArtifactSummary,
+  format: typeof OFFICIAL_OPENSCAD_EXPORT_FORMATS[number],
+) {
+  return {
+    id: artifact.id,
+    resource_uri: officialArtifactUri(artifact.id),
+    file_name: artifact.fileName,
+    format,
+    mime_type: artifact.mimeType,
+    sha256: artifact.sha256,
+    byte_length: artifact.byteLength,
+  }
+}
+
+function independentArtifactToWire(artifact: IndependentArtifactSummary) {
+  return {
+    id: artifact.id,
+    resource_uri: independentArtifactUri(artifact.id),
+    file_name: artifact.fileName,
+    format: artifact.format,
+    mime_type: artifact.mimeType,
+    sha256: artifact.sha256,
+    byte_length: artifact.byteLength,
+  }
 }
 
 function resourceVariable(uri: URL, value: string | string[] | undefined): string {
@@ -768,6 +1404,19 @@ function errorResult(error: unknown, extra: Record<string, unknown> = {}) {
   }
 }
 
+function officialErrorResult(error: unknown) {
+  const exposesCompilerDiagnostics = error instanceof OfficialOpenScadRemoteError
+    && (error.code === 'E_OPENSCAD_COMPILE'
+      || error.code === 'E_OPENSCAD_NO_OUTPUT'
+      || error.code === 'E_OPENSCAD_OUTPUT_LIMIT')
+  return exposesCompilerDiagnostics
+    ? errorResult(error, {
+        official_logs: error.logs,
+        duration_ms: error.durationMs,
+      })
+    : errorResult(error)
+}
+
 interface SelectedModel {
   id: string
   name: string
@@ -869,6 +1518,26 @@ function safeFileName(name: string, format: 'stl' | 'obj'): string {
   return `${truncateWellFormed(base, 255 - extension.length)}${extension}`
 }
 
+function estimatedIndependentExportBytes(
+  meshes: Parameters<typeof buildObj>[0],
+  format: IndependentArtifactFormat,
+): number {
+  const triangles = meshes.reduce(
+    (total, mesh) => total + Math.floor(mesh.indices.length / 3),
+    0,
+  )
+  if (format === 'stl') return 84 + triangles * 50
+  const vertices = meshes.reduce(
+    (total, mesh) => total + Math.floor(mesh.vertices.length / 6),
+    0,
+  )
+  return 64 + meshes.length * 64 + vertices * 100 + triangles * 50
+}
+
+function throwIfIndependentExportAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw new DOMException('OpenSCAD export was cancelled', 'AbortError')
+}
+
 async function recordFailure(
   store: ModelStore,
   geometry: McpGeometryService,
@@ -914,6 +1583,9 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
   assertGeometryManifestArchive()
   const { store } = options
   const geometry = options.geometry ?? new HeadlessGeometryService()
+  const officialRuntime = options.officialRuntime ?? new OfficialOpenScadRuntimeSupervisor()
+  const officialArtifacts = new OfficialArtifactCache()
+  const independentArtifacts = new IndependentArtifactCache()
   const server = new McpServer(
     {
       name: 'open-scad-viewer',
@@ -1052,9 +1724,219 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     inputSchema: z.object({}),
     outputSchema: toolOutputSchema(z.object({ geometry_engines: engineRegistrySchema })),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-  }, async () => textResult({
-    geometry_engines: engineRegistryToWire(await geometry.capabilities()),
-  }))
+  }, async () => {
+    try {
+      return textResult({
+        geometry_engines: engineRegistryToWire(await geometry.capabilities()),
+      })
+    } catch (error) {
+      return errorResult(error)
+    }
+  })
+
+  server.registerTool('openscad_official_status', {
+    title: 'Upstream OpenSCAD oracle status',
+    description: 'Report availability and integrity of the optional upstream qualification oracle. This provider is not the independent production engine or a fallback.',
+    inputSchema: z.object({}).strict(),
+    outputSchema: officialToolOutputSchema(z.object({
+      language_contract: officialLanguageSummarySchema,
+      official_runtime: officialCapabilitiesSchema,
+    }).strict()),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async () => {
+    try {
+      return textResult({
+        language_contract: OFFICIAL_LANGUAGE_SUMMARY,
+        official_runtime: officialCapabilitiesToWire(await officialRuntime.capabilities()),
+      })
+    } catch (error) {
+      return officialErrorResult(error)
+    }
+  })
+
+  server.registerTool('openscad_official_check', {
+    title: 'Check with the upstream OpenSCAD oracle',
+    description: 'Run a bounded source project in the pinned upstream qualification oracle for differential comparison; this does not execute or attest the independent engine.',
+    inputSchema: officialToolInputSchema({}),
+    outputSchema: officialToolOutputSchema(z.object({ check: officialCheckSchema }).strict()),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async (input, context) => {
+    try {
+      const result = await officialRuntime.check(
+        input.source,
+        officialRunOptions(input, context.mcpReq.signal),
+      )
+      return textResult({ check: officialCheckToWire(result) })
+    } catch (error) {
+      return officialErrorResult(error)
+    }
+  })
+
+  server.registerTool('openscad_official_export', {
+    title: 'Reference export with the upstream OpenSCAD oracle',
+    description: 'Render a bounded source project in the pinned upstream oracle and expose a reference artifact; this is not an independent-engine export.',
+    inputSchema: officialToolInputSchema({ format: officialFormatSchema }),
+    outputSchema: officialToolOutputSchema(z.object({
+      export: officialExportSchema,
+      artifact: officialArtifactSchema,
+    }).strict()),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async (input, context) => {
+    try {
+      const exported = await officialRuntime.export(
+        input.source,
+        input.format,
+        officialRunOptions(input, context.mcpReq.signal),
+      )
+      if (sha256(exported.data) !== exported.sha256
+        || exported.format !== input.format
+        || exported.mimeType !== officialOpenScadMimeType(input.format)
+        || exported.fileName !== `model.${input.format}`) {
+        throw new Error('Official OpenSCAD export failed its MCP integrity boundary')
+      }
+      const artifact = officialArtifacts.put({
+        format: exported.format,
+        fileName: exported.fileName,
+        mimeType: exported.mimeType,
+        data: exported.data,
+      })
+      notifyResourceListChanged()
+      const artifactWire = officialArtifactToWire(artifact, exported.format)
+      const structured = {
+        export: officialExportToWire(exported),
+        artifact: artifactWire,
+      }
+      const result = textResult(structured)
+      return {
+        ...result,
+        content: [
+          result.content[0],
+          {
+            type: 'resource_link' as const,
+            uri: artifactWire.resource_uri,
+            name: artifact.fileName,
+            mimeType: artifact.mimeType,
+            description: `Official OpenSCAD ${exported.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes)`,
+          },
+        ],
+      }
+    } catch (error) {
+      return officialErrorResult(error)
+    }
+  })
+
+  server.registerTool('openscad_independent_check', {
+    title: 'Check with the independent OpenSCAD engine',
+    description: 'Execute an inline source or bounded include/use project with the project-owned OpenSCAD 2021.01 frontend and geometry pipeline, without invoking the upstream OpenSCAD runtime. This remains a development surface, not a complete-language production claim.',
+    inputSchema: independentCheckInputSchema,
+    outputSchema: toolOutputSchema(z.object({ check: independentCheckSchema }).strict()),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  }, async (input, context) => {
+    try {
+      const run = await executeIndependentOpenScad({
+        source: input.source,
+        files: input.files,
+        quality: input.quality,
+        time: input.time,
+        signal: context.mcpReq.signal,
+      })
+      return textResult({
+        check: {
+          engine: INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION,
+          source_sha256: sha256(input.source),
+          quality: run.result.quality,
+          duration_ms: run.durationMs,
+          ...independentOpenScadMetrics(run.result),
+          warnings: run.result.warnings,
+        },
+      })
+    } catch (error) {
+      return errorResult(error)
+    }
+  })
+
+  server.registerTool('openscad_independent_export', {
+    title: 'Export with the independent OpenSCAD engine',
+    description: 'Render an inline source or bounded VFS project at full quality with only the repository-owned OpenSCAD 2021.01 engine, then expose a bounded session-local STL/OBJ resource. No upstream runtime or legacy DuckDB build record is used.',
+    inputSchema: independentExportInputSchema,
+    outputSchema: toolOutputSchema(z.object({
+      export: independentExportSchema,
+      artifact: independentArtifactSchema,
+    }).strict()),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async (input, context) => {
+    const startedAt = performance.now()
+    try {
+      const run = await executeIndependentOpenScad({
+        source: input.source,
+        files: input.files,
+        quality: 'full',
+        time: input.time,
+        signal: context.mcpReq.signal,
+      })
+      throwIfIndependentExportAborted(context.mcpReq.signal)
+      const estimatedBytes = estimatedIndependentExportBytes(run.result.meshes, input.format)
+      if (estimatedBytes > input.max_bytes) {
+        throw new ArtifactSizeError(estimatedBytes, input.max_bytes)
+      }
+
+      const fileName = safeFileName(input.file_name ?? 'model', input.format)
+      const mimeType = independentArtifactMimeType(input.format)
+      const data = input.format === 'stl'
+        ? buildBinaryStl(run.result.meshes, fileName)
+        : new TextEncoder().encode(buildObj(run.result.meshes))
+      throwIfIndependentExportAborted(context.mcpReq.signal)
+      if (data.byteLength > input.max_bytes) {
+        throw new ArtifactSizeError(data.byteLength, input.max_bytes)
+      }
+
+      const dataDigest = sha256(data)
+      const artifact = independentArtifacts.put({
+        format: input.format,
+        fileName,
+        mimeType,
+        data,
+      })
+      if (artifact.id !== dataDigest
+        || artifact.sha256 !== dataDigest
+        || artifact.byteLength !== data.byteLength
+        || artifact.format !== input.format
+        || artifact.mimeType !== mimeType
+        || artifact.fileName !== fileName) {
+        throw new Error('Independent OpenSCAD export failed its MCP integrity boundary')
+      }
+      notifyResourceListChanged()
+      const artifactWire = independentArtifactToWire(artifact)
+      const structured = {
+        export: {
+          engine: INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION,
+          source_sha256: sha256(input.source),
+          quality: 'full' as const,
+          format: input.format,
+          duration_ms: Math.max(0, performance.now() - startedAt),
+          metrics: independentOpenScadMetrics(run.result),
+          warnings: run.result.warnings,
+        },
+        artifact: artifactWire,
+      }
+      const result = textResult(structured)
+      return {
+        ...result,
+        content: [
+          result.content[0],
+          {
+            type: 'resource_link' as const,
+            uri: artifactWire.resource_uri,
+            name: artifact.fileName,
+            mimeType: artifact.mimeType,
+            description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+          },
+        ],
+      }
+    } catch (error) {
+      return errorResult(error)
+    }
+  })
 
   server.registerTool('openscad_list_model_revisions', {
     title: 'List OpenSCAD model revisions',
@@ -1503,11 +2385,15 @@ First call openscad_check in preview quality and inspect its declared top-level 
 
   server.registerResource('capabilities', 'openscad://capabilities', {
     title: 'OpenSCAD MCP capabilities',
-    description: 'Machine-readable engine registry, source routes, compiler subset, safety limits, protocol support, and persistence boundaries.',
+    description: 'Machine-readable stable OpenSCAD inventory, official runtime, independent engine registry, source routes, safety limits, protocol support, and persistence boundaries.',
     mimeType: 'application/json',
     cacheHint: { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },
   }, async uri => {
-    const geometryEngines = engineRegistryToWire(await geometry.capabilities())
+    const [geometryCapabilities, officialCapabilities] = await Promise.all([
+      geometry.capabilities(),
+      officialRuntime.capabilities(),
+    ])
+    const geometryEngines = engineRegistryToWire(geometryCapabilities)
     return {
       contents: [{
         uri: uri.href,
@@ -1518,6 +2404,33 @@ First call openscad_check in preview quality and inspect its declared top-level 
         geometry_engines: geometryEngines,
         geometry_host: MCP_GEOMETRY_HOST_CONTRACT,
         parity_resource_uri: 'openscad://parity',
+        official_language_contract: OFFICIAL_LANGUAGE_SUMMARY,
+        official_runtime_resource_uri: 'openscad://official-runtime',
+        official_runtime: officialCapabilitiesToWire(officialCapabilities),
+        independent_runtime: {
+          engine: INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION,
+          tools: {
+            check: 'openscad_independent_check',
+            export: 'openscad_independent_export',
+          },
+          export_formats: ['stl', 'obj'],
+          artifact_resource_template: 'openscad://independent-artifacts/{sha256}',
+          defaults: { quality: 'full', time: 0 },
+          limits: {
+            source_bytes: OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
+            project_files: OPENSCAD_PROJECT_MAX_FILES,
+            project_file_bytes: Math.max(
+              OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
+              OPENSCAD_PROJECT_MAX_BLOB_BYTES,
+            ),
+            project_bytes: OPENSCAD_PROJECT_MAX_TOTAL_BYTES,
+            artifact_bytes: MAX_ARTIFACT_BYTES,
+            artifact_cache_entries: MAX_INDEPENDENT_ARTIFACT_CACHE_ENTRIES,
+            artifact_cache_bytes: MAX_INDEPENDENT_ARTIFACT_CACHE_BYTES,
+          },
+          persistence: 'session-local-content-addressed',
+          legacy_duckdb_build_schema_used: false,
+        },
         compiler: {
           language_scope: 'strict OpenSCAD subset',
           supported: [
@@ -1554,6 +2467,35 @@ First call openscad_check in preview quality and inspect its declared top-level 
       }],
     }
   })
+
+  server.registerResource('official-runtime', 'openscad://official-runtime', {
+    title: 'Official OpenSCAD runtime',
+    description: 'Live availability, pinned integrity identity, isolation contract, supported exports, experiments, limits, and setup command for the opt-in upstream runtime.',
+    mimeType: 'application/json',
+    cacheHint: { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },
+  }, async uri => ({
+    contents: [{
+      uri: uri.href,
+      mimeType: 'application/json',
+      text: JSON.stringify({
+        language_contract: OFFICIAL_LANGUAGE_SUMMARY,
+        official_runtime: officialCapabilitiesToWire(await officialRuntime.capabilities()),
+      }, null, 2),
+    }],
+  }))
+
+  server.registerResource('official-language-contract', OFFICIAL_LANGUAGE_RESOURCE_URI, {
+    title: 'OpenSCAD 2021.01 stable language contract',
+    description: 'Immutable source-derived inventory of stable built-ins, syntax, operators, variables, file semantics, compatibility tail, smoke fixtures, and the separately pinned execution runtime.',
+    mimeType: 'application/json',
+    cacheHint: { ttlMs: CACHE_ONE_DAY, cacheScope: 'public' },
+  }, async uri => ({
+    contents: [{
+      uri: uri.href,
+      mimeType: 'application/json',
+      text: JSON.stringify({ contract: OPENSCAD_2021_01_CONTRACT }, null, 2),
+    }],
+  }))
 
   const engineManifestTemplate = new ResourceTemplate(
     'openscad://engines/{engine_class}/capabilities/{manifest_version}',
@@ -1765,6 +2707,82 @@ First call openscad_check in preview quality and inspect its declared top-level 
     return artifact.format === 'obj'
       ? { contents: [{ uri: uri.href, mimeType: artifact.mimeType, text: new TextDecoder().decode(artifact.data) }] }
       : { contents: [{ uri: uri.href, mimeType: artifact.mimeType, blob: Buffer.from(artifact.data).toString('base64') }] }
+  })
+
+  const independentArtifactTemplate = new ResourceTemplate(
+    'openscad://independent-artifacts/{sha256}',
+    {
+      list: async () => ({
+        resources: independentArtifacts.list().map(artifact => ({
+          uri: independentArtifactUri(artifact.id),
+          name: artifact.fileName,
+          description: `Independent OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+          mimeType: artifact.mimeType,
+        })),
+      }),
+      complete: {
+        sha256: value => independentArtifacts.list().map(artifact => artifact.id)
+          .filter(id => id.startsWith(value)),
+      },
+    },
+  )
+  server.registerResource('independent-export-artifact', independentArtifactTemplate, {
+    title: 'Independent OpenSCAD export artifact',
+    description: 'A bounded content-addressed STL or OBJ produced by the repository-owned engine and retained only for this MCP server session.',
+    cacheHint: { ttlMs: CACHE_ONE_DAY, cacheScope: 'private' },
+  }, async (uri, variables) => {
+    const id = resourceVariable(uri, variables.sha256)
+    if (!/^[a-f0-9]{64}$/.test(id)) throw new ResourceNotFoundError(uri.href)
+    const artifact = independentArtifacts.get(id)
+    if (!artifact || artifact.sha256 !== id || sha256(artifact.data) !== id) {
+      throw new ResourceNotFoundError(uri.href)
+    }
+    return artifact.format === 'obj'
+      ? {
+          contents: [{
+            uri: uri.href,
+            mimeType: artifact.mimeType,
+            text: new TextDecoder().decode(artifact.data),
+          }],
+        }
+      : {
+          contents: [{
+            uri: uri.href,
+            mimeType: artifact.mimeType,
+            blob: Buffer.from(artifact.data).toString('base64'),
+          }],
+        }
+  })
+
+  const officialArtifactTemplate = new ResourceTemplate('openscad://official-artifacts/{id}', {
+    list: async () => ({
+      resources: officialArtifacts.list().map(artifact => ({
+        uri: officialArtifactUri(artifact.id),
+        name: artifact.fileName,
+        description: `Official OpenSCAD ${artifact.format.toUpperCase()} export (${artifact.byteLength.toLocaleString()} bytes); session-local`,
+        mimeType: artifact.mimeType,
+      })),
+    }),
+    complete: {
+      id: value => officialArtifacts.list().map(artifact => artifact.id)
+        .filter(id => id.startsWith(value)),
+    },
+  })
+  server.registerResource('official-export-artifact', officialArtifactTemplate, {
+    title: 'Official OpenSCAD export artifact',
+    description: 'A bounded content-addressed upstream-runtime export retained only for this MCP server session.',
+  }, async (uri, variables) => {
+    const id = resourceVariable(uri, variables.id)
+    if (!/^[a-f0-9]{64}$/.test(id)) throw new ResourceNotFoundError(uri.href)
+    const artifact = officialArtifacts.get(id)
+    if (!artifact) throw new ResourceNotFoundError(uri.href)
+    return {
+      contents: [{
+        uri: uri.href,
+        mimeType: artifact.mimeType,
+        blob: Buffer.from(artifact.data).toString('base64'),
+      }],
+    }
   })
 
   const exampleNames = EXAMPLE_CATALOG.map(example => example.id).sort()

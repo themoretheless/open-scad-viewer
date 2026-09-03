@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Test-only bounded project-VFS fixture for independent OpenSCAD text() conformance",
+  "family": "Basic",
+  "style": "Regular",
+  "sourceRepository": "https://github.com/SorkinType/Basic",
+  "sourceCommit": "202e65ac93bd6977e83b2f10db6b1467e0b348db",
+  "sourceUrl": "https://raw.githubusercontent.com/SorkinType/Basic/202e65ac93bd6977e83b2f10db6b1467e0b348db/Basic-Regular.ttf",
+  "byteLength": 67568,
+  "sha256": "f2487f20e2241002d007831ec0e7e9c24ad39e36b49492326c79f3d70fd3b270",
+  "license": "SIL Open Font License 1.1",
+  "licenseFile": "Basic-OFL.txt",
+  "licenseSha256": "d3dbe81ed315fba5ab88aa2ceb53f92892e4f58e405f31e07e0156b15ddb9b60"
+}

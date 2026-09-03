@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   planGeometrySourceExecution,
@@ -100,7 +101,7 @@ function capabilities(): GeometryEngineRegistrySnapshot {
     routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
     engines: [
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
         availability: 'available',
         unavailableReason: null,
       },
@@ -192,9 +193,9 @@ describe('direct production geometry protocol', () => {
   it('identifies the frozen production legacy-direct path without qualification claims', () => {
     expect(DIRECT_GEOMETRY_IDENTITY).toMatchObject({
       executionPath: 'legacy-direct-production',
-      engineKey: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'].engineKey,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'].manifestDigest,
-      manifestIsolation: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'].isolation,
+      engineKey: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold].engineKey,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold].manifestDigest,
+      manifestIsolation: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold].isolation,
       hostIsolation: 'disposable-node-worker-per-job',
       automaticFallback: false,
     })

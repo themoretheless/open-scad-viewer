@@ -702,6 +702,29 @@ function isChildrenExpansionContinuation(
     || slots[0].name !== '$index'
     || identityValueKey(childrenSlots[0].value) !== identityValueKey(slots[0].value)) return false
 
+  // A selected `!children()` is detached from the module invocation that
+  // supplied its dynamic continuation. The lowerer represents each bounded
+  // continuation as the sole static/runtime $expansion directly beneath its
+  // consuming children() call; all expanded statements must stay in that
+  // exact static subtree.
+  if (staticParent === parent
+    && callerBodyOccurrence.operation === childrenOccurrence.operation) {
+    const staticChildren = validationIndex.operationChildren[childrenOccurrence.operation] ?? []
+    const runtimeChildren = validationIndex.runtimeChildren[parent] ?? []
+    const expandedChildren = validationIndex.runtimeChildren[occurrenceIndex] ?? []
+    consumeOccurrenceProofBudget(
+      validationIndex,
+      staticChildren.length + runtimeChildren.length + expandedChildren.length,
+    )
+    return staticChildren.length === 1
+      && staticChildren[0] === operation
+      && runtimeChildren.length === 1
+      && runtimeChildren[0] === occurrenceIndex
+      && expandedChildren.every(candidate => (
+        operations[(occurrences[candidate] as SemanticOccurrence).operation].parent === operation
+      ))
+  }
+
   let cursor = childrenOccurrence.parent
   let definitionOccurrence: SemanticOccurrence | null = null
   while (cursor !== null && cursor !== staticParent) {
@@ -1311,7 +1334,10 @@ function semanticProductionRule(
     if ((operation.name === '$then' || operation.name === '$else')
       && operation.parent !== null && last.kind === 'branch' && last.ordinal === 0 && prior?.name === 'if' && prior.kind === 'control') return 'transparent'
     if (operation.name === '$expansion' && operation.parent !== null && last.kind === 'control'
-      && last.ordinal === 0 && prior?.name === '$body') return 'transparent'
+      && last.ordinal === 0
+      && (prior?.name === '$body' || (prior?.name === 'children' && prior.kind === 'control'))) {
+      return 'transparent'
+    }
     if (!operation.name.startsWith('$') && last.kind === 'control'
       && ['if', 'let', 'for', 'children', 'group', 'render'].includes(operation.name)) return 'transparent'
   }

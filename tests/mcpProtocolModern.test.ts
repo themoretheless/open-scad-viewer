@@ -214,6 +214,7 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
       .toEqual(expect.arrayContaining([
         'openscad://examples/basic',
         'openscad://engines/manifold/capabilities/manifold-node-v1',
+        'openscad://engines/manifold/capabilities/manifold-node-v2',
         'openscad://engines/brep/capabilities/brep-contract-v1',
       ]))
 

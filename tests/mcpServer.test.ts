@@ -7,12 +7,13 @@ import {
   type McpServer,
 } from '@modelcontextprotocol/server'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
+import { LEGACY_MANIFOLD_EXECUTION } from '../src/core/geometryExecution'
 import {
   createOpenScadMcpServer,
   persistedFailureStatus,
 } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
-import type { McpGeometryService } from '../src/mcp/geometryService'
+import { HeadlessGeometryService, type McpGeometryService } from '../src/mcp/geometryService'
 import type { ModelStore } from '../src/mcp/modelStore'
 import { canonicalJson } from '../src/mcp/engineManifest'
 
@@ -95,7 +96,7 @@ async function connectedServer(options: {
     await server.close()
     await baseStore.close()
   })
-  return { request, server, notifications, initialize, clientTransport, settledIds }
+  return { request, server, store: baseStore, notifications, initialize, clientTransport, settledIds }
 }
 
 describe('OpenSCAD MCP server', () => {
@@ -133,9 +134,14 @@ describe('OpenSCAD MCP server', () => {
       'openscad_customize_model',
       'openscad_export',
       'openscad_get_model',
+      'openscad_independent_check',
+      'openscad_independent_export',
       'openscad_list_engines',
       'openscad_list_model_revisions',
       'openscad_list_models',
+      'openscad_official_check',
+      'openscad_official_export',
+      'openscad_official_status',
       'openscad_save_model',
     ])
     const tools = new Map(listed.tools.map(tool => [tool.name, tool]))
@@ -149,6 +155,16 @@ describe('OpenSCAD MCP server', () => {
     })
     expect(tools.get('openscad_check')?.annotations).toMatchObject({
       readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    })
+    expect(tools.get('openscad_independent_check')?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+    })
+    expect(tools.get('openscad_independent_export')?.annotations).toMatchObject({
+      readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
     })
@@ -253,7 +269,11 @@ describe('OpenSCAD MCP server', () => {
     expect(listed.structuredContent.geometry_engines).toMatchObject({
       automatic_fallback: false,
       engines: [
-        { engine_class: 'manifold', availability: 'available' },
+        {
+          engine_class: 'manifold',
+          availability: 'available',
+          manifest_resource_uri: 'openscad://engines/manifold/capabilities/manifold-node-v2',
+        },
         { engine_class: 'brep', availability: 'unavailable' },
       ],
     })
@@ -298,13 +318,14 @@ describe('OpenSCAD MCP server', () => {
     expect(manifestJson).not.toHaveProperty('unavailable_reason')
 
     const manifoldManifest = await request('resources/read', {
-      uri: 'openscad://engines/manifold/capabilities/manifold-node-v1',
+      uri: 'openscad://engines/manifold/capabilities/manifold-node-v2',
     }) as { contents: Array<{ text: string }> }
     const manifoldManifestJson = JSON.parse(manifoldManifest.contents[0].text) as
       Record<string, unknown>
     expect(manifoldManifestJson).toMatchObject({
       engine_class: 'manifold',
-      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
+      capability_manifest_version: 'manifold-node-v2',
+      manifest_digest: '54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe',
       isolation: 'in-process-serialized',
       dependency: {
         package_name: 'manifold-3d',
@@ -317,6 +338,13 @@ describe('OpenSCAD MCP server', () => {
     })
     expect(manifoldManifestJson).not.toHaveProperty('geometry_host')
     expect(manifoldManifestJson).not.toHaveProperty('mcp_host_contract_id')
+    const historicalManifoldManifest = await request('resources/read', {
+      uri: 'openscad://engines/manifold/capabilities/manifold-node-v1',
+    }) as { contents: Array<{ text: string }> }
+    expect(JSON.parse(historicalManifoldManifest.contents[0].text)).toMatchObject({
+      capability_manifest_version: 'manifold-node-v1',
+      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
+    })
     await expect(request('resources/read', {
       uri: 'openscad://engines/brep/capabilities/manifold-node-v1',
     })).rejects.toThrow(/not found/i)
@@ -426,6 +454,47 @@ describe('OpenSCAD MCP server', () => {
         },
       },
     })
+  })
+
+  it('returns a schema-valid public error when engine discovery fails', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const geometry = new HeadlessGeometryService()
+    vi.spyOn(geometry, 'capabilities').mockRejectedValue(
+      new Error('synthetic engine discovery failure'),
+    )
+    const { request } = await connectedServer({ geometry })
+    const listed = await request('tools/list') as {
+      tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
+    }
+    const outputSchema = listed.tools.find(tool => (
+      tool.name === 'openscad_list_engines'
+    ))?.outputSchema
+
+    const failed = await request('tools/call', {
+      name: 'openscad_list_engines',
+      arguments: {},
+    }) as {
+      isError: boolean
+      structuredContent: {
+        error: { code: string; retryable: boolean; correlation_id: string }
+      }
+    }
+
+    expect(failed).toMatchObject({
+      isError: true,
+      structuredContent: {
+        error: {
+          code: 'internal_error',
+          retryable: true,
+          correlation_id: expect.any(String),
+        },
+      },
+    })
+    expect(outputSchema).toBeDefined()
+    const validation = await fromJsonSchema(outputSchema!)['~standard']
+      .validate(failed.structuredContent)
+    expect(validation).not.toHaveProperty('issues')
+    log.mockRestore()
   })
 
   it('keeps runtime provenance when persistence fails after geometry completed', async () => {
@@ -887,6 +956,63 @@ describe('OpenSCAD MCP server', () => {
     }) as { structuredContent: { builds: Array<{ status: string }> } }
     expect(history.structuredContent.builds).toHaveLength(1)
     expect(history.structuredContent.builds[0].status).toBe('succeeded')
+  })
+
+  it('serves archived v1 runtime provenance while new executions use v2', async () => {
+    const { request, store } = await connectedServer()
+    const source = 'cube(1);'
+    await store.recordBuild({
+      id: 'historical-v1-runtime',
+      source,
+      sourceSha256: createHash('sha256').update(source).digest('hex'),
+      quality: 'full',
+      durationMs: 1,
+      warnings: [],
+      status: 'succeeded',
+      execution: {
+        ...LEGACY_MANIFOLD_EXECUTION,
+        evidence: 'runtime',
+        effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
+      },
+      metrics: {
+        meshCount: 1,
+        triangleCount: 12,
+        volume: 1,
+        surfaceArea: 6,
+        reduced: false,
+      },
+    })
+
+    const listedTools = await request('tools/list') as {
+      tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
+    }
+    const historySchema = listedTools.tools.find(tool => (
+      tool.name === 'openscad_build_history'
+    ))?.outputSchema
+    const history = await request('tools/call', {
+      name: 'openscad_build_history',
+      arguments: { limit: 10 },
+    }) as { structuredContent: { builds: Array<{ execution: Record<string, unknown> }> } }
+
+    expect(history.structuredContent.builds[0].execution).toMatchObject({
+      capability_manifest_version: 'manifold-node-v1',
+      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
+      evidence: 'runtime',
+    })
+    expect(historySchema).toBeDefined()
+    const validation = await fromJsonSchema(historySchema!)['~standard']
+      .validate(history.structuredContent)
+    expect(validation).not.toHaveProperty('issues')
+
+    const current = await request('tools/call', {
+      name: 'openscad_check',
+      arguments: { source, quality: 'full' },
+    }) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
+    expect(current.structuredContent.analysis.execution).toMatchObject({
+      capability_manifest_version: 'manifold-node-v2',
+      manifest_digest: '54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe',
+      evidence: 'runtime',
+    })
   })
 
   it('reports DuckDB catalog usage and quota limits without exposing SQL', async () => {

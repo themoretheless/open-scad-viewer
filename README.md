@@ -1,10 +1,13 @@
 # OpenSCAD Viewer
 
 A client-side OpenSCAD workspace built with Vue, WebGPU, and the
-[Manifold](https://github.com/elalish/manifold) geometry kernel. It is designed
-as a fast, independent subset viewer: supported operations produce
-real geometry, while unsupported OpenSCAD syntax returns a line/column error
-instead of a misleading preview.
+[Manifold](https://github.com/elalish/manifold) geometry kernel. The browser is
+a fast, independent subset viewer: supported operations produce real geometry,
+while unsupported OpenSCAD syntax returns a line/column error instead of a
+misleading preview. The optional local MCP server also exposes the
+repository-owned `openscad/stable-2021.01` engine while it progresses through a
+full language/geometry qualification gate. A separately installed upstream
+OpenSCAD runtime is available only as a differential oracle.
 
 ## Highlights
 
@@ -32,6 +35,10 @@ instead of a misleading preview.
 - Binary STL and OBJ export with object transforms baked into the result.
 - Optional local MCP server with typed OpenSCAD tools/resources and a
   persistent DuckDB catalog for models, revisions, builds, and bounded exports.
+- Opt-in upstream OpenSCAD oracle with multi-file/binary project bundles,
+  bounded STL/OFF/WRL/3MF/CSG/DXF/SVG reference exports, and a
+  fresh permission-model subprocess with a project-local MEMFS for every
+  request. This is a host-file boundary, not a complete OS sandbox.
 - Open/save/drag-and-drop `.scad` files, shareable source links, and a validated
   IndexedDB workspace with ordered autosaves plus a synchronous crash-recovery
   journal per live tab, each carrying its exact causal IDB base. UI preferences
@@ -81,6 +88,40 @@ npm run --silent mcp -- --memory
 database defaults to `.open-scad-viewer.duckdb` in the server working directory;
 `OPENSCAD_VIEWER_DUCKDB` provides another default path.
 
+### Optional upstream OpenSCAD oracle
+
+Normal product execution does not require upstream OpenSCAD. To run
+differential qualification, inspect upstream diagnostics, or produce a
+reference export, install the pinned official runtime once:
+
+```bash
+npm run setup:openscad
+npm run verify:openscad-runtime
+npm run status:openscad-runtime
+```
+
+The setup command explicitly downloads the official OpenSCAD 2026.09.01 Node
+WebAssembly snapshot, verifies archive SHA-256
+`82054dfb4911686de0ee3ea36771dbf81f3d014c3460c8ea069ab4f933f6d888`, and
+creates a deterministic NODERAWFS-disabled patched copy under the gitignored
+`.open-scad-runtime/` directory. The same explicit setup downloads the pinned
+Basic Regular font and its SIL Open Font License 1.1 text, verifies both
+SHA-256 digests, and records them in the runtime manifest so `text()` has a
+deterministic default font. The GPL runtime, font, and license are not fetched
+by `npm install` or committed or bundled into the web app; exact identities and
+redistribution notes are in [OFFICIAL_RUNTIME_NOTICES.md](OFFICIAL_RUNTIME_NOTICES.md).
+MCP refuses official execution if the manifest, runtime, font, license, patch,
+or Node permission-model precondition cannot be verified.
+
+Run the upstream-oracle qualification suite (38 functions, 35 modules,
+multi-file/binary projects, `text()`, all seven advertised export formats with
+artifact-integrity checks, resource reads, and an actual stdio MCP process)
+with:
+
+```bash
+npm run test:official
+```
+
 Example MCP client configuration (replace the repository path):
 
 ```json
@@ -112,6 +153,17 @@ Available tools:
   revision, and `expected_revision` guards that source revision;
 - `openscad_check` — read-only preview/full validation that does not add a build
   record; saved inputs can be pinned to an immutable `revision`;
+- `openscad_independent_check` — development qualification surface for the
+  repository-owned `openscad/stable-2021.01` frontend and geometry engine. Its
+  result attests `upstream_runtime_used: false` and deliberately keeps
+  `complete_language_claim: false` until the full language/file/geometry gate
+  passes. Inline and bounded VFS projects accept an optional animation `time`
+  in the stable `$t` range `0..1`;
+- `openscad_independent_export` — full-quality STL/OBJ export through that same
+  repository-owned stable engine. Exact bytes are retained in a bounded,
+  content-addressed, session-local cache and returned as an MCP resource link;
+  no upstream runtime is invoked and no legacy DuckDB build/artifact provenance
+  is written;
 - `openscad_compare` — read-only metric, dimension, and topology deltas between
   two inline sources or saved revisions (not an exact geometric boolean diff);
 - `openscad_analyze` — full/preview compilation with metrics, bounds, topology,
@@ -122,18 +174,53 @@ Available tools:
   by `expected_revision`;
 - `openscad_export` — bounded full-quality STL/OBJ export returned as an MCP
   resource link and persisted in DuckDB;
+- `openscad_official_status` — availability of the optional upstream oracle,
+  exact runtime/archive digests,
+  pinned default-font/license digests, export formats, experimental-feature
+  policy, declared isolation/residual-risk flags, setup guidance, and the
+  canonical stable-language summary;
+- `openscad_official_check` — differential/reference evaluation by upstream
+  OpenSCAD with
+  ordered `ECHO`/warning/error logs. It accepts inline source plus bounded
+  relative text or base64 binary project files, so `include`, `use`, `import`,
+  `surface`, and related file-backed semantics work without host paths. The
+  result names the exact stable-language contract separately from the execution
+  runtime;
+- `openscad_official_export` — upstream-oracle reference export to a bounded,
+  content-addressed, session-local MCP resource. Official artifacts are kept out
+  of the legacy DuckDB engine-attestation schema rather than being mislabeled as
+  independent Manifold builds; its result also carries the stable-language
+  contract summary;
 - `openscad_build_history` — recent DuckDB-backed build results;
 - `openscad_catalog_stats` — model/revision/build/artifact counts, stored bytes,
   build outcomes, and current retention limits without exposing SQL.
 
 Saved sources (including immutable revisions), build summaries, artifacts, and
-bundled examples are also available under `openscad://models/...`, `openscad://builds/...`,
-`openscad://artifacts/...`, and `openscad://examples/...` resources. Arbitrary
-SQL is deliberately not exposed. DuckDB external access and extension
+bundled examples are also available under `openscad://models/...`,
+`openscad://builds/...`, `openscad://artifacts/...`, and
+`openscad://examples/...` resources. Official exports use the separate
+session-local `openscad://official-artifacts/{sha256}` template. Independent
+stable-engine exports likewise use their own session-local
+`openscad://independent-artifacts/{sha256}` template rather than the legacy
+DuckDB resource namespace. The immutable
+`openscad://language/openscad-2021.01` resource publishes the complete canonical
+registry, including syntax/operators, the 38 + 35 built-ins, smoke metadata,
+file semantics, and the separately recorded compatibility tail. Arbitrary SQL
+is deliberately not exposed. DuckDB external access and extension
 autoload/install are disabled in the server process.
 
-`openscad://capabilities` describes the supported OpenSCAD subset, protocol
-versions, active wire/work limits, and the deliberate IndexedDB/DuckDB boundary.
+The word `official` in these tool names means “the upstream OpenSCAD
+implementation”. These tools are intentionally separate from the
+repository-owned engine and are never called by `openscad_independent_check` or
+`openscad_independent_export`.
+
+`openscad://capabilities` describes the independent engine/host contracts,
+the canonical official-language summary and registry URI, official-runtime
+status and limits, protocol versions, and the deliberate IndexedDB/DuckDB
+boundary. `openscad://official-runtime` gives the language summary and provider
+status directly. Both resources derive the summary from
+[`src/core/openScad2021Contract.ts`](src/core/openScad2021Contract.ts); the
+stable target is not silently inferred from the newer execution snapshot.
 It reports the mutable stdio host/watchdog contract separately from immutable
 engine manifests, so moving an unchanged provider behind a Worker does not
 rewrite its engine identity or digest. `openscad://parity` uses the same
@@ -182,6 +269,20 @@ P1. It is not a subprocess sandbox: Worker threads share the MCP process and no
 OS-enforced memory limit contains WASM/native allocation, so hostile-memory
 isolation remains residual work.
 
+Official-runtime jobs do not use that Worker boundary. They run one-at-a-time
+in fresh subprocesses with Node permissions, no inherited application
+environment (only `NODE_NO_WARNINGS` is supplied), NODERAWFS disabled, and an
+in-memory virtual project. Host-file read permission is limited to the runner,
+verified patched runtime, and verified Basic font; host-file writes are denied.
+The supervisor bounds the project, arguments, logs, result, and wall time; it
+admits one official job and rejects concurrent official work as busy
+instead of maintaining an internal queue. Cancellation or deadline kills and
+joins the child before the slot becomes available again. SCAD code receives no
+host path and the runner exposes no network API, but Node's permission model
+does not enforce a network sandbox. The V8 old-space setting also does not cap
+WebAssembly linear memory, so OS-level network and hostile-memory containment
+remain explicit residual risks. There is no automatic fallback to the subset.
+
 ## Controls
 
 - Left drag: orbit.
@@ -209,19 +310,31 @@ isolation remains residual work.
 - `Ctrl/⌘ + Shift + B`: toggle the Scene/Inspect/Parameters dock.
 - `Ctrl/⌘ + Enter`: render.
 
-## Supported subset and limits
+## Independent language profiles and oracle boundary
 
-This project does **not** bundle the official OpenSCAD compiler. The official
-WASM runtime is the best route to full OpenSCAD compatibility, but bundling it
-introduces GPL-2.0+ licensing requirements. This viewer instead uses the
-Apache-2.0 `manifold-3d` package and implements a strict language subset.
+This project does **not** bundle or silently invoke the official OpenSCAD
+compiler. `openscad-viewer-subset@1` remains the frozen browser/legacy MCP
+contract. `openscad/stable-2021.01` is a separate repository-owned engine
+profile: it already executes the canonical 38 value functions, user functions,
+bounded `include`/`use` projects, all seven 2021.01 import formats (with NEF3
+reported as unavailable without CGAL), DAT/PNG `surface()`, shaped `text()`,
+stable lexical/dynamic scope, and the canonical 35 modules. It remains a
+development surface while exact module semantics and the deprecated
+compatibility tail finish qualification. Unsupported behavior fails explicitly
+and the MCP result keeps `complete_language_claim: false`.
 
-Currently unsupported features include `include`/`use`, user functions,
-expression-form `assert(condition) value`, `import()`, `surface()`, `text()`,
-Minkowski operations, and advanced OpenSCAD Customizer annotations. These fail
-explicitly. Complexity is bounded to protect the browser: source length, AST
-size, parse/evaluation depth, evaluated-value allocation, range size, object
-count, `$fn`, and final triangle count all have limits.
+The opt-in upstream 2026.09.01 snapshot is exposed only by
+`openscad_official_*`. It is useful for differential tests and reference
+artifacts, but a successful upstream run never counts as implementation of the
+independent profile. Deprecated aliases and snapshot-only experiments remain
+outside the stable 38 + 35 gate. External libraries are bounded project inputs,
+not silently searched on the host.
+
+All paths are bounded. Independent limits cover source/project length, AST size,
+parse/evaluation depth, evaluated-value allocation, range size, object count,
+`$fn`, and final triangle count. Official MCP limits cover the aggregate virtual
+project, files, arguments, logs, output, one-at-a-time fail-fast admission,
+subprocess lifetime, and session-local artifact cache.
 
 ## Architecture
 
@@ -261,6 +374,10 @@ count, `$fn`, and final triangle count all have limits.
 - `src/mcp/`: optional stdio MCP host, headless analysis/export facade, and the
   Node-only DuckDB repository. It is excluded from the browser TypeScript/Vite
   graph and checked separately by `tsconfig.mcp.json`.
+- `src/mcp/officialOpenScadRuntime*.ts`: verified official-runtime project
+  protocol, MEMFS child, fail-closed subprocess supervisor, and MCP-facing
+  execution service. `scripts/official-openscad-runtime.mjs` is the explicit
+  checksum-verifying installer; it is never part of the browser graph.
 - `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
   viewer controls.
 - `tests/`: mathematical and geometry golden tests plus protocol, contract-

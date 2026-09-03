@@ -1,0 +1,18 @@
+{
+  "profile": "OpenSCAD-2021.01",
+  "capturedWith": "official OpenSCAD 2021.01 CLI linear_extrude(height=1)",
+  "cases": [
+    {
+      "name": "svg-mm-viewbox-y-flip",
+      "source": "<svg width=\"10mm\" height=\"20mm\" viewBox=\"0 0 10 20\"><rect x=\"1\" y=\"2\" width=\"3\" height=\"5\"/></svg>",
+      "minimum": [1, 13],
+      "maximum": [4, 18]
+    },
+    {
+      "name": "svg-css-px-is-96dpi",
+      "source": "<svg width=\"96px\" height=\"96px\" viewBox=\"0 0 96 96\"><rect x=\"0\" y=\"0\" width=\"96\" height=\"48\"/></svg>",
+      "minimum": [0, 12.7],
+      "maximum": [25.4, 25.4]
+    }
+  ]
+}

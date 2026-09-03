@@ -11,7 +11,11 @@
     "typecheck": "vue-tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json",
     "test": "vitest run",
     "test:conformance": "vitest run tests/languageConformance.test.ts",
+    "test:official": "npm run verify:openscad-runtime && vitest run tests/officialOpenScadRuntimeConformance.test.ts tests/mcpOfficialRuntimeStdio.test.ts",
     "test:scale": "vitest run tests/scaleTargets.test.ts",
+    "setup:openscad": "node --import tsx scripts/official-openscad-runtime.mjs install",
+    "verify:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs verify",
+    "status:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs status",
     "verify:dist": "node scripts/verify-dist.mjs",
     "check": "npm run typecheck && npm run test && npm run build"
   },
@@ -21,6 +25,7 @@
   "dependencies": {
     "@duckdb/node-api": "^1.5.5-r.2",
     "@modelcontextprotocol/server": "2.0.0",
+    "harfbuzzjs": "0.10.3",
     "manifold-3d": "^3.5.1",
     "tsx": "^4.23.1",
     "vue": "^3.5.31",

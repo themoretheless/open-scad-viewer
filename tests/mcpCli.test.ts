@@ -323,6 +323,12 @@ describe('MCP CLI', () => {
       build: vi.fn(async () => { throw new Error('not used') }),
       close: vi.fn(async () => { events.push('runtime') }),
     }
+    const officialRuntime = {
+      capabilities: vi.fn(async () => { throw new Error('not used') }),
+      check: vi.fn(async () => { throw new Error('not used') }),
+      export: vi.fn(async () => { throw new Error('not used') }),
+      close: vi.fn(async () => { events.push('official-runtime') }),
+    } satisfies ReturnType<RunMcpServerDependencies['createOfficialRuntime']>
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
     const transport = new BoundedTransport(serverTransport)
     const handleClose = vi.fn(async () => { events.push('handle') })
@@ -332,6 +338,7 @@ describe('MCP CLI', () => {
     const running = await runMcpServer({ databasePath: ':memory:', showHelp: false }, {
       openStore: async () => store,
       createGeometryRuntime: () => runtime,
+      createOfficialRuntime: () => officialRuntime,
       createTransport: () => transport,
       startServer,
     })
@@ -340,9 +347,10 @@ describe('MCP CLI', () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1)
     expect(runtime.close).toHaveBeenCalledTimes(1)
+    expect(officialRuntime.close).toHaveBeenCalledTimes(1)
     expect(storeClose).toHaveBeenCalledTimes(1)
-    expect(events.slice(0, 2).sort()).toEqual(['handle', 'runtime'])
-    expect(events[2]).toBe('store')
+    expect(events.slice(0, 3).sort()).toEqual(['handle', 'official-runtime', 'runtime'])
+    expect(events[3]).toBe('store')
   })
 
   it('closes transport, geometry runtime, and store when bootstrap fails', async () => {
@@ -384,6 +392,27 @@ describe('MCP CLI', () => {
       createGeometryRuntime: () => { throw startupError },
     })).rejects.toBe(startupError)
 
+    expect(storeClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the geometry runtime and store when official runtime construction fails', async () => {
+    const store = await DuckDbModelStore.open(':memory:')
+    const originalStoreClose = store.close.bind(store)
+    const storeClose = vi.spyOn(store, 'close').mockImplementation(originalStoreClose)
+    const runtime: ReturnType<RunMcpServerDependencies['createGeometryRuntime']> = {
+      capabilities: vi.fn(async () => { throw new Error('not used') }),
+      build: vi.fn(async () => { throw new Error('not used') }),
+      close: vi.fn(async () => undefined),
+    }
+    const startupError = new Error('synthetic official runtime construction failure')
+
+    await expect(runMcpServer({ databasePath: ':memory:', showHelp: false }, {
+      openStore: async () => store,
+      createGeometryRuntime: () => runtime,
+      createOfficialRuntime: () => { throw startupError },
+    })).rejects.toBe(startupError)
+
+    expect(runtime.close).toHaveBeenCalledTimes(1)
     expect(storeClose).toHaveBeenCalledTimes(1)
   })
 

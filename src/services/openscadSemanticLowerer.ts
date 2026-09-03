@@ -37,13 +37,36 @@ import { sha256Hex } from '../core/sha256'
 import {
   TT,
   compileOpenSCAD,
+  hasOpenScadViewportModifier,
   type CallNode,
   type Expr,
+  type ExpressionArgument,
+  type FunctionNode,
+  type FunctionValue,
+  type ListComprehensionExpression,
   type ModuleNode,
+  type OpenScadLanguageProfile,
   type Statement,
   type Value,
 } from './openscadCompiler'
 import { AbortedError, OpenSCADParseError } from './openscadErrors'
+import {
+  evaluateOpenScadBuiltinFunction,
+  type OpenScadBuiltinValue,
+} from './openScadBuiltinFunctions'
+import {
+  formatOpenScadValue,
+  isOpenScadRange,
+  materializeOpenScadRange,
+  openScadBinary,
+  openScadIndex,
+  openScadMember,
+  openScadTruthy,
+  openScadUnary,
+  type OpenScadValueSemanticsContext,
+} from './openScadValueSemantics'
+import { OpenScadStableScope } from './openScadStableScope'
+import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
 import {
   attestSemanticProgram,
   encodeSemanticProgram,
@@ -105,18 +128,39 @@ interface RegisteredOperations {
 
 interface EvaluationBudget { ops: number }
 
+interface SemanticRuntimeCheckpoint {
+  readonly nodes: number
+  readonly evaluationOrder: number
+  readonly discardedEffects: number
+  readonly occurrences: number
+  readonly tessellationIntents: number
+  readonly paletteIndex: number
+  readonly terminalOccurrence: number | null
+  readonly invocationDuplicates: ReadonlyMap<string, number>
+  readonly outputCounts: ReadonlyMap<number, number>
+}
+
+interface SemanticDiagnosticCheckpoint {
+  readonly templates: number
+  readonly diagnostics: number
+  readonly warnings: number
+}
+
 interface PassedCallChildren {
   readonly owner: CallNode
   readonly bodyOccurrence: number
   readonly expansionOperation: number
   readonly statements: readonly Statement[]
   readonly env: Map<string, Value>
+  readonly scope?: OpenScadStableScope
   readonly continuation?: PassedCallChildren
 }
 
 interface EvalContext {
   readonly source: string
+  readonly languageProfile: OpenScadLanguageProfile
   readonly env: Map<string, Value>
+  readonly functions: Map<string, FunctionNode>
   readonly modules: Map<string, ModuleNode>
   readonly builder: SemanticProgramBuilder
   readonly quality: GeometryQuality
@@ -129,11 +173,34 @@ interface EvalContext {
   readonly parentOccurrence: number | null
   readonly pendingSlots: readonly SemanticDynamicSlot[]
   readonly callChildren?: Readonly<PassedCallChildren>
+  readonly functionStack: readonly string[]
+  readonly moduleStack: readonly string[]
+  readonly stableScope?: OpenScadStableScope
+  readonly scopeVisibleBefore?: number
+  /** Once `!` wins at runtime, nested root markers are ordinary calls. */
+  readonly viewportRootLocked?: boolean
+  /** The winning call ignores its own `#`/`%` chain, as OpenSCAD does. */
+  readonly viewportRootOwner?: CallNode
   readonly shouldAbort?: () => boolean
 }
 
+class StableViewportRootSelection {
+  constructor(
+    readonly node: CallNode,
+    readonly context: EvalContext,
+    readonly diagnosticsBeforeCandidate: SemanticDiagnosticCheckpoint,
+  ) {}
+}
+
+interface StableFunctionValue extends FunctionValue {
+  readonly lexicalScope: OpenScadStableScope
+}
+
 export interface SemanticLoweringOptions {
+  readonly languageProfile?: OpenScadLanguageProfile
   readonly quality?: GeometryQuality
+  /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
+  readonly animationTime?: number
   readonly shouldAbort?: () => boolean
   /** Qualification-only: preserve a deterministic evaluation failure as a kernel-prefix plan. */
   readonly captureTerminalFailure?: boolean
@@ -143,6 +210,13 @@ class LegacyBindingCompatibilityError extends TypeError {
   constructor(message: string) {
     super(message)
     this.name = 'TypeError'
+  }
+}
+
+class StableBuiltinValueError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'StableBuiltinValueError'
   }
 }
 
@@ -173,20 +247,54 @@ function identityValue(value: Value, depth = 0): SemanticIdentityValue {
   if (typeof value === 'boolean') return { tag: 'boolean', value }
   if (typeof value === 'number') return { tag: 'number', value: canonicalNumber(value) }
   if (typeof value === 'string') return { tag: 'string', value }
+  if (isFunctionValue(value)) return { tag: 'string', value: `function:${value.name ?? '<anonymous>'}` }
+  if (isOpenScadRange(value)) return { tag: 'string', value: `range:${formatOpenScadValue(value)}` }
   return { tag: 'vector', items: value.map(item => identityValue(item, depth + 1)) }
 }
 
-function operationCategory(name: string, moduleNames: ReadonlySet<string>): SemanticOperationCategory {
+function operationCategory(
+  name: string,
+  moduleNames: ReadonlySet<string>,
+  languageProfile: OpenScadLanguageProfile,
+): SemanticOperationCategory {
   if (moduleNames.has(name)) return 'module'
   if (['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(name)) return 'transform'
   if (['union', 'difference', 'intersection', 'hull'].includes(name)) return 'boolean'
-  if (['if', 'let', 'for', 'children', 'group', 'render'].includes(name)) return 'control'
+  if (['if', 'let', 'for', 'children', 'group', 'render'].includes(name)
+    || (languageProfile === 'openscad/stable-2021.01' && ['assign', 'child'].includes(name))
+    || (languageProfile === 'openscad/stable-2021.01' && name === 'echo')) return 'control'
   if (name === 'assert') return 'assertion'
   if (name === 'color') return 'presentation'
   return 'geometry'
 }
 
-function registerOperations(ast: readonly Statement[], moduleNames: ReadonlySet<string>): RegisteredOperations {
+function semanticOperationName(
+  statement: Exclude<Statement, FunctionNode>,
+  languageProfile: OpenScadLanguageProfile,
+): string {
+  if (statement.type === 'assign') return '$assign'
+  if (languageProfile !== 'openscad/stable-2021.01' || statement.type !== 'call') {
+    return statement.name
+  }
+  switch (statement.name) {
+    // Semantic-program v1 intentionally has a closed production vocabulary.
+    // Historical spellings are lowered onto the equivalent frozen operation;
+    // provenance still retains the authored spelling and source span.
+    case 'assign': return '$assign'
+    case 'child': return 'children'
+    case 'dxf_linear_extrude': return 'linear_extrude'
+    case 'dxf_rotate_extrude': return 'rotate_extrude'
+    default: return statement.name
+  }
+}
+
+function registerOperations(
+  ast: readonly Statement[],
+  moduleNames: ReadonlySet<string>,
+  languageProfile: OpenScadLanguageProfile,
+  detachedRoot?: CallNode,
+  detachedContinuations?: ReadonlyMap<CallNode, Readonly<PassedCallChildren>>,
+): RegisteredOperations {
   const operations: SemanticStaticOperation[] = []
   const provenance: RegisteredOperations['provenance'] = []
   const byStatement = new Map<Statement, number>()
@@ -226,14 +334,32 @@ function registerOperations(ast: readonly Statement[], moduleNames: ReadonlySet<
     statements: readonly Statement[],
     parent: number | null,
     parentPath: readonly SemanticStructuralPathSegment[],
+    allowDetachedRoot = false,
   ) => {
-    const candidates = statements
+    // Function declarations affect the value environment but do not create a
+    // geometry operation or runtime occurrence in the semantic DAG.
+    const candidates: Array<Exclude<Statement, FunctionNode>> = []
+    const appendCandidates = (items: readonly Statement[]) => {
+      for (const statement of items) {
+        if (statement === detachedRoot && !allowDetachedRoot) continue
+        if (statement.type === 'function') continue
+        // Frozen semantic-program v1 has no effect-only occurrence production
+        // rule. In the full frontend profile echo is therefore represented as
+        // a diagnostic effect while its transparent children occupy the same
+        // structural scope.
+        if (languageProfile === 'openscad/stable-2021.01'
+          && statement.type === 'call' && statement.name === 'echo') {
+          appendCandidates(statement.children)
+        } else candidates.push(statement)
+      }
+    }
+    appendCandidates(statements)
     const totals = new Map<string, number>()
     candidates.forEach(statement => {
       const category = statement.type === 'assign'
         ? 'control'
-        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames)
-      const name = statement.type === 'assign' ? '$assign' : statement.name
+        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames, languageProfile)
+      const name = semanticOperationName(statement, languageProfile)
       const key = `${category}\0${name}`
       totals.set(key, (totals.get(key) ?? 0) + 1)
     })
@@ -241,8 +367,8 @@ function registerOperations(ast: readonly Statement[], moduleNames: ReadonlySet<
     for (const statement of candidates) {
       const category = statement.type === 'assign'
         ? 'control'
-        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames)
-      const name = statement.type === 'assign' ? '$assign' : statement.name
+        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames, languageProfile)
+      const name = semanticOperationName(statement, languageProfile)
       const key = `${category}\0${name}`
       const ordinal = ordinals.get(key) ?? 0
       ordinals.set(key, ordinal + 1)
@@ -289,6 +415,19 @@ function registerOperations(ast: readonly Statement[], moduleNames: ReadonlySet<
         const elseFrame = addFrame(statement, id, structuralPath, '$else', 'branch')
         alternativeByCall.set(statement, elseFrame)
         visitSiblings(statement.alternative, elseFrame, operations[elseFrame].structuralPath)
+      } else if ((statement.name === 'children' || statement.name === 'child')
+        && detachedContinuations?.has(statement)) {
+        // children() owns a runtime caller continuation rather than syntactic
+        // children. When it becomes a detached root, give that continuation a
+        // real static expansion frame in the root registry so replay can keep
+        // the selected caller geometry without recreating discarded ancestors.
+        const expansion = addFrame(statement, id, structuralPath, '$expansion', 'control')
+        expansionByCall.set(statement, expansion)
+        visitSiblings(
+          detachedContinuations.get(statement)!.statements,
+          expansion,
+          operations[expansion].structuralPath,
+        )
       } else {
         if (statement.children.length > 0 || category === 'module') {
           const body = addFrame(statement, id, structuralPath, '$body', 'body')
@@ -303,7 +442,10 @@ function registerOperations(ast: readonly Statement[], moduleNames: ReadonlySet<
       }
     }
   }
-  visitSiblings(ast, null, [])
+  const roots = detachedRoot === undefined
+    ? ast
+    : [...ast.filter(statement => statement !== detachedRoot), detachedRoot]
+  visitSiblings(roots, null, [], detachedRoot !== undefined)
   return { operations, provenance, byStatement, bodyByStatement, alternativeByCall, expansionByCall }
 }
 
@@ -330,6 +472,69 @@ class SemanticProgramBuilder {
   nextColor(): RGBA {
     const color = PALETTE[this.paletteIndex++ % PALETTE.length]
     return [...color] as RGBA
+  }
+
+  runtimeCheckpoint(): SemanticRuntimeCheckpoint {
+    return {
+      nodes: this.nodes.length,
+      evaluationOrder: this.evaluationOrder.length,
+      discardedEffects: this.discardedEffects.length,
+      occurrences: this.occurrences.length,
+      tessellationIntents: this.tessellationIntents.length,
+      paletteIndex: this.paletteIndex,
+      terminalOccurrence: this.terminalOccurrence,
+      invocationDuplicates: new Map(this.invocationDuplicates),
+      outputCounts: new Map(this.outputCounts),
+    }
+  }
+
+  /**
+   * Full rendering evaluates `%` for language effects, then removes its
+   * kernel-visible subtree. Diagnostics intentionally survive this rollback.
+   */
+  rollbackRuntime(checkpoint: SemanticRuntimeCheckpoint): void {
+    this.nodes.length = checkpoint.nodes
+    this.evaluationOrder.length = checkpoint.evaluationOrder
+    this.discardedEffects.length = checkpoint.discardedEffects
+    this.occurrences.length = checkpoint.occurrences
+    this.tessellationIntents.length = checkpoint.tessellationIntents
+    this.paletteIndex = checkpoint.paletteIndex
+    this.terminalOccurrence = checkpoint.terminalOccurrence
+    this.invocationDuplicates.clear()
+    for (const [key, value] of checkpoint.invocationDuplicates) this.invocationDuplicates.set(key, value)
+    this.outputCounts.clear()
+    for (const [key, value] of checkpoint.outputCounts) this.outputCounts.set(key, value)
+  }
+
+  diagnosticCheckpoint(): SemanticDiagnosticCheckpoint {
+    return {
+      templates: this.diagnosticTemplates.length,
+      diagnostics: this.diagnostics.length,
+      warnings: this.warnings.length,
+    }
+  }
+
+  inheritDiagnostics(
+    source: SemanticProgramBuilder,
+    checkpoint: SemanticDiagnosticCheckpoint = source.diagnosticCheckpoint(),
+  ): void {
+    const operationById = new Map(
+      this.registered.operations.map(operation => [operation.operationId, operation.id] as const),
+    )
+    for (const template of source.diagnosticTemplates.slice(0, checkpoint.templates)) {
+      const operation = template.operation === null
+        ? null
+        : operationById.get(source.registered.operations[template.operation].operationId) ?? null
+      this.diagnosticTemplates.push({
+        ...template,
+        id: this.diagnosticTemplates.length,
+        operation,
+      })
+    }
+    for (const diagnostic of source.diagnostics.slice(0, checkpoint.diagnostics)) {
+      this.diagnostics.push({ ...diagnostic })
+    }
+    this.warnings.push(...source.warnings.slice(0, checkpoint.warnings))
   }
 
   addInternalNode(node: SemanticNodeWithoutId): number {
@@ -443,6 +648,14 @@ class SemanticProgramBuilder {
     const childrenSegment = childrenOperation.structuralPath.at(-1)
     const expansionSegment = expansionOperation.structuralPath.at(-1)
     const bodySegment = callerBodyOperation.structuralPath.at(-1)
+    const detachedContinuationExpansion = expansionOperation.name === '$expansion'
+      && expansionOperation.category === 'control'
+      && expansionSegment?.kind === 'control'
+      && expansionSegment.name === '$expansion'
+      && expansionOperation.parent === childrenOccurrence.operation
+      && childrenOperation.name === 'children'
+      && staticParent === parent
+    if (detachedContinuationExpansion) return true
     if (expansionOperation.name !== '$expansion'
       || expansionOperation.category !== 'control'
       || expansionSegment?.kind !== 'control'
@@ -608,11 +821,12 @@ class SemanticProgramBuilder {
     args: readonly SemanticDiagnosticArgument[],
     message: string,
     span: { start: number; end: number } | null,
+    dedupe = true,
   ): void {
     const id = this.diagnosticTemplates.length
     this.diagnosticTemplates.push({ id, code, severity: 'warning', operation, arguments: args })
     this.diagnostics.push({ template: id, message, span })
-    if (!this.warnings.includes(message)) this.warnings.push(message)
+    if (!dedupe || !this.warnings.includes(message)) this.warnings.push(message)
   }
 
   terminal(
@@ -711,8 +925,320 @@ function deepEqual(left: Value, right: Value): boolean {
 
 function valueToString(value: Value): string {
   if (Array.isArray(value)) return `[${value.map(valueToString).join(', ')}]`
+  if (isFunctionValue(value)) return 'function(...)'
   if (value === undefined) return 'undef'
   return String(value)
+}
+
+function isStableProfile(ctx: EvalContext): boolean {
+  return ctx.languageProfile === 'openscad/stable-2021.01'
+}
+
+function resolveStableVariable(
+  name: string,
+  ctx: EvalContext,
+  position: number,
+): { found: boolean; value: Value } {
+  if (name.startsWith('$') && ctx.env.has(name)) {
+    return { found: true, value: ctx.env.get(name) }
+  }
+  let scope = ctx.stableScope
+  let visibleBefore = ctx.scopeVisibleBefore ?? Number.POSITIVE_INFINITY
+  while (scope !== undefined && scope !== null) {
+    const local = scope.resolveLocalVariable(
+      name,
+      visibleBefore,
+      (expression, site) => evalExpression(expression, {
+        ...ctx,
+        env: site.env,
+        stableScope: site.scope,
+        scopeVisibleBefore: site.visibleBefore,
+      }),
+      message => stableWarning(ctx, position, message, 'W_OPENSCAD_SCOPE'),
+    )
+    if (local.found) return local
+    if (scope === ctx.stableScope && ctx.env.has(name)) {
+      return { found: true, value: ctx.env.get(name) }
+    }
+    scope = scope.parent ?? undefined
+    visibleBefore = Number.POSITIVE_INFINITY
+  }
+  if (ctx.env.has(name)) return { found: true, value: ctx.env.get(name) }
+  return { found: false, value: undefined }
+}
+
+function stableOverlayContext(ctx: EvalContext, env: ReadonlyMap<string, Value>): EvalContext {
+  if (!isStableProfile(ctx)) return { ...ctx, env: new Map(env) }
+  const scope = new OpenScadStableScope([], ctx.stableScope ?? null, env)
+  return {
+    ...ctx,
+    env: scope.env,
+    stableScope: scope,
+    scopeVisibleBefore: Number.POSITIVE_INFINITY,
+  }
+}
+
+function enterStableStatementScope(statements: readonly Statement[], parent: EvalContext): EvalContext {
+  const scope = new OpenScadStableScope(statements, parent.stableScope ?? null, parent.env)
+  const ctx: EvalContext = {
+    ...parent,
+    env: scope.env,
+    stableScope: scope,
+    scopeVisibleBefore: Number.POSITIVE_INFINITY,
+  }
+  for (const name of scope.dynamicVariableNames()) {
+    const resolved = scope.resolveLocalVariable(
+      name,
+      Number.POSITIVE_INFINITY,
+      (expression, site) => evalExpression(expression, {
+        ...ctx,
+        env: site.env,
+        stableScope: site.scope,
+        scopeVisibleBefore: site.visibleBefore,
+      }),
+      message => stableWarning(ctx, statements[0]?.p ?? 0, message, 'W_OPENSCAD_SCOPE'),
+    )
+    if (resolved.found) scope.env.set(name, resolved.value)
+  }
+  return ctx
+}
+
+function overlayDynamicVariables(target: Map<string, Value>, source: ReadonlyMap<string, Value>): void {
+  for (const [name, value] of source) if (name.startsWith('$')) target.set(name, value)
+}
+
+function stableWarning(
+  ctx: EvalContext,
+  position: number,
+  message: string,
+  code = 'W_OPENSCAD_VALUE',
+  dedupe = true,
+): void {
+  ctx.builder.warn(
+    null,
+    code,
+    [],
+    message,
+    { start: position, end: Math.min(ctx.source.length, position + 1) },
+    dedupe,
+  )
+}
+
+function stableValueContext(ctx: EvalContext, position: number): OpenScadValueSemanticsContext {
+  return {
+    warn: message => stableWarning(ctx, position, message),
+    maxRangeItems: MAX_RANGE_ITEMS,
+    registerArray: (values, label) => registerArrayValue(values, ctx, position, label),
+  }
+}
+
+function isListComprehensionExpression(expr: Expr): expr is ListComprehensionExpression {
+  return expr.kind === 'lc-for'
+    || expr.kind === 'lc-for-c'
+    || expr.kind === 'lc-if'
+    || expr.kind === 'lc-let'
+    || expr.kind === 'lc-each'
+}
+
+function evaluateSequentialBindings(
+  args: readonly ExpressionArgument[],
+  ctx: EvalContext,
+  depth: number,
+): Map<string, Value> {
+  const env = new Map(ctx.env)
+  const assigned = new Set<string>()
+  for (const argument of args) {
+    const value = evalExpression(argument.value, stableOverlayContext(ctx, env), depth + 1)
+    if (argument.name === undefined) {
+      stableWarning(ctx, argument.p, `Ignoring assignment without variable name ${formatOpenScadValue(value)}`)
+      continue
+    }
+    if (assigned.has(argument.name)) {
+      stableWarning(
+        ctx,
+        argument.p,
+        `Ignoring duplicate variable assignment ${argument.name} = ${formatOpenScadValue(value)}`,
+      )
+      continue
+    }
+    assigned.add(argument.name)
+    env.set(argument.name, value)
+  }
+  return env
+}
+
+function stableIterable(value: Value, ctx: EvalContext, position: number): Value[] {
+  if (isOpenScadRange(value)) return materializeOpenScadRange(value, stableValueContext(ctx, position))
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    return registerArrayValue(Array.from(value), ctx, position, 'string iteration')
+  }
+  return value === undefined ? [] : [value]
+}
+
+function appendComprehensionValues(
+  output: Value[],
+  values: readonly Value[],
+  expr: Expr,
+  ctx: EvalContext,
+): void {
+  if (output.length + values.length > MAX_VALUE_ELEMENTS) {
+    evaluationError(ctx, expr.p, `List comprehension exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+  }
+  output.push(...values)
+}
+
+function evalComprehensionElement(expr: Expr, ctx: EvalContext, depth: number): Value[] {
+  const value = evalExpression(expr, ctx, depth + 1)
+  return isListComprehensionExpression(expr) && Array.isArray(value) ? value : [value]
+}
+
+function evalListComprehension(
+  expr: ListComprehensionExpression,
+  ctx: EvalContext,
+  depth: number,
+): Value[] {
+  const output: Value[] = []
+  switch (expr.kind) {
+    case 'lc-each':
+      return stableIterable(evalExpression(expr.value, ctx, depth + 1), ctx, expr.p)
+    case 'lc-if': {
+      const selected = openScadTruthy(evalExpression(expr.condition, ctx, depth + 1))
+        ? expr.yes
+        : expr.no
+      return selected === undefined ? output : evalComprehensionElement(selected, ctx, depth + 1)
+    }
+    case 'lc-let': {
+      const env = evaluateSequentialBindings(expr.args, ctx, depth + 1)
+      return evalListComprehension(expr.body, stableOverlayContext(ctx, env), depth + 1)
+    }
+    case 'lc-for': {
+      const visit = (bindingIndex: number, iterationContext: EvalContext): void => {
+        if (bindingIndex >= expr.args.length) {
+          appendComprehensionValues(
+            output,
+            evalComprehensionElement(expr.body, iterationContext, depth + 1),
+            expr,
+            ctx,
+          )
+          return
+        }
+        const binding = expr.args[bindingIndex]
+        const iterable = stableIterable(
+          evalExpression(binding.value, iterationContext, depth + 1),
+          iterationContext,
+          binding.p,
+        )
+        if (binding.name === undefined) {
+          stableWarning(ctx, binding.p, 'Ignoring for() iterator without variable name')
+          return
+        }
+        for (const value of iterable) {
+          if (++ctx.budget.ops > MAX_EVAL_OPS) {
+            evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+          }
+          const env = new Map(iterationContext.env)
+          env.set(binding.name, value)
+          visit(bindingIndex + 1, stableOverlayContext(iterationContext, env))
+        }
+      }
+      visit(0, ctx)
+      return output
+    }
+    case 'lc-for-c': {
+      let iterationContext: EvalContext = {
+        ...ctx,
+        env: evaluateSequentialBindings(expr.init, ctx, depth + 1),
+      }
+      iterationContext = stableOverlayContext(ctx, iterationContext.env)
+      while (openScadTruthy(evalExpression(expr.condition, iterationContext, depth + 1))) {
+        if (++ctx.budget.ops > MAX_EVAL_OPS) {
+          evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+        }
+        appendComprehensionValues(
+          output,
+          evalComprehensionElement(expr.body, iterationContext, depth + 1),
+          expr,
+          ctx,
+        )
+        iterationContext = stableOverlayContext(
+          iterationContext,
+          evaluateSequentialBindings(expr.update, iterationContext, depth + 1),
+        )
+      }
+      return output
+    }
+  }
+}
+
+function resolveStableExpressionArguments(
+  args: readonly ExpressionArgument[],
+  parameterNames: readonly string[],
+  ctx: EvalContext,
+): Map<string, ExpressionArgument> {
+  const resolved = new Map<string, ExpressionArgument>()
+  const parameters = new Set(parameterNames)
+  for (const argument of args) {
+    const name = argument.name ?? parameterNames.find(parameter => !resolved.has(parameter))
+    if (name === undefined) {
+      stableWarning(ctx, argument.p, 'Ignoring excess positional argument')
+      continue
+    }
+    if (!parameters.has(name)) {
+      stableWarning(ctx, argument.p, `Ignoring unknown argument ${name}`)
+      continue
+    }
+    if (argument.name !== undefined && resolved.has(name)) {
+      stableWarning(ctx, argument.p, `Argument ${name} was specified more than once`)
+    }
+    // A positional argument occupies the first formal not already supplied by
+    // an earlier positional or named argument.
+    resolved.set(name, argument)
+  }
+  return resolved
+}
+
+function evalAssertExpression(
+  expr: Extract<Expr, { kind: 'assert' }>,
+  ctx: EvalContext,
+  depth: number,
+): Value {
+  const resolved = resolveStableExpressionArguments(expr.args, ['condition', 'message'], ctx)
+  const conditionArgument = resolved.get('condition')
+  const messageArgument = resolved.get('message')
+  const condition = conditionArgument
+    ? evalExpression(conditionArgument.value, ctx, depth + 1)
+    : undefined
+  const message = messageArgument
+    ? evalExpression(messageArgument.value, ctx, depth + 1)
+    : undefined
+  if (!openScadTruthy(condition)) {
+    const conditionText = conditionArgument
+      ? compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
+      : 'undef'
+    const detail = messageArgument ? `: ${compactDiagnosticText(formatOpenScadValue(message))}` : ''
+    evaluationError(ctx, expr.p, `Assertion '${conditionText}' failed${detail}`)
+  }
+  return expr.body === undefined ? undefined : evalExpression(expr.body, ctx, depth + 1)
+}
+
+function evalEchoExpression(
+  expr: Extract<Expr, { kind: 'echo' }>,
+  ctx: EvalContext,
+  depth: number,
+): Value {
+  const values = expr.args.map(argument => {
+    const value = formatOpenScadValue(evalExpression(argument.value, ctx, depth + 1))
+    return argument.name === undefined ? value : `${argument.name} = ${value}`
+  })
+  stableWarning(
+    ctx,
+    expr.p,
+    `ECHO:${values.length ? ` ${values.join(', ')}` : ''}`,
+    'W_OPENSCAD_ECHO',
+    false,
+  )
+  return expr.body === undefined ? undefined : evalExpression(expr.body, ctx, depth + 1)
 }
 
 function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
@@ -721,12 +1247,46 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
   const evaluate = (child: Expr) => evalExpression(child, ctx, depth + 1)
   switch (expr.kind) {
     case 'literal': return expr.value
-    case 'identifier':
+    case 'identifier': {
       if (expr.name === 'PI') return Math.PI
-      if (!ctx.env.has(expr.name)) evaluationError(ctx, expr.p, `Unknown variable ${expr.name}`)
-      return ctx.env.get(expr.name)
-    case 'vector': return registerArrayValue(expr.items.map(evaluate), ctx, expr.p)
+      const resolved = isStableProfile(ctx)
+        ? resolveStableVariable(expr.name, ctx, expr.p)
+        : { found: ctx.env.has(expr.name), value: ctx.env.get(expr.name) }
+      if (!resolved.found) {
+        if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, `Unknown variable ${expr.name}`)
+        stableWarning(ctx, expr.p, `Ignoring unknown variable '${expr.name}'`)
+        return undefined
+      }
+      return resolved.value
+    }
+    case 'vector': {
+      if (!isStableProfile(ctx)) return registerArrayValue(expr.items.map(evaluate), ctx, expr.p)
+      const values: Value[] = []
+      for (const item of expr.items) {
+        const value = evaluate(item)
+        if (isListComprehensionExpression(item) && Array.isArray(value)) {
+          appendComprehensionValues(values, value, item, ctx)
+        } else values.push(value)
+      }
+      return registerArrayValue(values, ctx, expr.p)
+    }
     case 'range': {
+      if (isStableProfile(ctx)) {
+        const start = evaluate(expr.start)
+        const end = evaluate(expr.end)
+        const step = expr.step === undefined ? 1 : evaluate(expr.step)
+        if (typeof start !== 'number' || typeof step !== 'number' || typeof end !== 'number'
+          || ![start, step, end].every(Number.isFinite)) {
+          stableWarning(ctx, expr.p, 'Invalid range bounds produce undef')
+          return undefined
+        }
+        if (step > 0 && start > end) {
+          stableWarning(ctx, expr.p, 'begin is greater than the end, but step is positive')
+        } else if (step < 0 && start < end) {
+          stableWarning(ctx, expr.p, 'begin is smaller than the end, but step is negative')
+        }
+        return { kind: 'range-value', start, step, end }
+      }
       const start = finiteNumber(evaluate(expr.start), ctx, expr.p, 'range start')
       const end = finiteNumber(evaluate(expr.end), ctx, expr.p, 'range end')
       const step = expr.step ? finiteNumber(evaluate(expr.step), ctx, expr.p, 'range step') : 1
@@ -741,11 +1301,18 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
     }
     case 'unary': {
       const value = evaluate(expr.value)
+      if (isStableProfile(ctx)) return openScadUnary(expr.op, value, stableValueContext(ctx, expr.p))
       if (expr.op === TT.Not) return !truthy(value)
       const number = finiteNumber(value, ctx, expr.p, 'unary operand')
       return canonicalNumber(expr.op === TT.Minus ? -number : number)
     }
     case 'binary': {
+      if (isStableProfile(ctx)) {
+        const left = evaluate(expr.left)
+        if (expr.op === TT.And && !openScadTruthy(left)) return false
+        if (expr.op === TT.Or && openScadTruthy(left)) return true
+        return openScadBinary(expr.op, left, evaluate(expr.right), stableValueContext(ctx, expr.p))
+      }
       if (expr.op === TT.And) return truthy(evaluate(expr.left)) && truthy(evaluate(expr.right))
       if (expr.op === TT.Or) return truthy(evaluate(expr.left)) || truthy(evaluate(expr.right))
       const left = evaluate(expr.left)
@@ -772,68 +1339,322 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       if (!Number.isFinite(result)) evaluationError(ctx, expr.p, 'Expression produced a non-finite number')
       return canonicalNumber(result)
     }
-    case 'ternary': return truthy(evaluate(expr.test)) ? evaluate(expr.yes) : evaluate(expr.no)
+    case 'ternary': return (isStableProfile(ctx) ? openScadTruthy(evaluate(expr.test)) : truthy(evaluate(expr.test)))
+      ? evaluate(expr.yes)
+      : evaluate(expr.no)
     case 'index': {
       const value = evaluate(expr.value)
+      if (isStableProfile(ctx)) {
+        return openScadIndex(value, evaluate(expr.index), stableValueContext(ctx, expr.p))
+      }
       const index = Math.trunc(finiteNumber(evaluate(expr.index), ctx, expr.p, 'index'))
       if (Array.isArray(value) || typeof value === 'string') return value[index] as Value
       evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
     }
-    case 'call': return evalBuiltin(expr, ctx, depth)
+    case 'member': {
+      const value = evaluate(expr.value)
+      if (isStableProfile(ctx)) return openScadMember(value, expr.name, stableValueContext(ctx, expr.p))
+      if (Array.isArray(value)) {
+        const index = ({ x: 0, y: 1, z: 2 } as const)[expr.name as 'x' | 'y' | 'z']
+        if (index !== undefined) return value[index]
+      }
+      evaluationError(ctx, expr.p, `Value has no member ${expr.name}`)
+    }
+    case 'function': {
+      const value: FunctionValue = {
+        kind: 'function-value',
+        name: null,
+        params: expr.params,
+        body: expr.body,
+        closure: new Map(ctx.env),
+      }
+      if (isStableProfile(ctx) && ctx.stableScope !== undefined) {
+        return { ...value, lexicalScope: ctx.stableScope } as StableFunctionValue
+      }
+      return value
+    }
+    case 'call': return evalFunctionCall(expr, ctx, depth)
+    case 'let': {
+      if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'let expression is not supported')
+      const env = evaluateSequentialBindings(expr.args, ctx, depth + 1)
+      return evalExpression(expr.body, stableOverlayContext(ctx, env), depth + 1)
+    }
+    case 'assert':
+      if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'assert expression is not supported')
+      return evalAssertExpression(expr, ctx, depth)
+    case 'echo':
+      if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'echo expression is not supported')
+      return evalEchoExpression(expr, ctx, depth)
+    case 'lc-for':
+    case 'lc-for-c':
+    case 'lc-if':
+    case 'lc-let':
+    case 'lc-each':
+      if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'list comprehension is not supported')
+      return registerArrayValue(evalListComprehension(expr, ctx, depth), ctx, expr.p, 'list comprehension')
   }
 }
 
+function isFunctionValue(value: Value): value is FunctionValue {
+  return !Array.isArray(value) && typeof value === 'object' && value !== null
+    && value.kind === 'function-value'
+}
+
+function evalFunctionCall(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
+  if (expr.name !== null) {
+    const declaration = isStableProfile(ctx)
+      ? ctx.stableScope?.functionDeclaration(expr.name)
+      : undefined
+    const definition = declaration?.node ?? ctx.functions.get(expr.name)
+    if (definition && (!isStableProfile(ctx) || declaration !== undefined)) {
+      const value: FunctionValue = {
+        kind: 'function-value',
+        name: definition.name,
+        params: definition.params,
+        body: definition.body,
+        closure: new Map(declaration?.scope.env ?? ctx.env),
+      }
+      return invokeUserFunction(
+        declaration === undefined
+          ? value
+          : { ...value, lexicalScope: declaration.scope } as StableFunctionValue,
+        expr.args,
+        ctx,
+        depth,
+      )
+    }
+    const resolved = isStableProfile(ctx)
+      ? resolveStableVariable(expr.name, ctx, expr.p)
+      : { found: ctx.env.has(expr.name), value: ctx.env.get(expr.name) }
+    if (resolved.found && isFunctionValue(resolved.value)) {
+      return invokeUserFunction(resolved.value, expr.args, ctx, depth)
+    }
+    return evalBuiltin(expr, ctx, depth)
+  }
+  const callee = evalExpression(expr.callee, ctx, depth + 1)
+  if (!isFunctionValue(callee)) evaluationError(ctx, expr.p, 'Expression is not callable')
+  return invokeUserFunction(callee, expr.args, ctx, depth)
+}
+
+function invokeUserFunction(
+  fn: FunctionValue,
+  args: readonly ExpressionArgument[],
+  ctx: EvalContext,
+  depth: number,
+): Value {
+  if (ctx.functionStack.length >= MAX_EVAL_DEPTH) {
+    evaluationError(ctx, args[0]?.p ?? fn.body.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested function calls`)
+  }
+  if (isStableProfile(ctx)) {
+    const lexicalScope = (fn as Partial<StableFunctionValue>).lexicalScope ?? ctx.stableScope
+    if (lexicalScope === undefined) {
+      evaluationError(ctx, args[0]?.p ?? fn.body.p, 'Stable function is missing its lexical scope')
+    }
+    const resolved = resolveStableExpressionArguments(
+      args,
+      fn.params.map(parameter => parameter.name),
+      ctx,
+    )
+    const callerValues = new Map<ExpressionArgument, Value>()
+    for (const argument of args) {
+      callerValues.set(argument, evalExpression(argument.value, ctx, depth + 1))
+    }
+    const definitionEnv = new Map(fn.closure)
+    overlayDynamicVariables(definitionEnv, ctx.env)
+    const definitionContext: EvalContext = {
+      ...ctx,
+      env: definitionEnv,
+      stableScope: lexicalScope,
+      scopeVisibleBefore: Number.POSITIVE_INFINITY,
+    }
+    const env = new Map(definitionEnv)
+    const parameterValues = new Map<string, Value>()
+    for (const parameter of fn.params) {
+      const supplied = resolved.get(parameter.name)
+      if (supplied !== undefined) parameterValues.set(parameter.name, callerValues.get(supplied))
+      else if (parameter.defaultValue !== undefined) {
+        parameterValues.set(parameter.name, evalExpression(
+          parameter.defaultValue,
+          { ...definitionContext, env: new Map(definitionEnv) },
+          depth + 1,
+        ))
+      } else parameterValues.set(parameter.name, undefined)
+    }
+    for (const [name, value] of parameterValues) env.set(name, value)
+    return evalExpression(fn.body, {
+      ...stableOverlayContext(definitionContext, env),
+      functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
+    }, depth + 1)
+  }
+  const positional = args.filter(argument => argument.name === undefined)
+  const named = new Map(args.filter(argument => argument.name !== undefined)
+    .map(argument => [argument.name!, argument] as const))
+  const parameterNames = new Set(fn.params.map(parameter => parameter.name))
+  for (const name of named.keys()) {
+    if (!parameterNames.has(name)) evaluationError(ctx, args.find(argument => argument.name === name)?.p ?? fn.body.p, `Unknown argument ${name}`)
+  }
+  if (positional.length > fn.params.length) evaluationError(ctx, positional[fn.params.length]?.p ?? fn.body.p, 'Too many function arguments')
+
+  const callerValues = new Map<ExpressionArgument, Value>()
+  for (const argument of args) callerValues.set(argument, evalExpression(argument.value, ctx, depth + 1))
+  const env = new Map(fn.closure)
+  for (let index = 0; index < fn.params.length; index++) {
+    const parameter = fn.params[index]
+    const supplied = named.get(parameter.name) ?? positional[index]
+    if (supplied) env.set(parameter.name, callerValues.get(supplied))
+    else if (parameter.defaultValue) env.set(parameter.name, evalExpression(parameter.defaultValue, { ...ctx, env }, depth + 1))
+    else env.set(parameter.name, undefined)
+  }
+  return evalExpression(fn.body, {
+    ...ctx,
+    env,
+    functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
+  }, depth + 1)
+}
+
 function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
-  if (expr.name === 'assert') evaluationError(ctx, expr.p, 'Expression-form assert() is not supported; use statement assert()')
-  const values = expr.args.map(argument => evalExpression(argument, ctx, depth + 1))
-  const nums = () => values.map(value => finiteNumber(value, ctx, expr.p, `${expr.name} argument`))
-  const radians = (degrees: number) => degrees * Math.PI / 180
-  const degrees = (radiansValue: number) => radiansValue * 180 / Math.PI
-  const unary: Record<string, (value: number) => number> = {
-    abs: Math.abs, ceil: Math.ceil, floor: Math.floor, round: Math.round,
-    sqrt: Math.sqrt, exp: Math.exp, ln: Math.log, log: Math.log10,
-    sin: value => Math.sin(radians(value)), cos: value => Math.cos(radians(value)),
-    tan: value => Math.tan(radians(value)), asin: value => degrees(Math.asin(value)),
-    acos: value => degrees(Math.acos(value)), atan: value => degrees(Math.atan(value)),
-    sign: Math.sign,
+  const name = expr.name
+  if (name === null) evaluationError(ctx, expr.p, 'Expression is not callable')
+  if (name === 'assert') evaluationError(ctx, expr.p, 'Expression-form assert() is not supported; use statement assert()')
+  if (isStableProfile(ctx) && (name === 'dxf_dim' || name === 'dxf_cross')) {
+    semanticProjectAssetRequired(ctx, expr.p, undefined, `${name}()`)
   }
-  if (unary[expr.name]) {
-    const result = unary[expr.name](nums()[0] ?? 0)
-    if (!Number.isFinite(result)) evaluationError(ctx, expr.p, `${expr.name} produced a non-finite number`)
-    return canonicalNumber(result)
+  if (!isStableProfile(ctx) && expr.args.some(argument => argument.name !== undefined)) {
+    evaluationError(ctx, expr.p, `${name}() does not accept named arguments in this engine revision`)
   }
-  if (expr.name === 'atan2') return canonicalNumber(degrees(Math.atan2(...nums().slice(0, 2) as [number, number])))
-  if (expr.name === 'pow') {
-    const result = (nums()[0] ?? 0) ** (nums()[1] ?? 0)
-    if (!Number.isFinite(result)) evaluationError(ctx, expr.p, 'pow produced a non-finite number')
-    return canonicalNumber(result)
+  const values = expr.args.map(argument => {
+    // OpenSCAD deliberately permits probing an undeclared bare name with
+    // is_undef() without emitting the ordinary unknown-variable warning.
+    if (isStableProfile(ctx) && name === 'is_undef' && expr.args.length === 1
+      && argument.value.kind === 'identifier') {
+      if (argument.value.name === 'PI') return Math.PI
+      const resolved = resolveStableVariable(argument.value.name, ctx, argument.value.p)
+      return resolved.found ? resolved.value : undefined
+    }
+    return evalExpression(argument.value, ctx, depth + 1)
+  })
+  let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>
+  try {
+    result = evaluateOpenScadBuiltinFunction(
+      name,
+      values as OpenScadBuiltinValue[],
+      {
+        error: message => {
+          if (isStableProfile(ctx)) throw new StableBuiltinValueError(message)
+          return evaluationError(ctx, expr.p, message)
+        },
+        warning: message => stableWarning(ctx, expr.p, message, 'W_OPENSCAD_BUILTIN'),
+        registerArray: (items, label) => {
+          if (items.length > MAX_VALUE_ELEMENTS) {
+            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
+          }
+          return registerArrayValue([...items] as Value[], ctx, expr.p, label)
+        },
+        registerString: (value, label) => {
+          if (value.length > MAX_VALUE_ELEMENTS) {
+            evaluationError(ctx, expr.p, `${label} exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
+          }
+          return registerStringValue(value, ctx, expr.p, label)
+        },
+        random: Math.random,
+        parentModule: moduleDepth => ctx.moduleStack.at(-1 - moduleDepth),
+        isFunction: value => isFunctionValue(value as Value),
+      },
+    )
+  } catch (error) {
+    if (!(error instanceof StableBuiltinValueError)) throw error
+    stableWarning(ctx, expr.p, error.message, 'W_OPENSCAD_BUILTIN')
+    return undefined
   }
-  if (expr.name === 'min' || expr.name === 'max') {
-    const input = values.length === 1 && Array.isArray(values[0]) ? values[0] : values
-    const numbers = input.map(value => finiteNumber(value, ctx, expr.p, `${expr.name} argument`))
-    return canonicalNumber(expr.name === 'min' ? Math.min(...numbers) : Math.max(...numbers))
-  }
-  if (expr.name === 'len') {
-    const value = values[0]
-    return Array.isArray(value) || typeof value === 'string' ? value.length : 0
-  }
-  if (expr.name === 'norm') return canonicalNumber(Math.hypot(...vectorValue(values[0], ctx, expr.p, 'norm vector')))
-  if (expr.name === 'concat') {
-    const result = values.flatMap(value => Array.isArray(value) ? value : [value])
-    if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `concat() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
-    return registerArrayValue(result, ctx, expr.p, 'concat() result')
-  }
-  if (expr.name === 'str') {
-    const result = values.map(valueToString).join('')
-    if (result.length > MAX_VALUE_ELEMENTS) evaluationError(ctx, expr.p, `str() result exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} characters`)
-    return registerStringValue(result, ctx, expr.p, 'str() result')
-  }
-  evaluationError(ctx, expr.p, `Unsupported function ${expr.name}()`)
+  if (!result.recognized) evaluationError(ctx, expr.p, `Unsupported function ${name}()`)
+  return result.value as Value
 }
 
 function arg(node: CallNode, name: string, position: number, fallback: Value, ctx: EvalContext): Value {
   const expression = node.args[name] ?? node.args[`_${position}`]
   return expression ? evalExpression(expression, ctx) : fallback
+}
+
+function callExpressionArguments(node: CallNode): ExpressionArgument[] {
+  if (node.callArguments !== undefined) return [...node.callArguments]
+  return Object.entries(node.args).map(([key, value]) => {
+    const span = node.argSpans[key]
+    return {
+      name: node.argKinds[key] === 'named' ? key : undefined,
+      value,
+      p: span?.start ?? value.p,
+      end: span?.end ?? value.p,
+    }
+  })
+}
+
+interface EvaluatedStableCompatibilityArguments {
+  readonly authored: readonly ExpressionArgument[]
+  readonly values: ReadonlyMap<string, Value>
+  readonly evaluated: ReadonlyMap<ExpressionArgument, Value>
+}
+
+/** Bind legacy built-in modules from the complete authored argument stream. */
+function evaluateStableCompatibilityArguments(
+  node: CallNode,
+  positionalNames: readonly string[],
+  namedOnlyNames: readonly string[],
+  ctx: EvalContext,
+): EvaluatedStableCompatibilityArguments {
+  const authored = callExpressionArguments(node)
+  const allowed = new Set([...positionalNames, ...namedOnlyNames])
+  const resolved = new Map<string, ExpressionArgument>()
+  for (const argument of authored) {
+    const name = argument.name ?? positionalNames.find(parameter => !resolved.has(parameter))
+    if (name === undefined) {
+      stableWarning(ctx, argument.p, `Ignoring excess positional argument to ${node.name}()`)
+      continue
+    }
+    if (!allowed.has(name)) {
+      stableWarning(ctx, argument.p, `Ignoring unknown argument ${name} to ${node.name}()`)
+      continue
+    }
+    if (resolved.has(name)) {
+      stableWarning(ctx, argument.p, `Argument ${name} was specified more than once for ${node.name}()`)
+    }
+    resolved.set(name, argument)
+  }
+
+  // Stable module calls evaluate every authored argument exactly once. The
+  // preserved stream matters for duplicate names and ignored expressions.
+  const evaluated = new Map<ExpressionArgument, Value>()
+  for (const argument of authored) evaluated.set(argument, evalExpression(argument.value, ctx))
+  return Object.freeze({
+    authored: Object.freeze(authored),
+    evaluated,
+    values: new Map([...resolved].map(([name, argument]) => [name, evaluated.get(argument)])),
+  })
+}
+
+function semanticProjectAssetRequired(
+  ctx: EvalContext,
+  position: number,
+  end: number | undefined,
+  callable: string,
+): never {
+  throw new OpenSCADParseError(
+    ctx.source,
+    position,
+    `${callable} requires an OpenSCAD project asset context; single-source semantic lowering cannot resolve project files.`,
+    'E_IMPORT_PROJECT_REQUIRED',
+    end,
+  )
+}
+
+function stableCompatibilityDeprecation(
+  node: CallNode,
+  ctx: EvalContext,
+  replacement: string,
+): void {
+  const message = node.name === 'child'
+    ? 'child() will be removed in future releases. Use children() instead.'
+    : `The ${node.name}() module will be removed in future releases. Use ${replacement} instead.`
+  stableWarning(ctx, node.p, message, 'W_OPENSCAD_DEPRECATED')
 }
 
 function compactDiagnosticText(value: string, limit = 240): string {
@@ -873,38 +1694,122 @@ function collectModules(nodes: readonly Statement[], modules: Map<string, Module
   }
 }
 
+function collectFunctions(nodes: readonly Statement[], functions: Map<string, FunctionNode>): void {
+  for (const node of nodes) {
+    if (node.type === 'function') functions.set(node.name, node)
+    if (node.type === 'call') {
+      collectFunctions(node.children, functions)
+      collectFunctions(node.alternative, functions)
+    } else if (node.type === 'module') collectFunctions(node.children, functions)
+  }
+}
+
+function detachedChildrenContinuationMap(
+  root: CallNode,
+  passed: Readonly<PassedCallChildren> | undefined,
+): ReadonlyMap<CallNode, Readonly<PassedCallChildren>> | undefined {
+  if ((root.name !== 'children' && root.name !== 'child') || passed === undefined) return undefined
+  const result = new Map<CallNode, Readonly<PassedCallChildren>>([[root, passed]])
+  const visited = new Set<Readonly<PassedCallChildren>>()
+  let current: Readonly<PassedCallChildren> | undefined = passed
+  while (current !== undefined && !visited.has(current)) {
+    visited.add(current)
+    const continuation: Readonly<PassedCallChildren> | undefined = current.continuation
+    if (continuation === undefined) break
+    const collectConsumers = (statements: readonly Statement[]): void => {
+      for (const statement of statements) {
+        if (statement.type !== 'call') continue
+        if (statement.name === 'children' || statement.name === 'child') result.set(statement, continuation)
+        collectConsumers(statement.children)
+        collectConsumers(statement.alternative)
+      }
+    }
+    collectConsumers(current.statements)
+    current = continuation
+  }
+  return result
+}
+
 function evalNodes(nodes: readonly Statement[], parent: EvalContext, scoped = true): SemanticShape[] {
-  const ctx: EvalContext = { ...parent, env: scoped ? new Map(parent.env) : parent.env }
+  const ctx: EvalContext = isStableProfile(parent)
+    ? enterStableStatementScope(nodes, parent)
+    : { ...parent, env: scoped ? new Map(parent.env) : parent.env }
+  return evalPreparedNodes(nodes, ctx)
+}
+
+function viewportSemanticSlots(node: CallNode, ctx: EvalContext): SemanticDynamicSlot[] {
+  if (!isStableProfile(ctx) || ctx.viewportRootOwner === node) return []
+  const slots: SemanticDynamicSlot[] = []
+  if (hasOpenScadViewportModifier(node, 'highlight')) {
+    slots.push(semanticSlot('$viewport-highlight', true))
+  }
+  if (hasOpenScadViewportModifier(node, 'background')) {
+    slots.push(semanticSlot('$viewport-background', true))
+  }
+  return slots
+}
+
+function viewportRootActivates(node: CallNode, shapes: readonly SemanticShape[]): boolean {
+  if (shapes.length > 0) return true
+  // These effect/branch calls do not contribute an empty CSG container in
+  // OpenSCAD 2021.01. Other evaluated module instantiations do, so a `!` on
+  // union(), transform{}, group{}, for(empty), or an empty user module still
+  // wins and deliberately yields an empty top-level result.
+  return !['if', 'assert', 'echo', 'children', 'child'].includes(node.name)
+}
+
+function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): SemanticShape[] {
   const output: SemanticShape[] = []
   for (const statement of nodes) {
+    if (isStableProfile(ctx) && statement.type === 'call'
+      && hasOpenScadViewportModifier(statement, 'disable')) {
+      // `*` is the sole modifier which suppresses language evaluation itself.
+      continue
+    }
     const occurrenceStart = ctx.builder.occurrences.length
+    const background = isStableProfile(ctx) && statement.type === 'call'
+      && ctx.viewportRootOwner !== statement
+      && hasOpenScadViewportModifier(statement, 'background')
+    const backgroundCheckpoint = background && ctx.quality === 'full'
+      ? ctx.builder.runtimeCheckpoint()
+      : null
     try {
       poll(ctx)
       if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
       if (statement.type === 'assign') {
         ctx.builder.invocation(statement, ctx.parentOccurrence, ctx.pendingSlots)
-        ctx.env.set(statement.name, evalExpression(statement.value, ctx))
+        if (!isStableProfile(ctx)) ctx.env.set(statement.name, evalExpression(statement.value, ctx))
         continue
       }
       if (statement.type === 'module') {
         ctx.builder.invocation(statement, ctx.parentOccurrence, ctx.pendingSlots)
         continue
       }
-      output.push(...evalNode(statement, ctx))
+      if (statement.type === 'function') continue
+      const shapes = evalNode(statement, ctx)
+      if (backgroundCheckpoint !== null) {
+        ctx.builder.rollbackRuntime(backgroundCheckpoint)
+      } else {
+        output.push(...shapes)
+        if (background && shapes.length > 0) ctx.reduced.value = true
+      }
       if (output.length > MAX_SHAPES) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
     } catch (error) {
       const capturable = error instanceof OpenSCADParseError
         || error instanceof LegacyBindingCompatibilityError
       if (capturable && ctx.builder.terminalOccurrence === null) {
         const operation = ctx.builder.registered.byStatement.get(statement)
+        // Full-profile echo is intentionally transparent in semantic-program
+        // v1. An expression error inside that effect has no static occurrence
+        // to attach to, so preserve the positioned language error instead of
+        // replacing it with an internal registry failure.
+        if (operation === undefined) throw error
         let occurrence = -1
-        if (operation !== undefined) {
-          for (let index = ctx.builder.occurrences.length - 1; index >= occurrenceStart; index--) {
-            const candidate = ctx.builder.occurrences[index]
-            if (candidate.operation === operation && candidate.parent === ctx.parentOccurrence) {
-              occurrence = index
-              break
-            }
+        for (let index = ctx.builder.occurrences.length - 1; index >= occurrenceStart; index--) {
+          const candidate = ctx.builder.occurrences[index]
+          if (candidate.operation === operation && candidate.parent === ctx.parentOccurrence) {
+            occurrence = index
+            break
           }
         }
         if (occurrence < 0) {
@@ -1086,7 +1991,12 @@ function invoke(
   ctx: EvalContext,
   slots: readonly SemanticDynamicSlot[] = [],
 ): number {
-  return ctx.builder.invocation(node, ctx.parentOccurrence, [...ctx.pendingSlots, ...slots])
+  const viewportSlots = node.type === 'call' ? viewportSemanticSlots(node, ctx) : []
+  return ctx.builder.invocation(
+    node,
+    ctx.parentOccurrence,
+    [...ctx.pendingSlots, ...viewportSlots, ...slots],
+  )
 }
 
 function nodeValueType(shape: SemanticShape, ctx: EvalContext): SemanticValueType {
@@ -1110,6 +2020,17 @@ function semanticSegments(
   minimum: number,
 ): number | null {
   const requested = requestedSegments(node, ctx)
+  return semanticSegmentsFromRequested(node, ctx, occurrence, requested, fallback, minimum)
+}
+
+function semanticSegmentsFromRequested(
+  node: CallNode,
+  ctx: EvalContext,
+  occurrence: number,
+  requested: number | null,
+  fallback: number,
+  minimum: number,
+): number | null {
   if (ctx.builder.languageContract === 'openscad-viewer/brep-1') {
     ctx.builder.addTessellationIntent(occurrence, requested, ctx.env)
     return null
@@ -1340,12 +2261,251 @@ function makePolygon(node: CallNode, ctx: EvalContext): SemanticShape[] {
   }, primitiveColor(ctx))]
 }
 
+function compatibilityRequestedSegments(
+  values: ReadonlyMap<string, Value>,
+  node: CallNode,
+  ctx: EvalContext,
+): number | null {
+  const local = values.get('$fn')
+  const global = ctx.env.get('$fn')
+  const raw = local === undefined || local === 0 ? global : local
+  return raw === undefined || raw === 0
+    ? null
+    : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
+}
+
+function compatibilityPlanarChildren(
+  node: CallNode,
+  occurrence: number,
+  ctx: EvalContext,
+): SemanticShape[] {
+  const children = frameChildren(node, node.children, occurrence, ctx)
+  const planar = children.filter(shape => shape.dimension === 'region2')
+  if (planar.length !== children.length) {
+    stableWarning(
+      ctx,
+      node.p,
+      `${node.name}() ignored non-2D child geometry`,
+      'W_OPENSCAD_COMPATIBILITY_CHILD',
+    )
+  }
+  return planar
+}
+
+function evalDxfLinearExtrude(node: CallNode, ctx: EvalContext): SemanticShape[] {
+  stableCompatibilityDeprecation(node, ctx, 'linear_extrude()')
+  const evaluated = evaluateStableCompatibilityArguments(
+    node,
+    ['file', 'layer', 'height', 'origin', 'scale', 'center', 'twist', 'slices'],
+    ['convexity', '$fn', '$fa', '$fs'],
+    ctx,
+  )
+  const file = evaluated.values.get('file')
+  if (typeof file === 'string' && file.length > 0) {
+    semanticProjectAssetRequired(ctx, node.p, node.end, 'dxf_linear_extrude()')
+  }
+
+  let heightValue = evaluated.values.get('height')
+  const first = evaluated.authored[0]
+  if (heightValue === undefined && first?.name === undefined) {
+    const firstValue = evaluated.evaluated.get(first)
+    if (typeof firstValue === 'number') heightValue = firstValue
+  }
+  let height = typeof heightValue === 'number' && Number.isFinite(heightValue) ? heightValue : 100
+  if (height <= 0) height = 0
+
+  const rawScale = evaluated.values.get('scale')
+  let scale: readonly [number, number] = [1, 1]
+  if (typeof rawScale === 'number' && Number.isFinite(rawScale)) {
+    scale = [Math.max(0, rawScale), Math.max(0, rawScale)]
+  } else if (Array.isArray(rawScale) && rawScale.length === 2) {
+    const scaleX = rawScale[0]
+    const scaleY = rawScale[1]
+    if (typeof scaleX === 'number' && Number.isFinite(scaleX)
+      && typeof scaleY === 'number' && Number.isFinite(scaleY)) {
+      scale = [Math.max(0, scaleX), Math.max(0, scaleY)]
+    }
+  }
+  const twistValue = evaluated.values.get('twist')
+  const twistDegrees = typeof twistValue === 'number' && Number.isFinite(twistValue) ? twistValue : 0
+  const slicesValue = evaluated.values.get('slices')
+  const slices = typeof slicesValue === 'number' && Number.isFinite(slicesValue) && slicesValue > 0
+    ? Math.min(MAX_EXTRUDE_SLICES, Math.trunc(slicesValue))
+    : 0
+  const center = evaluated.values.get('center') === true
+
+  const occurrence = invoke(node, ctx)
+  const shapes = compatibilityPlanarChildren(node, occurrence, ctx)
+  if (height === 0 || shapes.length === 0) return []
+  const profile = unionReduceInternal(shapes, ctx, node.p)!
+  const inputType = ctx.builder.nodes[profile.node].valueType
+  return [ctx.builder.produce(occurrence, {
+    kind: 'linear-extrude',
+    valueType: { ...inputType, geometryKind: 'solid-set', space: 'd3' },
+    input: profile.node,
+    height,
+    twistDegrees,
+    slices,
+    scale,
+    center,
+  }, profile.color)]
+}
+
+function evalDxfRotateExtrude(node: CallNode, ctx: EvalContext): SemanticShape[] {
+  stableCompatibilityDeprecation(node, ctx, 'rotate_extrude()')
+  const evaluated = evaluateStableCompatibilityArguments(
+    node,
+    ['file', 'layer', 'origin', 'scale'],
+    ['convexity', 'angle', '$fn', '$fa', '$fs'],
+    ctx,
+  )
+  const file = evaluated.values.get('file')
+  if (file !== undefined && (typeof file !== 'string' || file.length > 0)) {
+    semanticProjectAssetRequired(ctx, node.p, node.end, 'dxf_rotate_extrude()')
+  }
+  const rawAngle = evaluated.values.get('angle')
+  let angleDegrees = typeof rawAngle === 'number' && Number.isFinite(rawAngle) ? rawAngle : 360
+  if (angleDegrees <= -360 || angleDegrees > 360) angleDegrees = 360
+
+  const occurrence = invoke(node, ctx)
+  const shapes = compatibilityPlanarChildren(node, occurrence, ctx)
+  if (angleDegrees === 0 || shapes.length === 0) return []
+  const profile = unionReduceInternal(shapes, ctx, node.p)!
+  const requested = compatibilityRequestedSegments(evaluated.values, node, ctx)
+  const segments = semanticSegmentsFromRequested(node, ctx, occurrence, requested, 48, 3)
+  const valueType = {
+    ...ctx.builder.nodes[profile.node].valueType,
+    geometryKind: 'solid-set' as const,
+    space: 'd3' as const,
+  }
+  return [ctx.builder.produce(occurrence, segments === null ? {
+    kind: 'rotate-extrude-analytic', valueType, input: profile.node, angleDegrees,
+  } : {
+    kind: 'rotate-extrude-polygonal', valueType, input: profile.node, angleDegrees, radialSegments: segments,
+  }, profile.color)]
+}
+
+function evalPassedCallChildren(
+  node: CallNode,
+  ctx: EvalContext,
+  occurrence: number,
+  indexValue: Value,
+  passed: Readonly<PassedCallChildren>,
+  statements: readonly Statement[],
+): SemanticShape[] {
+  if (statements.length === 0) return []
+  const currentOperation = ctx.builder.registered.byStatement.get(node)
+  const expansionOperation = ctx.builder.registered.expansionByCall.get(node)
+    ?? passed.expansionOperation
+  const expansionPath = ctx.builder.registered.operations[expansionOperation].structuralPath
+  const currentPath = currentOperation === undefined
+    ? []
+    : ctx.builder.registered.operations[currentOperation].structuralPath
+  const legacyReentry = !isStableProfile(ctx)
+    && ctx.builder.languageContract === 'legacy/current'
+    && expansionPath.length < currentPath.length
+    && expansionPath.every((segment, index) => {
+      const candidate = currentPath[index]
+      return segment.kind === candidate.kind
+        && segment.name === candidate.name
+        && segment.ordinal === candidate.ordinal
+    })
+  const expansion = legacyReentry
+    ? occurrence
+    : ctx.builder.invocationOperation(
+      expansionOperation,
+      occurrence,
+      [semanticSlot('$index', indexValue)],
+    )
+  return evalNodes(statements, {
+    ...ctx,
+    env: new Map(passed.env),
+    stableScope: isStableProfile(ctx) ? passed.scope ?? ctx.stableScope : ctx.stableScope,
+    scopeVisibleBefore: Number.POSITIVE_INFINITY,
+    parentOccurrence: expansion,
+    pendingSlots: [],
+    callChildren: !isStableProfile(ctx) && ctx.builder.languageContract === 'legacy/current'
+      ? passed
+      : passed.continuation,
+  })
+}
+
 function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
+  if (isStableProfile(parent) && !parent.viewportRootLocked
+    && hasOpenScadViewportModifier(node, 'root')) {
+    // Selection is runtime-first and value-producing, not syntax-first: an
+    // unvisited false branch, unused module, or empty call cannot suppress
+    // later geometry. Probe the candidate with nested roots locked, then replay
+    // a non-empty winner against the captured environment as a detached root.
+    const diagnosticsBeforeCandidate = parent.builder.diagnosticCheckpoint()
+    const shapes = evalNode(node, {
+      ...parent,
+      viewportRootLocked: true,
+      viewportRootOwner: node,
+    })
+    if (viewportRootActivates(node, shapes)) {
+      throw new StableViewportRootSelection(node, parent, diagnosticsBeforeCandidate)
+    }
+    return shapes
+  }
   if (parent.depth >= MAX_EVAL_DEPTH) evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
   const ctx: EvalContext = { ...parent, depth: parent.depth + 1 }
 
   switch (node.name) {
+    case 'assign': {
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation assign()')
+      const env = new Map(ctx.env)
+      const bindings = new Map<string, Value>()
+      for (const argument of callExpressionArguments(node)) {
+        // Historical assign() ignores positional arguments without evaluating
+        // them, and evaluates every named RHS against the caller in parallel.
+        if (argument.name === undefined) continue
+        const value = evalExpression(argument.value, ctx)
+        bindings.set(argument.name, value)
+        env.set(argument.name, value)
+      }
+      const occurrence = invoke(
+        node,
+        ctx,
+        [...bindings].map(([name, value]) => semanticSlot(name, value)),
+      )
+      return frameChildren(node, node.children, occurrence, stableOverlayContext(ctx, env))
+    }
+    case 'dxf_linear_extrude':
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation dxf_linear_extrude()')
+      return evalDxfLinearExtrude(node, ctx)
+    case 'dxf_rotate_extrude':
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation dxf_rotate_extrude()')
+      return evalDxfRotateExtrude(node, ctx)
+    case 'import_stl':
+    case 'import_off':
+    case 'import_dxf':
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, `Unsupported geometry operation ${node.name}()`)
+      return semanticProjectAssetRequired(ctx, node.p, node.end, `${node.name}()`)
     case 'assert': {
+      if (isStableProfile(ctx)) {
+        const args = callExpressionArguments(node)
+        const resolved = resolveStableExpressionArguments(args, ['condition', 'message'], ctx)
+        const conditionArgument = resolved.get('condition')
+        const messageArgument = resolved.get('message')
+        const condition = conditionArgument === undefined
+          ? undefined
+          : evalExpression(conditionArgument.value, ctx)
+        const message = messageArgument === undefined
+          ? undefined
+          : evalExpression(messageArgument.value, ctx)
+        const conditionText = conditionArgument === undefined
+          ? 'undef'
+          : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
+        const occurrence = invoke(node, ctx, [semanticSlot('condition', condition), semanticSlot('message', message)])
+        if (!openScadTruthy(condition)) {
+          const detail = messageArgument === undefined
+            ? ''
+            : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
+          evaluationError(ctx, node.p, `Assertion '${conditionText}' failed${detail}`)
+        }
+        return ctx.builder.alias(occurrence, frameChildren(node, node.children, occurrence, ctx), false)
+      }
       const bound = bindAssertArguments(node, ctx)
       const condition = evalExpression(bound.condition, ctx)
       const message = bound.message ? evalExpression(bound.message, ctx) : undefined
@@ -1500,13 +2660,20 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       // implicit union) before it starts evaluating any cutter statement.
       // Keep those two scoped evalNodes calls separate: kernel failure in the
       // base must win over a later cutter-language diagnostic.
+      const childContext = framed !== null && isStableProfile(ctx)
+        ? enterStableStatementScope(node.children, framed)
+        : null
       const baseShapes = framed === null || node.children.length === 0
         ? []
-        : evalNodes(node.children.slice(0, 1), framed)
+        : childContext === null
+          ? evalNodes(node.children.slice(0, 1), framed)
+          : evalPreparedNodes(node.children.slice(0, 1), childContext)
       const base = unionReduceInternal(baseShapes, ctx, node.p)
       const cutterShapes = framed === null
         ? []
-        : evalNodes(node.children.slice(1), framed)
+        : childContext === null
+          ? evalNodes(node.children.slice(1), framed)
+          : evalPreparedNodes(node.children.slice(1), childContext)
       const cutters = unionReduceInternal(cutterShapes, ctx, node.p)
       if (base === null) {
         if (cutters !== null) {
@@ -1611,12 +2778,47 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const occurrence = invoke(node, ctx)
       return frameChildren(node, node.children, occurrence, ctx)
     }
+    case 'echo': {
+      if (!isStableProfile(ctx)) {
+        evaluationError(ctx, node.p, 'Unsupported geometry operation echo()')
+      }
+      const values = Object.entries(node.args).map(([name, expression]) => {
+        const value = formatOpenScadValue(evalExpression(expression, ctx))
+        return node.argKinds[name] === 'named' ? `${name} = ${value}` : value
+      })
+      const message = `ECHO:${values.length ? ` ${values.join(', ')}` : ''}`
+      ctx.builder.warn(
+        null,
+        'W_OPENSCAD_ECHO',
+        [],
+        message,
+        { start: node.p, end: node.end },
+        false,
+      )
+      const viewportSlots = viewportSemanticSlots(node, ctx)
+      return evalNodes(node.children, viewportSlots.length === 0
+        ? ctx
+        : { ...ctx, pendingSlots: [...ctx.pendingSlots, ...viewportSlots] })
+    }
     case 'if': {
-      const branch = truthy(arg(node, '_0', 0, false, ctx))
+      const condition = arg(node, '_0', 0, false, ctx)
+      const branch = isStableProfile(ctx) ? openScadTruthy(condition) : truthy(condition)
       const occurrence = invoke(node, ctx, [semanticSlot('$branch', branch)])
       return frameChildren(node, branch ? node.children : node.alternative, occurrence, ctx, !branch)
     }
     case 'let': {
+      if (isStableProfile(ctx)) {
+        const args = callExpressionArguments(node)
+        const env = evaluateSequentialBindings(args, ctx, 0)
+        const slots: SemanticDynamicSlot[] = []
+        for (const argument of args) {
+          if (argument.name !== undefined && env.has(argument.name)) {
+            slots.push(semanticSlot(argument.name, env.get(argument.name)))
+          }
+        }
+        const occurrence = invoke(node, ctx, slots)
+        return frameChildren(node, node.children, occurrence, stableOverlayContext(ctx, env))
+      }
       const env = new Map(ctx.env)
       const slots: SemanticDynamicSlot[] = []
       const bindings = Object.entries(node.args)
@@ -1630,6 +2832,48 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       return frameChildren(node, node.children, occurrence, { ...ctx, env })
     }
     case 'for': {
+      if (isStableProfile(ctx)) {
+        const bindings = callExpressionArguments(node)
+        const output: SemanticShape[] = []
+        const visit = (
+          bindingIndex: number,
+          iterationContext: EvalContext,
+          slots: readonly SemanticDynamicSlot[],
+        ): void => {
+          if (bindingIndex >= bindings.length) {
+            const occurrence = invoke(node, ctx, slots)
+            output.push(...frameChildren(node, node.children, occurrence, iterationContext))
+            if (output.length > MAX_SHAPES) {
+              evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+            }
+            return
+          }
+          const binding = bindings[bindingIndex]
+          const values = stableIterable(
+            evalExpression(binding.value, iterationContext),
+            iterationContext,
+            binding.p,
+          )
+          if (binding.name === undefined) {
+            stableWarning(ctx, binding.p, 'Ignoring for() iterator without variable name')
+            return
+          }
+          for (const value of values) {
+            if (++ctx.budget.ops > MAX_EVAL_OPS) {
+              evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+            }
+            const env = new Map(iterationContext.env)
+            env.set(binding.name, value)
+            visit(
+              bindingIndex + 1,
+              stableOverlayContext(iterationContext, env),
+              [...slots, semanticSlot(binding.name, value)],
+            )
+          }
+        }
+        visit(0, ctx, [])
+        return output
+      }
       const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
       if (entries.length !== 1) evaluationError(ctx, node.p, 'for() currently requires one named iterator')
       const [name, expression] = entries[0]
@@ -1646,6 +2890,42 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       }
       return output
     }
+    case 'child': {
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation child()')
+      stableCompatibilityDeprecation(node, ctx, 'children()')
+      const authored = callExpressionArguments(node)
+      const indexValue = authored[0] === undefined
+        ? 0
+        : evalExpression(authored[0].value, ctx)
+      const childIndex = typeof indexValue === 'number' && Number.isFinite(indexValue)
+        ? Math.trunc(indexValue)
+        : 0
+      const occurrence = invoke(node, ctx, [semanticSlot('$index', indexValue)])
+      if (childIndex < 0) {
+        stableWarning(
+          ctx,
+          node.p,
+          `Negative child index (${childIndex}) not allowed`,
+          'W_OPENSCAD_CHILD',
+          false,
+        )
+        return []
+      }
+      const passed = ctx.callChildren
+      if (!passed) return []
+      const statement = passed.statements[childIndex]
+      if (statement === undefined) {
+        stableWarning(
+          ctx,
+          node.p,
+          `Child index (${childIndex}) out of bounds (${passed.statements.length} children)`,
+          'W_OPENSCAD_CHILD',
+          false,
+        )
+        return []
+      }
+      return evalPassedCallChildren(node, ctx, occurrence, indexValue, passed, [statement])
+    }
     case 'children': {
       const indexValue = arg(node, '_0', 0, undefined, ctx)
       const childIndex = indexValue === undefined
@@ -1658,68 +2938,80 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (childIndex !== null) {
         statements = passed.statements[childIndex] ? [passed.statements[childIndex]] : []
       }
-      if (statements.length === 0) return []
-      const currentOperation = ctx.builder.registered.byStatement.get(node)
-      const expansionPath = ctx.builder.registered.operations[passed.expansionOperation].structuralPath
-      const currentPath = currentOperation === undefined
-        ? []
-        : ctx.builder.registered.operations[currentOperation].structuralPath
-      const legacyReentry = ctx.builder.languageContract === 'legacy/current'
-        && expansionPath.length < currentPath.length
-        && expansionPath.every((segment, index) => {
-          const candidate = currentPath[index]
-          return segment.kind === candidate.kind
-            && segment.name === candidate.name
-            && segment.ordinal === candidate.ordinal
-        })
-      // The initial module continuation instantiates its compiler-owned
-      // $expansion frame. The pinned legacy evaluator can then re-enter the
-      // already-expanded child-set from a children() authored inside that
-      // same subtree. That is a runtime control edge, not a second lexical
-      // expansion frame; retaining the children() occurrence as the parent
-      // lets ordinary depth accounting reproduce finite selection or natural
-      // recursion without forging another continuation anchor.
-      const expansion = legacyReentry
-        ? occurrence
-        : ctx.builder.invocationOperation(
-          passed.expansionOperation,
-          occurrence,
-          [semanticSlot('$index', indexValue)],
-        )
-      return evalNodes(statements, {
-        ...ctx,
-        env: new Map(passed.env),
-        parentOccurrence: expansion,
-        pendingSlots: [],
-        // The pinned legacy evaluator runs an expanded child with the same
-        // child-set still installed. This naturally recurses only when the
-        // selected statement itself calls children(); an out-of-range index
-        // or a selected non-children sibling terminates normally. brep-1 uses
-        // the corrected lexical continuation instead.
-        callChildren: ctx.builder.languageContract === 'legacy/current'
-          ? passed
-          : passed.continuation,
-      })
+      return evalPassedCallChildren(node, ctx, occurrence, indexValue, passed, statements)
     }
   }
 
-  const module = ctx.modules.get(node.name)
-  if (module) return evalUserModule(node, module, ctx)
+  if (isStableProfile(ctx)) {
+    const declaration = ctx.stableScope?.moduleDeclaration(node.name)
+    if (declaration !== undefined) return evalUserModule(node, declaration.node, ctx, declaration.scope)
+  } else {
+    const module = ctx.modules.get(node.name)
+    if (module) return evalUserModule(node, module, ctx)
+  }
   evaluationError(ctx, node.p, `Unsupported geometry operation ${node.name}()`)
 }
 
-function evalUserModule(call: CallNode, module: ModuleNode, ctx: EvalContext): SemanticShape[] {
-  const env = new Map(ctx.env)
-  const positional = Object.entries(call.args)
-    .filter(([name]) => name.startsWith('_'))
-    .sort(([left], [right]) => Number(left.slice(1)) - Number(right.slice(1)))
+function evalUserModule(
+  call: CallNode,
+  module: ModuleNode,
+  ctx: EvalContext,
+  definitionScope?: OpenScadStableScope,
+): SemanticShape[] {
+  let env = new Map(ctx.env)
   const slots: SemanticDynamicSlot[] = []
-  for (let index = 0; index < module.params.length; index++) {
-    const parameter = module.params[index]
-    const expression = call.args[parameter.name] ?? positional[index]?.[1] ?? parameter.defaultValue
-    const value = expression ? evalExpression(expression, { ...ctx, env }) : undefined
-    env.set(parameter.name, value)
-    slots.push(semanticSlot(parameter.name, value))
+  let moduleContext = ctx
+  if (isStableProfile(ctx)) {
+    if (definitionScope === undefined) {
+      evaluationError(ctx, call.p, `Stable module ${module.name}() is missing its lexical scope`)
+    }
+    const moduleStack = [...ctx.moduleStack, module.name]
+    const definitionEnv = new Map(definitionScope.env)
+    overlayDynamicVariables(definitionEnv, ctx.env)
+    definitionEnv.set('$children', call.children.length)
+    definitionEnv.set('$parent_modules', moduleStack.length)
+    moduleContext = {
+      ...ctx,
+      env: definitionEnv,
+      stableScope: definitionScope,
+      scopeVisibleBefore: Number.POSITIVE_INFINITY,
+      moduleStack,
+    }
+    const args = callExpressionArguments(call)
+    const resolved = resolveStableExpressionArguments(
+      args,
+      module.params.map(parameter => parameter.name),
+      ctx,
+    )
+    const callerValues = new Map<ExpressionArgument, Value>()
+    for (const argument of args) callerValues.set(argument, evalExpression(argument.value, ctx))
+    const parameterValues = new Map<string, Value>()
+    for (const parameter of module.params) {
+      const supplied = resolved.get(parameter.name)
+      const value = supplied !== undefined
+        ? callerValues.get(supplied)
+        : parameter.defaultValue !== undefined
+          ? evalExpression(parameter.defaultValue, { ...moduleContext, env: new Map(definitionEnv) })
+          : undefined
+      parameterValues.set(parameter.name, value)
+    }
+    env = new Map(definitionEnv)
+    for (const parameter of module.params) {
+      const value = parameterValues.get(parameter.name)
+      env.set(parameter.name, value)
+      slots.push(semanticSlot(parameter.name, value))
+    }
+  } else {
+    const positional = Object.entries(call.args)
+      .filter(([name]) => name.startsWith('_'))
+      .sort(([left], [right]) => Number(left.slice(1)) - Number(right.slice(1)))
+    for (let index = 0; index < module.params.length; index++) {
+      const parameter = module.params[index]
+      const expression = call.args[parameter.name] ?? positional[index]?.[1] ?? parameter.defaultValue
+      const value = expression ? evalExpression(expression, { ...ctx, env }) : undefined
+      env.set(parameter.name, value)
+      slots.push(semanticSlot(parameter.name, value))
+    }
   }
   const callOccurrence = invoke(call, ctx, slots)
   const bodyOperation = ctx.builder.registered.bodyByStatement.get(call)
@@ -1730,8 +3022,9 @@ function evalUserModule(call: CallNode, module: ModuleNode, ctx: EvalContext): S
   const bodyOccurrence = ctx.builder.invocationOperation(bodyOperation, callOccurrence)
   const definitionOccurrence = ctx.builder.invocation(module, bodyOccurrence, slots)
   return frameChildren(module, module.children, definitionOccurrence, {
-    ...ctx,
+    ...moduleContext,
     env,
+    moduleStack: isStableProfile(ctx) ? moduleContext.moduleStack : [...ctx.moduleStack, module.name],
     parentOccurrence: definitionOccurrence,
     pendingSlots: [],
     callChildren: {
@@ -1740,6 +3033,7 @@ function evalUserModule(call: CallNode, module: ModuleNode, ctx: EvalContext): S
       expansionOperation,
       statements: call.children,
       env: new Map(ctx.env),
+      scope: isStableProfile(ctx) ? ctx.stableScope : undefined,
       continuation: ctx.callChildren,
     },
   })
@@ -1994,21 +3288,40 @@ export function lowerOpenSCADToSemanticProgramUnchecked(
   options: SemanticLoweringOptions = {},
 ): SemanticLoweringSuccess {
   const route = parseGeometrySourceRoutingHeader(source)
-  const ast = compileOpenSCAD(source)
+  const ast = compileOpenSCAD(source, { languageProfile: options.languageProfile })
   const modules = new Map<string, ModuleNode>()
+  const functions = new Map<string, FunctionNode>()
   collectModules(ast, modules)
-  const registered = registerOperations(ast, new Set(modules.keys()))
-  const builder = new SemanticProgramBuilder(source, route.languageContract, registered)
+  collectFunctions(ast, functions)
+  const moduleNames = new Set(modules.keys())
+  const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
+  const registered = registerOperations(
+    ast,
+    moduleNames,
+    languageProfile,
+  )
+  let builder = new SemanticProgramBuilder(source, route.languageContract, registered)
   const budget = { ops: 0 }
   const reduced = { value: false }
   const valueBudget = { used: 0 }
+  const quality = options.quality ?? 'full'
+  const env = languageProfile === 'openscad/stable-2021.01'
+    ? new Map<string, Value>(Array.from(
+        createOpenScadStableRuntimeVariables({ quality, animationTime: options.animationTime }),
+        ([name, value]) => [name, Array.isArray(value) ? [...value] : value as Value],
+      ))
+    : new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]])
   const context: EvalContext = {
     source,
-    env: new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]]),
+    languageProfile,
+    env,
+    functions,
     modules,
     builder,
-    quality: options.quality ?? 'full',
+    quality,
     depth: 0,
+    functionStack: [],
+    moduleStack: [],
     budget,
     reduced,
     valueBudget,
@@ -2021,9 +3334,7 @@ export function lowerOpenSCADToSemanticProgramUnchecked(
   let shapes: SemanticShape[] = []
   let terminalError: OpenSCADParseError | LegacyBindingCompatibilityError | null = null
   let terminalDiagnostic: number | null = null
-  try {
-    shapes = evalNodes(ast, context, false)
-  } catch (error) {
+  const captureFailure = (error: unknown): void => {
     const capturable = error instanceof OpenSCADParseError
       || error instanceof LegacyBindingCompatibilityError
     if (!options.captureTerminalFailure || !capturable) throw error
@@ -2032,6 +3343,37 @@ export function lowerOpenSCADToSemanticProgramUnchecked(
     }
     terminalError = error
     terminalDiagnostic = builder.terminal(error, builder.terminalOccurrence)
+  }
+  try {
+    shapes = evalNodes(ast, context, false)
+  } catch (error) {
+    if (error instanceof StableViewportRootSelection) {
+      const detachedContinuations = detachedChildrenContinuationMap(
+        error.node,
+        error.context.callChildren,
+      )
+      const rootBuilder = new SemanticProgramBuilder(
+        source,
+        route.languageContract,
+        registerOperations(ast, moduleNames, languageProfile, error.node, detachedContinuations),
+      )
+      rootBuilder.inheritDiagnostics(builder, error.diagnosticsBeforeCandidate)
+      builder = rootBuilder
+      try {
+        shapes = evalPreparedNodes([error.node], {
+          ...error.context,
+          builder,
+          parentOccurrence: null,
+          pendingSlots: [],
+          viewportRootLocked: true,
+          viewportRootOwner: error.node,
+        })
+      } catch (rootError) {
+        captureFailure(rootError)
+      }
+    } else {
+      captureFailure(error)
+    }
   }
   const canonical = canonicalizeCompletedDag(
     builder,
