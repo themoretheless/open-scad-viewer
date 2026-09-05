@@ -35,7 +35,7 @@ node --import tsx src/mcp/modelGraphHttp.ts
 
 Адрес на этой машине: `http://127.0.0.1:7433/mcp`. Порт меняется через `MODELGRAPH_PORT`. Процесс слушает только loopback. Для веб-клиентов разместите перед ним HTTPS reverse proxy либо согласованный туннель. Веб-клиенту указывается HTTPS URL с путём `/mcp`, а не локальная JSON-конфигурация.
 
-HTTP-профиль предоставляет `modelgraph_language`, `modelgraph_compile`, `modelgraph_check`, `modelgraph_set_parameters`, `modelgraph_report`, `modelgraph_export`. Описание языка доступно как инструмент и ресурс, чтобы не зависеть от поддержки ресурсов клиентом. Экспорт возвращает встроенный MCP-ресурс STL/OBJ, до 4 MiB; отображение/скачивание вложения зависит от клиента. Постоянного хранилища и публичных ссылок на файлы нет.
+HTTP-профиль предоставляет `modelgraph_language`, `modelgraph_compile`, `modelgraph_check`, `modelgraph_set_parameters`, `modelgraph_report`, `modelgraph_export`. Описание языка доступно как инструмент и ресурс, чтобы не зависеть от поддержки ресурсов клиентом. Экспорт возвращает встроенный MCP-ресурс STL/3MF/OBJ/PLY/OFF/AMF, до 4 MiB; отображение/скачивание вложения зависит от клиента. Постоянного хранилища и публичных ссылок на файлы нет.
 
 HTTP-профиль stateless, без собственной авторизации. Он рассчитан на доверенное подключение через туннель или шлюз доступа. Для публичного многопользовательского размещения требуется настроить аутентификацию на шлюзе, совместимую с целевым клиентом (например OAuth). Не считайте наличие HTTPS авторизацией. Ограничения: 2 одновременных HTTP-запроса, тело до 256 KiB, таймаут 30 секунд; геометрия исполняется в изолированном worker. Запросы с браузерным Origin отклоняются — это серверное MCP-подключение, не прямой fetch из страницы.
 
@@ -59,4 +59,8 @@ HTTP-профиль stateless, без собственной авторизац�
 
 ## Собственное NURBS-ядро
 
-`modelgraph_nurbs_language` передаёт схему и примеры отдельного контракта `modelgraph/nurbs-1`. Расчёт рациональных кривых/поверхностей, редактирование, тесселяция и STL реализованы в проекте на TypeScript. Дополнительный геометрический пакет или Python не нужны. `modelgraph_nurbs_build` возвращает определения, диагностику сетки и PNG; `modelgraph_nurbs_export` — JSON или STL. STEP и общие B-rep boolean-операции пока не реализованы. Проверка: `npx vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts`.
+`modelgraph_nurbs_language` передаёт схему и примеры отдельного контракта `modelgraph/nurbs-1`. Расчёт рациональных кривых/поверхностей, редактирование, тесселяция и STL реализованы в проекте на TypeScript. Дополнительный геометрический пакет или Python не нужны. `modelgraph_nurbs_build` возвращает определения, диагностику сетки и PNG; `modelgraph_nurbs_export` — исходный JSON или поддерживаемый формат сетки. STEP и общие B-rep boolean-операции пока не реализованы. Проверка: `npx vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts`.
+
+## Форматы экспорта
+
+`modelgraph_export` и `modelgraph_nurbs_export`: `stl` (ASCII), `stl_binary`, `3mf`, `obj`, `ply`, `off`, `amf`. NURBS также сохраняет исходный `json`. STL/3MF/AMF требуют замкнутую ориентированную сетку. Файл содержит геометрию, без настроек слайсера, текстур и семантики сборки. Максимум 4 МиБ и 100000 треугольников. В панели браузера доступны STL/OBJ и выбор 3MF/PLY/OFF/AMF.

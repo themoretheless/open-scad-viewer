@@ -33,13 +33,6 @@ export function createModelGraphHttpServer() {
       server = new McpServer({ name: 'modelgraph', version: '0.1.0' }, { instructions: 'Call modelgraph_language first, then compile/check your ModelGraph document. No persistent catalog. Export with modelgraph_export.' })
       registerModelGraphTools(server, geometry)
       server.registerTool('modelgraph_language', { description: 'Read the complete ModelGraph language guide and JSON Schema before modeling.', inputSchema: z.object({}), annotations: { readOnlyHint: true, openWorldHint: false } }, async () => ({ content: [{ type: 'text', text: JSON.stringify({ guide: [MODELGRAPH_GUIDE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_SKETCH_GUIDE].join('\n\n'), schema: z.toJSONSchema(modelGraphSchema) }) }] }))
-      server.registerTool('modelgraph_export', { description: 'Build a ModelGraph document and return an embedded STL or OBJ artifact (maximum 4 MiB). No storage.', inputSchema: z.object({ document: modelGraphSchema, format: z.enum(['stl', 'obj']) }), annotations: { readOnlyHint: true, openWorldHint: false } }, async (input, context) => {
-        try {
-          const compiled = compileModelGraph(input.document)
-          const artifact = await geometry.export(compiled.source, input.format, { maxBytes: 4 * 1024 * 1024, signal: context.mcpReq.signal })
-          return { content: [{ type: 'resource' as const, resource: { uri: `modelgraph://export/${compiled.document_sha256}.${input.format}`, mimeType: artifact.mimeType, blob: Buffer.from(artifact.data).toString('base64') } }] }
-        } catch { return { isError: true, content: [{ type: 'text' as const, text: 'Export failed. Run modelgraph_check for diagnostics; the export size limit is 4 MiB.' }] } }
-      })
       const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
       await server.connect(transport)
       const headers = new Headers()

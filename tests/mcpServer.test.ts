@@ -127,6 +127,7 @@ describe('OpenSCAD MCP server', () => {
     expect(listed.tools.map(tool => tool.name).sort()).toEqual([
       'modelgraph_check',
       'modelgraph_compile',
+      'modelgraph_export',
       'modelgraph_interference',
       'modelgraph_nurbs_build',
       'modelgraph_nurbs_compile',

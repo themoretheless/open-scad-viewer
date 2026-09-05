@@ -1,3 +1,4 @@
+import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileModelGraphNurbs } from './modelGraphNurbs';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from './nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from './nurbsSurface';
@@ -16,7 +17,7 @@ type Value = {
 };
 export type OwnNurbsRequest = {
     action: 'build' | 'evaluate' | 'export';
-    format?: 'json' | 'stl';
+    format?: 'json' | MeshExportFormat;
     evaluations?: Array<{
         node: string;
         u: number;
@@ -162,8 +163,9 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
     if (request.action === 'export') {
         if (request.format === 'json')
             return { ...base, artifact: { format: 'json', mime_type: 'application/json', text: JSON.stringify(compiled.document, null, 2) } };
-        if (request.format !== 'stl' || root.kind !== 'mesh')
+        if (!request.format || root.kind !== 'mesh')
             throw new Error('STL export requires a closed tessellated mesh. Export JSON to retain native NURBS definitions.');
+        if (request.format !== 'stl') { const artifact = exportMeshFormat(root.data, request.format); return {...base, artifact: {format: request.format, mime_type: artifact.mimeType, extension: artifact.extension, base64: meshExportBase64(artifact.data)}}; }
         const text = exportNurbsStl(root.data);
         if (text.length > 4 * 1024 * 1024)
             throw new Error('STL export exceeds 4 MiB.');

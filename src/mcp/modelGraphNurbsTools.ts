@@ -1,3 +1,4 @@
+import { MESH_EXPORT_FORMATS } from '../services/meshExportFormats';
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { modelGraphNurbsSchema, compileModelGraphNurbs, MODELGRAPH_NURBS_GUIDE, MODELGRAPH_NURBS_EXAMPLE, MODELGRAPH_NURBS_SURFACE_EXAMPLE } from '../services/modelGraphNurbs';
@@ -50,7 +51,7 @@ export function registerModelGraphNurbsTools(server: McpServer) {
             return failure(error);
         }
     });
-    server.registerTool('modelgraph_nurbs_export', { description: 'Export native NURBS JSON or own ASCII STL from a closed oriented derived mesh. No STEP export. Mesh topology checks do not certify absence of self-intersections or printability.', inputSchema: z.object({ document: modelGraphNurbsSchema, format: z.enum(['json', 'stl']) }), annotations }, async (input, context) => {
+    server.registerTool('modelgraph_nurbs_export', { description: 'Export NURBS JSON or mesh STL (ASCII/binary), 3MF, OBJ, PLY, OFF or AMF. Printing formats require a closed oriented mesh. No STEP export. Mesh topology checks do not certify absence of self-intersections or printability.', inputSchema: z.object({ document: modelGraphNurbsSchema, format: z.enum(['json', ...MESH_EXPORT_FORMATS]) }), annotations }, async (input, context) => {
         try {
             const result = await runOwnNurbs(input.document, { action: 'export', format: input.format }, context.mcpReq.signal);
             if (!result.ok)
@@ -58,7 +59,7 @@ export function registerModelGraphNurbsTools(server: McpServer) {
             if (!('artifact' in result) || !result.artifact)
                 throw new Error('Export artifact missing.');
             const { artifact, ...report } = result;
-            return { ...text(report), content: [{ type: 'text' as const, text: JSON.stringify(report) }, { type: 'resource' as const, resource: { uri: `modelgraph://nurbs-export/${result.document_sha256}.${input.format}`, mimeType: artifact.mime_type, blob: Buffer.from(artifact.text).toString('base64') } }] };
+            return { ...text(report), content: [{ type: 'text' as const, text: JSON.stringify(report) }, { type: 'resource' as const, resource: { uri: `modelgraph://nurbs-export/${result.document_sha256}.${input.format === 'stl_binary' ? 'stl' : input.format}`, mimeType: artifact.mime_type, blob: typeof artifact.base64 === 'string' ? artifact.base64 : Buffer.from(artifact.text!).toString('base64') } }] };
         }
         catch (error) {
             return failure(error);

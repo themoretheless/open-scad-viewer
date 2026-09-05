@@ -156,4 +156,12 @@ describe('own NURBS through the MCP protocol', () => {
     expect(result.isError).toBe(true)
     expect(result.content.some(item => item.type === 'resource')).toBe(false)
   })
+  it('transports a binary 3MF package through the actual own-kernel process', async () => {
+    const result = await tool('modelgraph_nurbs_export', { document: MODELGRAPH_NURBS_SURFACE_EXAMPLE, format: '3mf' })
+    expect(result.isError).toBe(false)
+    const resource = result.content.find((c: any) => c.type === 'resource') as any
+    expect(resource.resource.uri).toMatch(/\.3mf$/)
+    expect(Buffer.from(resource.resource.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
+  })
+
 })

@@ -24,6 +24,9 @@ describe('remote ModelGraph MCP', () => {
     const exported = await (await call('tools/call', { name: 'modelgraph_export', arguments: { document: MODELGRAPH_UNITS_EXAMPLE, format: 'stl' } })).json()
     expect(exported.result.isError).not.toBe(true)
     expect(Buffer.from(exported.result.content[0].resource.blob, 'base64').length).toBeGreaterThan(84)
+    const package3mf = await (await call('tools/call', { name: 'modelgraph_export', arguments: { document: MODELGRAPH_UNITS_EXAMPLE, format: '3mf' } })).json()
+    expect(package3mf.result.isError).not.toBe(true)
+    expect(Buffer.from(package3mf.result.content[0].resource.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
   })
   it('rejects browser origins, unsupported methods and oversized requests', async () => {
     const { url } = await start()

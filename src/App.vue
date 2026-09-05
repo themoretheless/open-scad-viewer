@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { flattenExportMeshes } from './services/meshExportAdapter'
+import { exportMeshFormat, type MeshExportFormat } from './services/meshExportFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
@@ -1428,6 +1430,18 @@ function downloadBlob(blob: Blob, name: string) {
   URL.revokeObjectURL(url)
 }
 
+const additionalExportFormat = ref<MeshExportFormat>('3mf')
+function exportAdditionalMesh() {
+  if (!canExport.value) return
+  try {
+    const artifact = exportMeshFormat(flattenExportMeshes(sceneMeshes.value), additionalExportFormat.value)
+    const buffer = new ArrayBuffer(artifact.data.byteLength)
+    new Uint8Array(buffer).set(artifact.data)
+    downloadBlob(new Blob([buffer], { type: artifact.mimeType }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.' + artifact.extension))
+    showNotice(t('exported'))
+  } catch (error) { showNotice(error instanceof Error ? error.message : 'Export failed') }
+}
+
 function exportStl() {
   if (!canExport.value) return
   const bytes = buildBinaryStl(sceneMeshes.value, fileName.value)
@@ -2119,6 +2133,10 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button class="btn" type="button" :title="t('shareFile')" @click="shareSource">⌁ {{ t('share') }}</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportStl">STL</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportObj">OBJ</button>
+          <select v-model="additionalExportFormat" class="btn export-btn" :aria-label="lang === 'ru' ? 'Формат экспорта' : 'Export format'">
+            <option value="3mf">3MF</option><option value="ply">PLY</option><option value="off">OFF</option><option value="amf">AMF</option>
+          </select>
+          <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportAdditionalMesh">{{ lang === 'ru' ? 'Скачать' : 'Download' }}</button>
           <span class="file-name" :title="fileName">{{ fileName }}</span>
           <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
         </div>
@@ -2546,7 +2564,7 @@ button, select { color: inherit; }
 }
 .toolbar { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-bottom: 1px solid var(--border); }
 .editor-toolbar { flex-wrap: wrap; }
-.file-toolbar { padding-block: 5px; background: color-mix(in srgb, var(--surface-raised) 55%, var(--surface)); }
+.file-toolbar { flex-wrap: wrap; padding-block: 5px; background: color-mix(in srgb, var(--surface-raised) 55%, var(--surface)); }
 .btn { padding: 4px 10px; font-size: .76rem; white-space: nowrap; }
 .btn:disabled { opacity: .55; cursor: progress; }
 .btn-primary { background: var(--accent-strong); border-color: var(--accent-strong); color: white; font-weight: 700; }
