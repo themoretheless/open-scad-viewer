@@ -19,7 +19,7 @@ function png(pixels: Buffer) {
 }
 type P = [number, number, number]
 /** Orthographic CPU snapshots of actual triangles, independent of a browser/GPU. */
-export function renderModelGraphPreviews(meshes: MeshData[]) {
+export function renderModelGraphPreviews(meshes: Pick<MeshData, 'vertices' | 'indices' | 'transform'>[]) {
   const count = meshes.reduce((n, mesh) => n + mesh.indices.length / 3, 0)
   if (count > 20000) throw new Error('Preview triangle limit (20000) exceeded.')
   const triangles: P[][] = []

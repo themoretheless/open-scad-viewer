@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 const folder = resolve(process.argv[2] ?? '.local-integrations')
 const config = JSON.parse(readFileSync(resolve(folder, 'claude-desktop.json'), 'utf8')).mcpServers.modelgraph
@@ -29,6 +29,15 @@ const call = (method, params) => new Promise((resolve, reject) => {
 try {
   await call('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'modelgraph-plugin-smoke', version: '1' } })
   child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
+  const ownLanguage = await call('tools/call', { name: 'modelgraph_nurbs_language', arguments: {} })
+  const ownDocument = ownLanguage.structuredContent.surface_example
+  const ownBuild = await call('tools/call', { name: 'modelgraph_nurbs_build', arguments: { document: ownDocument } })
+  const ownImages = ownBuild.content.filter(item => item.type === 'image')
+  if (ownBuild.isError || ownImages.length !== 3 || ownBuild.structuredContent.execution_target !== 'own-nurbs') throw new Error('Own NURBS build failed: ' + JSON.stringify(ownBuild.structuredContent))
+  if (process.env.MODELGRAPH_PREVIEW_PATH) writeFileSync(process.env.MODELGRAPH_PREVIEW_PATH, Buffer.from(ownImages[2].data, 'base64'))
+  const ownExport = await call('tools/call', { name: 'modelgraph_nurbs_export', arguments: { document: ownDocument, format: 'stl' } })
+  if (ownExport.isError || !Buffer.from(ownExport.content.find(item => item.type === 'resource').resource.blob, 'base64').toString().includes('facet normal')) throw new Error('Own NURBS STL failed')
+  console.log('PASS: own NURBS kernel, three PNG images and closed STL through generated stdio plugin.')
   const resource = await call('resources/read', { uri: 'openscad://language/modelgraph-1' })
   const contract = JSON.parse(resource.contents[0].text)
   const loft = await call('tools/call', { name: 'modelgraph_check', arguments: { document: contract.loft_example } })

@@ -56,3 +56,7 @@ HTTP-профиль stateless, без собственной авторизац�
 - [ChatGPT: подключение и проверка](https://developers.openai.com/plugins/deploy/connect-chatgpt)
 
 Наличие инструмента в клиенте не гарантирует, что любая выбранная LLM корректно использует схему. Печатность не гарантируется проверкой выражений; modelgraph_report возвращает ограниченные PNG-превью, если клиент поддерживает изображения.
+
+## Собственное NURBS-ядро
+
+`modelgraph_nurbs_language` передаёт схему и примеры отдельного контракта `modelgraph/nurbs-1`. Расчёт рациональных кривых/поверхностей, редактирование, тесселяция и STL реализованы в проекте на TypeScript. Дополнительный геометрический пакет или Python не нужны. `modelgraph_nurbs_build` возвращает определения, диагностику сетки и PNG; `modelgraph_nurbs_export` — JSON или STL. STEP и общие B-rep boolean-операции пока не реализованы. Проверка: `npx vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts`.

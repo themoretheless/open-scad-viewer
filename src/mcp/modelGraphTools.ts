@@ -1,3 +1,4 @@
+import { registerModelGraphNurbsTools } from './modelGraphNurbsTools'
 import { registerModelGraphInterference } from './modelGraphInterference'
 import { registerModelGraphReport } from './modelGraphReport'
 import type { McpServer } from '@modelcontextprotocol/server'
@@ -6,6 +7,7 @@ import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGrap
 import type { McpGeometryService } from './geometryService'
 
 export function registerModelGraphTools(server: McpServer, geometry: McpGeometryService) {
+  registerModelGraphNurbsTools(server)
   registerModelGraphReport(server, geometry)
   registerModelGraphInterference(server, geometry)
   const result = (data: Record<string, unknown>, isError = false) => ({ isError, content: [{ type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data })
