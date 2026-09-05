@@ -31,6 +31,8 @@ try {
   child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
   const resource = await call('resources/read', { uri: 'openscad://language/modelgraph-1' })
   const contract = JSON.parse(resource.contents[0].text)
+  const loft = await call('tools/call', { name: 'modelgraph_check', arguments: { document: contract.loft_example } })
+  if (loft.isError || Math.abs(loft.structuredContent.analysis.volume - 14000/3) > 0.001) throw new Error('Loft validation failed')
   const checked = await call('tools/call', { name: 'modelgraph_check', arguments: { document: contract.units_example } })
   if (checked.isError || Math.abs(checked.structuredContent.analysis.volume - 1600) > 1e-6) throw new Error('Geometry validation failed')
   const report = await call('tools/call', { name: 'modelgraph_report', arguments: { document: contract.units_example } })
@@ -43,7 +45,7 @@ try {
   const built = checked.structuredContent
   const rejected = await call('tools/call', { name: 'modelgraph_set_parameters', arguments: { document: built.document, expected_document_sha256: built.document_sha256, updates: [{ id: 'wall', value: 0.6 }] } })
   if (!rejected.isError || rejected.structuredContent.error.code !== 'constraint_failed') throw new Error('Constraint validation failed')
-  console.log('PASS: generated launcher, MCP handshake, language resource, real geometry (1600 mm3), three PNG views, solved sketch (600 mm3), structured constraint error, actual assembly overlap (200 mm3).')
+  console.log('PASS: generated launcher, MCP handshake, language resource, real geometry (1600 mm3), three PNG views, solved sketch (600 mm3), structured constraint error, actual assembly overlap (200 mm3), closed loft (4666.67 mm3).')
 } finally {
   clearTimeout(timeout)
   lines.close()

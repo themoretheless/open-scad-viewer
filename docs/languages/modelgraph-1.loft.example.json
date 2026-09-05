@@ -1,0 +1,54 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [],
+  "nodes": [
+    {
+      "id": "adapter",
+      "op": "loft",
+      "profile": [
+        [
+          -10,
+          -10
+        ],
+        [
+          10,
+          -10
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "sections": [
+        {
+          "z": 0,
+          "scale": [
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0
+          ]
+        },
+        {
+          "z": 20,
+          "scale": [
+            0.5,
+            0.5
+          ],
+          "offset": [
+            5,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "root": "adapter"
+}

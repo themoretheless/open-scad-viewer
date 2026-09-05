@@ -2,7 +2,7 @@ import { registerModelGraphInterference } from './modelGraphInterference'
 import { registerModelGraphReport } from './modelGraphReport'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
-import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGraphError, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE } from '../services/modelGraph'
+import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGraphError, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE, MODELGRAPH_LOFT_EXAMPLE } from '../services/modelGraph'
 import type { McpGeometryService } from './geometryService'
 
 export function registerModelGraphTools(server: McpServer, geometry: McpGeometryService) {
@@ -16,7 +16,7 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
   server.registerResource('modelgraph-language', 'openscad://language/modelgraph-1', {
     title: 'ModelGraph/1 language for AI modeling', mimeType: 'application/json',
     description: 'Complete model prompt, JSON Schema, example and execution limitations.',
-  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify({ language: 'modelgraph/1', guide: MODELGRAPH_GUIDE + '\n\n' + MODELGRAPH_FUNCTIONAL_GUIDE + '\n\n' + MODELGRAPH_UNITS_GUIDE + '\n\n' + MODELGRAPH_SKETCH_GUIDE, sketch_example: MODELGRAPH_SKETCH_EXAMPLE, assembly_example: MODELGRAPH_ASSEMBLY_EXAMPLE, units_example: MODELGRAPH_UNITS_EXAMPLE, functional_example: MODELGRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(modelGraphSchema), example: MODELGRAPH_EXAMPLE }) }] }))
+  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify({ language: 'modelgraph/1', guide: MODELGRAPH_GUIDE + '\n\n' + MODELGRAPH_FUNCTIONAL_GUIDE + '\n\n' + MODELGRAPH_UNITS_GUIDE + '\n\n' + MODELGRAPH_SKETCH_GUIDE, sketch_example: MODELGRAPH_SKETCH_EXAMPLE, assembly_example: MODELGRAPH_ASSEMBLY_EXAMPLE, loft_example: MODELGRAPH_LOFT_EXAMPLE, units_example: MODELGRAPH_UNITS_EXAMPLE, functional_example: MODELGRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(modelGraphSchema), example: MODELGRAPH_EXAMPLE }) }] }))
   server.registerTool('modelgraph_compile', {
     title: 'Compile ModelGraph document', description: 'Preferred structured frontend for new MCP models. Validate ModelGraph/1 JSON and return normalized document, revision hash, generated SCAD and node-to-line map. Does not build geometry or save data. Read openscad://language/modelgraph-1 first.',
     inputSchema: z.object({ document: modelGraphSchema }).strict(), annotations,

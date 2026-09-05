@@ -1,13 +1,14 @@
 // Run: node --import tsx scripts/export-modelgraph-language.mjs
 import { writeFileSync } from 'node:fs'
 import { z } from 'zod/v4'
-import { modelGraphSchema, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE } from '../src/services/modelGraph.ts'
+import { modelGraphSchema, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE, MODELGRAPH_LOFT_EXAMPLE } from '../src/services/modelGraph.ts'
 const json = value => JSON.stringify(value, null, 2) + '\n'
 writeFileSync(new URL('../docs/languages/modelgraph-1.schema.json', import.meta.url), json(z.toJSONSchema(modelGraphSchema)))
 writeFileSync(new URL('../docs/languages/modelgraph-1.example.json', import.meta.url), json(MODELGRAPH_EXAMPLE))
 writeFileSync(new URL('../docs/languages/modelgraph-1.functional.example.json', import.meta.url), json(MODELGRAPH_FUNCTIONAL_EXAMPLE))
 writeFileSync(new URL('../docs/languages/modelgraph-1.units.example.json', import.meta.url), json(MODELGRAPH_UNITS_EXAMPLE))
 writeFileSync(new URL('../docs/languages/modelgraph-1.sketch.example.json', import.meta.url), json(MODELGRAPH_SKETCH_EXAMPLE))
+writeFileSync(new URL('../docs/languages/modelgraph-1.loft.example.json', import.meta.url), json(MODELGRAPH_LOFT_EXAMPLE))
 writeFileSync(new URL('../docs/languages/modelgraph-1.assembly.example.json', import.meta.url), json(MODELGRAPH_ASSEMBLY_EXAMPLE))
 writeFileSync(new URL('../docs/languages/modelgraph-1-prompt.md', import.meta.url), `# ModelGraph/1 — инструкция для модели
 
