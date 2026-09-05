@@ -1,0 +1,49 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "width",
+      "value": 40
+    }
+  ],
+  "segments": 48,
+  "nodes": [
+    {
+      "id": "body",
+      "op": "box",
+      "size": [
+        {
+          "param": "width"
+        },
+        30,
+        8
+      ]
+    },
+    {
+      "id": "hole",
+      "op": "cylinder",
+      "radius": 4,
+      "height": 10
+    },
+    {
+      "id": "placedHole",
+      "op": "translate",
+      "vector": [
+        20,
+        15,
+        -1
+      ],
+      "input": "hole"
+    },
+    {
+      "id": "part",
+      "op": "difference",
+      "base": "body",
+      "subtract": [
+        "placedHole"
+      ]
+    }
+  ],
+  "root": "part"
+}

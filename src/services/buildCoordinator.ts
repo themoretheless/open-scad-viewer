@@ -41,7 +41,10 @@ export interface GeometryBuildInput {
 }
 
 export type BuildCoordinatorStatus = 'idle' | 'building' | 'ready' | 'failed' | 'cancelled' | 'stale' | 'disposed'
-export type PublishedGeometryBuild = GeometryBuildSuccess | GeometryBuildFailure
+export type PublishedGeometryBuild = (GeometryBuildSuccess | GeometryBuildFailure) & {
+  /** Main-thread request to validated publication; includes queue/startup/transport. */
+  readonly hostElapsedMs?: number
+}
 
 export interface BuildCoordinatorState {
   readonly status: BuildCoordinatorStatus
@@ -200,11 +203,16 @@ export class BuildCoordinator {
     this.supersedeGraceMs = grace
   }
 
+  private counters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
+
+  get diagnostics() { return { ...this.counters } }
+
   get state(): BuildCoordinatorState {
     return this.snapshot
   }
 
   requestBuild(input: GeometryBuildInput): GeometryJobId {
+    const requestedAt = this.now()
     this.assertUsable()
     assertInput(input)
     if (this.latestRevision !== null && input.documentRevision < this.latestRevision) {
@@ -236,9 +244,10 @@ export class BuildCoordinator {
     const record: JobRecord = {
       request,
       lifecycle: 'queued',
-      requestedAt: this.now(),
+      requestedAt,
       workerGeneration: null,
     }
+    this.counters.builds++
     this.jobs.set(request.jobId, record)
 
     const isNewRevision = this.latestRevision === null || input.documentRevision > this.latestRevision
@@ -307,6 +316,7 @@ export class BuildCoordinator {
     this.latestJobByQuality.clear()
     for (const [jobId, record] of this.jobs) {
       if (record.request.documentRevision === revision || record.lifecycle === 'terminal') continue
+      if (record.lifecycle !== 'superseded') this.counters.superseded++
       record.lifecycle = 'superseded'
       if (record.workerGeneration === this.binding?.generation) this.supersededWorkerJobs.add(record.request.jobId)
       else this.jobs.delete(jobId)
@@ -403,6 +413,7 @@ export class BuildCoordinator {
     if (this.binding) return this.binding
     try {
       const worker = this.options.workerFactory()
+      this.counters.workerStarts++
       const generation = this.nextWorkerGeneration++
       const messageListener: EventListener = event => {
         this.handleWorkerMessage((event as MessageEvent<unknown>).data, generation)
@@ -428,6 +439,7 @@ export class BuildCoordinator {
   }
 
   private restartAndPostPending() {
+    if (this.binding) this.counters.hardRestarts++
     this.clearHardRestartTimer()
     this.destroyWorker()
     for (const jobId of this.supersededWorkerJobs) this.jobs.delete(jobId)
@@ -592,7 +604,7 @@ export class BuildCoordinator {
         error: null,
       })
     }
-    this.options.onPublish?.(event)
+    this.options.onPublish?.(Object.freeze({ ...event, hostElapsedMs: Math.max(0, this.now() - record.requestedAt) }))
   }
 
   private handleFailure(record: JobRecord, event: GeometryBuildFailure) {
@@ -621,7 +633,7 @@ export class BuildCoordinator {
       activeJobIds: this.activeJobIds(record.request.jobId),
       error: event.error,
     })
-    this.options.onPublish?.(event)
+    this.options.onPublish?.(Object.freeze({ ...event, hostElapsedMs: Math.max(0, this.now() - record.requestedAt) }))
   }
 
   private handleNonPublishedTerminal(record: JobRecord, event: GeometryBuildCancelled | GeometryBuildStale) {
@@ -717,7 +729,7 @@ export class BuildCoordinator {
       activeJobIds: [],
       error,
     })
-    this.options.onPublish?.(event)
+    this.options.onPublish?.(Object.freeze({ ...event, hostElapsedMs: Math.max(0, this.now() - effectiveRecord.requestedAt) }))
   }
 
   private primaryCurrentJob(): JobRecord | null {

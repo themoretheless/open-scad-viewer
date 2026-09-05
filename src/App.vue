@@ -15,7 +15,11 @@ import type {
   SourceProvenanceRow,
 } from './components/cadPanels.types'
 import type { GeometryQuality } from './core/build'
-import type { MeshData } from './core/mesh'
+import { meshTransferables, type MeshData } from './core/mesh'
+import { applyParameterPreset, captureParameterPreset, parameterTemplateHash, MAX_PARAMETER_PRESETS, type ParameterPreset } from './services/parameterPresets'
+import { analyzeSurfaceArea, type GeometryComputeResult } from './services/geometryCompute'
+import { AutoBuildScheduler } from './services/autoBuildScheduler'
+import { BuildPerformanceHistory, type BuildPerformanceSample } from './services/buildPerformance'
 import { EXAMPLE_CATALOG, EXAMPLES } from './data/examples'
 import { assertExampleCatalog } from './services/exampleCatalog'
 import type { CameraState } from './services/cameraHistory'
@@ -227,6 +231,34 @@ const triangleCount = ref(0)
 const volume = ref(0)
 const surfaceArea = ref(0)
 const renderDuration = ref(0)
+const performanceHistory = new BuildPerformanceHistory()
+const performanceSamples = shallowRef<BuildPerformanceSample[]>([])
+const performanceLast = computed(() => performanceSamples.value.at(-1))
+const performanceMs = (value: number | null | undefined) => value == null ? '—' : `${value.toFixed(1)} ms`
+const performanceRows = computed(() => {
+  const sample = performanceSamples.value.at(-1)
+  if (!sample) return []
+  return [
+    [lang.value === 'ru' ? 'Разбор исходника' : 'Parse', performanceMs(sample.phases.parseMs)],
+    [lang.value === 'ru' ? 'Инициализация ядра' : 'Kernel initialization', performanceMs(sample.phases.initializeMs)],
+    [lang.value === 'ru' ? 'Вычисление геометрии' : 'Geometry evaluation', performanceMs(sample.phases.evaluateMs)],
+    [lang.value === 'ru' ? 'Анализ геометрии' : 'Geometry analysis', performanceMs(sample.phases.analyzeMs)],
+    [lang.value === 'ru' ? 'Вся работа в Worker' : 'Worker total', performanceMs(sample.workerMs)],
+    [lang.value === 'ru' ? 'Запрос → проверенный результат' : 'Request → validated result', performanceMs(sample.hostMs)],
+    [lang.value === 'ru' ? 'Публикация сцены (CPU)' : 'Scene publication (CPU)', performanceMs(sample.publicationMs)],
+    [lang.value === 'ru' ? 'Публикация → отправка кадра' : 'Publication → frame submission', performanceMs(sample.publicationToSubmitMs)],
+    [lang.value === 'ru' ? 'Правка → отправка кадра' : 'Edit → frame submission', performanceMs(sample.editToSubmitMs)],
+    [lang.value === 'ru' ? 'Переданные буферы' : 'Transferred buffers', `${(sample.transferBytes / 1024).toFixed(1)} KiB`],
+    [lang.value === 'ru' ? 'Загрузка вершин и индексов на GPU' : 'Vertex/index GPU upload', sample.upload ? `${(sample.upload.geometryUploadBytes / 1024).toFixed(1)} KiB` : '—'],
+    [lang.value === 'ru' ? 'Новые буферы вершин и индексов' : 'New vertex/index buffers', sample.upload?.geometryBuffersCreated ?? '—'],
+    [lang.value === 'ru' ? 'Объекты с повторно использованной геометрией' : 'Entities reusing geometry', sample.upload?.reusedEntities ?? '—'],
+  ]
+})
+
+let nextPerformanceFrameToken = 1
+let previousBuildCounters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
+let pendingPerformanceFrame: { frameToken: number; historyToken: number } | null = null
+const buildCounters = shallowRef({ builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 })
 const gpuOk = ref(false)
 const rendererInitializing = ref(false)
 const rendererUnavailableMessage = ref('')
@@ -323,7 +355,49 @@ function closeDock() {
   void nextTick(() => dockToggleRef.value?.focus())
 }
 
+const computeResult = shallowRef<GeometryComputeResult | null>(null)
+const computeBusy = ref(false)
+const computeError = ref('')
+let computeAbort: AbortController | null = null
+function cancelGeometryAnalysis() {
+  computeAbort?.abort()
+  computeAbort = null
+  computeBusy.value = false
+  computeResult.value = null
+  computeError.value = ''
+}
+watch([selectedMesh, sceneMeshes, code], cancelGeometryAnalysis, { flush: 'sync' })
+
+async function runGeometryAnalysis() {
+  const mesh = selectedMesh.value === null ? null : sceneMeshes.value[selectedMesh.value]
+  if (!mesh || !canExport.value || computeBusy.value) return
+  cancelGeometryAnalysis()
+  const controller = new AbortController()
+  computeAbort = controller
+  computeBusy.value = true
+  try {
+    const result = await analyzeSurfaceArea(mesh, controller.signal)
+    if (computeAbort === controller && !controller.signal.aborted) computeResult.value = result
+  } catch {
+    if (computeAbort === controller && !controller.signal.aborted) computeError.value = lang.value === 'ru' ? 'Не удалось проанализировать геометрию.' : 'Could not analyze geometry.'
+  } finally {
+    if (computeAbort === controller) { computeBusy.value = false; computeAbort = null }
+  }
+}
+
 const customizerParameters = computed(() => extractCustomizerParameters(code.value))
+const presetName = ref('')
+const presetSelection = ref('')
+const presetError = ref('')
+const presetUndo = shallowRef<{ before: string; after: string } | null>(null)
+const parameterPresets = computed(() => workspaceDocument.value.parameterPresets)
+const selectedPreset = computed(() => parameterPresets.value.find(item => item.id === presetSelection.value) ?? parameterPresets.value[0])
+const currentParameterTemplate = computed(() => {
+  if (!parameterPresets.value.length) return null
+  try { return parameterTemplateHash(code.value) } catch { return null }
+})
+const presetCompatible = computed(() => !!selectedPreset.value && selectedPreset.value.templateHash === currentParameterTemplate.value)
+
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
 const sourceMatchesEditor = computed(() => renderedSource.value !== '' && renderedSource.value === code.value)
 const exportEligibility = computed(() => geometryExportEligibility({
@@ -504,7 +578,7 @@ let watchdogTimer: ReturnType<typeof setTimeout> | null = null
 let watchdogToken = 0
 let watchdogRetried = false
 let lastStorageNotice = 0
-let renderDebounce: ReturnType<typeof setTimeout> | null = null
+const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) } })
 let buildGeneration = 0
 let storageDebounce: ReturnType<typeof setTimeout> | null = null
 let workspaceEditGeneration = 0
@@ -535,6 +609,9 @@ onMounted(async () => {
   applyPreferences()
   updateBeforeUnloadGuard()
   window.addEventListener('pagehide', flushWorkspacePersistence)
+  window.addEventListener('pointerup', endParameterGesture)
+  window.addEventListener('pointercancel', endParameterGesture)
+  window.addEventListener('blur', endParameterGesture)
   document.addEventListener('visibilitychange', handleVisibilityChange)
   if (mainRef.value) {
     const syncEditorBounds = () => {
@@ -613,6 +690,11 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
     measureActive.value = active
   }
   instance.onCameraHistoryChange = available => { canPreviousView.value = available }
+  instance.onFrameSubmitted = (token, at) => {
+    if (instance !== renderer) return
+    if (!pendingPerformanceFrame || pendingPerformanceFrame.frameToken !== token) return
+    if (performanceHistory.submitted(pendingPerformanceFrame.historyToken, at)) performanceSamples.value = performanceHistory.snapshot()
+  }
   instance.onCameraChange = syncCameraState
   instance.onStatusChange = event => handleRendererStatus(instance, event)
   canPreviousView.value = instance.canGoToPreviousView
@@ -620,12 +702,13 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
 }
 
 onUnmounted(() => {
+  cancelGeometryAnalysis()
   layoutResizeObserver?.disconnect()
   layoutResizeObserver = null
   rendererRecoveryToken++
   activeRendererRecoveryToken = null
   rendererRecoveryGate.reset()
-  if (renderDebounce) clearTimeout(renderDebounce)
+  autoBuildScheduler.cancel()
   if (storageDebounce) {
     clearTimeout(storageDebounce)
     void persistWorkspaceNow()
@@ -639,6 +722,9 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKey)
   themeMediaQuery.removeEventListener('change', handleSystemThemeChange)
   window.removeEventListener('pagehide', flushWorkspacePersistence)
+  window.removeEventListener('pointerup', endParameterGesture)
+  window.removeEventListener('pointercancel', endParameterGesture)
+  window.removeEventListener('blur', endParameterGesture)
   detachBeforeUnloadGuard()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (renderer) {
@@ -648,6 +734,7 @@ onUnmounted(() => {
     renderer.onCameraHistoryChange = null
     renderer.onCameraChange = null
     renderer.onStatusChange = null
+    renderer.onFrameSubmitted = null
   }
   renderer?.destroy()
   renderer = null
@@ -774,6 +861,7 @@ watch(code, value => {
   // process-local monotonic generation, so old results can never alias a new
   // document that happens to have the same revision number.
   buildGeneration++
+  performanceHistory.edited(buildGeneration, performance.now())
   // Provenance belongs to the last compiled source revision. Never retain a
   // reverse highlight while the editor has moved ahead of that revision.
   if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
@@ -824,14 +912,29 @@ watch(fileName, value => {
 watch(autoRender, enabled => {
   storageSet('scad-auto', String(enabled))
   if (enabled) scheduleRender(0)
-  else {
-    if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
-  }
+  else autoBuildScheduler.cancel()
 })
 
-function scheduleRender(delay = 450) {
-  if (renderDebounce) clearTimeout(renderDebounce)
-  renderDebounce = setTimeout(() => doRender('preview'), Math.min(delay, 180))
+function scheduleRender(delay?: number) {
+  autoBuildScheduler.edited(delay === 0)
+}
+
+function beginParameterGesture(event: PointerEvent) {
+  if (autoRender.value && event.target instanceof HTMLInputElement && event.target.type === 'range') {
+    autoBuildScheduler.beginGesture()
+  }
+}
+
+async function endParameterGesture() {
+  // Vue source watchers must advance the revision before submitting the final value.
+  await nextTick()
+  if (componentActive && autoRender.value) autoBuildScheduler.endGesture()
+}
+
+async function commitParameterControl(event: Event) {
+  if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'range') return
+  await nextTick()
+  if (componentActive && autoRender.value) autoBuildScheduler.flush()
 }
 
 function scheduleWorkspacePersistence() {
@@ -1017,7 +1120,7 @@ function startBuildCoordinator() {
 
 function doRender(quality: GeometryQuality = 'full') {
   if (!renderer) return
-  if (renderDebounce) { clearTimeout(renderDebounce); renderDebounce = null }
+  autoBuildScheduler.cancelPending()
   try {
     startBuildCoordinator()
     const documentRevision = buildGeneration
@@ -1035,7 +1138,17 @@ function doRender(quality: GeometryQuality = 'full') {
 }
 
 function handleBuildState(state: BuildCoordinatorState) {
+  if (buildCoordinator) {
+    const current = buildCoordinator.diagnostics
+    buildCounters.value = {
+      builds: previousBuildCounters.builds + current.builds,
+      superseded: previousBuildCounters.superseded + current.superseded,
+      workerStarts: previousBuildCounters.workerStarts + current.workerStarts,
+      hardRestarts: previousBuildCounters.hardRestarts + current.hardRestarts,
+    }
+  }
   rendering.value = state.status === 'building'
+  autoBuildScheduler.setBuilding(rendering.value)
   if (state.requestedQuality) renderingQuality.value = state.requestedQuality
   if (!rendering.value && rendererErrorMessage && !error.value) error.value = rendererErrorMessage
   // The watchdog observes coordinator liveness: every state change (including
@@ -1083,6 +1196,7 @@ function handleWatchdogTimeout(token: number) {
 }
 
 function handleGeometryResponse(response: PublishedGeometryBuild) {
+  if (response.status === 'succeeded') autoBuildScheduler.observe(response.quality, response.durationMs)
   // The editor revision advances before its debounced preview is submitted.
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
@@ -1110,6 +1224,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   const effectiveQuality = publicationPlan.effectiveQuality
 
   try {
+    const publicationStartedAt = performance.now()
     const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
     const previousMeshes = sceneMeshes.value
     const previousVisibility = meshVisibility.value
@@ -1124,7 +1239,9 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       sameSourceSnapshot,
     })
 
+    const frameToken = nextPerformanceFrameToken++
     renderer?.setMeshes(response.meshes, {
+      frameToken,
       preserveMeasurement: publication.measurementMayBePreserved,
     })
     sceneController.publish({
@@ -1164,11 +1281,24 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     syncSourceHighlightFromEditor()
     sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
     applySection()
+    const publishedAt = performance.now()
+    const historyToken = performanceHistory.record({
+      revision: response.documentRevision,
+      quality: response.quality,
+      phases: response.timings,
+      workerMs: response.durationMs,
+      hostMs: response.hostElapsedMs ?? null,
+      publicationMs: publishedAt - publicationStartedAt,
+      transferBytes: meshTransferables(response.meshes).reduce((sum, buffer) => sum + buffer.byteLength, 0),
+      upload: renderer?.currentStatus.status === 'ready' ? renderer.sceneUploadMetrics : null,
+    }, publishedAt)
+    pendingPerformanceFrame = { frameToken, historyToken }
+    performanceSamples.value = performanceHistory.snapshot()
     // Auto builds are sequential: request full only after preview proves it
     // used a reduced quality decision. Equivalent models therefore compile
     // exactly once and reduced models retain the warm Worker for their full
     // continuation.
-    if (publicationPlan.requestFull) doRender('full')
+    if (publicationPlan.requestFull && autoRender.value) autoBuildScheduler.promote()
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught)
   }
@@ -1178,6 +1308,7 @@ function handleWorkerError(caught?: unknown) {
   rendering.value = false
   disarmWatchdog()
   buildCoordinator?.dispose()
+  previousBuildCounters = { ...buildCounters.value }
   buildCoordinator = null
   error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
 }
@@ -1306,10 +1437,86 @@ function exportStl() {
   showNotice(t('exported'))
 }
 
+function exportPerformance() {
+  downloadBlob(new Blob([JSON.stringify({
+    schemaVersion: 1,
+    recordedAt: new Date().toISOString(),
+    frameBoundary: 'GPU queue submission, not display presentation or GPU completion',
+    counters: buildCounters.value,
+    samples: performanceSamples.value,
+  }, null, 2)], { type: 'application/json' }), 'build-performance.json')
+}
+
 function exportObj() {
   if (!canExport.value) return
   downloadBlob(new Blob([buildObj(sceneMeshes.value)], { type: 'text/plain;charset=utf-8' }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.obj'))
   showNotice(t('exported'))
+}
+
+function savePresetList(presets: readonly ParameterPreset[]): boolean {
+  try {
+    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { parameterPresets: presets })
+    workspaceEditGeneration++
+    scheduleWorkspacePersistence()
+    return true
+  } catch {
+    presetError.value = lang.value === 'ru' ? 'Не удалось сохранить варианты: превышен допустимый объём.' : 'Could not save presets: storage size limit exceeded.'
+    return false
+  }
+}
+
+async function saveParameterPreset() {
+  await nextTick()
+  presetError.value = ''
+  if (parameterPresets.value.some(item => item.name === presetName.value.trim())) {
+    presetError.value = lang.value === 'ru' ? 'Вариант с таким именем уже есть. Выберите другое имя.' : 'This name already exists. Choose another name.'
+    return
+  }
+  try {
+    const preset = captureParameterPreset(code.value, presetName.value, crypto.randomUUID())
+    if (savePresetList([...parameterPresets.value, preset])) {
+      presetSelection.value = preset.id
+      presetName.value = ''
+    }
+  } catch {
+    presetError.value = lang.value === 'ru' ? 'Не удалось сохранить: нужны уникальные параметры (до 128) и имя до 80 символов.' : 'Could not save: requires unique parameters (up to 128) and a name of up to 80 characters.'
+  }
+}
+
+function replacePresetSource(source: string) {
+  if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) throw new Error('source limit')
+  const editor = editorRef.value
+  if (editor) {
+    editor.setRangeText(source, 0, editor.value.length, 'preserve')
+    code.value = editor.value
+  } else code.value = source
+}
+
+function restoreParameterPreset() {
+  presetError.value = ''
+  if (!selectedPreset.value) return
+  try {
+    const before = code.value
+    const after = applyParameterPreset(before, selectedPreset.value)
+    if (before === after) return
+    replacePresetSource(after)
+    presetUndo.value = { before, after }
+  } catch {
+    presetError.value = lang.value === 'ru' ? 'Вариант не подходит к текущему исходнику.' : 'This preset does not match the current source.'
+  }
+}
+
+function undoParameterPreset() {
+  const undo = presetUndo.value
+  if (!undo || code.value !== undo.after) return
+  replacePresetSource(undo.before)
+  presetUndo.value = null
+}
+
+function removeParameterPreset() {
+  if (!selectedPreset.value) return
+  presetError.value = ''
+  if (savePresetList(parameterPresets.value.filter(item => item.id !== selectedPreset.value!.id))) presetSelection.value = ''
 }
 
 function updateCustomizer(name: string, value: CustomizerValue) {
@@ -1979,6 +2186,20 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
           <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
+<details class="performance-panel">
+    <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
+    <div class="performance-content">
+      <p>{{ lang === 'ru' ? 'Последние 60 успешных публикаций этой сессии. Отправка кадра не означает его показ на экране. Этапы вложены друг в друга: значения не нужно складывать.' : 'Last 60 successful publications in this session. Frame submission is not display presentation. Timings overlap; do not add them together.' }}</p>
+      <p>{{ lang === 'ru' ? 'Сборки / вытеснены / запуски Worker / принудительные перезапуски' : 'Builds / superseded / Worker starts / forced restarts' }}: {{ buildCounters.builds }} / {{ buildCounters.superseded }} / {{ buildCounters.workerStarts }} / {{ buildCounters.hardRestarts }}</p>
+      <table v-if="performanceLast">
+        <caption>{{ lang === 'ru' ? 'Последняя публикация' : 'Latest publication' }} · {{ performanceLast.quality }} · #{{ performanceLast.revision }}</caption>
+        <tbody><tr v-for="row in performanceRows" :key="row[0]"><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr></tbody>
+      </table>
+      <p v-else>{{ lang === 'ru' ? 'Замеры появятся после успешной сборки.' : 'Measurements will appear after a successful build.' }}</p>
+      <p>{{ lang === 'ru' ? '«—»: этап не наблюдался. Объём загрузки учитывает только вершины и индексы, без рёбер и служебных данных.' : '“—”: boundary not observed. Upload bytes cover vertices and indices only, excluding edges and auxiliary data.' }}</p>
+      <button type="button" :disabled="!performanceSamples.length" @click="exportPerformance">{{ lang === 'ru' ? 'Скачать отчёт JSON' : 'Download JSON report' }}</button>
+    </div>
+  </details>
       </section>
 
       <div
@@ -2088,8 +2309,22 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             @reveal-source="revealSource"
             @highlight-source="highlightSource"
           />
+          <div v-else-if="dockTab === 'inspect'" class="compute-inspector">
+          <section class="compute-panel" :aria-label="lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation'">
+            <strong>{{ lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation' }}</strong>
+            <button type="button" :disabled="selectedMesh === null || !canExport || computeBusy" @click="runGeometryAnalysis">{{ computeBusy ? (lang === 'ru' ? 'Вычисление…' : 'Computing…') : (lang === 'ru' ? 'Рассчитать площадь на GPU' : 'Compute surface area on GPU') }}</button>
+            <button v-if="computeBusy" type="button" @click="cancelGeometryAnalysis">{{ lang === 'ru' ? 'Отменить' : 'Cancel' }}</button>
+            <p>{{ lang === 'ru' ? 'Выберите деталь актуальной полной сборки. Эксперимент: WebGPU Compute со сверкой каждого результата на CPU.' : 'Select a part from a current full build. Experimental WebGPU Compute with CPU verification of every result.' }}</p>
+            <div v-if="computeResult" role="status">
+              <p>{{ lang === 'ru' ? 'Площадь поверхности' : 'Surface area' }}: <strong>{{ formatNumber(computeResult.area, 4) }}</strong></p>
+              <p>{{ computeResult.backend === 'webgpu-compute' ? 'WebGPU Compute ✓' : (lang === 'ru' ? 'Результат CPU (запасной путь)' : 'CPU result (fallback)') }}</p>
+              <p>CPU: {{ formatNumber(computeResult.cpuMs, 1) }} ms · GPU: {{ computeResult.gpuMs === null ? '—' : formatNumber(computeResult.gpuMs, 1) + ' ms' }}</p>
+              <p v-if="computeResult.fallback">{{ lang === 'ru' ? 'GPU недоступен, завершился с ошибкой или не прошёл сверку. Показан расчёт CPU.' : 'GPU unavailable, failed, or did not pass verification. Showing CPU calculation.' }}</p>
+              <p>{{ lang === 'ru' ? 'GPU-время включает запуск, передачу и чтение результата. Этот режим проверяет корректность, а не обещает ускорение.' : 'GPU time includes setup, upload and readback. This mode verifies correctness; it does not promise acceleration.' }}</p>
+            </div>
+            <p v-if="computeError" role="alert">{{ computeError }}</p>
+          </section>
           <InspectPanel
-            v-else-if="dockTab === 'inspect'"
             :selection="currentInspection"
             :measurement="panelMeasurement"
             :measure-active="measureActive"
@@ -2113,7 +2348,28 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             @update:section-flip="setSectionFlip"
             @reset-section="resetSection"
           />
-          <div v-else class="customizer-card">
+          </div>
+          <div v-else class="customizer-card" @pointerdown.capture="beginParameterGesture" @change.capture="commitParameterControl">
+            <section class="parameter-presets" :aria-label="lang === 'ru' ? 'Варианты параметров' : 'Parameter presets'">
+              <strong>{{ lang === 'ru' ? 'Варианты параметров' : 'Parameter presets' }}</strong>
+              <form class="preset-save" @submit.prevent="saveParameterPreset">
+                <input v-model="presetName" maxlength="80" :aria-label="lang === 'ru' ? 'Имя варианта' : 'Preset name'" :placeholder="lang === 'ru' ? 'Имя варианта' : 'Preset name'">
+                <button type="submit" :disabled="!presetName.trim() || !customizerParameters.length || parameterPresets.length >= MAX_PARAMETER_PRESETS">{{ lang === 'ru' ? 'Сохранить вариант' : 'Save preset' }}</button>
+              </form>
+              <template v-if="parameterPresets.length">
+                <select :value="selectedPreset?.id" :aria-label="lang === 'ru' ? 'Сохранённый вариант' : 'Saved preset'" @change="presetSelection = ($event.target as HTMLSelectElement).value">
+                  <option v-for="preset in parameterPresets" :key="preset.id" :value="preset.id">{{ preset.name }}</option>
+                </select>
+                <div class="preset-actions">
+                  <button type="button" :disabled="!presetCompatible" @click="restoreParameterPreset">{{ lang === 'ru' ? 'Применить' : 'Apply' }}</button>
+                  <button type="button" @click="removeParameterPreset">{{ lang === 'ru' ? 'Удалить вариант' : 'Delete preset' }}</button>
+                  <button v-if="presetUndo && code === presetUndo.after" type="button" @click="undoParameterPreset">{{ lang === 'ru' ? 'Отменить применение' : 'Undo apply' }}</button>
+                </div>
+                <p v-if="!presetCompatible">{{ lang === 'ru' ? 'Исходник изменился. Вариант доступен после восстановления той же структуры кода, включая комментарии.' : 'Source changed. Restore the same code structure, including comments, to apply this preset.' }}</p>
+              </template>
+              <p>{{ lang === 'ru' ? 'До 20 вариантов в локальной рабочей сессии. Файл SCAD и ссылка содержат только текущий исходник.' : 'Up to 20 presets in the local workspace. SCAD files and links contain only the current source.' }}</p>
+              <p v-if="presetError" role="alert">{{ presetError }}</p>
+            </section>
             <CustomizerPanel
               :parameters="customizerParameters"
               :title="t('parameters')"
@@ -2214,6 +2470,31 @@ button, select { color: inherit; }
   position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+.performance-panel { flex: 0 0 auto; border-top: 1px solid var(--border); color: var(--text); font-size: .72rem; }
+.performance-panel summary { cursor: pointer; padding: 8px 12px; }
+.performance-panel summary span, .performance-panel p { color: var(--text-dim); }
+.performance-content { padding: 0 12px 10px; max-height: 280px; overflow: auto; }
+.performance-panel p { line-height: 1.45; }
+.performance-panel table { width: 100%; border-collapse: collapse; }
+.performance-panel caption { text-align: left; font-weight: 600; margin: 8px 0; }
+.performance-panel th, .performance-panel td { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.performance-panel th { text-align: left; font-weight: 400; }
+.performance-panel td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.performance-panel button { padding: 6px 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; color: var(--text); cursor: pointer; }
+.performance-panel button:disabled { opacity: .5; cursor: default; }
+
+.parameter-presets { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 8px; font-size: .72rem; }
+.parameter-presets p { margin: 0; color: var(--text-dim); line-height: 1.45; }
+.parameter-presets input, .parameter-presets select { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); }
+.preset-save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.preset-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.parameter-presets button { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); cursor: pointer; }
+.parameter-presets button:disabled { opacity: .5; cursor: default; }
+.compute-inspector { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.compute-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); font-size: .72rem; }
+.compute-panel p { margin: 0; line-height: 1.45; color: var(--text-dim); }
+.compute-panel button { padding: 7px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.compute-panel button:disabled { opacity: .5; cursor: default; }
 </style>
 
 <style scoped>
@@ -2438,4 +2719,29 @@ button, select { color: inherit; }
   button, select, input, textarea { border: 1px solid ButtonText !important; }
   :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
 }
+.performance-panel { flex: 0 0 auto; border-top: 1px solid var(--border); color: var(--text); font-size: .72rem; }
+.performance-panel summary { cursor: pointer; padding: 8px 12px; }
+.performance-panel summary span, .performance-panel p { color: var(--text-dim); }
+.performance-content { padding: 0 12px 10px; max-height: 280px; overflow: auto; }
+.performance-panel p { line-height: 1.45; }
+.performance-panel table { width: 100%; border-collapse: collapse; }
+.performance-panel caption { text-align: left; font-weight: 600; margin: 8px 0; }
+.performance-panel th, .performance-panel td { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.performance-panel th { text-align: left; font-weight: 400; }
+.performance-panel td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.performance-panel button { padding: 6px 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; color: var(--text); cursor: pointer; }
+.performance-panel button:disabled { opacity: .5; cursor: default; }
+
+.parameter-presets { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 8px; font-size: .72rem; }
+.parameter-presets p { margin: 0; color: var(--text-dim); line-height: 1.45; }
+.parameter-presets input, .parameter-presets select { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); }
+.preset-save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.preset-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.parameter-presets button { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); cursor: pointer; }
+.parameter-presets button:disabled { opacity: .5; cursor: default; }
+.compute-inspector { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.compute-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); font-size: .72rem; }
+.compute-panel p { margin: 0; line-height: 1.45; color: var(--text-dim); }
+.compute-panel button { padding: 7px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.compute-panel button:disabled { opacity: .5; cursor: default; }
 </style>

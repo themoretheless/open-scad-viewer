@@ -6,10 +6,10 @@ import {
   type JSONRPCMessage,
   type McpServer,
 } from '@modelcontextprotocol/server'
+import { createModelGraphMcpServer as createOpenScadMcpServer } from '../src/mcp/createModelGraphServer'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
 import { LEGACY_MANIFOLD_EXECUTION } from '../src/core/geometryExecution'
 import {
-  createOpenScadMcpServer,
   persistedFailureStatus,
 } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
@@ -125,6 +125,11 @@ describe('OpenSCAD MCP server', () => {
       tools: Array<{ name: string; annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean } }>
     }
     expect(listed.tools.map(tool => tool.name).sort()).toEqual([
+      'modelgraph_check',
+      'modelgraph_compile',
+      'modelgraph_interference',
+      'modelgraph_report',
+      'modelgraph_set_parameters',
       'openscad_analyze',
       'openscad_build_history',
       'openscad_catalog_stats',
@@ -1148,5 +1153,45 @@ describe('OpenSCAD MCP server', () => {
       arguments: { model_id: 'notify:part', format: 'stl', file_name: 'notify.stl' },
     })
     await expect.poll(listChangedCount).toBe(3)
+  })
+})
+
+describe('ModelGraph MCP language workflow', () => {
+  it('serves a model-ready schema and compiles, edits and checks a structured model', async () => {
+    const { MODELGRAPH_EXAMPLE } = await import('../src/services/modelGraph')
+    const { request, initialize } = await connectedServer()
+    expect(initialize.instructions).toContain('openscad_check')
+    const resource = await request('resources/read', { uri: 'openscad://language/modelgraph-1' }) as { contents: Array<{ text: string }> }
+    const contract = JSON.parse(resource.contents[0].text)
+    expect(contract.language).toBe('modelgraph/1')
+    expect(contract.schema.additionalProperties).toBe(false)
+    expect(contract.guide).toContain('lexical closures')
+    expect(contract.guide).toContain('type_policy:')
+    const assembly = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.assembly_example } }) as { isError?: boolean; structuredContent: { assembly_components: Array<{ id: string; matrix: number[] }>; analysis: { meshCount: number } } }
+    expect(assembly.isError).toBe(false)
+    expect(assembly.structuredContent.analysis.meshCount).toBe(2)
+    expect(assembly.structuredContent.assembly_components[1].matrix[11]).toBeCloseTo(5.3)
+    const sketch = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.sketch_example } }) as { isError?: boolean; structuredContent: { sketch_solutions: Array<{ status: string }>; analysis: { volume: number } } }
+    expect(sketch.isError).toBe(false)
+    expect(sketch.structuredContent.sketch_solutions[0].status).toBe('solved')
+    expect(sketch.structuredContent.analysis.volume).toBeCloseTo(600, 3)
+    const typed = await request('tools/call', { name: 'modelgraph_compile', arguments: { document: contract.units_example } }) as { structuredContent: { document: unknown; document_sha256: string; constraint_report: Array<{ passed: boolean }> } }
+    expect(typed.structuredContent.constraint_report[0].passed).toBe(true)
+    const rejected = await request('tools/call', { name: 'modelgraph_set_parameters', arguments: { document: typed.structuredContent.document, expected_document_sha256: typed.structuredContent.document_sha256, updates: [{ id: 'wall', value: 0.6 }] } }) as { isError: boolean; structuredContent: { error: { code: string; details: unknown[] } } }
+    expect(rejected.isError).toBe(true)
+    expect(rejected.structuredContent.error.code).toBe('constraint_failed')
+    expect(rejected.structuredContent.error.details).toContainEqual(expect.objectContaining({ id: 'minimumWall', actual: 0.6, expected: 1.2, passed: false }))
+    const functional = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.functional_example } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    expect(functional.isError).toBe(false)
+    expect(functional.structuredContent.analysis.volume).toBeCloseTo(24)
+    const report = await request('tools/call', { name: 'modelgraph_report', arguments: { document: contract.units_example } }) as { content: Array<{ type: string }>; structuredContent: { images_status: string; references: Array<{ node_id: string | null }> } }
+    expect(report.structuredContent.images_status).toBe('rendered')
+    expect(report.content.filter(item => item.type === 'image')).toHaveLength(3)
+    expect(report.structuredContent.references.some(item => item.node_id === 'plate')).toBe(true)
+    const compiled = await request('tools/call', { name: 'modelgraph_compile', arguments: { document: MODELGRAPH_EXAMPLE } }) as { structuredContent: { document: unknown; document_sha256: string } }
+    const changed = await request('tools/call', { name: 'modelgraph_set_parameters', arguments: { document: compiled.structuredContent.document, expected_document_sha256: compiled.structuredContent.document_sha256, updates: [{ id: 'width', value: 50 }] } }) as { structuredContent: { document: unknown } }
+    const checked = await request('tools/call', { name: 'modelgraph_check', arguments: { document: changed.structuredContent.document } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    expect(checked.isError).toBe(false)
+    expect(checked.structuredContent.analysis.volume).toBeGreaterThan(11000)
   })
 })

@@ -1,0 +1,110 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "width",
+      "value": 20
+    }
+  ],
+  "nodes": [
+    {
+      "id": "outline",
+      "op": "sketch",
+      "points": [
+        {
+          "id": "a",
+          "position": [
+            0.2,
+            -0.1
+          ]
+        },
+        {
+          "id": "b",
+          "position": [
+            19,
+            1
+          ]
+        },
+        {
+          "id": "c",
+          "position": [
+            21,
+            9
+          ]
+        },
+        {
+          "id": "d",
+          "position": [
+            -1,
+            11
+          ]
+        }
+      ],
+      "boundary": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "constraints": [
+        {
+          "id": "origin",
+          "kind": "fix",
+          "point": "a",
+          "at": [
+            0,
+            0
+          ]
+        },
+        {
+          "id": "bottom",
+          "kind": "horizontal",
+          "a": "a",
+          "b": "b"
+        },
+        {
+          "id": "right",
+          "kind": "vertical",
+          "a": "b",
+          "b": "c"
+        },
+        {
+          "id": "top",
+          "kind": "horizontal",
+          "a": "c",
+          "b": "d"
+        },
+        {
+          "id": "left",
+          "kind": "vertical",
+          "a": "d",
+          "b": "a"
+        },
+        {
+          "id": "width",
+          "kind": "distance",
+          "a": "a",
+          "b": "b",
+          "value": {
+            "param": "width"
+          }
+        },
+        {
+          "id": "height",
+          "kind": "distance",
+          "a": "b",
+          "b": "c",
+          "value": 10
+        }
+      ]
+    },
+    {
+      "id": "part",
+      "op": "extrude",
+      "input": "outline",
+      "height": 3
+    }
+  ],
+  "root": "part"
+}

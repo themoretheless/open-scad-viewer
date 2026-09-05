@@ -43,4 +43,13 @@ export type RendererStatusChangeHandler = (event: RendererLifecycleEvent) => voi
 
 export interface SetMeshesOptions {
   preserveMeasurement?: boolean
+  /** Opaque publication token, echoed only after its first GPU submission. */
+  frameToken?: number
+}
+
+/** CPU-side publication counters, not GPU execution time. */
+export interface SceneUploadMetrics {
+  geometryUploadBytes: number
+  geometryBuffersCreated: number
+  reusedEntities: number
 }

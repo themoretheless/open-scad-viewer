@@ -1,0 +1,19 @@
+{
+  "name": "modelgraph",
+  "version": "0.1.0",
+  "description": "Functional parametric 3D modeling with local MCP",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ModelGraph",
+    "shortDescription": "Create and validate parametric 3D models.",
+    "longDescription": "Use typed functional ModelGraph documents to build, check and export geometry through a local MCP server.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Create a parameterized 3D model with ModelGraph."
+  },
+  "mcpServers": "./.mcp.json"
+}

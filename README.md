@@ -286,6 +286,39 @@ does not enforce a network sandbox. The V8 old-space setting also does not cap
 WebAssembly linear memory, so OS-level network and hostile-memory containment
 remain explicit residual risks. There is no automatic fallback to the subset.
 
+## GPU geometry computation (experimental)
+
+Select a part from a current full build, open **Inspect**, and choose
+**Compute surface area on GPU**. A WebGPU compute shader calculates triangle
+surface area with the object's transform, with CPU verification and an explicit
+CPU fallback. Cancellation and scene/source changes invalidate the analysis.
+This opt-in pilot does not accelerate or replace Manifold construction/booleans;
+CUDA is not implemented. See the
+[compute boundaries and live smoke checks](docs/design/geometry-compute-pilot.md).
+
+## Automatic builds and parameter presets
+
+Automatic builds adapt to recent build cost: text changes wait 60–450 ms,
+while range drags coalesce updates without repeatedly interrupting in-flight
+geometry. Release flushes the latest value and completes full quality when
+needed. Manual Render remains immediate.
+
+The Parameters dock can save up to 20 named parameter sets, apply them and undo
+an application. Sets survive reload in the local workspace and are bound to
+the same source template. They are not included in SCAD downloads or source
+links. Existing workspaces migrate automatically. See
+[the scheduling and preset contracts](docs/design/auto-build-and-presets.md).
+
+## Build measurements
+
+The collapsible **Build measurements / Замеры сборки** panel below the editor
+shows compiler phases, request-to-result and scene-publication time, the first
+GPU frame submission, transferred buffer bytes and vertex/index GPU reuse.
+Download a source-free JSON report of the last 60 successful publications for
+comparisons. Frame submission is not the moment the image appears on screen;
+missing observations remain blank. See the
+[measurement boundaries](docs/design/build-performance-measurements.md).
+
 ## Controls
 
 - Left drag: orbit.
@@ -408,7 +441,12 @@ prerequisites. The MCP sidecar has its own
 
 ## Docs
 
+- [ModelGraph/1 model prompt](docs/languages/modelgraph-1-prompt.md) — the MCP functional modeling language: pure functions, lexical closures, immutable lists and geometry values, bounded evaluation, and examples. Read `openscad://language/modelgraph-1` from MCP for the same guide and JSON Schema. Regenerate artifacts with `node --import tsx scripts/export-modelgraph-language.mjs`.
 - [architecture.md](architecture.md) — the current module map, worker/kernel design, and active technical debt.
 - [recommendation.md](recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
 - [docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md) — the 7-role panel review of this rewrite: what was fixed immediately, what remains, and the convergence plan with the feature branch (`claude/top-issues-architecture-sync-00p2q9`).
 - [docs/research/mcp-ten-agent-review.md](docs/research/mcp-ten-agent-review.md) — ten MCP reviews, implemented decisions, rejected scope, and the ranked next stage.
+
+## ModelGraph LLM plugin
+
+[Local client packages and remote HTTP setup](integrations/modelgraph/README.md) cover Claude Desktop, Claude Code, Cursor, VS Code, Codex and an HTTP endpoint for web clients. Generate local configurations with `node scripts/package-modelgraph-plugin.mjs`.

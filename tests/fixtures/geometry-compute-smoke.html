@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Geometry compute smoke</title>
+<style>body{font:16px system-ui;max-width:960px;margin:40px auto;background:#181b22;color:#eef0f5}button{padding:12px}pre{white-space:pre-wrap}</style>
+<h1>WebGPU surface-area checks</h1>
+<p>Real compute dispatch, readback and CPU comparison. No workspace data is read or written.</p>
+<button id="run">Run compute checks</button>
+<pre id="result">Ready</pre>
+<script type="module">
+import { analyzeSurfaceArea } from '../../src/services/geometryCompute.ts'
+const identity = () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
+const triangle = () => ({ vertices: new Float32Array([0,0,0,0,0,1,2,0,0,0,0,1,0,3,0,0,0,1]), indices: new Uint32Array([0,1,2]), transform: identity() })
+document.querySelector('#run').onclick = async () => {
+  document.querySelector('#run').disabled = true
+  const result = document.querySelector('#result')
+  result.textContent = 'Running…'
+  const scaled = triangle()
+  scaled.transform[0] = -2; scaled.transform[5] = 3; scaled.transform[10] = 4; scaled.transform[3] = 1e20
+  const boundary = triangle()
+  boundary.indices = new Uint32Array(Array.from({length:129}, () => [0,1,2]).flat())
+  const degenerate = triangle()
+  degenerate.indices = new Uint32Array([0,0,0])
+  const rows = []
+  try {
+    for (const [name, input, expected] of [['partial workgroup', triangle(), 3], ['reflection, nonuniform scale, large translation', scaled, 18], ['129 triangles across workgroups', boundary, 387], ['degenerate triangle', degenerate, 0]]) {
+      const actual = await analyzeSurfaceArea(input, new AbortController().signal)
+      const passed = actual.backend === 'webgpu-compute' && Math.abs(actual.area - expected) <= 1e-8 + expected * 5e-4
+      rows.push({ name, passed, expected, ...actual })
+      result.textContent = JSON.stringify(rows, null, 2)
+    }
+    result.textContent = (rows.every(row => row.passed) ? 'PASS' : 'FAIL') + '\n' + JSON.stringify(rows, null, 2)
+  } catch (error) { result.textContent = 'FAIL\n' + String(error) }
+  finally { document.querySelector('#run').disabled = false }
+}
+</script>

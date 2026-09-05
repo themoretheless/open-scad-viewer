@@ -1,0 +1,105 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "count",
+      "value": 3
+    }
+  ],
+  "functions": [
+    {
+      "id": "block",
+      "kind": "geometry",
+      "parameters": [
+        "width"
+      ],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            {
+              "local": "width"
+            },
+            2,
+            2
+          ]
+        }
+      ],
+      "root": "solid"
+    }
+  ],
+  "assertions": [
+    {
+      "condition": {
+        "op": "le",
+        "args": [
+          {
+            "param": "count"
+          },
+          20
+        ]
+      },
+      "message": "Use at most 20 blocks."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "block",
+      "op": "call",
+      "function": "block",
+      "args": {
+        "width": {
+          "op": "apply",
+          "function": {
+            "op": "lambda",
+            "parameters": [
+              "x"
+            ],
+            "body": {
+              "op": "multiply",
+              "args": [
+                {
+                  "local": "x"
+                },
+                2
+              ]
+            }
+          },
+          "args": [
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "placed",
+      "op": "translate",
+      "vector": [
+        {
+          "op": "multiply",
+          "args": [
+            {
+              "local": "i"
+            },
+            3
+          ]
+        },
+        0,
+        0
+      ],
+      "input": "block"
+    },
+    {
+      "id": "parts",
+      "op": "map",
+      "count": {
+        "param": "count"
+      },
+      "index": "i",
+      "input": "placed"
+    }
+  ],
+  "root": "parts"
+}

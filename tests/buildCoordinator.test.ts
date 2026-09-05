@@ -526,3 +526,30 @@ describe('BuildCoordinator', () => {
     }).toThrow(TypeError)
   })
 })
+
+
+describe('coordinator measurement boundaries', () => {
+  it('measures main-clock latency independently of Worker time and counts coalesced requests once', () => {
+    const worker = new FakeWorker()
+    let now = 100
+    let result: PublishedGeometryBuild | undefined
+    const coordinator = new BuildCoordinator({ workerFactory: () => worker, now: () => now, onPublish: event => { result = event } })
+    const input = { documentRevision: 1, source: 'cube(1);', quality: 'preview' as const }
+    const job = coordinator.requestBuild(input)
+    expect(coordinator.requestBuild(input)).toBe(job)
+    now = 145
+    worker.emitMessage(success(buildRequests(worker)[0]))
+    expect(result).toMatchObject({ hostElapsedMs: 45, durationMs: 10 })
+    expect(coordinator.diagnostics).toEqual({ builds: 1, superseded: 0, workerStarts: 1, hardRestarts: 0 })
+    coordinator.dispose()
+  })
+
+  it('counts supersession and hard restarts without counting disposal as a restart', () => {
+    const { coordinator } = harness()
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'preview' })
+    coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'preview' })
+    expect(coordinator.diagnostics).toEqual({ builds: 2, superseded: 1, workerStarts: 2, hardRestarts: 1 })
+    coordinator.dispose()
+    expect(coordinator.diagnostics.hardRestarts).toBe(1)
+  })
+})

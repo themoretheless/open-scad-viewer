@@ -1,0 +1,56 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "type_policy": "strict",
+  "parameters": [
+    {
+      "id": "width",
+      "value": 4,
+      "unit": "cm",
+      "min": 1,
+      "max": 20
+    },
+    {
+      "id": "wall",
+      "value": 2,
+      "unit": "mm",
+      "min": 0.1,
+      "max": 10
+    }
+  ],
+  "constraints": [
+    {
+      "id": "minimumWall",
+      "left": {
+        "param": "wall"
+      },
+      "relation": "ge",
+      "right": {
+        "op": "quantity",
+        "value": 1.2,
+        "unit": "mm"
+      },
+      "message": "Declared plate thickness must be at least 1.2 mm."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "plate",
+      "op": "box",
+      "size": [
+        {
+          "param": "width"
+        },
+        {
+          "op": "quantity",
+          "value": 20,
+          "unit": "mm"
+        },
+        {
+          "param": "wall"
+        }
+      ]
+    }
+  ],
+  "root": "plate"
+}

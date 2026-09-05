@@ -83,3 +83,36 @@ describe('WebGPURenderer lifecycle reporting', () => {
     expect(renderer.restoreMeasurement({ points: [[Number.NaN, 0, 0]], distance: null }, false)).toBe(false)
   })
 })
+
+describe('first scene frame submission boundary', () => {
+  it('does not report hidden frames or failed submissions, and reports a successful token once', () => {
+    const renderer = new WebGPURenderer()
+    const submitted = vi.fn()
+    renderer.onFrameSubmitted = submitted
+    const queueSubmit = vi.fn()
+    const pass = { setPipeline() {}, setBindGroup() {}, end() {} }
+    const internal = renderer as unknown as { drawable: boolean; render(): void; pendingFrameToken: number | null }
+    Object.assign(internal, {
+      canvas: { width: 640, height: 480 },
+      dev: { queue: { writeBuffer() {}, submit: queueSubmit }, createCommandEncoder: () => ({ beginRenderPass: () => pass, finish: () => ({}) }) },
+      ctx: { getCurrentTexture: () => ({ createView() {} }) },
+      depth: { createView() {} }, sceneUB: {}, drawable: false,
+      updateSize() {}, pendingFrameToken: 7,
+    })
+    internal.render()
+    expect(submitted).not.toHaveBeenCalled()
+    internal.drawable = true
+    queueSubmit.mockImplementationOnce(() => { throw new Error('queue failed') })
+    expect(() => internal.render()).toThrow('queue failed')
+    expect(submitted).not.toHaveBeenCalled()
+    expect(internal.pendingFrameToken).toBe(7)
+    internal.render()
+    expect(submitted).toHaveBeenCalledWith(7, expect.any(Number))
+    internal.render()
+    expect(submitted).toHaveBeenCalledTimes(1)
+    renderer.onFrameSubmitted = () => { throw new Error('consumer failed') }
+    internal.pendingFrameToken = 8
+    expect(() => internal.render()).not.toThrow()
+    expect(internal.pendingFrameToken).toBeNull()
+  })
+})

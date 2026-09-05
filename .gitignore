@@ -11,3 +11,6 @@ coverage
 .open-scad-viewer.duckdb*
 .open-scad-runtime/
 /tmp/
+
+# Machine-specific generated MCP client configurations
+.local-integrations/

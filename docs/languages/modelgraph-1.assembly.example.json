@@ -1,0 +1,100 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "gap",
+      "value": 0.3
+    }
+  ],
+  "nodes": [
+    {
+      "id": "body",
+      "op": "box",
+      "size": [
+        20,
+        10,
+        5
+      ]
+    },
+    {
+      "id": "cover",
+      "op": "box",
+      "size": [
+        20,
+        10,
+        2
+      ]
+    },
+    {
+      "id": "product",
+      "op": "assembly",
+      "components": [
+        {
+          "id": "base",
+          "input": "body",
+          "anchors": [
+            {
+              "id": "top",
+              "origin": [
+                0,
+                0,
+                5
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "placement": {
+            "origin": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "id": "lid",
+          "input": "cover",
+          "anchors": [
+            {
+              "id": "bottom",
+              "origin": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "mate": {
+            "component": "base",
+            "anchor": "top",
+            "own_anchor": "bottom",
+            "gap": {
+              "param": "gap"
+            },
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "root": "product"
+}

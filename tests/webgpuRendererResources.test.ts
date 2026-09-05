@@ -81,11 +81,13 @@ describe('WebGPURenderer retained geometry resources', () => {
     const { renderer, device, internal } = harness()
     const first = fixture()
     renderer.setMeshes([first])
+    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 84, geometryBuffersCreated: 2, reusedEntities: 0 })
     const initial = internal.meshes[0]
     expect(device.buffers).toHaveLength(3)
 
     const replacement = fixture()
     renderer.setMeshes([replacement])
+    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 1 })
     expect(device.buffers).toHaveLength(4)
     expect(internal.meshes[0].vb).toBe(initial.vb)
     expect(internal.meshes[0].ib).toBe(initial.ib)

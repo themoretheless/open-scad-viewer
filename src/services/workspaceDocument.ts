@@ -1,3 +1,5 @@
+import { parseParameterPresets, type ParameterPreset } from './parameterPresets'
+
 /**
  * Versioned persistence contract for the local single-document workspace.
  *
@@ -5,7 +7,7 @@
  * to a multi-file workspace without coupling migrations to Vue components.
  */
 
-export const WORKSPACE_SCHEMA_VERSION = 1 as const
+export const WORKSPACE_SCHEMA_VERSION = 2 as const
 export const WORKSPACE_STORAGE_KEY = 'open-scad-viewer.workspace'
 export const WORKSPACE_RECOVERY_KEY_PREFIX = 'open-scad-viewer.workspace.recovery.'
 export const WORKSPACE_LEGACY_SOURCE_KEY = 'scad-code'
@@ -19,6 +21,7 @@ export interface WorkspaceDocumentSnapshot {
   readonly documentId: string
   readonly fileName: string
   readonly source: string
+  readonly parameterPresets: readonly ParameterPreset[]
   /** Monotonic persistence generation for both source and metadata edits. */
   readonly mutation: number
   readonly revision: number
@@ -82,6 +85,7 @@ export function createWorkspaceDocument(
     documentId: options.documentId ?? fallbackDocumentId(),
     fileName: options.fileName ?? 'model.scad',
     source,
+    parameterPresets: [],
     mutation: options.mutation ?? revision,
     revision,
     updatedAt: options.updatedAt ?? Date.now(),
@@ -95,16 +99,19 @@ export function createWorkspaceDocument(
  */
 export function updateWorkspaceDocument(
   previous: WorkspaceDocumentSnapshot,
-  update: { source?: string; fileName?: string },
+  update: { source?: string; fileName?: string; parameterPresets?: readonly ParameterPreset[] },
   updatedAt = Date.now(),
 ): WorkspaceDocumentSnapshot {
   const source = update.source ?? previous.source
   const fileName = update.fileName ?? previous.fileName
-  if (source === previous.source && fileName === previous.fileName) return previous
+  const parameterPresets = update.parameterPresets ?? previous.parameterPresets
+  if (source === previous.source && fileName === previous.fileName
+    && JSON.stringify(parameterPresets) === JSON.stringify(previous.parameterPresets)) return previous
   return requireValidWorkspaceDocument({
     ...previous,
     source,
     fileName,
+    parameterPresets,
     mutation: previous.mutation + 1,
     revision: previous.revision + (source === previous.source ? 0 : 1),
     updatedAt,
@@ -181,11 +188,13 @@ export function parseWorkspaceRecovery(serialized: string): WorkspaceRecoveryRec
 export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSnapshot | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<Record<keyof WorkspaceDocumentSnapshot, unknown>>
-  if (candidate.schemaVersion !== WORKSPACE_SCHEMA_VERSION
+  if ((candidate.schemaVersion !== WORKSPACE_SCHEMA_VERSION && candidate.schemaVersion !== 1)
     || !validDocumentId(candidate.documentId)
     || !validFileName(candidate.fileName)
     || typeof candidate.source !== 'string'
     || candidate.source.length > MAX_WORKSPACE_SOURCE_LENGTH) return null
+  const parameterPresets = candidate.schemaVersion === 1 ? [] : parseParameterPresets(candidate.parameterPresets)
+  if (parameterPresets === null) return null
   const revision = finiteRevision(candidate.revision)
   // Schema v1 originally shipped without a general mutation counter. Treat
   // its geometry revision as the migration baseline, then persist mutation on
@@ -200,6 +209,7 @@ export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSn
     documentId: candidate.documentId,
     fileName: candidate.fileName,
     source: candidate.source,
+    parameterPresets,
     mutation,
     revision,
     updatedAt,
@@ -222,6 +232,7 @@ export function workspaceDocumentsEqual(
     && left.documentId === right.documentId
     && left.fileName === right.fileName
     && left.source === right.source
+    && JSON.stringify(left.parameterPresets) === JSON.stringify(right.parameterPresets)
     && left.mutation === right.mutation
     && left.revision === right.revision
     && left.updatedAt === right.updatedAt

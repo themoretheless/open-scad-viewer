@@ -1,0 +1,44 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "height",
+      "value": 5
+    }
+  ],
+  "nodes": [
+    {
+      "id": "outline",
+      "op": "rectangle",
+      "size": [
+        20,
+        10
+      ],
+      "center": true
+    },
+    {
+      "id": "hole",
+      "op": "circle",
+      "radius": 2
+    },
+    {
+      "id": "profile",
+      "op": "difference",
+      "base": "outline",
+      "subtract": [
+        "hole"
+      ]
+    },
+    {
+      "id": "part",
+      "op": "extrude",
+      "input": "profile",
+      "height": {
+        "param": "height"
+      },
+      "center": true
+    }
+  ],
+  "root": "part"
+}

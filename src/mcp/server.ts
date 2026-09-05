@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio'
 import { defaultGeometryBuildEngine } from '../services/geometryBuildEngine'
 import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from './boundedTransport'
-import { createOpenScadMcpServer } from './createServer'
+import { createModelGraphMcpServer as createOpenScadMcpServer } from './createModelGraphServer'
 import { DirectGeometrySupervisor } from './directGeometrySupervisor'
 import { DuckDbModelStore } from './duckdbModelStore'
 import {

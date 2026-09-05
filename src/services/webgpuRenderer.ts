@@ -45,6 +45,7 @@ import type {
   SelectionChangeHandler,
   SelectionMode,
   SetMeshesOptions,
+  SceneUploadMetrics,
 } from './rendererContracts'
 export type {
   DisplayMode,
@@ -308,6 +309,11 @@ export class WebGPURenderer {
   private edgeWarmQueue: GMesh[] = []
   private edgeWarmHandle: number | ReturnType<typeof setTimeout> | null = null
   private edgeWarmIsIdle = false
+
+  private pendingFrameToken: number | null = null
+  private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
+  get sceneUploadMetrics(): SceneUploadMetrics { return { ...this.uploadMetrics } }
+  onFrameSubmitted: ((token: number, submittedAt: number) => void) | null = null
 
   onSelectionChange: SelectionChangeHandler | null = null
   onHoverChange: HoverChangeHandler | null = null
@@ -658,6 +664,7 @@ export class WebGPURenderer {
     const dev = this.dev
     if (!dev || !this.initialized || this.dead || this.lost) return
 
+    const metrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
     const previous = this.meshes
     const previousSet = new Set(previous)
     const reusableByAsset = new Map<GeometryAssetId, GMesh[]>()
@@ -698,6 +705,8 @@ export class WebGPURenderer {
           const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
           if (ownsGeometryBuffers) {
+            metrics.geometryBuffersCreated += 2
+            metrics.geometryUploadBytes += m.vertices.byteLength + m.indices.byteLength
             dev.queue.writeBuffer(vb, 0, m.vertices)
             dev.queue.writeBuffer(ib, 0, m.indices)
           }
@@ -710,6 +719,7 @@ export class WebGPURenderer {
             layout: this.objBGL,
             entries: [{ binding: 0, resource: { buffer: ub } }],
           })
+          if (reusable) metrics.reusedEntities++
           next.push({
             assetId: m.geometryAssetId,
             vb, ib, ic: m.indices.length, ub, bg,
@@ -755,6 +765,8 @@ export class WebGPURenderer {
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.meshes = next
+    this.pendingFrameToken = options.frameToken ?? null
+    this.uploadMetrics = metrics
     this.rebuildSceneAabbIndex()
     this.bounds = nextBounds
     this.selected = null
@@ -1602,6 +1614,11 @@ export class WebGPURenderer {
 
     pass.end()
     dev.queue.submit([enc.finish()])
+    const token = this.pendingFrameToken
+    this.pendingFrameToken = null
+    if (token !== null) {
+      try { this.onFrameSubmitted?.(token, performance.now()) } catch { /* Diagnostics cannot break rendering. */ }
+    }
   }
 
   requestRender(resetFrameRetry = true) {
@@ -2324,6 +2341,7 @@ export class WebGPURenderer {
   }
 
   destroy() {
+    this.pendingFrameToken = null
     this.teardown()
     this.updateStatus({ status: 'destroyed' })
   }
