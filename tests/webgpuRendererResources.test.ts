@@ -5,7 +5,12 @@ import { WebGPURenderer } from '../src/services/webgpuRenderer'
 
 class FakeBuffer {
   destroyCalls = 0
-  constructor(readonly size: number, readonly usage: number) {}
+  readonly contents: Uint8Array
+  readonly written: Uint8Array
+  constructor(readonly size: number, readonly usage: number) {
+    this.contents = new Uint8Array(size)
+    this.written = new Uint8Array(size)
+  }
   destroy() { this.destroyCalls++ }
 }
 
@@ -14,9 +19,18 @@ class FakeDevice {
   readonly writes: Array<{ buffer: FakeBuffer; offset: number; bytes: number }> = []
   readonly limits = { maxBufferSize: 1 << 28 }
   failCreateAt: number | null = null
+  failBindGroupAt: number | null = null
+  bindGroupCalls = 0
   readonly queue = {
-    writeBuffer: (buffer: FakeBuffer, offset: number, data: ArrayBufferView) => {
+    writeBuffer: (buffer: FakeBuffer, offset: number, data: ArrayBuffer | ArrayBufferView) => {
       this.writes.push({ buffer, offset, bytes: data.byteLength })
+      // WebGPU snapshots the supplied bytes when writeBuffer is called. Keep
+      // that behavior when the renderer reuses one mutable uniform scratch.
+      const bytes = ArrayBuffer.isView(data)
+        ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+        : new Uint8Array(data)
+      buffer.contents.set(bytes, offset)
+      buffer.written.fill(1, offset, offset + bytes.length)
     },
   }
   createBuffer(descriptor: { size: number; usage: number }) {
@@ -25,7 +39,11 @@ class FakeDevice {
     this.buffers.push(buffer)
     return buffer
   }
-  createBindGroup() { return {} }
+  createBindGroup() {
+    this.bindGroupCalls++
+    if (this.failBindGroupAt === this.bindGroupCalls) throw new Error('injected bind-group failure')
+    return {}
+  }
 }
 
 function fixture(offset = 0): MeshData {
@@ -58,7 +76,7 @@ function harness() {
     lost: boolean
     objBGL: GPUBindGroupLayout
     initialFitDone: boolean
-    meshes: Array<{ vb: FakeBuffer; ib: FakeBuffer; ub: FakeBuffer }>
+    meshes: Array<{ vb: FakeBuffer; ib: FakeBuffer; ub: FakeBuffer; edgeIB: FakeBuffer | null; edgeIC: number }>
     scheduleEdgeBufferWarmup(): void
     requestRender(): void
   }
@@ -75,6 +93,45 @@ function harness() {
 
 describe('WebGPURenderer retained geometry resources', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it.each([
+    ['shaded', 0.625, 0],
+    ['edges', 0.625, 0.7],
+    ['xray', 0.24, 0],
+  ] as const)('writes complete model, normal, color and %s style uniforms', (mode, alpha, edge) => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    renderer.setDisplayMode(mode)
+    const mesh = fixture()
+    // A rotated, mirrored, nonuniformly scaled object with translation catches
+    // both matrix-layout mistakes and incorrectly using the model for normals.
+    mesh.transform = new Float32Array([
+      0, -3, 0, 5,
+      -2, 0, 0, -7,
+      0, 0, 4, 11,
+      0, 0, 0, 1,
+    ])
+    mesh.color = [0.125, 0.375, 0.75, 0.625]
+    renderer.setMeshes([mesh])
+    const uniform = internal.meshes[0].ub
+    const expected = [
+      // Column-major model matrix.
+      0, -2, 0, 0, -3, 0, 0, 0, 0, 0, 4, 0, 5, -7, 11, 1,
+      // Column-major inverse-transpose, including the homogeneous row.
+      0, -0.5, 0, -3.5, -1 / 3, 0, 0, 5 / 3, 0, 0, 0.25, -2.75, 0, 0, 0, 1,
+      0.125, 0.375, 0.75, 0.625,
+      alpha, 0, edge, 0,
+    ]
+    expect(uniform.size).toBe(160)
+    expect(uniform.written.every(byte => byte === 1)).toBe(true)
+    const values = new Float32Array(uniform.contents.buffer)
+    expected.forEach((value, index) => expect(values[index]).toBeCloseTo(value, 6))
+
+    const presentationBefore = uniform.contents.slice(0, 144)
+    renderer.setDisplayMode(mode === 'xray' ? 'shaded' : 'xray')
+    expect(uniform.contents.slice(0, 144)).toEqual(presentationBefore)
+    expect(values[36]).toBeCloseTo(mode === 'xray' ? 0.625 : 0.24, 6)
+  })
 
   it('reuses verified vertex/index buffers and only replaces entity uniforms', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
@@ -96,6 +153,116 @@ describe('WebGPURenderer retained geometry resources', () => {
     expect(initial.ub.destroyCalls).toBe(1)
   })
 
+  it('keeps colliding asset identifiers separate while reusing verified staged views', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    const first = fixture()
+    renderer.setMeshes([first])
+    const originalVertexBuffer = internal.meshes[0].vb
+    const replacement = fixture()
+    const collision = fixture(10)
+    collision.geometryAssetId = first.geometryAssetId
+    renderer.setMeshes([replacement, collision, { ...replacement, entityId: 'entity:third' }])
+    expect(internal.meshes[0].vb).toBe(originalVertexBuffer)
+    expect(internal.meshes[1].vb).not.toBe(originalVertexBuffer)
+    expect(internal.meshes[2].vb).toBe(originalVertexBuffer)
+    expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 84, geometryBuffersCreated: 2, reusedEntities: 2 })
+    const changedIndex = { ...replacement, indices: new Uint32Array([0, 2, 1]) }
+    renderer.setMeshes([replacement, changedIndex])
+    expect(internal.meshes[1].ib).not.toBe(internal.meshes[0].ib)
+    expect(internal.meshes[1].vb).not.toBe(originalVertexBuffer)
+  })
+
+  it('uploads one edge buffer for three shared-asset instances, including equal edge-array copies', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, device, internal } = harness()
+    renderer.setDisplayMode('edges')
+    const mesh = fixture()
+    renderer.setMeshes([
+      { ...mesh, entityId: 'entity:first' },
+      { ...mesh, entityId: 'entity:second', edgeIndices: mesh.edgeIndices.slice() },
+      { ...mesh, entityId: 'entity:third' },
+    ])
+
+    const first = internal.meshes[0]
+    expect(first.edgeIB).not.toBeNull()
+    for (const instance of internal.meshes) {
+      expect(instance.vb).toBe(first.vb)
+      expect(instance.ib).toBe(first.ib)
+      expect(instance.edgeIB).toBe(first.edgeIB)
+      expect(instance.edgeIC).toBe(mesh.edgeIndices.length)
+    }
+    const edge = first.edgeIB!
+    expect(new Uint32Array(edge.contents.buffer)).toEqual(mesh.edgeIndices)
+    expect(device.writes.filter(write => write.buffer === edge)).toHaveLength(1)
+    // One vertex buffer, one triangle index buffer, three entity uniforms and
+    // one shared edge buffer: no hidden per-instance duplicate edge upload.
+    expect(device.buffers).toHaveLength(6)
+  })
+
+  it('keeps distinct edge topology separate even when vertex and triangle buffers are shared', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, device, internal } = harness()
+    renderer.setDisplayMode('edges')
+    const mesh = fixture()
+    const firstEdges = new Uint32Array([0, 1, 1, 2])
+    const otherEdges = new Uint32Array([0, 2, 2, 1])
+    renderer.setMeshes([
+      { ...mesh, entityId: 'entity:first', edgeIndices: firstEdges },
+      { ...mesh, entityId: 'entity:other-topology', edgeIndices: otherEdges },
+      { ...mesh, entityId: 'entity:copy', edgeIndices: firstEdges.slice() },
+    ])
+
+    const [first, other, copy] = internal.meshes
+    expect(first.vb).toBe(other.vb)
+    expect(first.ib).toBe(other.ib)
+    expect(first.edgeIB).not.toBeNull()
+    expect(other.edgeIB).not.toBeNull()
+    expect(first.edgeIB).not.toBe(other.edgeIB)
+    expect(copy.edgeIB).toBe(first.edgeIB)
+    expect(new Uint32Array(first.edgeIB!.contents.buffer)).toEqual(firstEdges)
+    expect(new Uint32Array(other.edgeIB!.contents.buffer)).toEqual(otherEdges)
+    expect(device.buffers).toHaveLength(7)
+  })
+
+  it('releases shared edges once and recreates them after topology disappears from the publication', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, device, internal } = harness()
+    renderer.setDisplayMode('edges')
+    const mesh = fixture()
+    const instances = Array.from({ length: 3 }, (_, index) => ({ ...mesh, entityId: `entity:instance-${index}` as const }))
+    renderer.setMeshes(instances)
+    const originalVertex = internal.meshes[0].vb
+    const originalEdges = internal.meshes[0].edgeIB!
+    expect(originalEdges).not.toBeNull()
+
+    renderer.setMeshes(instances.map(instance => ({ ...instance, edgeIndices: instance.edgeIndices.slice() })))
+    expect(internal.meshes.every(instance => instance.edgeIB === originalEdges)).toBe(true)
+    expect(originalEdges.destroyCalls).toBe(0)
+
+    renderer.setMeshes(instances.map(instance => ({ ...instance, edgeIndices: new Uint32Array() })))
+    expect(internal.meshes.every(instance => instance.edgeIB === null && instance.edgeIC === 0)).toBe(true)
+    expect(originalEdges.destroyCalls).toBe(1)
+    expect(internal.meshes[0].vb).toBe(originalVertex)
+    expect(originalVertex.destroyCalls).toBe(0)
+
+    // The VB/IB pair remains live, so a stale cache keyed only by geometry
+    // would incorrectly resurrect the edge buffer destroyed just above.
+    renderer.setMeshes(instances)
+    const replacementEdges = internal.meshes[0].edgeIB!
+    expect(replacementEdges).not.toBeNull()
+    expect(replacementEdges).not.toBe(originalEdges)
+    expect(replacementEdges.destroyCalls).toBe(0)
+    expect(internal.meshes.every(instance => instance.edgeIB === replacementEdges)).toBe(true)
+    expect(new Uint32Array(replacementEdges.contents.buffer)).toEqual(mesh.edgeIndices)
+
+    renderer.destroy()
+    renderer.destroy()
+    expect(originalEdges.destroyCalls).toBe(1)
+    expect(replacementEdges.destroyCalls).toBe(1)
+    for (const buffer of device.buffers) expect(buffer.destroyCalls).toBe(1)
+  })
+
   it('rolls back a failed staged entity allocation without destroying live geometry', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
     const { renderer, device, internal } = harness()
@@ -108,5 +275,26 @@ describe('WebGPURenderer retained geometry resources', () => {
     expect(live.vb.destroyCalls).toBe(0)
     expect(live.ib.destroyCalls).toBe(0)
     expect(live.ub.destroyCalls).toBe(0)
+  })
+
+  it('preserves published geometry and uniforms when a later staged bind group fails', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, device, internal } = harness()
+    renderer.setMeshes([fixture()])
+    const live = internal.meshes[0]
+    const publishedUniform = live.ub.contents.slice()
+    const metrics = renderer.sceneUploadMetrics
+    const stagedStart = device.buffers.length
+    device.failBindGroupAt = device.bindGroupCalls + 2
+    const replacement = fixture()
+    replacement.color = [0, 0.5, 1, 0.25]
+    replacement.transform[3] = 12
+
+    expect(() => renderer.setMeshes([replacement, fixture(2)])).toThrow('injected bind-group failure')
+    expect(internal.meshes).toEqual([live])
+    expect(renderer.sceneUploadMetrics).toEqual(metrics)
+    expect(live.ub.contents).toEqual(publishedUniform)
+    for (const buffer of [live.vb, live.ib, live.ub]) expect(buffer.destroyCalls).toBe(0)
+    for (const buffer of device.buffers.slice(stagedStart)) expect(buffer.destroyCalls).toBe(1)
   })
 })

@@ -36,6 +36,7 @@ const LARGE_WELD_VERTEX_THRESHOLD = 65_536
 const RADIX_BITS = 16
 const RADIX_SIZE = 1 << RADIX_BITS
 const RADIX_MASK = RADIX_SIZE - 1
+const SMALL_EDGE_SORT_THRESHOLD = 65_536
 
 /**
  * Returns boundary, crease and non-manifold edges, while removing coplanar
@@ -232,25 +233,32 @@ function radixSortEdgeOccurrences(
   edgeCount: number,
 ): Uint32Array {
   let current: Uint32Array = occurrenceOrder.subarray(0, edgeCount)
+  if (edgeCount < 2) return current
   let next: Uint32Array = new Uint32Array(edgeCount)
-  const counts = new Uint32Array(RADIX_SIZE)
+  // Tiny bodies otherwise allocate and scan 65,536 buckets for just a handful
+  // of edges. Eight-bit digits need more stable passes but only 1 KiB of
+  // counters; keep the existing four-pass path for larger occurrence streams.
+  const radixBits = edgeCount < SMALL_EDGE_SORT_THRESHOLD ? 8 : RADIX_BITS
+  const radixSize = 1 << radixBits
+  const radixMask = radixSize - 1
+  const counts = new Uint32Array(radixSize)
 
   // b is the secondary key and therefore sorted first.
   for (const values of [edgeB, edgeA]) {
-    for (let shift = 0; shift < 32; shift += RADIX_BITS) {
+    for (let shift = 0; shift < 32; shift += radixBits) {
       counts.fill(0)
       for (let index = 0; index < edgeCount; index++) {
-        counts[(values[current[index]] >>> shift) & RADIX_MASK]++
+        counts[(values[current[index]] >>> shift) & radixMask]++
       }
       let offset = 0
-      for (let digit = 0; digit < RADIX_SIZE; digit++) {
+      for (let digit = 0; digit < radixSize; digit++) {
         const count = counts[digit]
         counts[digit] = offset
         offset += count
       }
       for (let index = 0; index < edgeCount; index++) {
         const occurrence = current[index]
-        const digit = (values[occurrence] >>> shift) & RADIX_MASK
+        const digit = (values[occurrence] >>> shift) & radixMask
         next[counts[digit]++] = occurrence
       }
       const swap = current

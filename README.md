@@ -319,6 +319,14 @@ comparisons. Frame submission is not the moment the image appears on screen;
 missing observations remain blank. See the
 [measurement boundaries](docs/design/build-performance-measurements.md).
 
+For reproducible bottleneck investigations, run `npm run bench:cpu` and
+`npm run bench:gpu` separately. The CPU suite includes cold/warm compiler phases,
+mesh analysis, validation, inspection and export; `--profiles build,stl` adds
+separate CPU and allocation profiles. The browser suite uses the real WebGPU
+renderer, records adapter identity, GPU timestamps when available, resource
+counts, scene replacement and idle/animation behavior. See the
+[benchmark instructions and results](docs/design/performance-benchmarks.md).
+
 ## Controls
 
 - Left drag: orbit.

@@ -2,7 +2,7 @@
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
-  perspective, orthographic, lookAt, transpose, invert, multiply,
+  perspective, orthographic, lookAt, invert, multiply,
   transformPoint, unprojectRay,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
@@ -223,6 +223,7 @@ interface Bounds {
 }
 
 function sameTypedArray(left: Float32Array | Uint32Array, right: Float32Array | Uint32Array) {
+  if (left === right) return true
   if (left.constructor !== right.constructor || left.length !== right.length) return false
   for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false
   return true
@@ -305,7 +306,12 @@ export class WebGPURenderer {
   private cameraHistory = new CameraHistory(32)
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
-  private meshBoundsCache = new WeakMap<Float32Array, { transform: Mat4; result: { local: Aabb3; world: Bounds } }>()
+  private objectUniformScratch = new Float32Array(40)
+  private sceneUniformScratch = new Float32Array(36)
+  private meshBoundsCache = new WeakMap<Float32Array, WeakMap<Mat4, {
+    transformSnapshot: Mat4; result: { local: Aabb3; world: Bounds }
+  }>>()
+  private edgeBuffersByVertexBuffer = new Map<GPUBuffer, GMesh[]>()
   private edgeWarmQueue: GMesh[] = []
   private edgeWarmHandle: number | ReturnType<typeof setTimeout> | null = null
   private edgeWarmIsIdle = false
@@ -688,12 +694,14 @@ export class WebGPURenderer {
         const transform = new Float32Array(m.transform)
         const inverseTransform = invert(transform)
 
-        const reusable = m.geometryAssetId
-          ? reusableByAsset.get(m.geometryAssetId)?.find(candidate => (
+        const candidates = m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
+        // Prefer the already verified views staged earlier in this publication.
+        // A newly built shared asset needs one content comparison, not one per instance.
+        const reusable = candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
+          ?? candidates?.find(candidate => (
               sameTypedArray(candidate.vertices, m.vertices)
               && sameTypedArray(candidate.indices, m.indices)
             ))
-          : undefined
         let vb: GPUBuffer | null = reusable?.vb ?? null
         let ib: GPUBuffer | null = reusable?.ib ?? null
         let ub: GPUBuffer | null = null
@@ -710,21 +718,29 @@ export class WebGPURenderer {
             dev.queue.writeBuffer(vb, 0, m.vertices)
             dev.queue.writeBuffer(ib, 0, m.indices)
           }
-          dev.queue.writeBuffer(ub, 0, transpose(transform))
+          // One contiguous upload per entity. writeBuffer snapshots the data,
+          // so the same bounded scratch storage can serve the next entity.
+          const uniform = this.objectUniformScratch
+          for (let row = 0; row < 4; row++) {
+            for (let column = 0; column < 4; column++) uniform[column * 4 + row] = transform[row * 4 + column]
+          }
           // Column-major bytes for inverse-transpose(row-major model).
-          dev.queue.writeBuffer(ub, 64, inverseTransform)
-          dev.queue.writeBuffer(ub, 128, new Float32Array(m.color))
-          dev.queue.writeBuffer(ub, 144, new Float32Array([initialAlpha, 0, initialEdge, 0]))
+          uniform.set(inverseTransform, 16)
+          uniform.set(m.color, 32)
+          uniform[36] = initialAlpha; uniform[37] = 0
+          uniform[38] = initialEdge; uniform[39] = 0
+          dev.queue.writeBuffer(ub, 0, uniform)
           const bg = dev.createBindGroup({
             layout: this.objBGL,
             entries: [{ binding: 0, resource: { buffer: ub } }],
           })
           if (reusable) metrics.reusedEntities++
+          const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
           next.push({
             assetId: m.geometryAssetId,
             vb, ib, ic: m.indices.length, ub, bg,
-            edgeIB: reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices) ? reusable.edgeIB : null,
-            edgeIC: reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices) ? reusable.edgeIC : 0,
+            edgeIB: reuseEdges ? reusable.edgeIB : null,
+            edgeIC: reuseEdges ? reusable.edgeIC : 0,
             vertices: m.vertices, indices: m.indices,
             edgeIndices: m.edgeIndices, faceIds: m.faceIds, bvh: m.bvh,
             provenance: m.provenance,
@@ -765,6 +781,7 @@ export class WebGPURenderer {
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.meshes = next
+    this.rebuildEdgeBufferCache()
     this.pendingFrameToken = options.frameToken ?? null
     this.uploadMetrics = metrics
     this.rebuildSceneAabbIndex()
@@ -807,12 +824,14 @@ export class WebGPURenderer {
 
   /**
    * Scalar min/max scan over the interleaved vertex stream (no per-vertex
-   * allocations or closures). Results are cached per vertices-buffer identity
-   * and reused as long as the same transform reference is supplied.
+   * allocations or closures). Cache each immutable geometry/instance pair so
+   * shared assets do not evict each other's transformed bounds. Weak keys do
+   * not keep previous scene instances alive; snapshots detect transform edits.
    */
   private measureMeshBounds(vertices: Float32Array, transform: Mat4): { local: Aabb3; world: Bounds } | null {
-    const cached = this.meshBoundsCache.get(vertices)
-    if (cached && cached.transform === transform) return cached.result
+    let instances = this.meshBoundsCache.get(vertices)
+    const cached = instances?.get(transform)
+    if (cached && sameTypedArray(cached.transformSnapshot, transform)) return cached.result
 
     const m0 = transform[0], m1 = transform[1], m2 = transform[2], m3 = transform[3]
     const m4 = transform[4], m5 = transform[5], m6 = transform[6], m7 = transform[7]
@@ -855,7 +874,11 @@ export class WebGPURenderer {
         max: [wMaxX, wMaxY, wMaxZ] as [number, number, number],
       },
     }
-    this.meshBoundsCache.set(vertices, { transform, result })
+    if (!instances) {
+      instances = new WeakMap()
+      this.meshBoundsCache.set(vertices, instances)
+    }
+    instances.set(transform, { transformSnapshot: new Float32Array(transform), result })
     return result
   }
 
@@ -1188,11 +1211,31 @@ export class WebGPURenderer {
     return true
   }
 
+  /** Rebuild at publication so cached handles never outlive their scene. */
+  private rebuildEdgeBufferCache() {
+    this.edgeBuffersByVertexBuffer.clear()
+    for (const mesh of this.meshes) {
+      if (!mesh.edgeIB) continue
+      const candidates = this.edgeBuffersByVertexBuffer.get(mesh.vb) ?? []
+      if (!candidates.some(candidate => candidate.edgeIB === mesh.edgeIB)) candidates.push(mesh)
+      this.edgeBuffersByVertexBuffer.set(mesh.vb, candidates)
+    }
+  }
+
   private ensureEdgeBuffer(mesh: GMesh) {
     const dev = this.dev
     if (!dev || mesh.edgeIB || !mesh.edgeIndices.length) return
     const byteLength = mesh.edgeIndices.byteLength
     if (byteLength > MAX_EDGE_BUFFER_BYTES || byteLength > dev.limits.maxBufferSize) return
+
+    const candidates = this.edgeBuffersByVertexBuffer.get(mesh.vb)
+    const shared = candidates?.find(candidate => candidate.ib === mesh.ib
+      && sameTypedArray(candidate.edgeIndices, mesh.edgeIndices))
+    if (shared?.edgeIB) {
+      mesh.edgeIB = shared.edgeIB
+      mesh.edgeIC = shared.edgeIC
+      return
+    }
 
     let buffer: GPUBuffer | null = null
     try {
@@ -1200,6 +1243,8 @@ export class WebGPURenderer {
       dev.queue.writeBuffer(buffer, 0, mesh.edgeIndices)
       mesh.edgeIB = buffer
       mesh.edgeIC = mesh.edgeIndices.length
+      if (candidates) candidates.push(mesh)
+      else this.edgeBuffersByVertexBuffer.set(mesh.vb, [mesh])
     } catch {
       buffer?.destroy()
     }
@@ -1466,14 +1511,16 @@ export class WebGPURenderer {
     if (!canvas || !dev || !ctx || !depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
     const { eye, viewProjection } = this.cameraState()
-    const vp = transpose(viewProjection)
-    const sd = new Float32Array(36)
-    sd.set(vp, 0)
-    sd.set([eye[0],eye[1],eye[2],1], 16)
-    sd.set([0.55,0.75,0.45,0], 20)
-    sd.set([0.22,0.22,0.24,1], 24)
-    sd.set([this.sectionNormal[0], this.sectionNormal[1], this.sectionNormal[2], this.sectionOffset], 28)
-    sd.set([this.sectionEnabled ? 1 : 0, 0, 0, 0], 32)
+    const sd = this.sceneUniformScratch
+    for (let row = 0; row < 4; row++) {
+      for (let column = 0; column < 4; column++) sd[column * 4 + row] = viewProjection[row * 4 + column]
+    }
+    sd[16] = eye[0]; sd[17] = eye[1]; sd[18] = eye[2]; sd[19] = 1
+    sd[20] = 0.55; sd[21] = 0.75; sd[22] = 0.45; sd[23] = 0
+    sd[24] = 0.22; sd[25] = 0.22; sd[26] = 0.24; sd[27] = 1
+    sd[28] = this.sectionNormal[0]; sd[29] = this.sectionNormal[1]
+    sd[30] = this.sectionNormal[2]; sd[31] = this.sectionOffset
+    sd[32] = this.sectionEnabled ? 1 : 0
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
@@ -1520,12 +1567,15 @@ export class WebGPURenderer {
 
     pass.setPipeline(this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
+    const transparentObjects = []
+    for (let index = 0; index < this.meshes.length; index++) {
+      const mesh = this.meshes[index]
+      if (this.isMeshVisible(index) && isTransparentAlpha(mesh.alpha)) {
+        transparentObjects.push({ index, center: mesh.worldBounds.center })
+      }
+    }
     const transparentOrder = sortTransparentBackToFront(
-      this.meshes.flatMap((mesh, index) => (
-        this.isMeshVisible(index) && isTransparentAlpha(mesh.alpha)
-          ? [{ index, center: mesh.worldBounds.center }]
-          : []
-      )),
+      transparentObjects,
       eye,
       [this.tx, this.ty, this.tz],
     )
@@ -2385,6 +2435,7 @@ export class WebGPURenderer {
     this.cameraHistory.clear()
 
     this.destroyMeshes(this.meshes)
+    this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []
     this.sceneAabbIndex = buildSceneAabbIndex([])
     this.sceneAabbIndexDirty = false

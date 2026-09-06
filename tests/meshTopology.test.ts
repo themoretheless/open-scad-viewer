@@ -119,6 +119,51 @@ describe('semantic mesh edges', () => {
     expect(reordered).toEqual(visible)
   })
 
+  it('sorts sparse high vertex IDs correctly even when there are only a few valid edges', () => {
+    const sparseVertices = new Float32Array(65_537 * 6)
+    sparseVertices.set([0, 0, 0], 65_536 * 6)
+    sparseVertices.set([1, 0, 0], 256 * 6)
+    sparseVertices.set([1, 1, 0], 65_535 * 6)
+    sparseVertices.set([0, 1, 0], 255 * 6)
+    const result = extractSemanticEdges(sparseVertices, Uint32Array.from([
+      255, 255, 65_536, // Skipped occurrence slots precede the valid triangles.
+      65_536, 256, 65_535,
+      65_536, 65_535, 255,
+    ]), { weldCoincidentVertices: false })
+
+    // Four square boundaries in lexicographic vertex-ID order. The diagonal
+    // (65535, 65536) is coplanar, independently of the sparse ID assignment.
+    expect([...result.indices]).toEqual([255, 65_535, 255, 65_536, 256, 65_535, 256, 65_536])
+    expect(result.diagnostics).toEqual({ boundary: 4, crease: 0, nonManifold: 0, degenerate: 1 })
+  })
+
+  it.each([10_922, 10_923])('matches the exact strip boundary around the radix-size transition (%i segments)', segments => {
+    // Each segment contributes six edge occurrences: these cases straddle
+    // 65,536 occurrences while retaining a simple independently known outline.
+    const stripVertices = new Float32Array((segments + 1) * 2 * 6)
+    const triangles = new Uint32Array(segments * 6)
+    const boundary = [[0, 1], [segments * 2, segments * 2 + 1]]
+    for (let x = 0; x <= segments; x++) {
+      stripVertices.set([x, 0, 0, 0, 0, 1, x, 1, 0, 0, 0, 1], x * 12)
+      if (x === segments) continue
+      const low = x * 2
+      // Reversed segment order forces extraction to establish output order.
+      triangles.set([low, low + 2, low + 3, low, low + 3, low + 1], (segments - 1 - x) * 6)
+      boundary.push([low, low + 2], [low + 1, low + 3])
+    }
+    boundary.sort((left, right) => left[0] - right[0] || left[1] - right[1])
+
+    const result = extractSemanticEdges(stripVertices, triangles, { weldCoincidentVertices: false })
+    expect(result.indices).toEqual(Uint32Array.from(boundary.flat()))
+    expect(result.diagnostics).toEqual({ boundary: segments * 2 + 2, crease: 0, nonManifold: 0, degenerate: 0 })
+  })
+
+  it('returns no edges when every triangle is degenerate', () => {
+    const result = extractSemanticEdges(vertices([[0, 0, 0], [1, 0, 0], [2, 0, 0]]), Uint32Array.from([0, 0, 1, 0, 1, 2]))
+    expect(result.indices).toEqual(new Uint32Array())
+    expect(result.diagnostics).toEqual({ boundary: 0, crease: 0, nonManifold: 0, degenerate: 2 })
+  })
+
   it('keeps a large coplanar strip compact and removes every triangulation diagonal', () => {
     const segments = 25_000
     const stripVertices = new Float32Array((segments + 1) * 2 * 6)

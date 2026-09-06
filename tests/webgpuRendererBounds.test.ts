@@ -61,6 +61,30 @@ describe('WebGPURenderer mesh bounds cache', () => {
     expect(again!.world).toEqual(first!.world)
   })
 
+  it('retains separate bounds for instances sharing a geometry buffer', () => {
+    const measure = boundMeasure(new WebGPURenderer())
+    const left = translate(identity(), [-5, 0, 0])
+    const right = translate(identity(), [5, 0, 0])
+    const first = measure(vertices, left)
+    const second = measure(vertices, right)
+    expect(first!.world.min).toEqual([-6, 0, 0])
+    expect(second!.world.min).toEqual([4, 0, 0])
+    expect(measure(vertices, left)).toBe(first)
+    expect(measure(vertices, right)).toBe(second)
+  })
+
+  it('invalidates an instance when its transform changes in place', () => {
+    const measure = boundMeasure(new WebGPURenderer())
+    const transform = identity()
+    const first = measure(vertices, transform)
+    transform[3] = 10
+    const moved = measure(vertices, transform)
+    expect(moved).not.toBe(first)
+    expect(moved!.world.min).toEqual([9, 0, 0])
+    expect(first!.world.min).toEqual([-1, 0, 0])
+    expect(measure(vertices, transform)).toBe(moved)
+  })
+
   it('skips non-finite vertices and reports fully invalid buffers as null', () => {
     const measure = boundMeasure(new WebGPURenderer())
     const withNaN = new Float32Array([
