@@ -2390,12 +2390,12 @@ function svgElementSubpaths(element: XmlElement, dpi: number): SvgSubpath[] {
     if (rx === 0 || ry === 0) return [{ points: [[x, y], [x + width, y], [x + width, y + height], [x, y + height]], closed: true }]
     const points: OpenScadImportPoint2[] = [[x + rx, y], [x + width - rx, y]]
     const corners = [
-      [[x + width - rx, y + ry], -Math.PI / 2, 0],
+      [[x + width - rx, y + ry], -Math.PI / 2, Math.PI / 2],
       [[x + width - rx, y + height - ry], 0, Math.PI / 2],
       [[x + rx, y + height - ry], Math.PI / 2, Math.PI / 2],
       [[x + rx, y + ry], Math.PI, Math.PI / 2],
     ] as const
-    for (const [center, start, sweep] of corners) points.push(...arcPoints(center, rx, ry, start, sweep).slice(1))
+    for (const [center, start, sweep] of corners) points.push(...arcPoints(center, rx, ry, start, sweep))
     return [{ points, closed: true }]
   }
   if (element.localName === 'circle') return [{ points: svgCircle([length('cx'), length('cy')], length('r')), closed: true }]

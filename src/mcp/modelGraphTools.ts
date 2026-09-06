@@ -1,3 +1,4 @@
+import { registerModelGraphSvgTools } from './modelGraphSvgTools'
 import { registerModelGraphGenerate } from './modelGraphGenerate'
 import { MECHANICAL_GENERATOR_EXAMPLES } from '../services/mechanicalGeneratorContract'
 import { registerModelGraphModify } from './modelGraphModify'
@@ -11,6 +12,7 @@ import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGrap
 import type { McpGeometryService } from './geometryService'
 
 export function registerModelGraphTools(server: McpServer, geometry: McpGeometryService) {
+  registerModelGraphSvgTools(server, geometry)
   registerModelGraphGenerate(server, geometry)
   registerModelGraphModify(server, geometry)
   registerModelGraphMeshExport(server, geometry)

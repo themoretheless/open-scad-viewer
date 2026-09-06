@@ -450,3 +450,26 @@ prerequisites. The MCP sidecar has its own
 ## ModelGraph LLM plugin
 
 [Local client packages and remote HTTP setup](integrations/modelgraph/README.md) cover Claude Desktop, Claude Code, Cursor, VS Code, Codex and an HTTP endpoint for web clients. Generate local configurations with `node scripts/package-modelgraph-plugin.mjs`.
+
+## SVG creation and conversion
+
+Open **SVG ↔ 3D** below the editor to create a rectangle or circle, edit SVG
+markup, or load a local SVG. Preview and download normalize the geometry into
+filled contours. **Add extrusion to model** appends self-contained SCAD with
+an editable height in millimeters. Curves are tessellated; fill rules, holes,
+and supported strokes use the existing bounded SVG importer. Convert text to
+outlines first; images, masks and clipping paths are unsupported.
+
+After a current full build, export a silhouette along X/Y/Z or select a planar
+face and export it in its own plane at true scale. The result also becomes the
+panel's SVG input, so it can be extruded again. Export uses all model geometry,
+including hidden bodies; section clipping does not change it. Face export uses
+the selected mesh's kernel face identity and verifies planarity. Curved-surface
+unwrapping is not implemented. SVG viewport bounds are cropped to the contour
+bounds; reimport preserves size and holes, not the original world-space origin.
+
+MCP exposes `modelgraph_svg_extrude(svg, height)` with an actual full geometry
+check, and `modelgraph_svg_export(document, axis?, face?)` returning SVG.
+`face` contains zero-based `meshIndex` and `triangleIndex` from a full build.
+Limits: 256 KiB input SVG, 20000 contour points, 20000 source triangles for
+projection, and 4 MiB output SVG.

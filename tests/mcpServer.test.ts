@@ -138,6 +138,8 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_nurbs_language',
       'modelgraph_report',
       'modelgraph_set_parameters',
+      'modelgraph_svg_export',
+      'modelgraph_svg_extrude',
       'openscad_analyze',
       'openscad_build_history',
       'openscad_catalog_stats',

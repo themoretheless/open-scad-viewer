@@ -6,6 +6,7 @@ import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import MechanicalGenerator from './features/MechanicalGenerator.vue'
+import SvgPanel from './features/SvgPanel.vue'
 import InspectPanel from './components/InspectPanel.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import SceneOutliner from './components/SceneOutliner.vue'
@@ -2214,6 +2215,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
           <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
+        <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" @append="source => replacePresetSource(code + '\n\n' + source)" />
 <details class="performance-panel">
     <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
     <div class="performance-content">
