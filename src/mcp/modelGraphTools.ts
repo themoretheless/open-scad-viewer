@@ -1,3 +1,4 @@
+import { registerModelGraphModify } from './modelGraphModify'
 import { registerModelGraphMeshExport } from './modelGraphMeshExport'
 import { registerModelGraphNurbsTools } from './modelGraphNurbsTools'
 import { registerModelGraphInterference } from './modelGraphInterference'
@@ -8,6 +9,7 @@ import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGrap
 import type { McpGeometryService } from './geometryService'
 
 export function registerModelGraphTools(server: McpServer, geometry: McpGeometryService) {
+  registerModelGraphModify(server, geometry)
   registerModelGraphMeshExport(server, geometry)
   registerModelGraphNurbsTools(server)
   registerModelGraphReport(server, geometry)

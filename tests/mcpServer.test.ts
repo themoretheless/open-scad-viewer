@@ -129,6 +129,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_compile',
       'modelgraph_export',
       'modelgraph_interference',
+      'modelgraph_modify',
       'modelgraph_nurbs_build',
       'modelgraph_nurbs_compile',
       'modelgraph_nurbs_evaluate',
@@ -1173,6 +1174,14 @@ describe('ModelGraph MCP language workflow', () => {
     expect(contract.schema.additionalProperties).toBe(false)
     expect(contract.guide).toContain('lexical closures')
     expect(contract.guide).toContain('type_policy:')
+    const modified = await request('tools/call', {name:'modelgraph_modify', arguments:{
+      document:{language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'b',op:'box',size:[10,10,10]}],root:'b'},
+      modification:{operation:'split',axis:'z',position:4},
+    }}) as {isError?:boolean;structuredContent:{results:Array<{analysis:{volume:number}}>}}
+    expect(modified.isError).not.toBe(true)
+    expect(modified.structuredContent.results[0].analysis.volume).toBeCloseTo(400,6)
+    expect(modified.structuredContent.results[1].analysis.volume).toBeCloseTo(600,6)
+
     const assembly = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.assembly_example } }) as { isError?: boolean; structuredContent: { assembly_components: Array<{ id: string; matrix: number[] }>; analysis: { meshCount: number } } }
     expect(assembly.isError).toBe(false)
     expect(assembly.structuredContent.analysis.meshCount).toBe(2)
