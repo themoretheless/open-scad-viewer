@@ -94,6 +94,18 @@ class GpuProbe {
       this.queryResolve = device.createBuffer({ size: 256, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC })
       this.queryReadback = device.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ })
     }
+    const bundleDraws = new WeakMap<GPURenderBundle, { draws: number; indices: number }>()
+    const createBundle = device.createRenderBundleEncoder.bind(device)
+    device.createRenderBundleEncoder = descriptor => {
+      const encoder = createBundle(descriptor)
+      let draws = 0, indices = 0
+      const draw = encoder.draw.bind(encoder), drawIndexed = encoder.drawIndexed.bind(encoder)
+      encoder.draw = (...args: Parameters<GPURenderBundleEncoder['draw']>) => { draws++; draw(...args) }
+      encoder.drawIndexed = (...args: Parameters<GPURenderBundleEncoder['drawIndexed']>) => { draws++; indices += args[0] * (args[1] ?? 1); drawIndexed(...args) }
+      const finish = encoder.finish.bind(encoder)
+      encoder.finish = descriptor => { const bundle = finish(descriptor); bundleDraws.set(bundle, { draws, indices }); return bundle }
+      return encoder
+    }
     const createBuffer = device.createBuffer.bind(device)
     device.createBuffer = descriptor => {
       const buffer = createBuffer(descriptor)
@@ -123,6 +135,16 @@ class GpuProbe {
           timestamped = true
         }
         const pass = beginRenderPass(passDescriptor)
+        const executeBundles = pass.executeBundles.bind(pass)
+        pass.executeBundles = bundles => {
+          const list = [...bundles]
+          for (const bundle of list) {
+            const counts = bundleDraws.get(bundle)
+            if (!counts) throw new Error('Uninstrumented render bundle')
+            this.counters.drawCalls += counts.draws; this.counters.indicesDrawn += counts.indices
+          }
+          executeBundles(list)
+        }
         const draw = pass.draw.bind(pass), drawIndexed = pass.drawIndexed.bind(pass)
         pass.draw = (...args: Parameters<GPURenderPassEncoder['draw']>) => { this.counters.drawCalls++; draw(...args) }
         pass.drawIndexed = (...args: Parameters<GPURenderPassEncoder['drawIndexed']>) => { this.counters.drawCalls++; this.counters.indicesDrawn += args[0] * (args[1] ?? 1); drawIndexed(...args) }
@@ -434,8 +456,172 @@ async function run(options: Options) {
   }
 }
 
+
+// Throughput pass: no per-frame GPU fence, timestamp readback, or API counters.
+async function runFps(options: Options) {
+  disposeCurrent?.()
+  const scenarios: unknown[] = []
+  const errors: string[] = []
+  const adapter = await navigator.gpu.requestAdapter()
+  if (!adapter || adapter.info.isFallbackAdapter) throw new Error('Hardware WebGPU adapter required')
+  const cadence: number[] = []
+  await new Promise<void>(resolve => {
+    let previous = 0
+    const tick = (time: number) => {
+      if (previous) cadence.push(time - previous)
+      previous = time
+      if (cadence.length < 60) requestAnimationFrame(tick); else resolve()
+    }
+    requestAnimationFrame(tick)
+  })
+  for (const [entities, triangles] of [[128, 5000], [4096, 200], [16384, 200], [1, 200000]]) {
+    const meshes = instances(sphereMesh(triangles), entities)
+    for (const mode of ['shaded', 'edges', 'xray'] as const) {
+      const renderer = new WebGPURenderer()
+      disposeCurrent = () => renderer.destroy()
+      renderer.onStatusChange = event => {
+        if (event.status === 'error') errors.push(event.error.message)
+        if (event.status === 'device-lost') errors.push(event.message)
+      }
+      if (!await renderer.init(document.querySelector<HTMLCanvasElement>('#viewport')!)) throw new Error('FPS renderer init failed')
+      const internal = renderer as unknown as { render(): void; raf: number; edgeWarmQueue: unknown[]; edgeWarmHandle: unknown; dev: GPUDevice }
+      internal.dev.addEventListener('uncapturederror', event => errors.push(event.error.message))
+      renderer.setDisplayMode('edges')
+      renderer.setMeshes(meshes)
+      renderer.setDisplayMode(mode)
+      renderer.resetView()
+      const deadline = performance.now() + 20000
+      while (internal.raf || internal.edgeWarmQueue.length || internal.edgeWarmHandle !== null) {
+        if (performance.now() > deadline) throw new Error('FPS scene warmup timed out')
+        await sleep(20)
+      }
+      await internal.dev.queue.onSubmittedWorkDone()
+      const render = internal.render.bind(renderer)
+      for (const activity of ['camera', 'zoom', 'scan-plane'] as const) {
+        const cpu: number[] = [], starts: number[] = []
+        let measured = false
+        internal.render = () => {
+          const start = performance.now()
+          render()
+          if (measured) { starts.push(start); cpu.push(performance.now() - start) }
+        }
+        const baseDistance = renderer.dist
+        await new Promise<void>((resolve, reject) => {
+          let frame = 0
+          const tick = () => {
+            try {
+              if (errors.length) throw new Error(errors.join('; '))
+              if (frame === options.warmup + options.frames) { measured = false; resolve(); return }
+              measured = frame >= options.warmup
+              if (activity === 'camera') renderer.yaw += 0.012
+              if (activity === 'zoom') renderer.dist = baseDistance * (0.15 + 0.05 * Math.cos(frame * 0.03))
+              if (activity === 'scan-plane') renderer.setSection(true, [0, 0, 1], -8 + 16 * (frame % 180) / 180)
+              renderer.requestRender()
+              frame++
+              requestAnimationFrame(tick)
+            } catch (error) { reject(error) }
+          }
+          requestAnimationFrame(tick)
+        })
+        await internal.dev.queue.onSubmittedWorkDone()
+        const intervals = starts.slice(1).map((start, i) => start - starts[i])
+        const budget = summary(cadence)!.median
+        scenarios.push({ kind: 'continuous-fps', entities, triangles: meshes[0].indices.length / 3 * entities, mode, activity,
+          submittedFrames: starts.length, submittedFps: (starts.length - 1) * 1000 / (starts.at(-1)! - starts[0]),
+          frameIntervalMs: summary(intervals), renderCpuMs: summary(cpu),
+          overRefreshBudget: intervals.filter(value => value > budget * 1.5).length,
+        })
+        await (window as unknown as { captureBenchmarkFrame?: (name: string) => Promise<void> })
+          .captureBenchmarkFrame?.(`fps-${entities}-${mode}-${activity}.png`)
+        renderer.dist = baseDistance
+        renderer.setSection(false, [0, 0, 1], 0)
+      }
+      // A fixed final camera makes before/after screenshots comparable.
+      renderer.resetView()
+      await sleep(50)
+      await internal.dev.queue.onSubmittedWorkDone()
+      if (entities !== 1 || mode !== 'xray') renderer.destroy()
+    }
+  }
+  return { schema: 'open-scad-viewer-fps-v1', options, metadata: {
+    adapter: { vendor: adapter.info.vendor, architecture: adapter.info.architecture, description: adapter.info.description, isFallbackAdapter: adapter.info.isFallbackAdapter },
+    canvas: { width: document.querySelector('canvas')!.width, height: document.querySelector('canvas')!.height, devicePixelRatio },
+    idleRafIntervalMs: summary(cadence),
+  }, scenarios, errors, methodology: [
+    'Continuous requestAnimationFrame invalidations of the production renderer; no per-frame queue fence, readback, or GPU method instrumentation.',
+    'CPU render duration and render-start intervals measured with performance.now; GPU drained only between scenarios. Submission FPS is not physical display presentation FPS.',
+    'Real native hardware adapter. Scene setup and edge warmup excluded. Synthetic indexed spheres exercise camera rotation, zoom and clipping; this excludes Vue UI, compilation, and pointer picking.',
+    '128 dense shared instances, 4096/16384 small shared instances, and one dense mesh. All tessellation edges retained as a deliberate edge stress test.',
+  ] }
+}
+
+async function runFpsDiagnostics(options: Options) {
+  disposeCurrent?.()
+  const probe = new GpuProbe(), renderer = new WebGPURenderer()
+  const scenarios: unknown[] = []
+  probe.install(options.timestamps)
+  try {
+    if (!await renderer.init(document.querySelector<HTMLCanvasElement>('#viewport')!)) throw new Error('Diagnostic renderer initialization failed')
+    probe.instrumentRenderer(renderer)
+    renderer.setDisplayMode('edges')
+    renderer.setMeshes(instances(sphereMesh(200), 16384))
+    renderer.resetView()
+    await probe.settle(renderer)
+    const baseDistance = renderer.dist
+    for (const mode of ['shaded', 'edges', 'xray'] as const) for (const close of [false, true]) {
+      renderer.setDisplayMode(mode)
+      renderer.dist = baseDistance * (close ? 0.15 : 1)
+      renderer.requestRender()
+      await probe.settle(renderer)
+      const action = () => { renderer.yaw += 0.012; renderer.requestRender() }
+      for (let i = 0; i < 5; i++) await probe.frame(action)
+      const before = { ...probe.counters }, samples: FrameSample[] = []
+      for (let i = 0; i < 20; i++) samples.push(await probe.frame(action))
+      scenarios.push({ kind: 'gpu-fps-diagnostic', activity: close ? 'close-zoom' : 'camera', mode, close, entities: 16384, ...frameSummary(samples), counters: delta(before, probe.counters) })
+    }
+    // Mixed colors, alpha, mirrored/nonuniform transforms and different assets.
+    const first = sphereMesh(200), second = sphereMesh(400)
+    const meshes = instances(first, 64).map((mesh, index) => {
+      const base = index >= 16 && index < 32 ? second : first
+      const transform = mesh.transform.slice()
+      transform[0] = index % 2 ? -0.6 : 0.6; transform[5] = 0.8; transform[10] = 1.2
+      return { ...mesh, ...base, entityId: mesh.entityId, transform,
+        color: [index / 64, 0.3, 0.8, index % 3 === 0 ? 0.4 : 1] as [number, number, number, number] }
+    })
+    const capture = async (name: string) => {
+      renderer.requestRender(); await probe.settle(renderer)
+      await (window as unknown as { captureBenchmarkFrame: (name: string) => Promise<void> }).captureBenchmarkFrame(`validation-${name}.png`)
+    }
+    renderer.setDisplayMode('edges'); renderer.setMeshes(meshes); renderer.resetView()
+    await capture('mixed')
+    renderer.selectMesh(24); renderer.setPreselection(40)
+    await capture('selection-hover')
+    renderer.setSection(true, [1, 0, 0], 0)
+    await capture('section')
+    renderer.toggleIsolateSelection()
+    await capture('isolation')
+    renderer.clearSelection(); renderer.setPreselection(null); renderer.setSection(false, [1, 0, 0], 0)
+    renderer.setDisplayMode('xray')
+    await capture('transparent')
+    renderer.setMeshes(meshes.slice().reverse())
+    await capture('replacement')
+    renderer.setDisplayMode('edges')
+    renderer.setMeshes(meshes.map((mesh, index) => ({ ...mesh, ...sphereMesh(200, index + 1), transform: mesh.transform, color: mesh.color })))
+    await capture('unique-bundles')
+    renderer.selectMesh(20); renderer.setPreselection(35); renderer.yaw += 0.4
+    await capture('unique-hover')
+    renderer.setMeshes([])
+    await capture('empty')
+    const beforeIdle = { ...probe.counters }
+    await sleep(options.idleMs)
+    if (probe.errors.length) throw new Error(probe.errors.join('; '))
+    return { schema: 'open-scad-viewer-fps-diagnostics-v1', metadata: { adapter: probe.adapterInfo, timestampEnabled: probe.timestampEnabled }, scenarios, errors: probe.errors, idle: delta(beforeIdle, probe.counters),
+      methodology: 'Separate serialized diagnostic pass after FPS timings: native GPU timestamps and draw counters include instanced counts and bundle replay. Visual state checks are untimed.' }
+  } finally { renderer.destroy(); probe.restore() }
+}
+
 Object.assign(window, { gpuBenchmark: {
-  run, dispose: () => disposeCurrent?.(), prepareHeapWorkload, runHeapWorkload,
+  run, runFps, runFpsDiagnostics, dispose: () => disposeCurrent?.(), prepareHeapWorkload, runHeapWorkload,
   disposeHeapWorkload: () => { heapRenderer?.destroy(); heapRenderer = null },
 } })
 document.querySelector('#status')!.textContent = 'Benchmark ready'

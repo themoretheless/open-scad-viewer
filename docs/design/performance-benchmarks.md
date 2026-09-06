@@ -5,6 +5,7 @@ real viewport renderer. They are development tools, run separately from unit
 tests. Machine-dependent timing thresholds do not gate correctness tests.
 
 Measured findings and changes: [2026-09-07 results](performance-results-2026-09-07.md).
+Continuous animation and draw-call optimization: [FPS results](performance-fps-2026-09-07.md).
 
 ## Run
 
@@ -13,6 +14,7 @@ npm run bench:cpu -- --out tmp/performance/cpu-baseline
 npm run bench:cpu -- --profiles build,stl --out tmp/performance/cpu-profiles
 npm run bench:gpu -- --out tmp/performance/gpu-baseline
 npm run bench:gpu -- --heap-sampling --out tmp/performance/gpu-profiles
+npm run bench:gpu -- --fps --fps-diagnostics --frames 100 --warmup 20 --out tmp/performance/fps
 npm run bench:memory -- tmp/performance/manifold-memory.json
 ```
 
@@ -55,6 +57,30 @@ correctness tests.
 Synthetic GPU spheres deliberately include all tessellation edges to stress the
 edge pass. Their index count includes degenerate pole triangles. This workload
 is a rendering stress case, not a claim about edge counts produced by OpenSCAD.
+
+## Continuous FPS and separate GPU diagnostics
+
+`--fps` runs continuous camera rotation, close zoom and section animation with
+128 dense instances, 4096/16384 small instances, and a single dense mesh, in
+shaded/edges/xray modes. Geometry and edge buffers are prepared before timing.
+There are no per-frame GPU fences, timestamp readbacks or API counter wrappers
+in this mode. A wrapper records CPU render duration and render-start intervals;
+an idle requestAnimationFrame calibration records the browser refresh cadence.
+The reported FPS is **frame submission cadence**, not physical display
+presentation or whole-application FPS. GPU work is drained between scenarios.
+Compilation, Vue updates and pointer picking are outside this measurement.
+
+`--fps-diagnostics` adds a separate pass after FPS timing: native GPU timestamps,
+queue-completion latency, draw counts and image captures for mixed materials,
+mirrored transforms, selection/hover, clipping, isolation, scene replacement and
+unique-geometry render bundles. `--diagnostics-only` runs just this pass.
+Counters include draw commands replayed by bundles and instance counts; encoding
+a reusable bundle does not itself count as an executed draw.
+
+`results.json` contains the final report; `timing-results.json` preserves the
+primary measurement before optional diagnostics. `fps-*.png` and
+`validation-*.png` can be compared byte-for-byte between versions. GPU timestamp
+diagnostics intentionally serialize samples and must not be converted into FPS.
 
 ## Measurement rules
 

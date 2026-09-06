@@ -74,7 +74,10 @@ import {
   querySceneAabbIndex,
   type SceneAabbIndex,
 } from './sceneAabbIndex'
-import { sortTransparentBackToFront } from './transparentOrdering'
+import { TransparentSortBuffer } from './transparentOrdering'
+import { MeshDrawBundle } from './meshDrawBundle'
+import { ViewFrustum } from './viewFrustum'
+import { MeshInstances, instancedObjectShader } from './meshInstances'
 import { effectiveDisplayAlpha, isTransparentAlpha } from './backendQuality'
 
 /* ── WGSL shaders ─────────────────────────────────── */
@@ -311,6 +314,20 @@ export class WebGPURenderer {
   private meshBoundsCache = new WeakMap<Float32Array, WeakMap<Mat4, {
     transformSnapshot: Mat4; result: { local: Aabb3; world: Bounds }
   }>>()
+  private readonly viewFrustum = new ViewFrustum()
+  private readonly opaqueDraws: GMesh[] = []
+  private readonly edgeDraws: GMesh[] = []
+  private readonly transparentSort = new TransparentSortBuffer()
+  private readonly transparentDraws: GMesh[] = []
+  private readonly opaqueInstances = new MeshInstances()
+  private readonly transparentInstances = new MeshInstances()
+  private readonly edgeInstances = new MeshInstances()
+  private instanceBGL!: GPUBindGroupLayout
+  private instanceMeshPipe!: GPURenderPipeline
+  private instanceMeshPipeT!: GPURenderPipeline
+  private instanceEdgePipe!: GPURenderPipeline
+  private readonly opaqueBundle = new MeshDrawBundle()
+  private readonly edgeBundle = new MeshDrawBundle()
   private edgeBuffersByVertexBuffer = new Map<GPUBuffer, GMesh[]>()
   private edgeWarmQueue: GMesh[] = []
   private edgeWarmHandle: number | ReturnType<typeof setTimeout> | null = null
@@ -479,15 +496,16 @@ export class WebGPURenderer {
     }
     const ds: GPUDepthStencilState = { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' }
 
-    this.meshPipe = dev.createRenderPipeline({
+    const meshPipeDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
       vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl] },
       fragment: { module: meshMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: ds,
-    })
+    }
+    this.meshPipe = dev.createRenderPipeline(meshPipeDescriptor)
 
-    this.meshPipeT = dev.createRenderPipeline({
+    const meshPipeTDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
       vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl] },
       fragment: { module: meshMod, entryPoint: 'fs', targets: [{
@@ -499,7 +517,8 @@ export class WebGPURenderer {
       }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: { ...ds, depthWriteEnabled: false },
-    })
+    }
+    this.meshPipeT = dev.createRenderPipeline(meshPipeTDescriptor)
 
     const deepMeshMod = dev.createShaderModule({ code: DEEP_MESH_WGSL })
     this.deepMeshPipe = dev.createRenderPipeline({
@@ -540,7 +559,7 @@ export class WebGPURenderer {
     })
 
     const edgeMod = dev.createShaderModule({ code: EDGE_WGSL })
-    this.edgePipe = dev.createRenderPipeline({
+    const edgePipeDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
       vertex: {
         module: edgeMod,
@@ -563,7 +582,23 @@ export class WebGPURenderer {
       },
       primitive: { topology: 'line-list' },
       depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'less-equal' },
+    }
+    this.edgePipe = dev.createRenderPipeline(edgePipeDescriptor)
+    this.instanceBGL = dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+    ] })
+    const instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL] })
+    const instanceMeshMod = dev.createShaderModule({ code: instancedObjectShader(MESH_WGSL, 'V') })
+    const instanceEdgeMod = dev.createShaderModule({ code: instancedObjectShader(EDGE_WGSL, 'EdgeV') })
+    const instanceDescriptor = (descriptor: GPURenderPipelineDescriptor, module: GPUShaderModule): GPURenderPipelineDescriptor => ({
+      ...descriptor, layout: instanceLayout,
+      vertex: { ...descriptor.vertex, module },
+      fragment: { ...descriptor.fragment!, module },
     })
+    this.instanceMeshPipe = dev.createRenderPipeline(instanceDescriptor(meshPipeDescriptor, instanceMeshMod))
+    this.instanceMeshPipeT = dev.createRenderPipeline(instanceDescriptor(meshPipeTDescriptor, instanceMeshMod))
+    this.instanceEdgePipe = dev.createRenderPipeline(instanceDescriptor(edgePipeDescriptor, instanceEdgeMod))
+
     this.deepEdgePipe = dev.createRenderPipeline({
       layout: meshLayout,
       vertex: {
@@ -780,6 +815,7 @@ export class WebGPURenderer {
     const nextBounds = this.combineBounds(next.map(mesh => mesh.worldBounds))
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
+    this.clearDrawCaches()
     this.meshes = next
     this.rebuildEdgeBufferCache()
     this.pendingFrameToken = options.frameToken ?? null
@@ -1505,6 +1541,17 @@ export class WebGPURenderer {
     return { eye, viewProjection: multiply(projection, view) }
   }
 
+  private clearDrawCaches() {
+    this.opaqueInstances.clear()
+    this.transparentInstances.clear()
+    this.edgeInstances.clear()
+    this.transparentDraws.length = 0
+    this.opaqueBundle.clear()
+    this.edgeBundle.clear()
+    this.opaqueDraws.length = this.edgeDraws.length = 0
+    this.transparentSort.clear()
+  }
+
   private render() {
     this.updateSize()
     const canvas = this.canvas, dev = this.dev, ctx = this.ctx, depth = this.depth, sceneUB = this.sceneUB
@@ -1554,37 +1601,33 @@ export class WebGPURenderer {
       pass.draw(this.measurementVC)
     }
 
-    pass.setPipeline(this.meshPipe)
-    pass.setBindGroup(0, this.sceneBG)
+    this.viewFrustum.update(viewProjection)
+    this.opaqueDraws.length = this.edgeDraws.length = 0
+    this.transparentSort.begin()
     for (let index = 0; index < this.meshes.length; index++) {
-      const g = this.meshes[index]
-      if (!this.isMeshVisible(index) || isTransparentAlpha(g.alpha)) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
+      const mesh = this.meshes[index]
+      if (!this.isMeshVisible(index) || !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius)) continue
+      if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
+      else this.opaqueDraws.push(mesh)
+      const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
+      if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
+    }
+    if (!this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws)) {
+      this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws)
     }
 
     pass.setPipeline(this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
-    const transparentObjects = []
-    for (let index = 0; index < this.meshes.length; index++) {
-      const mesh = this.meshes[index]
-      if (this.isMeshVisible(index) && isTransparentAlpha(mesh.alpha)) {
-        transparentObjects.push({ index, center: mesh.worldBounds.center })
+    const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
+    this.transparentDraws.length = 0
+    for (const { index } of transparentOrder) this.transparentDraws.push(this.meshes[index])
+    if (!this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws)) {
+      for (const g of this.transparentDraws) {
+        pass.setBindGroup(1, g.bg)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
       }
-    }
-    const transparentOrder = sortTransparentBackToFront(
-      transparentObjects,
-      eye,
-      [this.tx, this.ty, this.tz],
-    )
-    for (const index of transparentOrder) {
-      const g = this.meshes[index]
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.ib, 'uint32')
-      pass.drawIndexed(g.ic)
     }
 
     const deepSelectedIndex = this.selectionMode === 'object'
@@ -1617,16 +1660,8 @@ export class WebGPURenderer {
       pass.draw(this.selectionFaceSlot.count)
     }
 
-    pass.setPipeline(this.edgePipe)
-    pass.setBindGroup(0, this.sceneBG)
-    for (let index = 0; index < this.meshes.length; index++) {
-      const g = this.meshes[index]
-      const objectHighlight = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
-      if (!this.isMeshVisible(index) || !g.edgeIB || (this.displayMode !== 'edges' && !objectHighlight)) continue
-      pass.setBindGroup(1, g.bg)
-      pass.setVertexBuffer(0, g.vb)
-      pass.setIndexBuffer(g.edgeIB, 'uint32')
-      pass.drawIndexed(g.edgeIC)
+    if (!this.edgeInstances.draw(pass, dev, this.instanceBGL, this.instanceEdgePipe, this.sceneBG, this.edgeDraws, true)) {
+      this.edgeBundle.draw(pass, dev, this.fmt, this.edgePipe, this.sceneBG, this.edgeDraws, true)
     }
 
     if (deepSelectedIndex !== null) {
@@ -2434,6 +2469,7 @@ export class WebGPURenderer {
     const hadCameraHistory = this.canGoToPreviousView
     this.cameraHistory.clear()
 
+    this.clearDrawCaches()
     this.destroyMeshes(this.meshes)
     this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []

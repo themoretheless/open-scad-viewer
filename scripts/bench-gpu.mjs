@@ -17,19 +17,20 @@ const positive = (name, fallback, max = 10_000) => {
   return number
 }
 if (args.includes('--help')) {
-  console.log('Usage: node scripts/bench-gpu.mjs [--out DIR] [--frames 30] [--warmup 8] [--uploads 8] [--triangles 5000,50000,200000] [--idle-ms 500] [--headless] [--executable PATH] [--no-timestamps] [--heap-sampling] [--heap-frames 180] [--renderer-source PATH]\nUses the existing isolated Playwright package; never installs dependencies. Defaults to headed bundled Chromium and records actual adapter metadata. Timings must run without other benchmark loads. Optional CDP heap sampling is a separate pass after timings, without renderer instrumentation wrappers. --renderer-source loads a saved renderer snapshot at the original module id for A/B comparison without editing product files; the override and resulting source-map binding are recorded.')
+  console.log('Usage: node scripts/bench-gpu.mjs [--out DIR] [--frames 30] [--warmup 8] [--uploads 8] [--triangles 5000,50000,200000] [--idle-ms 500] [--headless] [--executable PATH] [--no-timestamps] [--heap-sampling] [--heap-frames 180] [--renderer-source PATH] [--fps] [--fps-diagnostics] [--diagnostics-only]\nUses the existing isolated Playwright package; never installs dependencies. Defaults to headed bundled Chromium and records actual adapter metadata. Timings must run without other benchmark loads. Use --fps for continuous frame submission measurements without per-frame GPU fences; --fps-diagnostics adds a separate GPU timestamp/counter pass and visual state checks. Optional CDP heap sampling is a separate pass after timings, without renderer instrumentation wrappers. --renderer-source loads a saved renderer snapshot at the original module id for A/B comparison without editing product files; the override and resulting source-map binding are recorded.')
   process.exit(0)
 }
-const allowed = new Set(['--out', '--frames', '--warmup', '--uploads', '--triangles', '--idle-ms', '--headless', '--executable', '--no-timestamps', '--heap-sampling', '--heap-frames', '--renderer-source'])
+const allowed = new Set(['--out', '--frames', '--warmup', '--uploads', '--triangles', '--idle-ms', '--headless', '--executable', '--no-timestamps', '--heap-sampling', '--heap-frames', '--renderer-source', '--fps', '--fps-diagnostics', '--diagnostics-only'])
 for (let index = 0; index < args.length; index++) {
   if (!allowed.has(args[index])) throw new Error(`Unknown option ${args[index]}`)
-  if (!['--headless', '--no-timestamps', '--heap-sampling'].includes(args[index])) { if (!args[index + 1] || args[index + 1].startsWith('--')) throw new Error(`Missing value for ${args[index]}`); index++ }
+  if (!['--headless', '--no-timestamps', '--heap-sampling', '--fps', '--fps-diagnostics', '--diagnostics-only'].includes(args[index])) { if (!args[index + 1] || args[index + 1].startsWith('--')) throw new Error(`Missing value for ${args[index]}`); index++ }
 }
 const options = {
   triangles: String(value('--triangles', '5000,50000,200000')).split(',').map(Number),
   frames: positive('--frames', 30, 1_000), warmup: positive('--warmup', 8, 100),
   uploads: positive('--uploads', 8, 100), idleMs: positive('--idle-ms', 500, 10_000), timestamps: !args.includes('--no-timestamps'),
 }
+if (args.includes('--fps') && options.frames < 2) throw new Error('--fps requires at least 2 measured frames')
 const heapFrames = positive('--heap-frames', 180, 3_600)
 if (!options.triangles.length || options.triangles.length > 10 || options.triangles.some(n => !Number.isSafeInteger(n) || n < 100 || n > 750_000)) throw new Error('--triangles requires 1-10 integer counts in [100,750000]')
 const output = resolve(root, value('--out', `tmp/performance/gpu-${new Date().toISOString().replaceAll(':', '-')}`))
@@ -131,23 +132,26 @@ try {
   const page = await context.newPage()
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  await page.exposeFunction('captureBenchmarkFrame', name => page.screenshot({ path: join(output, name) }))
   await page.goto(new URL('benchmarks/gpu.html', origin).href)
   await page.waitForFunction(() => Boolean(window.gpuBenchmark), { timeout: 30_000 })
   console.log(`Running native WebGPU workloads in Chromium ${browserVersion}; ${options.frames} measured frames per case`)
   const result = await Promise.race([
-    page.evaluate(options => window.gpuBenchmark.run(options), options),
-    new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error('GPU benchmark exceeded 180 seconds')), 180_000); timer.unref() }),
+    page.evaluate(({ options, fps, diagnosticsOnly }) => diagnosticsOnly ? window.gpuBenchmark.runFpsDiagnostics(options) : fps ? window.gpuBenchmark.runFps(options) : window.gpuBenchmark.run(options), { options, fps: args.includes('--fps'), diagnosticsOnly: args.includes('--diagnostics-only') }),
+    new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error('GPU benchmark exceeded 600 seconds')), 600_000); timer.unref() }),
   ])
+  await writeFile(join(output, 'timing-results.json'), JSON.stringify({ ...result, source, rendererSource, bundle, browserVersion }, null, 2) + '\n')
   await page.screenshot({ path: join(output, 'viewport.png') })
   await page.evaluate(() => window.gpuBenchmark.dispose())
   const heapSampling = args.includes('--heap-sampling') ? await captureHeapProfiles(context, page) : null
+  const fpsDiagnostics = args.includes('--fps-diagnostics') ? await page.evaluate(options => window.gpuBenchmark.runFpsDiagnostics(options), options) : null
   const finalSource = await sourceEvidence()
   const sourceChangedDuringRun = source.sourceSha256 !== finalSource.sourceSha256
-  const report = { ...result, host: { platform: platform(), arch: arch(), osRelease: release(), cpu: cpus()[0]?.model, logicalCpus: cpus().length, totalMemoryBytes: totalmem(), node: process.version }, browser: { version: browserVersion, launch, packageMetadata }, source, rendererSource, sourceChangedDuringRun, ...(sourceChangedDuringRun ? { sourceAfter: finalSource } : {}), bundle, browserErrors: errors, heapSampling }
+  const report = { ...result, host: { platform: platform(), arch: arch(), osRelease: release(), cpu: cpus()[0]?.model, logicalCpus: cpus().length, totalMemoryBytes: totalmem(), node: process.version }, browser: { version: browserVersion, launch, packageMetadata }, source, rendererSource, sourceChangedDuringRun, ...(sourceChangedDuringRun ? { sourceAfter: finalSource } : {}), bundle, browserErrors: errors, heapSampling, fpsDiagnostics }
   await writeFile(join(output, 'results.json'), JSON.stringify(report, null, 2) + '\n')
-  const lines = ['kind\ttriangles/entities\tmode/activity\tCPU p50 ms\tGPU pass p50 ms\tqueue completion p50 ms']
+  const lines = ['kind\ttriangles/entities\tmode/activity\tCPU p50 ms\tGPU pass p50 ms\tqueue completion p50 ms\tsubmitted FPS\tframe interval p95 ms']
   for (const scenario of report.scenarios) {
-    lines.push([scenario.kind, scenario.triangles ?? scenario.entities ?? scenario.requestedTriangles, [scenario.mode, scenario.activity].filter(Boolean).join('/'), (scenario.setMeshesCpuMs?.median ?? scenario.renderCpuMs?.median ?? scenario.coldSetMeshesCpuMs)?.toFixed(3) ?? '', scenario.renderPassGpuMs?.median?.toFixed(3) ?? '', scenario.queueCompletionMs?.median?.toFixed(3) ?? ''].join('\t'))
+    lines.push([scenario.kind, scenario.triangles ?? scenario.entities ?? scenario.requestedTriangles, [scenario.mode, scenario.activity].filter(Boolean).join('/'), (scenario.setMeshesCpuMs?.median ?? scenario.renderCpuMs?.median ?? scenario.coldSetMeshesCpuMs)?.toFixed(3) ?? '', scenario.renderPassGpuMs?.median?.toFixed(3) ?? '', scenario.queueCompletionMs?.median?.toFixed(3) ?? '', scenario.submittedFps?.toFixed(1) ?? '', scenario.frameIntervalMs?.p95?.toFixed(3) ?? ''].join('\t'))
   }
   await writeFile(join(output, 'summary.tsv'), lines.join('\n') + '\n')
   console.log(lines.join('\n'))
