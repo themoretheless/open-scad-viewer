@@ -47,3 +47,32 @@ it('preserves mirrored world transforms when exporting the existing scene', asyn
     expect(Math.min(...flat.positions.filter((_, i) => i % 3 === 0))).toBe(8);
     expect(exportMeshFormat(flat, '3mf').data.length).toBeGreaterThan(100);
 });
+it('preserves separate 3MF objects and world placement through lossless compressed export', async () => {
+    const { HeadlessGeometryService } = await import('../src/mcp/geometryService');
+    const { flattenExportMeshes } = await import('../src/services/meshExportAdapter');
+    const { exportMeshFormatCompressed } = await import('../src/services/meshExportFormats');
+    const result = await new HeadlessGeometryService().compile('cube(2);translate([10,20,30])mirror([1,0,0])cube([2,3,4]);', 'full');
+    const flat = flattenExportMeshes(result.meshes);
+    expect(flat.parts).toHaveLength(2);
+    const stored = exportMeshFormat(flat, '3mf');
+    const xml = new TextDecoder().decode(stored.data);
+    expect(xml.match(/<object id=/g)).toHaveLength(2);
+    expect(xml.match(/<item objectid=/g)).toHaveLength(2);
+    expect(xml).toContain('objectid="2"');
+    const out = await exportMeshFormatCompressed(flat, '3mf');
+    expect(out.data.length).toBeLessThan(stored.data.length);
+    const decoded = await parseOpenScad3mf(file(out.data, '3mf'));
+    const original = await parseOpenScad3mf(file(stored.data, '3mf'));
+    expect(Array.from(decoded.vertices)).toEqual(Array.from(original.vertices));
+    expect(Array.from(decoded.triangles)).toEqual(Array.from(original.triangles));
+    expect(decoded.triangleCount).toBe(flat.indices.length / 3);
+    expect(Math.max(...Array.from(decoded.vertices).filter((_, i) => i % 3 === 2))).toBe(34);
+});
+it('keeps touching scene parts independent instead of rejecting a welded aggregate', async () => {
+    const { HeadlessGeometryService } = await import('../src/mcp/geometryService');
+    const { flattenExportMeshes } = await import('../src/services/meshExportAdapter');
+    const result = await new HeadlessGeometryService().compile('cube(2);translate([2,0,0])cube(2);', 'full');
+    const flat = flattenExportMeshes(result.meshes);
+    expect(flat.parts).toHaveLength(2);
+    expect(new TextDecoder().decode(exportMeshFormat(flat, '3mf').data).match(/<object id=/g)).toHaveLength(2);
+});

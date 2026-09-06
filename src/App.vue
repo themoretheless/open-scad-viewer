@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
-import { exportMeshFormat, type MeshExportFormat } from './services/meshExportFormats'
+import { exportMeshFormatCompressed, type MeshExportFormat } from './services/meshExportFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
@@ -1441,10 +1441,10 @@ function downloadBlob(blob: Blob, name: string) {
 }
 
 const additionalExportFormat = ref<MeshExportFormat>('3mf')
-function exportAdditionalMesh() {
+async function exportAdditionalMesh() {
   if (!canExport.value) return
   try {
-    const artifact = exportMeshFormat(flattenExportMeshes(sceneMeshes.value), additionalExportFormat.value)
+    const artifact = await exportMeshFormatCompressed(flattenExportMeshes(sceneMeshes.value), additionalExportFormat.value)
     const buffer = new ArrayBuffer(artifact.data.byteLength)
     new Uint8Array(buffer).set(artifact.data)
     downloadBlob(new Blob([buffer], { type: artifact.mimeType }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.' + artifact.extension))

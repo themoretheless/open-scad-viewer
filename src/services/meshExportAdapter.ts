@@ -1,6 +1,6 @@
 import type { MeshData } from '../core/mesh';
 import { inspectNurbsMesh, type NurbsMesh } from './nurbsTessellation';
-export function flattenExportMeshes(meshes: readonly MeshData[]): NurbsMesh {
+function flattenGroup(meshes: readonly MeshData[]): NurbsMesh {
     if (meshes.reduce((n, m) => n + m.indices.length / 3, 0) > 100000)
         throw new Error('Mesh export exceeds 100000 triangles.');
     const positions: number[] = [], indices: number[] = [], vertices = new Map<string, number>();
@@ -25,4 +25,10 @@ export function flattenExportMeshes(meshes: readonly MeshData[]): NurbsMesh {
     }
     const report = inspectNurbsMesh(positions, indices);
     return { positions, indices, report: { ...report, construction: 'sampled_surface', errorBoundCertified: false, selfIntersectionStatus: 'not_checked' } };
+}
+
+/** Preserve scene objects for 3MF while keeping the flat mesh for legacy formats. */
+export function flattenExportMeshes(meshes: readonly MeshData[]): NurbsMesh & { parts: NurbsMesh[] } {
+    const combined = flattenGroup(meshes);
+    return { ...combined, parts: meshes.filter(m => m.indices.length > 0).map(m => flattenGroup([m])) };
 }
