@@ -1,7 +1,9 @@
+import { MECHANICAL_GENERATOR_EXAMPLES } from '../src/services/mechanicalGeneratorContract.ts'
 // Run: node --import tsx scripts/export-modelgraph-language.mjs
 import { writeFileSync } from 'node:fs'
 import { z } from 'zod/v4'
 import { modelGraphSchema, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE, MODELGRAPH_LOFT_EXAMPLE } from '../src/services/modelGraph.ts'
+for (const [kind,document] of Object.entries(MECHANICAL_GENERATOR_EXAMPLES)) writeFileSync(new URL(`../docs/languages/modelgraph-1.${kind}.example.json`,import.meta.url),JSON.stringify(document,null,2)+'\n')
 const json = value => JSON.stringify(value, null, 2) + '\n'
 writeFileSync(new URL('../docs/languages/modelgraph-1.schema.json', import.meta.url), json(z.toJSONSchema(modelGraphSchema)))
 writeFileSync(new URL('../docs/languages/modelgraph-1.example.json', import.meta.url), json(MODELGRAPH_EXAMPLE))

@@ -27,7 +27,14 @@ describe('remote ModelGraph MCP', () => {
     const package3mf = await (await call('tools/call', { name: 'modelgraph_export', arguments: { document: MODELGRAPH_UNITS_EXAMPLE, format: '3mf' } })).json()
     expect(package3mf.result.isError).not.toBe(true)
     expect(Buffer.from(package3mf.result.content[0].resource.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
-  })
+  },15000)
+  it('generates an internal thread through HTTP MCP',async()=>{
+    const {call}=await start()
+    const generated = await (await call('tools/call',{name:'modelgraph_generate',arguments:{kind:'thread',length:6,internal:true}})).json()
+    expect(generated.result.isError).not.toBe(true)
+    expect(generated.result.structuredContent.analysis.volume).toBeGreaterThan(0)
+    expect(generated.result.structuredContent.mechanical_reports[0].internal).toBe(true)
+  },15000)
   it('rejects browser origins, unsupported methods and oversized requests', async () => {
     const { url } = await start()
     expect((await fetch(url)).status).toBe(405)

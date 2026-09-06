@@ -1,0 +1,111 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "type_policy": "strict",
+  "parameters": [
+    {
+      "id": "sun_teeth",
+      "value": 24,
+      "integer": true
+    },
+    {
+      "id": "planet_teeth",
+      "value": 24,
+      "integer": true
+    },
+    {
+      "id": "planet_count",
+      "value": 3,
+      "integer": true
+    },
+    {
+      "id": "module",
+      "value": 2,
+      "unit": "mm"
+    },
+    {
+      "id": "pressure_angle",
+      "value": 20,
+      "unit": "deg"
+    },
+    {
+      "id": "thickness",
+      "value": 8,
+      "unit": "mm"
+    },
+    {
+      "id": "bore",
+      "value": 5,
+      "unit": "mm"
+    },
+    {
+      "id": "backlash",
+      "value": 0.15,
+      "unit": "mm"
+    },
+    {
+      "id": "clearance",
+      "value": 0.5,
+      "unit": "mm"
+    },
+    {
+      "id": "rim_width",
+      "value": 6,
+      "unit": "mm"
+    },
+    {
+      "id": "flank_segments",
+      "value": 6,
+      "integer": true
+    },
+    {
+      "id": "carrier_angle",
+      "value": 0,
+      "unit": "deg"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "part",
+      "op": "planetary_gears",
+      "sun_teeth": {
+        "param": "sun_teeth"
+      },
+      "planet_teeth": {
+        "param": "planet_teeth"
+      },
+      "planet_count": {
+        "param": "planet_count"
+      },
+      "module": {
+        "param": "module"
+      },
+      "pressure_angle": {
+        "param": "pressure_angle"
+      },
+      "thickness": {
+        "param": "thickness"
+      },
+      "bore": {
+        "param": "bore"
+      },
+      "backlash": {
+        "param": "backlash"
+      },
+      "clearance": {
+        "param": "clearance"
+      },
+      "rim_width": {
+        "param": "rim_width"
+      },
+      "flank_segments": {
+        "param": "flank_segments"
+      },
+      "carrier_angle": {
+        "param": "carrier_angle"
+      }
+    }
+  ],
+  "root": "part",
+  "segments": 48
+}

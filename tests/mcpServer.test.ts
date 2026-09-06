@@ -128,6 +128,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_check',
       'modelgraph_compile',
       'modelgraph_export',
+      'modelgraph_generate',
       'modelgraph_interference',
       'modelgraph_modify',
       'modelgraph_nurbs_build',
@@ -1209,4 +1210,26 @@ describe('ModelGraph MCP language workflow', () => {
     expect(checked.isError).toBe(false)
     expect(checked.structuredContent.analysis.volume).toBeGreaterThan(11000)
   })
+})
+
+describe('Mechanical generators over MCP',()=>{
+  it('generates readable models, returns individual planetary parts and exports a thread',async()=>{
+    const {request}=await connectedServer()
+    const resource=await request('resources/read',{uri:'openscad://language/modelgraph-mechanical'}) as {contents:Array<{text:string}>}
+    expect(JSON.parse(resource.contents[0].text).examples.thread).toBeTruthy()
+    for(const kind of ['gear','planetary_gears','thread']) {
+      const response=await request('tools/call',{name:'modelgraph_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
+      expect(response.isError,JSON.stringify(response.structuredContent).slice(0,500)).not.toBe(true)
+      expect(response.structuredContent.analysis.volume).toBeGreaterThan(0)
+      expect(response.content.filter(c=>c.type==='image')).toHaveLength(3)
+      expect(response.structuredContent.mechanical_reports).toHaveLength(1)
+      if(kind==='planetary_gears')expect(response.structuredContent.mechanical_parts).toHaveLength(5)
+      const exported=await request('tools/call',{name:'modelgraph_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
+      expect(exported.isError).not.toBe(true)
+      expect(Buffer.from(exported.content[0].resource.blob,'base64').readUInt32LE(0)).toBe(0x04034b50)
+    }
+    const rejected=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:8}}) as {isError:boolean;structuredContent:{error:{code:string}}}
+    expect(rejected.isError).toBe(true)
+    expect(rejected.structuredContent.error.code).toBe('invalid_mechanical_geometry')
+  },30000)
 })

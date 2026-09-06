@@ -1,0 +1,73 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "type_policy": "strict",
+  "parameters": [
+    {
+      "id": "diameter",
+      "value": 12,
+      "unit": "mm"
+    },
+    {
+      "id": "pitch",
+      "value": 1.5,
+      "unit": "mm"
+    },
+    {
+      "id": "length",
+      "value": 12,
+      "unit": "mm"
+    },
+    {
+      "id": "wall",
+      "value": 3,
+      "unit": "mm"
+    },
+    {
+      "id": "clearance",
+      "value": 0.2,
+      "unit": "mm"
+    },
+    {
+      "id": "starts",
+      "value": 1,
+      "integer": true
+    },
+    {
+      "id": "segments_per_turn",
+      "value": 32,
+      "integer": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "part",
+      "op": "thread",
+      "diameter": {
+        "param": "diameter"
+      },
+      "pitch": {
+        "param": "pitch"
+      },
+      "length": {
+        "param": "length"
+      },
+      "internal": false,
+      "wall": {
+        "param": "wall"
+      },
+      "clearance": {
+        "param": "clearance"
+      },
+      "starts": {
+        "param": "starts"
+      },
+      "left_handed": false,
+      "segments_per_turn": {
+        "param": "segments_per_turn"
+      }
+    }
+  ],
+  "root": "part",
+  "segments": 48
+}

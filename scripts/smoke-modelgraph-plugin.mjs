@@ -29,6 +29,14 @@ const call = (method, params) => new Promise((resolve, reject) => {
 try {
   await call('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'modelgraph-plugin-smoke', version: '1' } })
   child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
+  for (const kind of ['gear','planetary_gears','thread']) {
+    const generated = await call('tools/call',{name:'modelgraph_generate',arguments:{kind}})
+    if (generated.isError || generated.structuredContent.analysis.volume <= 0 || generated.content.filter(c=>c.type==='image').length !== 3) throw new Error(`Mechanical generator ${kind} failed: `+JSON.stringify(generated.structuredContent).slice(0,1000))
+    if(kind==='planetary_gears' && generated.structuredContent.mechanical_parts.length!==5) throw new Error('Planetary part documents missing')
+    const exported = await call('tools/call',{name:'modelgraph_export',arguments:{document:generated.structuredContent.document,format:'3mf'}})
+    if(exported.isError || Buffer.from(exported.content.find(c=>c.type==='resource').resource.blob,'base64').readUInt32LE(0)!==0x04034b50) throw new Error(`Mechanical ${kind} export failed`)
+  }
+  console.log('PASS: gear, planetary gearset and thread generators, individual part documents, PNG views and 3MF through stdio plugin.')
   const ownLanguage = await call('tools/call', { name: 'modelgraph_nurbs_language', arguments: {} })
   const ownDocument = ownLanguage.structuredContent.surface_example
   const ownBuild = await call('tools/call', { name: 'modelgraph_nurbs_build', arguments: { document: ownDocument } })

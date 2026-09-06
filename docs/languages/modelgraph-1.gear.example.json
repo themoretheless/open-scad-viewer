@@ -1,0 +1,88 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "type_policy": "strict",
+  "parameters": [
+    {
+      "id": "teeth",
+      "value": 24,
+      "integer": true
+    },
+    {
+      "id": "module",
+      "value": 2,
+      "unit": "mm"
+    },
+    {
+      "id": "pressure_angle",
+      "value": 20,
+      "unit": "deg"
+    },
+    {
+      "id": "thickness",
+      "value": 8,
+      "unit": "mm"
+    },
+    {
+      "id": "bore",
+      "value": 5,
+      "unit": "mm"
+    },
+    {
+      "id": "backlash",
+      "value": 0.15,
+      "unit": "mm"
+    },
+    {
+      "id": "clearance",
+      "value": 0.5,
+      "unit": "mm"
+    },
+    {
+      "id": "rim_width",
+      "value": 6,
+      "unit": "mm"
+    },
+    {
+      "id": "flank_segments",
+      "value": 6,
+      "integer": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "part",
+      "op": "gear",
+      "teeth": {
+        "param": "teeth"
+      },
+      "module": {
+        "param": "module"
+      },
+      "pressure_angle": {
+        "param": "pressure_angle"
+      },
+      "thickness": {
+        "param": "thickness"
+      },
+      "bore": {
+        "param": "bore"
+      },
+      "backlash": {
+        "param": "backlash"
+      },
+      "clearance": {
+        "param": "clearance"
+      },
+      "internal": false,
+      "rim_width": {
+        "param": "rim_width"
+      },
+      "flank_segments": {
+        "param": "flank_segments"
+      }
+    }
+  ],
+  "root": "part",
+  "segments": 48
+}

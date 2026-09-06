@@ -5,6 +5,7 @@ import { exportMeshFormat, type MeshExportFormat } from './services/meshExportFo
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
+import MechanicalGenerator from './features/MechanicalGenerator.vue'
 import InspectPanel from './components/InspectPanel.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import SceneOutliner from './components/SceneOutliner.vue'
@@ -276,6 +277,7 @@ const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
 )
 const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
+const mechanicalGeneratorOpen = ref(false)
 const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
 const standardView = ref<StandardView>('iso')
@@ -1345,9 +1347,7 @@ function applyPreferences() {
   storageSet('scad-theme', theme.scheme)
 }
 
-async function loadExample(id: string) {
-  const example = EXAMPLES[id]
-  if (!example) return
+async function loadEditorDocument(example: string, nextFileName: string) {
   applyingWorkspaceReplacement = true
   buildGeneration++
   editorDiagnostic.value = null
@@ -1355,7 +1355,6 @@ async function loadExample(id: string) {
   if (!sharedImportPending && location.hash.startsWith('#code=')) {
     history.replaceState(null, '', location.pathname + location.search)
   }
-  const nextFileName = `${id}.scad`
   workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, {
     source: example,
     fileName: nextFileName,
@@ -1377,6 +1376,16 @@ async function loadExample(id: string) {
   await nextTick()
   applyingWorkspaceReplacement = false
   editor?.focus({ preventScroll: true })
+}
+
+async function loadExample(id: string) {
+  const example = EXAMPLES[id]
+  if (example) await loadEditorDocument(example, `${id}.scad`)
+}
+
+async function loadMechanicalModel(source: string, name: string) {
+  await loadEditorDocument(source, name)
+  await doRender('full')
 }
 
 function triggerOpen() { fileInputRef.value?.click() }
@@ -1995,7 +2004,7 @@ function handleGlobalKey(event: KeyboardEvent) {
 function dispatchKeyboardCommand(event: KeyboardEvent, scope: CommandScope) {
   const id = resolveKeyboardCommand(event, scope, { isEnabled: isCommandEnabled })
   if (!id) return
-  if (shortcutHelpOpen.value || exampleGalleryOpen.value) return
+  if (shortcutHelpOpen.value || exampleGalleryOpen.value || mechanicalGeneratorOpen.value) return
   if (paletteOpen.value && id !== 'command-palette') return
   event.preventDefault()
   executeCommand(id)
@@ -2124,6 +2133,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
           <span class="toolbar-divider" aria-hidden="true" />
+          <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">⚙ {{ lang === 'ru' ? 'Генераторы' : 'Generators' }}</button>
           <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
         </div>
 
@@ -2424,6 +2434,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @close="paletteOpen = false"
       @execute="executeCommand"
     />
+    <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
     <ExampleGallery
       :open="exampleGalleryOpen"
       :examples="EXAMPLE_CATALOG"

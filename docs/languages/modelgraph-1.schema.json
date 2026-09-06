@@ -122,6 +122,204 @@
               },
               "op": {
                 "type": "string",
+                "const": "gear"
+              },
+              "teeth": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "module": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "pressure_angle": {
+                "default": 20,
+                "$ref": "#/$defs/__schema0"
+              },
+              "thickness": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "bore": {
+                "default": 0,
+                "$ref": "#/$defs/__schema0"
+              },
+              "backlash": {
+                "default": 0.15,
+                "$ref": "#/$defs/__schema0"
+              },
+              "clearance": {
+                "default": 0.5,
+                "$ref": "#/$defs/__schema0"
+              },
+              "internal": {
+                "default": false,
+                "type": "boolean"
+              },
+              "rim_width": {
+                "default": 6,
+                "$ref": "#/$defs/__schema0"
+              },
+              "flank_segments": {
+                "default": 6,
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "teeth",
+              "module",
+              "pressure_angle",
+              "thickness",
+              "bore",
+              "backlash",
+              "clearance",
+              "internal",
+              "rim_width",
+              "flank_segments"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planetary_gears"
+              },
+              "sun_teeth": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "planet_teeth": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "planet_count": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "module": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "pressure_angle": {
+                "default": 20,
+                "$ref": "#/$defs/__schema0"
+              },
+              "thickness": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "bore": {
+                "default": 0,
+                "$ref": "#/$defs/__schema0"
+              },
+              "backlash": {
+                "default": 0.15,
+                "$ref": "#/$defs/__schema0"
+              },
+              "clearance": {
+                "default": 0.5,
+                "$ref": "#/$defs/__schema0"
+              },
+              "rim_width": {
+                "default": 6,
+                "$ref": "#/$defs/__schema0"
+              },
+              "flank_segments": {
+                "default": 6,
+                "$ref": "#/$defs/__schema0"
+              },
+              "carrier_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "sun_teeth",
+              "planet_teeth",
+              "planet_count",
+              "module",
+              "pressure_angle",
+              "thickness",
+              "bore",
+              "backlash",
+              "clearance",
+              "rim_width",
+              "flank_segments",
+              "carrier_angle"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "thread"
+              },
+              "diameter": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "pitch": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "length": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "internal": {
+                "default": false,
+                "type": "boolean"
+              },
+              "wall": {
+                "default": 3,
+                "$ref": "#/$defs/__schema0"
+              },
+              "clearance": {
+                "default": 0.2,
+                "$ref": "#/$defs/__schema0"
+              },
+              "starts": {
+                "default": 1,
+                "$ref": "#/$defs/__schema0"
+              },
+              "left_handed": {
+                "default": false,
+                "type": "boolean"
+              },
+              "segments_per_turn": {
+                "default": 32,
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "diameter",
+              "pitch",
+              "length",
+              "internal",
+              "wall",
+              "clearance",
+              "starts",
+              "left_handed",
+              "segments_per_turn"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "affine"
               },
               "input": {
@@ -1649,6 +1847,204 @@
                 "type": "array",
                 "items": {
                   "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "gear"
+                        },
+                        "teeth": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "module": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "pressure_angle": {
+                          "default": 20,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "thickness": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "bore": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "backlash": {
+                          "default": 0.15,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "clearance": {
+                          "default": 0.5,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "internal": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "rim_width": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "flank_segments": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "teeth",
+                        "module",
+                        "pressure_angle",
+                        "thickness",
+                        "bore",
+                        "backlash",
+                        "clearance",
+                        "internal",
+                        "rim_width",
+                        "flank_segments"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "planetary_gears"
+                        },
+                        "sun_teeth": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "planet_teeth": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "planet_count": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "module": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "pressure_angle": {
+                          "default": 20,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "thickness": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "bore": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "backlash": {
+                          "default": 0.15,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "clearance": {
+                          "default": 0.5,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "rim_width": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "flank_segments": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "carrier_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "sun_teeth",
+                        "planet_teeth",
+                        "planet_count",
+                        "module",
+                        "pressure_angle",
+                        "thickness",
+                        "bore",
+                        "backlash",
+                        "clearance",
+                        "rim_width",
+                        "flank_segments",
+                        "carrier_angle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "thread"
+                        },
+                        "diameter": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "pitch": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "length": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "internal": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "wall": {
+                          "default": 3,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "clearance": {
+                          "default": 0.2,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "starts": {
+                          "default": 1,
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "left_handed": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "segments_per_turn": {
+                          "default": 32,
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "diameter",
+                        "pitch",
+                        "length",
+                        "internal",
+                        "wall",
+                        "clearance",
+                        "starts",
+                        "left_handed",
+                        "segments_per_turn"
+                      ],
+                      "additionalProperties": false
+                    },
                     {
                       "type": "object",
                       "properties": {
