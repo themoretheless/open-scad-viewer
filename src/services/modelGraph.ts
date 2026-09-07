@@ -1,3 +1,4 @@
+import { resolveInterval } from './modelGraphRange'
 import { planetarySpinnerTemplate } from './planetarySpinnerTemplate'
 import { buildModelGraphGear } from './modelGraphGears'
 import { buildModelGraphThread } from './modelGraphThreads'
@@ -21,7 +22,10 @@ export type Expression =
   | { op: 'apply'; function: Expression; args: Expression[] }
   | { op: 'list'; items: Expression[] }
   | { op: 'range'; count: Expression; start: Expression; step: Expression }
-  | { op: 'map' | 'filter'; input: Expression; function: Expression }
+  | { op: 'interval'; start: Expression; end: Expression; inclusive: boolean; count?: Expression; step?: Expression }
+  | { op: 'zip'; inputs: Expression[] }
+  | { op: 'enumerate'; input: Expression }
+  | { op: 'map' | 'filter' | 'flatmap'; input: Expression; function: Expression }
   | { op: 'reduce'; input: Expression; function: Expression; initial: Expression }
   | { op: 'at'; input: Expression; index: Expression }
   | { op: 'length'; input: Expression }
@@ -38,7 +42,10 @@ export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
   z.object({ op: z.literal('apply'), function: expressionSchema, args: z.array(expressionSchema).max(32) }).strict(),
   z.object({ op: z.literal('list'), items: z.array(expressionSchema).max(256) }).strict(),
   z.object({ op: z.literal('range'), count: expressionSchema, start: expressionSchema, step: expressionSchema }).strict(),
-  z.object({ op: z.enum(['map', 'filter']), input: expressionSchema, function: expressionSchema }).strict(),
+  z.object({ op: z.literal('interval'), start: expressionSchema, end: expressionSchema, inclusive: z.boolean(), count: expressionSchema.optional(), step: expressionSchema.optional() }).strict(),
+  z.object({ op: z.literal('zip'), inputs: z.array(expressionSchema).min(2).max(8) }).strict(),
+  z.object({ op: z.literal('enumerate'), input: expressionSchema }).strict(),
+  z.object({ op: z.enum(['map', 'filter', 'flatmap']), input: expressionSchema, function: expressionSchema }).strict(),
   z.object({ op: z.literal('reduce'), input: expressionSchema, function: expressionSchema, initial: expressionSchema }).strict(),
   z.object({ op: z.literal('at'), input: expressionSchema, index: expressionSchema }).strict(),
   z.object({ op: z.literal('length'), input: expressionSchema }).strict(),
@@ -89,6 +96,8 @@ const node = z.discriminatedUnion('op', [
   z.object({ id, op: z.literal('evaluate'), value: scalar }).strict(),
   z.object({ id, op: z.literal('call'), function: id, args: z.record(id, scalar) }).strict(),
   z.object({ id, op: z.literal('if'), condition: scalar, then: id, else: id }).strict(),
+  z.object({ id, op: z.literal('collect'), values: scalar, binding: id, input: id }).strict(),
+  z.object({ id, op: z.literal('group'), inputs: z.array(id).max(256) }).strict(),
   z.object({ id, op: z.literal('map'), count: scalar, index: id, input: id }).strict(),
   z.object({ id, op: z.literal('box'), size: vector, center: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('sphere'), radius: scalar }).strict(),
@@ -102,7 +111,7 @@ export const modelGraphSchema = z.object({
   language: z.literal('modelgraph/1'),
   units: z.literal('mm'),
   type_policy: z.enum(['legacy', 'strict']).optional(),
-  constraints: z.array(z.object({ id, left: scalar, relation: z.enum(['le', 'ge', 'eq']), right: scalar, tolerance: scalar.optional(), message: z.string().min(1).max(256) }).strict()).max(64).optional(),
+  constraints: z.array(z.object({ id, left: scalar, relation: z.enum(['le', 'ge', 'eq', 'lt', 'gt']), right: scalar, tolerance: scalar.optional(), message: z.string().min(1).max(256) }).strict()).max(64).optional(),
   parameters: z.array(z.object({ id, value: number, unit: unit.optional(), min: number.optional(), max: number.optional(), integer: z.boolean().optional() }).strict()).max(64),
   nodes: z.array(node).min(1).max(128),
   root: id,
@@ -110,6 +119,10 @@ export const modelGraphSchema = z.object({
     z.object({ id, kind: z.enum(['scalar', 'value']), parameters: z.array(id).max(32), body: scalar }).strict(),
     z.object({ id, kind: z.literal('geometry'), parameters: z.array(id).max(32), nodes: z.array(node).min(1).max(128), root: id }).strict(),
   ])).max(32).optional(),
+  geometry_assertions: z.array(z.object({
+    id, target: id, check: z.enum(['hasBodies', 'isWatertight', 'hasNoDegenerateTriangles', 'height', 'width', 'depth']),
+    expected: scalar.optional(), tolerance: scalar.optional(), message: z.string().min(1).max(256),
+  }).strict()).max(64).optional(),
   assertions: z.array(z.object({ condition: scalar, message: z.string().min(1).max(256) }).strict()).max(64).optional(),
   segments: z.number().int().min(12).max(128).default(48),
 }).strict()
@@ -194,6 +207,22 @@ export function compileModelGraph(value: unknown) {
       }
       if (expr.op === 'apply') return invoke(sub(expr.function, 'function'), expr.args.map((a, i) => sub(a, `args/${i}`)), path, depth + 1)
       if (expr.op === 'list') { allocate(expr.items.length, path); return expr.items.map((a, i) => sub(a, `items/${i}`)) }
+      if (expr.op === 'interval') {
+        const items = resolveInterval(numericValue(sub(expr.start, 'start'), path), numericValue(sub(expr.end, 'end'), path), expr.inclusive,
+          { ...(expr.count === undefined ? {} : {count: numericValue(sub(expr.count, 'count'), path)}), ...(expr.step === undefined ? {} : {step: numericValue(sub(expr.step, 'step'), path)}) }, fail, path)
+        allocate(items.length, path); return items
+      }
+      if (expr.op === 'zip') {
+        const lists = expr.inputs.map((input, i) => sequence(sub(input, `inputs/${i}`), path))
+        const count = lists[0]!.length
+        if (lists.some(list => list.length !== count)) fail('length_mismatch', path, 'zip requires equal length sequences.')
+        allocate(count * (lists.length + 1), path)
+        return Array.from({length:count}, (_, i) => lists.map(list => list[i]!))
+      }
+      if (expr.op === 'enumerate') {
+        const items = sequence(sub(expr.input, 'input'), path)
+        allocate(items.length * 3, path); return items.map((value, i) => [i, value])
+      }
       if (expr.op === 'range') {
         const count = numeric(sub(expr.count, 'count'), path)
         const start = numericValue(sub(expr.start, 'start'), path), step = numericValue(sub(expr.step, 'step'), path)
@@ -208,9 +237,19 @@ export function compileModelGraph(value: unknown) {
         if (!Number.isInteger(index) || index < 0 || index >= items.length) fail('invalid_index', path, 'List index is out of bounds.')
         return items[index]!
       }
-      if (expr.op === 'map' || expr.op === 'filter' || expr.op === 'reduce') {
+      if (expr.op === 'map' || expr.op === 'filter' || expr.op === 'flatmap' || expr.op === 'reduce') {
         const items = sequence(sub(expr.input, 'input'), path), fn = sub(expr.function, 'function')
         allocate(items.length, path)
+        if (expr.op === 'flatmap') {
+          const output: Value[] = []
+          for (const [i, a] of items.entries()) {
+            const batch = sequence(invoke(fn, [a], `${path}[${i}]`, depth + 1), path)
+            allocate(batch.length, path)
+            if (output.length + batch.length > 256) fail('invalid_count', path, 'Generated sequence exceeds 256 values.')
+            output.push(...batch)
+          }
+          return output
+        }
         if (expr.op === 'map') return items.map((a, i) => invoke(fn, [a], `${path}[${i}]`, depth + 1))
         if (expr.op === 'filter') return items.filter((a, i) => numeric(invoke(fn, [a], `${path}[${i}]`, depth + 1), path) !== 0)
         if (!('initial' in expr)) return fail('type_error', path, 'Expected reduce initial value.')
@@ -278,6 +317,7 @@ export function compileModelGraph(value: unknown) {
     const left = numericValue(resolve(constraint.left, empty, path + '/left'), path)
     const right = numericValue(resolve(constraint.right, empty, path + '/right'), path)
     arithmetic.equal(left, right, path)
+    if (['lt','gt'].includes(constraint.relation) && constraint.tolerance !== undefined) fail('invalid_tolerance', path, 'Strict comparisons do not accept tolerance.')
     let tolerance = 0
     if (constraint.tolerance !== undefined) {
       const value = numericValue(resolve(constraint.tolerance, empty, path + '/tolerance'), path)
@@ -286,10 +326,31 @@ export function compileModelGraph(value: unknown) {
       if (tolerance < 0) fail('invalid_tolerance', path, 'Tolerance must be nonnegative.')
     }
     const a = magnitude(left), b = magnitude(right)
-    const passed = constraint.relation === 'eq' ? Math.abs(a - b) <= tolerance : constraint.relation === 'le' ? a <= b + tolerance : a >= b - tolerance
-    return { id: constraint.id, path, passed, actual: a, expected: b, relation: constraint.relation, tolerance, dimension: dimensionOf(left), message: constraint.message }
+    const passed = constraint.relation === 'lt' ? a < b : constraint.relation === 'gt' ? a > b : constraint.relation === 'eq' ? Math.abs(a - b) <= tolerance : constraint.relation === 'le' ? a <= b + tolerance : a >= b - tolerance
+    return { id: constraint.id, path, passed, status: passed ? 'passed' as const : 'failed' as const, actual: a, expected: b, relation: constraint.relation, tolerance, dimension: dimensionOf(left), message: constraint.message }
   })
   if (constraint_report.some(item => !item.passed)) throw new ModelGraphError('constraint_failed', '/constraints', 'Declared constraints were not satisfied.', constraint_report)
+  const geometry_assertions = (document.geometry_assertions ?? []).map((check, i) => {
+    const path = `/geometry_assertions/${i}`
+    if (check.target !== document.root) fail('unsupported_assertion_target', path, 'Geometry checks currently target the shown root only.')
+    if (document.geometry_assertions!.slice(0, i).some(c => c.id === check.id)) fail('duplicate_id', path, 'Check IDs must be unique.')
+    const measured = ['height', 'width', 'depth'].includes(check.check)
+    const expectedValue = check.expected === undefined ? undefined : numericValue(resolve(check.expected, empty, path), path)
+    if (measured && expectedValue !== undefined) arithmetic.equal(expectedValue, arithmetic.quantity(1, 'mm', path), path)
+    if (!measured && expectedValue !== undefined) arithmetic.scalar(expectedValue, path)
+    const expected = expectedValue === undefined ? (check.check === 'hasBodies' || measured ? fail('missing_expected', path, 'Expected value required.') : 0) : magnitude(expectedValue)
+    if (expected < 0 || (check.check === 'hasBodies' && !Number.isInteger(expected))) fail('invalid_expected', path, 'Expected value must be nonnegative; body count must be integral.')
+    let tolerance = 0
+    if (check.tolerance !== undefined) {
+      const v = numericValue(resolve(check.tolerance, empty, path), path)
+      if (!measured) fail('invalid_tolerance', path, 'Tolerance applies only to measurements.')
+      arithmetic.equal(v, arithmetic.quantity(1, 'mm', path), path)
+      tolerance = magnitude(v)
+      if (tolerance < 0) fail('invalid_tolerance', path, 'Tolerance must be nonnegative.')
+    }
+    if (!measured && check.check !== 'hasBodies' && check.expected !== undefined) fail('invalid_expected', path, 'Topology checks take no expected argument.')
+    return { ...check, expected, tolerance }
+  })
   const lines = ['// Generated from modelgraph/1; execution target: legacy/current + Manifold', `$fn = ${document.segments};`]
   const sourceMap: Array<{ node_id: string; line: number; instance_path: string }> = []
   const sketch_solutions: Array<ReturnType<typeof solveModelGraphSketch> & { instance_path: string }> = []
@@ -365,7 +426,16 @@ export function compileModelGraph(value: unknown) {
       if (bound.fn.kind !== 'geometry') return fail('type_error', current, 'Expected a geometry function.')
       emit(bound.fn.root, bodies.get(bound.fn.id)!, bound.scope, `${current}/call:${bound.fn.id}`, depth + 1, expected)
     } else if (item.op === 'if') emit(value(item.condition, 'condition') !== 0 ? item.then : item.else, nodes, scope, current, depth + 1, expected)
-    else if (item.op === 'map') {
+    else if (item.op === 'group') {
+      for (const child of item.inputs) emit(child, nodes, scope, current, depth + 1, expected)
+    } else if (item.op === 'collect') {
+      const items = sequence(resolve(item.values, scope, current + '/values'), current)
+      if (items.length > 256) fail('invalid_count', current, 'Collection exceeds 256 elements.')
+      for (const [i, v] of items.entries()) {
+        const local = new Map(scope); local.set(item.binding, v)
+        emit(item.input, nodes, local, `${current}[${i}]`, depth + 1, expected)
+      }
+    } else if (item.op === 'map') {
       const count = value(item.count, 'count')
       if (!Number.isInteger(count) || count < 1 || count > 256) fail('invalid_count', current, 'Map count must be an integer from 1 to 256.')
       lines.push('union(){')
@@ -493,7 +563,7 @@ export function compileModelGraph(value: unknown) {
     }
   }
   emit(document.root, main, empty, '')
-  return { document, constraint_report, sketch_solutions, assembly_components, mechanical_reports, mechanical_parts, document_sha256: sha256Hex(canonical(document)), source: lines.join('\n'), source_map: sourceMap, execution_target: 'legacy/current+manifold' as const }
+  return { document, geometry_assertions, constraint_report, sketch_solutions, assembly_components, mechanical_reports, mechanical_parts, document_sha256: sha256Hex(canonical(document)), source: lines.join('\n'), source_map: sourceMap, execution_target: 'legacy/current+manifold' as const }
 }
 
 export function setModelGraphParameters(value: unknown, expectedHash: string, updates: Array<{ id: string; value: number }>) {
@@ -524,6 +594,7 @@ Profiles and solid features: rectangle(size:[length,length],center=false), circl
 export const MODELGRAPH_FUNCTIONAL_GUIDE = `Functional extension (backward compatible with ModelGraph/1):
 Values are numbers, immutable lists, lexical closures and immutable geometry values. No mutation, IO, clock, random or eval. All numeric intermediates are finite and within +/-1000000. Predicates return 0 or 1; conditions treat zero as false. Trigonometry uses degrees.
 Expressions: {param:id} reads a document parameter; {local:id} reads a lexical binding. Binary {op,args:[a,b]}: add, subtract, multiply, divide, mod, pow, min, max, lt, le, eq, and, or. Unary {op,value}: negate, abs, sqrt, sin, cos, floor, ceil, not. if uses condition, then, else and evaluates only the selected branch; and/or short circuit. let uses name,value,body; the new binding exists only in body. lambda uses parameters:[ids],body and captures its definition scope. apply uses function:expression,args:[expressions]; arguments are positional. Duplicate binders are errors; lexical shadowing is allowed.
+Endpoint sequences: interval uses start,end,inclusive and optional count OR step expressions. Endpoints and step must share dimensions. Count is dimensionless integer 0..256, 0 gives empty, 1 gives start (exclusive equal endpoints with positive count are invalid); inclusive samples include end when count>1. Without count, step is nonzero; implicit +1 only for dimensionless integer endpoints. Wrong direction gives empty; unreachable endpoint is not appended. Count/step are mutually exclusive. zip(inputs) requires 2..8 equal-length lists; enumerate(input) produces [index,value] pairs. flatmap(input,function) concatenates returned sequences with maximum 256 output elements. Geometry collect node {id,op:"collect",values:expression,binding:localId,input:nodeId} expands separately emitted instances using each sequence value. group node {id,op:"group",inputs:[nodeIds]} likewise emits separate parts. They preserve separate scene meshes at root; enclosing booleans merge according to the boolean operation. Positional instance_path references are not persistent semantic keys. No joint/assembly semantics implied.
 Lists: list uses items; range uses count,start,step (count 0..256); at uses input,index (zero based); length uses input. map and filter use input and function (one argument: element). reduce uses input,function,initial and folds left with callback(accumulator,element). Empty reduce returns initial. Lists may hold closures or lists; a geometric numeric field must resolve to a number.
 Document functions: {id,kind:"scalar"|"value",parameters:[ids],body:expression} or {id,kind:"geometry",parameters:[ids],nodes:[...],root:id}. scalar must return a number; value can return a list or closure. Named call uses {op:"call",function:id,args:{parameter:expression}}. Geometry call is a node with an id and the same fields. Exact named argument matching is required. Named functions see document parameters and their own arguments, never caller locals. Pass closures as arguments to write higher-order value functions. The expression {op:"geometry",function:id,args:{name:expression}} constructs an immutable geometry value with bound arguments. A geometry node {id,op:"evaluate",value:expression} emits a geometry value. Closures may return geometry; lists and higher-order functions may carry geometry values. Geometry functions can accept geometry values and use evaluate nodes to compose them.
 Geometry if nodes have condition,then:nodeId,else:nodeId. Geometry map nodes have count (1..256),index:localId,input:nodeId; each instance receives an immutable zero-based index and results are unioned. Node IDs are local to each geometry body. Document assertions:[{condition:expression,message:string}] run before geometry emission. source_map includes instance_path identifying function calls and map instances.
@@ -547,7 +618,7 @@ For new documents use type_policy:"strict". Expressions {op:"quantity",value:num
 Box sizes, radius, height and translation require length; rotation requires angle; scale, predicates, indices and counts require dimensionless numbers. Function arguments, closures, lists, geometry values and scalar-function returns preserve quantities. Checks occur during evaluation, not by whole-program static inference. Inactive branches retain lazy semantics.
 Add/subtract/min/max/mod/comparisons require identical dimensions; implicit number-to-length promotion in arithmetic is forbidden. Multiply/divide combine dimensions; length/length is dimensionless. Powers require a dimensionless exponent; resulting length/angle exponents must be integers within +/-8. sqrt halves exponents. sin/cos accept angles, returning dimensionless values (legacy mode also accepts bare degrees). abs/negate preserve dimensions; floor/ceil round canonical mm/degrees, preserving dimensions. Typed ranges require matching start/step dimensions; count remains dimensionless. Numeric limits apply after conversion as well as during arithmetic.
 Parameters may declare unit,min,max,integer. Bounds and update values are expressed in the parameter's declared unit; modelgraph_set_parameters preserves that unit and revalidates all bounds/constraints atomically. An omitted unit denotes a dimensionless parameter.
-Document constraints:[{id,left:expression,relation:"le"|"ge"|"eq",right:expression,tolerance?:expression,message:string}] compare numeric values with identical dimensions. Tolerance must have the same dimensions and be nonnegative; omitted means exact comparison. le means left <= right+tolerance; ge means left >= right-tolerance; eq means abs(left-right) <= tolerance. IDs must be unique. Maximum 64 constraints. constraint_report contains id,path,passed,actual,expected,relation,tolerance,dimension:[lengthExponent,angleExponent],message; measurements use canonical mm/degrees. If any fail, compilation returns constraint_failed with the entire report in error.details and emits no geometry. Legacy assertions still work.
+Document constraints:[{id,left:expression,relation:"le"|"ge"|"eq"|"lt"|"gt",right:expression,tolerance?:expression,message:string}] compare numeric values with identical dimensions. Tolerance must have the same dimensions and be nonnegative; omitted means exact comparison. lt/gt are strict comparisons without tolerance. le means left <= right+tolerance; ge means left >= right-tolerance; eq means abs(left-right) <= tolerance. IDs must be unique. Maximum 64 constraints. constraint_report contains id,path,passed,actual,expected,relation,tolerance,dimension:[lengthExponent,angleExponent],message; measurements use canonical mm/degrees. If any fail, compilation returns constraint_failed with the entire report in error.details and emits no geometry. Legacy assertions still work.
 These are checks of declared expressions, not a constraint solver or measured mesh-wall analysis. A minimumWall constraint checks the expression you provide; it does not prove every wall in the finished mesh meets that minimum. No automatic parameter repair, sketches or geometric constraint solving is introduced.`
 
 export const MODELGRAPH_UNITS_EXAMPLE = {

@@ -174,7 +174,7 @@ export const COMMAND_REGISTRY = [
     bindings: [{ code: 'Equal', primary: true, scope: 'viewport' }],
   },
   {
-    id: 'section', labelKey: 'section', aliasKeys: ['section'],
+    id: 'section', labelKey: 'section', aliasKeys: ['section', 'scanPlane'],
     keywords: ['inspect', 'slice', 'clipping', 'plane'], scopes: ['viewport'], palette: true,
   },
   {

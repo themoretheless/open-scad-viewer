@@ -354,6 +354,17 @@ counts, scene replacement and idle/animation behavior. See the
 - `Ctrl/⌘ + Shift + B`: toggle the Scene/Inspect/Parameters dock.
 - `Ctrl/⌘ + Enter`: render.
 
+The **Section / Срез** toolbar button opens the scanning-plane panel. Enable
+the cut, choose X/Y/Z, move it in millimeters, or press **Scan / Сканировать**
+for an automatic back-and-forth pass. You can reverse the visible side or
+return the plane to the center. Closing the panel pauses the scan; disable
+the cut to restore the full view. Sections affect rendering and picking only:
+source geometry and exported files remain complete.
+
+Close zoom keeps the camera in front of the model in both projection modes.
+Magnification continues without accidentally slicing geometry; only the
+explicit section controls cut the displayed model.
+
 ## Independent language profiles and oracle boundary
 
 This project does **not** bundle or silently invoke the official OpenSCAD

@@ -35,7 +35,9 @@
             "enum": [
               "le",
               "ge",
-              "eq"
+              "eq",
+              "lt",
+              "gt"
             ]
           },
           "right": {
@@ -175,6 +177,48 @@
               "internal",
               "rim_width",
               "flank_segments"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planetary_spinner"
+              },
+              "inner_radius": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "outer_radius": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "bore": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "gap": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "helix_angle": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inner_radius",
+              "outer_radius",
+              "bore",
+              "gap",
+              "height",
+              "helix_angle"
             ],
             "additionalProperties": false
           },
@@ -1459,6 +1503,65 @@
               },
               "op": {
                 "type": "string",
+                "const": "collect"
+              },
+              "values": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "binding": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "values",
+              "binding",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "group"
+              },
+              "inputs": {
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "map"
               },
               "count": {
@@ -1909,6 +2012,48 @@
                         "internal",
                         "rim_width",
                         "flank_segments"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "planetary_spinner"
+                        },
+                        "inner_radius": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "outer_radius": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "bore": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "gap": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "helix_angle": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inner_radius",
+                        "outer_radius",
+                        "bore",
+                        "gap",
+                        "height",
+                        "helix_angle"
                       ],
                       "additionalProperties": false
                     },
@@ -3193,6 +3338,65 @@
                         },
                         "op": {
                           "type": "string",
+                          "const": "collect"
+                        },
+                        "values": {
+                          "$ref": "#/$defs/__schema0"
+                        },
+                        "binding": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "values",
+                        "binding",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "group"
+                        },
+                        "inputs": {
+                          "maxItems": 256,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inputs"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
                           "const": "map"
                         },
                         "count": {
@@ -3530,6 +3734,52 @@
         ]
       }
     },
+    "geometry_assertions": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "check": {
+            "type": "string",
+            "enum": [
+              "hasBodies",
+              "isWatertight",
+              "hasNoDegenerateTriangles",
+              "height",
+              "width",
+              "depth"
+            ]
+          },
+          "expected": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "tolerance": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "check",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
     "assertions": {
       "maxItems": 64,
       "type": "array",
@@ -3733,9 +3983,80 @@
           "properties": {
             "op": {
               "type": "string",
+              "const": "interval"
+            },
+            "start": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "end": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "inclusive": {
+              "type": "boolean"
+            },
+            "count": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "step": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "start",
+            "end",
+            "inclusive"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "zip"
+            },
+            "inputs": {
+              "minItems": 2,
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "inputs"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "enumerate"
+            },
+            "input": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
               "enum": [
                 "map",
-                "filter"
+                "filter",
+                "flatmap"
               ]
             },
             "input": {

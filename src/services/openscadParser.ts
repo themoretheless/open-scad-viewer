@@ -1,3 +1,4 @@
+import { checkModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by Manifold WASM.
  *
@@ -3888,6 +3889,7 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
       const { compileModelGraphText } = await import('./modelGraphText')
       const compiled = compileModelGraphText(source)
       const result = await parseInternal(compiled.source, options)
+      requireModelGraphChecks(checkModelGraphGeometry(compiled.geometry_assertions, result.meshes))
       // Generated SCAD spans are not spans in the authored compact document.
       for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
       return result

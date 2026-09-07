@@ -2,6 +2,7 @@
 import type { CustomizerParameter, CustomizerValue } from '../services/scadCustomizer'
 
 defineProps<{
+  errors?: string[]
   parameters: CustomizerParameter[]
   title: string
   emptyLabel: string
@@ -25,6 +26,7 @@ function optionValue(parameter: CustomizerParameter, event: Event): CustomizerVa
 <template>
   <section class="customizer" :aria-label="title">
     <header><span>{{ title }}</span><span class="count">{{ parameters.length }}</span></header>
+    <p v-for="(error, index) in errors" :key="index" class="validation-error" role="alert">{{ error }}</p>
     <p v-if="parameters.length === 0" class="empty">{{ emptyLabel }}</p>
     <div v-for="parameter in parameters" :key="parameter.name" class="parameter">
       <label :for="`customizer-${parameter.name}`">
@@ -85,6 +87,7 @@ function optionValue(parameter: CustomizerParameter, event: Event): CustomizerVa
 </template>
 
 <style scoped>
+.validation-error { color: #ff8989; margin: 8px 10px; font-size: .75rem; }
 .customizer { min-width: 0; color: var(--text); }
 header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: .72rem; font-weight: 650; letter-spacing: .02em; }
 .count { min-width: 19px; padding: 1px 5px; border-radius: 999px; background: var(--hover); color: var(--text-dim); text-align: center; font-size: .62rem; }

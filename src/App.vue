@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { compileModelGraphText, isModelGraphText } from './services/modelGraphText'
+import { modelGraphTextControls, isModelGraphText } from './services/modelGraphText'
 import { highlightCode } from './services/codeHighlight'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
@@ -8,6 +8,7 @@ import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import MechanicalGenerator from './features/MechanicalGenerator.vue'
+import ScanPlanePanel from './features/ScanPlanePanel.vue'
 import SvgPanel from './features/SvgPanel.vue'
 import InspectPanel from './components/InspectPanel.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
@@ -155,7 +156,7 @@ const L: Record<Language, Record<string, string>> = {
     scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
     selectionMode: 'Режим выбора', sidebar: 'Боковая панель', closeSidebar: 'Закрыть боковую панель', measure: 'Измерить расстояние',
     cancelMeasure: 'Отменить измерение', flipSection: 'Перевернуть сечение', hideSelected: 'Скрыть выбранное', cycleSelectionMode: 'Следующий режим выбора',
-    section: 'Сечение', hidden: 'Скрыт',
+    section: 'Плоскость сканирования', scanPlane: 'Срез', hidden: 'Скрыт',
     sourceStale: 'Сначала дождитесь сборки текущего исходника',
     needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
     needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
@@ -202,7 +203,7 @@ const L: Record<Language, Record<string, string>> = {
     scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
     selectionMode: 'Selection mode', sidebar: 'Sidebar', closeSidebar: 'Close sidebar', measure: 'Measure distance',
     cancelMeasure: 'Cancel measurement', flipSection: 'Flip section', hideSelected: 'Hide selected', cycleSelectionMode: 'Next selection mode',
-    section: 'Section', hidden: 'Hidden',
+    section: 'Scanning plane', scanPlane: 'Section', hidden: 'Hidden',
     sourceStale: 'Wait for the current source to finish building first',
     needsModel: 'Build a model first', needsSelection: 'Select an object first',
     needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
@@ -332,6 +333,9 @@ const sectionEnabled = ref(false)
 const sectionAxis = ref<SectionAxis>('z')
 const sectionOffset = ref(0)
 const sectionFlip = ref(false)
+const scanPanelOpen = ref(false)
+const scanToggleRef = ref<HTMLButtonElement | null>(null)
+let sectionInitialized = false
 const dockTab = ref<'scene' | 'inspect' | 'parameters'>('scene')
 const dockOpen = ref(true)
 const findOpen = ref(false)
@@ -399,9 +403,10 @@ async function runGeometryAnalysis() {
   }
 }
 
+const compactControls = computed(() => isModelGraphText(code.value) ? modelGraphTextControls(code.value) : {parameters: [], errors: []})
 const customizerParameters = computed(() => {
   if (!isModelGraphText(code.value)) return extractCustomizerParameters(code.value)
-  try { return compileModelGraphText(code.value).customizer } catch { return [] }
+  return compactControls.value.parameters
 })
 const presetName = ref('')
 const presetSelection = ref('')
@@ -505,12 +510,15 @@ const panelMeasurement = computed<PanelMeasurement | null>(() => measurement.val
   points: measurement.value.points,
   distance: measurement.value.distance ?? undefined,
 } : null)
+function isSectionMeshVisible(index: number) {
+  return meshVisibility.value[index] !== false && (!isolated.value || index === selectedMesh.value)
+}
 const sectionRange = computed(() => {
   const axis = sectionAxis.value === 'x' ? 0 : sectionAxis.value === 'y' ? 1 : 2
   let min = Infinity
   let max = -Infinity
   sceneMeshes.value.forEach((mesh, index) => {
-    if (meshVisibility.value[index] === false) return
+    if (!isSectionMeshVisible(index)) return
     const bounds = inspectMesh(mesh, index).bounds
     if (!bounds) return
     min = Math.min(min, bounds.min[axis])
@@ -520,6 +528,8 @@ const sectionRange = computed(() => {
   const span = Math.max(0.001, max - min)
   return { min, max, step: Math.max(0.001, span / 500) }
 })
+const sectionAvailable = computed(() => gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)))
+watch(sectionRange, syncSectionRange)
 const paletteCommands = computed(() => {
   const hasVisibleModel = sceneMeshes.value.some((_, index) => meshVisibility.value[index] !== false)
   const hasSelection = selectedMesh.value !== null
@@ -565,7 +575,7 @@ const paletteCommands = computed(() => {
       disabledReason: t('needsModel'),
     },
     section: {
-      enabled: hasVisibleModel || sectionEnabled.value,
+      enabled: sectionAvailable.value || sectionEnabled.value,
       disabledReason: t('needsModel'),
     },
   }
@@ -1296,8 +1306,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     renderedSource.value = source
     renderedQuality.value = effectiveQuality
     syncSourceHighlightFromEditor()
-    sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
-    applySection()
+    syncSectionRange()
     const publishedAt = performance.now()
     const historyToken = performanceHistory.record({
       revision: response.documentRevision,
@@ -1907,19 +1916,35 @@ function applySection() {
   )
 }
 
+function syncSectionRange() {
+  const { min, max } = sectionRange.value
+  if (sectionOffset.value < min || sectionOffset.value > max) {
+    sectionOffset.value = (min + max) / 2
+  }
+  applySection()
+}
+
 function setSectionEnabled(enabled: boolean) {
+  if (enabled && !sectionAvailable.value) return
+  if (enabled && !sectionInitialized) {
+    sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
+    sectionInitialized = true
+  }
   sectionEnabled.value = enabled
   applySection()
 }
 
 function setSectionAxis(axis: SectionAxis) {
   sectionAxis.value = axis
-  sectionOffset.value = clamp(sectionOffset.value, sectionRange.value.min, sectionRange.value.max)
+  sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
+  sectionInitialized = true
   applySection()
 }
 
 function setSectionOffset(offset: number) {
+  if (!Number.isFinite(offset)) return
   sectionOffset.value = clamp(offset, sectionRange.value.min, sectionRange.value.max)
+  sectionInitialized = true
   applySection()
 }
 
@@ -1931,7 +1956,13 @@ function setSectionFlip(flip: boolean) {
 function resetSection() {
   sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
   sectionFlip.value = false
+  sectionInitialized = true
   applySection()
+}
+
+function closeScanPanel() {
+  scanPanelOpen.value = false
+  void nextTick(() => scanToggleRef.value?.focus())
 }
 
 function lineAndColumn(source: string, offset: number) {
@@ -1974,8 +2005,7 @@ function executeCommand(id: string) {
     case 'select-object': setSelectionMode('object'); break
     case 'measure': measureActive.value ? cancelMeasure() : startMeasure(); break
     case 'section':
-      dockOpen.value = true
-      dockTab.value = 'inspect'
+      scanPanelOpen.value = true
       setSectionEnabled(!sectionEnabled.value)
       break
     case 'sidebar': dockOpen.value = !dockOpen.value; break
@@ -2282,6 +2312,13 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             {{ projection === 'perspective' ? t('perspective') : t('orthographic') }}
           </button>
           <button class="view-btn" type="button" :aria-pressed="gridVisible" @click="toggleGrid"># {{ t('grid') }}</button>
+          <button
+            ref="scanToggleRef" class="view-btn scan-toggle" type="button"
+            :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('section')"
+            :aria-expanded="scanPanelOpen" aria-controls="scan-plane-panel"
+            :disabled="!sectionAvailable && !sectionEnabled"
+            @click="scanPanelOpen = !scanPanelOpen"
+          ><span aria-hidden="true">◩</span> {{ t('scanPlane') }}<i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
           <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">▥</button>
           <label class="view-select-label">
             <span class="sr-only">{{ t('display') }}</span>
@@ -2304,6 +2341,16 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             </select>
           </label>
         </div>
+
+        <ScanPlanePanel
+          v-if="scanPanelOpen" id="scan-plane-panel"
+          :enabled="sectionEnabled" :axis="sectionAxis" :offset="sectionOffset"
+          :min="sectionRange.min" :max="sectionRange.max" :step="sectionRange.step"
+          :flip="sectionFlip" :locale="lang" :available="sectionAvailable"
+          @update:enabled="setSectionEnabled" @update:axis="setSectionAxis"
+          @update:offset="setSectionOffset" @update:flip="setSectionFlip"
+          @reset="resetSection" @close="closeScanPanel"
+        />
 
         <div class="selection-modes" role="group" :aria-label="t('selectionMode')">
           <button type="button" :class="{ active: selectionMode === 'point' }" :aria-pressed="selectionMode === 'point'" :title="`${t('point')} · 1`" @click="setSelectionMode('point')">
@@ -2419,6 +2466,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             </section>
             <CustomizerPanel
               :parameters="customizerParameters"
+              :errors="compactControls.errors"
               :title="t('parameters')"
               :empty-label="t('noParameters')"
               @change="updateCustomizer"
@@ -2672,6 +2720,9 @@ button, select { color: inherit; }
 .view-btn { min-height: 28px; padding: 3px 8px; background: transparent; border-color: transparent; color: inherit; font-size: .7rem; }
 .view-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: color-mix(in srgb, var(--accent) 42%, transparent); }
 .view-btn.icon-only { min-width: 28px; padding-inline: 6px; font-size: .9rem; }
+.scan-toggle { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.scan-toggle.active { background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--accent); }
+.scan-active-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .view-select { max-width: 110px; height: 28px; color: #f2f4f8; background: #252932; border-color: #3b414d; }
 .display-select { max-width: 90px; }
 .view-cube-wrap { position: absolute; z-index: 2; top: 58px; right: 13px; }

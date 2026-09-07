@@ -1,3 +1,4 @@
+import { checkModelGraphGeometry } from '../services/modelGraphChecks'
 import { compileModelGraphText, MODELGRAPH_TEXT_GUIDE } from '../services/modelGraphText'
 import { MODELGRAPH_INSTRUCTIONS } from './modelGraphInstructions'
 import { registerModelGraphSvgTools } from './modelGraphSvgTools'
@@ -33,7 +34,7 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
     inputSchema: z.object({ source: z.string().max(262144) }).strict(), annotations,
   }, async ({ source }) => {
     try { return result(compileModelGraphText(source)) }
-    catch (error) { return result({ error: { code: 'text_compile_failed', message: error instanceof Error ? error.message : 'Text compilation failed' } }, true) }
+    catch (error) { if(error instanceof ModelGraphError) return failure(error); return result({ error: { code: 'text_compile_failed', message: error instanceof Error ? error.message : 'Text compilation failed' } }, true) }
   })
   server.registerResource('modelgraph-language', 'openscad://language/modelgraph-1', {
     title: 'ModelGraph/1 language for AI modeling', mimeType: 'application/json',
@@ -51,8 +52,9 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
   }, async (input, context) => {
     try {
       const compiled = compileModelGraph(input.document)
-      const analysis = await geometry.analyze(compiled.source, 'full', context.mcpReq.signal)
-      return result({ ...compiled, analysis })
+      const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
+      const checks = checkModelGraphGeometry(compiled.geometry_assertions, built.meshes)
+      return result({ ...compiled, analysis: built.analysis, checks }, checks.some(c => c.status !== 'passed'))
     } catch (error) { return failure(error) }
   })
   server.registerTool('modelgraph_set_parameters', {

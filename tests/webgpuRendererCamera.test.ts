@@ -1,5 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/services/webgpuRenderer'
+import { transformPoint, type Mat4, type Vec3 } from '../src/services/math3d'
+
+describe('WebGPURenderer close zoom', () => {
+  it.each(['orthographic', 'perspective'] as const)('uses protected %s depth after restoring a close camera', projection => {
+    const renderer = new WebGPURenderer()
+    const internal = renderer as unknown as {
+      bounds: { min: Vec3; max: Vec3; center: Vec3; radius: number }
+      cameraState(): { eye: Vec3; viewProjection: Mat4 }
+    }
+    internal.bounds = { min: [-34, -34, 0], max: [34, 34, 10], center: [0, 0, 5], radius: 49 }
+    renderer.restoreCameraState({
+      yaw: Math.PI / 4, pitch: Math.atan(1 / Math.sqrt(2)), distance: 0.01,
+      target: [0, 0, 5], projection,
+    })
+
+    const frame = internal.cameraState()
+    // This front corner was behind the old eye and was cut by the near plane.
+    const depth = transformPoint(frame.viewProjection, [34, -34, 10])[2]
+    expect(depth).toBeGreaterThan(0)
+    expect(depth).toBeLessThan(1)
+    expect(renderer.getCameraState().distance).toBe(0.01)
+    expect(renderer.canGoToPreviousView).toBe(false)
+  })
+})
 
 describe('WebGPURenderer camera history integration', () => {
   afterEach(() => vi.unstubAllGlobals())

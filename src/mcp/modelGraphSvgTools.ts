@@ -1,3 +1,4 @@
+import { checkModelGraphGeometry, requireModelGraphChecks, ModelGraphCheckError } from '../services/modelGraphChecks'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
@@ -6,7 +7,7 @@ import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_B
 
 export function registerModelGraphSvgTools(server: McpServer, geometry: McpGeometryService) {
   const annotations = { readOnlyHint: true, openWorldHint: false }
-  const failure = (e: unknown) => ({ isError: true, content: [{ type: 'text' as const, text: e instanceof Error ? e.message : 'SVG conversion failed.' }] })
+  const failure = (e: unknown) => ({ isError: true, ...(e instanceof ModelGraphCheckError ? {structuredContent:{checks:e.checks}} : {}), content: [{ type: 'text' as const, text: e instanceof Error ? e.message : 'SVG conversion failed.' }] })
   server.registerTool('modelgraph_svg_extrude', {
     description: 'Convert SVG filled shapes and strokes (including curved paths and holes) to self-contained SCAD extrusion in millimeters. Returns normalized SVG and source after an actual full geometry check. SVG text/images/masks are unsupported; outline text first. Maximum 256 KiB input and 20000 contour points.',
     inputSchema: z.object({ svg: z.string().max(SVG_MAX_BYTES), height: z.number().positive().max(100000) }).strict(), annotations,
@@ -23,6 +24,7 @@ export function registerModelGraphSvgTools(server: McpServer, geometry: McpGeome
   }, async (input, context) => {
     try {
       const compiled = compileModelGraph(input.document), built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
+      requireModelGraphChecks(checkModelGraphGeometry(compiled.geometry_assertions, built.meshes));
       const svg = contoursSvg(await meshSvgContours(built.meshes, input))
       return { content: [{ type: 'resource' as const, resource: { uri: `modelgraph://export/${compiled.document_sha256}.svg`, mimeType: 'image/svg+xml', text: svg } }] }
     } catch (e) { return failure(e) }

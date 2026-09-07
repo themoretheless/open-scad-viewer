@@ -13,3 +13,10 @@ it('recognizes parameters, calls, JSON keys and numeric exponents', () => {
  expect(html).toContain('syntax-number">1e-3');
  expect(html).toContain('syntax-property">&quot;op&quot;');
 });
+
+it('highlights generator clauses and range operators',()=>{
+ const html=highlightCode('[for angle in 0deg..<360deg count 18 where angle > 0deg => body.rotate(z: angle)]')
+ expect(html).toContain('syntax-keyword">count')
+ expect(html).toContain('syntax-keyword">where')
+ expect(html).toContain('syntax-operator">..&lt;')
+})

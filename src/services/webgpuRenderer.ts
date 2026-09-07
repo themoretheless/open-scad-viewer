@@ -2,7 +2,7 @@
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
-  perspective, orthographic, lookAt, invert, multiply,
+  invert,
   transformPoint, unprojectRay,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
@@ -79,6 +79,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances, instancedObjectShader } from './meshInstances'
 import { effectiveDisplayAlpha, isTransparentAlpha } from './backendQuality'
+import { computeOrbitCameraFrame } from './orbitCameraProjection'
 
 /* ── WGSL shaders ─────────────────────────────────── */
 
@@ -235,8 +236,6 @@ function sameTypedArray(left: Float32Array | Uint32Array, right: Float32Array | 
 
 const FOV_Y = Math.PI / 4
 const DEFAULT_DISTANCE = 50
-const MIN_DISTANCE = 0.01
-const MAX_DISTANCE = 1e12
 const MAX_ORBIT_PITCH = Math.PI / 2 - 0.001
 const MAX_DPR = 2
 const GRID_SIZE = 200
@@ -1509,36 +1508,21 @@ export class WebGPURenderer {
     return canvas.clientWidth > 0 && canvas.clientHeight > 0 ? canvas.clientWidth / canvas.clientHeight : 1
   }
 
-  private clipPlanes(): [number, number] {
-    let extent = this.gridVisible ? Math.hypot(GRID_SIZE, GRID_SIZE, GRID_SIZE) : 1
+  private cameraState() {
     const activeBounds = this.isolated && this.selected !== null
       ? this.meshes[this.selected]?.worldBounds
       : this.bounds
-    if (activeBounds) {
-      const [x, y, z] = activeBounds.center
-      extent = Math.max(extent, Math.hypot(x-this.tx, y-this.ty, z-this.tz) + activeBounds.radius)
-    }
-    const nearest = this.dist - extent * 1.1
-    const near = Math.max(0.001, Math.min(this.dist * 0.01, nearest > 0 ? nearest : 0.001))
-    const far = Math.max(near + 1, this.dist + extent * 1.1)
-    return [near, far]
-  }
-
-  private cameraState() {
-    const asp = this.getAspect()
-    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch)
-    const eye: Vec3 = [
-      this.tx + this.dist * cp * Math.sin(this.yaw),
-      this.ty - this.dist * cp * Math.cos(this.yaw),
-      this.tz + this.dist * sp,
-    ]
-    const view = lookAt(eye, [this.tx,this.ty,this.tz], [0,0,1])
-    const [near, far] = this.clipPlanes()
-    const halfHeight = Math.max(MIN_DISTANCE, this.dist * Math.tan(FOV_Y / 2))
-    const projection = this.projection === 'perspective'
-      ? perspective(FOV_Y, asp, near, far)
-      : orthographic(-halfHeight*asp, halfHeight*asp, -halfHeight, halfHeight, near, far)
-    return { eye, viewProjection: multiply(projection, view) }
+    return computeOrbitCameraFrame({
+      yaw: this.yaw,
+      pitch: this.pitch,
+      distance: this.dist,
+      target: [this.tx, this.ty, this.tz],
+      aspect: this.getAspect(),
+      fovY: FOV_Y,
+      projection: this.projection,
+      bounds: activeBounds ?? null,
+      backgroundRadius: this.gridVisible ? Math.hypot(GRID_SIZE, GRID_SIZE, GRID_SIZE) : 1,
+    })
   }
 
   private clearDrawCaches() {

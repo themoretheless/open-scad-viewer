@@ -1,3 +1,4 @@
+import { MODELGRAPH_TEXT_GUIDE } from '../src/services/modelGraphText.ts'
 import { MECHANICAL_GENERATOR_EXAMPLES } from '../src/services/mechanicalGeneratorContract.ts'
 // Run: node --import tsx scripts/export-modelgraph-language.mjs
 import { writeFileSync } from 'node:fs'
@@ -17,6 +18,10 @@ writeFileSync(new URL('../docs/languages/modelgraph-1-prompt.md', import.meta.ur
 Создавай параметрические 3D-модели в JSON по приложенной схеме. Используй чистые функции и именованные параметры для повторно используемых деталей. Не вставляй программный код в строки.
 
 ${MODELGRAPH_GUIDE}
+
+## Compact text syntax
+
+${MODELGRAPH_TEXT_GUIDE}
 
 ## Functional programming
 
