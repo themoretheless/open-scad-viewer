@@ -1,9 +1,8 @@
+import { MODELGRAPH_INSTRUCTIONS } from './modelGraphInstructions'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { McpServer, WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server'
-import { z } from 'zod/v4'
 import { registerModelGraphTools } from './modelGraphTools'
-import { compileModelGraph, modelGraphSchema, MODELGRAPH_GUIDE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_SKETCH_GUIDE } from '../services/modelGraph'
 import { HeadlessGeometryService } from './geometryService'
 import { DirectGeometrySupervisor } from './directGeometrySupervisor'
 import { defaultGeometryBuildEngine } from '../services/geometryBuildEngine'
@@ -30,9 +29,8 @@ export function createModelGraphHttpServer() {
         chunks.push(Buffer.from(chunk))
       }
       const geometry = new HeadlessGeometryService(defaultGeometryBuildEngine, runtime)
-      server = new McpServer({ name: 'modelgraph', version: '0.1.0' }, { instructions: 'Call modelgraph_language first, then compile/check your ModelGraph document. No persistent catalog. Export with modelgraph_export.' })
+      server = new McpServer({ name: 'modelgraph', version: '0.1.0' }, { instructions: MODELGRAPH_INSTRUCTIONS + '\nHTTP mode has no persistent catalog.' })
       registerModelGraphTools(server, geometry)
-      server.registerTool('modelgraph_language', { description: 'Read the complete ModelGraph language guide and JSON Schema before modeling.', inputSchema: z.object({}), annotations: { readOnlyHint: true, openWorldHint: false } }, async () => ({ content: [{ type: 'text', text: JSON.stringify({ guide: [MODELGRAPH_GUIDE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_SKETCH_GUIDE].join('\n\n'), schema: z.toJSONSchema(modelGraphSchema) }) }] }))
       const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
       await server.connect(transport)
       const headers = new Headers()

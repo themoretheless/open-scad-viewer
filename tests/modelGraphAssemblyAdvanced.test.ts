@@ -59,8 +59,8 @@ it('reports unavailable intersections as unknown and enforces the leaf budget',a
  const result=await inspectModelGraphInterference(doc,geometry)
  expect(result.status).toBe('unknown')
  expect(result.pairs[0]!.intersection_volume_mm3).toBeNull()
- const large={language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'ball',op:'sphere',radius:1},{id:'assembly',op:'assembly',components:Array.from({length:9},(_,i)=>({id:`part${i}`,input:'ball',anchors:[],placement:frame}))}],root:'assembly'}
- await expect(inspectModelGraphInterference(large,geometry)).rejects.toThrow('8 leaf')
+ const large={language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'ball',op:'sphere',radius:1},{id:'assembly',op:'assembly',components:Array.from({length:33},(_,i)=>({id:`part${i}`,input:'ball',anchors:[],placement:frame}))}],root:'assembly'}
+ await expect(inspectModelGraphInterference(large,geometry)).rejects.toThrow('32')
 })
 it('evaluates joint parameter expressions through the language compiler',()=>{
  const doc=JSON.parse(JSON.stringify(MODELGRAPH_ASSEMBLY_EXAMPLE))
@@ -71,4 +71,20 @@ it('evaluates joint parameter expressions through the language compiler',()=>{
  expect(compiled.assembly_components[1]!.joint?.position).toBeCloseTo(0.3)
  product.components[1].mate.joint.max=0.1
  expect(()=>compileModelGraph(doc)).toThrow('limits')
+})
+
+it('checks all pairs in a twenty-component assembly', async () => {
+ const doc={language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'ball',op:'sphere',radius:1},{id:'assembly',op:'assembly',components:Array.from({length:20},(_,i)=>({id:`part${i}`,input:'ball',anchors:[],placement:{...frame,origin:[i*3,0,0]}}))}],root:'assembly'}
+ const result=await inspectModelGraphInterference(doc,new HeadlessGeometryService())
+ expect(result.pairs).toHaveLength(190)
+ expect(result.status).toBe('no_volume_overlap')
+})
+
+it('does not report missing bounds as collision-free', async () => {
+ const geometry=new HeadlessGeometryService()
+ const analyze=geometry.analyze.bind(geometry)
+ geometry.analyze=async(source,quality,signal)=>({...await analyze(source,quality,signal),bounds:null})
+ const result=await inspectModelGraphInterference(MODELGRAPH_ASSEMBLY_EXAMPLE,geometry)
+ expect(result.status).toBe('unknown')
+ expect(result.pairs[0]!.method).toBe('bounds_unavailable')
 })

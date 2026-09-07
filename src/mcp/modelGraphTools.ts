@@ -1,3 +1,5 @@
+import { compileModelGraphText, MODELGRAPH_TEXT_GUIDE } from '../services/modelGraphText'
+import { MODELGRAPH_INSTRUCTIONS } from './modelGraphInstructions'
 import { registerModelGraphSvgTools } from './modelGraphSvgTools'
 import { registerModelGraphGenerate } from './modelGraphGenerate'
 import { MECHANICAL_GENERATOR_EXAMPLES } from '../services/mechanicalGeneratorContract'
@@ -24,10 +26,19 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
     ? result({ error: { code: error.code, path: error.path, message: error.message, ...(error.details === undefined ? {} : { details: error.details }) } }, true)
     : result({ error: { code: 'geometry_check_failed', path: '/', message: 'Geometry execution failed; check generated source with openscad_check for engine diagnostics.' } }, true)
   const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  const languageDocument = () => ({ text_guide: MODELGRAPH_TEXT_GUIDE, language: 'modelgraph/1', mechanical_examples: MECHANICAL_GENERATOR_EXAMPLES, guide: MODELGRAPH_GUIDE + '\n\n' + MODELGRAPH_FUNCTIONAL_GUIDE + '\n\n' + MODELGRAPH_UNITS_GUIDE + '\n\n' + MODELGRAPH_SKETCH_GUIDE, sketch_example: MODELGRAPH_SKETCH_EXAMPLE, assembly_example: MODELGRAPH_ASSEMBLY_EXAMPLE, loft_example: MODELGRAPH_LOFT_EXAMPLE, units_example: MODELGRAPH_UNITS_EXAMPLE, functional_example: MODELGRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(modelGraphSchema), example: MODELGRAPH_EXAMPLE })
+  server.registerTool('modelgraph_language', { description: 'Read the complete ModelGraph language, JSON Schema, examples and workflow before modeling.', inputSchema: z.object({}).strict(), annotations }, async () => result({ ...languageDocument(), instructions: MODELGRAPH_INSTRUCTIONS }))
+  server.registerTool('modelgraph_text_compile', {
+    description: 'Compile compact ModelGraph Text/1 to canonical ModelGraph JSON and SCAD. Read modelgraph_language text_guide. Pass the returned document to check/report/export; compile alone does not build geometry.',
+    inputSchema: z.object({ source: z.string().max(262144) }).strict(), annotations,
+  }, async ({ source }) => {
+    try { return result(compileModelGraphText(source)) }
+    catch (error) { return result({ error: { code: 'text_compile_failed', message: error instanceof Error ? error.message : 'Text compilation failed' } }, true) }
+  })
   server.registerResource('modelgraph-language', 'openscad://language/modelgraph-1', {
     title: 'ModelGraph/1 language for AI modeling', mimeType: 'application/json',
     description: 'Complete model prompt, JSON Schema, example and execution limitations.',
-  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify({ language: 'modelgraph/1', mechanical_examples: MECHANICAL_GENERATOR_EXAMPLES, guide: MODELGRAPH_GUIDE + '\n\n' + MODELGRAPH_FUNCTIONAL_GUIDE + '\n\n' + MODELGRAPH_UNITS_GUIDE + '\n\n' + MODELGRAPH_SKETCH_GUIDE, sketch_example: MODELGRAPH_SKETCH_EXAMPLE, assembly_example: MODELGRAPH_ASSEMBLY_EXAMPLE, loft_example: MODELGRAPH_LOFT_EXAMPLE, units_example: MODELGRAPH_UNITS_EXAMPLE, functional_example: MODELGRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(modelGraphSchema), example: MODELGRAPH_EXAMPLE }) }] }))
+  }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify({ ...languageDocument(), instructions: MODELGRAPH_INSTRUCTIONS }) }] }))
   server.registerTool('modelgraph_compile', {
     title: 'Compile ModelGraph document', description: 'Preferred structured frontend for new MCP models. Validate ModelGraph/1 JSON and return normalized document, revision hash, generated SCAD and node-to-line map. Does not build geometry or save data. Read openscad://language/modelgraph-1 first.',
     inputSchema: z.object({ document: modelGraphSchema }).strict(), annotations,

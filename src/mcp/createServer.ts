@@ -144,6 +144,7 @@ import {
 
 export interface CreateOpenScadMcpServerOptions {
   store: ModelStore
+  additionalInstructions?: string
   geometry?: McpGeometryService
   /** Optional upstream oracle used only by the explicitly named official tools. */
   officialRuntime?: OfficialOpenScadRuntimeService
@@ -1597,7 +1598,7 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     },
     {
       supportedProtocolVersions: ['2026-07-28', ...SUPPORTED_PROTOCOL_VERSIONS],
-      instructions: SERVER_INSTRUCTIONS,
+      instructions: [options.additionalInstructions, SERVER_INSTRUCTIONS].filter(Boolean).join('\n\n'),
       cacheHints: {
         'server/discover': { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },
         'tools/list': { ttlMs: CACHE_FIVE_MINUTES, cacheScope: 'private' },

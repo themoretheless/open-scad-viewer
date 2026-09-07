@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 // renderer, and exporters aren't all forced into the main entry chunk.
 export default defineConfig({
   plugins: [vue()],
+  worker: { format: 'es' },
   build: {
     chunkSizeWarningLimit: 700,
     rollupOptions: {

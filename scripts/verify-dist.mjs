@@ -29,5 +29,8 @@ for (const file of files) {
   }
 }
 const total = files.reduce((sum, file) => sum + file.bytes, 0)
-if (total > 2_000_000) throw new Error(`dist totals ${total} bytes; budget is 2000000`)
+// ModelGraph Text adds the bounded compiler to the geometry worker as well as the UI.
+// Keep per-artifact limits above; allow the measured ~140 KiB compiler addition.
+const totalBudget = 2_200_000
+if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

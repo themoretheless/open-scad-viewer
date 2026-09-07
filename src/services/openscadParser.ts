@@ -3883,7 +3883,18 @@ let parseQueue: Promise<void> = Promise.resolve()
 
 /** Parse and evaluate the supported OpenSCAD subset in a serialized WASM scope. */
 export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promise<ParseResult> {
-  const result = parseQueue.then(() => parseInternal(source, options), () => parseInternal(source, options))
+  const run = async () => {
+    if (/^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)) {
+      const { compileModelGraphText } = await import('./modelGraphText')
+      const compiled = compileModelGraphText(source)
+      const result = await parseInternal(compiled.source, options)
+      // Generated SCAD spans are not spans in the authored compact document.
+      for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
+      return result
+    }
+    return parseInternal(source, options)
+  }
+  const result = parseQueue.then(run, run)
   parseQueue = result.then(() => undefined, () => undefined)
   return result
 }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { compileModelGraphText, isModelGraphText } from './services/modelGraphText'
+import { highlightCode } from './services/codeHighlight'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
 import { exportMeshFormatCompressed, type MeshExportFormat } from './services/meshExportFormats'
@@ -224,6 +226,13 @@ const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 30
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
+const highlightRef = ref<HTMLPreElement | null>(null)
+const highlightedCode = computed(() => highlightCode(code.value))
+function syncHighlightScroll() {
+  if (!editorRef.value || !highlightRef.value) return
+  highlightRef.value.scrollTop = editorRef.value.scrollTop
+  highlightRef.value.scrollLeft = editorRef.value.scrollLeft
+}
 const findInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
@@ -390,7 +399,10 @@ async function runGeometryAnalysis() {
   }
 }
 
-const customizerParameters = computed(() => extractCustomizerParameters(code.value))
+const customizerParameters = computed(() => {
+  if (!isModelGraphText(code.value)) return extractCustomizerParameters(code.value)
+  try { return compileModelGraphText(code.value).customizer } catch { return [] }
+})
 const presetName = ref('')
 const presetSelection = ref('')
 const presetError = ref('')
@@ -2180,10 +2192,14 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button type="button" :aria-label="t('closeSearch')" @click="closeEditorFind">×</button>
         </div>
 
+        <div class="code-editor">
+        <pre ref="highlightRef" class="code code-highlight" aria-hidden="true" v-html="highlightedCode" />
         <textarea
           ref="editorRef"
           v-model="code"
-          class="code"
+          class="code code-input"
+          wrap="off"
+          @scroll="syncHighlightScroll"
           :aria-label="t('editor')"
           spellcheck="false"
           autocomplete="off"
@@ -2197,6 +2213,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           @focus="syncSourceHighlightFromEditor"
           @keydown="handleEditorKey"
         />
+        </div>
 
         <div v-if="error" class="message error" role="alert" aria-live="assertive">
           <button v-if="editorDiagnostic" type="button" class="diagnostic-link" @click="revealCurrentDiagnostic">
@@ -2609,6 +2626,22 @@ button, select { color: inherit; }
   background: var(--bg); color: var(--text); caret-color: var(--accent);
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .82rem; line-height: 1.58;
   tab-size: 2; white-space: pre; overflow: auto;
+}
+.code-editor { position: relative; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
+.code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
+.code-highlight { pointer-events: none; overflow: hidden; }
+.code-input { background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
+.code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.code-highlight :deep(.syntax-comment) { color: #84929f; }
+.code-highlight :deep(.syntax-keyword) { color: #c792ea; }
+.code-highlight :deep(.syntax-string) { color: #9acb88; }
+.code-highlight :deep(.syntax-number) { color: #e8ac76; }
+.code-highlight :deep(.syntax-function) { color: #76c7df; }
+.code-highlight :deep(.syntax-property) { color: #d5c288; }
+.code-highlight :deep(.syntax-operator) { color: #b7bfea; }
+@media (forced-colors: active) {
+  .code-highlight { display: none; }
+  .code-input { color: CanvasText; -webkit-text-fill-color: CanvasText; }
 }
 .message { margin: 7px 9px 0; padding: 8px 10px; border-radius: 7px; font: .74rem/1.45 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .diagnostic-link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }

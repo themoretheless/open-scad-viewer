@@ -1,3 +1,4 @@
+import { planetarySpinnerTemplate } from './planetarySpinnerTemplate'
 import { buildModelGraphGear } from './modelGraphGears'
 import { buildModelGraphThread } from './modelGraphThreads'
 import { buildModelGraphPlanetary } from './modelGraphPlanetary'
@@ -61,6 +62,7 @@ const frameSchema = z.object({ origin: vector, rotation: vector }).strict()
 const affineRow = z.tuple([scalar, scalar, scalar, scalar])
 const node = z.discriminatedUnion('op', [
   z.object({id,op:z.literal('gear'),teeth:scalar,module:scalar,pressure_angle:scalar.default(20),thickness:scalar,bore:scalar.default(0),backlash:scalar.default(0.15),clearance:scalar.default(0.5),internal:z.boolean().default(false),rim_width:scalar.default(6),flank_segments:scalar.default(6)}).strict(),
+  z.object({id,op:z.literal('planetary_spinner'),inner_radius:scalar,outer_radius:scalar,bore:scalar,gap:scalar,height:scalar,helix_angle:scalar}).strict(),
   z.object({id,op:z.literal('planetary_gears'),sun_teeth:scalar,planet_teeth:scalar,planet_count:scalar,module:scalar,pressure_angle:scalar.default(20),thickness:scalar,bore:scalar.default(0),backlash:scalar.default(0.15),clearance:scalar.default(0.5),rim_width:scalar.default(6),flank_segments:scalar.default(6),carrier_angle:scalar.default(0)}).strict(),
   z.object({id,op:z.literal('thread'),diameter:scalar,pitch:scalar,length:scalar,internal:z.boolean().default(false),wall:scalar.default(3),clearance:scalar.default(0.2),starts:scalar.default(1),left_handed:z.boolean().default(false),segments_per_turn:scalar.default(32)}).strict(),
 
@@ -300,11 +302,18 @@ export function compileModelGraph(value: unknown) {
     if (++expanded > 4096 || depth > 32) fail('graph_limit', path, 'Maximum depth 32 and expanded node uses 4096.')
     const item = nodes.get(key)!
     const current = `${path}/${key}`
-    const produced = ['sketch', 'rectangle', 'circle', 'polygon', 'offset', 'projection', 'section'].includes(item.op) ? 'profile' : ['box', 'sphere', 'cylinder', 'extrude', 'revolve', 'loft', 'advanced_extrude', 'cone', 'torus', 'gear', 'thread', 'planetary_gears'].includes(item.op) ? 'solid' : expected
+    const produced = ['sketch', 'rectangle', 'circle', 'polygon', 'offset', 'projection', 'section'].includes(item.op) ? 'profile' : ['box', 'sphere', 'cylinder', 'extrude', 'revolve', 'loft', 'advanced_extrude', 'cone', 'torus', 'gear', 'thread', 'planetary_gears', 'planetary_spinner'].includes(item.op) ? 'solid' : expected
     if (produced !== expected) fail('geometry_type_mismatch', current, `Expected ${expected}, received ${produced}. Extrude or revolve a profile before using it as a solid.`)
     sourceMap.push({ node_id: key, line: lines.length + 1, instance_path: current })
     const value = (expr: Expression, field: string, expected: Dimension = SCALAR) => arithmetic.field(numericValue(resolve(expr, scope, `${current}/${field}`), `${current}/${field}`), expected, `${current}/${field}`, strict)
-    if (item.op === 'gear' || item.op === 'thread' || item.op === 'planetary_gears') {
+    if (item.op === 'planetary_spinner') {
+      if(depth!==1)fail('mechanism_scope',current,'Planetary spinner must be the root to preserve separate parts.')
+      const r=value(item.inner_radius,'inner_radius',LENGTH),outer=value(item.outer_radius,'outer_radius',LENGTH),bore=value(item.bore,'bore',LENGTH),gap=value(item.gap,'gap',LENGTH),height=value(item.height,'height',LENGTH),helix=value(item.helix_angle,'helix_angle',ANGLE)
+      const scale=r/30.845
+      if(r<=0||outer<=r||height<=0||gap<0||gap>0.6*scale||helix<0||helix>=80||bore<0||bore>=2*(23.154388*scale-gap/2)*Math.cos(Math.PI/45)||outer*Math.cos(Math.PI/96)<=r+gap/2)fail('invalid_spinner',current,'Invalid spinner dimensions, gap, bore or rim thickness.')
+      lines.push(`inner_radius=${r};outer_radius=${outer};center_hole_diameter=${bore};gap=${gap};spinner_height=${height};helix_angle=${helix};`,planetarySpinnerTemplate)
+      mechanical_reports.push({node_id:key,kind:'planetary_spinner',sun_teeth:32,planet_teeth:4,ring_teeth:40,planet_count:18,gap_mm:gap,profile:'fixed sampled prototype',printability:'unknown'})
+    } else if (item.op === 'gear' || item.op === 'thread' || item.op === 'planetary_gears') {
       if (item.op === 'planetary_gears' && depth !== 1) fail('mechanism_scope',current,'Planetary gears must be the document root; export or edit individual parts separately.')
       const length = (field:string) => value((item as unknown as Record<string,Expression>)[field],field,LENGTH)
       const angle = (field:string) => value((item as unknown as Record<string,Expression>)[field],field,ANGLE)

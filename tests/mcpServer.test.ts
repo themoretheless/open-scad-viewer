@@ -121,6 +121,7 @@ describe('OpenSCAD MCP server', () => {
   it('advertises tools and persists a model exposed as an MCP resource', async () => {
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
+    expect(initialize.instructions).toContain('First call modelgraph_language')
     const listed = await request('tools/list') as {
       tools: Array<{ name: string; annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean } }>
     }
@@ -130,6 +131,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_export',
       'modelgraph_generate',
       'modelgraph_interference',
+      'modelgraph_language',
       'modelgraph_modify',
       'modelgraph_nurbs_build',
       'modelgraph_nurbs_compile',
@@ -140,6 +142,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_set_parameters',
       'modelgraph_svg_export',
       'modelgraph_svg_extrude',
+      'modelgraph_text_compile',
       'openscad_analyze',
       'openscad_build_history',
       'openscad_catalog_stats',
@@ -1171,6 +1174,7 @@ describe('ModelGraph MCP language workflow', () => {
     const { MODELGRAPH_EXAMPLE } = await import('../src/services/modelGraph')
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
+    expect(initialize.instructions).toContain('First call modelgraph_language')
     const resource = await request('resources/read', { uri: 'openscad://language/modelgraph-1' }) as { contents: Array<{ text: string }> }
     const contract = JSON.parse(resource.contents[0].text)
     expect(contract.language).toBe('modelgraph/1')
