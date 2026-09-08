@@ -1,3 +1,4 @@
+import { bakeSketch, worldPoint } from './directSketchGeometry'
 import { revolvePolygonProfile, booleanPolygonMeshes } from './polygonKernel'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
 
@@ -37,7 +38,7 @@ export function directCornerTool(sketch: DirectSketch, vertex: number, radius: n
   const arc=Array.from({length:segments+1},(_,i):Point2=>i===0?a:i===segments?b:[center[0]+radius*Math.cos(start+sweep*i/segments),center[1]+radius*Math.sin(start+sweep*i/segments)])
   const points=[...p.slice(0,vertex),...arc,...p.slice(vertex+1)].map(p=>[...p] as Point2)
   validateContour(points)
-  return {...sketch,points}
+  return {...bakeSketch(sketch),points}
 }
 
 export interface DirectRevolveOptions { axis: 'x'|'y'; offset: number; angle: number; segments: number }
@@ -56,7 +57,7 @@ export function directRevolveTool(sketch: DirectSketch, options: DirectRevolveOp
   const positions:number[]=[]
   for(let i=0;i<mesh.positions.length;i+=3) {
     const [r,t,h]=mesh.positions.slice(i,i+3)
-    positions.push(...(axis==='y'?[offset+side*r,h,-side*t]:[h,offset+side*r,side*t]))
+    positions.push(...worldPoint(axis==='y'?[offset+side*r,h,-side*t]:[h,offset+side*r,side*t],sketch.plane))
   }
   const body={id:'preview-revolve',name:(sketch.name+' · revolve').slice(0,100),mesh:{positions,indices:[...mesh.indices]}}
   parseDirectDocument(JSON.stringify({version:1,sketches:[],bodies:[body]}))

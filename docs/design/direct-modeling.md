@@ -27,7 +27,7 @@ Added:
 - Vertex/grid snapping with a visible vertex marker; Alt bypasses snapping. Live size feedback during rectangle/circle drawing. Polylines can close by clicking the first point.
 - Hover highlight and compact on-canvas operation cards. Exact numeric transforms are tucked into a contextual popover. V/R/C/L/E/F/G and ? are documented in the help overlay.
 
-Remaining differences from the demo: analytic arcs, arbitrary face-attached workplanes and multi-selection are not yet supported. 3D preview still uses projected SVG triangles with painter ordering, not a depth-buffer renderer; intersecting surfaces may have occlusion artifacts. Undo history is still session-local.
+The advanced pass below adds analytic circle/arc objects, planar face workplanes and multiple selection. 3D preview still uses projected SVG triangles with painter ordering, not a depth-buffer renderer; intersecting surfaces may have occlusion artifacts. Undo history is still session-local.
 
 Additional verification: `tests/directModelingTools.test.ts` checks camera inverse projection, snap precedence, signed extrusion, confirmed add/cut volumes/topology and undo, invalid target handling, and circular copy spacing/isolation. Browser checks cover E, height-handle dragging, Escape without history edits, circular copy confirmation + one undo, and orbit changing screen geometry without history edits.
 
@@ -41,3 +41,42 @@ Additional verification: `tests/directModelingTools.test.ts` checks camera inver
 Verification: `tests/directProfileTools.test.ts` checks fillet radius/tangent endpoints/area with both windings, concave corners, DogEar relief area and closed extrusion, invalid corners/radii, full/partial/negative revolutions, both axes and sides, shifted axes, and add/cut volumes with undo/redo and source independence. Manual Edge checks cover applying Fillet, undoing it, selecting a different DogEar corner and undoing it, and creating a capped 180-degree revolved body.
 
 DogEar geometry reference: [Vectric Dogbone documentation](https://gadgets.vectric.com/v9/dogbone).
+
+## Advanced direct editing (ten-tool pass)
+
+1. **Push / Pull:** switch to Faces and select a planar surface. Drag the selected face again or its yellow handle, or enter a signed distance in the operation card. This moves the face support plane while preserving a convex solid; it is not a blind triangle displacement.
+2. **3D chamfer / fillet:** switch to Edges and select a feature edge (triangulation diagonals are excluded). Set a chamfer distance or fillet radius; inspect the replacement preview, then confirm. Fillets are tessellated with 16 angular intervals. Edges are selectable as an overlay, including occluded edges.
+3. **Sketch on face:** select a planar face and press Sketch on face. The left pane switches to the face's local coordinates and shows its boundary; new sketches store an orthonormal world-space basis. Extrude/Add/Cut follows that plane's normal. XY returns to the global drawing plane. Workplanes are independent snapshots, not live references to a body.
+4. **Analytic circles and arcs:** new circles/arcs store center, radius, start and sweep, with sampled points as a rendering/meshing cache. Edit the numeric curve card or drag center/radius/arc endpoint handles. Tangents are shown at the angular endpoints. JSON round trips, uniform transforms, circular copies and offsets preserve the analytic representation. Corner edits and Trim explicitly bake affected curves to polylines; there is no general mixed line/arc wire representation yet.
+5. **Multiple selection:** Shift-click objects or their list buttons; Box select encloses all vertices/projected body vertices in a rectangular selection. Shared transforms, dragging, duplicate and delete commit once and undo together.
+6. **Gizmo:** world X/Y/Z translation handles, rotation rings and uniform scale handles act around the selection's shared bounds center. The Transform selection card exposes exact translation, axis, angle and scale. Camera movement stays outside document history.
+7. **Trim / Extend:** click the portion of a contour to remove between nearest intersections; both surviving chains are retained. Extend an open polyline's chosen endpoint to the nearest intersecting boundary on the same workplane. Curves are sampled for Trim; Extend requires a polyline.
+8. **Offset:** signed miter offset for closed polylines; analytic circles/arcs change radius. Positive distances expand the contour. Collapsing and self-intersecting results are rejected; concave contours that would need topology changes are not silently repaired.
+9. **Shell:** Faces mode, Ctrl/Cmd-click one or more openings, then enter wall thickness. Inward support-plane offsets produce the cavity and boolean subtraction removes it through the selected openings.
+10. **Plane split:** choose X/Y/Z normal and signed plane position, or drag its yellow handle. Both closed halves are previewed in distinct colors and retained as separate bodies. The service also supports arbitrary normals, tested with an oblique plane; the UI currently offers the three world axes.
+
+**Current solid-operation envelope:** Push/Pull, Shell and edge chamfer/fillet require a closed convex solid with at most 64 planar support faces. Unsupported nonconvex bodies, collapsed dimensions and invalid results are rejected without modifying the document. This is a bounded mesh implementation, not general B-rep filleting or shelling of curved/nonconvex surfaces. Sketch workplanes and splitting do not have that convex-only restriction. The document retains the existing 200-object/4 MB limits. SVG painter ordering remains the preview renderer and can show occlusion artifacts.
+
+**Verification:** `directAdvancedTools.test.ts` checks merged face/edge topology, signed Push/Pull volumes, chamfer and fillet volumes, Shell wall thickness, axis-aligned/oblique split volume conservation, vertical face extrusion, analytic curve round trips/transforms/offsets, Trim/Extend boundaries and shared-pivot history. `directModelerUi.test.ts` mounts the actual Vue component with a deterministic custom renderer and invokes rendered controls/pointer handlers to check selection, previews, confirmation, cancellation, undo, face workplanes, curve parameters, Trim/Extend, box selection and gizmo commits. These component tests do not simulate browser layout or prove visual picking accuracy. Browser checks additionally exercised drawing/extrusion and exposed the new selection modes and operation panels. A local stable preview avoids hot updates from parallel workspace work during inspection.
+
+
+### Main editor tools
+
+The main WebGPU viewport has a persistent **Primitives** toolbar with Box,
+Cylinder, Cone and Sphere. Clicking a primitive appends an ordinary OpenSCAD
+command, rebuilds the existing scene and selects the new body. It never opens
+DirectModeler or replaces the viewport. The separate direct workspace remains
+available through its explicit button above the source editor.
+
+Selecting a body in the native viewport or scene tree exposes Push/Pull, fillet,
+chamfer, Shell, split, face profile, move, rotate, scale, duplicate and delete.
+Face operations use the native triangle pick. Edge treatment offers an edge
+selector. Face profiles are dimensioned rectangles/circles at the picked point,
+with union/cut depth; this is not the standalone freehand sketch canvas.
+Preview publishes temporary meshes to the same WebGPU renderer. Cancel restores
+the original meshes and visibility; preview picks cannot replace the source
+selection. Apply bakes the edited scene to SCAD polyhedra and rebuilds it.
+Source undo/redo restores the original source, and stops when unrelated edits
+make its snapshot stale. Histories are bounded by count and retained text size.
+Operations require a current completed build; the existing convex/planar limits
+for Push/Pull, edge treatment and Shell still apply.

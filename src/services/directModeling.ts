@@ -1,7 +1,8 @@
+import { sampleCurve, worldPoint, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, type PolygonMesh } from './polygonKernel'
 
 export type Point2 = [number, number]
-export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean }
+export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh }
 export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[] }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [] })
@@ -18,6 +19,11 @@ export function parseDirectDocument(text: string): DirectDocument {
     ids.add(item.id)
   }
   for (const s of d.sketches) {
+    if (s.analytic) { s.points = sampleCurve(s.analytic); s.closed = s.analytic.kind === 'circle' }
+    if (s.plane) {
+      const {origin,u,v}=s.plane
+      if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
+    }
     if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > 512 || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
   }
   for (const b of d.bodies) {
@@ -52,7 +58,7 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
-  return { id, name: sketch.name + ' · 3D', mesh: { positions: [...built.positions], indices: [...built.indices] } }
+  return { id, name: sketch.name + ' · 3D', mesh: { positions: Array.from({length:built.positions.length/3},(_,i)=>worldPoint(built.positions.slice(i*3,i*3+3),sketch.plane)).flat(), indices: [...built.indices] } }
 }
 
 export function transformDirectPoints(points: number[][], delta: number[], angle: number, scale: number): number[][] {

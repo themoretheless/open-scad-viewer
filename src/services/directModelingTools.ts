@@ -1,3 +1,4 @@
+import { cross3, xyPlane, transformSketch } from './directSketchGeometry'
 import { booleanPolygonMeshes, type PolygonMesh } from './polygonKernel'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
 
@@ -24,7 +25,8 @@ export function snapDirectPoint(p: Point2, candidates: Point2[], tolerance: numb
 export function directExtrusionTool(sketch: DirectSketch, height: number, baseZ: number): DirectBody {
   if (!Number.isFinite(baseZ) || !Number.isFinite(height) || Math.abs(height) < .01 || Math.abs(baseZ) > 1e6) throw new Error('Extrusion requires a finite height of at least 0.01 mm.')
   const body = extrudeDirectSketch(sketch, Math.abs(height), 'preview-extrusion')
-  for (let i = 2; i < body.mesh.positions.length; i += 3) body.mesh.positions[i] += baseZ + Math.min(0, height)
+  const plane=sketch.plane??xyPlane(), normal=cross3(plane.u,plane.v)
+  for (let i=0;i<body.mesh.positions.length;i++) body.mesh.positions[i]+=normal[i%3]*(baseZ+Math.min(0,height))
   return body
 }
 export function applyDirectExtrusion(document: DirectDocument, sketchId: string, height: number, baseZ: number, operation: 'new' | 'union' | 'difference', targetId: string, id: string): DirectDocument {
@@ -46,7 +48,7 @@ export function circularDirectCopies(sketch: DirectSketch, count: number, center
   const closed = Math.abs(sweep) === 360
   return Array.from({ length: count - 1 }, (_, i) => {
     const a = (i + 1) * sweep / (closed ? count : count - 1) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a)
-    return { ...sketch, id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0, 100), points: sketch.points.map(p => [center[0] + (p[0] - center[0]) * c - (p[1] - center[1]) * s, center[1] + (p[0] - center[0]) * s + (p[1] - center[1]) * c] as Point2) }
+    return { ...transformSketch(sketch,[0,0],a*180/Math.PI,1,center), id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0,100) }
   })
 }
 export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera): number {

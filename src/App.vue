@@ -11,6 +11,7 @@ import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import MechanicalGenerator from './features/MechanicalGenerator.vue'
 import DirectModeler from './features/DirectModeler.vue'
+import MainModelingTools from './features/MainModelingTools.vue'
 import ScanPlanePanel from './features/ScanPlanePanel.vue'
 import SvgPanel from './features/SvgPanel.vue'
 import InspectPanel from './components/InspectPanel.vue'
@@ -341,6 +342,33 @@ const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
 const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
+const mainEditPast = ref<{before:string;after:string}[]>([])
+const mainEditFuture = ref<{before:string;after:string}[]>([])
+let mainPreviewActive = false
+let mainEditSelection: {source:string;index:number}|null = null
+function previewMainGeometry(meshes:MeshData[]|null) {
+ if(meshes){mainPreviewActive=true;renderer?.setMeshes(meshes)}
+ else if(mainPreviewActive){try{renderer?.setMeshes(sceneMeshes.value);renderer?.setMeshVisibilityBatch(meshVisibility.value);renderer?.selectMesh(selectedMesh.value)}finally{mainPreviewActive=false}}
+}
+function commitMainSource(source:string, selectIndex=selectedMesh.value) {
+ try {
+  if(source.length>MAX_WORKSPACE_SOURCE_LENGTH)throw Error('source limit')
+  previewMainGeometry(null)
+  mainEditPast.value.push({before:code.value,after:source});while(mainEditPast.value.length>30||(mainEditPast.value.length>1&&mainEditPast.value.reduce((n,e)=>n+e.before.length+e.after.length,0)>8_000_000))mainEditPast.value.shift();mainEditFuture.value=[]
+  mainEditSelection=selectIndex===null?null:{source,index:selectIndex}
+  replacePresetSource(source);void nextTick(()=>doRender('full'))
+ } catch(e){error.value=e instanceof Error?e.message:String(e)}
+}
+function appendMainPrimitive(source:string) {
+ if(isModelGraphText(code.value)){error.value=lang.value==='ru'?'Примитивы доступны в документе OpenSCAD.':'Primitives require an OpenSCAD document.';return}
+ commitMainSource(code.value+'\n'+source,-1)
+}
+function undoMainGeometry(redo=false){
+ const from=redo?mainEditFuture:mainEditPast,to=redo?mainEditPast:mainEditFuture,entry=from.value.at(-1)
+ if(!entry||code.value!==(redo?entry.before:entry.after))return
+ previewMainGeometry(null);from.value.pop();to.value.push(entry);replacePresetSource(redo?entry.after:entry.before);void nextTick(()=>doRender('full'))
+}
+
 const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
 const standardView = ref<StandardView>('iso')
@@ -757,11 +785,11 @@ async function initializeViewportRenderer() {
 
 function bindRendererCallbacks(instance: WebGPURenderer) {
   instance.onSelectionChange = (index, isIsolated, hit) => {
-    if (activeRendererRecoveryToken !== null) return
+    if (activeRendererRecoveryToken !== null || mainPreviewActive) return
     sceneController.applyRendererSelection(index, isIsolated, hit)
   }
   instance.onHoverChange = hit => {
-    if (activeRendererRecoveryToken !== null) return
+    if (activeRendererRecoveryToken !== null || mainPreviewActive) return
     hoveredHit.value = hit
   }
   instance.onMeasurementChange = (value, active) => {
@@ -1359,6 +1387,11 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       if (publication.nextIsolated) renderer?.toggleIsolateSelection()
     } else {
       sceneController.applyRendererSelection(null, false, null)
+    }
+    if(mainEditSelection?.source===source){
+      const index=mainEditSelection.index<0?displayMeshes.length-1:Math.min(mainEditSelection.index,displayMeshes.length-1)
+      mainEditSelection=null
+      if(index>=0)renderer?.selectMesh(index)
     }
     if (publication.measurementMayBePreserved) {
       // The renderer may rebuild this overlay; retaining the UI value avoids a
@@ -2420,6 +2453,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       ><span /></div>
 
       <section class="canvas-panel" :aria-label="t('viewport')">
+        <MainModelingTools :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
         <div class="viewer-toolbar">
           <button class="view-btn" type="button" :title="t('fit')" @click="fitView">⌗ <span>{{ t('fit') }}</span></button>
           <button class="view-btn icon-only" type="button" :title="t('reset')" @click="resetView">↺</button>
