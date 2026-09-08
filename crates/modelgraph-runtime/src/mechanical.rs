@@ -1,10 +1,10 @@
 //! Sampled involute and phase-aligned thread generation, bounded before emission.
 use super::emit::append_number;
 use crate::{Error, Result};
-use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::f64::consts::{PI, TAU};
 use std::fmt::Write;
+use value_codec::{json, Value};
 type Point = [f64; 2];
 pub struct Generated {
     pub source: String,
@@ -766,7 +766,7 @@ mod tests {
                 .unwrap()
                 + start
                 + 1;
-            let value: Value = serde_json::from_str(&tail[start..end]).unwrap();
+            let value: Value = value_codec::from_str(&tail[start..end]).unwrap();
             arrays.push(json!({"kind":kind,"value":value}));
             tail = &tail[end..];
         }
@@ -775,7 +775,8 @@ mod tests {
     #[test]
     fn mechanical_generators_preserve_reference_reports_and_geometry() {
         let corpus: Value =
-            serde_json::from_str(include_str!("../tests/fixtures/mechanical-parity.json")).unwrap();
+            value_codec::from_str(include_str!("../tests/fixtures/mechanical-parity.json"))
+                .unwrap();
         for case in corpus["cases"].as_array().unwrap() {
             let name = case["name"].as_str().unwrap();
             let actual = match case["kind"].as_str().unwrap() {

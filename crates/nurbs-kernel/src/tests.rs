@@ -104,9 +104,9 @@ fn natural_endpoints_and_periodic_seams_are_supported() {
 fn surface_construction_and_iso_are_consistent() {
     let c = circle();
     let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
-    let e = serde_json::to_value(s.evaluate(0.5, 0.4).unwrap()).unwrap();
+    let e = value_codec::to_value(s.evaluate(0.5, 0.4).unwrap()).unwrap();
     near(
-        &serde_json::from_value::<Vec<f64>>(e["point"].clone()).unwrap(),
+        &value_codec::from_value::<Vec<f64>>(e["point"].clone()).unwrap(),
         &[
             std::f64::consts::FRAC_1_SQRT_2,
             std::f64::consts::FRAC_1_SQRT_2,
@@ -131,7 +131,7 @@ fn malformed_boundary_input_returns_errors_without_poisoning_kernel() {
         r#"{"op":"curve_validate","curve":{"degree":-1}}"#,
         r#"{"op":"basis","degree":1,"knots":[0,0,1,1],"controlCount":2,"u":null}"#,
     ] {
-        let v: Value = serde_json::from_str(&execute(input)).unwrap();
+        let v: Value = value_codec::from_str(&execute(input)).unwrap();
         assert_eq!(v["ok"], false);
         assert_eq!(v["error"]["code"], "NURBS_INVALID_INPUT");
     }

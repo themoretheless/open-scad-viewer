@@ -19,14 +19,29 @@ fn cross(a: Point, b: Point) -> Point {
 fn norm(a: Point) -> f64 {
     dot(a, a).sqrt()
 }
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy)]
 pub enum Mode {
     Faceted,
     PointNormal,
 }
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+impl value_codec::Serialize for Mode {
+    fn to_value(&self) -> value_codec::Value {
+        match self {
+            Self::Faceted => value_codec::Value::String("faceted".into()),
+            Self::PointNormal => value_codec::Value::String("point_normal".into()),
+        }
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Mode {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        match value.as_str().unwrap_or("") {
+            "faceted" => Ok(Self::Faceted),
+            "point_normal" => Ok(Self::PointNormal),
+            _ => Err(value_codec::error("Unknown enum variant")),
+        }
+    }
+}
+#[derive(Clone)]
 pub struct PatchSet {
     pub patches: Vec<Surface>,
     pub face_ids: Vec<usize>,
@@ -34,6 +49,79 @@ pub struct PatchSet {
     pub sampled_max_deviation_mm: f64,
     pub sample_count: usize,
     pub error_bound_certified: bool,
+}
+impl value_codec::Serialize for PatchSet {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "patches".into(),
+            value_codec::Serialize::to_value(&self.patches),
+        );
+        object.insert(
+            "faceIds".into(),
+            value_codec::Serialize::to_value(&self.face_ids),
+        );
+        object.insert("mode".into(), value_codec::Serialize::to_value(&self.mode));
+        object.insert(
+            "sampledMaxDeviationMm".into(),
+            value_codec::Serialize::to_value(&self.sampled_max_deviation_mm),
+        );
+        object.insert(
+            "sampleCount".into(),
+            value_codec::Serialize::to_value(&self.sample_count),
+        );
+        object.insert(
+            "errorBoundCertified".into(),
+            value_codec::Serialize::to_value(&self.error_bound_certified),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for PatchSet {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let patches: Vec<Surface> = value_codec::Deserialize::from_value(
+            object
+                .remove("patches")
+                .ok_or_else(|| value_codec::error("Missing field patches"))?,
+        )?;
+        let face_ids: Vec<usize> = value_codec::Deserialize::from_value(
+            object
+                .remove("faceIds")
+                .ok_or_else(|| value_codec::error("Missing field faceIds"))?,
+        )?;
+        let mode: Mode = value_codec::Deserialize::from_value(
+            object
+                .remove("mode")
+                .ok_or_else(|| value_codec::error("Missing field mode"))?,
+        )?;
+        let sampled_max_deviation_mm: f64 = value_codec::Deserialize::from_value(
+            object
+                .remove("sampledMaxDeviationMm")
+                .ok_or_else(|| value_codec::error("Missing field sampledMaxDeviationMm"))?,
+        )?;
+        let sample_count: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("sampleCount")
+                .ok_or_else(|| value_codec::error("Missing field sampleCount"))?,
+        )?;
+        let error_bound_certified: bool = value_codec::Deserialize::from_value(
+            object
+                .remove("errorBoundCertified")
+                .ok_or_else(|| value_codec::error("Missing field errorBoundCertified"))?,
+        )?;
+        Ok(Self {
+            patches,
+            face_ids,
+            mode,
+            sampled_max_deviation_mm,
+            sample_count,
+            error_bound_certified,
+        })
+    }
 }
 fn surface(cp: Vec<Vec<Point>>) -> Surface {
     let degree = cp.len() - 1;

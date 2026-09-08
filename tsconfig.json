@@ -6,7 +6,7 @@
     "strict": true,
     "noEmit": true,
     "jsx": "preserve",
-    "importHelpers": true,
+    "importHelpers": false,
     "allowJs": true,
     "sourceMap": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],

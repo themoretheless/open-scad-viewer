@@ -1,12 +1,23 @@
 //! Tessellation and interchange preserve topological face identity.
 use super::*;
 use std::collections::BTreeMap;
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
+
 pub struct Tessellation {
-    #[serde(flatten)]
     pub built: BuiltMesh,
     pub face_ids: Vec<usize>,
+}
+impl value_codec::Serialize for Tessellation {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        if let value_codec::Value::Object(fields) = value_codec::Serialize::to_value(&self.built) {
+            object.extend(fields);
+        }
+        object.insert(
+            "faceIds".into(),
+            value_codec::Serialize::to_value(&self.face_ids),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 pub(crate) fn weld(mesh: Mesh, tolerance: f64) -> Result<Mesh> {
     let mut positions = Vec::<f64>::new();

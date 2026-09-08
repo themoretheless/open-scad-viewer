@@ -3,7 +3,7 @@
 //! Dispatch by `op`/`kind` once per object instead of probing a recursive union.
 //! The input is normalized in place; expression subtrees are never cloned.
 use crate::{Error, Result};
-use serde_json::Value;
+use value_codec::Value;
 
 #[derive(Clone, Copy)]
 enum Rule {
@@ -781,7 +781,7 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use value_codec::json;
 
     fn document(node: Value) -> Value {
         json!({"language":"modelgraph/1","units":"mm","parameters":[],"nodes":[node],"root":"shape"})
@@ -789,7 +789,7 @@ mod tests {
     #[test]
     fn matches_original_zod_schema_corpus() {
         let corpus: Value =
-            serde_json::from_str(include_str!("../tests/fixtures/schema-parity.json")).unwrap();
+            value_codec::from_str(include_str!("../tests/fixtures/schema-parity.json")).unwrap();
         for case in corpus["cases"].as_array().unwrap() {
             let result = validate(case["input"].clone());
             if case["error"] == true {

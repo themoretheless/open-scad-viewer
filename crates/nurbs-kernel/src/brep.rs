@@ -1,7 +1,6 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
 use crate::{curve::Curve, surface::Surface, Error, Result};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};
@@ -9,9 +8,22 @@ pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
 pub type Loop = brep_topology::Loop<Curve>;
 pub type Face = brep_topology::Face<Surface>;
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Clone, Debug)]
 pub struct Model(pub brep_topology::Model<Curve, Surface, Curve>);
+impl value_codec::Serialize for Model {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::Serialize::to_value(&self.0)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Model {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        Ok(Self(
+            <brep_topology::Model<Curve, Surface, Curve> as value_codec::Deserialize>::from_value(
+                value,
+            )?,
+        ))
+    }
+}
 impl std::ops::Deref for Model {
     type Target = brep_topology::Model<Curve, Surface, Curve>;
     fn deref(&self) -> &Self::Target {
@@ -23,8 +35,7 @@ impl std::ops::DerefMut for Model {
         &mut self.0
     }
 }
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct Report {
     pub vertex_count: usize,
     pub edge_count: usize,
@@ -36,6 +47,52 @@ pub struct Report {
     pub topology_valid: bool,
     pub geometry_agreement: &'static str,
     pub solid_geometry_status: &'static str,
+}
+impl value_codec::Serialize for Report {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "vertexCount".into(),
+            value_codec::Serialize::to_value(&self.vertex_count),
+        );
+        object.insert(
+            "edgeCount".into(),
+            value_codec::Serialize::to_value(&self.edge_count),
+        );
+        object.insert(
+            "loopCount".into(),
+            value_codec::Serialize::to_value(&self.loop_count),
+        );
+        object.insert(
+            "faceCount".into(),
+            value_codec::Serialize::to_value(&self.face_count),
+        );
+        object.insert(
+            "shellCount".into(),
+            value_codec::Serialize::to_value(&self.shell_count),
+        );
+        object.insert(
+            "bodyCount".into(),
+            value_codec::Serialize::to_value(&self.body_count),
+        );
+        object.insert(
+            "boundaryEdgeCount".into(),
+            value_codec::Serialize::to_value(&self.boundary_edge_count),
+        );
+        object.insert(
+            "topologyValid".into(),
+            value_codec::Serialize::to_value(&self.topology_valid),
+        );
+        object.insert(
+            "geometryAgreement".into(),
+            value_codec::Serialize::to_value(&self.geometry_agreement),
+        );
+        object.insert(
+            "solidGeometryStatus".into(),
+            value_codec::Serialize::to_value(&self.solid_geometry_status),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 fn invalid(message: impl Into<String>) -> Error {
     Error {
@@ -360,7 +417,7 @@ mod tests {
             (r.vertex_count, r.edge_count, r.face_count, r.body_count),
             (8, 12, 6, 1)
         );
-        let restored: Model = serde_json::from_str(&serde_json::to_string(&m).unwrap()).unwrap();
+        let restored: Model = value_codec::from_str(&value_codec::to_string(&m).unwrap()).unwrap();
         restored.validate().unwrap();
     }
     #[test]

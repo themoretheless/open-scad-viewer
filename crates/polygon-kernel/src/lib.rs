@@ -8,17 +8,27 @@ pub mod edit;
 pub mod modeling;
 pub mod proximity;
 pub mod tessellation;
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
 pub const MAX_TRIANGLES: usize = 20_000;
 pub const MAX_MESH_TRIANGLES: usize = 100_000;
 pub const MAX_VERTICES: usize = 300_000;
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct Error {
     pub code: &'static str,
     pub message: String,
+}
+impl value_codec::Serialize for Error {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
+        object.insert(
+            "message".into(),
+            value_codec::Serialize::to_value(&self.message),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 impl Error {
     pub fn new(message: impl Into<String>) -> Self {
@@ -56,30 +66,121 @@ pub(crate) fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     std::array::from_fn(|i| a[i] - b[i])
 }
 /// Common owned exchange format: independent buffers, no kernel pointers.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Mesh {
     pub positions: Vec<f64>,
     pub indices: Vec<usize>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uv: Option<Vec<f64>>,
 }
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+impl value_codec::Serialize for Mesh {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "positions".into(),
+            value_codec::Serialize::to_value(&self.positions),
+        );
+        object.insert(
+            "indices".into(),
+            value_codec::Serialize::to_value(&self.indices),
+        );
+        if self.uv.is_some() {
+            object.insert("uv".into(), value_codec::Serialize::to_value(&self.uv));
+        }
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Mesh {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let positions: Vec<f64> = value_codec::Deserialize::from_value(
+            object
+                .remove("positions")
+                .ok_or_else(|| value_codec::error("Missing field positions"))?,
+        )?;
+        let indices: Vec<usize> = value_codec::Deserialize::from_value(
+            object
+                .remove("indices")
+                .ok_or_else(|| value_codec::error("Missing field indices"))?,
+        )?;
+        let uv: Option<Vec<f64>> = if let Some(v) = object.remove("uv") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        Ok(Self {
+            positions,
+            indices,
+            uv,
+        })
+    }
+}
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Seams {
     pub u: bool,
     pub v: bool,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+impl value_codec::Serialize for Seams {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("u".into(), value_codec::Serialize::to_value(&self.u));
+        object.insert("v".into(), value_codec::Serialize::to_value(&self.v));
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Seams {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let u: bool = value_codec::Deserialize::from_value(
+            object
+                .remove("u")
+                .ok_or_else(|| value_codec::error("Missing field u"))?,
+        )?;
+        let v: bool = value_codec::Deserialize::from_value(
+            object
+                .remove("v")
+                .ok_or_else(|| value_codec::error("Missing field v"))?,
+        )?;
+        Ok(Self { u, v })
+    }
+}
+#[derive(Debug, Clone)]
 pub enum Construction {
     TriangleMesh,
     Boolean,
     SampledSurface,
     FixedVectorThickening,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+impl value_codec::Serialize for Construction {
+    fn to_value(&self) -> value_codec::Value {
+        match self {
+            Self::TriangleMesh => value_codec::Value::String("triangle_mesh".into()),
+            Self::Boolean => value_codec::Value::String("boolean".into()),
+            Self::SampledSurface => value_codec::Value::String("sampled_surface".into()),
+            Self::FixedVectorThickening => {
+                value_codec::Value::String("fixed_vector_thickening".into())
+            }
+        }
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Construction {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        match value.as_str().unwrap_or("") {
+            "triangle_mesh" => Ok(Self::TriangleMesh),
+            "boolean" => Ok(Self::Boolean),
+            "sampled_surface" => Ok(Self::SampledSurface),
+            "fixed_vector_thickening" => Ok(Self::FixedVectorThickening),
+            _ => Err(value_codec::error("Unknown enum variant")),
+        }
+    }
+}
+#[derive(Debug, Clone)]
 pub struct Report {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boolean: Option<boolean::BooleanReport>,
     pub triangle_count: usize,
     pub vertex_count: usize,
@@ -92,20 +193,232 @@ pub struct Report {
     pub error_bound_certified: bool,
     pub self_intersection_status: String,
     pub construction: Construction,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub uv_area: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub sampled_deviation_mm: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub parameter_seams_welded: Option<Seams>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub collapsed_boundary_count: Option<usize>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl value_codec::Serialize for Report {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        if self.boolean.is_some() {
+            object.insert(
+                "boolean".into(),
+                value_codec::Serialize::to_value(&self.boolean),
+            );
+        }
+        object.insert(
+            "triangleCount".into(),
+            value_codec::Serialize::to_value(&self.triangle_count),
+        );
+        object.insert(
+            "vertexCount".into(),
+            value_codec::Serialize::to_value(&self.vertex_count),
+        );
+        object.insert(
+            "boundaryEdges".into(),
+            value_codec::Serialize::to_value(&self.boundary_edges),
+        );
+        object.insert(
+            "nonManifoldEdges".into(),
+            value_codec::Serialize::to_value(&self.non_manifold_edges),
+        );
+        object.insert(
+            "orientationConflicts".into(),
+            value_codec::Serialize::to_value(&self.orientation_conflicts),
+        );
+        object.insert(
+            "degenerateTriangles".into(),
+            value_codec::Serialize::to_value(&self.degenerate_triangles),
+        );
+        object.insert(
+            "closed".into(),
+            value_codec::Serialize::to_value(&self.closed),
+        );
+        object.insert(
+            "signedVolumeMm3".into(),
+            value_codec::Serialize::to_value(&self.signed_volume_mm3),
+        );
+        object.insert(
+            "errorBoundCertified".into(),
+            value_codec::Serialize::to_value(&self.error_bound_certified),
+        );
+        object.insert(
+            "selfIntersectionStatus".into(),
+            value_codec::Serialize::to_value(&self.self_intersection_status),
+        );
+        object.insert(
+            "construction".into(),
+            value_codec::Serialize::to_value(&self.construction),
+        );
+        if self.uv_area.is_some() {
+            object.insert(
+                "uvArea".into(),
+                value_codec::Serialize::to_value(&self.uv_area),
+            );
+        }
+        if self.sampled_deviation_mm.is_some() {
+            object.insert(
+                "sampledDeviationMm".into(),
+                value_codec::Serialize::to_value(&self.sampled_deviation_mm),
+            );
+        }
+        if self.parameter_seams_welded.is_some() {
+            object.insert(
+                "parameterSeamsWelded".into(),
+                value_codec::Serialize::to_value(&self.parameter_seams_welded),
+            );
+        }
+        if self.collapsed_boundary_count.is_some() {
+            object.insert(
+                "collapsedBoundaryCount".into(),
+                value_codec::Serialize::to_value(&self.collapsed_boundary_count),
+            );
+        }
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Report {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let boolean: Option<boolean::BooleanReport> = if let Some(v) = object.remove("boolean") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        let triangle_count: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("triangleCount")
+                .ok_or_else(|| value_codec::error("Missing field triangleCount"))?,
+        )?;
+        let vertex_count: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("vertexCount")
+                .ok_or_else(|| value_codec::error("Missing field vertexCount"))?,
+        )?;
+        let boundary_edges: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("boundaryEdges")
+                .ok_or_else(|| value_codec::error("Missing field boundaryEdges"))?,
+        )?;
+        let non_manifold_edges: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("nonManifoldEdges")
+                .ok_or_else(|| value_codec::error("Missing field nonManifoldEdges"))?,
+        )?;
+        let orientation_conflicts: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("orientationConflicts")
+                .ok_or_else(|| value_codec::error("Missing field orientationConflicts"))?,
+        )?;
+        let degenerate_triangles: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("degenerateTriangles")
+                .ok_or_else(|| value_codec::error("Missing field degenerateTriangles"))?,
+        )?;
+        let closed: bool = value_codec::Deserialize::from_value(
+            object
+                .remove("closed")
+                .ok_or_else(|| value_codec::error("Missing field closed"))?,
+        )?;
+        let signed_volume_mm3: f64 = value_codec::Deserialize::from_value(
+            object
+                .remove("signedVolumeMm3")
+                .ok_or_else(|| value_codec::error("Missing field signedVolumeMm3"))?,
+        )?;
+        let error_bound_certified: bool = value_codec::Deserialize::from_value(
+            object
+                .remove("errorBoundCertified")
+                .ok_or_else(|| value_codec::error("Missing field errorBoundCertified"))?,
+        )?;
+        let self_intersection_status: String = value_codec::Deserialize::from_value(
+            object
+                .remove("selfIntersectionStatus")
+                .ok_or_else(|| value_codec::error("Missing field selfIntersectionStatus"))?,
+        )?;
+        let construction: Construction = value_codec::Deserialize::from_value(
+            object
+                .remove("construction")
+                .ok_or_else(|| value_codec::error("Missing field construction"))?,
+        )?;
+        let uv_area: Option<f64> = if let Some(v) = object.remove("uvArea") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        let sampled_deviation_mm: Option<f64> = if let Some(v) = object.remove("sampledDeviationMm")
+        {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        let parameter_seams_welded: Option<Seams> =
+            if let Some(v) = object.remove("parameterSeamsWelded") {
+                value_codec::Deserialize::from_value(v)?
+            } else {
+                Default::default()
+            };
+        let collapsed_boundary_count: Option<usize> =
+            if let Some(v) = object.remove("collapsedBoundaryCount") {
+                value_codec::Deserialize::from_value(v)?
+            } else {
+                Default::default()
+            };
+        Ok(Self {
+            boolean,
+            triangle_count,
+            vertex_count,
+            boundary_edges,
+            non_manifold_edges,
+            orientation_conflicts,
+            degenerate_triangles,
+            closed,
+            signed_volume_mm3,
+            error_bound_certified,
+            self_intersection_status,
+            construction,
+            uv_area,
+            sampled_deviation_mm,
+            parameter_seams_welded,
+            collapsed_boundary_count,
+        })
+    }
+}
+#[derive(Debug, Clone)]
 pub struct BuiltMesh {
-    #[serde(flatten)]
     pub mesh: Mesh,
     pub report: Report,
+}
+impl value_codec::Serialize for BuiltMesh {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        if let value_codec::Value::Object(fields) = value_codec::Serialize::to_value(&self.mesh) {
+            object.extend(fields);
+        }
+        object.insert(
+            "report".into(),
+            value_codec::Serialize::to_value(&self.report),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for BuiltMesh {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let mesh: Mesh = value_codec::Deserialize::from_value(value.clone())?;
+        let report: Report = value_codec::Deserialize::from_value(
+            object
+                .remove("report")
+                .ok_or_else(|| value_codec::error("Missing field report"))?,
+        )?;
+        Ok(Self { mesh, report })
+    }
 }
 impl Mesh {
     pub fn validate(&self) -> Result<()> {

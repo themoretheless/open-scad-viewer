@@ -4,13 +4,24 @@ pub mod brep;
 pub mod curve;
 pub mod edit;
 pub mod surface;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use value_codec::{json, Value};
+use value_codec::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Error {
     pub code: &'static str,
     pub message: String,
+}
+impl value_codec::Serialize for Error {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
+        object.insert(
+            "message".into(),
+            value_codec::Serialize::to_value(&self.message),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 pub type Result<T> = std::result::Result<T, Error>;
 impl Error {
@@ -48,10 +59,10 @@ fn numeric(condition: bool, message: &str) -> Result<()> {
     }
 }
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
-    serde_json::from_value(v[k].clone()).map_err(|e| Error::input(format!("Invalid {k}: {e}")))
+    value_codec::from_value(v[k].clone()).map_err(|e| Error::input(format!("Invalid {k}: {e}")))
 }
 fn encode<T: Serialize>(v: T) -> Result<Value> {
-    serde_json::to_value(v).map_err(|e| Error::numeric(e.to_string()))
+    value_codec::to_value(v).map_err(|e| Error::numeric(e.to_string()))
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
@@ -157,7 +168,7 @@ pub fn execute(input: &str) -> String {
         return response(Err(Error::resource("NURBS request exceeds 2 MiB")));
     }
     response(
-        serde_json::from_str(input)
+        value_codec::from_str(input)
             .map_err(|e| Error::input(e.to_string()))
             .and_then(dispatch),
     )

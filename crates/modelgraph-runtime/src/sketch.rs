@@ -1,8 +1,8 @@
 //! Bounded damped least-squares solver. Constraint references are resolved once,
 //! and residual buffers are reused while computing numerical Jacobians.
 use crate::{Error, Result};
-use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
+use value_codec::{json, Value};
 fn maximum(v: &[f64]) -> f64 {
     v.iter().map(|v| v.abs()).fold(0., f64::max)
 }

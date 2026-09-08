@@ -1,6 +1,6 @@
 use crate::{Error, Result};
-use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
+use value_codec::{json, Value};
 pub type Matrix = [f64; 16];
 const IDENTITY: Matrix = [
     1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,

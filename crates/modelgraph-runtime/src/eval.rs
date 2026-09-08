@@ -3,9 +3,9 @@
 use crate::range::resolve_interval;
 use crate::units::{self, Dimension, Numeric};
 use crate::{Error, Result};
-use serde_json::{json, Value as Json};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use value_codec::{json, Value as Json};
 
 pub type Scope<'a> = Rc<HashMap<String, Value<'a>>>;
 #[derive(Clone, Debug)]

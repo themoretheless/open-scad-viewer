@@ -1,5 +1,5 @@
 use crate::{Error, Result};
-use serde_json::{json, Value};
+use value_codec::{json, Value};
 pub type Point = [f64; 2];
 pub fn validate(points: &[Point], path: &str) -> Result<()> {
     let minx = points.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min);

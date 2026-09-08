@@ -1,6 +1,6 @@
 //! Captured results from the original TypeScript compiler cover geometry emission,
 //! instance identity, solved constraints and failure diagnostics during migration.
-use serde_json::Value;
+use value_codec::Value;
 fn close(a: f64, b: f64, path: &str) {
     assert!(
         (a - b).abs() <= 1e-8 * (1. + a.abs().max(b.abs())),
@@ -79,7 +79,7 @@ fn approx(a: &Value, b: &Value, path: &str) {
 }
 #[test]
 fn geometry_and_diagnostics_match_original_compiler() {
-    let cases: Value = serde_json::from_str(include_str!("fixtures/emitter-parity.json")).unwrap();
+    let cases: Value = value_codec::from_str(include_str!("fixtures/emitter-parity.json")).unwrap();
     for case in cases.as_array().unwrap() {
         let name = case["name"].as_str().unwrap();
         match modelgraph_runtime::compile(case["document"].clone()) {
@@ -88,7 +88,7 @@ fn geometry_and_diagnostics_match_original_compiler() {
                 let mut expected = case["result"].clone();
                 // The archived compiler fixture used the external kernel.
                 // Source and graph semantics remain identical; routing changes.
-                expected["execution_target"] = serde_json::json!("legacy/current+own-rust-cad");
+                expected["execution_target"] = value_codec::json!("legacy/current+own-rust-cad");
                 approx(&result, &expected, name);
             }
             Err(error) => {
@@ -96,7 +96,7 @@ fn geometry_and_diagnostics_match_original_compiler() {
                     case.get("error").is_some(),
                     "unexpected failure {name}: {error:?}"
                 );
-                approx(&serde_json::to_value(error).unwrap(), &case["error"], name);
+                approx(&value_codec::to_value(error).unwrap(), &case["error"], name);
             }
         }
     }

@@ -3,7 +3,7 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {execFileSync} from 'node:child_process'
 mkdirSync('output',{recursive:true})
-const tests=['tests/cadBinaryTransport.test.ts','tests/ownRustCad.test.ts','tests/openscadParser.test.ts','tests/manifoldPlanBackend.test.ts','tests/manifoldGeometryKernel.test.ts','tests/languageConformance.test.ts','tests/geometryWorkerRealBoundary.test.ts','tests/mcpDirectGeometrySupervisor.test.ts','tests/mcpServer.test.ts']
+const tests=['tests/valueBinaryCodec.test.ts','tests/cadBinaryTransport.test.ts','tests/ownRustCad.test.ts','tests/openscadParser.test.ts','tests/manifoldPlanBackend.test.ts','tests/manifoldGeometryKernel.test.ts','tests/languageConformance.test.ts','tests/geometryWorkerRealBoundary.test.ts','tests/mcpDirectGeometrySupervisor.test.ts','tests/mcpServer.test.ts']
 const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex')
 const wasmPath='src/generated/geometry-kernels/kernel_bg.wasm'
 const wasmSha256=hash(wasmPath)

@@ -1,5 +1,5 @@
 use modelgraph_text::compile;
-use serde_json::json;
+use value_codec::json;
 
 #[test]
 fn builds_graph_without_a_javascript_host() {

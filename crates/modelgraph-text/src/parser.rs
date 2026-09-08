@@ -1,5 +1,5 @@
 use crate::value::json;
-use serde_json::Value as J;
+use value_codec::Value as J;
 type R<T> = Result<T, String>;
 #[derive(Clone)]
 struct Token {
@@ -677,7 +677,7 @@ impl Parser<'_> {
             }
             _ => {
                 if t.starts_with('"') {
-                    json!({"kind":"string","value":serde_json::from_str::<J>(&t).map_err(|e|e.to_string())?})
+                    json!({"kind":"string","value":value_codec::from_str::<J>(&t).map_err(|e|e.to_string())?})
                 } else if t.starts_with(|c: char| c.is_ascii_digit() || c == '.') {
                     json!({"kind":"number","value":t})
                 } else if ident(&t) && t != "EOF" {

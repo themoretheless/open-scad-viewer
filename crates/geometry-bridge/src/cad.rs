@@ -1,8 +1,8 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
 use polygon_kernel::{cad, Mesh};
-use serde_json::{json, Value};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use value_codec::{json, Value};
 #[derive(Clone)]
 enum Shape {
     Solid(Mesh),

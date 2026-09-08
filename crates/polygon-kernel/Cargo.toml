@@ -5,6 +5,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
+value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
-serde = { version = "1.0", features = ["derive"] }
 brep-topology = { path = "../brep-topology" }

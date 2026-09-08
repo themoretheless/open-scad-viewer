@@ -1,13 +1,11 @@
 //! Representation-independent point mappings and brush falloffs. Geometry
 //! ownership, topology updates and validity checks belong to each consuming kernel.
-use serde::{Deserialize, Serialize};
 pub type Point = [f64; 3];
 pub type Result<T> = std::result::Result<T, String>;
 fn finite(p: Point) -> bool {
     p.iter().all(|v| v.is_finite() && v.abs() <= 1e6)
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[derive(Clone, Debug)]
 pub enum Deformation {
     Twist {
         origin: Point,
@@ -22,6 +20,109 @@ pub enum Deformation {
         max: Point,
         controls: Box<[Point; 8]>,
     },
+}
+impl value_codec::Serialize for Deformation {
+    fn to_value(&self) -> value_codec::Value {
+        match self {
+            Self::Twist {
+                origin,
+                radians_per_unit,
+            } => {
+                let mut object = value_codec::Map::new();
+                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
+                object.insert(
+                    "radians_per_unit".into(),
+                    value_codec::Serialize::to_value(radians_per_unit),
+                );
+                object.insert("kind".into(), value_codec::Value::String("twist".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Bend { origin, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert("kind".into(), value_codec::Value::String("bend".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::Lattice { min, max, controls } => {
+                let mut object = value_codec::Map::new();
+                object.insert("min".into(), value_codec::Serialize::to_value(min));
+                object.insert("max".into(), value_codec::Serialize::to_value(max));
+                object.insert(
+                    "controls".into(),
+                    value_codec::Serialize::to_value(controls),
+                );
+                object.insert("kind".into(), value_codec::Value::String("lattice".into()));
+                value_codec::Value::Object(object)
+            }
+        }
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Deformation {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        match value["kind"].as_str().unwrap_or("") {
+            "twist" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let origin: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("origin")
+                        .ok_or_else(|| value_codec::error("Missing field origin"))?,
+                )?;
+                let radians_per_unit: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radians_per_unit")
+                        .ok_or_else(|| value_codec::error("Missing field radians_per_unit"))?,
+                )?;
+                Ok(Self::Twist {
+                    origin,
+                    radians_per_unit,
+                })
+            }
+            "bend" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let origin: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("origin")
+                        .ok_or_else(|| value_codec::error("Missing field origin"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                Ok(Self::Bend { origin, radius })
+            }
+            "lattice" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let min: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("min")
+                        .ok_or_else(|| value_codec::error("Missing field min"))?,
+                )?;
+                let max: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("max")
+                        .ok_or_else(|| value_codec::error("Missing field max"))?,
+                )?;
+                let controls: Box<[Point; 8]> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("controls")
+                        .ok_or_else(|| value_codec::error("Missing field controls"))?,
+                )?;
+                Ok(Self::Lattice { min, max, controls })
+            }
+            _ => Err(value_codec::error("Unknown enum variant")),
+        }
+    }
 }
 impl Deformation {
     pub fn validate(&self) -> Result<()> {
@@ -116,12 +217,57 @@ impl Deformation {
         }
     }
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct Brush {
     pub center: Point,
     pub radius: f64,
     pub displacement: Point,
+}
+impl value_codec::Serialize for Brush {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "center".into(),
+            value_codec::Serialize::to_value(&self.center),
+        );
+        object.insert(
+            "radius".into(),
+            value_codec::Serialize::to_value(&self.radius),
+        );
+        object.insert(
+            "displacement".into(),
+            value_codec::Serialize::to_value(&self.displacement),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Brush {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let center: Point = value_codec::Deserialize::from_value(
+            object
+                .remove("center")
+                .ok_or_else(|| value_codec::error("Missing field center"))?,
+        )?;
+        let radius: f64 = value_codec::Deserialize::from_value(
+            object
+                .remove("radius")
+                .ok_or_else(|| value_codec::error("Missing field radius"))?,
+        )?;
+        let displacement: Point = value_codec::Deserialize::from_value(
+            object
+                .remove("displacement")
+                .ok_or_else(|| value_codec::error("Missing field displacement"))?,
+        )?;
+        Ok(Self {
+            center,
+            radius,
+            displacement,
+        })
+    }
 }
 impl Brush {
     pub fn validate(&self) -> Result<()> {
@@ -199,11 +345,43 @@ mod tests {
 }
 
 /// Common 2D region representation, without a triangulation or geometry kernel.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Region2 {
     pub outer: Vec<[f64; 2]>,
-    #[serde(default)]
     pub holes: Vec<Vec<[f64; 2]>>,
+}
+impl value_codec::Serialize for Region2 {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "outer".into(),
+            value_codec::Serialize::to_value(&self.outer),
+        );
+        object.insert(
+            "holes".into(),
+            value_codec::Serialize::to_value(&self.holes),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Region2 {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let outer: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
+            object
+                .remove("outer")
+                .ok_or_else(|| value_codec::error("Missing field outer"))?,
+        )?;
+        let holes: Vec<Vec<[f64; 2]>> = if let Some(v) = object.remove("holes") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        Ok(Self { outer, holes })
+    }
 }
 fn area2(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
     (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])

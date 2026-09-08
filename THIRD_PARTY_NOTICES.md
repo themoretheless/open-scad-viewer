@@ -5,9 +5,9 @@
 The application uses the repository's Rust CAD implementation in
 `crates/polygon-kernel` through `crates/geometry-bridge`. It contains no Manifold,
 OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
-Rust serialization and WebAssembly bindings still use serde/serde_json and
-wasm-bindgen, recorded in `crates/Cargo.lock`; host transport uses fflate.
-This is not a claim that the UI, transport or build tooling has zero dependencies.
+The Rust workspace has no external Cargo dependencies. Document values, binary
+transport, direct WASM bindings and runtime DEFLATE decoding are repository-owned.
+The UI, MCP integration and build tooling still use the packages listed below.
 Historical Manifold qualification fixtures and manifests describe old releases;
 they are not dependencies or attestations of the current runtime.
 

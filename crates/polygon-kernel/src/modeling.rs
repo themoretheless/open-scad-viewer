@@ -1,7 +1,6 @@
 //! Native polygon construction. No spline or external CAD backend is used.
 use crate::tessellation::{self, Options, ParametricSurface, Trim};
 use crate::{check, cross, norm, sub, BuiltMesh, Mesh, Result};
-use serde::{Deserialize, Serialize};
 pub type Point = [f64; 3];
 fn dot(a: Point, b: Point) -> f64 {
     a.iter().zip(b).map(|(a, b)| a * b).sum()
@@ -11,11 +10,43 @@ fn unit(a: Point) -> Result<Point> {
     check(l > 1e-12, "Direction is zero or numerically singular")?;
     Ok(a.map(|v| v / l))
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Profile {
     pub outer: Vec<[f64; 2]>,
-    #[serde(default)]
     pub holes: Vec<Vec<[f64; 2]>>,
+}
+impl value_codec::Serialize for Profile {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "outer".into(),
+            value_codec::Serialize::to_value(&self.outer),
+        );
+        object.insert(
+            "holes".into(),
+            value_codec::Serialize::to_value(&self.holes),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Profile {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let outer: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
+            object
+                .remove("outer")
+                .ok_or_else(|| value_codec::error("Missing field outer"))?,
+        )?;
+        let holes: Vec<Vec<[f64; 2]>> = if let Some(v) = object.remove("holes") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        Ok(Self { outer, holes })
+    }
 }
 struct Plane {
     min: [f64; 2],

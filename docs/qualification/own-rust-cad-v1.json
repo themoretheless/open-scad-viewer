@@ -1,10 +1,11 @@
 {
   "id": "own-rust-cad-v1",
-  "wasmSha256": "f1abcb15d4218920eb25f73ca7ebc0ca3387bf8f3230ec47a7588fc1f5efa250",
-  "noticesSha256": "e15b9a31ebeda4b60a966df8ff31a54c5c528809ff18882c9fb3fb23a6f769fa",
-  "lockfileSha256": "5ced9138f92c85b32b3d7277e6c84a4ded1d894002cb241fcbacc262520d2ecc",
-  "rustLockfileSha256": "238d0044a1606babafa99298eaee2de79888e67ea7d22b9754b4b580f85e3f4a",
+  "wasmSha256": "497b34d33a89d5d1e744b5e760486fa4822700cc811fa03e03fcd2e0c3020adc",
+  "noticesSha256": "05c576c9c3a93512d85e1361ae44e536fa87b09e51a41278585d38a4c4f19394",
+  "lockfileSha256": "970dc1c6a58331959bd4042a585c779f1070c5d9fdf03698adc71327718a3ee8",
+  "rustLockfileSha256": "0205e816533e2c6c4b27d5986ccf5ca6fa7ccf01a8f64e65f48b639d16613cb2",
   "tests": [
+    "tests/valueBinaryCodec.test.ts",
     "tests/cadBinaryTransport.test.ts",
     "tests/ownRustCad.test.ts",
     "tests/openscadParser.test.ts",
@@ -15,7 +16,7 @@
     "tests/mcpDirectGeometrySupervisor.test.ts",
     "tests/mcpServer.test.ts"
   ],
-  "passedTests": 210,
+  "passedTests": 214,
   "environment": {
     "platform": "darwin",
     "architecture": "arm64",

@@ -1,13 +1,47 @@
 //! Polygon B-rep uses the same incidence model as NURBS, with mesh face geometry.
 use crate::{Error, Mesh, Result};
 use brep_topology::{Body, Coedge, Edge, Face, FaceUse, Loop, Shell, Vertex};
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Clone, Debug)]
 pub struct FaceGeometry {
     pub mesh: Mesh,
     pub source_face_id: usize,
+}
+impl value_codec::Serialize for FaceGeometry {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("mesh".into(), value_codec::Serialize::to_value(&self.mesh));
+        object.insert(
+            "sourceFaceId".into(),
+            value_codec::Serialize::to_value(&self.source_face_id),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for FaceGeometry {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let mesh: Mesh = value_codec::Deserialize::from_value(
+            object
+                .remove("mesh")
+                .ok_or_else(|| value_codec::error("Missing field mesh"))?,
+        )?;
+        let source_face_id: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("sourceFaceId")
+                .ok_or_else(|| value_codec::error("Missing field sourceFaceId"))?,
+        )?;
+        if let Some(key) = object.keys().next() {
+            return Err(value_codec::error(format!("Unknown field {key}")));
+        }
+        Ok(Self {
+            mesh,
+            source_face_id,
+        })
+    }
 }
 pub type Model = brep_topology::Model<(), FaceGeometry, ()>;
 fn invalid(message: impl Into<String>) -> Error {
@@ -280,12 +314,23 @@ pub fn validate(m: &Model) -> Result<()> {
     }
     Ok(())
 }
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct Tessellation {
-    #[serde(flatten)]
     pub mesh: Mesh,
     pub face_ids: Vec<usize>,
+}
+impl value_codec::Serialize for Tessellation {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        if let value_codec::Value::Object(fields) = value_codec::Serialize::to_value(&self.mesh) {
+            object.extend(fields);
+        }
+        object.insert(
+            "faceIds".into(),
+            value_codec::Serialize::to_value(&self.face_ids),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 /// Face geometry is already tessellated. Preserve it and publish B-rep face IDs.
 pub fn tessellate(m: &Model) -> Result<Tessellation> {

@@ -41,12 +41,11 @@ Build prerequisites (in addition to Node.js):
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install wasm-bindgen-cli --version 0.2.125 --locked
 npm run build:geometry
 npm run test:geometry
 ```
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated bindings and binaries are ignored; `crates/Cargo.lock` pins Rust dependencies. `build:nurbs` and `test:nurbs` remain compatibility aliases. See [the library contract](crates/README.md) for native and host APIs.
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. The Cargo workspace uses only repository-owned crates; the WASM boundary uses the MGV1 binary protocol and direct exports. `build:nurbs` and `test:nurbs` remain compatibility aliases. See [the library contract](crates/README.md) for native and host APIs.
 
 ## Highlights
 

@@ -9,15 +9,31 @@ pub mod range;
 pub mod schema;
 mod sketch;
 pub mod units;
-use serde::Serialize;
-use serde_json::Value;
-#[derive(Debug, Clone, Serialize)]
+use value_codec::Value;
+#[derive(Debug, Clone)]
 pub struct Error {
     pub code: String,
     pub path: String,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<Value>,
+}
+impl value_codec::Serialize for Error {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
+        object.insert("path".into(), value_codec::Serialize::to_value(&self.path));
+        object.insert(
+            "message".into(),
+            value_codec::Serialize::to_value(&self.message),
+        );
+        if self.details.is_some() {
+            object.insert(
+                "details".into(),
+                value_codec::Serialize::to_value(&self.details),
+            );
+        }
+        value_codec::Value::Object(object)
+    }
 }
 impl Error {
     pub fn new(

@@ -12,14 +12,24 @@ use polygon_kernel::{
     tessellation::{self, Boundary, Options, ParametricSurface},
     BuiltMesh, Mesh, Seams,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-#[derive(Debug, Serialize)]
+use value_codec::{json, Value};
+use value_codec::{Deserialize, Serialize};
+
+#[derive(Debug)]
 pub struct Error {
     pub code: &'static str,
     pub message: String,
+}
+impl value_codec::Serialize for Error {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
+        object.insert(
+            "message".into(),
+            value_codec::Serialize::to_value(&self.message),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 pub type Result<T> = std::result::Result<T, Error>;
 impl From<nurbs_kernel::Error> for Error {
@@ -45,10 +55,10 @@ fn input(message: impl Into<String>) -> Error {
     }
 }
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
-    serde_json::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
+    value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
 }
 fn encode(v: impl Serialize) -> Result<Value> {
-    serde_json::to_value(v).map_err(|e| input(e.to_string()))
+    value_codec::to_value(v).map_err(|e| input(e.to_string()))
 }
 fn response(result: Result<Value>) -> String {
     match result {
@@ -269,7 +279,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "operation")?,
             &match v.get("options") {
                 Some(options) => {
-                    serde_json::from_value(options.clone()).map_err(|e| input(e.to_string()))?
+                    value_codec::from_value(options.clone()).map_err(|e| input(e.to_string()))?
                 }
                 None => polygon_kernel::boolean::Options::default(),
             },
@@ -317,53 +327,20 @@ pub fn dispatch(v: Value) -> Result<Value> {
         _ => Ok(nurbs_kernel::dispatch(v)?),
     }
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn execute(input_text: &str) -> String {
     if input_text.len() > 32 * 1024 * 1024 {
         return response(Err(input("Geometry request exceeds 32 MiB")));
     }
     response(
-        serde_json::from_str(input_text)
+        value_codec::from_str(input_text)
             .map_err(|e| input(e.to_string()))
             .and_then(dispatch),
     )
 }
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub struct SurfaceEvaluator {
-    sampler: SurfaceSampler,
-}
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-impl SurfaceEvaluator {
-    #[wasm_bindgen(constructor)]
-    pub fn new(text: &str) -> std::result::Result<SurfaceEvaluator, JsValue> {
-        let result = (|| {
-            if text.len() > 2 * 1024 * 1024 {
-                return Err(input("Surface request exceeds 2 MiB"));
-            }
-            let surface: Surface = serde_json::from_str(text).map_err(|e| input(e.to_string()))?;
-            Ok(Self {
-                sampler: SurfaceSampler::new(&surface)?,
-            })
-        })();
-        result.map_err(|e: Error| JsValue::from_str(&serde_json::to_string(&e).unwrap()))
-    }
-    pub fn evaluate(&self, u: f64, v: f64) -> String {
-        response(
-            self.sampler
-                .evaluate(u, v)
-                .map_err(Error::from)
-                .and_then(encode),
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests;
 
 /// Source-to-graph frontend shared by browser workers and native callers.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn compile_modelgraph_text(source: &str) -> String {
     match modelgraph_text::compile(source) {
         Ok(value) => json!({"ok":true,"value":value}).to_string(),
@@ -372,14 +349,12 @@ pub fn compile_modelgraph_text(source: &str) -> String {
 }
 
 /// Canonical graph preparation; errors retain the public ModelGraph code/path/details.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn compile_modelgraph(input: &str) -> String {
     runtime_response(
         parse_graph_input(input).and_then(modelgraph_runtime::compile),
         None,
     )
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn compile_modelgraph_nurbs(input: &str) -> String {
     runtime_response(
         parse_graph_input(input).and_then(modelgraph_runtime::nurbs::compile),
@@ -394,25 +369,30 @@ fn parse_graph_input(input: &str) -> modelgraph_runtime::Result<Value> {
             "Document exceeds transport limit.",
         ));
     }
-    serde_json::from_str(input)
+    value_codec::from_str(input)
         .map_err(|e| modelgraph_runtime::Error::new("invalid_document", "/", e.to_string()))
 }
 fn runtime_response(
     result: modelgraph_runtime::Result<Value>,
     customizer: Option<Value>,
 ) -> String {
+    runtime_value(result, customizer).to_string()
+}
+fn runtime_value(result: modelgraph_runtime::Result<Value>, customizer: Option<Value>) -> Value {
     match result {
-        Ok(value) => json!({"ok":true,"value":value}).to_string(),
-        Err(error) => json!({"ok":false,"error":error,"customizer":customizer}).to_string(),
+        Ok(value) => json!({"ok":true,"value":value}),
+        Err(error) => json!({"ok":false,"error":error,"customizer":customizer}),
     }
 }
 /// Fused source -> authoring graph -> evaluated graph, with no intermediate JS graph.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn execute_modelgraph_text(source: &str) -> String {
+    execute_text_value(source).to_string()
+}
+fn execute_text_value(source: &str) -> Value {
     let mut graph = match modelgraph_text::compile(source) {
         Ok(graph) => graph,
         Err(message) => {
-            return runtime_response(
+            return runtime_value(
                 Err(modelgraph_runtime::Error::new("text_error", "", message)),
                 None,
             )
@@ -472,7 +452,7 @@ pub fn execute_modelgraph_text(source: &str) -> String {
             }
             compiled
         } else {
-            let mut document = serde_json::Map::new();
+            let mut document = value_codec::Map::new();
             document.insert("language".into(), json!("modelgraph/1"));
             document.insert("units".into(), json!("mm"));
             document.insert("nodes".into(), nodes);
@@ -495,10 +475,9 @@ pub fn execute_modelgraph_text(source: &str) -> String {
         compiled["customizer"] = controls.clone();
         Ok(compiled)
     })();
-    runtime_response(result, Some(controls))
+    runtime_value(result, Some(controls))
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn compile_modelgraph_text_nurbs(input: &str) -> String {
     let result = parse_graph_input(input).and_then(|v| {
         let nodes = v["nodes"].as_array().ok_or_else(|| {
@@ -521,15 +500,29 @@ pub fn compile_modelgraph_text_nurbs(input: &str) -> String {
 
 /// Owned binary transport snapshot. Pointers are borrowed until `free()`;
 /// clients must reacquire the WASM memory buffer after allocating this object.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct CadMeshBuffer {
     pub(crate) positions: Vec<f64>,
     pub(crate) indices: Vec<u32>,
     pub(crate) face_ids: Vec<u32>,
 }
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl value_codec::Serialize for CadMeshBuffer {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "positions".into(),
+            value_codec::Serialize::to_value(&self.positions),
+        );
+        object.insert(
+            "indices".into(),
+            value_codec::Serialize::to_value(&self.indices),
+        );
+        object.insert(
+            "faceIds".into(),
+            value_codec::Serialize::to_value(&self.face_ids),
+        );
+        value_codec::Value::Object(object)
+    }
+}
 impl CadMeshBuffer {
     pub fn positions_ptr(&self) -> usize {
         self.positions.as_ptr() as usize
@@ -550,23 +543,10 @@ impl CadMeshBuffer {
         self.face_ids.len()
     }
 }
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn cad_mesh_buffer(id: u32) -> std::result::Result<CadMeshBuffer, JsValue> {
-    cad::export_buffers(id).map_err(|e| JsValue::from_str(&serde_json::to_string(&e).unwrap()))
-}
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn cad_import_mesh(
-    stride: u32,
-    vertices: &[f32],
-    indices: &[u32],
-) -> std::result::Result<u32, JsValue> {
-    import_cad_mesh(stride as usize, vertices, indices)
-        .map_err(|e| JsValue::from_str(&serde_json::to_string(&e).unwrap()))
-}
-
 /// Typed native entry point shared with the WASM import adapter.
 pub fn import_cad_mesh(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
     cad::import_buffers(stride, vertices, indices)
 }
+
+#[cfg(target_arch = "wasm32")]
+mod abi;

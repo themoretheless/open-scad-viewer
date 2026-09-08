@@ -1,11 +1,11 @@
 //! Numeric own-geometry graph preparation. Kernel execution remains separate.
 use crate::units::{self, Numeric, ANGLE, LENGTH, SCALAR};
 use crate::{Error, Result};
-use serde_json::{json, Value as J};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::OnceLock,
 };
+use value_codec::{json, Value as J};
 fn s<'a>(v: &'a J, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
 }
@@ -176,7 +176,7 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
 fn schema() -> &'static J {
     static SCHEMA: OnceLock<J> = OnceLock::new();
     SCHEMA.get_or_init(|| {
-        serde_json::from_str(include_str!(
+        value_codec::from_str(include_str!(
             "../../../docs/languages/modelgraph-nurbs-1.schema.json"
         ))
         .expect("checked-in NURBS schema")
@@ -225,7 +225,7 @@ pub fn compile(mut document: J) -> Result<J> {
                         Error::new("unknown_parameter", path, format!("Unknown parameter {id}"))
                     });
                 }
-                let mut out = serde_json::Map::new();
+                let mut out = value_codec::Map::new();
                 for (k, v) in o {
                     out.insert(
                         k.clone(),

@@ -1,19 +1,60 @@
 //! Bounded Catmull–Clark refinement. Original polygon IDs survive refinement.
 use polygon_kernel::{Error, Mesh, Result};
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 type Point = [f64; 3];
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct Cage {
     pub vertices: Vec<Point>,
     pub faces: Vec<Vec<usize>>,
 }
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+impl value_codec::Serialize for Cage {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "vertices".into(),
+            value_codec::Serialize::to_value(&self.vertices),
+        );
+        object.insert(
+            "faces".into(),
+            value_codec::Serialize::to_value(&self.faces),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Cage {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let vertices: Vec<Point> = value_codec::Deserialize::from_value(
+            object
+                .remove("vertices")
+                .ok_or_else(|| value_codec::error("Missing field vertices"))?,
+        )?;
+        let faces: Vec<Vec<usize>> = value_codec::Deserialize::from_value(
+            object
+                .remove("faces")
+                .ok_or_else(|| value_codec::error("Missing field faces"))?,
+        )?;
+        Ok(Self { vertices, faces })
+    }
+}
+#[derive(Clone, Debug)]
 pub struct Refined {
     pub cage: Cage,
     pub face_ids: Vec<usize>,
+}
+impl value_codec::Serialize for Refined {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("cage".into(), value_codec::Serialize::to_value(&self.cage));
+        object.insert(
+            "faceIds".into(),
+            value_codec::Serialize::to_value(&self.face_ids),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 fn avg(p: impl Iterator<Item = Point>, n: usize) -> Point {
     let mut r = [0.; 3];
@@ -248,8 +289,7 @@ mod tests {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct Reconstruction {
     pub cage: Cage,
     pub iterations: usize,
@@ -257,6 +297,33 @@ pub struct Reconstruction {
     pub vertex_residual_after_mm: f64,
     pub deviation: polygon_kernel::proximity::Deviation,
     pub correspondence: &'static str,
+}
+impl value_codec::Serialize for Reconstruction {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("cage".into(), value_codec::Serialize::to_value(&self.cage));
+        object.insert(
+            "iterations".into(),
+            value_codec::Serialize::to_value(&self.iterations),
+        );
+        object.insert(
+            "vertexResidualBeforeMm".into(),
+            value_codec::Serialize::to_value(&self.vertex_residual_before_mm),
+        );
+        object.insert(
+            "vertexResidualAfterMm".into(),
+            value_codec::Serialize::to_value(&self.vertex_residual_after_mm),
+        );
+        object.insert(
+            "deviation".into(),
+            value_codec::Serialize::to_value(&self.deviation),
+        );
+        object.insert(
+            "correspondence".into(),
+            value_codec::Serialize::to_value(&self.correspondence),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 impl Cage {
     /// Retains welded source triangle topology. No hidden quad remeshing or decimation.

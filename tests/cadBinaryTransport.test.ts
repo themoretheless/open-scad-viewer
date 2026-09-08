@@ -4,7 +4,7 @@ import Module from '../src/services/ownGeometryModule'
 const cube=()=>callGeometryRust<number>('cad',{action:'cube',size:[2,3,4],center:false})
 const remove=(ids:number[])=>callGeometryRust('cad',{action:'delete',ids})
 describe('binary CAD transport',()=>{
- it('matches the JSON reference bit-for-bit and keeps renderer arrays owned by JS',async()=>{
+ it('matches the value transport reference bit-for-bit and keeps renderer arrays owned by JS',async()=>{
   const id=cube()
   try{
    const reference=callGeometryRust<{positions:number[];indices:number[];faceIds:number[]}>('cad',{action:'export_mesh',id})

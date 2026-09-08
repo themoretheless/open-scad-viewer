@@ -1,8 +1,8 @@
+use crate::ordered_map::OrderedMap as Map;
 use crate::parser::{number, Statement};
 use crate::value::json;
-use indexmap::IndexMap as Map;
-use serde_json::Value as J;
 use std::{collections::BTreeSet as Set, rc::Rc};
+use value_codec::Value as J;
 type R<T> = Result<T, String>;
 type Env = Map<String, V>;
 type Types = Map<String, J>;

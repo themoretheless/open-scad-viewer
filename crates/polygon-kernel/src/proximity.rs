@@ -139,13 +139,34 @@ mod tests {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct Deviation {
     pub sampled_max_mm: f64,
     pub sampled_rms_mm: f64,
     pub sample_count: usize,
     pub error_bound_certified: bool,
+}
+impl value_codec::Serialize for Deviation {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "sampledMaxMm".into(),
+            value_codec::Serialize::to_value(&self.sampled_max_mm),
+        );
+        object.insert(
+            "sampledRmsMm".into(),
+            value_codec::Serialize::to_value(&self.sampled_rms_mm),
+        );
+        object.insert(
+            "sampleCount".into(),
+            value_codec::Serialize::to_value(&self.sample_count),
+        );
+        object.insert(
+            "errorBoundCertified".into(),
+            value_codec::Serialize::to_value(&self.error_bound_certified),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 /// Bidirectional samples at vertices and triangle centroids, not Hausdorff proof.
 pub fn sample_deviation(a: &Mesh, b: &Mesh) -> Result<Deviation> {

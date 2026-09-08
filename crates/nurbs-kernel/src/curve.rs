@@ -1,17 +1,80 @@
 use crate::{check, numeric, Error, Result};
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug)]
 pub struct Curve {
     pub degree: usize,
     pub knots: Vec<f64>,
     pub control_points: Vec<Vec<f64>>,
     pub weights: Vec<f64>,
-    #[serde(default)]
     pub periodic: bool,
 }
-#[derive(Debug, Serialize)]
+impl value_codec::Serialize for Curve {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "degree".into(),
+            value_codec::Serialize::to_value(&self.degree),
+        );
+        object.insert(
+            "knots".into(),
+            value_codec::Serialize::to_value(&self.knots),
+        );
+        object.insert(
+            "controlPoints".into(),
+            value_codec::Serialize::to_value(&self.control_points),
+        );
+        object.insert(
+            "weights".into(),
+            value_codec::Serialize::to_value(&self.weights),
+        );
+        object.insert(
+            "periodic".into(),
+            value_codec::Serialize::to_value(&self.periodic),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Curve {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let degree: usize = value_codec::Deserialize::from_value(
+            object
+                .remove("degree")
+                .ok_or_else(|| value_codec::error("Missing field degree"))?,
+        )?;
+        let knots: Vec<f64> = value_codec::Deserialize::from_value(
+            object
+                .remove("knots")
+                .ok_or_else(|| value_codec::error("Missing field knots"))?,
+        )?;
+        let control_points: Vec<Vec<f64>> = value_codec::Deserialize::from_value(
+            object
+                .remove("controlPoints")
+                .ok_or_else(|| value_codec::error("Missing field controlPoints"))?,
+        )?;
+        let weights: Vec<f64> = value_codec::Deserialize::from_value(
+            object
+                .remove("weights")
+                .ok_or_else(|| value_codec::error("Missing field weights"))?,
+        )?;
+        let periodic: bool = if let Some(v) = object.remove("periodic") {
+            value_codec::Deserialize::from_value(v)?
+        } else {
+            Default::default()
+        };
+        Ok(Self {
+            degree,
+            knots,
+            control_points,
+            weights,
+            periodic,
+        })
+    }
+}
+#[derive(Debug)]
 pub struct Basis {
     pub basis: Vec<f64>,
     pub d1: Vec<f64>,
@@ -21,7 +84,35 @@ pub struct Basis {
     pub derivative_status: &'static str,
     pub derivative_side: &'static str,
 }
-#[derive(Debug, Serialize)]
+impl value_codec::Serialize for Basis {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "basis".into(),
+            value_codec::Serialize::to_value(&self.basis),
+        );
+        object.insert("d1".into(), value_codec::Serialize::to_value(&self.d1));
+        object.insert("d2".into(), value_codec::Serialize::to_value(&self.d2));
+        object.insert(
+            "domain".into(),
+            value_codec::Serialize::to_value(&self.domain),
+        );
+        object.insert(
+            "continuity".into(),
+            value_codec::Serialize::to_value(&self.continuity),
+        );
+        object.insert(
+            "derivative_status".into(),
+            value_codec::Serialize::to_value(&self.derivative_status),
+        );
+        object.insert(
+            "derivative_side".into(),
+            value_codec::Serialize::to_value(&self.derivative_side),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+#[derive(Debug)]
 pub struct Evaluation {
     pub point: Vec<f64>,
     pub d1: Option<Vec<f64>>,
@@ -30,6 +121,34 @@ pub struct Evaluation {
     pub continuity: Option<i32>,
     pub derivative_status: &'static str,
     pub derivative_side: &'static str,
+}
+impl value_codec::Serialize for Evaluation {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "point".into(),
+            value_codec::Serialize::to_value(&self.point),
+        );
+        object.insert("d1".into(), value_codec::Serialize::to_value(&self.d1));
+        object.insert("d2".into(), value_codec::Serialize::to_value(&self.d2));
+        object.insert(
+            "domain".into(),
+            value_codec::Serialize::to_value(&self.domain),
+        );
+        object.insert(
+            "continuity".into(),
+            value_codec::Serialize::to_value(&self.continuity),
+        );
+        object.insert(
+            "derivative_status".into(),
+            value_codec::Serialize::to_value(&self.derivative_status),
+        );
+        object.insert(
+            "derivative_side".into(),
+            value_codec::Serialize::to_value(&self.derivative_side),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 fn budget(count: usize) -> Result<()> {
     if count > 256 {
@@ -381,12 +500,12 @@ impl Curve {
         }
         .to_curve()
     }
-    pub fn bounds(&self) -> Result<serde_json::Value> {
+    pub fn bounds(&self) -> Result<value_codec::Value> {
         self.validate()?;
         Ok(bounds(&self.control_points))
     }
 }
-pub fn bounds(points: &[Vec<f64>]) -> serde_json::Value {
+pub fn bounds(points: &[Vec<f64>]) -> value_codec::Value {
     let dim = points[0].len();
     let min: Vec<f64> = (0..dim)
         .map(|a| points.iter().map(|p| p[a]).fold(f64::INFINITY, f64::min))
@@ -399,12 +518,26 @@ pub fn bounds(points: &[Vec<f64>]) -> serde_json::Value {
                 .fold(f64::NEG_INFINITY, f64::max)
         })
         .collect();
-    serde_json::json!({"min":min,"max":max})
+    value_codec::json!({"min":min,"max":max})
 }
-#[derive(Serialize)]
+
 pub struct Segment {
     curve: Curve,
     domain: [f64; 2],
+}
+impl value_codec::Serialize for Segment {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "curve".into(),
+            value_codec::Serialize::to_value(&self.curve),
+        );
+        object.insert(
+            "domain".into(),
+            value_codec::Serialize::to_value(&self.domain),
+        );
+        value_codec::Value::Object(object)
+    }
 }
 fn multiplicity(knots: &[f64], u: f64) -> usize {
     knots.iter().filter(|k| **k == u).count()

@@ -8,6 +8,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+value-codec = { path = "../value-codec" }
 modelgraph-runtime = { path = "../modelgraph-runtime" }
 modelgraph-text = { path = "../modelgraph-text" }
 sketch-kernel = { path = "../sketch-kernel" }
@@ -16,8 +17,3 @@ subdivision-kernel = { path = "../subdivision-kernel" }
 sdf-kernel = { path = "../sdf-kernel" }
 nurbs-kernel = { path = "../nurbs-kernel" }
 polygon-kernel = { path = "../polygon-kernel" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "=0.2.125"

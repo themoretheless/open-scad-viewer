@@ -1,5 +1,5 @@
 //! Move JSON subtrees into their parents instead of serializing/cloning them.
-use serde_json::Value;
+use value_codec::Value;
 pub trait IntoJson {
     fn into_json(self) -> Value;
 }
@@ -51,10 +51,10 @@ impl<T: IntoJson> IntoJson for Option<T> {
     }
 }
 macro_rules! json {
- ([]) => {serde_json::Value::Array(Vec::new())};
- ({$($fields:tt)*}) => {{ let mut object=serde_json::Map::new();json!(@fields object; $($fields)*);serde_json::Value::Object(object) }};
- ([$($v:expr),* $(,)?]) => {serde_json::Value::Array(vec![$(json!($v)),*])};
- ([$($items:tt)*]) => {{ let mut items=Vec::<serde_json::Value>::new();json!(@items items; $($items)*);serde_json::Value::Array(items) }};
+ ([]) => {value_codec::Value::Array(Vec::new())};
+ ({$($fields:tt)*}) => {{ let mut object=value_codec::Map::new();json!(@fields object; $($fields)*);value_codec::Value::Object(object) }};
+ ([$($v:expr),* $(,)?]) => {value_codec::Value::Array(vec![$(json!($v)),*])};
+ ([$($items:tt)*]) => {{ let mut items=Vec::<value_codec::Value>::new();json!(@items items; $($items)*);value_codec::Value::Array(items) }};
  (@fields $o:ident;) => {};
  (@fields $o:ident; $k:literal : {$($v:tt)*} $(, $($tail:tt)*)?) => {$o.insert($k.into(),json!({$($v)*})); $(json!(@fields $o; $($tail)*);)?};
  (@fields $o:ident; $k:literal : [$($v:tt)*] $(, $($tail:tt)*)?) => {$o.insert($k.into(),json!([$($v)*])); $(json!(@fields $o; $($tail)*);)?};

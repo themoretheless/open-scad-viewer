@@ -3,10 +3,10 @@ use crate::eval::{sequence, Evaluator, Scope, Value as RuntimeValue};
 use crate::units::{Dimension, ANGLE, LENGTH, SCALAR};
 use crate::{assembly, mechanical, profiles, sketch};
 use crate::{Error, Result};
-use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
+use value_codec::{json, Value};
 
 /// ECMAScript-compatible spelling for finite generated coordinates. Keep the
 /// decimal interval used by JSON.stringify, including a canonical positive zero.
@@ -52,7 +52,7 @@ pub fn json_string(v: &Value) -> String {
                     if i != 0 {
                         out.push(',');
                     }
-                    out.push_str(&serde_json::to_string(k).unwrap());
+                    out.push_str(&value_codec::to_string(k).unwrap());
                     out.push(':');
                     append(v, out);
                 }

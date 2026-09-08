@@ -1,6 +1,6 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
-import { initSync, execute, SurfaceEvaluator, compile_modelgraph_text, compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text_nurbs, execute_modelgraph_text, cad_mesh_buffer, cad_import_mesh } from '../generated/geometry-kernels/kernel.js'
-import { gunzipSync } from 'fflate/browser'
+import {encodeBinary,decodeBinary} from './valueBinaryCodec'
+import {unpackWasm} from './wasmPacking'
 import wasmBase64 from '../generated/geometry-kernels/bytes'
 
 export class GeometryKernelError extends Error {
@@ -12,6 +12,16 @@ export class NurbsCurveError extends GeometryKernelError {
     this.name = 'NurbsCurveError'
   }
 }
+interface KernelExports extends WebAssembly.Exports {
+ memory: WebAssembly.Memory
+ abi_alloc(len:number):number
+ abi_free(ptr:number,len:number):void
+ abi_request(op:number,ptr:number,len:number):bigint
+ abi_mesh_field(ptr:number,field:number):number
+ abi_mesh_free(ptr:number):void
+ abi_import_mesh(stride:number,vp:number,vl:number,ip:number,il:number):bigint
+}
+let wasm:KernelExports
 let initialized = false
 let wasmMemory: WebAssembly.Memory
 let readingCadMesh = false
@@ -19,37 +29,36 @@ function initialize(): void {
   if (readingCadMesh) throw new Error('WASM calls are not allowed while reading a borrowed CAD mesh')
   if (initialized) return
   const binary = atob(wasmBase64)
-  wasmMemory = initSync({ module: gunzipSync(Uint8Array.from(binary, character => character.charCodeAt(0))) }).memory
+  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackWasm(Uint8Array.from(binary, character => character.charCodeAt(0))))).exports as KernelExports
+  wasmMemory=wasm.memory
   initialized = true
 }
-export function decodeNurbsResult<T>(text: string): T {
-  const result = JSON.parse(text)
-  if (!result.ok) {
-    const ErrorType = result.error.code.startsWith('NURBS_') ? NurbsCurveError : GeometryKernelError
-    throw new ErrorType(result.error.code, result.error.message)
-  }
-  return result.value as T
+function takeResponse(packed:bigint):unknown {
+ const ptr=Number(packed&0xffffffffn),length=Number(packed>>32n)
+ try{return decodeBinary(new Uint8Array(wasmMemory.buffer,ptr,length))}finally{wasm.abi_free(ptr,length)}
 }
-export function callGeometryRust<T>(op: string, args: object): T {
-  initialize()
-  return decodeNurbsResult<T>(execute(JSON.stringify({ op, ...args })))
+function request(op:number,value:unknown):unknown{
+ initialize()
+ const bytes=encodeBinary(value),ptr=wasm.abi_alloc(bytes.length)
+ if(!ptr)throw new Error('WASM request allocation failed')
+ try{new Uint8Array(wasmMemory.buffer,ptr,bytes.length).set(bytes);return takeResponse(wasm.abi_request(op,ptr,bytes.length))}
+ finally{wasm.abi_free(ptr,bytes.length)}
 }
-export function createRustSurfaceEvaluator(surface: object): SurfaceEvaluator {
-  initialize()
-  try { return new SurfaceEvaluator(JSON.stringify(surface)) }
-  catch (error) {
-    if (typeof error === 'string') {
-      const detail = JSON.parse(error)
-      throw new NurbsCurveError(detail.code, detail.message)
-    }
-    throw error
-  }
+export function decodeNurbsResult<T>(result:unknown):T{
+ const envelope=result as {ok:boolean;value:T;error:{code:string;message:string}}
+ if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURBS_')?NurbsCurveError:GeometryKernelError;throw new ErrorType(envelope.error.code,envelope.error.message)}
+ return envelope.value
+}
+export function callGeometryRust<T>(op:string,args:object):T{return decodeNurbsResult<T>(request(0,{op,...args}))}
+export function createRustSurfaceEvaluator(surface:object){
+ const id=decodeNurbsResult<number>(request(6,surface));let disposed=false
+ return {evaluate(u:number,v:number){if(disposed)throw new Error('NURBS surface evaluator is disposed.');return request(7,{id,u,v})},free(){if(!disposed){request(8,{id});disposed=true}}}
 }
 
 /** No JavaScript compiler fallback: both browser and Node use the same Rust frontend. */
 export function compileTextRust<T>(source: string): T {
   initialize()
-  const result = JSON.parse(compile_modelgraph_text(source))
+  const result = request(1,source) as {ok:boolean;value:T;message:string}
   if (!result.ok) throw new Error(result.message)
   return result.value as T
 }
@@ -59,7 +68,7 @@ export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',valu
   if(kind==='text') {
     if(typeof value !== 'string' || value.length > 262144)return {ok:false,error:{code:'text_error',path:'',message:'ModelGraph Text exceeds 256 KiB.'}}
     initialize()
-    return JSON.parse(execute_modelgraph_text(value))
+    return request(4,value) as GraphRustResult<T>
   }
   // NURBS counts resolved values in Rust: each {param:id} becomes one value.
   // Its raw transport may therefore contain up to twice the 30000-value budget.
@@ -73,7 +82,7 @@ export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',valu
     while(item.parent){keys.push(item.key!);item=item.parent}
     return '/'+keys.reverse().join('/')
   }
-  let scheduled=1,input:string|undefined
+  let scheduled=1
   try {
     while(pending.length){
       const item=pending.pop()!
@@ -94,13 +103,11 @@ export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',valu
         }
       }
     }
-    input=JSON.stringify(value)
   }catch{
-    return {ok:false,error:{code:'invalid_document',path:'/',message:'Document could not be serialized as JSON.'}}
+    return {ok:false,error:{code:'invalid_document',path:'/',message:'Document could not be inspected.'}}
   }
-  if(input===undefined)return {ok:false,error:{code:'invalid_document',path:'/',message:'Expected a JSON document.'}}
   initialize()
-  return JSON.parse(kind==='graph'?compile_modelgraph(input):kind==='textNurbs'?compile_modelgraph_text_nurbs(input):compile_modelgraph_nurbs(input))
+  return request(kind==='graph'?2:kind==='textNurbs'?5:3,value) as GraphRustResult<T>
 }
 
 
@@ -109,27 +116,20 @@ export interface CadMeshViews {
   readonly indices: Uint32Array
   readonly faceIds: Uint32Array
 }
-function cadBinaryError(error: unknown): never {
-  if (typeof error === 'string') {
-    const detail = JSON.parse(error) as {code:string;message:string}
-    throw new GeometryKernelError(detail.code, detail.message)
-  }
-  throw error
-}
 /** Internal synchronous borrow: do not retain or mutate these views. The caller
  * must build its owned renderer buffers before returning. No WASM calls or await
  * are permitted while the views exist, because memory.grow invalidates them. */
 export function withCadMesh<T>(id:number, read:(mesh:CadMeshViews)=>T):T {
   initialize()
-  let snapshot: ReturnType<typeof cad_mesh_buffer>
-  try { snapshot = cad_mesh_buffer(id) } catch (error) { return cadBinaryError(error) }
+  if(!Number.isInteger(id)||id<1||id>0xffffffff)throw new GeometryKernelError('GEOMETRY_INVALID_INPUT','Invalid CAD handle')
+  const snapshot=decodeNurbsResult<number>(request(9,{id}))
   try {
     // Allocation above may grow memory. Never cache memory.buffer between calls.
     const buffer = wasmMemory.buffer
     const mesh:CadMeshViews = {
-      positions:new Float64Array(buffer,snapshot.positions_ptr(),snapshot.positions_len()),
-      indices:new Uint32Array(buffer,snapshot.indices_ptr(),snapshot.indices_len()),
-      faceIds:new Uint32Array(buffer,snapshot.face_ids_ptr(),snapshot.face_ids_len()),
+      positions:new Float64Array(buffer,wasm.abi_mesh_field(snapshot,0),wasm.abi_mesh_field(snapshot,1)),
+      indices:new Uint32Array(buffer,wasm.abi_mesh_field(snapshot,2),wasm.abi_mesh_field(snapshot,3)),
+      faceIds:new Uint32Array(buffer,wasm.abi_mesh_field(snapshot,4),wasm.abi_mesh_field(snapshot,5)),
     }
     readingCadMesh = true
     const result = read(mesh)
@@ -137,12 +137,19 @@ export function withCadMesh<T>(id:number, read:(mesh:CadMeshViews)=>T):T {
     return result
   } finally {
     readingCadMesh = false
-    snapshot.free()
+    wasm.abi_mesh_free(snapshot)
   }
 }
-/** wasm-bindgen copies the packed input once into Rust-owned memory. There is
- * no intermediate number array, JSON text or JSON parsing for imported meshes. */
+/** Packed input is copied into temporary linear-memory buffers and validated by Rust. */
 export function importCadMesh(stride:number,vertices:Float32Array,indices:Uint32Array):number {
-  initialize()
-  try { return cad_import_mesh(stride,vertices,indices) } catch(error) { return cadBinaryError(error) }
+ initialize()
+ if(!Number.isInteger(stride)||stride<3||stride>64)throw new GeometryKernelError('GEOMETRY_INVALID_INPUT','Invalid mesh vertex stride')
+ let vp=0,ip=0
+ try{
+  vp=wasm.abi_alloc(vertices.byteLength);ip=wasm.abi_alloc(indices.byteLength)
+  if(!vp||!ip)throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT','Mesh exceeds transport limit')
+  new Uint8Array(wasmMemory.buffer,vp,vertices.byteLength).set(new Uint8Array(vertices.buffer,vertices.byteOffset,vertices.byteLength))
+  new Uint8Array(wasmMemory.buffer,ip,indices.byteLength).set(new Uint8Array(indices.buffer,indices.byteOffset,indices.byteLength))
+  return decodeNurbsResult<number>(takeResponse(wasm.abi_import_mesh(stride,vp,vertices.length,ip,indices.length)))
+ }finally{if(ip)wasm.abi_free(ip,indices.byteLength);if(vp)wasm.abi_free(vp,vertices.byteLength)}
 }
