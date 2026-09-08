@@ -42,6 +42,8 @@ export type RendererLifecycleEvent =
 export type RendererStatusChangeHandler = (event: RendererLifecycleEvent) => void
 
 export interface SetMeshesOptions {
+  /** Animate compatible parameter edits in display buffers only. */
+  animate?: boolean
   preserveMeasurement?: boolean
   /** Opaque publication token, echoed only after its first GPU submission. */
   frameToken?: number

@@ -189,6 +189,8 @@ struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
 /* ── GPU mesh handle ──────────────────────────────── */
 
 interface GMesh {
+  entityId?: MeshData['entityId']
+  morph?: { from: Float32Array; current: Float32Array; started: number }
   nativeGeometry?: MeshData['nativeGeometry']
   faceIdsAuthoritative?: boolean
   assetId?: GeometryAssetId
@@ -710,6 +712,10 @@ export class WebGPURenderer {
     const metrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
     const previous = this.meshes
     const previousSet = new Set(previous)
+    const animate = options.animate && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
+      && meshes.reduce((bytes, mesh) => bytes + mesh.vertices.byteLength, 0) <= 8 * 1024 * 1024
+    const previousById = new Map(previous.filter(mesh => mesh.entityId).map(mesh => [mesh.entityId, mesh]))
+    const started = performance.now()
     const reusableByAsset = new Map<GeometryAssetId, GMesh[]>()
     for (const mesh of previous) {
       if (!mesh.assetId) continue
@@ -731,7 +737,13 @@ export class WebGPURenderer {
         const transform = new Float32Array(m.transform)
         const inverseTransform = invert(transform)
 
-        const candidates = m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
+        const old = m.entityId ? previousById.get(m.entityId) : undefined
+        const morphFrom = animate && old && old.vertices.length === m.vertices.length
+          && sameTypedArray(old.indices, m.indices) && sameTypedArray(old.transform, m.transform)
+          && !sameTypedArray(old.morph?.current ?? old.vertices, m.vertices)
+          ? new Float32Array(old.morph?.current ?? old.vertices) : null
+        // Animated geometry must own its buffer: instances may have different start shapes.
+        const candidates = !morphFrom && m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
         // Prefer the already verified views staged earlier in this publication.
         // A newly built shared asset needs one content comparison, not one per instance.
         const reusable = candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
@@ -752,7 +764,7 @@ export class WebGPURenderer {
           if (ownsGeometryBuffers) {
             metrics.geometryBuffersCreated += 2
             metrics.geometryUploadBytes += m.vertices.byteLength + m.indices.byteLength
-            dev.queue.writeBuffer(vb, 0, m.vertices)
+            dev.queue.writeBuffer(vb, 0, morphFrom ?? m.vertices)
             dev.queue.writeBuffer(ib, 0, m.indices)
           }
           // One contiguous upload per entity. writeBuffer snapshots the data,
@@ -774,7 +786,9 @@ export class WebGPURenderer {
           if (reusable) metrics.reusedEntities++
           const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
           next.push({
-            assetId: m.geometryAssetId,
+            entityId: m.entityId,
+            morph: morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started } : undefined,
+            assetId: morphFrom ? undefined : m.geometryAssetId,
             nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
             edgeIB: reuseEdges ? reusable.edgeIB : null,
@@ -1604,7 +1618,7 @@ export class WebGPURenderer {
     this.transparentSort.begin()
     for (let index = 0; index < this.meshes.length; index++) {
       const mesh = this.meshes[index]
-      if (!this.isMeshVisible(index) || !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius)) continue
+      if (!this.isMeshVisible(index) || (!mesh.morph && !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
       if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
       else this.opaqueDraws.push(mesh)
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
@@ -1644,14 +1658,14 @@ export class WebGPURenderer {
       }
     }
 
-    if (this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
+    if (!this.meshes.some(mesh => mesh.morph) && this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceFaceSlot.buffer)
       pass.draw(this.sourceFaceSlot.count)
     }
 
-    if (this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
+    if (!this.meshes.some(mesh => mesh.morph) && this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionFaceSlot.buffer)
@@ -1674,21 +1688,21 @@ export class WebGPURenderer {
       }
     }
 
-    if (this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
+    if (!this.meshes.some(mesh => mesh.morph) && this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceLineSlot.buffer)
       pass.draw(this.sourceLineSlot.count)
     }
 
-    if (this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
+    if (!this.meshes.some(mesh => mesh.morph) && this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionLineSlot.buffer)
       pass.draw(this.selectionLineSlot.count)
     }
 
-    if (this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
+    if (!this.meshes.some(mesh => mesh.morph) && this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
       pass.setPipeline(this.deepSelectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.deepSelectionLineSlot.buffer)
@@ -1710,12 +1724,33 @@ export class WebGPURenderer {
     this.raf = requestAnimationFrame(this.drawFrame)
   }
 
+  private advanceGeometryAnimation(now: number, finish = false) {
+    let active = false
+    for (const mesh of this.meshes) {
+      const morph = mesh.morph
+      if (!morph) continue
+      const t = finish ? 1 : Math.min(1, Math.max(0, (now - morph.started) / 180))
+      const eased = t * t * (3 - 2 * t)
+      if (t === 1) {
+        this.dev?.queue.writeBuffer(mesh.vb, 0, mesh.vertices)
+        mesh.morph = undefined
+      } else {
+        for (let i = 0; i < morph.current.length; i++) morph.current[i] = morph.from[i] + (mesh.vertices[i] - morph.from[i]) * eased
+        this.dev?.queue.writeBuffer(mesh.vb, 0, morph.current)
+        active = true
+      }
+    }
+    return active
+  }
+
   private drawFrame = () => {
     this.raf = 0
     if (this.dead || this.lost || !this.initialized) return
     this.notifyCameraChange()
     try {
+      const animating = this.advanceGeometryAnimation(performance.now())
       this.render()
+      if (animating) this.requestRender(false)
       this.frameRetryCount = 0
       if (this.status.status === 'error' && this.status.phase === 'frame') {
         this.updateStatus({ status: 'ready' })
@@ -1817,6 +1852,12 @@ export class WebGPURenderer {
     clientY: number,
     maximum = MAX_DEPTH_CANDIDATES,
   ): DepthCandidate<PickHit>[] {
+    // Picking uses the authoritative destination BVH. Finish the visual transition
+    // before interaction so a transient display shape never supplies CAD identity.
+    if (this.meshes.some(mesh => mesh.morph)) {
+      this.advanceGeometryAnimation(performance.now(), true)
+      this.requestRender(false)
+    }
     const limit = Math.max(0, Math.min(MAX_DEPTH_CANDIDATES, Math.trunc(maximum)))
     if (!limit) return []
     const ray = this.rayForClientPoint(clientX, clientY)

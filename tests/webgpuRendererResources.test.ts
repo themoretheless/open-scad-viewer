@@ -316,3 +316,42 @@ describe('WebGPURenderer retained geometry resources', () => {
     for (const buffer of device.buffers.slice(stagedStart)) expect(buffer.destroyCalls).toBe(1)
   })
 })
+
+
+describe('parameter geometry animation', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('interpolates display buffers, retargets continuously and retains exact source geometry', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    const animation = renderer as unknown as { advanceGeometryAnimation(now: number, finish?: boolean): boolean; meshes: Array<{ morph?: { started: number } }> }
+    const first = { ...fixture(0), entityId: 'entity:part' as const }
+    const next = { ...fixture(10), entityId: 'entity:part' as const }
+    renderer.setMeshes([first])
+    renderer.setMeshes([next], { animate: true })
+    const start = animation.meshes[0].morph!.started
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(first.vertices)
+    animation.advanceGeometryAnimation(start + 90)
+    const midway = new Float32Array(internal.meshes[0].vb.contents.buffer).slice()
+    expect(midway[0]).toBeCloseTo((first.vertices[0] + next.vertices[0]) / 2)
+    expect(next.vertices).toEqual(fixture(10).vertices)
+    const latest = { ...fixture(20), entityId: 'entity:part' as const }
+    renderer.setMeshes([latest], { animate: true })
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(midway)
+    expect(animation.advanceGeometryAnimation(start + 1000)).toBe(false)
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(latest.vertices)
+    expect(animation.meshes[0].morph).toBeUndefined()
+  })
+  it('skips incompatible topology and honors reduced motion', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    const first = { ...fixture(), entityId: 'entity:part' as const }
+    renderer.setMeshes([first])
+    const changed = { ...fixture(10), entityId: first.entityId, indices: new Uint32Array([2, 1, 0]) }
+    renderer.setMeshes([changed], { animate: true })
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(changed.vertices)
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    const reduced = { ...fixture(20), entityId: first.entityId, indices: changed.indices }
+    renderer.setMeshes([reduced], { animate: true })
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(reduced.vertices)
+  })
+})

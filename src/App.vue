@@ -230,10 +230,15 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const highlightRef = ref<HTMLPreElement | null>(null)
 const highlightedCode = computed(() => highlightCode(code.value))
+const lineNumbersRef = ref<HTMLPreElement | null>(null)
+const editorLineCount = computed(() => code.value.split('\n').length)
+const editorLineNumbers = computed(() => Array.from({ length: editorLineCount.value }, (_, i) => i + 1).join('\n'))
+watch(code, () => { void nextTick(syncHighlightScroll) }, { flush: 'post' })
 function syncHighlightScroll() {
   if (!editorRef.value || !highlightRef.value) return
   highlightRef.value.scrollTop = editorRef.value.scrollTop
   highlightRef.value.scrollLeft = editorRef.value.scrollLeft
+  if (lineNumbersRef.value) lineNumbersRef.value.style.transform = `translateY(${-editorRef.value.scrollTop}px)`
 }
 const findInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -1272,6 +1277,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     const frameToken = nextPerformanceFrameToken++
     renderer?.setMeshes(displayMeshes, {
       frameToken,
+      animate: renderedSource.value !== '' && !sameSourceSnapshot,
       preserveMeasurement: publication.measurementMayBePreserved,
     })
     sceneController.publish({
@@ -2227,7 +2233,9 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button type="button" :aria-label="t('closeSearch')" @click="closeEditorFind">×</button>
         </div>
 
-        <div class="code-editor">
+        <div class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
+        <div class="code-gutter" aria-hidden="true"><pre ref="lineNumbersRef">{{ editorLineNumbers }}</pre></div>
+        <div class="code-content">
         <pre ref="highlightRef" class="code code-highlight" aria-hidden="true" v-html="highlightedCode" />
         <textarea
           ref="editorRef"
@@ -2248,6 +2256,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           @focus="syncSourceHighlightFromEditor"
           @keydown="handleEditorKey"
         />
+        </div>
         </div>
 
         <div v-if="error" class="message error" role="alert" aria-live="assertive">
@@ -2680,7 +2689,10 @@ button, select { color: inherit; }
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .82rem; line-height: 1.58;
   tab-size: 2; white-space: pre; overflow: auto;
 }
-.code-editor { position: relative; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
+.code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
+.code-content { position: relative; flex: 1; min-width: 0; }
+.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 20px); overflow: hidden; border-right: 1px solid var(--border); color: var(--text-dim); user-select: none; pointer-events: none; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
+.code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
 .code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
 .code-highlight { pointer-events: none; overflow: hidden; }
 .code-input { background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
