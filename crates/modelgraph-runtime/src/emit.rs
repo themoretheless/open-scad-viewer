@@ -1,5 +1,5 @@
 //! Canonical graph indexing, bounded evaluation, and geometry lowering.
-use crate::eval::{sequence, Evaluator, Scope, Value as RuntimeValue};
+use crate::eval::{numeric_value, sequence, Evaluator, Scope, Value as RuntimeValue};
 use crate::units::{Dimension, ANGLE, LENGTH, SCALAR};
 use crate::{assembly, mechanical, profiles, sketch};
 use crate::{Error, Result};
@@ -87,6 +87,11 @@ fn children(node: &Value) -> Vec<&str> {
     } else if let Some(v) = node.get("base") {
         std::iter::once(v.as_str().unwrap())
             .chain(array(&node["subtract"]).iter().map(|v| v.as_str().unwrap()))
+            .collect()
+    } else if str_at(node, "op") == "match" {
+        array(&node["arms"])
+            .iter()
+            .map(|arm| str_at(arm, "input"))
             .collect()
     } else if str_at(node, "op") == "if" {
         vec![str_at(node, "then"), str_at(node, "else")]
@@ -205,11 +210,51 @@ impl<'a> Emitter<'a> {
         field: &str,
         dimension: Dimension,
     ) -> Result<Vec<f64>> {
+        if !expr.is_array() {
+            let path = format!("{current}/{field}");
+            let value = self.eval.resolve(expr, scope, &path, 0)?;
+            return sequence(&value, &path)?
+                .iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    let path = format!("{path}/{index}");
+                    crate::units::field(
+                        numeric_value(value, &path)?,
+                        dimension,
+                        &path,
+                        self.eval.strict,
+                    )
+                })
+                .collect();
+        }
         array(expr)
             .iter()
             .enumerate()
             .map(|(i, v)| self.value(v, scope, current, &format!("{field}/{i}"), dimension))
             .collect()
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn geometry_vector(
+        &mut self,
+        expr: &'a Value,
+        scope: &Scope<'a>,
+        current: &str,
+        field: &str,
+        dimension: Dimension,
+        size: usize,
+    ) -> Result<Vec<f64>> {
+        let values = self.vector(expr, scope, current, field, dimension)?;
+        if values.len() != size {
+            return Err(Error::new(
+                "type_error",
+                format!("{current}/{field}"),
+                format!(
+                    "Expected vector with {size} components, received {}.",
+                    values.len()
+                ),
+            ));
+        }
+        Ok(values)
     }
     fn frame(
         &mut self,
@@ -558,6 +603,25 @@ impl<'a> Emitter<'a> {
                     &body,
                     &bound.scope,
                     &format!("{current}/call:{id}"),
+                    depth + 1,
+                    expected,
+                    None,
+                    false,
+                )?;
+            }
+            "match" => {
+                let (arm, bound) = self.eval.select_match_arm(
+                    &item["value"],
+                    array(&item["arms"]),
+                    scope,
+                    &current,
+                    0,
+                )?;
+                self.emit(
+                    str_at(&item["arms"][arm], "input"),
+                    nodes,
+                    &bound,
+                    &format!("{current}/arms/{arm}"),
                     depth + 1,
                     expected,
                     None,
@@ -975,7 +1039,14 @@ impl<'a> Emitter<'a> {
                     .push(format!("polygon(points={});", json_string(&json!(polygon))));
             }
             "rectangle" | "box" => {
-                let size = self.vector(&item["size"], scope, &current, "size", LENGTH)?;
+                let size = self.geometry_vector(
+                    &item["size"],
+                    scope,
+                    &current,
+                    "size",
+                    LENGTH,
+                    if op == "box" { 3 } else { 2 },
+                )?;
                 if size.iter().any(|v| *v <= 0.) {
                     return Err(Error::new(
                         "invalid_dimension",
@@ -1080,7 +1151,7 @@ impl<'a> Emitter<'a> {
                 self.lines.push("}".into());
             }
             "translate" | "rotate" | "scale" => {
-                let vector = self.vector(
+                let vector = self.geometry_vector(
                     &item["vector"],
                     scope,
                     &current,
@@ -1092,6 +1163,7 @@ impl<'a> Emitter<'a> {
                     } else {
                         SCALAR
                     },
+                    3,
                 )?;
                 if expected == GeometryType::Profile
                     && ((op == "translate" && vector[2] != 0.)
@@ -1185,4 +1257,90 @@ pub fn compile(document: &Value) -> Result<Value> {
     Ok(
         json!({"geometry_assertions":checks.geometry_assertions,"constraint_report":checks.constraint_report,"sketch_solutions":emitter.sketch_solutions,"assembly_components":emitter.assembly_components,"mechanical_reports":emitter.mechanical_reports,"mechanical_parts":emitter.mechanical_parts,"source":emitter.lines.join("\n"),"source_map":emitter.source_map,"execution_target":"legacy/current+own-rust-cad"}),
     )
+}
+
+#[cfg(test)]
+mod match_tests {
+    use super::*;
+
+    #[test]
+    fn geometry_match_keeps_bindings_local_and_builds_only_selected_arm() {
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"choice","nodes":[
+            {"id":"choice","op":"match","value":{"op":"record","fields":{"radius":3}},"arms":[
+                {"pattern":{"kind":"record","exact":true,"fields":{"radius":{"kind":"bind","name":"r"}}},"guard":{"op":"lt","args":[0,{"local":"r"}]},"input":"good"},
+                {"pattern":{"kind":"wildcard"},"input":"bad"}
+            ]},
+            {"id":"good","op":"sphere","radius":{"local":"r"}},
+            {"id":"bad","op":"sphere","radius":-1}
+        ]});
+        let result = crate::compile(document.clone()).unwrap();
+        assert!(result["source"].as_str().unwrap().contains("sphere(r=3);"));
+        let mut invalid = document;
+        invalid["nodes"][0]["arms"][1]["input"] = json!("missing");
+        assert_eq!(crate::compile(invalid).unwrap_err().code, "unknown_node");
+    }
+}
+
+#[cfg(test)]
+mod dynamic_vector_tests {
+    use super::*;
+    fn document(nodes: Value, root: &str) -> Value {
+        json!({"language":"modelgraph/1","units":"mm","parameters":[],"nodes":nodes,"root":root})
+    }
+
+    #[test]
+    fn uses_dynamic_box_and_transform_vectors_with_correct_units() {
+        let size = json!({"op":"match","input":3,"arms":[{"pattern":{"kind":"bind","name":"n"},"body":{"op":"list","items":[{"local":"n"},4,5]}}]});
+        for (op, unit, result) in [
+            ("translate", "mm", "translate([2,0,0])"),
+            ("rotate", "deg", "rotate([2,0,0])"),
+            ("scale", "", "scale([2,1,1])"),
+        ] {
+            let first = if unit.is_empty() {
+                json!(2)
+            } else {
+                json!({"op":"quantity","value":2,"unit":unit})
+            };
+            let remaining = if op == "scale" { 1 } else { 0 };
+            let nodes = json!([
+                {"id":"base","op":"box","size":size},
+                {"id":"shape","op":op,"input":"base","vector":{"op":"list","items":[first,remaining,remaining]}}
+            ]);
+            let output = crate::compile(document(nodes, "shape")).unwrap();
+            let source = output["source"].as_str().unwrap();
+            assert!(source.contains("cube([3,4,5]"));
+            assert!(source.contains(result), "{source}");
+        }
+        let nodes = json!([
+            {"id":"profile","op":"rectangle","size":{"op":"list","items":[3,4]}},
+            {"id":"shape","op":"extrude","input":"profile","height":2}
+        ]);
+        assert!(crate::compile(document(nodes, "shape")).unwrap()["source"]
+            .as_str()
+            .unwrap()
+            .contains("square([3,4]"));
+    }
+
+    #[test]
+    fn rejects_wrong_vector_lengths_scalar_results_and_dimensions() {
+        for vector in [
+            json!({"op":"list","items":[1,2]}),
+            json!({"op":"list","items":[1,2,3,4]}),
+            json!(2),
+        ] {
+            let nodes = json!([{"id":"shape","op":"box","size":vector}]);
+            assert_eq!(
+                crate::compile(document(nodes, "shape")).unwrap_err().code,
+                "type_error"
+            );
+        }
+        let nodes = json!([
+            {"id":"base","op":"box","size":[1,2,3]},
+            {"id":"shape","op":"translate","input":"base","vector":{"op":"list","items":[{"op":"quantity","value":2,"unit":"deg"},0,0]}}
+        ]);
+        assert_eq!(
+            crate::compile(document(nodes, "shape")).unwrap_err().code,
+            "unit_mismatch"
+        );
+    }
 }

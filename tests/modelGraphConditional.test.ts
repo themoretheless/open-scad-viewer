@@ -39,3 +39,14 @@ it('resolves lazy scalar and geometry choices on the own geometry backend',()=>{
  expect(c.execution_target).toBe('own-nurbs')
  expect(c.document.nodes.some(n=>n.op==='if')).toBe(false)
 })
+
+it('continues before question marks without consuming the next statement',()=>{
+ const compact='param part = 0 range 0..2\nbody = box([2,3,4])\nhook = sphere(1)\nshow part == 2 ? hook : part == 1 ? body : [body,hook]'
+ const multiline=compact.replace('show part == 2 ? hook : part == 1 ? body : [body,hook]', 'show part == 2\n  ? hook\n  : part == 1\n    ? body\n    : [body,hook]')
+ for(const part of [0,1,2]) {
+  expect(compile(multiline.replace('part = 0',`part = ${part}`)).source).toBe(compile(compact.replace('part = 0',`part = ${part}`)).source)
+ }
+ expect(compile('r = 1 + 2 == 3\n // continuation\n\n ? 4\n : 8\nx = 2\nshow sphere(r+x)').source).toContain('sphere(r=6')
+ expect(compile('fn choose x: int -> Geometry\n  ret x > 0\n    ? sphere(2)\n    : box([1,1,1])\nshow choose(1)').source).toContain('sphere(r=2')
+ expect(()=>compile('r = 1;\n? 2 : 3\nshow sphere(r)')).toThrow()
+})

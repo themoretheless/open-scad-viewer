@@ -113,6 +113,7 @@ fn list(v: V) -> R<J> {
 }
 fn raw(v: V) -> R<J> {
     match v {
+        V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
         V::Json(j) => Ok(j),
         V::Array(a) => a.into_iter().map(raw).collect::<R<Vec<_>>>().map(J::Array),
         _ => Err("Expected numeric geometry argument".into()),
@@ -154,6 +155,24 @@ impl Compiler {
                 Ok(id)
             }
             V::Json(j) if j.get("geometry").is_some() => Ok(s(&j, "geometry").into()),
+            V::Json(j) if empty_match_sequence(&j["sequence"]) => {
+                let sequence = &j["sequence"];
+                let empty = self.geometry(V::Array(Vec::new()))?;
+                let arms = arr(sequence, "arms")
+                    .iter()
+                    .map(|arm| {
+                        let mut arm = arm.clone();
+                        arm.as_object_mut().unwrap().remove("body");
+                        arm["input"] = json!(&empty);
+                        arm
+                    })
+                    .collect::<Vec<_>>();
+                let value =
+                    self.add(json!({"op":"match","value":&sequence["input"],"arms":arms}))?;
+                let id = self.geometry(value)?;
+                self.collections.insert(id.clone());
+                Ok(id)
+            }
             _ => Err("Expected geometry".into()),
         }
     }
@@ -232,6 +251,9 @@ impl Compiler {
                     json!({"op":"quantity","value":n,"unit":u})
                 }));
             }
+            "name" if name == "true" || name == "false" => {
+                return Ok(V::Json(json!(if name == "true" { 1 } else { 0 })))
+            }
             "name" => {
                 return e
                     .get(name)
@@ -270,6 +292,20 @@ impl Compiler {
                 return Ok(V::Json(json!({"sequence":node})));
             }
             "comprehension" => return self.comprehension(a, 0, e, b),
+            "match" => return self.match_value(a, e, b),
+            "match_block" => {
+                let mut scope = e.clone();
+                let mut names = Set::new();
+                for item in arr(a, "items") {
+                    let name = s(item, "name");
+                    if !names.insert(name.to_owned()) {
+                        return Err(format!("Duplicate match body binding {name}"));
+                    }
+                    let value = self.eval(&item["value"], &scope, b)?;
+                    scope.insert(name.into(), value);
+                }
+                return self.eval(&a["left"], &scope, b);
+            }
             "conditional" => {
                 let condition = scalar(self.eval(&a["left"], e, b)?)?;
                 let yes = self.eval(&a["items"][0], e, b)?;
@@ -527,6 +563,11 @@ impl Compiler {
         input: Option<String>,
         mut args: Vec<(Option<String>, V)>,
     ) -> R<V> {
+        let name = match name {
+            "move" => "translate",
+            "rect" => "rectangle",
+            _ => name,
+        };
         if [
             "surface_sweep",
             "surface_loft",
@@ -733,12 +774,19 @@ impl Compiler {
                 return Ok(ty("Vec", vec![element]));
             }
             V::Json(j) => {
-                let name = if j.get("text").is_some() {
+                if let Some(sequence) = j.get("sequence") {
+                    if ["typed_value", "checked"].contains(&s(sequence, "op")) {
+                        return self.infer_type(&V::Json(sequence.clone()));
+                    }
+                }
+                let name = if j.get("text").is_some() || s(j, "op") == "text" {
                     "str"
                 } else if j.get("geometry").is_some() {
                     "Geometry"
                 } else if s(j, "op") == "checked" {
                     return self.infer_type(&V::Json(j["value"].clone()));
+                } else if s(j, "op") == "typed_value" {
+                    return Ok(j["type"].clone());
                 } else if s(j, "op") == "typed" {
                     s(j, "type")
                 } else if s(j, "op") == "quantity" {
@@ -781,6 +829,17 @@ impl Compiler {
         }
         let t = substitute(t, bs, 0)?;
         let name = s(&t, "name");
+        if (name == "str" || name == "Vec" || self.structs.contains_key(name))
+            && matches!(&v,V::Json(j) if j.get("text").is_none() && j.get("geometry").is_none())
+        {
+            let descriptor = self.runtime_type_descriptor(&t, level)?;
+            let checked = json!({"op":"typed_value","type":descriptor,"value":expression(v)?});
+            return Ok(V::Json(if name == "Vec" {
+                json!({"sequence":checked})
+            } else {
+                checked
+            }));
+        }
         if name == "str" {
             if !matches!(&v,V::Json(j) if j.get("text").is_some()) {
                 return Err(format!("{label}: expected str"));
@@ -1063,7 +1122,9 @@ impl Compiler {
                     }
                     Ok(result)
                 } else if j.get("text").is_some() {
-                    Ok(V::Json(j))
+                    Ok(V::Json(
+                        json!({"op":"checked","checks":checks,"value":{"op":"text","value":&j["text"]}}),
+                    ))
                 } else if let Some(seq) = j.get("sequence") {
                     Ok(V::Json(
                         json!({"sequence":{"op":"checked","checks":checks,"value":seq}}),
@@ -1210,7 +1271,10 @@ fn gather(v: &V, out: &mut Vec<J>) {
     match v {
         V::Array(a) => a.iter().for_each(|v| gather(v, out)),
         V::Record(r, _, _) => r.values().for_each(|v| gather(v, out)),
-        V::Json(j) if ["typed", "checked"].contains(&s(j, "op")) => out.push(j.clone()),
+        V::Json(j) if ["typed", "typed_value", "checked"].contains(&s(j, "op")) => {
+            out.push(j.clone())
+        }
+        V::Json(j) if j.get("sequence").is_some() => gather(&V::Json(j["sequence"].clone()), out),
         _ => {}
     }
 }
@@ -1423,3 +1487,5 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
 }
 
 include!("lower_query.rs");
+
+include!("lower_match.rs");

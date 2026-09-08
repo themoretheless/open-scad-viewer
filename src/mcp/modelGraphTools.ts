@@ -13,8 +13,12 @@ import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import { compileModelGraph, modelGraphSchema, setModelGraphParameters, ModelGraphError, MODELGRAPH_GUIDE, MODELGRAPH_EXAMPLE, MODELGRAPH_FUNCTIONAL_GUIDE, MODELGRAPH_FUNCTIONAL_EXAMPLE, MODELGRAPH_UNITS_GUIDE, MODELGRAPH_UNITS_EXAMPLE, MODELGRAPH_SKETCH_GUIDE, MODELGRAPH_SKETCH_EXAMPLE, MODELGRAPH_ASSEMBLY_EXAMPLE, MODELGRAPH_LOFT_EXAMPLE } from '../services/modelGraph'
 import type { McpGeometryService } from './geometryService'
+import { createStaticToolRegistration } from './staticToolSchemas'
+
+const staticToolRegistration = createStaticToolRegistration()
 
 export function registerModelGraphTools(server: McpServer, geometry: McpGeometryService) {
+  server = staticToolRegistration(server)
   registerModelGraphSvgTools(server, geometry)
   registerModelGraphGenerate(server, geometry)
   registerModelGraphModify(server, geometry)

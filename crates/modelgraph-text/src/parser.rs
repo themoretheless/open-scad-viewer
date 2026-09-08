@@ -16,6 +16,7 @@ struct Parser<'a> {
     tokens: Vec<Token>,
     p: usize,
     depth: usize,
+    match_indent: Option<usize>,
     line_starts: Vec<usize>,
 }
 fn ident(s: &str) -> bool {
@@ -130,7 +131,7 @@ fn lex(source: &str) -> R<Vec<Token>> {
         .find(|op| source[p..].starts_with(**op))
         {
             p += op.len()
-        } else if b"\n{}()[],.?:;=+*/%<>-!".contains(&b[p]) {
+        } else if b"\n{}()[],.?:;=+*/%<>-!|@".contains(&b[p]) {
             p += 1
         } else {
             return Err(format!(
@@ -338,6 +339,10 @@ impl Parser<'_> {
             Ok(json!({"kind":"name","value":self.id()?}))
         }
     }
+    fn check_statement(&mut self) -> R<J> {
+        let kind = self.pop()?;
+        Ok(json!({"kind":kind,"left":self.expr(0)?}))
+    }
     fn function(&mut self) -> R<J> {
         let gs = self.generics("<", ">")?;
         self.inner();
@@ -367,9 +372,13 @@ impl Parser<'_> {
                 if self.peek() == "}" {
                     return self.err("Function requires ret");
                 }
-                let binding = self.binding()?;
-                self.take("=")?;
-                items.push(json!({"kind":"binding","left":binding,"right":self.expr(0)?}));
+                if ["assert", "validate"].contains(&self.peek()) {
+                    items.push(self.check_statement()?);
+                } else {
+                    let binding = self.binding()?;
+                    self.take("=")?;
+                    items.push(json!({"kind":"binding","left":binding,"right":self.expr(0)?}));
+                }
                 if items.len() > 64 {
                     return self.err("At most 64 function statements");
                 }
@@ -476,7 +485,9 @@ impl Parser<'_> {
             if self.peek() == "EOF" || self.indent() != indent {
                 return self.err("Expected ret at function body indentation");
             }
-            if self.next() == "(" {
+            if ["assert", "validate"].contains(&self.peek()) {
+                items.push(self.check_statement()?)
+            } else if self.next() == "(" {
                 items.push(json!({"kind":"statement","left":self.expr(0)?}))
             } else {
                 let binding = self.binding()?;
@@ -657,7 +668,9 @@ impl Parser<'_> {
                     body = self.expr(0)?;
                     break;
                 }
-                if ["where", "continue", "break"].contains(&self.peek()) {
+                if ["assert", "validate"].contains(&self.peek()) {
+                    clauses.push(self.check_statement()?);
+                } else if ["where", "continue", "break"].contains(&self.peek()) {
                     let kind = self.pop()?;
                     if kind != "where" {
                         self.take("if")?;
@@ -694,6 +707,7 @@ impl Parser<'_> {
         let mut a = match t.as_str() {
             "fn" => self.function()?,
             "foreach" => self.foreach()?,
+            "match" => self.match_expression()?,
             "{" => {
                 self.p -= 1;
                 self.record()?
@@ -832,7 +846,15 @@ impl Parser<'_> {
         };
         while self.peek() == "." || (self.peek() == "\n" && self.next() == ".") {
             if self.peek() == "\n" {
+                let end = self.p;
                 self.pop()?;
+                if self
+                    .match_indent
+                    .is_some_and(|indent| self.indent().len() < indent)
+                {
+                    self.p = end;
+                    break;
+                }
             }
             self.pop()?;
             let name = self.pop()?;
@@ -877,14 +899,24 @@ impl Parser<'_> {
                 a = json!({"kind":"binary","value":&op,"left":a,"right":self.expr(if op=="**"{prec}else{prec+1})?})
             }
         }
+        // A leading ? explicitly continues the preceding condition across
+        // lines. Preserve the newline if the next token starts a statement.
+        if min <= 2 && self.peek() == "\n" {
+            let end = self.p;
+            self.inner();
+            if self.peek() != "?" {
+                self.p = end;
+            }
+        }
         if min <= 2 && self.peek() == "?" {
             self.pop()?;
             self.inner();
-            let yes = self.expr(0)?;
+            let branch_min = if min >= 2 { 2 } else { 0 };
+            let yes = self.expr(branch_min)?;
             self.inner();
             self.take(":")?;
             self.inner();
-            let no = self.expr(0)?;
+            let no = self.expr(branch_min)?;
             a = json!({"kind":"conditional","left":a,"items":[yes,no]})
         }
         self.depth -= 1;
@@ -929,6 +961,7 @@ pub fn number(s: &str) -> R<(f64, String)> {
 }
 pub fn parse(source: &str) -> R<Vec<Statement>> {
     let mut p = Parser {
+        match_indent: None,
         source,
         tokens: lex(source)?,
         p: 0,
@@ -1042,3 +1075,5 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
     }
     Ok(out)
 }
+
+include!("parser_match.rs");

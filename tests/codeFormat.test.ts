@@ -16,7 +16,18 @@ it('does not swallow a closing delimiter into a comment or change multiline lite
 it('attaches closing parentheses followed by chained methods',()=>{
  const source='// @modelgraph-text/1\nprofile = union(\n    rectangle([4,12]),\n    rectangle([3,24])\n).offset(0.7).offset(delta: -0.7)\nshow profile.extrude(2)'
  const formatted=formatCode(source)
- expect(formatted).toContain('rectangle([3,24])).offset(0.7).offset(delta: -0.7)')
+ expect(formatted).toContain('rectangle([3, 24])).offset(0.7).offset(delta: -0.7)')
  expect(formatCode(formatted)).toBe(formatted)
  expect(compileModelGraphText(formatted).source).toBe(compileModelGraphText(source).source)
+})
+
+it('spaces commas in parameters, calls and vectors while preserving literals and comments',()=>{
+ const source='fn point x: f64,y: f64,   z: f64 -> Geometry\n  ret box([x,y,\tz]) // keep,a,b\nshow point(1,2,3)\ntext = "keep,a,  b" /* keep,c */'
+ const formatted=formatCode(source)
+ expect(formatted).toBe('fn point x: f64, y: f64, z: f64 -> Geometry\n  ret box([x, y, z]) // keep,a,b\nshow point(1, 2, 3)\ntext = "keep,a,  b" /* keep,c */')
+ expect(formatCode(formatted)).toBe(formatted)
+})
+
+it('keeps multiline separators and trailing commas without adding spaces before closing brackets',()=>{
+ expect(formatCode('f(a,\n  b,  )\nxs = [1,2,  ]')).toBe('f(a,\n  b,)\nxs = [1, 2,]')
 })

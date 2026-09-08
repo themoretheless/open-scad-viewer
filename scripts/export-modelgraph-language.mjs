@@ -54,5 +54,5 @@ Example: modelgraph-1.sketch.example.json, also exposed as sketch_example in the
 
 The caller owns document storage. The hash checks the supplied document, not concurrent external storage. Generated source can be passed to existing OpenSCAD export tools. Error paths for evaluated instances and source_map.instance_path locate function calls and repetitions; they do not identify stable CAD faces. Runtime geometry errors may still refer to generated SCAD.
 
-The browser editor still accepts OpenSCAD. Geometry is computed by Manifold; this language does not introduce B-rep, CUDA or guarantees of printability. Closures may return geometry values, which evaluate nodes insert into the geometric graph. No pattern matching or static type inference.
+The browser editor also accepts OpenSCAD. ModelGraph Text parsing and evaluation run in Rust/WASM with the repository-owned geometry kernel. Closures and match expressions may return geometry values. Structural pattern matching follows the compact text guide; it does not provide static exhaustiveness checking or guarantee printability.
 `)

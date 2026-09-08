@@ -1,4 +1,11 @@
 /** Conservative layout formatter: preserves expressions, comments and literal contents. */
+function spaceAfterCommas(line: string): string {
+  return line.replace(/\/\*.*?(?:\*\/|$)|\/\/.*|"(?:\\.|[^"\\])*(?:"|$)|,[ \t]*(?=\S)/g,
+    (token, offset: number) => token.startsWith(',')
+      ? /[)\]}]/.test(line[offset + token.length]!) ? ',' : ', '
+      : token)
+}
+
 export function formatCode(source: string): string {
   const protectedLines = new Set<number>(), commentedLines = new Set<number>()
   const tokens = /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*|"(?:\\[\s\S]|[^"\\])*(?:"|$)/g
@@ -12,14 +19,14 @@ export function formatCode(source: string): string {
   let previousMergeable = false
   source.split('\n').forEach((line, index) => {
     if(protectedLines.has(index)) { output.push(line); previousMergeable=false; return }
-    const trimmed=line.trim()
+    const trimmed=spaceAfterCommas(line.trim())
     if(!trimmed) { output.push(''); previousMergeable=false; return }
     const leading=line.match(/^[ \t]*/)![0]
     let column=0
     for(const char of leading) column+=char==='\t'?2-column%2:1
     while(levels.length>1&&levels.at(-1)!>column) levels.pop()
     if(levels.at(-1)!<column) levels.push(column)
-    const formatted='  '.repeat(levels.length-1)+line.slice(leading.length).trimEnd()
+    const formatted='  '.repeat(levels.length-1)+trimmed
     if(/^\)+(?:[,;]?$|\.[A-Za-z_]\w*\s*\()/.test(trimmed)&&previousMergeable) {
       output[output.length-1]=output.at(-1)!.replace(/,\s*$/, '')+trimmed
     } else output.push(formatted)

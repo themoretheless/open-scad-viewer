@@ -602,6 +602,11 @@ impl<'a> Evaluator<'a> {
                 }
                 return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
             }
+            "typed_value" => {
+                let value =
+                    self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1)?;
+                return self.check_value_type(value, &expr["type"], path, depth + 1);
+            }
             "typed" => {
                 return Ok(units::check_type(
                     numeric_value(
@@ -617,6 +622,21 @@ impl<'a> Evaluator<'a> {
                     path,
                 )?
                 .into())
+            }
+            "match" => {
+                let (arm, bound) = self.select_match_arm(
+                    &expr["input"],
+                    array(&expr["arms"]),
+                    scope,
+                    path,
+                    depth,
+                )?;
+                return self.resolve(
+                    &expr["arms"][arm]["body"],
+                    &bound,
+                    &format!("{path}/arms/{arm}/body"),
+                    depth + 1,
+                );
             }
             "if" => {
                 let field = if self.evaluate(
@@ -892,6 +912,7 @@ fn unique(items: &[Json]) -> bool {
 }
 
 include!("eval_query.rs");
+include!("eval_match.rs");
 
 #[cfg(test)]
 mod tests {

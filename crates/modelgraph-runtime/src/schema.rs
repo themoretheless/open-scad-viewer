@@ -18,9 +18,19 @@ enum Rule {
     Expr,
     Node,
     Vector(usize),
+    GeometryVector(usize),
+    TypeDesc,
+    TypeDescShape,
+    TypeDescFields,
     Array(&'static Rule, usize, usize),
     ExprRecord,
     SortKey,
+    Pattern,
+    PatternShape,
+    PatternFields,
+    PatternLiteral,
+    RestBinding,
+    MatchArm(bool),
     Frame,
     LoftSection,
     Component,
@@ -316,9 +326,83 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
                 required("descending", Rule::Bool),
             ],
         )?,
+        Rule::Pattern => {
+            pattern_shape(value, path)?;
+            pattern_bindings(value, path, 0, &mut 0)?;
+        }
+        Rule::PatternShape => pattern_shape(value, path)?,
+        Rule::PatternFields => {
+            let fields = value
+                .as_object_mut()
+                .ok_or_else(|| invalid(path, "Expected pattern fields."))?;
+            if fields.len() > 256 {
+                return Err(invalid(path, "Pattern fields exceed 256 entries."));
+            }
+            for (key, pattern) in fields {
+                let child = child_path(path, key);
+                if !valid_id(key) {
+                    return Err(invalid(&child, "Invalid pattern field name."));
+                }
+                pattern_shape(pattern, &child)?;
+            }
+        }
+        Rule::PatternLiteral => {
+            if !pattern_literal(value) {
+                return Err(invalid(
+                    path,
+                    "Pattern literal must be a number, quantity or string constant.",
+                ));
+            }
+            expression(value, path)?;
+        }
+        Rule::RestBinding => {
+            if value != "_" {
+                rule(value, path, Rule::Id)?;
+            }
+        }
+        Rule::MatchArm(geometry) => object(
+            value,
+            path,
+            &[
+                required("pattern", Rule::Pattern),
+                optional("guard", Rule::Expr),
+                if geometry {
+                    INPUT
+                } else {
+                    required("body", Rule::Expr)
+                },
+            ],
+        )?,
         Rule::Expr => expression(value, path)?,
         Rule::Node => node(value, path)?,
         Rule::Vector(size) => array(value, path, Rule::Expr, size, size)?,
+        Rule::GeometryVector(size) => {
+            if value.is_array() {
+                array(value, path, Rule::Expr, size, size)?;
+            } else {
+                expression(value, path)?;
+            }
+        }
+        Rule::TypeDesc => {
+            type_descriptor(value, path)?;
+            type_descriptor_depth(value, path, 0)?;
+        }
+        Rule::TypeDescShape => type_descriptor(value, path)?,
+        Rule::TypeDescFields => {
+            let fields = value
+                .as_object_mut()
+                .ok_or_else(|| invalid(path, "Expected type descriptor fields."))?;
+            if fields.len() > 32 {
+                return Err(invalid(path, "Type descriptor exceeds 32 fields."));
+            }
+            for (name, descriptor) in fields {
+                let child = child_path(path, name);
+                if !valid_id(name) {
+                    return Err(invalid(&child, "Invalid field name."));
+                }
+                type_descriptor(descriptor, &child)?;
+            }
+        }
         Rule::Array(element, min, max) => array(value, path, *element, min, max)?,
         Rule::ExprRecord => {
             let map = value
@@ -571,6 +655,11 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
         return object(value, path, &fields);
     }
     let fields: &[Field] = match discriminator(value, path, "op")? {
+        "match" => &[
+            OP,
+            required("input", Rule::Expr),
+            required("arms", Rule::Array(&Rule::MatchArm(false), 1, 32)),
+        ],
         "text" => &[OP, required("value", Rule::Text)],
         "record" => &[OP, required("fields", Rule::ExprRecord)],
         "field" => &[
@@ -582,6 +671,11 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
             OP,
             required("checks", Rule::Array(&Rule::Expr, 0, 256)),
             required("value", Rule::Expr),
+        ],
+        "typed_value" => &[
+            OP,
+            required("value", Rule::Expr),
+            required("type", Rule::TypeDesc),
         ],
         "typed" => &[
             OP,
@@ -663,6 +757,208 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
     object(value, path, fields)
 }
 
+fn type_descriptor(value: &mut Value, path: &str) -> Result<()> {
+    object(
+        value,
+        path,
+        &[
+            required("name", Rule::Id),
+            optional("args", Rule::Array(&Rule::TypeDescShape, 0, 32)),
+            optional("fields", Rule::TypeDescFields),
+        ],
+    )?;
+    let name = value["name"].as_str().unwrap();
+    let count = value
+        .get("args")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+    if name == "Vec" {
+        if count != 1 || value.get("fields").is_some() {
+            return Err(invalid(
+                path,
+                "Vec requires one type argument and no fields.",
+            ));
+        }
+    } else if ["int", "f32", "f64", "length", "angle", "str"].contains(&name) {
+        if count != 0 || value.get("fields").is_some() {
+            return Err(invalid(
+                path,
+                "Primitive types do not accept arguments or fields.",
+            ));
+        }
+    } else if value.get("fields").is_none() {
+        return Err(invalid(
+            path,
+            "Named record types require a fields descriptor.",
+        ));
+    }
+    Ok(())
+}
+fn type_descriptor_depth(value: &Value, path: &str, depth: usize) -> Result<()> {
+    if depth > 16 {
+        return Err(invalid(path, "Type descriptor depth 16 exceeded."));
+    }
+    if let Some(args) = value.get("args").and_then(Value::as_array) {
+        for (index, arg) in args.iter().enumerate() {
+            type_descriptor_depth(
+                arg,
+                &child_path(&child_path(path, "args"), index),
+                depth + 1,
+            )?;
+        }
+    }
+    if let Some(fields) = value.get("fields").and_then(Value::as_object) {
+        for (name, field) in fields {
+            type_descriptor_depth(
+                field,
+                &child_path(&child_path(path, "fields"), name),
+                depth + 1,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn pattern_literal(value: &Value) -> bool {
+    value.is_number()
+        || matches!(value["op"].as_str(), Some("text" | "quantity"))
+        || (value["op"] == "negate"
+            && pattern_literal(&value["value"])
+            && value["value"]["op"] != "text")
+}
+
+fn pattern_shape(value: &mut Value, path: &str) -> Result<()> {
+    let fields: &[Field] = match discriminator(value, path, "kind")? {
+        "wildcard" => &[KIND],
+        "bind" => &[KIND, required("name", Rule::Id)],
+        "literal" => &[KIND, required("value", Rule::PatternLiteral)],
+        "as" => &[
+            KIND,
+            required("name", Rule::Id),
+            required("pattern", Rule::PatternShape),
+        ],
+        "or" => &[
+            KIND,
+            required("patterns", Rule::Array(&Rule::PatternShape, 2, 32)),
+        ],
+        "range" => &[
+            KIND,
+            required("start", Rule::Expr),
+            required("end", Rule::Expr),
+            required("inclusive", Rule::Bool),
+        ],
+        "list" => &[
+            KIND,
+            required("prefix", Rule::Array(&Rule::PatternShape, 0, 256)),
+            required("suffix", Rule::Array(&Rule::PatternShape, 0, 256)),
+            optional("rest", Rule::RestBinding),
+        ],
+        "record" => &[
+            KIND,
+            required("fields", Rule::PatternFields),
+            required("exact", Rule::Bool),
+        ],
+        "type" => &[
+            KIND,
+            required(
+                "name",
+                Rule::Enum(&[
+                    "int", "f32", "f64", "str", "length", "angle", "list", "record",
+                ]),
+            ),
+            required("pattern", Rule::PatternShape),
+        ],
+        kind => return Err(invalid(path, format!("Unknown pattern kind {kind}."))),
+    };
+    object(value, path, fields)
+}
+
+fn pattern_bindings(
+    pattern: &Value,
+    path: &str,
+    depth: usize,
+    count: &mut usize,
+) -> Result<std::collections::HashSet<String>> {
+    use std::collections::HashSet;
+    *count += 1;
+    if depth > 16 || *count > 256 {
+        return Err(invalid(path, "Pattern depth 16 or size 256 exceeded."));
+    }
+    let mut bindings = HashSet::new();
+    let mut merge = |names: HashSet<String>| -> Result<()> {
+        for name in names {
+            if !bindings.insert(name.clone()) {
+                return Err(invalid(path, format!("Duplicate pattern binding {name}.")));
+            }
+        }
+        Ok(())
+    };
+    match pattern["kind"].as_str().unwrap_or("") {
+        "bind" => {
+            merge(HashSet::from([pattern["name"]
+                .as_str()
+                .unwrap()
+                .to_owned()]))?;
+        }
+        "as" | "type" => {
+            merge(pattern_bindings(
+                &pattern["pattern"],
+                &child_path(path, "pattern"),
+                depth + 1,
+                count,
+            )?)?;
+            if pattern["kind"] == "as" {
+                merge(HashSet::from([pattern["name"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned()]))?;
+            }
+        }
+        "or" => {
+            let mut previous = None;
+            for (index, child) in pattern["patterns"].as_array().unwrap().iter().enumerate() {
+                let child = pattern_bindings(child, &child_path(path, index), depth + 1, count)?;
+                if previous.as_ref().is_some_and(|names| names != &child) {
+                    return Err(invalid(path, "Every alternative must bind the same names."));
+                }
+                previous = Some(child);
+            }
+            merge(previous.unwrap_or_default())?;
+        }
+        "list" => {
+            for field in ["prefix", "suffix"] {
+                for (index, child) in pattern[field].as_array().unwrap().iter().enumerate() {
+                    merge(pattern_bindings(
+                        child,
+                        &child_path(&child_path(path, field), index),
+                        depth + 1,
+                        count,
+                    )?)?;
+                }
+            }
+            if let Some(name) = pattern
+                .get("rest")
+                .and_then(Value::as_str)
+                .filter(|name| *name != "_")
+            {
+                merge(HashSet::from([name.to_owned()]))?;
+            }
+        }
+        "record" => {
+            for (name, child) in pattern["fields"].as_object().unwrap() {
+                merge(pattern_bindings(
+                    child,
+                    &child_path(path, name),
+                    depth + 1,
+                    count,
+                )?)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(bindings)
+}
+
 fn function(value: &mut Value, path: &str) -> Result<()> {
     let fields: &[Field] = match discriminator(value, path, "kind")? {
         "scalar" | "value" => &[ID, KIND, PARAMETERS, required("body", Rule::Expr)],
@@ -715,6 +1011,12 @@ fn sketch_constraint(value: &mut Value, path: &str) -> Result<()> {
 
 fn node(value: &mut Value, path: &str) -> Result<()> {
     let fields: &[Field] = match discriminator(value, path, "op")? {
+        "match" => &[
+            ID,
+            OP,
+            required("value", Rule::Expr),
+            required("arms", Rule::Array(&Rule::MatchArm(true), 1, 32)),
+        ],
         "gear" => &[
             ID,
             OP,
@@ -844,7 +1146,7 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
             required("constraints", Rule::Array(&Rule::SketchConstraint, 0, 48)),
             bool_default("allow_underconstrained", false),
         ],
-        "rectangle" => &[ID, OP, required("size", Rule::Vector(2)), CENTER],
+        "rectangle" => &[ID, OP, required("size", Rule::GeometryVector(2)), CENTER],
         "circle" | "sphere" => &[ID, OP, RADIUS],
         "polygon" => &[
             ID,
@@ -877,9 +1179,11 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
             required("index", Rule::Id),
             INPUT,
         ],
-        "box" => &[ID, OP, required("size", Rule::Vector(3)), CENTER],
+        "box" => &[ID, OP, required("size", Rule::GeometryVector(3)), CENTER],
         "cylinder" => &[ID, OP, RADIUS, HEIGHT, CENTER],
-        "translate" | "rotate" | "scale" => &[ID, OP, required("vector", Rule::Vector(3)), INPUT],
+        "translate" | "rotate" | "scale" => {
+            &[ID, OP, required("vector", Rule::GeometryVector(3)), INPUT]
+        }
         "difference" => &[
             ID,
             OP,
@@ -1003,5 +1307,79 @@ mod tests {
         input.as_object_mut().unwrap().remove("type_policy");
         input["assertions"] = json!([{"condition":1,"message":"😀".repeat(129)}]);
         assert!(validate(input).is_err());
+    }
+    #[test]
+    fn pattern_schema_rejects_ambiguous_bindings_and_unknown_keys() {
+        for pattern in [
+            json!({"kind":"list","prefix":[{"kind":"bind","name":"x"},{"kind":"bind","name":"x"}],"suffix":[]}),
+            json!({"kind":"as","name":"x","pattern":{"kind":"bind","name":"x"}}),
+            json!({"kind":"or","patterns":[{"kind":"bind","name":"x"},{"kind":"wildcard"}]}),
+            json!({"kind":"wildcard","ignored":1}),
+            json!({"kind":"literal","value":{"local":"x"}}),
+            json!({"kind":"type","name":"unknown","pattern":{"kind":"wildcard"}}),
+            json!({"kind":"list","prefix":[],"suffix":[],"rest":"bad-name"}),
+        ] {
+            let input = document(
+                json!({"id":"shape","op":"sphere","radius":{"op":"match","input":1,"arms":[{"pattern":pattern,"body":2}]}}),
+            );
+            assert!(validate(input).is_err());
+        }
+    }
+
+    #[test]
+    fn pattern_schema_enforces_arms_nesting_and_total_size_limits() {
+        let valid = json!({"pattern":{"kind":"wildcard"},"body":1});
+        let input = document(
+            json!({"id":"shape","op":"sphere","radius":{"op":"match","input":1,"arms":vec![valid;33]}}),
+        );
+        assert!(validate(input).is_err());
+        let mut deep = json!({"kind":"wildcard"});
+        for _ in 0..18 {
+            deep = json!({"kind":"type","name":"int","pattern":deep});
+        }
+        let wide = json!({"kind":"list","prefix":vec![json!({"kind":"wildcard"});256],"suffix":[]});
+        for pattern in [deep, wide] {
+            let input = document(
+                json!({"id":"shape","op":"sphere","radius":{"op":"match","input":1,"arms":[{"pattern":pattern,"body":2}]}}),
+            );
+            assert!(validate(input).is_err());
+        }
+    }
+    #[test]
+    fn type_descriptors_are_strict_and_bounded() {
+        let mut deep = json!({"name":"int"});
+        for _ in 0..18 {
+            deep = json!({"name":"Vec","args":[deep]});
+        }
+        let mut wide = json!({"name":"Wide","fields":{}});
+        for index in 0..33 {
+            wide["fields"][&format!("f{index}")] = json!({"name":"int"});
+        }
+        for descriptor in [
+            deep,
+            wide,
+            json!({"name":"Vec"}),
+            json!({"name":"Unknown"}),
+            json!({"name":"str","fields":{}}),
+            json!({"name":"int","args":[{"name":"int"}]}),
+            json!({"name":"int","unknown":1}),
+            json!({"name":"Point","fields":{"bad-name":{"name":"int"}}}),
+        ] {
+            let input = document(
+                json!({"id":"shape","op":"sphere","radius":{"op":"typed_value","value":1,"type":descriptor}}),
+            );
+            assert!(validate(input).is_err());
+        }
+    }
+
+    #[test]
+    fn dynamic_vectors_do_not_relax_numeric_or_other_surface_shapes() {
+        for node in [
+            json!({"id":"shape","op":"sphere","radius":{"op":"add","args":{"op":"list","items":[1,2]}}}),
+            json!({"id":"shape","op":"mirror","input":"other","normal":{"op":"list","items":[1,0,0]}}),
+            json!({"id":"shape","op":"polygon","points":{"op":"list","items":[]}}),
+        ] {
+            assert!(validate(document(node)).is_err());
+        }
     }
 }

@@ -8,6 +8,10 @@ expand = x => x + 1mm
 body = circle(expand(radius)).extrude(height)
 show body
 `
+it.each(['[2mm, 3mm, 4mm]', 'x: 2mm, z: 4mm', 'vector: [2, 3, 4]'])('moves geometry with the same relative displacement as translate: %s',args=>{
+ const source=`// @modelgraph-text/1\nshow box([1,2,3]).move(${args})`
+ expect(compileModelGraphText(source).source).toBe(compileModelGraphText(source.replace('.move(','.translate(')).source)
+})
 it('lowers parameters, units, closures and pipelines and preserves slider spans',()=>{
  const c=compileModelGraphText(source)
  expect(c.document.parameters[0]).toMatchObject({id:'radius',value:20,unit:'mm',min:1,max:50})
@@ -41,4 +45,9 @@ it('makes direct repeat-count parameters integer sliders',()=>{
  const c=compileModelGraphText('// @modelgraph-text/1\nparam count = 3 range 1..10\nbody = repeat(count, i => sphere(1).translate([i*3,0,0]))')
  expect(c.customizer[0]!.step).toBe(1)
  expect(c.document.parameters[0]!.integer).toBe(true)
+})
+
+it("accepts rect as the rectangle primitive",()=>{
+ const source="// @modelgraph-text/1\nshow rect([12,8]).move([2,3,0]).extrude(4)"
+ expect(compileModelGraphText(source).source).toBe(compileModelGraphText(source.replace("rect(","rectangle(")).source)
 })

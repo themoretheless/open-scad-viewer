@@ -10,6 +10,29 @@ import { sha256Hex } from '../core/sha256'
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/)
 const unit = z.enum(['mm', 'cm', 'm', 'in', 'deg', 'rad'])
 const number = z.number().finite().min(-1_000_000).max(1_000_000)
+export type CheckedValueType = {name:string;args?:CheckedValueType[];fields?:Record<string,CheckedValueType>}
+const checkedValueTypeSchema: z.ZodType<CheckedValueType> = z.lazy(()=>z.object({name:id,args:z.array(checkedValueTypeSchema).max(16).optional(),fields:z.record(id,checkedValueTypeSchema).optional()}).strict())
+export type MatchPattern =
+  | {kind:'wildcard'}
+  | {kind:'bind';name:string}
+  | {kind:'literal';value:Expression}
+  | {kind:'as';name:string;pattern:MatchPattern}
+  | {kind:'or';patterns:MatchPattern[]}
+  | {kind:'range';start:Expression;end:Expression;inclusive:boolean}
+  | {kind:'list';prefix:MatchPattern[];suffix:MatchPattern[];rest?:string}
+  | {kind:'record';fields:Record<string,MatchPattern>;exact:boolean}
+  | {kind:'type';name:'int'|'f32'|'f64'|'str'|'length'|'angle'|'list'|'record';pattern:MatchPattern}
+export const matchPatternSchema: z.ZodType<MatchPattern> = z.lazy(()=>z.discriminatedUnion('kind',[
+  z.object({kind:z.literal('wildcard')}).strict(),
+  z.object({kind:z.literal('bind'),name:id}).strict(),
+  z.object({kind:z.literal('literal'),value:expressionSchema}).strict(),
+  z.object({kind:z.literal('as'),name:id,pattern:matchPatternSchema}).strict(),
+  z.object({kind:z.literal('or'),patterns:z.array(matchPatternSchema).min(1).max(32)}).strict(),
+  z.object({kind:z.literal('range'),start:expressionSchema,end:expressionSchema,inclusive:z.boolean()}).strict(),
+  z.object({kind:z.literal('list'),prefix:z.array(matchPatternSchema).max(256),suffix:z.array(matchPatternSchema).max(256),rest:z.union([id,z.literal('_')]).optional()}).strict(),
+  z.object({kind:z.literal('record'),fields:z.record(id,matchPatternSchema),exact:z.boolean()}).strict(),
+  z.object({kind:z.literal('type'),name:z.enum(['int','f32','f64','str','length','angle','list','record']),pattern:matchPatternSchema}).strict(),
+]))
 export type Expression =
   { op: 'checked'; checks: Expression[]; value: Expression } |
   { op: 'typed'; type: ModelGraphNumericType; value: Expression } |
@@ -33,6 +56,8 @@ export type Expression =
   | number | { param: string } | { local: string }
   | { op: 'add' | 'subtract' | 'multiply' | 'divide' | 'min' | 'max' | 'pow' | 'mod' | 'lt' | 'le' | 'eq' | 'and' | 'or'; args: [Expression, Expression] }
   | { op: 'negate' | 'abs' | 'sqrt' | 'sin' | 'cos' | 'floor' | 'ceil' | 'not'; value: Expression }
+  | { op: 'typed_value'; value:Expression; type:CheckedValueType }
+  | { op: 'match'; input:Expression; arms:{pattern:MatchPattern;guard?:Expression;body:Expression}[] }
   | { op: 'if'; condition: Expression; then: Expression; else: Expression }
   | { op: 'let'; name: string; value: Expression; body: Expression }
   | { op: 'call'; function: string; args: Record<string, Expression> }
@@ -61,6 +86,8 @@ export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
     z.object({ op: z.literal('length'), input: expressionSchema }).strict(),
     z.object({ op: z.enum(['add', 'subtract', 'multiply', 'divide', 'min', 'max', 'pow', 'mod', 'lt', 'le', 'eq', 'and', 'or']), args: z.tuple([expressionSchema, expressionSchema]) }).strict(),
     z.object({ op: z.enum(['negate', 'abs', 'sqrt', 'sin', 'cos', 'floor', 'ceil', 'not']), value: expressionSchema }).strict(),
+    z.object({op:z.literal('typed_value'),value:expressionSchema,type:checkedValueTypeSchema}).strict(),
+    z.object({op:z.literal('match'),input:expressionSchema,arms:z.array(z.object({pattern:matchPatternSchema,guard:expressionSchema.optional(),body:expressionSchema}).strict()).min(1).max(32)}).strict(),
     z.object({ op: z.literal('if'), condition: expressionSchema, then: expressionSchema, else: expressionSchema }).strict(),
     z.object({ op: z.literal('let'), name: id, value: expressionSchema, body: expressionSchema }).strict(),
     z.object({ op: z.literal('call'), function: id, args: z.record(id, expressionSchema) }).strict(),
@@ -98,21 +125,22 @@ const node = z.discriminatedUnion('op', [
   z.object({ id, op: z.literal('loft'), profile: z.array(vector2).min(3).max(64), sections: z.array(z.object({ z: scalar, scale: vector2, offset: vector2 }).strict()).min(2).max(32) }).strict(),
   z.object({ id, op: z.literal('assembly'), components: z.array(z.object({ id, input: id, anchors: z.array(z.object({ id, origin: vector, rotation: vector }).strict()).max(32), placement: frameSchema.optional(), mate: z.object({ component: id, anchor: id, own_anchor: id, gap: scalar, rotation: vector, joint: z.object({ kind: z.enum(['revolute', 'slider']), position: scalar, min: scalar, max: scalar }).strict().optional() }).strict().optional() }).strict()).min(1).max(32) }).strict(),
   z.object({ id, op: z.literal('sketch'), points: z.array(z.object({ id, position: vector2 }).strict()).min(3).max(16), boundary: z.array(id).min(3).max(16), constraints: z.array(sketchConstraint).max(48), allow_underconstrained: z.boolean().default(false) }).strict(),
-  z.object({ id, op: z.literal('rectangle'), size: vector2, center: z.boolean().default(false) }).strict(),
+  z.object({ id, op: z.literal('rectangle'), size: z.union([vector2,scalar]), center: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('circle'), radius: scalar }).strict(),
   z.object({ id, op: z.literal('polygon'), points: z.array(vector2).min(3).max(256) }).strict(),
   z.object({ id, op: z.literal('extrude'), input: id, height: scalar, center: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('revolve'), input: id, angle: scalar }).strict(),
   z.object({ id, op: z.literal('evaluate'), value: scalar }).strict(),
   z.object({ id, op: z.literal('call'), function: id, args: z.record(id, scalar) }).strict(),
+  z.object({id,op:z.literal('match'),value:scalar,arms:z.array(z.object({pattern:matchPatternSchema,guard:scalar.optional(),input:id}).strict()).min(1).max(32)}).strict(),
   z.object({ id, op: z.literal('if'), condition: scalar, then: id, else: id }).strict(),
   z.object({ id, op: z.literal('collect'), values: scalar, binding: id, input: id }).strict(),
   z.object({ id, op: z.literal('group'), inputs: z.array(id).max(256) }).strict(),
   z.object({ id, op: z.literal('map'), count: scalar, index: id, input: id }).strict(),
-  z.object({ id, op: z.literal('box'), size: vector, center: z.boolean().default(false) }).strict(),
+  z.object({ id, op: z.literal('box'), size: z.union([vector,scalar]), center: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('sphere'), radius: scalar }).strict(),
   z.object({ id, op: z.literal('cylinder'), radius: scalar, height: scalar, center: z.boolean().default(false) }).strict(),
-  ...(['translate', 'rotate', 'scale'] as const).map(op => z.object({ id, op: z.literal(op), vector, input: id }).strict()),
+  ...(['translate', 'rotate', 'scale'] as const).map(op => z.object({ id, op: z.literal(op), vector:z.union([vector,scalar]), input: id }).strict()),
   ...(['union', 'intersection'] as const).map(op => z.object({ id, op: z.literal(op), inputs: z.array(id).min(1).max(32) }).strict()),
   z.object({ id, op: z.literal('difference'), base: id, subtract: z.array(id).min(1).max(32) }).strict(),
 ])
