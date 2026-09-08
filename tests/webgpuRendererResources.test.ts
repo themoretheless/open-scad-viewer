@@ -341,7 +341,7 @@ describe('parameter geometry animation', () => {
     expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(latest.vertices)
     expect(animation.meshes[0].morph).toBeUndefined()
   })
-  it('skips incompatible topology and honors reduced motion', () => {
+  it('retains exact destination geometry for topology changes and honors reduced motion', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
     const { renderer, internal } = harness()
     const first = { ...fixture(), entityId: 'entity:part' as const }
@@ -354,4 +354,58 @@ describe('parameter geometry animation', () => {
     renderer.setMeshes([reduced], { animate: true })
     expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(reduced.vertices)
   })
+})
+
+
+it('dissolves changed topology, does not stop on hover, and releases retired buffers', () => {
+  vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+  try {
+    const { renderer, internal } = harness()
+    const state = renderer as unknown as {
+      geometryFade: { started: number } | null
+      geometryGhosts: unknown[]
+      advanceGeometryAnimation(now: number, finish?: boolean): boolean
+      updateHoverAt(x: number, y: number): void
+    }
+    renderer.setMeshes([fixture()])
+    const old = internal.meshes[0].vb
+    renderer.setMeshes([{ ...fixture(10), indices: new Uint32Array([2,1,0]) }], { animate: true })
+    const start = state.geometryFade!.started
+    expect(old.destroyCalls).toBe(0)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(0)
+    state.updateHoverAt(0, 0)
+    expect(state.geometryFade).not.toBeNull()
+    state.advanceGeometryAnimation(start + 90)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBeCloseTo(0.5)
+    state.advanceGeometryAnimation(start + 181)
+    expect(old.destroyCalls).toBe(1)
+    expect(state.geometryGhosts).toHaveLength(0)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(1)
+    renderer.destroy()
+    expect(old.destroyCalls).toBe(1)
+  } finally { vi.unstubAllGlobals() }
+})
+
+it('animates transform-only changes and continues through quality publications', () => {
+  vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+  try {
+    const { renderer, internal } = harness()
+    const state = renderer as unknown as {
+      meshes: Array<{ morph?: { started: number } }>
+      advanceGeometryAnimation(now: number): boolean
+    }
+    const first = fixture()
+    renderer.setMeshes([first])
+    const moved = { ...fixture(), transform: new Float32Array(first.transform) }
+    moved.transform[3] = 20
+    renderer.setMeshes([moved], { animate: true })
+    const start = state.meshes[0].morph!.started
+    state.advanceGeometryAnimation(start + 90)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBeCloseTo(10)
+    renderer.setMeshes([moved])
+    expect(state.meshes[0].morph).toBeDefined()
+    state.advanceGeometryAnimation(start + 1000)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBe(20)
+    expect(moved.transform[3]).toBe(20)
+  } finally { vi.unstubAllGlobals() }
 })

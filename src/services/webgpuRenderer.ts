@@ -1,3 +1,4 @@
+import { geometryTransformTransition } from './geometryTransformTransition'
 import {remapNativeFaceSelection} from './nativeFaceSelection'
 /**
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
@@ -190,7 +191,7 @@ struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
 
 interface GMesh {
   entityId?: MeshData['entityId']
-  morph?: { from: Float32Array; current: Float32Array; started: number }
+  morph?: { from: Float32Array; current: Float32Array; started: number; matrix?: (t: number) => Mat4; currentMatrix?: Mat4 }
   nativeGeometry?: MeshData['nativeGeometry']
   faceIdsAuthoritative?: boolean
   assetId?: GeometryAssetId
@@ -282,6 +283,8 @@ export class WebGPURenderer {
   private depth: GPUTexture | null = null
 
   private meshes: GMesh[] = []
+  private geometryFade: { started: number; progress: number } | null = null
+  private geometryGhosts: Array<{ meshes: GMesh[]; started: number; alphas: number[] }> = []
   private sceneAabbIndex: SceneAabbIndex = buildSceneAabbIndex([])
   private sceneAabbIndexDirty = false
   private gridVB: GPUBuffer | null = null
@@ -712,10 +715,16 @@ export class WebGPURenderer {
     const metrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
     const previous = this.meshes
     const previousSet = new Set(previous)
-    const animate = options.animate && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
-      && meshes.reduce((bytes, mesh) => bytes + mesh.vertices.byteLength, 0) <= 8 * 1024 * 1024
+    const animate = (options.animate || this.geometryFade !== null || this.meshes.some(mesh => mesh.morph)) && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
+
     const previousById = new Map(previous.filter(mesh => mesh.entityId).map(mesh => [mesh.entityId, mesh]))
     const started = performance.now()
+    const morphBudget = meshes.reduce((bytes, mesh) => bytes + mesh.vertices.byteLength, 0) <= 8 * 1024 * 1024
+    const dissolve = animate && (this.geometryFade !== null || !morphBudget || meshes.length !== previous.length || meshes.some(mesh => {
+      const old = mesh.entityId ? previousById.get(mesh.entityId) : undefined
+      return !old || old.vertices.length !== mesh.vertices.length || !sameTypedArray(old.indices, mesh.indices)
+        || !geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, mesh.transform)
+    }))
     const reusableByAsset = new Map<GeometryAssetId, GMesh[]>()
     for (const mesh of previous) {
       if (!mesh.assetId) continue
@@ -738,12 +747,12 @@ export class WebGPURenderer {
         const inverseTransform = invert(transform)
 
         const old = m.entityId ? previousById.get(m.entityId) : undefined
-        const morphFrom = animate && old && old.vertices.length === m.vertices.length
-          && sameTypedArray(old.indices, m.indices) && sameTypedArray(old.transform, m.transform)
-          && !sameTypedArray(old.morph?.current ?? old.vertices, m.vertices)
+        const matrix = animate && !dissolve && old ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
+        const morphFrom = animate && !dissolve && old && matrix
+          && (!sameTypedArray(old.morph?.current ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
           ? new Float32Array(old.morph?.current ?? old.vertices) : null
         // Animated geometry must own its buffer: instances may have different start shapes.
-        const candidates = !morphFrom && m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
+        const candidates = !animate && m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
         // Prefer the already verified views staged earlier in this publication.
         // A newly built shared asset needs one content comparison, not one per instance.
         const reusable = candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
@@ -759,7 +768,7 @@ export class WebGPURenderer {
           if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
           if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
           ub = dev.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-          const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
+          const initialAlpha = dissolve ? 0 : effectiveDisplayAlpha(m.color[3], this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
           if (ownsGeometryBuffers) {
             metrics.geometryBuffersCreated += 2
@@ -787,8 +796,8 @@ export class WebGPURenderer {
           const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
           next.push({
             entityId: m.entityId,
-            morph: morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started } : undefined,
-            assetId: morphFrom ? undefined : m.geometryAssetId,
+            morph: morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined,
+            assetId: animate ? undefined : m.geometryAssetId,
             nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
             edgeIB: reuseEdges ? reusable.edgeIB : null,
@@ -830,6 +839,7 @@ export class WebGPURenderer {
     }
 
     const nextBounds = this.combineBounds(next.map(mesh => mesh.worldBounds))
+    const previousVisible = new Set(previous.filter((_, index) => this.isMeshVisible(index)))
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.clearDrawCaches()
@@ -854,7 +864,13 @@ export class WebGPURenderer {
     this.sourceHighlightId = null
     this.clearSourceHighlightOverlayBuffers()
     this.emitMeasurementChange()
-    this.destroyMeshes(previous, retainedGeometryBuffers)
+    if (dissolve) {
+      this.geometryGhosts.push({ meshes: previous, started, alphas: previous.map(mesh => previousVisible.has(mesh) ? mesh.styleAlpha : 0) })
+      this.geometryFade = { started, progress: 0 }
+    } else {
+      this.destroyMeshes(previous, retainedGeometryBuffers)
+      this.geometryFade = null
+    }
     if (this.displayMode === 'edges') {
       for (const mesh of next) this.ensureEdgeBuffer(mesh)
     }
@@ -1376,8 +1392,9 @@ export class WebGPURenderer {
       const mesh = this.meshes[index]
       const selected = this.usesObjectSelectionStyle(index) ? 1 : 0
       const hovered = this.usesObjectHoverStyle(index) && !selected ? 1 : 0
-      const alpha = effectiveDisplayAlpha(mesh.color[3], this.displayMode)
-      const edgeOpacity = selected || hovered ? 1 : this.displayMode === 'edges' ? 0.7 : 0
+      const progress = this.geometryFade?.progress ?? 1
+      const alpha = effectiveDisplayAlpha(mesh.color[3], this.displayMode) * progress * progress * (3 - 2 * progress)
+      const edgeOpacity = (selected || hovered ? 1 : this.displayMode === 'edges' ? 0.7 : 0) * progress * progress * (3 - 2 * progress)
       mesh.alpha = alpha
       if (mesh.styleAlpha === alpha && mesh.styleSelected === selected
         && mesh.styleEdge === edgeOpacity && mesh.styleHovered === hovered) continue
@@ -1613,6 +1630,7 @@ export class WebGPURenderer {
       pass.draw(this.measurementVC)
     }
 
+    const transitioning = this.geometryGhosts.length > 0 || this.meshes.some(mesh => mesh.morph)
     this.viewFrustum.update(viewProjection)
     this.opaqueDraws.length = this.edgeDraws.length = 0
     this.transparentSort.begin()
@@ -1624,16 +1642,18 @@ export class WebGPURenderer {
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
       if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
     }
-    if (!this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws)) {
+    if (transitioning || !this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws)) {
       this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws)
     }
 
     pass.setPipeline(this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
+    const ghostMeshes = this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+    ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
     const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
     this.transparentDraws.length = 0
-    for (const { index } of transparentOrder) this.transparentDraws.push(this.meshes[index])
-    if (!this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws)) {
+    for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
+    if (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws)) {
       for (const g of this.transparentDraws) {
         pass.setBindGroup(1, g.bg)
         pass.setVertexBuffer(0, g.vb)
@@ -1658,21 +1678,21 @@ export class WebGPURenderer {
       }
     }
 
-    if (!this.meshes.some(mesh => mesh.morph) && this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceFaceSlot.buffer)
       pass.draw(this.sourceFaceSlot.count)
     }
 
-    if (!this.meshes.some(mesh => mesh.morph) && this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionFaceSlot.buffer)
       pass.draw(this.selectionFaceSlot.count)
     }
 
-    if (!this.edgeInstances.draw(pass, dev, this.instanceBGL, this.instanceEdgePipe, this.sceneBG, this.edgeDraws, true)) {
+    if (transitioning || !this.edgeInstances.draw(pass, dev, this.instanceBGL, this.instanceEdgePipe, this.sceneBG, this.edgeDraws, true)) {
       this.edgeBundle.draw(pass, dev, this.fmt, this.edgePipe, this.sceneBG, this.edgeDraws, true)
     }
 
@@ -1688,21 +1708,21 @@ export class WebGPURenderer {
       }
     }
 
-    if (!this.meshes.some(mesh => mesh.morph) && this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceLineSlot.buffer)
       pass.draw(this.sourceLineSlot.count)
     }
 
-    if (!this.meshes.some(mesh => mesh.morph) && this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionLineSlot.buffer)
       pass.draw(this.selectionLineSlot.count)
     }
 
-    if (!this.meshes.some(mesh => mesh.morph) && this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
       pass.setPipeline(this.deepSelectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.deepSelectionLineSlot.buffer)
@@ -1726,11 +1746,35 @@ export class WebGPURenderer {
 
   private advanceGeometryAnimation(now: number, finish = false) {
     let active = false
+    if (this.geometryFade) {
+      if (finish || now - this.geometryFade.started >= 180) this.geometryFade = null
+      else { this.geometryFade.progress = Math.max(0, (now - this.geometryFade.started) / 180); active = true }
+      this.updateMeshStyles()
+    }
+    for (const ghost of this.geometryGhosts) {
+      const t = finish ? 1 : Math.min(1, Math.max(0, (now - ghost.started) / 180))
+      if (t === 1) this.destroyMeshes(ghost.meshes)
+      else {
+        active = true
+        ghost.meshes.forEach((mesh, i) => {
+          mesh.alpha = ghost.alphas[i] * (1 - t*t*(3-2*t))
+          this.dev?.queue.writeBuffer(mesh.ub, 144, new Float32Array([mesh.alpha, 0, 0, 0]))
+        })
+      }
+    }
+    this.geometryGhosts = this.geometryGhosts.filter(ghost => !finish && now - ghost.started < 180)
     for (const mesh of this.meshes) {
       const morph = mesh.morph
       if (!morph) continue
       const t = finish ? 1 : Math.min(1, Math.max(0, (now - morph.started) / 180))
       const eased = t * t * (3 - 2 * t)
+      if (morph.matrix) {
+        morph.currentMatrix = morph.matrix(eased)
+        const uniform = new Float32Array(32), inverse = invert(morph.currentMatrix)
+        for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) uniform[column*4+row] = morph.currentMatrix[row*4+column]
+        uniform.set(inverse, 16)
+        this.dev?.queue.writeBuffer(mesh.ub, 0, uniform)
+      }
       if (t === 1) {
         this.dev?.queue.writeBuffer(mesh.vb, 0, mesh.vertices)
         mesh.morph = undefined
@@ -1854,7 +1898,7 @@ export class WebGPURenderer {
   ): DepthCandidate<PickHit>[] {
     // Picking uses the authoritative destination BVH. Finish the visual transition
     // before interaction so a transient display shape never supplies CAD identity.
-    if (this.meshes.some(mesh => mesh.morph)) {
+    if (this.geometryFade || this.geometryGhosts.length || this.meshes.some(mesh => mesh.morph)) {
       this.advanceGeometryAnimation(performance.now(), true)
       this.requestRender(false)
     }
@@ -1996,6 +2040,8 @@ export class WebGPURenderer {
   }
 
   private updateHoverAt(clientX: number, clientY: number) {
+    // A passing pointer must not prematurely finish parameter animation.
+    if (this.geometryFade || this.geometryGhosts.length || this.meshes.some(mesh => mesh.morph)) return
     const hit = this.findHit(clientX, clientY)
     const index = hit?.meshIndex ?? null
     const styleChanged = index !== this.hovered
@@ -2509,6 +2555,9 @@ export class WebGPURenderer {
     this.cameraHistory.clear()
 
     this.clearDrawCaches()
+    for (const ghost of this.geometryGhosts) this.destroyMeshes(ghost.meshes)
+    this.geometryGhosts = []
+    this.geometryFade = null
     this.destroyMeshes(this.meshes)
     this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []
