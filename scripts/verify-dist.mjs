@@ -39,6 +39,7 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 480_000) {
 }
 // Direct NURBS text compilation and mesh publication add ~28 kB of host code.
 // Typed block functions and generic records add ~21 kB across UI and worker.
-const totalBudget = 2_200_000 + 480_000 + 30_000 + 30_000
+// Editor folding and indentation guides add about 7 kB of UI code and styles.
+const totalBudget = 2_200_000 + 480_000 + 30_000 + 30_000 + 10_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

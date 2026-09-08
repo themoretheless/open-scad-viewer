@@ -131,7 +131,7 @@ r = get_first(1, 3)
 show box([r.x1,r.x2,r.x3])`)
  expect(c.source).toContain('cube([3,5,55]')
 })
-it('supports column signatures, blank lines, local colon bindings and direct returns',()=>{
+it('supports column signatures, blank lines, local bindings and direct returns',()=>{
  const c=compile(`fn get_first[T]
     a: int,
     b: T
@@ -139,7 +139,7 @@ it('supports column signatures, blank lines, local colon bindings and direct ret
     x1: T,
     x2: int
 
-    sum: a + 2
+    sum = a + 2
     ret
         x1: b,
         x2: sum
@@ -176,3 +176,29 @@ it('builds the indented functions example as a solid',async()=>{
  const built=await parseOpenSCAD(text)
  expect(built.volume).toBeCloseTo(2400)
 })
+it('accepts colon parameters with units and preserves editable spans',()=>{
+ const text=header+'param size: -2mm range -5mm..5mm\nshow sphere(size + 4mm)'
+ const c=compileModelGraphText(text),p=c.customizer[0]!
+ expect(text.slice(p.valueStart,p.valueEnd)).toBe('-2')
+ expect(c.source).toContain('sphere(r=2')
+})
+it('supports no-result functions ending at dedent and calls inside functions',()=>{
+ const c=compile(`fn helper width: f64, depth: f64
+    b = width + depth
+
+fn outer size: f64
+    helper(size, size)
+    ret
+
+outer(2)
+show sphere(1)`)
+ expect(c.source).toContain('sphere(r=1')
+})
+it('allows an unused no-result declaration at end of source',()=>{
+ expect(compile('show sphere(1)\nfn helper x: int\n    b = x + 1').source).toContain('sphere(r=1')
+})
+it.each([
+ 'fn f x: int\n    ret 2\nf(1)\nshow sphere(1)',
+ 'fn f x: int\n    b = x\nr = f(1)\nshow sphere(1)',
+ 'fn f x: int\n    b = x\nf(1.5)\nshow sphere(1)',
+])('rejects invalid no-result use: %s',text=>expect(()=>compile(text)).toThrow())

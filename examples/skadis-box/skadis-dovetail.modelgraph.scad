@@ -2,19 +2,19 @@
 // SKADIS bottom-insert asymmetric dovetail. Dimensions in mm.
 // part: 0 assembly, 1 box upright, 2 hook on its flat side.
 segments 40
-param part = 0 range 0..2
-param width = 120 range 60..300
-param depth = 75 range 30..200
-param height = 80 range 50..250
-param wall = 3 range 2..6
-param floor_thickness = 4 range 2..8
-param back_thickness = 7 range 7..12
-param corner_radius = 5 range 3..12
-param hook_count = 2 range 2..5
-param hook_spacing_steps = 2 range 1..6
-param mount_top_offset = 14 range 14..30
-param fit = 0.25 range 0.15..0.4
-param friction_ridge_enabled = 1 range 0..1
+param part: 0 range 0..2
+param width: 120 range 60..300
+param depth: 75 range 30..200
+param height: 80 range 50..250
+param wall: 3 range 2..6
+param floor_thickness: 4 range 2..8
+param back_thickness: 7 range 7..12
+param corner_radius: 5 range 3..12
+param hook_count: 2 range 2..5
+param hook_spacing_steps: 2 range 1..6
+param mount_top_offset: 14 range 14..30
+param fit: 0.25 range 0.15..0.4
+param friction_ridge_enabled: 1 range 0..1
 
 hook_width = 4.4
 hook_spacing = 40 * hook_spacing_steps
@@ -33,8 +33,8 @@ validate part % 1 |> equalTo(0)
 validate friction_ridge_enabled % 1 |> equalTo(0)
 
 // Rounded rectangle with named inputs and result.
-roundedRectangle = fn width: f64, depth: f64, radius: f64 -> Geometry
-    => hull(
+fn roundedRectangle width: f64, depth: f64, radius: f64 -> Geometry
+    ret hull(
         circle(radius).translate([radius, radius, 0]),
         circle(radius).translate([width-radius, radius, 0]),
         circle(radius).translate([radius, depth-radius, 0]),

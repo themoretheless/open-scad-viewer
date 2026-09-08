@@ -11,7 +11,7 @@ fn makeBox
     depth: int,
     height: f64
 -> Geometry
-    size: [width, depth, height]
+    size = [width, depth, height]
     ret box(size)
 
 r = dimensions(height)

@@ -7,7 +7,7 @@ const original = readFileSync('examples/skadis-box/skadis-dovetail.scad', 'utf8'
 const compact = readFileSync('examples/skadis-box/skadis-dovetail.modelgraph.scad', 'utf8')
 
 it.each([0, 1, 2])('preserves SKADIS geometry for output %i', async part => {
-  const source = compact.replace('param part = 0', `param part = ${part}`)
+  const source = compact.replace('param part: 0', `param part: ${part}`)
   const compiled = compileModelGraphText(source)
   expect(compiled.document).toMatchObject({ language: 'modelgraph/1', segments: 40 })
   expect(compiled.source).not.toMatch(/module\s+hook/)
@@ -22,9 +22,9 @@ it('preserves configurable fit, mount placement and disabled ridge', async () =>
   const changes = { width: 160, height: 100, fit: 0.35, hook_count: 3, hook_spacing_steps: 1, mount_top_offset: 20 }
   let source = compact
   let reference = original.replace('friction_ridge_enabled = true;', 'friction_ridge_enabled = false;')
-  source = source.replace('param friction_ridge_enabled = 1', 'param friction_ridge_enabled = 0')
+  source = source.replace('param friction_ridge_enabled: 1', 'param friction_ridge_enabled: 0')
   for (const [name, value] of Object.entries(changes)) {
-    source = source.replace(new RegExp(`param ${name} = [0-9.]+`), `param ${name} = ${value}`)
+    source = source.replace(new RegExp(`param ${name}: [0-9.]+`), `param ${name}: ${value}`)
     reference = reference.replace(new RegExp(`^${name} = [0-9.]+;`, 'm'), `${name} = ${value};`)
   }
   const a = await parseOpenSCAD(reference, { quality: 'full' })

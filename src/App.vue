@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { modelGraphTextControls, isModelGraphText } from './services/modelGraphText'
+import { editorBlocks, indentSelection } from './services/editorBlocks'
 import { highlightCode } from './services/codeHighlight'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
@@ -229,15 +230,50 @@ const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 30
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const highlightRef = ref<HTMLPreElement | null>(null)
+const blocks = computed(() => editorBlocks(code.value))
+const foldedLines = ref(new Set<number>())
+const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
+const editorRows = computed(() => {
+  const highlighted = highlightCode(code.value).replace(/\n$/, '').split('\n')
+  const byStart = new Map(blocks.value.map(b=>[b.start,b]))
+  let active: typeof blocks.value = []
+  return code.value.split('\n').map((text, line) => {
+    active = active.filter(b=>b.end>=line)
+    const row={line,text,html:highlighted[line]??'',block:byStart.get(line),guides:[...active]}
+    if(row.block)active.push(row.block)
+    return row
+  })
+})
+const foldedRows = computed(() => {
+  let hiddenThrough=-1
+  return editorRows.value.filter(row=>{
+    if(row.line<=hiddenThrough)return false
+    if(row.block && foldedLines.value.has(row.line))hiddenThrough=row.block.end
+    return true
+  })
+})
+function toggleFold(line: number) {
+  const next = new Set(foldedLines.value); if(next.has(line)) next.delete(line); else next.add(line)
+  foldedLines.value = next
+}
+async function editFoldedLine(line: number) {
+  foldedLines.value = new Set(); await nextTick()
+  const editor = editorRef.value; if(!editor) return
+  const offset = code.value.split('\n').slice(0,line).reduce((n,s)=>n+s.length+1,0)
+  editor.focus(); editor.setSelectionRange(offset,offset)
+  editor.scrollTop = Math.max(0,line * parseFloat(getComputedStyle(editor).lineHeight)-40)
+  syncHighlightScroll()
+}
 const highlightedCode = computed(() => highlightCode(code.value))
-const lineNumbersRef = ref<HTMLPreElement | null>(null)
+const lineNumbersRef = ref<HTMLDivElement | null>(null)
+const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => code.value.split('\n').length)
-const editorLineNumbers = computed(() => Array.from({ length: editorLineCount.value }, (_, i) => i + 1).join('\n'))
-watch(code, () => { void nextTick(syncHighlightScroll) }, { flush: 'post' })
+watch(code, () => { foldedLines.value = new Set(); void nextTick(syncHighlightScroll) }, { flush: 'post' })
 function syncHighlightScroll() {
   if (!editorRef.value || !highlightRef.value) return
-  highlightRef.value.scrollTop = editorRef.value.scrollTop
-  highlightRef.value.scrollLeft = editorRef.value.scrollLeft
+  const layer = highlightRef.value.firstElementChild as HTMLElement | null
+  if(layer) layer.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
+  if (guidesRef.value) guidesRef.value.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
   if (lineNumbersRef.value) lineNumbersRef.value.style.transform = `translateY(${-editorRef.value.scrollTop}px)`
 }
 const findInputRef = ref<HTMLInputElement | null>(null)
@@ -2044,6 +2080,14 @@ function recordCommandUsage(id: string) {
 }
 
 function handleEditorKey(event: KeyboardEvent) {
+  if(event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
+    event.preventDefault()
+    const editor=editorRef.value; if(!editor) return
+    const edit=indentSelection(code.value,editor.selectionStart,editor.selectionEnd,event.shiftKey)
+    editor.setRangeText(edit.text,edit.start,edit.end,'preserve')
+    code.value=editor.value; editor.setSelectionRange(edit.selectionStart,edit.selectionEnd)
+    handleEditorInput(); return
+  }
   dispatchKeyboardCommand(event, 'editor')
 }
 
@@ -2234,9 +2278,19 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         </div>
 
         <div class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
-        <div class="code-gutter" aria-hidden="true"><pre ref="lineNumbersRef">{{ editorLineNumbers }}</pre></div>
-        <div class="code-content">
-        <pre ref="highlightRef" class="code code-highlight" aria-hidden="true" v-html="highlightedCode" />
+        <div v-if="foldedLines.size" class="folded-editor code" aria-label="Свернутый код">
+          <div v-for="row in foldedRows" :key="row.line" class="folded-row">
+            <span class="folded-number">{{ row.line + 1 }}</span>
+            <button v-if="row.block" class="fold-toggle" :aria-label="`${foldedLines.has(row.line) ? 'Развернуть' : 'Свернуть'} блок, строка ${row.line + 1}`" :aria-expanded="!foldedLines.has(row.line)" @click="toggleFold(row.line)">{{ foldedLines.has(row.line) ? '▸' : '▾' }}</button>
+            <span v-else class="fold-spacer" />
+            <span class="folded-text" @click="editFoldedLine(row.line)"><span v-html="row.html || ' '" /><span v-if="row.block && foldedLines.has(row.line)" class="fold-summary"> ⋯ {{ row.block.end - row.line }} строк</span></span>
+          </div>
+          <button class="unfold-all" @click="editFoldedLine(0)">Развернуть всё для редактирования</button>
+        </div>
+        <div v-show="!foldedLines.size" class="code-gutter"><div ref="lineNumbersRef" class="gutter-lines"><div v-for="row in editorRows" :key="row.line" class="gutter-row"><span aria-hidden="true">{{ row.line + 1 }}</span><button v-if="row.block" class="fold-toggle" :aria-label="`Свернуть блок, строка ${row.line + 1}`" aria-expanded="true" @click="toggleFold(row.line)">▾</button><span v-else class="fold-spacer" /></div></div></div>
+        <div v-show="!foldedLines.size" class="code-content">
+        <div class="code-guides" aria-hidden="true"><div ref="guidesRef" class="guide-lines"><div v-for="row in editorRows" :key="row.line" class="guide-row"><i v-for="guide in row.guides" :key="guide.start" :style="{ left: `${guide.column}ch`, borderColor: blockColors[guide.depth % blockColors.length] }" /></div></div></div>
+        <pre ref="highlightRef" class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="highlightedCode" /></pre>
         <textarea
           ref="editorRef"
           v-model="code"
@@ -2687,14 +2741,16 @@ button, select { color: inherit; }
   flex: 1; width: 100%; min-height: 120px; resize: none; border: 0; outline: 0; padding: 14px 15px;
   background: var(--bg); color: var(--text); caret-color: var(--accent);
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .82rem; line-height: 1.58;
-  tab-size: 2; white-space: pre; overflow: auto;
+  font-weight: 400; font-style: normal; font-kerning: none; font-variant-ligatures: none; letter-spacing: 0; word-spacing: 0;
+  tab-size: 4; white-space: pre; overflow: auto;
 }
 .code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
 .code-content { position: relative; flex: 1; min-width: 0; }
-.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 20px); overflow: hidden; border-right: 1px solid var(--border); color: var(--text-dim); user-select: none; pointer-events: none; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
+.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; border-right: 1px solid var(--border); color: var(--text-dim); user-select: none; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
 .code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
 .code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
 .code-highlight { pointer-events: none; overflow: hidden; }
+.highlight-content { display: block; width: max-content; min-width: 100%; transform-origin: top left; }
 .code-input { background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
 .code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
 .code-highlight :deep(.syntax-comment) { color: #84929f; }
@@ -2876,4 +2932,22 @@ button, select { color: inherit; }
 .compute-panel p { margin: 0; line-height: 1.45; color: var(--text-dim); }
 .compute-panel button { padding: 7px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
 .compute-panel button:disabled { opacity: .5; cursor: default; }
+</style>
+
+<style scoped>
+.gutter-lines { padding: 14px 4px 14px 8px; }
+.gutter-row { display: flex; justify-content: flex-end; height: 1.58em; align-items: center; }
+.fold-toggle, .fold-spacer { display: inline-block; flex: 0 0 20px; width: 20px; }
+.fold-toggle { padding: 0; border: 0; color: var(--text-dim); background: transparent; cursor: pointer; font: inherit; line-height: inherit; }
+.fold-toggle:hover, .fold-toggle:focus-visible { color: var(--accent); background: var(--surface-raised); }
+.code-guides { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
+.guide-lines { padding: 14px 15px; }
+.guide-row { position: relative; height: 1.58em; }
+.guide-row i { position: absolute; top: 0; bottom: 0; border-left: 1px solid; opacity: .55; }
+.folded-editor { z-index: 3; }
+.folded-row { display: flex; min-height: 1.58em; }
+.folded-number { color: var(--text-dim); width: 4ch; text-align: right; flex: 0 0 4ch; }
+.folded-text { cursor: text; }
+.fold-summary { color: var(--text-dim); background: var(--surface-raised); border-radius: 4px; }
+.unfold-all { position: sticky; bottom: 0; left: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; }
 </style>

@@ -165,10 +165,10 @@ fn get_first[T]
     x3: int,
     x4: int
 
-    count: a + 1
+    count = a + 1
     ret
         x1: b, x2: count,
         x3: 55, x4: 6546
 ```
 
-Signature lists and named returns require commas between items, including across lines. The final item has no trailing comma. `ret x1: b, x2: count,` can continue on a deeper-indented line. Body statements share one indentation; return field continuation lines share a deeper indentation. Blank lines do not delimit lists. Local `:` bindings are immutable, just like `=`. A single unnamed return uses `ret value`. Existing brace-based functions remain supported. Explicit generic calls continue to use `get_first<int>(1, 2)`.
+Signature lists and named returns require commas between items, including across lines. The final item has no trailing comma. `ret x1: b, x2: count,` can continue on a deeper-indented line. Body statements share one indentation; return field continuation lines share a deeper indentation. Blank lines do not delimit lists. Local bindings use `=` and are immutable. A single unnamed return uses `ret value`. Existing brace-based functions remain supported. Explicit generic calls continue to use `get_first<int>(1, 2)`.
