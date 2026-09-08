@@ -10,6 +10,7 @@ import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import MechanicalGenerator from './features/MechanicalGenerator.vue'
+import DirectModeler from './features/DirectModeler.vue'
 import ScanPlanePanel from './features/ScanPlanePanel.vue'
 import SvgPanel from './features/SvgPanel.vue'
 import InspectPanel from './components/InspectPanel.vue'
@@ -339,6 +340,7 @@ const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
 const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
 const mechanicalGeneratorOpen = ref(false)
+const directModelerOpen = ref(false)
 const projection = ref<ProjectionMode>('perspective')
 const gridVisible = ref(true)
 const standardView = ref<StandardView>('iso')
@@ -2271,7 +2273,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
     </nav>
 
-    <main ref="mainRef" class="main">
+    <main ref="mainRef" class="main" :inert="directModelerOpen">
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
@@ -2279,6 +2281,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
           <span class="toolbar-divider" aria-hidden="true" />
+          <button class="btn" type="button" @click="directModelerOpen = true">{{ lang === 'ru' ? 'Прямое моделирование' : 'Direct modeling' }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">⚙ {{ lang === 'ru' ? 'Генераторы' : 'Generators' }}</button>
           <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
         </div>
@@ -2619,6 +2622,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @close="paletteOpen = false"
       @execute="executeCommand"
     />
+    <DirectModeler :open="directModelerOpen" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @close="directModelerOpen = false" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
     <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
     <ExampleGallery
       :open="exampleGalleryOpen"
