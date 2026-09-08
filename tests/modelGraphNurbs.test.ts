@@ -84,3 +84,26 @@ it('enforces depth through a shared subgraph reached earlier on a shallow branch
     nodes.push({ id: 'join', op: 'ruled_surface', inputs: ['a28', 'b28'] });
     expect(() => compileModelGraphNurbs({ ...MODELGRAPH_NURBS_EXAMPLE, nodes, root: 'join' })).toThrow('depth');
 });
+
+it('builds mesh CSG through the NURBS graph and handles empty intersections', async () => {
+    const nodes = [
+        {id:'patch',op:'surface',degree_u:1,degree_v:1,knots_u:[0,0,1,1],knots_v:[0,0,1,1],control_points:[[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]],weights:[[1,1],[1,1]]},
+        {id:'skin',op:'tessellate',input:'patch',segments_u:2,segments_v:3},
+        {id:'a',op:'thicken',input:'skin',vector:[0,0,2]},
+        {id:'shifted',op:'transform',input:'patch',matrix:[[1,0,0,1],[0,1,0,1],[0,0,1,1],[0,0,0,1]]},
+        {id:'skin_b',op:'tessellate',input:'shifted',segments_u:3,segments_v:2},
+        {id:'b',op:'thicken',input:'skin_b',vector:[0,0,2]},
+    ];
+    for (const [operation,volume] of [['union',15],['intersection',1],['difference',7]] as const) {
+        const doc={language:'modelgraph/nurbs-1',units:'mm',nodes:[...nodes,{id:'result',op:'mesh_boolean',inputs:['a','b'],operation}],root:'result'};
+        const result=await runOwnNurbs(doc,{action:'export',format:'stl'});
+        expect(result.ok,JSON.stringify(result)).toBe(true);
+        if (!result.ok) throw new Error('CSG failed');
+        expect(result.report.mesh?.signedVolumeMm3).toBeCloseTo(volume,8);
+        expect(result.report.definitions.patch).toBeTruthy();
+        expect(result.report.mesh?.boolean?.operation).toBe(operation);
+    }
+    const empty=buildOwnNurbs({language:'modelgraph/nurbs-1',units:'mm',nodes:[...nodes.slice(0,3),{id:'empty',op:'mesh_boolean',inputs:['a','a'],operation:'difference'}],root:'empty'},{action:'build'});
+    expect(empty.report.bounds).toBeNull();
+    expect(empty.mesh?.indices).toEqual([]);
+});

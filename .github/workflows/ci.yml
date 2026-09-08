@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -26,12 +26,30 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen*
+            ~/.cargo/registry
+            crates/target
+          key: nurbs-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+      - name: Install matching WASM binding generator
+        shell: bash
+        run: |
+          if ! wasm-bindgen --version 2>/dev/null | grep -qx 'wasm-bindgen 0.2.125'; then
+            cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+          fi
       - run: npm ci
+      - run: npm run build:geometry
+      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm run check
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -42,18 +60,54 @@ jobs:
         with:
           node-version: '20.19'
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen*
+            ~/.cargo/registry
+            crates/target
+          key: nurbs-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+      - name: Install matching WASM binding generator
+        shell: bash
+        run: |
+          if ! wasm-bindgen --version 2>/dev/null | grep -qx 'wasm-bindgen 0.2.125'; then
+            cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+          fi
       - run: npm ci
+      - run: npm run build:geometry
+      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm test -- tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
 
   official-openscad-mcp:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen*
+            ~/.cargo/registry
+            crates/target
+          key: nurbs-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+      - name: Install matching WASM binding generator
+        shell: bash
+        run: |
+          if ! wasm-bindgen --version 2>/dev/null | grep -qx 'wasm-bindgen 0.2.125'; then
+            cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+          fi
       - run: npm ci
+      - run: npm run build:geometry
+      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm run setup:openscad
       - run: npm run test:official

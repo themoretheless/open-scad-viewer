@@ -1,3 +1,4 @@
+import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { geometryAssetId } from '../src/core/scene'
@@ -93,6 +94,23 @@ function harness() {
 
 describe('WebGPURenderer retained geometry resources', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('restores native face selection after mesh publication and rejects changed geometry',()=>{
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const {renderer}=harness()
+    const previous=fixture()
+    previous.nativeGeometry=createNativeGeometryArtifact('patch','surface',{controls:[1]}, {})
+    previous.faceIdsAuthoritative=true
+    const next=fixture();next.nativeGeometry=previous.nativeGeometry;next.faceIdsAuthoritative=true
+    renderer.setMeshes([next]);renderer.setSelectionMode('face')
+    const hit={meshIndex:0,triangleIndex:0,faceId:1,point:[0,0,0] as [number,number,number],normal:[0,0,1] as [number,number,number],barycentric:[1,0,0] as [number,number,number],source:null,backside:false}
+    expect(renderer.restoreNativeFaceSelection(previous,hit,0)).toBe(true)
+    expect(renderer.currentHit?.faceId).toBe(1)
+    next.nativeGeometry=createNativeGeometryArtifact('patch','surface',{controls:[2]}, {})
+    renderer.setMeshes([next])
+    expect(renderer.restoreNativeFaceSelection(previous,hit,0)).toBe(false)
+    expect(renderer.currentHit).toBeNull()
+  })
 
   it.each([
     ['shaded', 0.625, 0],

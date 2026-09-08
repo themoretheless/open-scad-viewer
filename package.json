@@ -20,7 +20,16 @@
     "verify:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs verify",
     "status:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs status",
     "verify:dist": "node scripts/verify-dist.mjs",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "build:nurbs": "node scripts/build-nurbs-kernel.mjs",
+    "test:nurbs": "npm run test:geometry",
+    "predev": "npm run build:geometry",
+    "prebuild": "npm run build:geometry",
+    "pretest": "npm run build:geometry",
+    "pretypecheck": "npm run build:geometry",
+    "premcp": "npm run build:geometry",
+    "build:geometry": "node scripts/build-geometry-kernels.mjs",
+    "test:geometry": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml --workspace && vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts tests/geometryInterop.test.ts"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -32,7 +41,8 @@
     "manifold-3d": "^3.5.1",
     "tsx": "^4.23.1",
     "vue": "^3.5.31",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@types/node": "^20.19.9",

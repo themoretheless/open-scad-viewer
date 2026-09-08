@@ -30,7 +30,7 @@ export function registerModelGraphNurbsTools(server: McpServer) {
             if (!result.ok)
                 return text(result, true);
             let images: ReturnType<typeof renderModelGraphPreviews> = [], imageError: string | null = null;
-            if ('mesh' in result && result.mesh) {
+            if ('mesh' in result && result.mesh && result.mesh.indices.length > 0) {
                 try {
                     const m = result.mesh, vertices = new Float32Array(m.positions.length * 2);
                     for (let i = 0; i < m.positions.length / 3; i++)

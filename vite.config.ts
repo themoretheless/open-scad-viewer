@@ -5,12 +5,17 @@ import vue from '@vitejs/plugin-vue'
 // renderer, and exporters aren't all forced into the main entry chunk.
 export default defineConfig({
   plugins: [vue()],
-  worker: { format: 'es' },
+  worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
+    if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
+  } } } },
   build: {
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
+          if (id.endsWith('/src/services/modelGraphText.ts')) return 'modelgraph-text'
+          if (id.includes('/src/services/meshSurfaceGroups')) return 'surface-selection'
           if (id.includes('/src/services/openscadParser') || id.includes('/src/parser/')) return 'parser'
           if (id.includes('/src/services/webgpuRenderer') || id.includes('/src/renderer/')) return 'renderer'
           if (

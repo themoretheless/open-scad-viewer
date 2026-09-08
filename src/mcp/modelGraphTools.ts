@@ -30,7 +30,7 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
   const languageDocument = () => ({ text_guide: MODELGRAPH_TEXT_GUIDE, language: 'modelgraph/1', mechanical_examples: MECHANICAL_GENERATOR_EXAMPLES, guide: MODELGRAPH_GUIDE + '\n\n' + MODELGRAPH_FUNCTIONAL_GUIDE + '\n\n' + MODELGRAPH_UNITS_GUIDE + '\n\n' + MODELGRAPH_SKETCH_GUIDE, sketch_example: MODELGRAPH_SKETCH_EXAMPLE, assembly_example: MODELGRAPH_ASSEMBLY_EXAMPLE, loft_example: MODELGRAPH_LOFT_EXAMPLE, units_example: MODELGRAPH_UNITS_EXAMPLE, functional_example: MODELGRAPH_FUNCTIONAL_EXAMPLE, schema: z.toJSONSchema(modelGraphSchema), example: MODELGRAPH_EXAMPLE })
   server.registerTool('modelgraph_language', { description: 'Read the complete ModelGraph language, JSON Schema, examples and workflow before modeling.', inputSchema: z.object({}).strict(), annotations }, async () => result({ ...languageDocument(), instructions: MODELGRAPH_INSTRUCTIONS }))
   server.registerTool('modelgraph_text_compile', {
-    description: 'Compile compact ModelGraph Text/1 to canonical ModelGraph JSON and SCAD. Read modelgraph_language text_guide. Pass the returned document to check/report/export; compile alone does not build geometry.',
+    description: 'Compile compact ModelGraph Text/1 to canonical ModelGraph JSON and SCAD. Read modelgraph_language text_guide. Route by execution_target: own-nurbs documents go to modelgraph_nurbs_build/evaluate/export; legacy documents go to modelgraph_check/report/export. Compile alone does not build geometry.',
     inputSchema: z.object({ source: z.string().max(262144) }).strict(), annotations,
   }, async ({ source }) => {
     try { return result(compileModelGraphText(source)) }

@@ -139,6 +139,9 @@ describe('own tensor-product rational NURBS surface arithmetic', () => {
     surface.controlPoints[1][1][2] = 999
     surface.weights[1][1] = 3
     expect(evaluate(0.5, 0.5)).toEqual(before)
+    evaluate.dispose()
+    evaluate.dispose()
+    expect(() => evaluate(0.5, 0.5)).toThrow('disposed')
   })
 })
 

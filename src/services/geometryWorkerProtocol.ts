@@ -1,3 +1,4 @@
+import {isNativeGeometryArtifact,MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import type { GeometryEvaluationResult, GeometryPhaseTimings, GeometryQuality } from '../core/build'
 import {
   GEOMETRY_MANIFEST_ARCHIVE,
@@ -480,10 +481,11 @@ function isMeshData(value: unknown): value is MeshData {
   if (!hasExactKeys(value, [
     'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
     'faceIds', 'provenance', 'topology',
-  ], ['entityId', 'geometryAssetId'])
+  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
     || !isFloat32Payload(value.vertices)
     || !isUint32Payload(value.indices)
     || !isUint32Payload(value.edgeIndices)
+    || (value.faceIdsAuthoritative !== undefined && typeof value.faceIdsAuthoritative !== 'boolean')
     || !isUint32Payload(value.faceIds)
     || !isFloat32Payload(value.transform)
     || !isRecord(value.bvh)
@@ -500,6 +502,7 @@ function isMeshData(value: unknown): value is MeshData {
     && optionalKey(value, 'geometryAssetId', candidate => typeof candidate === 'string'
         && candidate.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
         && candidate.startsWith('asset:'))
+    && optionalKey(value, 'nativeGeometry', isNativeGeometryArtifact)
     && Number.isInteger(vertexCount)
     && Number.isInteger(triangleCount)
     && value.vertices.every(Number.isFinite)
@@ -533,6 +536,7 @@ function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
   if (!value.warnings.every(warning => typeof warning === 'string'
     && warning.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters)) return false
 
+  let nativeCharacters = 0
   let triangles = 0
   let bytes = 0
   let provenanceRuns = 0
@@ -544,10 +548,11 @@ function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || !hasExactKeys(candidate, [
         'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
         'faceIds', 'provenance', 'topology',
-      ], ['entityId', 'geometryAssetId'])
+      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
       || !isFloat32Payload(candidate.vertices)
       || !isUint32Payload(candidate.indices)
       || !isUint32Payload(candidate.edgeIndices)
+      || (candidate.faceIdsAuthoritative !== undefined && typeof candidate.faceIdsAuthoritative !== 'boolean')
       || !isUint32Payload(candidate.faceIds)
       || !isFloat32Payload(candidate.transform)
       || !isRecord(candidate.bvh)
@@ -559,6 +564,14 @@ function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || !isUint32Payload(candidate.bvh.triangles)
       || candidate.indices.length % 3 !== 0
       || !isDenseExactArray(candidate.provenance, candidate.indices.length / 3)) return false
+    if(candidate.nativeGeometry!==undefined) {
+      if(!isRecord(candidate.nativeGeometry)||!hasExactKeys(candidate.nativeGeometry,['version','nodeId','kind','revision','geometryJson','documentJson','documentRevision']))return false
+      const native=candidate.nativeGeometry
+      if(typeof native.geometryJson!=='string'||typeof native.documentJson!=='string')return false
+      nativeCharacters+=native.geometryJson.length+native.documentJson.length
+      if(nativeCharacters>MAX_NATIVE_GEOMETRY_CHARACTERS)return false
+      bytes+=2*(native.geometryJson.length+native.documentJson.length)
+    }
     const views = [
       candidate.vertices, candidate.indices, candidate.edgeIndices, candidate.faceIds,
       candidate.transform, candidate.bvh.bounds, candidate.bvh.nodes, candidate.bvh.triangles,

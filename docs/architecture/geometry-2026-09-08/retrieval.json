@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-09-08",
+  "purpose": "native geometry and slicing architecture research; preparation for later ingestion",
+  "rag": {
+    "connected": true,
+    "backend": "duckdb",
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "ready_for_search": true,
+    "fts_ready": true,
+    "embedding_manifest_match": true,
+    "document_count": 82440,
+    "chunk_count": 642656,
+    "project_document_count": 259
+  },
+  "scope": "Targeted retrieval and source verification, not exhaustive reading of all 82440 documents. Historical repository surveys were consulted as prior synthesis, not revalidated repository by repository.",
+  "records": [
+    {
+      "stage": "catalog",
+      "query": "open-scad-viewer NURBS geometry B-rep",
+      "matches": [
+        {
+          "id": "idx-0c7ded52-42bb-42f8-aae2-30d3e43012de",
+          "slug": "open-scad-viewer-readme-d98cf426",
+          "title": "open-scad-viewer — README",
+          "kind": "source_summary",
+          "category": "documentation",
+          "summary": "Кураторская wiki-копия проектного документа project://open-scad-viewer/repository/README.md",
+          "page_id": "0c7ded52-42bb-42f8-aae2-30d3e43012de",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-b58f786c-8487-4942-82ba-d782bf93d446",
+          "slug": "open-scad-viewer-architecture-d0a696dc",
+          "title": "open-scad-viewer — architecture",
+          "kind": "source_summary",
+          "category": "architecture",
+          "summary": "Кураторская wiki-копия проектного документа project://open-scad-viewer/repository/architecture.md",
+          "page_id": "b58f786c-8487-4942-82ba-d782bf93d446",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-2f435f48-c532-4bc9-a163-c4acd077936e",
+          "slug": "open-scad-viewer-overview",
+          "title": "open-scad-viewer — обзор проекта",
+          "kind": "source_summary",
+          "category": "projects",
+          "summary": "Навигационная карта проекта open-scad-viewer по индексированным источникам.",
+          "page_id": "2f435f48-c532-4bc9-a163-c4acd077936e",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-a091c00c-65bb-4987-bba5-f01f256879cc",
+          "slug": "rrrah-open-mosaic-design-db346301",
+          "title": "rrrah — OPEN_MOSAIC_DESIGN",
+          "kind": "source_summary",
+          "category": "architecture",
+          "summary": "Кураторская wiki-копия проектного документа project://rrrah/repository/docs/OPEN_MOSAIC_DESIGN.md",
+          "page_id": "a091c00c-65bb-4987-bba5-f01f256879cc",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-2af2e8f7-b028-4437-b7a6-e5f69515273c",
+          "slug": "opener-readme-820f64be",
+          "title": "opener — README",
+          "kind": "source_summary",
+          "category": "documentation",
+          "summary": "Кураторская wiki-копия проектного документа file:///Users/themoretheless/Documents/Sources/opener/README.md",
+          "page_id": "2af2e8f7-b028-4437-b7a6-e5f69515273c",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-12281f23-a1f2-49b5-9d66-0aa597b00728",
+          "slug": "ruos-maintainability",
+          "title": "ruos — maintainability",
+          "kind": "wiki",
+          "category": "engineering",
+          "summary": "Shared bounds-checked codecs are in `servers/fs/src/codec.rs`. Mount-level list/read/write/mutation policy is centralized. Open handles, advisory locks and capability-selected namespace paths live in `handles.rs`, `locking.rs` and `paths.r…",
+          "page_id": "12281f23-a1f2-49b5-9d66-0aa597b00728",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-2d22d130-6a7b-420a-96ae-5680e1979e56",
+          "slug": "referralprogram-runbook-poison",
+          "title": "Runbook — Kafka partition остановлен poison event",
+          "kind": "runbook",
+          "category": "runbook",
+          "summary": "Диагностика повторных падений consumer, сохранённого poison event и контролируемого replay.",
+          "page_id": "2d22d130-6a7b-420a-96ae-5680e1979e56",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-be8d50d9-9a83-4573-9771-1894cf908afd",
+          "slug": "referralprogram-runbook-contract-change",
+          "title": "Runbook — изменение HTTP или Kafka-контракта",
+          "kind": "runbook",
+          "category": "runbook",
+          "summary": "Порядок изменения endpoint/event, OpenAPI, generated client и compatibility tests.",
+          "page_id": "be8d50d9-9a83-4573-9771-1894cf908afd",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-016ad784-53df-48d1-a733-d2995b999fa7",
+          "slug": "auto-reverse-roadmap-f5317c7b",
+          "title": "auto-reverse — ROADMAP",
+          "kind": "source_summary",
+          "category": "roadmap",
+          "summary": "Кураторская wiki-копия проектного документа project://auto-reverse/repository/ROADMAP.md",
+          "page_id": "016ad784-53df-48d1-a733-d2995b999fa7",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-cee8bf19-4a3b-4f98-8453-77af4d4c6584",
+          "slug": "camera-man-readme-778c1eab",
+          "title": "camera-man — README",
+          "kind": "source_summary",
+          "category": "documentation",
+          "summary": "Кураторская wiki-копия проектного документа project://camera-man/repository/tools/resize-bench/README.md",
+          "page_id": "cee8bf19-4a3b-4f98-8453-77af4d4c6584",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        }
+      ]
+    },
+    {
+      "stage": "catalog",
+      "query": "slicing SDF subdivision CAD geometry kernel",
+      "matches": [
+        {
+          "id": "idx-0c7ded52-42bb-42f8-aae2-30d3e43012de",
+          "slug": "open-scad-viewer-readme-d98cf426",
+          "title": "open-scad-viewer — README",
+          "kind": "source_summary",
+          "category": "documentation",
+          "summary": "Кураторская wiki-копия проектного документа project://open-scad-viewer/repository/README.md",
+          "page_id": "0c7ded52-42bb-42f8-aae2-30d3e43012de",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-b58f786c-8487-4942-82ba-d782bf93d446",
+          "slug": "open-scad-viewer-architecture-d0a696dc",
+          "title": "open-scad-viewer — architecture",
+          "kind": "source_summary",
+          "category": "architecture",
+          "summary": "Кураторская wiki-копия проектного документа project://open-scad-viewer/repository/architecture.md",
+          "page_id": "b58f786c-8487-4942-82ba-d782bf93d446",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-2f435f48-c532-4bc9-a163-c4acd077936e",
+          "slug": "open-scad-viewer-overview",
+          "title": "open-scad-viewer — обзор проекта",
+          "kind": "source_summary",
+          "category": "projects",
+          "summary": "Навигационная карта проекта open-scad-viewer по индексированным источникам.",
+          "page_id": "2f435f48-c532-4bc9-a163-c4acd077936e",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        },
+        {
+          "id": "idx-d96f960d-b328-4c64-90a2-5cccabac484b",
+          "slug": "ruos-architecture",
+          "title": "ruos — архитектура",
+          "kind": "wiki",
+          "category": "architecture",
+          "summary": "Микроядро на Rust для одноплатников. Цель: ARM64, разработка в QEMU `virt`, потом Raspberry Pi 4. Принципы: «всё своё» (ноль внешних зависимостей у kernel/sysabi), async в серверах, многопользовательский режим через capabilities.",
+          "page_id": "d96f960d-b328-4c64-90a2-5cccabac484b",
+          "updated_at": "2026-09-05T12:02:04.021311Z"
+        }
+      ]
+    },
+    {
+      "stage": "hybrid_wiki",
+      "query": "NURBS B-rep slicing geometry topology",
+      "error": "tool call error: tool call failed for `rag-mcp/search_wiki`\n\nCaused by:\n    Mcp error: -32602: search timeout budget exceeded after retrieval"
+    },
+    {
+      "stage": "hybrid_wiki",
+      "query": "slicing contour SDF subdivision CAD",
+      "error": "tool call error: tool call failed for `rag-mcp/search_wiki`\n\nCaused by:\n    Mcp error: -32602: search timeout budget exceeded after retrieval"
+    },
+    {
+      "stage": "lex",
+      "query": "NURBS; wing=open-scad-viewer",
+      "hits": [
+        {
+          "document_id": "6c13a061-13f9-4748-b49b-c7cc8b77ee03",
+          "uri": "project://open-scad-viewer/repository/docs/design/brep-nurbs-14-stage-review-manifest.json",
+          "title": "brep-nurbs-14-stage-review-manifest.json",
+          "chunk_id": "0a64ac92-4512-4f91-8782-707da54f8be4"
+        },
+        {
+          "document_id": "8b09f213-9a66-499f-9252-35ae0a6ad0f5",
+          "uri": "project://open-scad-viewer/repository/docs/qualification/geometry-routing-contract-v1.json",
+          "title": "geometry-routing-contract-v1.json",
+          "chunk_id": "dae43169-521e-4ce4-8ff6-a965d4c73f18"
+        },
+        {
+          "document_id": "bb96bbf9-8b25-4028-9b65-7cf1e8f826d8",
+          "uri": "project://open-scad-viewer/repository/docs/design/brep-nurbs-14-stage-master-plan.md",
+          "title": "brep-nurbs-14-stage-master-plan.md",
+          "chunk_id": "5b657f71-c1a7-4484-84d8-808c7375c0a5",
+          "section": "Исправленный порядок"
+        },
+        {
+          "document_id": "b53aed96-9eb2-441e-82fd-695036b20472",
+          "uri": "project://open-scad-viewer/repository/docs/design/rust-brep-nurbs-kernel.md",
+          "title": "rust-brep-nurbs-kernel.md",
+          "chunk_id": "37589cb1-41dd-4da3-83fe-352becf2de57",
+          "section": "21. Dependency-ordered roadmap"
+        },
+        {
+          "document_id": "b53aed96-9eb2-441e-82fd-695036b20472",
+          "uri": "project://open-scad-viewer/repository/docs/design/rust-brep-nurbs-kernel.md",
+          "title": "rust-brep-nurbs-kernel.md",
+          "chunk_id": "b5340506-ce6a-4fef-b820-7afb4d5e2733",
+          "section": "Цели"
+        },
+        {
+          "document_id": "bb96bbf9-8b25-4028-9b65-7cf1e8f826d8",
+          "uri": "project://open-scad-viewer/repository/docs/design/brep-nurbs-14-stage-master-plan.md",
+          "title": "brep-nurbs-14-stage-master-plan.md",
+          "chunk_id": "9f8878c5-0d8c-45fa-be46-c3d60d8537e8",
+          "section": "Десять review lenses"
+        }
+      ]
+    },
+    {
+      "stage": "lex",
+      "query": "slicing contour; wing=open-scad-viewer",
+      "hits": [
+        {
+          "document_id": "6e5957dd-f42b-4400-8249-e674f8f7411a",
+          "uri": "project://open-scad-viewer/repository/src/services/openscadParser.ts",
+          "title": "openscadParser.ts",
+          "chunk_id": "019faa54-7a02-45a8-a427-b3ed537e4b11"
+        },
+        {
+          "document_id": "ac1081fc-b1e1-4d4b-aac9-2a39d8cf5280",
+          "uri": "project://open-scad-viewer/repository/src/services/openscadSemanticLowerer.ts",
+          "title": "openscadSemanticLowerer.ts",
+          "chunk_id": "ff7e0911-8b3d-42db-90e5-034f3d943822"
+        },
+        {
+          "document_id": "6e5957dd-f42b-4400-8249-e674f8f7411a",
+          "uri": "project://open-scad-viewer/repository/src/services/openscadParser.ts",
+          "title": "openscadParser.ts",
+          "chunk_id": "62c872b3-4b58-40ad-9395-fd65aacec61d"
+        },
+        {
+          "document_id": "1fc7cb52-5123-451b-8e4d-6a721a99f503",
+          "uri": "project://open-scad-viewer/repository/docs/research/geometry-pipeline-literature.md",
+          "title": "geometry-pipeline-literature.md",
+          "chunk_id": "da1849be-06bb-436e-a766-64cec45810a7",
+          "section": "2. SDF и гибридное представление"
+        },
+        {
+          "document_id": "dbe19a25-2708-44e3-86a1-ab97a227e32b",
+          "uri": "project://open-scad-viewer/repository/src/services/meshSelectionOverlay.ts",
+          "title": "meshSelectionOverlay.ts",
+          "chunk_id": "8fbe7c51-1bdc-4b28-9f7f-77512842bed6"
+        },
+        {
+          "document_id": "8f010f94-2354-4e5e-a227-4048ce06a843",
+          "uri": "project://open-scad-viewer/repository/src/services/sourceSplice.ts",
+          "title": "sourceSplice.ts",
+          "chunk_id": "23331a6b-f416-46b5-a2d1-cb76fca23fae"
+        }
+      ]
+    },
+    {
+      "stage": "lex",
+      "query": "geometry topology; wing=curvex",
+      "hits": [
+        {
+          "document_id": "4c3a6ba6-a623-44f8-9f89-1178ac106df3",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/src/laser/toolpath.rs",
+          "title": "toolpath.rs",
+          "chunk_id": "b24a7fce-35ad-41a0-bed5-8ea2eb040d73"
+        },
+        {
+          "document_id": "edd1eb22-1266-4d4c-b5a5-85e5b55c7902",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/src/path_offset.rs",
+          "title": "path_offset.rs",
+          "chunk_id": "f1c0c7d6-e2e1-4c41-bc99-7089bc1f1283"
+        },
+        {
+          "document_id": "ea25ec82-9374-4e97-a627-5c86f80ca9f9",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/src/snap.rs",
+          "title": "snap.rs",
+          "chunk_id": "20f7c0fd-5dad-4b67-bd50-f87edf238791"
+        },
+        {
+          "document_id": "5b8eeed8-9e0c-440e-9b6c-1935e5f43380",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/research.md",
+          "title": "curvex/research.md",
+          "chunk_id": "bb4d8760-3d57-4ffb-a352-422b7ad002b0",
+          "section": "Constraint and geometry problem modeling"
+        },
+        {
+          "document_id": "4c3a6ba6-a623-44f8-9f89-1178ac106df3",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/src/laser/toolpath.rs",
+          "title": "toolpath.rs",
+          "chunk_id": "02a35411-e0b8-46ac-a3ba-270dcc88295a"
+        },
+        {
+          "document_id": "18e824dc-5d63-41dd-a08e-10b49456c453",
+          "uri": "file:///Users/themoretheless/Documents/Sources/curvex/plan.md",
+          "title": "plan.md",
+          "chunk_id": "4e604078-201c-496a-8669-997de42163a3",
+          "section": "Batch 1 - X001-X050 (in progress)"
+        }
+      ]
+    },
+    {
+      "stage": "lex_wiki",
+      "query": "NURBS; wing=open-scad-viewer",
+      "hits": []
+    }
+  ],
+  "opened_sources": [
+    {
+      "wiki": "open-scad-viewer-architecture-d0a696dc",
+      "id": "b58f786c-8487-4942-82ba-d782bf93d446",
+      "revision": 1,
+      "content_updated_at": "2026-09-03T21:36:58.536179Z",
+      "catalog_updated_at": "2026-09-05T12:02:04.021311Z",
+      "status": "historical; checked against workspace"
+    },
+    {
+      "id": "1fc7cb52-5123-451b-8e4d-6a721a99f503",
+      "uri": "project://open-scad-viewer/repository/docs/research/geometry-pipeline-literature.md",
+      "status": "historical literature synthesis; selected primary sources reverified"
+    },
+    {
+      "id": "edd1eb22-1266-4d4c-b5a5-85e5b55c7902",
+      "uri": "file:///Users/themoretheless/Documents/Sources/curvex/src/path_offset.rs",
+      "status": "current local API checked; not copied as own algorithm"
+    }
+  ],
+  "excluded_queries": [
+    {
+      "query": "SDF subdivision; all wings; lex",
+      "reason": "Ambiguous acronyms returned non-geometry hits; not used in architecture."
+    }
+  ],
+  "ingestion_performed": false
+}

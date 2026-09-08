@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-08",
+  "git_head": "992d749ad9c6f21d1251d04e6d83f5abd8e200df",
+  "worktree_dirty": true,
+  "note": "HEAD is not sufficient identity for this dirty workspace; per-file hashes bind evidence. Source set covers audited files, not every transitive implementation dependency. No application tests rerun for documentation-only work.",
+  "files": [
+    {
+      "path": "architecture.md",
+      "sha256": "ffa2388718a46a9cf55885ed11db85d8149179b6c134b06f2d0629481dd2f3b4",
+      "bytes": 32868
+    },
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "ca88dd87ce08ef3f6cefff04932e580b12144e5fa74f9f853cdf155780890e85",
+      "bytes": 5688
+    },
+    {
+      "path": "crates/Cargo.toml",
+      "sha256": "689ddc7319cd7940f9b6ee2059e8727d65a2c8d690e77923dc38de28e13c1ecb",
+      "bytes": 223
+    },
+    {
+      "path": "crates/brep-topology/Cargo.toml",
+      "sha256": "c41571e60629a8d03f4153c9a9a64a38e732319b0df80ffeb2a3229e3944b923",
+      "bytes": 151
+    },
+    {
+      "path": "crates/brep-topology/src/lib.rs",
+      "sha256": "9d202257a87efda3f4c31085672b9a3350fb111521e224558a224e5bc778f7f6",
+      "bytes": 11594
+    },
+    {
+      "path": "crates/geometry-bridge/Cargo.toml",
+      "sha256": "a46a4c51baa8a8568613bfe5c56e1bf40a979f5fd171e59af9492fdc2aaae3fd",
+      "bytes": 570
+    },
+    {
+      "path": "crates/geometry-bridge/src/brep.rs",
+      "sha256": "627c4b4d8cc8bc9fc21f83c16a322653bb2af49442d904e4f422f5b733a68c46",
+      "bytes": 4488
+    },
+    {
+      "path": "crates/geometry-bridge/src/lib.rs",
+      "sha256": "45e0769ba7e85a526bef9786ab709e69e58b005fdc772daa39dab19adbb0a922",
+      "bytes": 13759
+    },
+    {
+      "path": "crates/geometry-bridge/src/reconstruction.rs",
+      "sha256": "d988261db8f15cb8f256169f06d1e0ea1a6609439b223daea04034ec24d07536",
+      "bytes": 14644
+    },
+    {
+      "path": "crates/geometry-bridge/src/tests.rs",
+      "sha256": "d3296aca9a1acc1a22258e803a699d9a97ba1a4afb1a71571305fcc88e261c24",
+      "bytes": 3512
+    },
+    {
+      "path": "crates/geometry-ops/Cargo.toml",
+      "sha256": "564fd2326d200dc49ab65181a26431ddfa96af6bdc8fc42518b267ce35e2a46c",
+      "bytes": 149
+    },
+    {
+      "path": "crates/geometry-ops/src/lib.rs",
+      "sha256": "7eb28b4b34a6e9356db2e493f76cfb143d2272978218a966eb4364edb7f9302c",
+      "bytes": 10541
+    },
+    {
+      "path": "crates/nurbs-kernel/Cargo.toml",
+      "sha256": "7375c7ca52771c23d509b9469beeb45bc28e26cd8eaa28c218f666c60af25dc9",
+      "bytes": 260
+    },
+    {
+      "path": "crates/nurbs-kernel/src/brep.rs",
+      "sha256": "11049db70185eafa16206e0299091ac409ac40520848289f3be96dc048da33da",
+      "bytes": 14071
+    },
+    {
+      "path": "crates/nurbs-kernel/src/curve.rs",
+      "sha256": "b1ca87f037d3f411fa9a79d6a369e5b5c9ec25ae7d9df450694b540b53d19e83",
+      "bytes": 18957
+    },
+    {
+      "path": "crates/nurbs-kernel/src/edit.rs",
+      "sha256": "1307b84c917956ee5ae4f64173e002c02ea340f45cd52936657e6cb3a4869f07",
+      "bytes": 1620
+    },
+    {
+      "path": "crates/nurbs-kernel/src/lib.rs",
+      "sha256": "915e3d1958dc1c59d4f17c184b089dc81726608392d96d259223d46220728490",
+      "bytes": 5566
+    },
+    {
+      "path": "crates/nurbs-kernel/src/surface.rs",
+      "sha256": "3f1c5700ec8d7289aaded4a9808396c2964a0fd6f87660af627fa41a63108987",
+      "bytes": 22345
+    },
+    {
+      "path": "crates/nurbs-kernel/src/tests.rs",
+      "sha256": "7b2906959898692a606e887f345bf83b49c2a6e07b26e9cc1269cec17c19c811",
+      "bytes": 4755
+    },
+    {
+      "path": "crates/polygon-kernel/Cargo.toml",
+      "sha256": "baee6fd22bc2bedd4a245c416352676ed0f24371dc375da9d7b1e1219b486586",
+      "bytes": 242
+    },
+    {
+      "path": "crates/polygon-kernel/src/boolean.rs",
+      "sha256": "c3ce46a3be1cd7e0572d25652f98205f2f14b2abf5ef8b83863b5036469034d3",
+      "bytes": 26246
+    },
+    {
+      "path": "crates/polygon-kernel/src/brep.rs",
+      "sha256": "d073af8704cf9a93c1ee42bfb5bebcacac2b92419177e4c3e67b88f44169af21",
+      "bytes": 12809
+    },
+    {
+      "path": "crates/polygon-kernel/src/edit.rs",
+      "sha256": "88792bd41a35c30dc85d906a2c982a005f306f7a7d6d80b98d4ff149ef9994ce",
+      "bytes": 4045
+    },
+    {
+      "path": "crates/polygon-kernel/src/lib.rs",
+      "sha256": "a350e10872abcd36e08650bad53502c9287544f596e609f019b1eebf82d2864c",
+      "bytes": 13206
+    },
+    {
+      "path": "crates/polygon-kernel/src/modeling.rs",
+      "sha256": "90a1eb2575cbc0b6b9ffda03a03c5202c6f8952e6e5a91e825438c8947279a7f",
+      "bytes": 13050
+    },
+    {
+      "path": "crates/polygon-kernel/src/proximity.rs",
+      "sha256": "49d59d69359ac979a835904569a66902090f906117738e1c30447da6c55d56f2",
+      "bytes": 6012
+    },
+    {
+      "path": "crates/polygon-kernel/src/tessellation.rs",
+      "sha256": "be164df962733903c125beb533304c7cd1a0c90a6015b423a9c113ec9e5f9e3e",
+      "bytes": 16158
+    },
+    {
+      "path": "crates/polygon-kernel/src/tests.rs",
+      "sha256": "edf0e255ff7e72924eeb1e4fb75997dc80879fbf22b577f310020e60fd253a01",
+      "bytes": 3010
+    },
+    {
+      "path": "crates/sdf-kernel/Cargo.toml",
+      "sha256": "e94f68654375ee2bc087ba74a57cb434d923a03c4cc5ff0ab069aa3fdcddfc29",
+      "bytes": 240
+    },
+    {
+      "path": "crates/sdf-kernel/src/lib.rs",
+      "sha256": "a699ef37db6d8eb10a9083fd51f2a02b59d9fce9e5a23617e4428e37c4d0237c",
+      "bytes": 18416
+    },
+    {
+      "path": "crates/sketch-kernel/Cargo.toml",
+      "sha256": "64553d13c24261a036f5af766530224df6af38af0a25f6445248ef8315e36d25",
+      "bytes": 150
+    },
+    {
+      "path": "crates/sketch-kernel/src/lib.rs",
+      "sha256": "b77a4ec9dfc02d655fe489883e0fd4fc3928fa78dbf769ff707f921550337c90",
+      "bytes": 14890
+    },
+    {
+      "path": "crates/subdivision-kernel/Cargo.toml",
+      "sha256": "6f94dbb6416e1c556100f550c82144d0a72a5a290ec77fbe95de6bf2392ba5e1",
+      "bytes": 248
+    },
+    {
+      "path": "crates/subdivision-kernel/src/lib.rs",
+      "sha256": "bef1c3dcfa3db60a9832140c5f28f885f83964dd970b1c5f94efc689c1e5e439",
+      "bytes": 16451
+    },
+    {
+      "path": "docs/design/brep-nurbs-14-stage-master-plan.md",
+      "sha256": "cd48c0f51c314786729e9307810f2f89aaee65b6853e83b071abf6c8d0b4c063",
+      "bytes": 51834
+    },
+    {
+      "path": "docs/design/mesh-reconstruction.md",
+      "sha256": "c5cb5a31271b6866c81dcd1a4da8461f85da57d08198461e7c832e8a9f07e140",
+      "bytes": 8171
+    },
+    {
+      "path": "docs/design/native-modeling-operations.md",
+      "sha256": "a75a1345a2d65c829c76e1e1213b26093e3299fdee93606d8caecba644c2cd3f",
+      "bytes": 2758
+    },
+    {
+      "path": "docs/design/rust-brep-nurbs-kernel.md",
+      "sha256": "df87da05982c960f27071f09d7c51aadc57029a3d128a45451a936cb34e94c33",
+      "bytes": 113250
+    },
+    {
+      "path": "docs/research/cad-hci-literature.md",
+      "sha256": "43c0f70819de7f391d58db6b1edad5c4e0f75a61ce0fc6318bf2a1717db72d35",
+      "bytes": 16524
+    },
+    {
+      "path": "docs/research/geometry-pipeline-literature.md",
+      "sha256": "71e32588b03c2be0f30cbf83435f6ba7aee7dbdf61e3b7020469f3c4ab77870c",
+      "bytes": 26798
+    },
+    {
+      "path": "docs/research/plasticity-patterns.md",
+      "sha256": "f974821cd2c9f9a02ba76b38f7740fb979a3c57f8eaecc21123ce5a9a2823941",
+      "bytes": 2974
+    },
+    {
+      "path": "docs/research/second-pass-recommendations.md",
+      "sha256": "8e896743e3016aff9262b085ebfddd4c8dd016b8bfcc7c37d76a31f033b892d1",
+      "bytes": 15981
+    },
+    {
+      "path": "src/core/geometryExecution.ts",
+      "sha256": "9064842528cf77c954de1fc82beecd4009d6ba51e887e59d2e39a5b8b4afe787",
+      "bytes": 24526
+    },
+    {
+      "path": "src/core/mesh.ts",
+      "sha256": "2bb820b05588005234415b8b19201847986e7bfd31390f59865b7c3ea932eeef",
+      "bytes": 2969
+    },
+    {
+      "path": "src/services/geometryRustKernel.ts",
+      "sha256": "dce8f1878603e3ade627fb571dc28ffca01c3935efc7ed9aa362974386c651cb",
+      "bytes": 1750
+    },
+    {
+      "path": "src/services/modelGraphNurbs.ts",
+      "sha256": "b6989e9e698e82cdb9333ea0bf1ed220301ee08f4b627d370554e83455449ad5",
+      "bytes": 18861
+    },
+    {
+      "path": "src/services/modelGraphNurbsKernel.ts",
+      "sha256": "d395bd7d87af057b2019159a860b9485637ac5d39af6e6e5f4550980bbe4fe05",
+      "bytes": 18215
+    },
+    {
+      "path": "src/services/modelGraphTextNurbs.ts",
+      "sha256": "8e0a3e49defa70b88d7084074403e8479f079d49da60221d6a1df8c03dcf96e3",
+      "bytes": 3431
+    },
+    {
+      "path": "src/services/modelGraphTextScene.ts",
+      "sha256": "546c8fbe3f3ba90df92d94dbb7af67ae39610701fe633dc32b2635f4f7970cdb",
+      "bytes": 2220
+    }
+  ]
+}

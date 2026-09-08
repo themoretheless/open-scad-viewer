@@ -31,6 +31,13 @@ for (const file of files) {
 const total = files.reduce((sum, file) => sum + file.bytes, 0)
 // ModelGraph Text adds the bounded compiler to the geometry worker as well as the UI.
 // Keep per-artifact limits above; allow the measured ~140 KiB compiler addition.
-const totalBudget = 2_200_000
+// The independent Rust geometry libraries add one shared, gzip-packed WASM
+// chunk (~294 kB including mesh CSG and shared B-rep topology). Preserve every per-artifact limit and bound its allowance.
+const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path))
+if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 480_000) {
+  throw new Error('Expected one shared geometry kernel chunk within 480000 bytes')
+}
+// Direct NURBS text compilation and mesh publication add ~28 kB of host code.
+const totalBudget = 2_200_000 + 480_000 + 30_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

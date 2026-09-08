@@ -65,7 +65,8 @@ describe('immutable geometry manifest archive', () => {
         lockfileSha256: 'b4fc02ba7ec6cb446763577536cdef9f830797852886f15a9af174b21edc9f2f',
       },
     })
-    expect(manifest.capabilityManifestVersion).toBe('manifold-node-v2')
+    expect(manifest.capabilityManifestVersion).toBe('manifold-node-v3')
+    expect(GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest).toBe('54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe')
     expect(sha256(notices)).toBe(manifest.dependency.sbomSha256)
     expect(sha256(lockfile)).toBe(manifest.dependency.lockfileSha256)
     expect(parsedLockfile.packages['node_modules/manifold-3d']?.version)

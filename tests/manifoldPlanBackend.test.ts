@@ -282,6 +282,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'core/geometryRouting.ts',
       'core/languageContract.ts',
       'core/mesh.ts',
+      'core/nativeGeometry.ts',
       'core/openScad2021Contract.ts',
       'core/qualityTargets.ts',
       'core/scene.ts',

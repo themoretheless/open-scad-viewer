@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "prepared_at": "2026-09-08",
+  "status": "pending_ingestion",
+  "ingestion_performed": false,
+  "retrieval_evidence": {
+    "path": "docs/architecture/geometry-2026-09-08/retrieval.json",
+    "sha256": "6933ff2d9f3365274886181ef291b5b24dec7d630e048133a6855bc28971ce9b"
+  },
+  "code_evidence": {
+    "path": "docs/architecture/geometry-2026-09-08/source-snapshot.json",
+    "sha256": "0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c"
+  },
+  "policy": {
+    "tool": "mcp__rag_mcp__ingest_file",
+    "order": "sequential",
+    "remove_deleted": false,
+    "follow_up": "Read returned IDs, verify hashes/content, then optionally compile wiki with raw citations and CAS. No automatic writes have been performed."
+  },
+  "documents": [
+    {
+      "path": "docs/design/native-geometry-architecture.md",
+      "sha256": "d4e036f0bdc196bc5736471ab3b922fe044245f033416c5837f057481c0a2707",
+      "bytes": 42139,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/native-geometry-architecture.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/native-geometry-architecture.md",
+        "title": "Архитектура собственной геометрии и нарезки",
+        "wing": "open-scad-viewer",
+        "room": "geometry-architecture",
+        "metadata_json": "{\"project\": \"open-scad-viewer\", \"kind\": \"proposed-design\", \"verified_at\": \"2026-09-08\", \"source_sha256\": \"d4e036f0bdc196bc5736471ab3b922fe044245f033416c5837f057481c0a2707\", \"source_path\": \"docs/design/native-geometry-architecture.md\", \"implementation_claim\": \"See observed/proposed distinctions; no general NURBS booleans or slicer completion claim.\", \"source_snapshot_sha256\": \"0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c\", \"scope\": \"own Rust geometry, native slicing architecture\"}"
+      }
+    },
+    {
+      "path": "docs/design/geometry-architecture-audit-2026-09-08.md",
+      "sha256": "e313db8a9925fcd0c6e5a87900e9ef73be142117cfced1cc59d0253737da1bac",
+      "bytes": 29356,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/geometry-architecture-audit-2026-09-08.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/geometry-architecture-audit-2026-09-08.md",
+        "title": "Аудит реализации геометрических библиотек 2026-09-08",
+        "wing": "open-scad-viewer",
+        "room": "geometry-architecture",
+        "metadata_json": "{\"project\": \"open-scad-viewer\", \"kind\": \"observed-code-audit\", \"verified_at\": \"2026-09-08\", \"source_sha256\": \"e313db8a9925fcd0c6e5a87900e9ef73be142117cfced1cc59d0253737da1bac\", \"source_path\": \"docs/design/geometry-architecture-audit-2026-09-08.md\", \"implementation_claim\": \"See observed/proposed distinctions; no general NURBS booleans or slicer completion claim.\", \"source_snapshot_sha256\": \"0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c\", \"scope\": \"own Rust geometry, native slicing architecture\"}"
+      }
+    },
+    {
+      "path": "docs/design/slicing-evidence-2026-09-08.md",
+      "sha256": "85063c69fa9cd14a2acbc96d3a26955832675ea5a4c6737709365484f58e97c5",
+      "bytes": 29932,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/slicing-evidence-2026-09-08.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/slicing-evidence-2026-09-08.md",
+        "title": "Первичные источники и контракты native slicing",
+        "wing": "open-scad-viewer",
+        "room": "geometry-architecture",
+        "metadata_json": "{\"project\": \"open-scad-viewer\", \"kind\": \"researched-proposal\", \"verified_at\": \"2026-09-08\", \"source_sha256\": \"85063c69fa9cd14a2acbc96d3a26955832675ea5a4c6737709365484f58e97c5\", \"source_path\": \"docs/design/slicing-evidence-2026-09-08.md\", \"implementation_claim\": \"See observed/proposed distinctions; no general NURBS booleans or slicer completion claim.\", \"source_snapshot_sha256\": \"0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c\", \"scope\": \"own Rust geometry, native slicing architecture\"}"
+      }
+    },
+    {
+      "path": "docs/design/geometry-architecture-review-2026-09-08.md",
+      "sha256": "4e6a9df54a7136c4baa76fb0ed91a9f0e81a5bf17fa227007b384f3f2f9e90c3",
+      "bytes": 22629,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/geometry-architecture-review-2026-09-08.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/geometry-architecture-review-2026-09-08.md",
+        "title": "Независимая проверка архитектуры геометрии",
+        "wing": "open-scad-viewer",
+        "room": "geometry-architecture",
+        "metadata_json": "{\"project\": \"open-scad-viewer\", \"kind\": \"design-review\", \"verified_at\": \"2026-09-08\", \"source_sha256\": \"4e6a9df54a7136c4baa76fb0ed91a9f0e81a5bf17fa227007b384f3f2f9e90c3\", \"source_path\": \"docs/design/geometry-architecture-review-2026-09-08.md\", \"implementation_claim\": \"See observed/proposed distinctions; no general NURBS booleans or slicer completion claim.\", \"source_snapshot_sha256\": \"0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c\", \"scope\": \"own Rust geometry, native slicing architecture\"}"
+      }
+    },
+    {
+      "path": "docs/architecture/geometry-2026-09-08/README.md",
+      "sha256": "61e3e1de1bcc32c3e4bb40334ab25a4e9d04762d7629bf5e3a8d0709738f38c6",
+      "bytes": 8089,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/architecture/geometry-2026-09-08/README.md",
+        "uri": "project://open-scad-viewer/repository/docs/architecture/geometry-2026-09-08/README.md",
+        "title": "Пакет знаний геометрии: навигация и последующий RAG ingest",
+        "wing": "open-scad-viewer",
+        "room": "geometry-architecture",
+        "metadata_json": "{\"project\": \"open-scad-viewer\", \"kind\": \"navigation-runbook\", \"verified_at\": \"2026-09-08\", \"source_sha256\": \"61e3e1de1bcc32c3e4bb40334ab25a4e9d04762d7629bf5e3a8d0709738f38c6\", \"source_path\": \"docs/architecture/geometry-2026-09-08/README.md\", \"implementation_claim\": \"See observed/proposed distinctions; no general NURBS booleans or slicer completion claim.\", \"source_snapshot_sha256\": \"0c220a38bfb92d16c27dd9cdef953b9000f472cd3e3d70821f5c5965ecadf72c\", \"scope\": \"own Rust geometry, native slicing architecture\"}"
+      }
+    }
+  ]
+}

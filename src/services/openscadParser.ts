@@ -3888,6 +3888,13 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
     if (/^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)) {
       const { compileModelGraphText } = await import('./modelGraphText')
       const compiled = compileModelGraphText(source)
+      if (compiled.execution_target === 'own-nurbs') {
+        const { buildTextNurbsScene } = await import('./modelGraphTextScene')
+        if (options.shouldAbort?.()) throw new AbortedError()
+        const result = buildTextNurbsScene(compiled.document, options.quality)
+        if (options.shouldAbort?.()) throw new AbortedError()
+        return result
+      }
       const result = await parseInternal(compiled.source, options)
       requireModelGraphChecks(checkModelGraphGeometry(compiled.geometry_assertions, result.meshes))
       // Generated SCAD spans are not spans in the authored compact document.

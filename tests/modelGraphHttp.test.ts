@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createModelGraphHttpServer } from '../src/mcp/modelGraphHttp'
 import { MODELGRAPH_UNITS_EXAMPLE } from '../src/services/modelGraph'
@@ -12,6 +13,17 @@ async function start() {
   return { url, call }
 }
 describe('remote ModelGraph MCP', () => {
+  it('compiles own NURBS text and exports through the indicated MCP route', async () => {
+    const {call}=await start()
+    const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result
+    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/nurbs-boolean.scad','utf8')})
+    expect(compiled.isError).not.toBe(true)
+    expect(compiled.structuredContent.execution_target).toBe('own-nurbs')
+    const exported=await tool('modelgraph_nurbs_export',{document:compiled.structuredContent.document,format:'stl'})
+    expect(exported.isError,JSON.stringify(exported)).not.toBe(true)
+    expect(exported.structuredContent.report.mesh.signedVolumeMm3).toBeCloseTo(1200,7)
+  })
+
   it('discovers, builds and exports without persistent session state', async () => {
     const { call } = await start()
     const init = await (await call('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '1' } })).json()

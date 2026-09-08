@@ -16,6 +16,15 @@ describe('own NURBS through the MCP protocol', () => {
   let close: () => Promise<void>
   const tool = async (name: string, arguments_: RpcValue) => await request('tools/call', { name, arguments: arguments_ }) as unknown as ToolResult
 
+  it('accepts mesh_boolean over MCP and skips previews for an empty result', async () => {
+    const base = structuredClone(MODELGRAPH_NURBS_SURFACE_EXAMPLE)
+    const document = { ...base, nodes: [...base.nodes, {id:'empty',op:'mesh_boolean',inputs:[base.root,base.root],operation:'difference'}], root:'empty' }
+    const result = await tool('modelgraph_nurbs_build', {document})
+    expect(result.isError, JSON.stringify(result)).not.toBe(true)
+    expect(result.structuredContent).toMatchObject({report:{bounds:null,mesh:{triangleCount:0,construction:'boolean',boolean:{operation:'difference'}}},images_status:'unavailable',image_error:null})
+    expect(result.content.some(c => c.type === 'image')).toBe(false)
+  })
+
   beforeAll(async () => {
     const server = new McpServer({ name: 'own-nurbs-test', version: '1.0.0' })
     registerModelGraphNurbsTools(server)
@@ -56,7 +65,7 @@ describe('own NURBS through the MCP protocol', () => {
     const read = await request('resources/read', { uri: 'openscad://language/modelgraph-nurbs-1' }) as { contents: Array<{ text: string }> }
     const language = JSON.parse(read.contents[0].text)
     expect(language.language).toBe('modelgraph/nurbs-1')
-    expect(language.guide).toContain('own TypeScript numerical kernel')
+    expect(language.guide).toContain('own Rust numerical kernel')
     expect(language.guide).toContain('no third-party spline or B-rep kernel')
     expect(language.guide).toMatch(/STEP.*not implemented/)
     expect(language.schema.properties.language.const).toBe('modelgraph/nurbs-1')
@@ -91,7 +100,7 @@ describe('own NURBS through the MCP protocol', () => {
     expect(built.structuredContent.images_status).toBe('rendered')
     expect(built.structuredContent.views).toEqual(['front', 'top', 'isometric'])
     const report = built.structuredContent.report as { kernel: string; mesh: { closed: boolean; signedVolumeMm3: number; selfIntersectionStatus: string }; printability: string; error_bound_certified: boolean }
-    expect(report.kernel).toBe('own-typescript-nurbs')
+    expect(report.kernel).toBe('own-rust-nurbs')
     expect(report.mesh.closed).toBe(true)
     expect(report.mesh.signedVolumeMm3).toBeCloseTo(800, 6)
     expect(report.mesh.selfIntersectionStatus).toBe('not_checked')

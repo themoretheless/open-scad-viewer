@@ -14,3 +14,8 @@ coverage
 
 # Machine-specific generated MCP client configurations
 .local-integrations/
+
+# Reproducible Rust/WASM NURBS build products
+crates/**/target/
+src/generated/nurbs-kernel/
+src/generated/geometry-kernels/

@@ -153,7 +153,7 @@ function manifoldProvider(options: {
     engineClass: 'manifold',
     engineKey: 'manifold-wasm-v1',
     kernelFingerprint: 'manifold-wasm-v1',
-    capabilityManifestVersion: 'manifold-node-v2',
+    capabilityManifestVersion: 'manifold-node-v3',
     warm,
     build,
   }
@@ -296,7 +296,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
         }).buildSource('// @engine brep\ncube(1);', request)
       } catch (caught) {
         error = caught
@@ -307,7 +307,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
         }).buildSource('// @requires nurbs.surfaces\ncube(1);', request)
       } catch (caught) {
         error = caught
@@ -317,7 +317,7 @@ describe('frozen geometry routing contract v1', () => {
     } else if (runtimeCase.id === 'revocation-before-provider-missing') {
       try {
         await new GeometryBuildEngine([], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
         }).buildSource('cube(1);', request)
       } catch (caught) {
         error = caught
@@ -326,7 +326,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
         }).buildSource('cube(1);', request)
       } catch (caught) {
         error = caught

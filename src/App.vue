@@ -57,6 +57,7 @@ import {
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
+import { withSelectionSurfaces } from './services/meshSurfaceGroups'
 import { SceneController } from './services/sceneController'
 import { standardViewForCamera } from './services/viewportModel'
 import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
@@ -1252,7 +1253,9 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
   try {
     const publicationStartedAt = performance.now()
+    const displayMeshes = response.meshes.map(withSelectionSurfaces)
     const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
+    const previousFaceHit = renderer?.currentHit
     const previousMeshes = sceneMeshes.value
     const previousVisibility = meshVisibility.value
     const previousMeasurement = measurement.value
@@ -1262,17 +1265,17 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       previousVisibility,
       previousSelectedIndex: selectedMesh.value,
       previousIsolated: isolated.value,
-      nextMeshes: response.meshes,
+      nextMeshes: displayMeshes,
       sameSourceSnapshot,
     })
 
     const frameToken = nextPerformanceFrameToken++
-    renderer?.setMeshes(response.meshes, {
+    renderer?.setMeshes(displayMeshes, {
       frameToken,
       preserveMeasurement: publication.measurementMayBePreserved,
     })
     sceneController.publish({
-      meshes: response.meshes,
+      meshes: displayMeshes,
       visibility: publication.nextVisibility,
       selectedIndex: publication.nextSelectedIndex,
       isolated: publication.nextIsolated,
@@ -1280,7 +1283,9 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     renderer?.setMeshVisibilityBatch(meshVisibility.value)
     hoveredHit.value = null
     if (publication.nextSelectedIndex !== null) {
-      renderer?.selectMesh(publication.nextSelectedIndex)
+      const faceRestored = previousFaceHit && previousMeshes[previousFaceHit.meshIndex]
+        && renderer?.restoreNativeFaceSelection(previousMeshes[previousFaceHit.meshIndex], previousFaceHit, publication.nextSelectedIndex)
+      if (!faceRestored) renderer?.selectMesh(publication.nextSelectedIndex)
       if (publication.nextIsolated) renderer?.toggleIsolateSelection()
     } else {
       sceneController.applyRendererSelection(null, false, null)

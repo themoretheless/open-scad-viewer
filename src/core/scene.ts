@@ -1,3 +1,4 @@
+import {isNativeGeometryArtifact,type NativeGeometryArtifact} from './nativeGeometry'
 import type {
   MeshBvh,
   MeshData,
@@ -23,6 +24,7 @@ export interface ReadyGeometryInspectionArtifacts {
   readonly bvh: MeshBvh
   readonly edgeIndices: Uint32Array
   readonly faceIds: Uint32Array
+  readonly faceIdsAuthoritative?: boolean
   readonly provenance: readonly MeshProvenanceRun[]
   readonly topology: MeshTopologyDiagnostics
 }
@@ -33,6 +35,7 @@ export type GeometryInspectionArtifacts = ReadyGeometryInspectionArtifacts
   | { readonly state: 'failed'; readonly version: 1; readonly errorCode: string }
 
 export interface SceneEntity {
+  readonly nativeGeometry?: NativeGeometryArtifact
   readonly id: SceneEntityId
   readonly geometryAssetId: GeometryAssetId
   readonly color: readonly [number, number, number, number]
@@ -90,6 +93,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
     entities.push(Object.freeze({
       id: mesh.entityId ?? `entity:legacy/${index}`,
       geometryAssetId: id,
+      ...(mesh.nativeGeometry?{nativeGeometry:mesh.nativeGeometry}:{}),
       color: [...mesh.color] as [number, number, number, number],
       transform: mesh.transform,
       inspection: Object.freeze({
@@ -98,6 +102,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
         bvh: mesh.bvh,
         edgeIndices: mesh.edgeIndices,
         faceIds: mesh.faceIds,
+        ...(mesh.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:mesh.faceIdsAuthoritative}),
         provenance: mesh.provenance,
         topology: mesh.topology,
       }),
@@ -118,6 +123,7 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
     return {
       entityId: entity.id,
       geometryAssetId: asset.id,
+      ...(entity.nativeGeometry?{nativeGeometry:entity.nativeGeometry}:{}),
       vertices: asset.vertices,
       indices: asset.indices,
       bvh: artifacts.bvh,
@@ -125,6 +131,7 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
       color: [...entity.color],
       transform: entity.transform,
       faceIds: artifacts.faceIds,
+      ...(artifacts.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:artifacts.faceIdsAuthoritative}),
       provenance: [...artifacts.provenance],
       topology: artifacts.topology,
     }
@@ -168,6 +175,7 @@ export function assertGeometryScene(scene: GeometryScene): void {
   }
   const entityIds = new Set<SceneEntityId>()
   for (const entity of scene.entities) {
+    if(entity.nativeGeometry!==undefined&&!isNativeGeometryArtifact(entity.nativeGeometry))throw new Error('Invalid native geometry snapshot')
     if (entityIds.has(entity.id)) throw new Error(`Duplicate scene entity ${entity.id}`)
     if (!assets.has(entity.geometryAssetId)) throw new Error(`Scene entity ${entity.id} references a missing geometry asset`)
     if (entity.transform.length !== 16 || !entity.transform.every(Number.isFinite)

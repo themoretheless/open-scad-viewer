@@ -1,3 +1,4 @@
+import {remapNativeFaceSelection} from './nativeFaceSelection'
 /**
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
@@ -188,6 +189,8 @@ struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
 /* ── GPU mesh handle ──────────────────────────────── */
 
 interface GMesh {
+  nativeGeometry?: MeshData['nativeGeometry']
+  faceIdsAuthoritative?: boolean
   assetId?: GeometryAssetId
   vb: GPUBuffer; ib: GPUBuffer; ic: number
   ub: GPUBuffer; bg: GPUBindGroup
@@ -772,6 +775,7 @@ export class WebGPURenderer {
           const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
           next.push({
             assetId: m.geometryAssetId,
+            nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
             edgeIB: reuseEdges ? reusable.edgeIB : null,
             edgeIC: reuseEdges ? reusable.edgeIC : 0,
@@ -1115,6 +1119,16 @@ export class WebGPURenderer {
     this.sourceHighlightId = next
     this.rebuildSourceHighlightOverlay()
     this.requestRender()
+  }
+
+  restoreNativeFaceSelection(previous:MeshData,hit:PickHit,index:number):boolean {
+    const next=this.meshes[index]
+    if(this.selectionMode!=='face'||!next)return false
+    const mapped=remapNativeFaceSelection(previous,next,hit,index)
+    if(!mapped)return false
+    this.resetDepthCycle(false)
+    this.setSelection(index,mapped)
+    return true
   }
 
   selectMesh(index: number | null) {

@@ -1,0 +1,10 @@
+[package]
+name = "subdivision-kernel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+geometry-ops = { path = "../geometry-ops" }
+serde = { version = "1.0", features = ["derive"] }
+polygon-kernel = { path = "../polygon-kernel" }

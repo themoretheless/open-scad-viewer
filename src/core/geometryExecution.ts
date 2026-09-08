@@ -353,6 +353,57 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
     manifestDigest: '54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe',
     automaticFallback: false,
   } satisfies GeometryEngineStaticManifest),
+  'manifold-node-v3': deepFreeze({
+    engineClass: 'manifold',
+    displayName: 'Manifold mesh kernel',
+    permanent: true,
+    maturity: 'production',
+    engineKey: 'manifold-wasm-v1',
+    kernelFingerprint: 'manifold-wasm-v1',
+    semanticProgramVersion: 'legacy-direct-evaluator-v1',
+    capabilityManifestVersion: 'manifold-node-v3',
+    languageContracts: ['legacy/current'],
+    inputContract: 'legacy-source-direct',
+    capabilities: [
+      'analysis.metrics',
+      'csg.boolean',
+      'export.obj',
+      'export.stl',
+      'geometry.mesh',
+      'provenance.source-ranges',
+    ],
+    plannedCapabilities: [],
+    qualities: ['preview', 'full'],
+    representations: ['mesh'],
+    plannedRepresentations: [],
+    exportFormats: ['stl', 'obj'],
+    plannedExportFormats: [],
+    limits: { sourceCharacters: 250_000, triangles: 750_000 },
+    isolation: 'in-process-serialized',
+    deployment: 'node-mcp',
+    qualification: {
+      status: 'baseline-pending',
+      recordId: null,
+      corpusVersion: 'language-conformance-v1',
+      target: 'browser-worker/node-mcp',
+    },
+    dependency: {
+      packageName: 'manifold-3d',
+      version: '3.5.1',
+      licenseExpression: 'Apache-2.0',
+      sbomRef: 'THIRD_PARTY_NOTICES.md',
+      sbomSha256: '23ebf2a0384beb79d5d7854a74736d2ee07821be7544065081916ddd418137be',
+      lockfileSha256: '8b1ce9377a09a4ec7df832cbac9f57608e782866b1b58b092f0b7213222a6f08',
+    },
+    rollbackCompatibility: {
+      disableEngineCapability: true,
+      sourceContractPreserved: true,
+      crossEngineFallback: false,
+      minimumCatalogSchema: 3,
+    },
+    manifestDigest: '4d0ed5a1dad0d54656b1508dd045b6ad911343dd5ba4b00aafca03b9d9128a84',
+    automaticFallback: false,
+  } satisfies GeometryEngineStaticManifest),
   'brep-contract-v1': deepFreeze({
     engineClass: 'brep',
     displayName: 'Rust B-rep/NURBS kernel',
@@ -409,7 +460,7 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  manifold: 'manifold-node-v2',
+  manifold: 'manifold-node-v3',
   brep: 'brep-contract-v1',
 } as const)
 
@@ -448,8 +499,8 @@ export const LEGACY_MANIFOLD_ADMISSION_EXCEPTION = deepFreeze({
 
 /**
  * Exact immutable manifests for the unchanged legacy evaluator. V1 remains
- * readable for historical catalogs; v2 is the current dependency-attested
- * package snapshot. Neither entry authorizes a different evaluator identity.
+ * readable for historical catalogs; v3 is the current dependency-attested
+ * package snapshot. No entry authorizes a different evaluator identity.
  */
 export const LEGACY_MANIFOLD_ADMISSION_EXCEPTIONS = deepFreeze([
   LEGACY_MANIFOLD_ADMISSION_EXCEPTION,
@@ -457,6 +508,13 @@ export const LEGACY_MANIFOLD_ADMISSION_EXCEPTIONS = deepFreeze([
     engineClass: 'manifold',
     capabilityManifestVersion: 'manifold-node-v2',
     manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest,
+    kernelFingerprint: 'manifold-wasm-v1',
+    qualificationTarget: 'browser-worker/node-mcp',
+  },
+  {
+    engineClass: 'manifold',
+    capabilityManifestVersion: 'manifold-node-v3',
+    manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest,
     kernelFingerprint: 'manifold-wasm-v1',
     qualificationTarget: 'browser-worker/node-mcp',
   },

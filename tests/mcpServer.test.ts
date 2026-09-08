@@ -290,7 +290,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'manifold',
           availability: 'available',
-          manifest_resource_uri: 'openscad://engines/manifold/capabilities/manifold-node-v2',
+          manifest_resource_uri: 'openscad://engines/manifold/capabilities/manifold-node-v3',
         },
         { engine_class: 'brep', availability: 'unavailable' },
       ],
@@ -976,7 +976,7 @@ describe('OpenSCAD MCP server', () => {
     expect(history.structuredContent.builds[0].status).toBe('succeeded')
   })
 
-  it('serves archived v1 runtime provenance while new executions use v2', async () => {
+  it('serves archived v1 runtime provenance while new executions use v3', async () => {
     const { request, store } = await connectedServer()
     const source = 'cube(1);'
     await store.recordBuild({
@@ -1027,8 +1027,8 @@ describe('OpenSCAD MCP server', () => {
       arguments: { source, quality: 'full' },
     }) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
     expect(current.structuredContent.analysis.execution).toMatchObject({
-      capability_manifest_version: 'manifold-node-v2',
-      manifest_digest: '54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe',
+      capability_manifest_version: 'manifold-node-v3',
+      manifest_digest: '4d0ed5a1dad0d54656b1508dd045b6ad911343dd5ba4b00aafca03b9d9128a84',
       evidence: 'runtime',
     })
   })

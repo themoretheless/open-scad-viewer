@@ -1,0 +1,166 @@
+{
+  "verified_at": "2026-09-08",
+  "documents": [
+    {
+      "path": "docs/design/native-geometry-architecture.md",
+      "source_sha256": "d4e036f0bdc196bc5736471ab3b922fe044245f033416c5837f057481c0a2707",
+      "document_id": "0d85058a-1562-4c38-97ac-f64d0de46a47",
+      "chunk_count": 42,
+      "node_id": "6820bd97-8929-46c5-9318-d7ccd63dabc4",
+      "edge_count": 2,
+      "content_hash": "1068034a664f1c0c51210b2b35b4fcb965a53187c1ebb23e82fc22daf7c58fa4",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "0d85058a-1562-4c38-97ac-f64d0de46a47",
+        "uri": "project://open-scad-viewer/repository/docs/design/native-geometry-architecture.md",
+        "contentPresent": true,
+        "sourceHashMatches": true
+      }
+    },
+    {
+      "path": "docs/design/geometry-architecture-audit-2026-09-08.md",
+      "source_sha256": "e313db8a9925fcd0c6e5a87900e9ef73be142117cfced1cc59d0253737da1bac",
+      "document_id": "2e2f3613-b992-4981-b26f-072417327d39",
+      "chunk_count": 28,
+      "node_id": "9e23dc27-5ec0-46b5-8b4e-eb1fdd0df22c",
+      "edge_count": 2,
+      "content_hash": "c7e06dc8684af59058771b2f4b5649e6b5894fb43bc9c2a6ffeef650b8b24589",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "2e2f3613-b992-4981-b26f-072417327d39",
+        "uri": "project://open-scad-viewer/repository/docs/design/geometry-architecture-audit-2026-09-08.md",
+        "contentPresent": true,
+        "sourceHashMatches": true
+      }
+    },
+    {
+      "path": "docs/design/slicing-evidence-2026-09-08.md",
+      "source_sha256": "85063c69fa9cd14a2acbc96d3a26955832675ea5a4c6737709365484f58e97c5",
+      "document_id": "07b2dbc6-e2f9-4401-9201-1bc70d8b67e8",
+      "chunk_count": 28,
+      "node_id": "8d1a757e-8e8d-442e-8888-1714150f1347",
+      "edge_count": 2,
+      "content_hash": "79fb6964b7c96fdf4af894854c0bd3178a0b43042f7e6d3de5e066b79e7927e0",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "07b2dbc6-e2f9-4401-9201-1bc70d8b67e8",
+        "uri": "project://open-scad-viewer/repository/docs/design/slicing-evidence-2026-09-08.md",
+        "contentPresent": true,
+        "sourceHashMatches": true
+      }
+    },
+    {
+      "path": "docs/design/geometry-architecture-review-2026-09-08.md",
+      "source_sha256": "4e6a9df54a7136c4baa76fb0ed91a9f0e81a5bf17fa227007b384f3f2f9e90c3",
+      "document_id": "409af65c-a924-4eea-a20e-bf0670e5f7e8",
+      "chunk_count": 21,
+      "node_id": "26329c5a-820c-4cb9-bbf3-d54c152b4f6a",
+      "edge_count": 2,
+      "content_hash": "772f3f4aa5406480e5ab981473e825261830d4c812094e671ab161320789314a",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "409af65c-a924-4eea-a20e-bf0670e5f7e8",
+        "uri": "project://open-scad-viewer/repository/docs/design/geometry-architecture-review-2026-09-08.md",
+        "contentPresent": true,
+        "sourceHashMatches": true
+      }
+    },
+    {
+      "path": "docs/architecture/geometry-2026-09-08/README.md",
+      "source_sha256": "61e3e1de1bcc32c3e4bb40334ab25a4e9d04762d7629bf5e3a8d0709738f38c6",
+      "document_id": "e2411db8-34a5-46c6-8dc8-a16360331f43",
+      "chunk_count": 8,
+      "node_id": "4c26a69e-b350-412e-bdab-f8274885f735",
+      "edge_count": 2,
+      "content_hash": "afeafd8497bbc756bd0bc9f0528bc64a577e2a8e948c1b800ee7ae4a18d658ae",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "e2411db8-34a5-46c6-8dc8-a16360331f43",
+        "uri": "project://open-scad-viewer/repository/docs/architecture/geometry-2026-09-08/README.md",
+        "contentPresent": true,
+        "sourceHashMatches": true
+      }
+    },
+    {
+      "path": "docs/design/native-geometry-scene-p0.md",
+      "document_id": "e2c01c10-e045-406e-b733-a6431c08434e",
+      "chunk_count": 6,
+      "node_id": "07a3e5de-07ac-4071-a0ca-7727b62f51fb",
+      "edge_count": 2,
+      "content_hash": "bef6d5b977b876db1cd2b412a4ebfbc7e96a0569c42d96799c8ef7e59eb54a37",
+      "op": "inserted",
+      "revision": 1,
+      "etag": "W/\"1\"",
+      "readback": {
+        "id": "e2c01c10-e045-406e-b733-a6431c08434e",
+        "sourceHashMatches": true
+      }
+    }
+  ],
+  "search": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"chunk_id\":\"0d987c59-492c-47ff-bd10-7622b7c31c9b\",\"document_id\":\"0d85058a-1562-4c38-97ac-f64d0de46a47\",\"document_title\":\"Архитектура собственной геометрии и нарезки\",\"document_uri\":\"project://open-scad-viewer/repository/docs/design/native-geometry-architecture.md\",\"chunk_index\":7,\"content\":\"стояние геометрии неизменяемое, изменения транзакционные | Ошибка или отмена не оставляет половину Boolean/скульпта |\\n| A10 | RAG — внешний инструмент знаний, не зависимость геометрического runtime | Модель должна собираться и печатные артефакты воспроизводиться офлайн |\\n\\n## 4. Система и направление зависимостей\\n\\n```mermaid\\nflowchart TD\\n    D[\\\"Документ: текст, параметры, assets, feature DAG\\\"] --> E[\\\"Планировщик операций и capabilities\\\"]\\n    E --> N[\\\"Аналитика / NURBS + CAD B-rep\\\"]\\n    E --> P[\\\"Polygon\\\"]\\n    E --> S[\\\"Implicit / SDF\\\"]\\n    E --> U[\\\"Subdivision\\\"]\\n    N --> V[\\\"Неизменяемые geometry snapshots\\\"]\\n    P --> V\\n    S --> V\\n    U --> V\\n    V --> R[\\\"Производные render mesh, BVH, selection map\\\"]\\n    V --> X[\\\"Native section adapters\\\"]\\n    X --> G[\\\"SectionGraph: кривые, контакты, \",\"score\":4.3053703,\"score_lex\":4.3053703,\"rank_lex\":1,\"snippet\":\"стояние геометрии неизменяемое, изменения транзакционные | Ошибка или отмена не оставляет половину Boolean/скульпта |\\n| A10 | RAG — внешний инструмент знаний, не зависимость геометрического runtime | Модель должна собираться и печатные арте...\",\"char_start\":4733,\"char_end\":5525,\"heading_path\":[\"Архитектура собственной геометрии и нарезки\",\"3. Архитектурные решения\"],\"section\":\"3. Архитектурные решения\",\"explanation\":{\"reasons\":[],\"retrieval_ms\":47.769916,\"postprocess_ms\":7.8482080000000005,\"total_ms\":55.618165999999995,\"lex_ms\":47.769708}},{\"chunk_id\":\"d48963f4-584d-49aa-81e3-0df2bb627a2b\",\"document_id\":\"0d85058a-1562-4c38-97ac-f64d0de46a47\",\"document_title\":\"Архитектура собственной геометрии и нарезки\",\"document_uri\":\"project://open-scad-viewer/repository/docs/design/native-geometry-architecture.md\",\"chunk_index\":8,\"content\":\"е render mesh, BVH, selection map\\\"]\\n    V --> X[\\\"Native section adapters\\\"]\\n    X --> G[\\\"SectionGraph: кривые, контакты, происхождение\\\"]\\n    G --> A[\\\"RegionSet2: области, отверстия, материалы\\\"]\\n    A --> L[\\\"План слоёв, поддержки, периметры, заполнение\\\"]\\n    L --> T[\\\"ToolpathPlan: траектории и объём подачи\\\"]\\n    T --> C[\\\"MachineProfile + G-code serializer\\\"]\\n    R --> UI[\\\"Viewer\\\"]\\n    T --> UI\\n```\\n\\nЛогические модули ниже — направление зависимостей, **не требование немедленно создать все crates**. Выделять crate при появлении второго потребителя, независимого API или бюджета сборки. Пометка «существует» означает наличие crate, а не готовность всей целевой ответственности: frames, limit/crease evaluation, intervals и общие intersections ещё требуют реализации; фактические возможности см. в \",\"score\":3.975344,\"score_lex\":3.975344,\"rank_lex\":2,\"snippet\":\"е render mesh, BVH, selection map\\\"]\\n    V --> X[\\\"Native section adapters\\\"]\\n    X --> G[\\\"SectionGraph: кривые, контакты, происхождение\\\"]\\n    G --> A[\\\"RegionSet2: области, отверстия, материалы\\\"]\\n    A --> L[\\\"План слоёв, поддержки, периметры, ...\",\"char_start\":5405,\"char_end\":6201,\"heading_path\":[\"Архитектура собственной геометрии и нарезки\",\"4. Система и направление зависимостей\"],\"section\":\"4. Система и направление зависимостей\",\"explanation\":{\"reasons\":[],\"retrieval_ms\":47.769916,\"postprocess_ms\":7.8482080000000005,\"total_ms\":55.618165999999995,\"lex_ms\":47.769708}}]"
+      }
+    ],
+    "isError": false
+  },
+  "status": "completed",
+  "exact_content_readback": [
+    {
+      "path": "docs/design/native-geometry-architecture.md",
+      "id": "0d85058a-1562-4c38-97ac-f64d0de46a47",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    },
+    {
+      "path": "docs/design/geometry-architecture-audit-2026-09-08.md",
+      "id": "2e2f3613-b992-4981-b26f-072417327d39",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    },
+    {
+      "path": "docs/design/slicing-evidence-2026-09-08.md",
+      "id": "07b2dbc6-e2f9-4401-9201-1bc70d8b67e8",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    },
+    {
+      "path": "docs/design/geometry-architecture-review-2026-09-08.md",
+      "id": "409af65c-a924-4eea-a20e-bf0670e5f7e8",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    },
+    {
+      "path": "docs/architecture/geometry-2026-09-08/README.md",
+      "id": "e2411db8-34a5-46c6-8dc8-a16360331f43",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    },
+    {
+      "path": "docs/design/native-geometry-scene-p0.md",
+      "id": "e2c01c10-e045-406e-b733-a6431c08434e",
+      "exactContentMatches": true,
+      "trimmedContentMatches": true
+    }
+  ],
+  "wiki": {
+    "id": "20fc0cd7-5785-4c13-95a3-29b78f3a8984",
+    "slug": "open-scad-viewer-native-geometry-architecture-2026-09-08",
+    "revision": 1,
+    "catalog_query": "open-scad-viewer native slicing P0",
+    "catalog_rank": 1
+  },
+  "append_log_id": "4c6e7649-a6de-4006-8943-8d88b399bdd2"
+}

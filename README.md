@@ -9,6 +9,26 @@ repository-owned `openscad/stable-2021.01` engine while it progresses through a
 full language/geometry qualification gate. A separately installed upstream
 OpenSCAD runtime is available only as a differential oracle.
 
+## Rust geometry libraries
+
+Two independent domain libraries live in the Cargo workspace under `crates/`:
+
+- `nurbs-kernel`: rational curves and surfaces, analytic derivatives, knot/degree edits, iso-curves, extrusion, revolution and lofts.
+- `polygon-kernel`: owned triangle meshes, polygonal UV meshing, boundary loops, topology inspection, affine transforms, fixed-vector thickening and STL output. It accepts plain imported meshes and arbitrary parametric samplers, without depending on NURBS.
+
+`geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in ModelGraph. A full NURBS B-rep modeler is not implemented; the existing OpenSCAD route still uses Manifold.
+
+Build prerequisites (in addition to Node.js):
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.125 --locked
+npm run build:geometry
+npm run test:geometry
+```
+
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated bindings and binaries are ignored; `crates/Cargo.lock` pins Rust dependencies. `build:nurbs` and `test:nurbs` remain compatibility aliases. See [the library contract](crates/README.md) for native and host APIs.
+
 ## Highlights
 
 - Real manifold `union()`, `difference()`, `intersection()`, and `hull()`.

@@ -1,3 +1,4 @@
+import type {NativeGeometryArtifact} from './nativeGeometry'
 /** Stable identity of a static geometry operation in the parsed source tree. */
 export type SourceOperationId = `op:${string}`
 
@@ -44,6 +45,8 @@ export interface MeshTopologyDiagnostics {
 
 /** Renderer-neutral output of a geometry build. */
 export interface MeshData {
+  /** Native source snapshot; render vertices are not its authority. */
+  nativeGeometry?: NativeGeometryArtifact
   /** Stable identity for this evaluated scene entity, independent of tessellation quality. */
   entityId?: SceneEntityId
   /** Verified identity of the exact vertex/index payload, independent of entity presentation. */
@@ -58,6 +61,8 @@ export interface MeshData {
   transform: Float32Array
   /** Manifold coplanar-face identifier for every triangle. */
   faceIds: Uint32Array
+  /** True when IDs refer to authored surfaces/B-rep faces rather than mesh facets. */
+  faceIdsAuthoritative?: boolean
   /** Compact triangle runs mapped back to the source operation that created them. */
   provenance: MeshProvenanceRun[]
   topology: MeshTopologyDiagnostics
