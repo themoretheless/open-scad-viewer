@@ -27,6 +27,17 @@ Added:
 - Vertex/grid snapping with a visible vertex marker; Alt bypasses snapping. Live size feedback during rectangle/circle drawing. Polylines can close by clicking the first point.
 - Hover highlight and compact on-canvas operation cards. Exact numeric transforms are tucked into a contextual popover. V/R/C/L/E/F/G and ? are documented in the help overlay.
 
-Remaining differences from the demo: analytic arcs, Fillet/DogEar, revolve tools, arbitrary face-attached workplanes and multi-selection are not yet supported. 3D preview still uses projected SVG triangles with painter ordering, not a depth-buffer renderer; intersecting surfaces may have occlusion artifacts. Undo history is still session-local.
+Remaining differences from the demo: analytic arcs, arbitrary face-attached workplanes and multi-selection are not yet supported. 3D preview still uses projected SVG triangles with painter ordering, not a depth-buffer renderer; intersecting surfaces may have occlusion artifacts. Undo history is still session-local.
 
 Additional verification: `tests/directModelingTools.test.ts` checks camera inverse projection, snap precedence, signed extrusion, confirmed add/cut volumes/topology and undo, invalid target handling, and circular copy spacing/isolation. Browser checks cover E, height-handle dragging, Escape without history edits, circular copy confirmation + one undo, and orbit changing screen geometry without history edits.
+
+## Corner tools and profile rotation
+
+- Select a closed sketch, then **Fillet / Скруглить** or **DogEar**. Click a vertex (or use the numbered vertex selector), set the radius and confirm with Enter. The green contour is a preview; Escape discards it. Fillet supports convex and concave corners. DogEar creates a semicircular relief at a right-angle corner, with radius equal to the cutter radius. Other angles are rejected explicitly. Oversized radii, degenerate edges, intersections and the 512-point document limit are checked before committing.
+- Arcs are baked as polyline samples: Fillet uses at most 5 degrees per segment, DogEar at most 2.5 degrees. This is sketch corner editing, not a fillet on 3D solid edges. Each confirmed corner is one undo step; existing bodies remain independent.
+- **Revolve / Вращение** rotates the sketch around an X or Y axis in its own XY plane. The dashed line shows the axis and its editable offset. Signed sweeps from 0.1 to 360 degrees and 8–128 segments are supported; partial rotations have closed end caps. Profiles may touch the axis or lie entirely on either side, but cannot cross it. The kernel currently accepts at most 128 profile points and 20,000 generated side triangles.
+- New/Add/Cut uses the same explicit target-body interaction as extrusion. The translucent preview is the revolved tool; confirming bakes the new or boolean result in one history step. The original sketch stays separate.
+
+Verification: `tests/directProfileTools.test.ts` checks fillet radius/tangent endpoints/area with both windings, concave corners, DogEar relief area and closed extrusion, invalid corners/radii, full/partial/negative revolutions, both axes and sides, shifted axes, and add/cut volumes with undo/redo and source independence. Manual Edge checks cover applying Fillet, undoing it, selecting a different DogEar corner and undoing it, and creating a capped 180-degree revolved body.
+
+DogEar geometry reference: [Vectric Dogbone documentation](https://gadgets.vectric.com/v9/dogbone).

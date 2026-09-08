@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, extrudeDirectSketch, parseDirectDocument, transformDirectPoints, type DirectDocument, type Point2 } from '../services/directModeling'
+import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../services/directProfileTools'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { exportPolygonStl } from '../services/polygonKernel'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
@@ -26,11 +27,29 @@ const centers = ref<Record<Pane, Point2>>({ '2d': [0, 0], '3d': [0, 0] })
 const panes: Pane[] = ['2d', '3d']
 const camera = ref(defaultDirectCamera()), hovered = ref(''), snap = ref(true), grid = ref(1)
 const snapMarker = ref<Point2 | null>(null)
-const drawMeasure = ref(''), operation = ref<'extrude' | 'array' | null>(null)
+const drawMeasure = ref(''), operation = ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>(null)
+const cornerVertex = ref(0), cornerRadius = ref(2)
+const revolveAxis = ref<'x'|'y'>('y'), revolveOffset = ref(0), revolveAngle = ref(360), revolveSegments = ref(48)
+const revolveOptions = () => ({ axis: revolveAxis.value, offset: revolveOffset.value, angle: revolveAngle.value, segments: revolveSegments.value })
+const cornerActive = computed(() => operation.value === 'fillet' || operation.value === 'dogear')
+const solidActive = computed(() => operation.value === 'extrude' || operation.value === 'revolve')
+const cornerPreview = computed(() => {
+  if (!cornerActive.value || !selectedSketch.value) return { sketch: null, error: '' }
+  try { return { sketch: directCornerTool(selectedSketch.value, cornerVertex.value, cornerRadius.value, operation.value as 'fillet'|'dogear'), error: '' } }
+  catch(e) { return { sketch: null, error: e instanceof Error ? e.message : String(e) } }
+})
+function beginCorner(kind: 'fillet'|'dogear') { if (!selectedSketch.value?.closed) return; cancelGesture(); tool.value = 'select'; operation.value = kind; mode.value = '2d' }
+function applyCorner() { run(() => {
+  if (!cornerPreview.value.sketch) return
+  const d = history.document, index = d.sketches.findIndex(s=>s.id===selection.value)
+  if (index < 0) return
+  d.sketches[index] = cornerPreview.value.sketch; commit(d); operation.value = null
+}) }
 const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
 const copyCount = ref(8), copySweep = ref(360), copyX = ref(0), copyY = ref(0)
 const previewBody = shallowRef<ReturnType<typeof directExtrusionTool> | null>(null), previewError = ref('')
 const movingBody = ref(false), showHelp = ref(false), floorVisible = ref(true)
+let fitNextPreview = false
 let previewTimer: ReturnType<typeof setTimeout> | undefined
 onUnmounted(() => { clearTimeout(previewTimer) })
 let previousFocus: HTMLElement | null = null
@@ -57,16 +76,17 @@ function addSketch(points: Point2[], closed: boolean) {
   commit(d); selection.value = id
 }
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; tool.value = 'select' }) }
-function beginExtrude() {
+function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
   if (!selectedSketch.value?.closed) return
-  operation.value = 'extrude'; mode.value = '3d'; previewError.value = ''
+  fitNextPreview = true; operation.value = kind; mode.value = '3d'; previewError.value = ''
   if (!document.value.bodies.some(b => b.id === targetBody.value)) targetBody.value = document.value.bodies[0]?.id ?? ''
-  void nextTick(() => { fit('3d') })
 }
 function extrude() { run(() => {
   if (!selectedSketch.value || previewError.value || !previewBody.value) return
   const id = crypto.randomUUID()
-  commit(applyDirectExtrusion(history.document, selectedSketch.value.id, height.value, baseZ.value, extrusionMode.value, targetBody.value, id))
+  commit(operation.value === 'revolve'
+    ? applyDirectRevolve(history.document, selectedSketch.value.id, revolveOptions(), extrusionMode.value, targetBody.value, id)
+    : applyDirectExtrusion(history.document, selectedSketch.value.id, height.value, baseZ.value, extrusionMode.value, targetBody.value, id))
   operation.value = null; mode.value = '3d'; selection.value = extrusionMode.value === 'new' ? id : targetBody.value; fit('3d')
 }) }
 const copyPreview = computed(() => {
@@ -81,15 +101,15 @@ function duplicate() { run(() => {
   else return
   commit(d); selection.value = id
 }) }
-watch([operation, selectedSketch, height, baseZ], () => {
+watch([operation, selectedSketch, height, baseZ, revolveAxis, revolveOffset, revolveAngle, revolveSegments], () => {
   clearTimeout(previewTimer); previewBody.value = null; previewError.value = ''
-  if (operation.value !== 'extrude' || !selectedSketch.value) return
+  if (!solidActive.value || !selectedSketch.value) return
   previewTimer = setTimeout(() => {
-    try { previewBody.value = directExtrusionTool(selectedSketch.value!,height.value,baseZ.value) }
+    try { previewBody.value = operation.value === 'revolve' ? directRevolveTool(selectedSketch.value!,revolveOptions()) : directExtrusionTool(selectedSketch.value!,height.value,baseZ.value); if (fitNextPreview) { fit('3d'); fitNextPreview = false } }
     catch (e) { previewError.value = e instanceof Error ? e.message : String(e) }
   }, 60)
 })
-watch(selection, () => { operation.value = null; previewBody.value = null })
+watch(selection, () => { operation.value = null; previewBody.value = null; cornerVertex.value = 0 })
 function remove() { run(() => { const d = history.document; d.sketches = d.sketches.filter(s => s.id !== selection.value); d.bodies = d.bodies.filter(b => b.id !== selection.value); commit(d); selection.value = '' }) }
 function transform() { run(() => {
   const d = history.document, sketch = d.sketches.find(s => s.id === selection.value), body = d.bodies.find(b => b.id === selection.value)
@@ -193,7 +213,9 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
   try { p = plane(position(e), pane) } catch (e) { error.value = String(e); return }
   if (pane === '2d' && !pan) p = snapped(p,e)
   if (pan) { gesture = { start: position(e), document: history.document, vertex: null, id: '', pointer: e.pointerId, pane, svg, pan: true, center: [...centers.value[pane]] }; svg.setPointerCapture(e.pointerId); return }
+  if (pane === '2d' && cornerActive.value) { if (id === selection.value && vertex !== null) cornerVertex.value = vertex; return }
   if (pane === '2d' && operation.value) operation.value = null
+  if (pane === '2d' && vertex !== null) cornerVertex.value = vertex
   if (pane === '2d' && tool.value === 'polyline') { if (draft.value.length >= 3 && Math.hypot(p[0]-draft.value[0][0],p[1]-draft.value[0][1]) < views.value['2d']/100) { finish(true); return } draft.value = [...draft.value, p]; return }
   if (tool.value === 'select' || pane === '3d') { selection.value = id; if (!id) return }
   gesture = { start: p, document: history.document, vertex, id, pointer: e.pointerId, pane, svg, pan: false, center: [...centers.value[pane]] }
@@ -246,12 +268,12 @@ function up(e: PointerEvent) {
 }
 function keydown(e: KeyboardEvent) {
   if (e.key === 'Escape') { e.preventDefault(); cancelGesture(); operation.value = null; return }
-  if (e.key === 'Enter' && operation.value) { e.preventDefault(); operation.value === 'extrude' ? extrude() : applyCopies(); return }
+  if (e.key === 'Enter' && operation.value) { e.preventDefault(); solidActive.value ? extrude() : cornerActive.value ? applyCorner() : applyCopies(); return }
   if ((e.target as HTMLElement).matches('input,textarea,select')) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     const k = e.key.toLowerCase(), tools = { v:'select', r:'rectangle', c:'circle', l:'polyline' } as const
-    if (k in tools) { cancelGesture(); tool.value = tools[k as keyof typeof tools]; mode.value = '2d' }
+    if (k in tools) { cancelGesture(); operation.value = null; tool.value = tools[k as keyof typeof tools]; mode.value = '2d' }
     if (k === 'e') beginExtrude()
     if (k === 'f') fit(mode.value)
     if (k === 'g') movingBody.value = !movingBody.value
@@ -285,7 +307,7 @@ function keydown(e: KeyboardEvent) {
           <header class="pane-heading"><strong>{{ pane === '2d' ? label('2D · Эскизы', '2D · Sketches') : label('3D · Тела', '3D · Bodies') }}</strong><span>{{ pane === '2d' ? label('Вид сверху · мм', 'Top view · mm') : label('Орбита · мм', 'Orbit · mm') }}</span><button @click="fit(pane)">{{ label('Вписать', 'Fit') }}</button></header>
           <div class="pane-tools">
             <template v-if="pane === '2d'">
-              <button v-for="(name, value) in { select: label('↖ Выбор · V', '↖ Select · V'), rectangle: label('□ Прямоугольник · R', '□ Rectangle · R'), circle: label('○ Круг · C', '○ Circle · C'), polyline: label('⌁ Ломаная · L', '⌁ Polyline · L') }" :key="value" :aria-pressed="tool === value" @click="cancelGesture(); tool = value; mode = '2d'">{{ name }}</button>
+              <button v-for="(name, value) in { select: label('↖ Выбор · V', '↖ Select · V'), rectangle: label('□ Прямоугольник · R', '□ Rectangle · R'), circle: label('○ Круг · C', '○ Circle · C'), polyline: label('⌁ Ломаная · L', '⌁ Polyline · L') }" :key="value" :aria-pressed="tool === value" @click="cancelGesture(); operation = null; tool = value; mode = '2d'">{{ name }}</button>
               <label class="snap-toggle"><input v-model="snap" type="checkbox">{{ label('Привязка', 'Snap') }}</label><input v-if="snap" class="grid-input" v-model.number="grid" type="number" min=".01" step=".5" :aria-label="label('Шаг сетки', 'Grid step')">
             </template>
             <template v-else><button :aria-pressed="!movingBody" @click="movingBody = false">{{ label('↻ Обзор', '↻ Orbit') }}</button><button :aria-pressed="movingBody" @click="movingBody = true">{{ label('↔ Двигать · G', '↔ Move · G') }}</button><button @click="camera = defaultDirectCamera(); fit('3d')">ISO</button><button :aria-pressed="floorVisible" @click="floorVisible = !floorVisible" :aria-label="label('Сетка 3D', '3D grid')">#</button><span class="subtle">{{ label('ПКМ — вращать · Shift — панорама', 'Right drag to orbit · Shift to pan') }}</span><button :disabled="!selectedBody" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))">↓ STL</button></template>
@@ -301,25 +323,44 @@ function keydown(e: KeyboardEvent) {
                   <path :d="'M ' + s.points.map(p => project(p, '2d').join(',')).join(' L ') + (s.closed ? ' Z' : '')" :class="{ selected: selection === s.id, hovered: hovered === s.id }" @pointerenter="hovered = s.id" @pointerleave="hovered = ''" :fill="selection === s.id && s.closed ? 'var(--accent)' : 'none'" fill-opacity=".08" pointer-events="all" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, s.id)" />
                   <template v-if="selection === s.id && tool === 'select'"><circle v-for="(p, i) in s.points" :key="i" :cx="p[0]" :cy="-p[1]" :r="views['2d'] / 150" fill="var(--accent)" @pointerdown.stop="down($event, pane, s.id, i)" /></template>
                 </g>
+                <line v-if="operation === 'revolve'" :x1="revolveAxis === 'y' ? revolveOffset : -2000000" :x2="revolveAxis === 'y' ? revolveOffset : 2000000" :y1="revolveAxis === 'x' ? -revolveOffset : -2000000" :y2="revolveAxis === 'x' ? -revolveOffset : 2000000" stroke="#77eac5" stroke-dasharray="8 4" vector-effect="non-scaling-stroke" pointer-events="none" />
+                <path v-if="cornerPreview.sketch" :d="'M '+cornerPreview.sketch.points.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="#77eac5" fill-opacity=".1" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
+                <circle v-if="cornerActive && selectedSketch" :cx="selectedSketch.points[cornerVertex]?.[0]" :cy="-(selectedSketch.points[cornerVertex]?.[1] ?? 0)" :r="views['2d']/80" fill="none" stroke="#ffcc77" stroke-width="2" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <path v-for="s in copyPreview" :key="s.id" :d="'M '+s.points.map(p=>project(p,'2d').join(',')).join(' L ')+(s.closed?' Z':'')" fill="none" stroke="#b894ff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <circle v-if="snapMarker" :cx="snapMarker[0]" :cy="-snapMarker[1]" :r="views['2d']/100" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <polyline v-if="draft.length"
  :points="draft.map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               </g>
               <g v-else><polygon v-for="p in polygons" :key="p.key" :points="p.points" :fill="`hsl(${selection === p.id ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="`hsl(${selection === p.id ? 266 : 220} 45% ${p.shade}%)`" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id)" /></g>
-              <g v-if="pane === '3d' && operation === 'extrude'" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
+              <g v-if="pane === '3d' && solidActive" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
               <g v-if="pane === '3d' && extrusionHandle" class="height-handle" @pointerdown.stop="dragHeight">
                 <line :x1="extrusionHandle.base[0]" :y1="extrusionHandle.base[1]" :x2="extrusionHandle.top[0]" :y2="extrusionHandle.top[1]" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" />
                 <circle :cx="extrusionHandle.top[0]" :cy="extrusionHandle.top[1]" :r="views['3d']/55" fill="#77eac5" stroke="#18332d" stroke-width="2" vector-effect="non-scaling-stroke" />
                 <text :x="extrusionHandle.top[0]+views['3d']/35" :y="extrusionHandle.top[1]" :font-size="views['3d']/45" fill="#77eac5">{{ height.toFixed(2) }} mm</text>
               </g>
             </svg>
+            <div v-if="pane === '2d' && cornerActive" class="operation-card">
+              <strong>{{ operation === 'fillet' ? label('Скругление', 'Fillet') : 'DogEar' }}</strong>
+              <small>{{ label('Нажмите вершину контура для выбора угла.', 'Click a contour vertex to choose a corner.') }}</small>
+              <small v-if="operation === 'dogear'">{{ label('Круглый выход в прямом углу. Радиус соответствует радиусу инструмента.', 'Circular relief at a right-angle corner. Radius is the tool radius.') }}</small>
+              <label>{{ label('Вершина', 'Vertex') }}<select v-model.number="cornerVertex" :aria-label="label('Вершина', 'Vertex')"><option v-for="(_, i) in selectedSketch?.points" :key="i" :value="i">{{ i + 1 }}</option></select></label>
+              <label>{{ label('Радиус, мм', 'Radius, mm') }}<input v-model.number="cornerRadius" type="number" min=".01" step=".5"></label>
+              <small v-if="cornerPreview.error" role="alert">{{ cornerPreview.error }}</small>
+              <div><button class="primary" :disabled="!cornerPreview.sketch" @click="applyCorner">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
+            </div>
             <div v-if="pane === '2d' && drawMeasure" class="live-measure">{{ drawMeasure }}</div>
-            <div v-if="pane === '3d' && operation === 'extrude'" class="operation-card">
-              <strong>{{ label('Выдавливание', 'Extrusion') }}</strong><small>{{ label('Тяните зелёную ручку или введите размер', 'Drag the green handle or enter a dimension') }}</small>
+            <div v-if="pane === '3d' && solidActive" class="operation-card">
+              <strong>{{ operation === 'revolve' ? label('Вращение профиля', 'Revolve profile') : label('Выдавливание', 'Extrusion') }}</strong><small v-if="operation === 'extrude'">{{ label('Тяните зелёную ручку или введите размер', 'Drag the green handle or enter a dimension') }}</small>
               <div class="segmented"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" :aria-pressed="extrusionMode === value" @click="extrusionMode = value">{{ name }}</button></div>
-              <label>{{ label('Высота, мм', 'Height, mm') }}<input v-model.number="height" type="number" step="1"></label>
-              <label>{{ label('Начало Z, мм', 'Start Z, mm') }}<input v-model.number="baseZ" type="number" step="1"></label>
+              <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<input v-model.number="height" type="number" step="1"></label>
+              <label v-if="operation === 'extrude'">{{ label('Начало Z, мм', 'Start Z, mm') }}<input v-model.number="baseZ" type="number" step="1"></label>
+              <template v-if="operation === 'revolve'">
+                <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>
+                <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<input v-model.number="revolveOffset" type="number" step="1"></label>
+                <label>{{ label('Угол, °', 'Angle, °') }}<input v-model.number="revolveAngle" type="number" min="-360" max="360" step="15"></label>
+                <label>{{ label('Сегменты', 'Segments') }}<input v-model.number="revolveSegments" type="number" min="8" max="128"></label>
+                <small>{{ label('Пунктир слева — ось вращения. Контур должен лежать по одну сторону от неё.', 'The dashed line on the left is the rotation axis. Keep the profile on one side of it.') }}</small>
+              </template>
               <label v-if="extrusionMode !== 'new'">{{ label('Тело', 'Body') }}<select v-model="targetBody"><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
               <small v-if="previewError" role="alert">{{ previewError }}</small>
               <div><button class="primary" :disabled="!previewBody || !!previewError || (extrusionMode !== 'new' && !targetBody)" @click="extrude">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
@@ -331,7 +372,7 @@ function keydown(e: KeyboardEvent) {
               <div><button class="primary" :disabled="!copyPreview.length" @click="applyCopies">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
-            <div v-if="pane === '3d' && !document.bodies.length && operation !== 'extrude'" class="empty-hint"><strong>{{ label('Здесь появится объём', 'Your solid appears here') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && !document.bodies.length && !solidActive" class="empty-hint"><strong>{{ label('Здесь появится объём', 'Your solid appears here') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
           </div>
           <div class="object-strip"><span>{{ pane === '2d' ? label('Эскизы', 'Sketches') : label('Тела', 'Bodies') }}</span><button v-for="item in (pane === '2d' ? document.sketches : document.bodies)" :key="item.id" :aria-pressed="selection === item.id" @click="selection = item.id; mode = pane">{{ item.name }}</button></div>
@@ -342,7 +383,10 @@ function keydown(e: KeyboardEvent) {
       <template v-if="tool === 'polyline' && draft.length"><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
       <template v-else-if="selectedSketch || selectedBody">
         <strong>{{ selectedSketch?.name || selectedBody?.name }}</strong>
-        <button v-if="selectedSketch" class="primary" :disabled="!selectedSketch.closed" @click="beginExtrude">{{ label('Выдавить · E', 'Extrude · E') }}</button>
+        <button v-if="selectedSketch" class="primary" :disabled="!selectedSketch.closed" @click="beginExtrude()">{{ label('Выдавить · E', 'Extrude · E') }}</button>
+        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginExtrude('revolve')">{{ label('Вращение', 'Revolve') }}</button>
+        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('fillet')">{{ label('Скруглить', 'Fillet') }}</button>
+        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('dogear')">DogEar</button>
         <button v-if="selectedSketch" @click="operation = operation === 'array' ? null : 'array'">{{ label('Круговые копии', 'Circular copies') }}</button><button @click="duplicate">{{ label('Копия · ⌘/Ctrl D', 'Duplicate · ⌘/Ctrl D') }}</button>
         <details class="transform-menu"><summary>{{ label('Точные преобразования', 'Exact transforms') }}</summary><div>
           <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
