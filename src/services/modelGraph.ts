@@ -23,6 +23,10 @@ export type Expression =
   | { op: 'zip'; inputs: Expression[] }
   | { op: 'enumerate'; input: Expression }
   | { op: 'map' | 'filter' | 'flatmap'; input: Expression; function: Expression }
+  | { op: 'text'; value: string }
+  | { op: 'record'; fields: Record<string, Expression> }
+  | { op: 'field'; input: Expression; name: string }
+  | { op: 'query'; method: string; input: Expression; function?: Expression; argument?: Expression; functions?: Expression[]; keys?: {function: Expression; descending: boolean}[] }
   | { op: 'reduce'; input: Expression; function: Expression; initial: Expression }
   | { op: 'at'; input: Expression; index: Expression }
   | { op: 'length'; input: Expression }
@@ -48,6 +52,10 @@ export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
     z.object({ op: z.literal('zip'), inputs: z.array(expressionSchema).min(2).max(8) }).strict(),
     z.object({ op: z.literal('enumerate'), input: expressionSchema }).strict(),
     z.object({ op: z.enum(['map', 'filter', 'flatmap']), input: expressionSchema, function: expressionSchema }).strict(),
+    z.object({op:z.literal('text'),value:z.string().max(4096)}).strict(),
+    z.object({op:z.literal('record'),fields:z.record(id,expressionSchema)}).strict(),
+    z.object({op:z.literal('field'),input:expressionSchema,name:id}).strict(),
+    z.object({op:z.literal('query'),method:id,input:expressionSchema,function:expressionSchema.optional(),argument:expressionSchema.optional(),functions:z.array(expressionSchema).length(3).optional(),keys:z.array(z.object({function:expressionSchema,descending:z.boolean()}).strict()).min(1).max(8).optional()}).strict(),
     z.object({ op: z.literal('reduce'), input: expressionSchema, function: expressionSchema, initial: expressionSchema }).strict(),
     z.object({ op: z.literal('at'), input: expressionSchema, index: expressionSchema }).strict(),
     z.object({ op: z.literal('length'), input: expressionSchema }).strict(),

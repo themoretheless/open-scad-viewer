@@ -4178,6 +4178,127 @@
               "properties": {
                 "op": {
                   "type": "string",
+                  "const": "text"
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              },
+              "required": [
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "record"
+                },
+                "fields": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "fields"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "field"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "query"
+                },
+                "method": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "argument": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "functions": {
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "keys": {
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "$ref": "#/$defs/__schema0"
+                      },
+                      "descending": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "function",
+                      "descending"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "method",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
                   "const": "reduce"
                 },
                 "input": {

@@ -519,3 +519,36 @@ it('manual save writes the current draft without requiring a conflict and surviv
   expect(await reopened.load()).toEqual({ status: 'found', snapshot: edited })
   await reopened.close()
 })
+
+it('ignores an older committed checkpoint when IndexedDB has a newer saved document', async () => {
+  const storage = new MemoryStorage(), repository = new ControlledRepository()
+  const old = snapshot('old width 72;', 100, 1, 1)
+  repository.value = old
+  const first = new BrowserWorkspacePersistence(repository, storage)
+  await first.initialize({ fallbackSource: 'fallback' })
+  first.stageRecovery(old)
+  const saved = updateWorkspaceDocument(old, { source: 'saved width 160;' }, 101)
+  repository.value = saved
+  const reopened = new BrowserWorkspacePersistence(repository, storage)
+  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({ document: saved, durable: true, backend: 'indexeddb' })
+  expect(reopened.hasConflict).toBe(false)
+})
+
+it('accepting the IndexedDB version resets autosave lineage and resolves the discarded recovery', async () => {
+  const storage = new MemoryStorage(), repository = new ControlledRepository()
+  const base = snapshot('base();', 110, 1, 1, 'first-document')
+  repository.value = base
+  const persistence = new BrowserWorkspacePersistence(repository, storage)
+  await persistence.initialize({ fallbackSource: 'fallback' })
+  const local = updateWorkspaceDocument(base, { source: 'local();' }, 111)
+  const remote = snapshot('remote();', 112, 1, 1, 'second-document')
+  repository.value = remote
+  expect(await persistence.save(local)).toBe(false)
+  expect((await persistence.resolveConflict(false, local)).saved).toBe(true)
+  const edit = updateWorkspaceDocument(remote, { source: 'edited remote();' }, 113)
+  expect(await persistence.save(edit)).toBe(true)
+  persistence.stageRecovery(edit)
+  const reopened = new BrowserWorkspacePersistence(repository, storage)
+  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({document: edit,durable: true})
+  expect(reopened.hasConflict).toBe(false)
+})

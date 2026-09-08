@@ -14,11 +14,13 @@ enum Rule {
     Enum(&'static [&'static str]),
     Literal(&'static str),
     Message,
+    Text,
     Expr,
     Node,
     Vector(usize),
     Array(&'static Rule, usize, usize),
     ExprRecord,
+    SortKey,
     Frame,
     LoftSection,
     Component,
@@ -283,6 +285,18 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
                 return Err(invalid(path, format!("Expected {expected}.")));
             }
         }
+        Rule::Text => {
+            if !value
+                .as_str()
+                .is_some_and(|text| text.encode_utf16().count() <= 4096)
+            {
+                return Err(Error::new(
+                    "schema_error",
+                    path,
+                    "Expected a string of at most 4096 characters",
+                ));
+            }
+        }
         Rule::Message => {
             if !value
                 .as_str()
@@ -294,6 +308,14 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
                 ));
             }
         }
+        Rule::SortKey => object(
+            value,
+            path,
+            &[
+                required("function", Rule::Expr),
+                required("descending", Rule::Bool),
+            ],
+        )?,
         Rule::Expr => expression(value, path)?,
         Rule::Node => node(value, path)?,
         Rule::Vector(size) => array(value, path, Rule::Expr, size, size)?,
@@ -459,7 +481,103 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
     if map.contains_key("local") {
         return object(value, path, &[required("local", Rule::Id)]);
     }
+    if value["op"] == "query" {
+        let method = value["method"].as_str().unwrap_or("").to_owned();
+        if ["join", "groupJoin"].contains(&method.as_str()) {
+            return object(
+                value,
+                path,
+                &[
+                    OP,
+                    required("method", Rule::Id),
+                    required("input", Rule::Expr),
+                    required("argument", Rule::Expr),
+                    required("functions", Rule::Array(&Rule::Expr, 3, 3)),
+                ],
+            );
+        }
+        if method == "scan" {
+            return object(
+                value,
+                path,
+                &[
+                    OP,
+                    required("method", Rule::Id),
+                    required("input", Rule::Expr),
+                    required("argument", Rule::Expr),
+                    required("function", Rule::Expr),
+                ],
+            );
+        }
+        let callback =
+            ["takeWhile", "skipWhile", "groupBy", "distinctBy", "all"].contains(&method.as_str());
+        let optional_callback = [
+            "count", "any", "first", "last", "single", "sum", "min", "max", "average",
+        ]
+        .contains(&method.as_str());
+        let argument = [
+            "take",
+            "skip",
+            "chunk",
+            "window",
+            "concat",
+            "append",
+            "prepend",
+            "contains",
+            "except",
+            "intersect",
+            "union",
+        ]
+        .contains(&method.as_str());
+        let optional_argument =
+            ["firstOrDefault", "lastOrDefault", "defaultIfEmpty"].contains(&method.as_str());
+        let plain = ["reverse", "distinct", "flatten", "length"].contains(&method.as_str());
+        if method == "orderBy" {
+            return object(
+                value,
+                path,
+                &[
+                    OP,
+                    required("method", Rule::Enum(&["orderBy"])),
+                    required("input", Rule::Expr),
+                    required("keys", Rule::Array(&Rule::SortKey, 1, 8)),
+                ],
+            );
+        }
+        if !(callback || optional_callback || argument || optional_argument || plain) {
+            return Err(Error::new(
+                "schema_error",
+                path,
+                "Unknown sequence query method",
+            ));
+        }
+        let mut fields = vec![
+            OP,
+            required("method", Rule::Id),
+            required("input", Rule::Expr),
+        ];
+        if callback {
+            fields.push(required("function", Rule::Expr));
+        }
+        if optional_callback {
+            fields.push(optional("function", Rule::Expr));
+        }
+        if argument {
+            fields.push(required("argument", Rule::Expr));
+        }
+        if optional_argument {
+            fields.push(optional("argument", Rule::Expr));
+        }
+        return object(value, path, &fields);
+    }
     let fields: &[Field] = match discriminator(value, path, "op")? {
+        "text" => &[OP, required("value", Rule::Text)],
+        "record" => &[OP, required("fields", Rule::ExprRecord)],
+        "field" => &[
+            OP,
+            required("input", Rule::Expr),
+            required("name", Rule::Id),
+        ],
         "checked" => &[
             OP,
             required("checks", Rule::Array(&Rule::Expr, 0, 256)),

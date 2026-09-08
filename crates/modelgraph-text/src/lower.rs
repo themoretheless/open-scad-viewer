@@ -21,6 +21,7 @@ struct Function {
 }
 struct Lambda {
     name: String,
+    parameters: Vec<String>,
     body: J,
     env: Env,
 }
@@ -91,6 +92,14 @@ fn expression(v: V) -> R<J> {
             Ok(json!({"op":"list","items":a.into_iter().map(expression).collect::<R<Vec<_>>>()?}))
         }
         V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
+        V::Json(j) if j.get("text").is_some() => Ok(json!({"op":"text","value":&j["text"]})),
+        V::Record(fields, _, _) => {
+            let mut result = value_codec::Map::new();
+            for (name, value) in fields {
+                result.insert(name, expression(value)?);
+            }
+            Ok(json!({"op":"record","fields":J::Object(result)}))
+        }
         v => scalar(v),
     }
 }
@@ -98,6 +107,7 @@ fn list(v: V) -> R<J> {
     match &v {
         V::Array(_) => expression(v),
         V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
+        V::Json(j) if j.get("geometry").is_none() && j.get("text").is_none() => Ok(j.clone()),
         _ => Err("Expected a sequence".into()),
     }
 }
@@ -208,6 +218,9 @@ impl Compiler {
                     V::Record(mut r, _, _) => r
                         .shift_remove(name)
                         .ok_or_else(|| format!("Unknown record field {name}")),
+                    V::Json(j) if j.get("geometry").is_none() => {
+                        Ok(V::Json(json!({"op":"field","input":j,"name":name})))
+                    }
                     _ => Err(format!("Unknown record field {name}")),
                 };
             }
@@ -292,14 +305,37 @@ impl Compiler {
             "lambda" => {
                 return Ok(V::Lambda(Rc::new(Lambda {
                     name: name.into(),
+                    parameters: if arr(a, "parameters").is_empty() {
+                        vec![name.into()]
+                    } else {
+                        arr(a, "parameters")
+                            .iter()
+                            .map(|p| p.as_str().unwrap().into())
+                            .collect()
+                    },
                     body: a["left"].clone(),
                     env: e.clone(),
                 })))
+            }
+            "not" => {
+                return Ok(V::Json(
+                    json!({"op":"not","value":scalar(self.eval(&a["left"],e,b)?)?}),
+                ))
             }
             "neg" => {
                 return Ok(V::Json(
                     json!({"op":"negate","value":scalar(self.eval(&a["left"],e,b)?)?}),
                 ))
+            }
+            "binary" if name == "==" || name == "!=" => {
+                let left = expression(self.eval(&a["left"], e, b)?)?;
+                let right = expression(self.eval(&a["right"], e, b)?)?;
+                let eq = json!({"op":"eq","args":[left,right]});
+                return Ok(V::Json(if name == "!=" {
+                    json!({"op":"not","value":eq})
+                } else {
+                    eq
+                }));
             }
             "binary" => {
                 let mut left = scalar(self.eval(&a["left"], e, b)?)?;
@@ -308,6 +344,8 @@ impl Compiler {
                     std::mem::swap(&mut left, &mut right)
                 }
                 let op = match name {
+                    "&&" => "and",
+                    "||" => "or",
                     "+" => "add",
                     "-" => "subtract",
                     "*" => "multiply",
@@ -329,6 +367,12 @@ impl Compiler {
         }
         let (call, input) = if s(a, "kind") == "pipe" {
             let v = self.eval(&a["left"], e, b)?;
+            if !is_geometry(&v)
+                && (matches!(&v, V::Array(_))
+                    || matches!(&v, V::Json(j) if j.get("sequence").is_some() || (j.get("geometry").is_none() && j.get("text").is_none())))
+            {
+                return self.query(v, &a["right"], e, b);
+            }
             (&a["right"], Some(self.geometry(v)?))
         } else {
             (a, None)
@@ -385,11 +429,16 @@ impl Compiler {
         if let Some(f) = e.get(name) {
             match f {
                 V::Lambda(f) => {
-                    if input.is_some() || args.len() != 1 || args[0].get("name").is_some() {
-                        return Err("Unary function expects one positional argument".into());
+                    if input.is_some()
+                        || args.len() != f.parameters.len()
+                        || args.iter().any(|a| a.get("name").is_some())
+                    {
+                        return Err("Lambda argument count mismatch".into());
                     }
                     let mut scope = f.env.clone();
-                    scope.insert(f.name.clone(), self.eval(&args[0]["value"], e, b)?);
+                    for (name, arg) in f.parameters.iter().zip(args) {
+                        scope.insert(name.clone(), self.eval(&arg["value"], e, b)?);
+                    }
                     return self.eval(&f.body, &scope, b);
                 }
                 V::Function(f) => {
@@ -439,7 +488,7 @@ impl Compiler {
             );
         }
         let mut next = offset + 1;
-        let mut condition: Option<J> = None;
+
         while next < clauses.len() && s(&clauses[next], "kind") != "for" {
             let c = &clauses[next];
             next += 1;
@@ -448,29 +497,25 @@ impl Compiler {
                 scope.insert(s(&c["items"][0], "value").into(), v);
             } else {
                 let v = scalar(self.eval(&c["left"], &scope, b)?)?;
-                condition = Some(if let Some(old) = condition {
-                    json!({"op":"and","args":[old,v]})
+                input = if s(c, "kind") == "while" {
+                    json!({"op":"query","method":"takeWhile","input":input,"function":{"op":"lambda","parameters":[&binding],"body":v}})
                 } else {
-                    v
-                })
+                    json!({"op":"filter","input":input,"function":{"op":"lambda","parameters":[&binding],"body":v}})
+                };
             }
-        }
-        if let Some(c) = condition {
-            input = json!({"op":"filter","input":input,"function":{"op":"lambda","parameters":[&binding],"body":c}})
         }
         let child = if next < clauses.len() {
             self.comprehension(a, next, &scope, b + 1)?
         } else {
             self.eval(&a["left"], &scope, b)?
         };
-        if let V::Json(j) = &child {
-            if let Some(id) = j.get("geometry") {
-                let result =
-                    self.add(json!({"op":"collect","values":input,"binding":binding,"input":id}))?;
-                let id = self.geometry(result.clone())?;
-                self.collections.insert(id);
-                return Ok(result);
-            }
+        if is_geometry(&child) {
+            let id = self.geometry(child)?;
+            let result =
+                self.add(json!({"op":"collect","values":input,"binding":binding,"input":id}))?;
+            let id = self.geometry(result.clone())?;
+            self.collections.insert(id);
+            return Ok(result);
         }
         Ok(V::Json(
             json!({"sequence":{"op":if next<clauses.len(){"flatmap"}else{"map"},"input":input,"function":{"op":"lambda","parameters":[&binding],"body":expression(child)?}}}),
@@ -1376,3 +1421,5 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         _ => return None,
     })
 }
+
+include!("lower_query.rs");

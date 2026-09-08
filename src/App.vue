@@ -1129,7 +1129,9 @@ async function resolveWorkspaceConflict(preferCurrentDraft: boolean) {
     && code.value === snapshot.source
     && fileName.value === snapshot.fileName
   if (result.restoredDocument && editorUnchanged) {
-    await restoreWorkspaceDocument(result.restoredDocument)
+    if (!workspaceDocumentsEqual(result.restoredDocument, snapshot)) {
+      await restoreWorkspaceDocument(result.restoredDocument)
+    }
   } else if (!editorUnchanged) {
     scheduleWorkspacePersistence()
     return

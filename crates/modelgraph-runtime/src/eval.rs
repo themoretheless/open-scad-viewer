@@ -11,6 +11,8 @@ pub type Scope<'a> = Rc<HashMap<String, Value<'a>>>;
 #[derive(Clone, Debug)]
 pub enum Value<'a> {
     Numeric(Numeric),
+    Text(&'a str),
+    Record(Rc<HashMap<String, Value<'a>>>),
     List(Rc<[Value<'a>]>),
     Closure {
         parameters: &'a [Json],
@@ -431,6 +433,37 @@ impl<'a> Evaluator<'a> {
                 }
                 return Ok(Value::List(output.into()));
             }
+            "eq" => {
+                let a = self.resolve(&expr["args"][0], scope, path, depth + 1)?;
+                let b = self.resolve(&expr["args"][1], scope, path, depth + 1)?;
+                return Ok((query_compare(&a, &b, path)?.is_eq() as u8 as f64).into());
+            }
+            "text" => return Ok(Value::Text(string(&expr["value"]))),
+            "record" => {
+                let fields = expr["fields"]
+                    .as_object()
+                    .ok_or_else(|| Error::new("type_error", path, "Expected record fields"))?;
+                self.allocate(fields.len(), path)?;
+                let mut values = HashMap::new();
+                for (name, value) in fields {
+                    values.insert(name.clone(), self.resolve(value, scope, path, depth + 1)?);
+                }
+                return Ok(Value::Record(Rc::new(values)));
+            }
+            "field" => {
+                let value = self.resolve(&expr["input"], scope, path, depth + 1)?;
+                let Value::Record(fields) = value else {
+                    return Err(Error::new("type_error", path, "Expected a record"));
+                };
+                return fields.get(string(&expr["name"])).cloned().ok_or_else(|| {
+                    Error::new(
+                        "unknown_field",
+                        path,
+                        format!("Unknown field {}", string(&expr["name"])),
+                    )
+                });
+            }
+            "query" => return self.query(expr, scope, path, depth),
             "enumerate" => {
                 let value =
                     self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
@@ -533,9 +566,10 @@ impl<'a> Evaluator<'a> {
                 }
                 let mut output = Vec::with_capacity(items.len());
                 for (i, item) in items.iter().enumerate() {
-                    let value = self.invoke(
+                    let value = self.invoke_indexed(
                         &function,
-                        vec![item.clone()],
+                        item.clone(),
+                        i,
                         &format!("{path}[{i}]"),
                         depth + 1,
                     )?;
@@ -856,6 +890,8 @@ fn unique(items: &[Json]) -> bool {
     let mut seen = HashSet::with_capacity(items.len());
     items.iter().all(|item| seen.insert(string(item)))
 }
+
+include!("eval_query.rs");
 
 #[cfg(test)]
 mod tests {

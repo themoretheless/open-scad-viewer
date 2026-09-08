@@ -166,7 +166,11 @@ export class BrowserWorkspacePersistence {
     // Raw `scad-code` has no identity or ordering metadata. It can seed an
     // empty/unavailable workspace, but can never overwrite a known IDB head.
     const nonMatchingRecoveries = recoveryEntries.filter(entry =>
-      !workspaceDocumentsEqual(indexed, entry.record.snapshot))
+      !workspaceDocumentsEqual(indexed, entry.record.snapshot)
+      // A journal equal to its durable base contains no pending edits. An old
+      // tab's pagehide checkpoint must not displace a newer IndexedDB head.
+      && !(indexed && entry.record.base.status === 'found'
+        && workspaceDocumentsEqual(entry.record.snapshot, entry.record.base.snapshot)))
     const replayableRecoveries = this.indexedDbState === 'ready'
       ? nonMatchingRecoveries.filter(entry => recoveryCanReplay(indexed, entry.record))
       : []
@@ -334,7 +338,7 @@ export class BrowserWorkspacePersistence {
         this.durableHead = document
         this.durableHeadKnown = true
         this.backendValue = 'indexeddb'
-      this.indexedDbError = ''
+        this.indexedDbError = ''
         this.retireRawLegacy()
         this.retireResolvedRecoveries(previousHead, document)
         return true
@@ -456,6 +460,7 @@ export class BrowserWorkspacePersistence {
     const chosen = preferCurrentDraft ? currentDocument : indexed
     if (!chosen) return { saved: false }
 
+    const resolvedRecovery = this.conflictingRecovery
     this.unresolvedConflict = false
     this.conflictingRecovery = null
     this.indexedDbState = 'ready'
@@ -468,7 +473,10 @@ export class BrowserWorkspacePersistence {
       this.backendValue = 'indexeddb'
       this.indexedDbError = ''
       this.retireRawLegacy()
-      this.retireResolvedRecoveries(indexed, chosen)
+      this.retireResolvedRecoveries(indexed, chosen, resolvedRecovery)
+      // Choosing another document is an explicit lineage change. Future
+      // autosaves must compare with that choice, not the rejected local draft.
+      this.latestSaveRequest = chosen
       return { saved: true, restoredDocument: chosen }
     } catch (error) {
       this.recordIndexedDbFailure(error)

@@ -123,12 +123,14 @@ fn lex(source: &str) -> R<Vec<Token>> {
             while p < b.len() && (b[p].is_ascii_alphanumeric() || b[p] == b'_') {
                 p += 1
             }
-        } else if let Some(op) = ["|>", "->", "=>", "..<", "..", "**", "==", "!=", "<=", ">="]
-            .iter()
-            .find(|op| source[p..].starts_with(**op))
+        } else if let Some(op) = [
+            "|>", "->", "=>", "..<", "..", "**", "==", "!=", "<=", ">=", "&&", "||",
+        ]
+        .iter()
+        .find(|op| source[p..].starts_with(**op))
         {
             p += op.len()
-        } else if b"\n{}()[],.?:;=+*/%<>-".contains(&b[p]) {
+        } else if b"\n{}()[],.?:;=+*/%<>-!".contains(&b[p]) {
             p += 1
         } else {
             return Err(format!(
@@ -599,6 +601,90 @@ impl Parser<'_> {
         }
         false
     }
+    // A foreach is a value-producing block. Its body has lexical bindings and
+    // ends in yield; nested foreach expressions compose without mutation.
+    fn foreach(&mut self) -> R<J> {
+        let base = self.indent();
+        let mut names = Vec::new();
+        if self.peek() == "(" {
+            self.pop()?;
+            loop {
+                names.push(json!({"kind":"name","value":self.id()?}));
+                if self.peek() != "," {
+                    break;
+                }
+                self.pop()?;
+            }
+            self.take(")")?;
+        } else {
+            names.push(json!({"kind":"name","value":self.id()?}));
+        }
+        if !unique(names.iter().map(|n| n["value"].as_str().unwrap().into())) {
+            return self.err("Duplicate foreach binding");
+        }
+        self.take("in")?;
+        let mut clauses = vec![json!({"kind":"for","items":names,"left":self.expr(2)?})];
+        while ["where", "let"].contains(&self.peek()) {
+            let kind = self.pop()?;
+            if kind == "where" {
+                clauses.push(json!({"kind":kind,"left":self.expr(2)?}));
+            } else {
+                let name = self.id()?;
+                self.take("=")?;
+                clauses.push(
+                    json!({"kind":"let","items":[json!({"value":name})],"left":self.expr(2)?}),
+                );
+            }
+        }
+        let body;
+        if self.peek() == "=>" {
+            self.pop()?;
+            self.inner();
+            body = self.expr(0)?;
+        } else {
+            self.take("\n")?;
+            self.inner();
+            let indent = self.indent();
+            if indent.len() <= base.len() || !indent.starts_with(&base) {
+                return self.err("Expected indented foreach body");
+            }
+            loop {
+                if self.peek() == "EOF" || self.indent() != indent {
+                    return self.err("Expected yield at foreach body indentation");
+                }
+                if self.peek() == "yield" {
+                    self.pop()?;
+                    body = self.expr(0)?;
+                    break;
+                }
+                if ["where", "continue", "break"].contains(&self.peek()) {
+                    let kind = self.pop()?;
+                    if kind != "where" {
+                        self.take("if")?;
+                    }
+                    let mut condition = self.expr(0)?;
+                    if kind != "where" {
+                        condition = json!({"kind":"binary","value":"==","left":condition,"right":{"kind":"number","value":"0"}});
+                    }
+                    clauses.push(
+                        json!({"kind":if kind=="break"{"while"}else{"where"},"left":condition}),
+                    );
+                } else {
+                    let name = self.id()?;
+                    self.take("=")?;
+                    clauses.push(
+                        json!({"kind":"let","items":[json!({"value":name})],"left":self.expr(0)?}),
+                    );
+                }
+                if clauses.len() > 64 {
+                    return self.err("At most 64 foreach clauses");
+                }
+                self.take("\n")?;
+                self.inner();
+            }
+        }
+        Ok(json!({"kind":"comprehension","items":clauses,"left":body}))
+    }
     fn expr(&mut self, min: u8) -> R<J> {
         self.depth += 1;
         if self.depth > 64 {
@@ -607,17 +693,40 @@ impl Parser<'_> {
         let t = self.pop()?;
         let mut a = match t.as_str() {
             "fn" => self.function()?,
+            "foreach" => self.foreach()?,
             "{" => {
                 self.p -= 1;
                 self.record()?
             }
+            "!" => json!({"kind":"not","left":self.expr(25)?}),
             "-" => json!({"kind":"neg","left":self.expr(25)?}),
             "(" => {
                 self.inner();
-                let x = self.expr(0)?;
-                self.inner();
-                self.take(")")?;
-                x
+                let start = self.p;
+                let mut names = Vec::new();
+                while ident(self.peek()) && self.peek() != "EOF" {
+                    names.push(self.id()?);
+                    if self.peek() != "," {
+                        break;
+                    }
+                    self.pop()?;
+                    self.inner();
+                }
+                if self.peek() == ")" && self.next() == "=>" {
+                    if names.is_empty() || names.len() > 8 || !unique(names.clone()) {
+                        return self.err("Lambda requires 1..8 distinct parameters");
+                    }
+                    self.pop()?;
+                    self.pop()?;
+                    self.inner();
+                    json!({"kind":"lambda","value":&names[0],"parameters":names,"left":self.expr(0)?})
+                } else {
+                    self.p = start;
+                    let x = self.expr(0)?;
+                    self.inner();
+                    self.take(")")?;
+                    x
+                }
             }
             "[" => {
                 self.inner();
@@ -739,7 +848,9 @@ impl Parser<'_> {
             }
             let op = self.peek().to_owned();
             let prec = match op.as_str() {
-                "==" | "!=" | "<" | "<=" | ">" | ">=" => 3,
+                "||" => 2,
+                "&&" => 3,
+                "==" | "!=" | "<" | "<=" | ">" | ">=" => 4,
                 ".." | "..<" => 5,
                 "+" | "-" => 10,
                 "*" | "/" | "%" => 20,
@@ -901,6 +1012,10 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
                     control["max"] = json!(max)
                 }
                 json!({"kind":"param","name":&name,"parameter":param,"control":control})
+            }
+            "foreach" => {
+                p.pop()?;
+                json!({"kind":"show","value":p.foreach()?})
             }
             "show" => {
                 p.pop()?;
