@@ -3,6 +3,7 @@
 //! Coordinates in this host contract are millimeters; algorithms use binary64.
 pub mod boolean;
 pub mod brep;
+pub mod cad;
 pub mod edit;
 pub mod modeling;
 pub mod proximity;
@@ -158,6 +159,7 @@ impl Mesh {
             self.point(0)?
         };
         let mut volume = 0.;
+        let mut volume_compensation = 0.;
         let mut degenerate = 0;
         for t in self.indices.chunks_exact(3) {
             let a = self.point(t[0])?;
@@ -173,7 +175,10 @@ impl Mesh {
             let br = sub(b, reference);
             let cr = sub(c, reference);
             let bc = cross(br, cr);
-            volume += (ar[0] * bc[0] + ar[1] * bc[1] + ar[2] * bc[2]) / 6.;
+            let term = ar[0] * bc[0] + ar[1] * bc[1] + ar[2] * bc[2] - volume_compensation;
+            let next = volume + term;
+            volume_compensation = (next - volume) - term;
+            volume = next;
         }
         check(
             volume.is_finite(),
@@ -199,7 +204,7 @@ impl Mesh {
                 && non_manifold == 0
                 && orientation == 0
                 && degenerate == 0,
-            signed_volume_mm3: volume,
+            signed_volume_mm3: volume / 6.,
             error_bound_certified: false,
             self_intersection_status: "not_checked".into(),
             construction: Construction::TriangleMesh,

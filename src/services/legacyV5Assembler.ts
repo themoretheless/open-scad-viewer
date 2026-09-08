@@ -1,3 +1,4 @@
+import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import type { GeometryQuality } from '../core/build'
 import type {
   MeshData,
@@ -177,7 +178,7 @@ export function legacySceneEntityId(
       }
     }
   }
-  return `entity:${path}`
+  return boundedSceneEntityId(path)
 }
 
 function producerOccurrenceByNode(program: SemanticProgramV1): ReadonlyMap<number, SemanticOccurrence> {

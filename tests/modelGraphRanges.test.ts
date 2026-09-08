@@ -21,7 +21,7 @@ it('defines endpoints, count, step, singleton, empty and descending ranges',()=>
  expect(values(0,0.3,false,{step:0.1})).toHaveLength(3)
 })
 it('supports typed ranges, scalar comprehensions and operators',()=>{
- const c=compileModelGraphText(header+'positions = 0mm..1cm by 2mm\nsquares = [for i in 0..<6 where i % 2 == 0 let n = i ** 2 => n]\n'+scene+'assert length(positions) |> equalTo(6)\nassert at(squares,2) |> equalTo(16)\nassert at(positions,5) |> equalTo(10mm)')
+ const c=compileModelGraphText(header+'positions = 0mm..1cm by 2mm\nsquares = [for i in 0..<6 where i % 2 == 0 let n = i ** 2 => n]\n'+scene+'assert length(positions). equalTo(6)\nassert at(squares,2). equalTo(16)\nassert at(positions,5). equalTo(10mm)')
  expect(c.constraint_report.every(r=>r.passed)).toBe(true)
 })
 it('supports exact-count parameter changes in canonical JSON',async()=>{
@@ -34,13 +34,13 @@ it('supports exact-count parameter changes in canonical JSON',async()=>{
  expect(()=>setModelGraphParameters(c.document,c.document_sha256,[{id:'count',value:1.5}])).toThrow()
 })
 it('supports nested loops, filtering and tuple zip/enumerate',async()=>{
- const c=compileModelGraphText(header+'angles = 0deg..<360deg count 4\nvalues = [for (i,a) in enumerate(angles) where i != 1 => a]\npairs = [for (x,y) in zip([1,2],[3,4]) => x+y]\n'+scene+'assert length(values) |> equalTo(3)\nassert at(pairs,1) |> equalTo(6)')
+ const c=compileModelGraphText(header+'angles = 0deg..<360deg count 4\nvalues = [for (i,a) in enumerate(angles) where i != 1 => a]\npairs = [for (x,y) in zip([1,2],[3,4]) => x+y]\n'+scene+'assert length(values). equalTo(3)\nassert at(pairs,1). equalTo(6)')
  expect(c.constraint_report.every(r=>r.passed)).toBe(true)
  const built=await parseOpenSCAD(header+'parts = [for x in 0..<3 for y in 0..<2 where x + y > 0 => box([1mm,1mm,1mm]).translate([x*3mm,y*3mm,0mm])]\nshow parts')
  expect(built.meshes).toHaveLength(5)
 })
 it('flattens nested numeric comprehensions in stable order',()=>{
- const c=compileModelGraphText(header+'values = [for x in 0..<3 for y in 0..<2 => x*10+y]'+scene+'assert length(values) |> equalTo(6)\nassert at(values,3) |> equalTo(11)')
+ const c=compileModelGraphText(header+'values = [for x in 0..<3 for y in 0..<2 => x*10+y]'+scene+'assert length(values). equalTo(6)\nassert at(values,3). equalTo(11)')
  expect(c.constraint_report.every(r=>r.passed)).toBe(true)
 })
 it('preserves separate touching parts unless union is explicit',async()=>{
@@ -49,10 +49,10 @@ it('preserves separate touching parts unless union is explicit',async()=>{
  expect((await parseOpenSCAD(source+'show union(parts)')).meshes).toHaveLength(1)
 })
 it.each(['0mm..10mm','0mm..10deg count 3','0mm..10mm by 1deg','0..10 by 0','0..10 count 2.5','0..10 count 2mm','0..10 count 300','0..10000','0..10 by 2 count 3','0..10 count 3 by 2','0..0 count 1 by 1','0..<0 count 1'])('rejects invalid range %s',range=>{
- expect(()=>compileModelGraphText(header+'xs = '+range+scene+'assert length(xs) |> atLeast(0)')).toThrow()
+ expect(()=>compileModelGraphText(header+'xs = '+range+scene+'assert length(xs). atLeast(0)')).toThrow()
 })
 it('rejects unequal zip lengths and accidental transforms of collections',()=>{
- expect(()=>compileModelGraphText(header+'xs=zip([1,2],[1])'+scene+'assert length(xs) |> atLeast(0)')).toThrow('equal length')
+ expect(()=>compileModelGraphText(header+'xs=zip([1,2],[1])'+scene+'assert length(xs). atLeast(0)')).toThrow('equal length')
  expect(()=>compileModelGraphText(header+'parts=[for i in 0..<3 => sphere(1mm)]\nshow parts.translate(x: 1mm)')).toThrow('Transform each')
 })
 
@@ -68,6 +68,6 @@ it('rejects oversized nested generation before geometry execution',()=>{
  expect(()=>compileModelGraphText(header+'parts=[for x in 0..<256 for y in 0..<256 => sphere(1mm)]\nshow parts')).toThrow(/budget|4096|allocation/i)
 })
 it('evaluates power with conventional precedence and right association',()=>{
- const c=compileModelGraphText(header+scene+'assert -2 ** 2 |> equalTo(-4)\nassert 2 ** 3 ** 2 |> equalTo(512)')
+ const c=compileModelGraphText(header+scene+'assert (-2 ** 2).equalTo(-4)\nassert (2 ** 3 ** 2).equalTo(512)')
  expect(c.constraint_report.every(r=>r.passed)).toBe(true)
 })

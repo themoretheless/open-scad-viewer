@@ -284,7 +284,7 @@ pub fn revolve(
         angle_degrees.is_finite()
             && angle_degrees != 0.
             && angle_degrees.abs() <= 360.
-            && (3..=64).contains(&segments),
+            && (1..=512).contains(&segments),
         "Invalid revolve angle or segments",
     )?;
     check(

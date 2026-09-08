@@ -1,4 +1,4 @@
-import type { ManifoldToplevel } from 'manifold-3d/manifold'
+import type { ManifoldToplevel } from '../src/services/ownGeometryModule'
 import { describe, expect, it, vi } from 'vitest'
 import { ManifoldGeometryKernel } from '../src/services/manifoldGeometryKernel'
 import { getWasm, parseOpenSCAD } from '../src/services/openscadParser'
@@ -43,8 +43,8 @@ describe('ManifoldGeometryKernel lifecycle', () => {
     const session = await kernel.openSession()
     const wasm = session.module
     const cube = wasm.Manifold.cube([4, 4, 4], true)
-    // The installed factory's prototype is not the prototype of real instances.
-    expect(Object.getPrototypeOf(cube)).not.toBe(wasm.Manifold.prototype)
+    // Own runtimes have isolated prototypes rather than shared global wrappers.
+    expect(Object.getPrototypeOf(cube)).toBe(wasm.Manifold.prototype)
     const translated = cube.translate([2, 0, 0])
     const normals = translated.calculateNormals(0, 52.5)
     const constructed = new wasm.Manifold(cube.getMesh())
@@ -79,7 +79,7 @@ describe('ManifoldGeometryKernel lifecycle', () => {
     expect(deleted(b)).toBe(true)
   })
 
-  it('owns the hidden native receiver used by centered extrusion', async () => {
+  it('owns centered extrusion without an intermediate native receiver', async () => {
     const session = await new ManifoldGeometryKernel().openSession()
     const probe = session.module.Manifold.cube(1)
     const prototype = Object.getPrototypeOf(probe) as typeof probe
@@ -93,7 +93,7 @@ describe('ManifoldGeometryKernel lifecycle', () => {
       const section = session.module.CrossSection.square([2, 2])
       const centered = section.extrude(3, 0, 0, [1, 1], true)
       expect(centered.volume()).toBeCloseTo(12)
-      expect(receivers.length).toBeGreaterThan(0)
+      expect(centered.boundingBox().min[2]).toBeCloseTo(-1.5)
       session.dispose()
       expect(receivers.every(deleted)).toBe(true)
       expect(deleted(centered)).toBe(true)

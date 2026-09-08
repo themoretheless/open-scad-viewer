@@ -17,7 +17,7 @@ it('extracts an oriented hollow solid and rejects unbounded extraction',()=>{
 it('renders compact subdivision and smooth implicit geometry with physical units',async()=>{
  const sub=await parseOpenSCAD(`// @modelgraph-text/1\nshow subdivision(${JSON.stringify(cage.vertices)},${JSON.stringify(cage.faces)},2)`)
  expect(sub.meshes).toHaveLength(1);expect(sub.meshes[0].faceIdsAuthoritative).toBe(true)
- const sdf=await parseOpenSCAD('// @modelgraph-text/1\na=sdf_sphere([-0.5mm,0,0],1mm)\nb=sdf_sphere([0.5mm,0,0],1mm)\nshow sdf_smooth_union(a,b,radius:0.3mm) |> sdf_tessellate([-2mm,-2mm,-2mm],[2mm,2mm,2mm],[16,16,16])')
+ const sdf=await parseOpenSCAD('// @modelgraph-text/1\na=sdf_sphere([-0.5mm,0,0],1mm)\nb=sdf_sphere([0.5mm,0,0],1mm)\nshow sdf_smooth_union(a,b,radius:0.3mm).sdf_tessellate([-2mm,-2mm,-2mm],[2mm,2mm,2mm],[16,16,16])')
  expect(sdf.meshes).toHaveLength(1);expect(sdf.meshes[0].indices.length).toBeGreaterThan(0)
 })
 it('rejects exponential shared SDF expressions before serialization',()=>{

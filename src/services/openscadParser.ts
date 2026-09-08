@@ -1,3 +1,4 @@
+import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import { checkModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by Manifold WASM.
@@ -17,7 +18,7 @@ import type {
   Polygons,
   Vec2,
   Vec3,
-} from 'manifold-3d/manifold'
+} from './ownGeometryModule'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import type {
@@ -243,7 +244,7 @@ class StableViewportRootSelection {
 }
 
 function currentEntityId(ctx: EvalContext): SceneEntityId {
-  return `entity:${ctx.instancePath}`
+  return boundedSceneEntityId(ctx.instancePath)
 }
 
 function staticOperationId(node: CallNode): SourceOperationId {

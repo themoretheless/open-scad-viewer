@@ -108,6 +108,7 @@ export class BrowserWorkspacePersistence {
   private writeTail: Promise<void> = Promise.resolve()
   private initialized = false
   private indexedDbState: IndexedDbState = 'ready'
+  private indexedDbError = ''
   private durableHead: WorkspaceDocumentSnapshot | null = null
   private durableHeadKnown = false
   private recoveryBase: WorkspaceRecoveryBase = { status: 'unknown' }
@@ -127,6 +128,11 @@ export class BrowserWorkspacePersistence {
 
   get backend(): WorkspacePersistenceBackend { return this.backendValue }
   get hasConflict(): boolean { return this.unresolvedConflict }
+  get failureReason(): string {
+    if(this.unresolvedConflict) return 'The saved draft differs from this tab. Save in browser to keep the current editor draft.'
+    if(this.indexedDbState === 'invalid') return 'IndexedDB contains an unsupported or invalid workspace row.'
+    return this.indexedDbError
+  }
 
   async initialize(options: WorkspaceBootstrapOptions): Promise<WorkspaceBootstrapResult> {
     if (this.initialized) throw new Error('Workspace persistence is already initialized')
@@ -149,7 +155,8 @@ export class BrowserWorkspacePersistence {
       loadResult = await this.repository.load()
       this.indexedDbState = loadResult.status === 'invalid' ? 'invalid' : 'ready'
       this.durableHeadKnown = loadResult.status !== 'invalid'
-    } catch {
+    } catch (error) {
+      this.recordIndexedDbFailure(error)
       this.indexedDbState = 'unavailable'
       this.backendValue = 'localstorage'
     }
@@ -283,6 +290,21 @@ export class BrowserWorkspacePersistence {
     return this.enqueue(() => this.retryDirect(snapshot))
   }
 
+  /** Explicit user save selects the current editor draft, with or without a conflict. */
+  saveCurrentDraft(document: WorkspaceDocumentSnapshot): Promise<WorkspaceRetryResult> {
+    if (!this.initialized) return Promise.reject(new Error('Workspace persistence is not initialized'))
+    const snapshot = parseWorkspaceDocumentValue(document)
+    if (!snapshot) return Promise.resolve({ saved: false })
+    return this.enqueue(async () => {
+      const result = await this.resolveConflictDirect(true, snapshot)
+      if (result.saved && this.backendValue === 'indexeddb'
+        && (!this.latestSaveRequest || !workspaceDocumentAdvances(snapshot, this.latestSaveRequest))) {
+        this.latestSaveRequest = snapshot
+      }
+      return result
+    })
+  }
+
   resolveConflict(preferCurrentDraft: boolean, currentDocument: WorkspaceDocumentSnapshot): Promise<WorkspaceRetryResult> {
     if (!this.initialized) return Promise.reject(new Error('Workspace persistence is not initialized'))
     if (!this.unresolvedConflict) return Promise.resolve({ saved: false })
@@ -312,6 +334,7 @@ export class BrowserWorkspacePersistence {
         this.durableHead = document
         this.durableHeadKnown = true
         this.backendValue = 'indexeddb'
+      this.indexedDbError = ''
         this.retireRawLegacy()
         this.retireResolvedRecoveries(previousHead, document)
         return true
@@ -335,7 +358,8 @@ export class BrowserWorkspacePersistence {
     let loadResult: WorkspaceRepositoryLoadResult
     try {
       loadResult = await this.repository.load()
-    } catch {
+    } catch (error) {
+      this.recordIndexedDbFailure(error)
       this.indexedDbState = 'unavailable'
       this.backendValue = 'localstorage'
       return { saved: recoverySaved }
@@ -354,6 +378,7 @@ export class BrowserWorkspacePersistence {
     if (indexed && workspaceDocumentsEqual(indexed, document)) {
       this.stageRecovery(indexed)
       this.backendValue = 'indexeddb'
+      this.indexedDbError = ''
       this.retireRawLegacy()
       this.retireResolvedRecoveries(indexed)
       return { saved: true }
@@ -361,6 +386,7 @@ export class BrowserWorkspacePersistence {
 
     if (indexed && !userDocumentIsAuthoritative) {
       this.backendValue = 'indexeddb'
+      this.indexedDbError = ''
       this.retireRawLegacy()
       return { saved: true, restoredDocument: indexed }
     }
@@ -386,6 +412,7 @@ export class BrowserWorkspacePersistence {
       this.durableHeadKnown = true
       this.indexedDbState = 'ready'
       this.backendValue = 'indexeddb'
+      this.indexedDbError = ''
       this.retireRawLegacy()
       this.retireResolvedRecoveries(indexed, document)
       return { saved: true }
@@ -397,6 +424,7 @@ export class BrowserWorkspacePersistence {
   }
 
   private recordIndexedDbFailure(error: unknown): void {
+    this.indexedDbError = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
     if (error instanceof WorkspaceIndexedDbConflictError) {
       this.indexedDbState = 'ready'
       this.durableHead = error.current
@@ -418,7 +446,8 @@ export class BrowserWorkspacePersistence {
     let loadResult: WorkspaceRepositoryLoadResult
     try {
       loadResult = await this.repository.load()
-    } catch {
+    } catch (error) {
+      this.recordIndexedDbFailure(error)
       this.backendValue = 'localstorage'
       return { saved: false }
     }
@@ -437,6 +466,7 @@ export class BrowserWorkspacePersistence {
       if (!workspaceDocumentsEqual(indexed, chosen)) await this.repository.save(chosen, indexed)
       this.durableHead = chosen
       this.backendValue = 'indexeddb'
+      this.indexedDbError = ''
       this.retireRawLegacy()
       this.retireResolvedRecoveries(indexed, chosen)
       return { saved: true, restoredDocument: chosen }

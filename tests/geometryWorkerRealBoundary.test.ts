@@ -146,16 +146,7 @@ describe('real structured-clone geometry Worker boundaries', () => {
     const oversizedRequest = request(2, oversizedSource)
     worker.postMessage(oversizedRequest)
     const oversized = await waitForMessage(worker, isDirectTerminalFor(oversizedRequest))
-    expect(oversized).toMatchObject({
-      jobId: 2,
-      status: 'failed',
-      phase: 'serializing',
-      error: {
-        name: 'GeometryWorkerProtocolError',
-        code: 'WORKER_RESULT_UNPUBLISHABLE',
-        message: 'Geometry result cannot be published under protocol v5',
-      },
-    })
+    expect(oversized).toMatchObject({jobId:2,status:'succeeded',meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})]})
     expect(JSON.stringify(oversized)).not.toContain('entity:root>op:root/call%3Aassert')
 
     const recoveryRequest = request(3, 'cube(1);')
@@ -206,11 +197,7 @@ describe('real structured-clone geometry Worker boundaries', () => {
     expect(exact.result.meshes[0].entityId).toHaveLength(256)
 
     await expect(run('assert(true) if(true) let(x=2) cube(x);', 2)).resolves.toMatchObject({
-      status: 'failed',
-      error: {
-        code: 'QUALIFICATION_RESULT_UNPUBLISHABLE',
-        message: 'Manifold plan result cannot be published by the qualification Worker',
-      },
+      status: 'succeeded', result: {meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})]},
     })
     await expect(run('cube(1);', 3)).resolves.toMatchObject({
       status: 'succeeded',

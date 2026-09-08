@@ -37,12 +37,11 @@
   "dependencies": {
     "@duckdb/node-api": "^1.5.5-r.2",
     "@modelcontextprotocol/server": "2.0.0",
+    "fflate": "0.8.3",
     "harfbuzzjs": "0.10.3",
-    "manifold-3d": "^3.5.1",
     "tsx": "^4.23.1",
     "vue": "^3.5.31",
-    "zod": "^4.4.3",
-    "fflate": "0.8.3"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.19.9",

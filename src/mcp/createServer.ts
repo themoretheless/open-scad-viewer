@@ -2603,9 +2603,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
             : 'node-wasm-disposable-worker',
           browser_mcp_status: engine.deployment === 'not-deployed'
             ? 'not-deployed'
-            : engine.qualification.status === 'qualified'
-              ? 'qualified'
-              : 'qualification-pending',
+            : 'qualification-pending', // Provider qualification is not browser/MCP parity evidence.
           mcp_isolation: engine.isolation,
           mcp_provider_manifest_isolation: engine.isolation,
           mcp_host_isolation: engine.deployment === 'not-deployed'

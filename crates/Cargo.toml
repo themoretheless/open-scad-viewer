@@ -1,5 +1,5 @@
 [workspace]
-members = ["sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "subdivision-kernel", "sdf-kernel"]
+members = ["modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "subdivision-kernel", "sdf-kernel"]
 resolver = "2"
 
 [profile.release]

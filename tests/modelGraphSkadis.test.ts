@@ -43,3 +43,13 @@ it('checks polygon, hull, sharp offsets and tessellation settings', () => {
   expect(() => compileModelGraphText(source.replace('segments 40', 'segments 40\nsegments 48'))).toThrow()
   expect(() => compileModelGraphText(source.replace('delta: 0.2', 'delta: 0.2, distance: 1'))).toThrow()
 })
+
+
+it('reports the required hook width and builds the narrow box with 40 mm spacing', async () => {
+  const narrow = compact.replace('param width: 120', 'param width: 72.2399111440207')
+    .replace('param depth: 75', 'param depth: 68.4089226212514')
+  expect(() => compileModelGraphText(narrow)).toThrow(/Box too narrow for hooks.*72\.2399111440207.*112/)
+  const result = await parseOpenSCAD(narrow.replace('param hook_spacing_steps: 2', 'param hook_spacing_steps: 1'), { quality: 'full' })
+  expect(result.meshes).toHaveLength(3)
+  expect(result.volume).toBeGreaterThan(0)
+})

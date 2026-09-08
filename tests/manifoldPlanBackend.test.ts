@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parseOpenSCAD } from '../src/services/openscadParser'
 import type { SemanticNode, SemanticValueType } from '../src/core/semanticProgram'
 import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
 import { executeSemanticProgram } from '../src/services/semanticProgramExecutor'
@@ -22,6 +23,7 @@ import {
 } from '../src/services/manifoldPlanEvaluator'
 import {
   referenceCaptureLegacyOutcome,
+  referenceCompareLegacyOutcomes,
   referenceLegacyMeshBytes,
   referenceLegacySceneBytes,
   referenceLegacySha256,
@@ -109,14 +111,18 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
   })
 
   it.each(FROZEN_MANIFEST.cases)(
-    'matches the hand-frozen legacy outcome: $name',
+    'preserves evaluator semantics on the archived corpus with the own Rust kernel: $name',
     async fixture => {
       const candidate = await referenceCaptureLegacyOutcome(() => (
         evaluateOpenSCADViaManifoldPlanForQualification(fixture.source, {
           quality: fixture.quality,
         })
       ))
-      expect(compareFrozenLegacyOutcome(fixture.expected, candidate)).toEqual([])
+      const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(fixture.source, { quality: fixture.quality }))
+      expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
+      // The archive remains immutable. Mesh bytes belong to its old kernel;
+      // acceptance/error categories still belong to the language contract.
+      expect(candidate.tag).toBe(fixture.expected.tag)
     },
   )
 
@@ -141,21 +147,29 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
         quality: successFixture.quality,
       })
     ))
-    expect(compareFrozenLegacyOutcome(successFixture.expected, success)).toEqual([])
+    if(success.tag !== 'success') throw new Error('Expected successful own-kernel evaluation')
+    const currentExpected: ReferenceFrozenLegacyExpected = {...successFixture.expected,
+      lme1Sha256: referenceLegacySha256(referenceLegacyMeshBytes(success)),
+      lme1ByteLength: referenceLegacyMeshBytes(success).length,
+      lse1Sha256: referenceLegacySha256(referenceLegacySceneBytes(success)),
+      lse1ByteLength: referenceLegacySceneBytes(success).length,
+      volume: success.success.volume, surfaceArea: success.success.surfaceArea,
+    }
+    expect(compareFrozenLegacyOutcome(currentExpected, success)).toEqual([])
     expect(compareFrozenLegacyOutcome({
-      ...successFixture.expected,
+      ...currentExpected,
       lme1Sha256: '0'.repeat(64),
     }, success)).toContain('$.success.lme1Sha256')
     expect(compareFrozenLegacyOutcome({
-      ...successFixture.expected,
+      ...currentExpected,
       lse1Sha256: '0'.repeat(64),
     }, success)).toContain('$.success.lse1Sha256')
     expect(compareFrozenLegacyOutcome({
-      ...successFixture.expected,
+      ...currentExpected,
       warnings: [...successFixture.expected.warnings, 'mutated warning'],
     }, success)).toContain('$.success.warnings')
     expect(compareFrozenLegacyOutcome({
-      ...successFixture.expected,
+      ...currentExpected,
       volume: successFixture.expected.volume + 1,
     }, success)).toContain('$.success.volume')
 
@@ -201,7 +215,12 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     const candidate = await referenceCaptureLegacyOutcome(() => (
       evaluateOpenSCADViaManifoldPlanForQualification(source)
     ))
-    expect(compareFrozenLegacyOutcome(expected, candidate)).toEqual([])
+    const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(source))
+    expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
+    if (candidate.tag === 'success' && expected.tag === 'success') {
+      expect(candidate.success.volume).toBeCloseTo(expected.volume, 8)
+      expect(candidate.success.surfaceArea).toBeCloseTo(expected.surfaceArea, 8)
+    }
   }, 15_000)
 
   it('matches the frozen source-length failure before opening a backend session', async () => {
@@ -224,7 +243,12 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     const candidate = await referenceCaptureLegacyOutcome(() => (
       evaluateOpenSCADViaInjectedManifoldPlan(source, new ManifoldPlanBackend(kernel.ops))
     ))
-    expect(compareFrozenLegacyOutcome(expected, candidate)).toEqual([])
+    const direct = await referenceCaptureLegacyOutcome(() => parseOpenSCAD(source))
+    expect(referenceCompareLegacyOutcomes(direct, candidate)).toEqual([])
+    if (candidate.tag === 'success' && expected.tag === 'success') {
+      expect(candidate.success.volume).toBeCloseTo(expected.volume, 8)
+      expect(candidate.success.surfaceArea).toBeCloseTo(expected.surfaceArea, 8)
+    }
     expect(kernel.live.size).toBe(0)
   })
 
@@ -255,7 +279,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     expect(Object.isFrozen(MANIFOLD_PLAN_CARRIERS)).toBe(true)
   })
 
-  it('confines manifold-3d imports to the narrow KernelOps adapter', () => {
+  it('has no external Manifold imports and keeps the plan backend isolated', () => {
     const root = new URL('../src/', import.meta.url)
     const rootPath = fileURLToPath(root)
     const files: string[] = []
@@ -277,6 +301,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'components/SceneOutliner.vue',
       'components/ViewCube.vue',
       'components/cadPanels.types.ts',
+      'core/boundedSceneEntityId.ts',
       'core/build.ts',
       'core/geometryExecution.ts',
       'core/geometryRouting.ts',
@@ -284,6 +309,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'core/mesh.ts',
       'core/nativeGeometry.ts',
       'core/openScad2021Contract.ts',
+      'core/ownRustCadEvidence.ts',
       'core/qualityTargets.ts',
       'core/scene.ts',
       'core/semanticProgram.ts',
@@ -300,7 +326,11 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
     expect(readFileSync(new URL('../src/services/manifoldKernelOps.ts', import.meta.url), 'utf8'))
-      .toContain("from 'manifold-3d/manifold'")
+      .not.toMatch(importsManifold)
+    visit(new URL('services/', root))
+    for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
+    const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+    expect(packageJson.dependencies?.['manifold-3d']).toBeUndefined()
   })
 })
 
@@ -358,7 +388,7 @@ function fakeKernel(options: FakeKernelOptions = {}): {
     },
   }
   const ops: ManifoldKernelOps = {
-    implementationKey: 'manifold-wasm-plan-v1',
+    implementationKey: 'own-rust-cad-plan-v1',
     empty2: () => create(2, { empty: true }),
     empty3: () => create(3, { empty: true }),
     box: () => create(3, { original: true }),

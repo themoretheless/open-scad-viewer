@@ -3836,374 +3836,6 @@
     "__schema0": {
       "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "checked"
-            },
-            "checks": {
-              "maxItems": 256,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema0"
-              }
-            },
-            "value": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "checks",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "typed"
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "int",
-                "f32",
-                "f64",
-                "length",
-                "angle"
-              ]
-            },
-            "value": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "type",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "quantity"
-            },
-            "value": {
-              "type": "number",
-              "minimum": -1000000,
-              "maximum": 1000000
-            },
-            "unit": {
-              "type": "string",
-              "enum": [
-                "mm",
-                "cm",
-                "m",
-                "in",
-                "deg",
-                "rad"
-              ]
-            }
-          },
-          "required": [
-            "op",
-            "value",
-            "unit"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "geometry"
-            },
-            "function": {
-              "type": "string",
-              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
-            },
-            "args": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string",
-                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
-              },
-              "additionalProperties": {
-                "$ref": "#/$defs/__schema0"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "function",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "lambda"
-            },
-            "parameters": {
-              "maxItems": 32,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
-              }
-            },
-            "body": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "parameters",
-            "body"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "apply"
-            },
-            "function": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "args": {
-              "maxItems": 32,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema0"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "function",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "list"
-            },
-            "items": {
-              "maxItems": 256,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema0"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "items"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "range"
-            },
-            "count": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "start": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "step": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "count",
-            "start",
-            "step"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "interval"
-            },
-            "start": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "end": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "inclusive": {
-              "type": "boolean"
-            },
-            "count": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "step": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "start",
-            "end",
-            "inclusive"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "zip"
-            },
-            "inputs": {
-              "minItems": 2,
-              "maxItems": 8,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/__schema0"
-              }
-            }
-          },
-          "required": [
-            "op",
-            "inputs"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "enumerate"
-            },
-            "input": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "input"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "enum": [
-                "map",
-                "filter",
-                "flatmap"
-              ]
-            },
-            "input": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "function": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "input",
-            "function"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "reduce"
-            },
-            "input": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "function": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "initial": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "input",
-            "function",
-            "initial"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "at"
-            },
-            "input": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "index": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "input",
-            "index"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "length"
-            },
-            "input": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "input"
-          ],
-          "additionalProperties": false
-        },
-        {
           "type": "number",
           "minimum": -1000000,
           "maximum": 1000000
@@ -4235,149 +3867,521 @@
           "additionalProperties": false
         },
         {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "enum": [
-                "add",
-                "subtract",
-                "multiply",
-                "divide",
-                "min",
-                "max",
-                "pow",
-                "mod",
-                "lt",
-                "le",
-                "eq",
-                "and",
-                "or"
-              ]
-            },
-            "args": {
-              "type": "array",
-              "prefixItems": [
-                {
-                  "$ref": "#/$defs/__schema0"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "checked"
                 },
-                {
+                "checks": {
+                  "maxItems": 256,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "value": {
                   "$ref": "#/$defs/__schema0"
                 }
-              ]
-            }
-          },
-          "required": [
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "enum": [
-                "negate",
-                "abs",
-                "sqrt",
-                "sin",
-                "cos",
-                "floor",
-                "ceil",
-                "not"
-              ]
-            },
-            "value": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "if"
-            },
-            "condition": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "then": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "else": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "condition",
-            "then",
-            "else"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "let"
-            },
-            "name": {
-              "type": "string",
-              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
-            },
-            "value": {
-              "$ref": "#/$defs/__schema0"
-            },
-            "body": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "op",
-            "name",
-            "value",
-            "body"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "op": {
-              "type": "string",
-              "const": "call"
-            },
-            "function": {
-              "type": "string",
-              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
-            },
-            "args": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string",
-                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
               },
-              "additionalProperties": {
-                "$ref": "#/$defs/__schema0"
-              }
+              "required": [
+                "op",
+                "checks",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "typed"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "int",
+                    "f32",
+                    "f64",
+                    "length",
+                    "angle"
+                  ]
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "quantity"
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": -1000000,
+                  "maximum": 1000000
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "mm",
+                    "cm",
+                    "m",
+                    "in",
+                    "deg",
+                    "rad"
+                  ]
+                }
+              },
+              "required": [
+                "op",
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "geometry"
+                },
+                "function": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "lambda"
+                },
+                "parameters": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  }
+                },
+                "body": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "parameters",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "apply"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "args": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "list"
+                },
+                "items": {
+                  "maxItems": 256,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "items"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "range"
+                },
+                "count": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "start": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "step": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "count",
+                "start",
+                "step"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "interval"
+                },
+                "start": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "end": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "inclusive": {
+                  "type": "boolean"
+                },
+                "count": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "step": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "start",
+                "end",
+                "inclusive"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "zip"
+                },
+                "inputs": {
+                  "minItems": 2,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "inputs"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "enumerate"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "map",
+                    "filter",
+                    "flatmap"
+                  ]
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "function"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "reduce"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "initial": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "function",
+                "initial"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "at"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "index": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "index"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "length"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "subtract",
+                    "multiply",
+                    "divide",
+                    "min",
+                    "max",
+                    "pow",
+                    "mod",
+                    "lt",
+                    "le",
+                    "eq",
+                    "and",
+                    "or"
+                  ]
+                },
+                "args": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "op",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "negate",
+                    "abs",
+                    "sqrt",
+                    "sin",
+                    "cos",
+                    "floor",
+                    "ceil",
+                    "not"
+                  ]
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "if"
+                },
+                "condition": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "then": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "else": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "condition",
+                "then",
+                "else"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "let"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "body": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "op",
+                "name",
+                "value",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "call"
+                },
+                "function": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
             }
-          },
-          "required": [
-            "op",
-            "function",
-            "args"
-          ],
-          "additionalProperties": false
+          ]
         }
       ]
     }

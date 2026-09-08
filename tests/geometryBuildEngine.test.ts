@@ -1,3 +1,4 @@
+import { GEOMETRY_MANIFEST_ARCHIVE as CAD_MANIFESTS } from '../src/core/geometryExecution'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createGeometryManifestRevocationRecord,
@@ -180,7 +181,7 @@ describe('GeometryBuildEngine', () => {
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       representation: 'mesh',
       purpose: 'analysis',
       evidence: 'planned',
@@ -193,9 +194,9 @@ describe('GeometryBuildEngine', () => {
     const warm = vi.fn().mockRejectedValue(new Error('private readiness detail'))
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm,
       build,
     }])
@@ -217,9 +218,9 @@ describe('GeometryBuildEngine', () => {
     const warm = vi.fn(() => new Promise<void>(() => undefined))
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm,
       build: vi.fn(),
     }])
@@ -240,9 +241,9 @@ describe('GeometryBuildEngine', () => {
     const build = vi.fn()
     const provider: GeometryBackendProvider = {
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }
@@ -266,9 +267,9 @@ describe('GeometryBuildEngine', () => {
     const build = vi.fn()
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }])
@@ -284,9 +285,9 @@ describe('GeometryBuildEngine', () => {
     const failure = new RangeError('provider failure')
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue(failure),
     }])
@@ -304,9 +305,9 @@ describe('GeometryBuildEngine', () => {
     const reused = new Error('reused')
     const reusedEngine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue(reused),
     }])
@@ -317,9 +318,9 @@ describe('GeometryBuildEngine', () => {
 
     const primitiveEngine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockRejectedValue('primitive failure'),
     }])
@@ -331,9 +332,9 @@ describe('GeometryBuildEngine', () => {
   it('rejects a provider result whose quality contradicts the execution descriptor', async () => {
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn().mockResolvedValue({
         meshes: [],
@@ -379,9 +380,9 @@ describe('GeometryBuildEngine', () => {
     const revocations = new GeometryManifestRevocationRegistry()
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }], { revocations })
@@ -390,7 +391,7 @@ describe('GeometryBuildEngine', () => {
     await vi.waitFor(() => expect(build).toHaveBeenCalledTimes(1))
     revocations.apply(createGeometryManifestRevocationRecord({
       epoch: 1,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest,
       reason: 'qualification withdrawn',
       effectiveAt: '2026-08-01T00:00:00.000Z',
       authority: 'test-policy',
@@ -431,9 +432,9 @@ describe('GeometryBuildEngine', () => {
     const build = vi.fn(() => new Promise<Result>(resolve => finishers.push(resolve)))
     const engine = new GeometryBuildEngine([{
       engineClass: 'manifold',
-      engineKey: 'manifold-wasm-v1',
-      kernelFingerprint: 'manifold-wasm-v1',
-      capabilityManifestVersion: 'manifold-node-v3',
+      engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+      kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build,
     }])
@@ -459,7 +460,7 @@ describe('GeometryBuildEngine', () => {
     const registry = new GeometryManifestRevocationRegistry()
     const record = createGeometryManifestRevocationRecord({
       epoch: 1,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest,
       reason: 'test',
       effectiveAt: '2026-08-01T00:00:00.000Z',
       authority: 'test-policy',

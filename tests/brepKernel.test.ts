@@ -12,7 +12,7 @@ it('shares topology across own NURBS and polygon kernels with stable face groups
  model.edges[0].vertices[0]=999;expect(()=>inspectNurbsBrep(model)).toThrow()
 })
 it('publishes authored B-rep identities through the compact viewer path',async()=>{
- const scene=await parseOpenSCAD('// @modelgraph-text/1\nbody=brep_box([0,0,0],[2mm,3mm,4mm])\nshow body |> brep_tessellate(3)')
+ const scene=await parseOpenSCAD('// @modelgraph-text/1\nbody=brep_box([0,0,0],[2mm,3mm,4mm])\nshow body.brep_tessellate(3)')
  const mesh=scene.meshes[0];expect(mesh.faceIdsAuthoritative).toBe(true);expect(new Set(mesh.faceIds).size).toBe(6)
  expect(withSelectionSurfaces(mesh)).toBe(mesh)
 })

@@ -22,24 +22,21 @@ for (const required of ['.html', '.css', '.js', '.wasm']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  const limit = limits.get(file.extension)
+  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 900_000 : limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
   if (limit !== undefined && file.bytes > limit) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
   }
 }
 const total = files.reduce((sum, file) => sum + file.bytes, 0)
-// ModelGraph Text adds the bounded compiler to the geometry worker as well as the UI.
-// Keep per-artifact limits above; allow the measured ~140 KiB compiler addition.
-// The independent Rust geometry libraries add one shared, gzip-packed WASM
-// chunk (~294 kB including mesh CSG and shared B-rep topology). Preserve every per-artifact limit and bound its allowance.
+// Own CAD adds ~96 kB to the shared Rust payload but removes the separate
+// Manifold WASM/JS assets. The complete distribution is smaller (~2.3 MB).
+// Preserve the total release budget and reject any external Manifold artifact.
+if (files.some(file => /manifold/i.test(file.path))) throw new Error('External Manifold artifact in dist')
 const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path))
-if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 480_000) {
-  throw new Error('Expected one shared geometry kernel chunk within 480000 bytes')
+if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
+  throw new Error('Expected one shared geometry kernel chunk within 900000 bytes')
 }
-// Direct NURBS text compilation and mesh publication add ~28 kB of host code.
-// Typed block functions and generic records add ~21 kB across UI and worker.
-// Editor folding and indentation guides add about 7 kB of UI code and styles.
-const totalBudget = 2_200_000 + 480_000 + 30_000 + 30_000 + 10_000
+const totalBudget = 2_882_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

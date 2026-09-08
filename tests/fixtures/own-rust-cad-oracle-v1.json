@@ -1,0 +1,42 @@
+{
+  "colored-transform": {
+    "meshLength": 2718,
+    "meshHash": "bdac091e518054e3d2bb4e083557ac82a54b02b704e0b23d3fb08fadda4eb94b",
+    "sceneLength": 2950,
+    "sceneHash": "96ba25483f29c24a9f2defee309e0be74430fdeb12d3265a835b2fdd956ae065",
+    "volume": 24,
+    "surfaceArea": 52
+  },
+  "boolean-difference": {
+    "meshLength": 11334,
+    "meshHash": "e55f2e6457825a50218d6bff0d93a3551f6a89d7fe4ed70a0f6e1cf7fd209c53",
+    "sceneLength": 11568,
+    "sceneHash": "db7da34e5d6c2455b7fb141ea790960a18fff8e3a9b623f0c55abc7d70b325b9",
+    "volume": 60.073403610888725,
+    "surfaceArea": 108.16668943855439
+  },
+  "repeated-loop-identities": {
+    "meshLength": 20634,
+    "meshHash": "4007b64c1dd58b9c74aac76fa31e2c1c2df697e8c4b4881b075ea6f74a0568f8",
+    "sceneLength": 17967,
+    "sceneHash": "53028403fcc9b90528df79bfe05cc3396e54c20efd39d7690d1c7a35dd7dd765",
+    "volume": 11.196152422706632,
+    "surfaceArea": 35.58386500883158
+  },
+  "reduced-preview": {
+    "meshLength": 98690,
+    "meshHash": "d65a1ec2080b801557359a00e43512696f714c7d7851b887b6e5bcdc1c81c760",
+    "sceneLength": 98926,
+    "sceneHash": "63a08599986c85373d2bb4a3de8efd237a3926fb2aed50403379c5faa1b1b741",
+    "volume": 519.8714295426239,
+    "surfaceArea": 313.0390631940918
+  },
+  "reduced-preview-full-companion": {
+    "meshLength": 408964,
+    "meshHash": "2aacddc467ff5d5129cfb8c4120a22ff0321163a6145ac47d7a7a86150d9d223",
+    "sceneLength": 409202,
+    "sceneHash": "56a79f97b98d5c2d12fceb1cd66c4414a54787062dc698f3bef4bffad70ef1a9",
+    "volume": 522.6649013606755,
+    "surfaceArea": 313.8789780354338
+  }
+}

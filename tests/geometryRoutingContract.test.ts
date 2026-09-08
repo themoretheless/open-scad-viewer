@@ -1,3 +1,4 @@
+import { GEOMETRY_MANIFEST_ARCHIVE as CAD_MANIFESTS } from '../src/core/geometryExecution'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
@@ -151,9 +152,9 @@ function manifoldProvider(options: {
   const build = options.build ?? vi.fn()
   const provider: GeometryBackendProvider = {
     engineClass: 'manifold',
-    engineKey: 'manifold-wasm-v1',
-    kernelFingerprint: 'manifold-wasm-v1',
-    capabilityManifestVersion: 'manifold-node-v3',
+    engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+    kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+    capabilityManifestVersion: 'own-rust-node-v1',
     warm,
     build,
   }
@@ -296,7 +297,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest],
         }).buildSource('// @engine brep\ncube(1);', request)
       } catch (caught) {
         error = caught
@@ -307,7 +308,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest],
         }).buildSource('// @requires nurbs.surfaces\ncube(1);', request)
       } catch (caught) {
         error = caught
@@ -317,7 +318,7 @@ describe('frozen geometry routing contract v1', () => {
     } else if (runtimeCase.id === 'revocation-before-provider-missing') {
       try {
         await new GeometryBuildEngine([], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest],
         }).buildSource('cube(1);', request)
       } catch (caught) {
         error = caught
@@ -326,7 +327,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'].manifestDigest],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest],
         }).buildSource('cube(1);', request)
       } catch (caught) {
         error = caught

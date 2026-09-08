@@ -1,0 +1,3080 @@
+[
+  {
+    "path": "examples/skadis-box/skadis-dovetail.modelgraph.scad",
+    "source": "// @modelgraph-text/1\n// SKADIS bottom-insert asymmetric dovetail. Dimensions in mm.\n// part: 0 assembly, 1 box upright, 2 hook on its flat side.\nsegments 40\nparam part: 0 range 0..2\nparam width: 120 range 60..300\nparam depth: 75 range 30..200\nparam height: 80 range 50..250\nparam wall: 3 range 2..6\nparam floor_thickness: 4 range 2..8\nparam back_thickness: 7 range 7..12\nparam corner_radius: 5 range 3..12\nparam hook_count: 2 range 2..5\nparam hook_spacing_steps: 2 range 1..6\nparam mount_top_offset: 14 range 14..30\nparam fit: 0.25 range 0.15..0.4\nparam friction_ridge_enabled: 1 range 0..1\n\nhook_width = 4.4\nhook_spacing = 40 * hook_spacing_steps\nhook_span = (hook_count - 1) * hook_spacing\nmount_shift = height - mount_top_offset - 66\nrib_height = height - mount_top_offset + 12\nvalidate width. atLeast(hook_span + 32).message(\"Box too narrow for hooks\")\nvalidate height. atLeast(mount_top_offset + 36)\nvalidate depth. atLeast(back_thickness + wall + 12)\nvalidate corner_radius. atLeast(wall)\nvalidate (2 * corner_radius). lessThan(width)\nvalidate (2 * corner_radius). lessThan(depth)\nvalidate (hook_count % 1). equalTo(0)\nvalidate (hook_spacing_steps % 1). equalTo(0)\nvalidate (part % 1). equalTo(0)\nvalidate (friction_ridge_enabled % 1). equalTo(0)\n\n// Rounded rectangle with named inputs and result.\nfn roundedRectangle width: f64, depth: f64, radius: f64 -> Geometry\n    ret hull(\n        circle(radius).translate([radius, radius, 0]),\n        circle(radius).translate([width-radius, radius, 0]),\n        circle(radius).translate([radius, depth-radius, 0]),\n        circle(radius).translate([width-radius, depth-radius, 0]),\n    )\nmale_section = polygon([[-2.2,0],[2.2,0],[6.2,4],[-2.2,4]])\nfemale_section = male_section.offset(delta: fit)\nunder_roof = polygon([[-3,-2],[8,-2],[8,66+mount_shift],[-3,77+mount_shift]])\n.extrude(40)\n.rotate([90,0,90])\n.translate([-20,0,0])\nchannel = union(\n    intersection(female_section.extrude(height+1).translate([0,0,-1]), under_roof),\n    box([4.4+2*fit,3.1,67.3+mount_shift]).translate([-2.2-fit,-3,-1])\n)\n// corner_radius >= wall makes corner_radius-wall+1 >= 1.\nouter = roundedRectangle(width, depth, corner_radius).extrude(height)\ninner = roundedRectangle(width-2*wall, depth-back_thickness-wall, corner_radius-wall+1)\n.extrude(height)\n.translate([wall,back_thickness,floor_thickness])\nrib = roundedRectangle(16, 10, 2).extrude(rib_height)\nribs = union([for i in 0..<hook_count => rib.translate([(width-hook_span)/2+i*hook_spacing-6,0,0])])\nchannels = union([for i in 0..<hook_count => channel.translate([(width-hook_span)/2+i*hook_spacing,0,0])])\nbody = union(outer.subtract(inner), ribs).subtract(channels)\n\nblade_profile = union(\n    rectangle([12.6,4]).translate([-9.6,62,0]),\n    rectangle([4,12]).translate([-9.6,54,0]),\n    rectangle([3,24]).translate([0,42,0])\n).offset(0.7).offset(delta: -0.7)\nfriction_ridge = hull(\n    box([0.01,0.6,0.1]).translate([4.2,2,46]),\n    box([0.65,0.6,4]).translate([4.2,2,48]),\n    box([0.01,0.6,0.1]).translate([4.2,2,54])\n)\nridge = [for i in 0..<1 where friction_ridge_enabled == 1 => friction_ridge.translate([0,0,mount_shift])]\nneck = intersection(\n    male_section.extrude(36).translate([0,0,42+mount_shift]),\n    under_roof.translate([0,0,-fit])\n)\nblade = blade_profile.extrude(hook_width).rotate([90,0,90]).translate([-2.2,0,mount_shift])\nhook = union(ridge, neck, blade)\nprint_hook = hook.translate([0,0,-42-mount_shift]).rotate([0,-90,0]).translate([10,0,2.2])\n\nbox_output = [for i in 0..<1 where part != 2 => body]\nhook_output = [for i in 0..<1 where part == 2 => print_hook]\nassembly_hooks = [for i in 0..<hook_count where part == 0 => hook.translate([(width-hook_span)/2+i*hook_spacing,0,0])]\nshow [box_output, hook_output, assembly_hooks]\n",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "constraints": [
+        {
+          "id": "v1",
+          "left": {
+            "param": "width"
+          },
+          "relation": "ge",
+          "right": {
+            "op": "add",
+            "args": [
+              {
+                "op": "multiply",
+                "args": [
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "hook_count"
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "op": "multiply",
+                    "args": [
+                      40,
+                      {
+                        "param": "hook_spacing_steps"
+                      }
+                    ]
+                  }
+                ]
+              },
+              32
+            ]
+          },
+          "message": "Box too narrow for hooks"
+        },
+        {
+          "id": "v2",
+          "left": {
+            "param": "height"
+          },
+          "relation": "ge",
+          "right": {
+            "op": "add",
+            "args": [
+              {
+                "param": "mount_top_offset"
+              },
+              36
+            ]
+          },
+          "message": "validate check failed"
+        },
+        {
+          "id": "v3",
+          "left": {
+            "param": "depth"
+          },
+          "relation": "ge",
+          "right": {
+            "op": "add",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "param": "back_thickness"
+                  },
+                  {
+                    "param": "wall"
+                  }
+                ]
+              },
+              12
+            ]
+          },
+          "message": "validate check failed"
+        },
+        {
+          "id": "v4",
+          "left": {
+            "param": "corner_radius"
+          },
+          "relation": "ge",
+          "right": {
+            "param": "wall"
+          },
+          "message": "validate check failed"
+        },
+        {
+          "id": "v5",
+          "left": {
+            "op": "multiply",
+            "args": [
+              2,
+              {
+                "param": "corner_radius"
+              }
+            ]
+          },
+          "relation": "lt",
+          "right": {
+            "param": "width"
+          },
+          "message": "validate check failed"
+        },
+        {
+          "id": "v6",
+          "left": {
+            "op": "multiply",
+            "args": [
+              2,
+              {
+                "param": "corner_radius"
+              }
+            ]
+          },
+          "relation": "lt",
+          "right": {
+            "param": "depth"
+          },
+          "message": "validate check failed"
+        },
+        {
+          "id": "v7",
+          "left": {
+            "op": "mod",
+            "args": [
+              {
+                "param": "hook_count"
+              },
+              1
+            ]
+          },
+          "relation": "eq",
+          "right": 0,
+          "message": "validate check failed"
+        },
+        {
+          "id": "v8",
+          "left": {
+            "op": "mod",
+            "args": [
+              {
+                "param": "hook_spacing_steps"
+              },
+              1
+            ]
+          },
+          "relation": "eq",
+          "right": 0,
+          "message": "validate check failed"
+        },
+        {
+          "id": "v9",
+          "left": {
+            "op": "mod",
+            "args": [
+              {
+                "param": "part"
+              },
+              1
+            ]
+          },
+          "relation": "eq",
+          "right": 0,
+          "message": "validate check failed"
+        },
+        {
+          "id": "v10",
+          "left": {
+            "op": "mod",
+            "args": [
+              {
+                "param": "friction_ridge_enabled"
+              },
+              1
+            ]
+          },
+          "relation": "eq",
+          "right": 0,
+          "message": "validate check failed"
+        }
+      ],
+      "parameters": [
+        {
+          "id": "part",
+          "value": 0,
+          "min": 0,
+          "max": 2
+        },
+        {
+          "id": "width",
+          "value": 120,
+          "min": 60,
+          "max": 300
+        },
+        {
+          "id": "depth",
+          "value": 75,
+          "min": 30,
+          "max": 200
+        },
+        {
+          "id": "height",
+          "value": 80,
+          "min": 50,
+          "max": 250
+        },
+        {
+          "id": "wall",
+          "value": 3,
+          "min": 2,
+          "max": 6
+        },
+        {
+          "id": "floor_thickness",
+          "value": 4,
+          "min": 2,
+          "max": 8
+        },
+        {
+          "id": "back_thickness",
+          "value": 7,
+          "min": 7,
+          "max": 12
+        },
+        {
+          "id": "corner_radius",
+          "value": 5,
+          "min": 3,
+          "max": 12
+        },
+        {
+          "id": "hook_count",
+          "value": 2,
+          "min": 2,
+          "max": 5
+        },
+        {
+          "id": "hook_spacing_steps",
+          "value": 2,
+          "min": 1,
+          "max": 6
+        },
+        {
+          "id": "mount_top_offset",
+          "value": 14,
+          "min": 14,
+          "max": 30
+        },
+        {
+          "id": "fit",
+          "value": 0.25,
+          "min": 0.15,
+          "max": 0.4
+        },
+        {
+          "id": "friction_ridge_enabled",
+          "value": 1,
+          "min": 0,
+          "max": 1
+        }
+      ],
+      "nodes": [
+        {
+          "id": "n1",
+          "op": "polygon",
+          "points": [
+            [
+              {
+                "op": "negate",
+                "value": 2.2
+              },
+              0
+            ],
+            [
+              2.2,
+              0
+            ],
+            [
+              6.2,
+              4
+            ],
+            [
+              {
+                "op": "negate",
+                "value": 2.2
+              },
+              4
+            ]
+          ]
+        },
+        {
+          "id": "n2",
+          "op": "offset",
+          "distance": {
+            "param": "fit"
+          },
+          "input": "n1",
+          "mode": "delta"
+        },
+        {
+          "id": "n3",
+          "op": "polygon",
+          "points": [
+            [
+              {
+                "op": "negate",
+                "value": 3
+              },
+              {
+                "op": "negate",
+                "value": 2
+              }
+            ],
+            [
+              8,
+              {
+                "op": "negate",
+                "value": 2
+              }
+            ],
+            [
+              8,
+              {
+                "op": "add",
+                "args": [
+                  66,
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "height"
+                          },
+                          {
+                            "param": "mount_top_offset"
+                          }
+                        ]
+                      },
+                      66
+                    ]
+                  }
+                ]
+              }
+            ],
+            [
+              {
+                "op": "negate",
+                "value": 3
+              },
+              {
+                "op": "add",
+                "args": [
+                  77,
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "height"
+                          },
+                          {
+                            "param": "mount_top_offset"
+                          }
+                        ]
+                      },
+                      66
+                    ]
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        {
+          "id": "n4",
+          "op": "extrude",
+          "input": "n3",
+          "height": 40,
+          "center": false
+        },
+        {
+          "id": "n5",
+          "op": "rotate",
+          "vector": [
+            90,
+            0,
+            90
+          ],
+          "input": "n4"
+        },
+        {
+          "id": "n6",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "negate",
+              "value": 20
+            },
+            0,
+            0
+          ],
+          "input": "n5"
+        },
+        {
+          "id": "n7",
+          "op": "extrude",
+          "input": "n2",
+          "height": {
+            "op": "add",
+            "args": [
+              {
+                "param": "height"
+              },
+              1
+            ]
+          },
+          "center": false
+        },
+        {
+          "id": "n8",
+          "op": "translate",
+          "vector": [
+            0,
+            0,
+            {
+              "op": "negate",
+              "value": 1
+            }
+          ],
+          "input": "n7"
+        },
+        {
+          "id": "n9",
+          "op": "intersection",
+          "inputs": [
+            "n8",
+            "n6"
+          ]
+        },
+        {
+          "id": "n10",
+          "op": "box",
+          "size": [
+            {
+              "op": "add",
+              "args": [
+                4.4,
+                {
+                  "op": "multiply",
+                  "args": [
+                    2,
+                    {
+                      "param": "fit"
+                    }
+                  ]
+                }
+              ]
+            },
+            3.1,
+            {
+              "op": "add",
+              "args": [
+                67.3,
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "height"
+                        },
+                        {
+                          "param": "mount_top_offset"
+                        }
+                      ]
+                    },
+                    66
+                  ]
+                }
+              ]
+            }
+          ],
+          "center": false
+        },
+        {
+          "id": "n11",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "negate",
+                  "value": 2.2
+                },
+                {
+                  "param": "fit"
+                }
+              ]
+            },
+            {
+              "op": "negate",
+              "value": 3
+            },
+            {
+              "op": "negate",
+              "value": 1
+            }
+          ],
+          "input": "n10"
+        },
+        {
+          "id": "n12",
+          "op": "union",
+          "inputs": [
+            "n9",
+            "n11"
+          ]
+        },
+        {
+          "id": "n13",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "param": "corner_radius"
+            }
+          }
+        },
+        {
+          "id": "n14",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "corner_radius"
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "corner_radius"
+              }
+            },
+            0
+          ],
+          "input": "n13"
+        },
+        {
+          "id": "n15",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "param": "corner_radius"
+            }
+          }
+        },
+        {
+          "id": "n16",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "width"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "corner_radius"
+                  }
+                }
+              ]
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "corner_radius"
+              }
+            },
+            0
+          ],
+          "input": "n15"
+        },
+        {
+          "id": "n17",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "param": "corner_radius"
+            }
+          }
+        },
+        {
+          "id": "n18",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "corner_radius"
+              }
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "depth"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "corner_radius"
+                  }
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n17"
+        },
+        {
+          "id": "n19",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "param": "corner_radius"
+            }
+          }
+        },
+        {
+          "id": "n20",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "width"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "corner_radius"
+                  }
+                }
+              ]
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "depth"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "corner_radius"
+                  }
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n19"
+        },
+        {
+          "id": "n21",
+          "op": "hull",
+          "inputs": [
+            "n14",
+            "n16",
+            "n18",
+            "n20"
+          ]
+        },
+        {
+          "id": "n22",
+          "op": "if",
+          "condition": {
+            "op": "checked",
+            "checks": [
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "width"
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "depth"
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "corner_radius"
+                }
+              }
+            ],
+            "value": 1
+          },
+          "then": "n21",
+          "else": "n21"
+        },
+        {
+          "id": "n23",
+          "op": "extrude",
+          "input": "n22",
+          "height": {
+            "param": "height"
+          },
+          "center": false
+        },
+        {
+          "id": "n24",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "add",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "corner_radius"
+                    },
+                    {
+                      "param": "wall"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "n25",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "corner_radius"
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "corner_radius"
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            0
+          ],
+          "input": "n24"
+        },
+        {
+          "id": "n26",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "add",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "corner_radius"
+                    },
+                    {
+                      "param": "wall"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "n27",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "width"
+                      },
+                      {
+                        "op": "multiply",
+                        "args": [
+                          2,
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "corner_radius"
+                          },
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "corner_radius"
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            0
+          ],
+          "input": "n26"
+        },
+        {
+          "id": "n28",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "add",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "corner_radius"
+                    },
+                    {
+                      "param": "wall"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "n29",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "corner_radius"
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  },
+                  1
+                ]
+              }
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "depth"
+                          },
+                          {
+                            "param": "back_thickness"
+                          }
+                        ]
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "corner_radius"
+                          },
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n28"
+        },
+        {
+          "id": "n30",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "add",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "corner_radius"
+                    },
+                    {
+                      "param": "wall"
+                    }
+                  ]
+                },
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "n31",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "param": "width"
+                      },
+                      {
+                        "op": "multiply",
+                        "args": [
+                          2,
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "corner_radius"
+                          },
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "subtract",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "depth"
+                          },
+                          {
+                            "param": "back_thickness"
+                          }
+                        ]
+                      },
+                      {
+                        "param": "wall"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "subtract",
+                        "args": [
+                          {
+                            "param": "corner_radius"
+                          },
+                          {
+                            "param": "wall"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n30"
+        },
+        {
+          "id": "n32",
+          "op": "hull",
+          "inputs": [
+            "n25",
+            "n27",
+            "n29",
+            "n31"
+          ]
+        },
+        {
+          "id": "n33",
+          "op": "if",
+          "condition": {
+            "op": "checked",
+            "checks": [
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "width"
+                    },
+                    {
+                      "op": "multiply",
+                      "args": [
+                        2,
+                        {
+                          "param": "wall"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "depth"
+                        },
+                        {
+                          "param": "back_thickness"
+                        }
+                      ]
+                    },
+                    {
+                      "param": "wall"
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "add",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "corner_radius"
+                        },
+                        {
+                          "param": "wall"
+                        }
+                      ]
+                    },
+                    1
+                  ]
+                }
+              }
+            ],
+            "value": 1
+          },
+          "then": "n32",
+          "else": "n32"
+        },
+        {
+          "id": "n34",
+          "op": "extrude",
+          "input": "n33",
+          "height": {
+            "param": "height"
+          },
+          "center": false
+        },
+        {
+          "id": "n35",
+          "op": "translate",
+          "vector": [
+            {
+              "param": "wall"
+            },
+            {
+              "param": "back_thickness"
+            },
+            {
+              "param": "floor_thickness"
+            }
+          ],
+          "input": "n34"
+        },
+        {
+          "id": "n36",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": 2
+          }
+        },
+        {
+          "id": "n37",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": 2
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": 2
+            },
+            0
+          ],
+          "input": "n36"
+        },
+        {
+          "id": "n38",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": 2
+          }
+        },
+        {
+          "id": "n39",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 16
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": 2
+            },
+            0
+          ],
+          "input": "n38"
+        },
+        {
+          "id": "n40",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": 2
+          }
+        },
+        {
+          "id": "n41",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": 2
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 10
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 2
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n40"
+        },
+        {
+          "id": "n42",
+          "op": "circle",
+          "radius": {
+            "op": "typed",
+            "type": "f64",
+            "value": 2
+          }
+        },
+        {
+          "id": "n43",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 16
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 10
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": 2
+                }
+              ]
+            },
+            0
+          ],
+          "input": "n42"
+        },
+        {
+          "id": "n44",
+          "op": "hull",
+          "inputs": [
+            "n37",
+            "n39",
+            "n41",
+            "n43"
+          ]
+        },
+        {
+          "id": "n45",
+          "op": "if",
+          "condition": {
+            "op": "checked",
+            "checks": [
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": 16
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": 10
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": 2
+              }
+            ],
+            "value": 1
+          },
+          "then": "n44",
+          "else": "n44"
+        },
+        {
+          "id": "n46",
+          "op": "extrude",
+          "input": "n45",
+          "height": {
+            "op": "add",
+            "args": [
+              {
+                "op": "subtract",
+                "args": [
+                  {
+                    "param": "height"
+                  },
+                  {
+                    "param": "mount_top_offset"
+                  }
+                ]
+              },
+              12
+            ]
+          },
+          "center": false
+        },
+        {
+          "id": "n48",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "op": "divide",
+                      "args": [
+                        {
+                          "op": "subtract",
+                          "args": [
+                            {
+                              "param": "width"
+                            },
+                            {
+                              "op": "multiply",
+                              "args": [
+                                {
+                                  "op": "subtract",
+                                  "args": [
+                                    {
+                                      "param": "hook_count"
+                                    },
+                                    1
+                                  ]
+                                },
+                                {
+                                  "op": "multiply",
+                                  "args": [
+                                    40,
+                                    {
+                                      "param": "hook_spacing_steps"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        2
+                      ]
+                    },
+                    {
+                      "op": "multiply",
+                      "args": [
+                        {
+                          "local": "v47"
+                        },
+                        {
+                          "op": "multiply",
+                          "args": [
+                            40,
+                            {
+                              "param": "hook_spacing_steps"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                6
+              ]
+            },
+            0,
+            0
+          ],
+          "input": "n46"
+        },
+        {
+          "id": "n49",
+          "op": "collect",
+          "values": {
+            "op": "interval",
+            "start": 0,
+            "end": {
+              "param": "hook_count"
+            },
+            "inclusive": false
+          },
+          "binding": "v47",
+          "input": "n48"
+        },
+        {
+          "id": "n50",
+          "op": "union",
+          "inputs": [
+            "n49"
+          ]
+        },
+        {
+          "id": "n52",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "divide",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "width"
+                        },
+                        {
+                          "op": "multiply",
+                          "args": [
+                            {
+                              "op": "subtract",
+                              "args": [
+                                {
+                                  "param": "hook_count"
+                                },
+                                1
+                              ]
+                            },
+                            {
+                              "op": "multiply",
+                              "args": [
+                                40,
+                                {
+                                  "param": "hook_spacing_steps"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    2
+                  ]
+                },
+                {
+                  "op": "multiply",
+                  "args": [
+                    {
+                      "local": "v51"
+                    },
+                    {
+                      "op": "multiply",
+                      "args": [
+                        40,
+                        {
+                          "param": "hook_spacing_steps"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            0,
+            0
+          ],
+          "input": "n12"
+        },
+        {
+          "id": "n53",
+          "op": "collect",
+          "values": {
+            "op": "interval",
+            "start": 0,
+            "end": {
+              "param": "hook_count"
+            },
+            "inclusive": false
+          },
+          "binding": "v51",
+          "input": "n52"
+        },
+        {
+          "id": "n54",
+          "op": "union",
+          "inputs": [
+            "n53"
+          ]
+        },
+        {
+          "id": "n55",
+          "op": "difference",
+          "base": "n23",
+          "subtract": [
+            "n35"
+          ]
+        },
+        {
+          "id": "n56",
+          "op": "union",
+          "inputs": [
+            "n55",
+            "n50"
+          ]
+        },
+        {
+          "id": "n57",
+          "op": "difference",
+          "base": "n56",
+          "subtract": [
+            "n54"
+          ]
+        },
+        {
+          "id": "n58",
+          "op": "rectangle",
+          "size": [
+            12.6,
+            4
+          ],
+          "center": false
+        },
+        {
+          "id": "n59",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "negate",
+              "value": 9.6
+            },
+            62,
+            0
+          ],
+          "input": "n58"
+        },
+        {
+          "id": "n60",
+          "op": "rectangle",
+          "size": [
+            4,
+            12
+          ],
+          "center": false
+        },
+        {
+          "id": "n61",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "negate",
+              "value": 9.6
+            },
+            54,
+            0
+          ],
+          "input": "n60"
+        },
+        {
+          "id": "n62",
+          "op": "rectangle",
+          "size": [
+            3,
+            24
+          ],
+          "center": false
+        },
+        {
+          "id": "n63",
+          "op": "translate",
+          "vector": [
+            0,
+            42,
+            0
+          ],
+          "input": "n62"
+        },
+        {
+          "id": "n64",
+          "op": "union",
+          "inputs": [
+            "n59",
+            "n61",
+            "n63"
+          ]
+        },
+        {
+          "id": "n65",
+          "op": "offset",
+          "distance": 0.7,
+          "input": "n64"
+        },
+        {
+          "id": "n66",
+          "op": "offset",
+          "distance": {
+            "op": "negate",
+            "value": 0.7
+          },
+          "input": "n65",
+          "mode": "delta"
+        },
+        {
+          "id": "n67",
+          "op": "box",
+          "size": [
+            0.01,
+            0.6,
+            0.1
+          ],
+          "center": false
+        },
+        {
+          "id": "n68",
+          "op": "translate",
+          "vector": [
+            4.2,
+            2,
+            46
+          ],
+          "input": "n67"
+        },
+        {
+          "id": "n69",
+          "op": "box",
+          "size": [
+            0.65,
+            0.6,
+            4
+          ],
+          "center": false
+        },
+        {
+          "id": "n70",
+          "op": "translate",
+          "vector": [
+            4.2,
+            2,
+            48
+          ],
+          "input": "n69"
+        },
+        {
+          "id": "n71",
+          "op": "box",
+          "size": [
+            0.01,
+            0.6,
+            0.1
+          ],
+          "center": false
+        },
+        {
+          "id": "n72",
+          "op": "translate",
+          "vector": [
+            4.2,
+            2,
+            54
+          ],
+          "input": "n71"
+        },
+        {
+          "id": "n73",
+          "op": "hull",
+          "inputs": [
+            "n68",
+            "n70",
+            "n72"
+          ]
+        },
+        {
+          "id": "n75",
+          "op": "translate",
+          "vector": [
+            0,
+            0,
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "height"
+                    },
+                    {
+                      "param": "mount_top_offset"
+                    }
+                  ]
+                },
+                66
+              ]
+            }
+          ],
+          "input": "n73"
+        },
+        {
+          "id": "n76",
+          "op": "collect",
+          "values": {
+            "op": "filter",
+            "input": {
+              "op": "interval",
+              "start": 0,
+              "end": 1,
+              "inclusive": false
+            },
+            "function": {
+              "op": "lambda",
+              "parameters": [
+                "v74"
+              ],
+              "body": {
+                "op": "eq",
+                "args": [
+                  {
+                    "param": "friction_ridge_enabled"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          "binding": "v74",
+          "input": "n75"
+        },
+        {
+          "id": "n77",
+          "op": "extrude",
+          "input": "n1",
+          "height": 36,
+          "center": false
+        },
+        {
+          "id": "n78",
+          "op": "translate",
+          "vector": [
+            0,
+            0,
+            {
+              "op": "add",
+              "args": [
+                42,
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "height"
+                        },
+                        {
+                          "param": "mount_top_offset"
+                        }
+                      ]
+                    },
+                    66
+                  ]
+                }
+              ]
+            }
+          ],
+          "input": "n77"
+        },
+        {
+          "id": "n79",
+          "op": "translate",
+          "vector": [
+            0,
+            0,
+            {
+              "op": "negate",
+              "value": {
+                "param": "fit"
+              }
+            }
+          ],
+          "input": "n6"
+        },
+        {
+          "id": "n80",
+          "op": "intersection",
+          "inputs": [
+            "n78",
+            "n79"
+          ]
+        },
+        {
+          "id": "n81",
+          "op": "extrude",
+          "input": "n66",
+          "height": 4.4,
+          "center": false
+        },
+        {
+          "id": "n82",
+          "op": "rotate",
+          "vector": [
+            90,
+            0,
+            90
+          ],
+          "input": "n81"
+        },
+        {
+          "id": "n83",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "negate",
+              "value": 2.2
+            },
+            0,
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "param": "height"
+                    },
+                    {
+                      "param": "mount_top_offset"
+                    }
+                  ]
+                },
+                66
+              ]
+            }
+          ],
+          "input": "n82"
+        },
+        {
+          "id": "n84",
+          "op": "union",
+          "inputs": [
+            "n76",
+            "n80",
+            "n83"
+          ]
+        },
+        {
+          "id": "n85",
+          "op": "translate",
+          "vector": [
+            0,
+            0,
+            {
+              "op": "subtract",
+              "args": [
+                {
+                  "op": "negate",
+                  "value": 42
+                },
+                {
+                  "op": "subtract",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "height"
+                        },
+                        {
+                          "param": "mount_top_offset"
+                        }
+                      ]
+                    },
+                    66
+                  ]
+                }
+              ]
+            }
+          ],
+          "input": "n84"
+        },
+        {
+          "id": "n86",
+          "op": "rotate",
+          "vector": [
+            0,
+            {
+              "op": "negate",
+              "value": 90
+            },
+            0
+          ],
+          "input": "n85"
+        },
+        {
+          "id": "n87",
+          "op": "translate",
+          "vector": [
+            10,
+            0,
+            2.2
+          ],
+          "input": "n86"
+        },
+        {
+          "id": "n89",
+          "op": "collect",
+          "values": {
+            "op": "filter",
+            "input": {
+              "op": "interval",
+              "start": 0,
+              "end": 1,
+              "inclusive": false
+            },
+            "function": {
+              "op": "lambda",
+              "parameters": [
+                "v88"
+              ],
+              "body": {
+                "op": "not",
+                "value": {
+                  "op": "eq",
+                  "args": [
+                    {
+                      "param": "part"
+                    },
+                    2
+                  ]
+                }
+              }
+            }
+          },
+          "binding": "v88",
+          "input": "n57"
+        },
+        {
+          "id": "n91",
+          "op": "collect",
+          "values": {
+            "op": "filter",
+            "input": {
+              "op": "interval",
+              "start": 0,
+              "end": 1,
+              "inclusive": false
+            },
+            "function": {
+              "op": "lambda",
+              "parameters": [
+                "v90"
+              ],
+              "body": {
+                "op": "eq",
+                "args": [
+                  {
+                    "param": "part"
+                  },
+                  2
+                ]
+              }
+            }
+          },
+          "binding": "v90",
+          "input": "n87"
+        },
+        {
+          "id": "n93",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "divide",
+                  "args": [
+                    {
+                      "op": "subtract",
+                      "args": [
+                        {
+                          "param": "width"
+                        },
+                        {
+                          "op": "multiply",
+                          "args": [
+                            {
+                              "op": "subtract",
+                              "args": [
+                                {
+                                  "param": "hook_count"
+                                },
+                                1
+                              ]
+                            },
+                            {
+                              "op": "multiply",
+                              "args": [
+                                40,
+                                {
+                                  "param": "hook_spacing_steps"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    2
+                  ]
+                },
+                {
+                  "op": "multiply",
+                  "args": [
+                    {
+                      "local": "v92"
+                    },
+                    {
+                      "op": "multiply",
+                      "args": [
+                        40,
+                        {
+                          "param": "hook_spacing_steps"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            0,
+            0
+          ],
+          "input": "n84"
+        },
+        {
+          "id": "n94",
+          "op": "collect",
+          "values": {
+            "op": "filter",
+            "input": {
+              "op": "interval",
+              "start": 0,
+              "end": {
+                "param": "hook_count"
+              },
+              "inclusive": false
+            },
+            "function": {
+              "op": "lambda",
+              "parameters": [
+                "v92"
+              ],
+              "body": {
+                "op": "eq",
+                "args": [
+                  {
+                    "param": "part"
+                  },
+                  0
+                ]
+              }
+            }
+          },
+          "binding": "v92",
+          "input": "n93"
+        },
+        {
+          "id": "n95",
+          "op": "group",
+          "inputs": [
+            "n89",
+            "n91",
+            "n94"
+          ]
+        }
+      ],
+      "root": "n95",
+      "segments": 40
+    },
+    "customizer": [
+      {
+        "name": "part",
+        "label": "part",
+        "value": 0,
+        "valueStart": 170,
+        "valueEnd": 171,
+        "min": 0,
+        "max": 2
+      },
+      {
+        "name": "width",
+        "label": "width",
+        "value": 120,
+        "valueStart": 196,
+        "valueEnd": 199,
+        "min": 60,
+        "max": 300
+      },
+      {
+        "name": "depth",
+        "label": "depth",
+        "value": 75,
+        "valueStart": 227,
+        "valueEnd": 229,
+        "min": 30,
+        "max": 200
+      },
+      {
+        "name": "height",
+        "label": "height",
+        "value": 80,
+        "valueStart": 258,
+        "valueEnd": 260,
+        "min": 50,
+        "max": 250
+      },
+      {
+        "name": "wall",
+        "label": "wall",
+        "value": 3,
+        "valueStart": 287,
+        "valueEnd": 288,
+        "min": 2,
+        "max": 6
+      },
+      {
+        "name": "floor_thickness",
+        "label": "floor_thickness",
+        "value": 4,
+        "valueStart": 323,
+        "valueEnd": 324,
+        "min": 2,
+        "max": 8
+      },
+      {
+        "name": "back_thickness",
+        "label": "back_thickness",
+        "value": 7,
+        "valueStart": 358,
+        "valueEnd": 359,
+        "min": 7,
+        "max": 12
+      },
+      {
+        "name": "corner_radius",
+        "label": "corner_radius",
+        "value": 5,
+        "valueStart": 393,
+        "valueEnd": 394,
+        "min": 3,
+        "max": 12
+      },
+      {
+        "name": "hook_count",
+        "label": "hook_count",
+        "value": 2,
+        "valueStart": 425,
+        "valueEnd": 426,
+        "min": 2,
+        "max": 5
+      },
+      {
+        "name": "hook_spacing_steps",
+        "label": "hook_spacing_steps",
+        "value": 2,
+        "valueStart": 464,
+        "valueEnd": 465,
+        "min": 1,
+        "max": 6
+      },
+      {
+        "name": "mount_top_offset",
+        "label": "mount_top_offset",
+        "value": 14,
+        "valueStart": 501,
+        "valueEnd": 503,
+        "min": 14,
+        "max": 30
+      },
+      {
+        "name": "fit",
+        "label": "fit",
+        "value": 0.25,
+        "valueStart": 528,
+        "valueEnd": 532,
+        "min": 0.15,
+        "max": 0.4
+      },
+      {
+        "name": "friction_ridge_enabled",
+        "label": "friction_ridge_enabled",
+        "value": 1,
+        "valueStart": 579,
+        "valueEnd": 580,
+        "min": 0,
+        "max": 1
+      }
+    ]
+  },
+  {
+    "path": "examples/modelgraph-text/generic-functions.scad",
+    "source": "// @modelgraph-text/1\n// Generic records, column parameters, named results and destructuring.\nstruct Point3D<T> {\n    x: f32,\n    y: f32,\n    z: T,\n}\n\nmakePoint = fn<T>\n    x: f32,\n    y: f32,\n    z: T,\n->\n    point: Point3D<T>,\n    count: int,\n{\n    ret {\n        point: Point3D<T> { x, y, z },\n        count: 1,\n    }\n}\n\nparam height = 12 range 1..40\n{ point, count } = makePoint(10, 20, height)\nbody = box([point.x, point.y, point.z])\nshow body\nassert body. hasBodies(count)\n",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "height",
+          "value": 12,
+          "min": 1,
+          "max": 40
+        }
+      ],
+      "nodes": [
+        {
+          "id": "n1",
+          "op": "box",
+          "size": [
+            {
+              "op": "checked",
+              "checks": [
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 10
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 20
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "typed",
+                    "type": "f64",
+                    "value": {
+                      "op": "typed",
+                      "type": "f64",
+                      "value": {
+                        "param": "height"
+                      }
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "int",
+                  "value": 1
+                }
+              ],
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": 10
+                  }
+                }
+              }
+            },
+            {
+              "op": "checked",
+              "checks": [
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 10
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 20
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "typed",
+                    "type": "f64",
+                    "value": {
+                      "op": "typed",
+                      "type": "f64",
+                      "value": {
+                        "param": "height"
+                      }
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "int",
+                  "value": 1
+                }
+              ],
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": 20
+                  }
+                }
+              }
+            },
+            {
+              "op": "checked",
+              "checks": [
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 10
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": {
+                      "op": "typed",
+                      "type": "f32",
+                      "value": 20
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "typed",
+                    "type": "f64",
+                    "value": {
+                      "op": "typed",
+                      "type": "f64",
+                      "value": {
+                        "param": "height"
+                      }
+                    }
+                  }
+                },
+                {
+                  "op": "typed",
+                  "type": "int",
+                  "value": 1
+                }
+              ],
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "typed",
+                    "type": "f64",
+                    "value": {
+                      "param": "height"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "center": false
+        }
+      ],
+      "root": "n1",
+      "geometry_assertions": [
+        {
+          "id": "g1",
+          "target": "n1",
+          "check": "hasBodies",
+          "expected": {
+            "op": "checked",
+            "checks": [
+              {
+                "op": "typed",
+                "type": "f32",
+                "value": 10
+              },
+              {
+                "op": "typed",
+                "type": "f32",
+                "value": 20
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "height"
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": 10
+                  }
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": {
+                    "op": "typed",
+                    "type": "f32",
+                    "value": 20
+                  }
+                }
+              },
+              {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "op": "typed",
+                    "type": "f64",
+                    "value": {
+                      "param": "height"
+                    }
+                  }
+                }
+              },
+              {
+                "op": "typed",
+                "type": "int",
+                "value": 1
+              }
+            ],
+            "value": {
+              "op": "typed",
+              "type": "int",
+              "value": 1
+            }
+          },
+          "message": "assert check failed"
+        }
+      ],
+      "segments": 48
+    },
+    "customizer": [
+      {
+        "name": "height",
+        "label": "height",
+        "value": 12,
+        "valueStart": 338,
+        "valueEnd": 340,
+        "min": 1,
+        "max": 40
+      }
+    ]
+  },
+  {
+    "path": "examples/modelgraph-text/range-pattern.scad",
+    "source": "// @modelgraph-text/1\nparam count = 18 range 1..24\nparam orbit = 20mm range 5mm..50mm\nparam height = 4mm range 1mm..10mm\n\nangles = 0deg..<360deg count count\npart = box([2mm, 2mm, height])\nparts = [\n  for angle in angles\n  => part.translate(x: orbit).rotate(z: angle)\n]\nshow parts\n\nassert parts. hasBodies(count).isWatertight()\nassert measure(parts).height. approximately(height, tolerance: 0.01mm)\n",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "count",
+          "value": 18,
+          "min": 1,
+          "max": 24,
+          "integer": true
+        },
+        {
+          "id": "orbit",
+          "value": 20,
+          "unit": "mm",
+          "min": 5,
+          "max": 50
+        },
+        {
+          "id": "height",
+          "value": 4,
+          "unit": "mm",
+          "min": 1,
+          "max": 10
+        }
+      ],
+      "nodes": [
+        {
+          "id": "n1",
+          "op": "box",
+          "size": [
+            {
+              "op": "quantity",
+              "value": 2,
+              "unit": "mm"
+            },
+            {
+              "op": "quantity",
+              "value": 2,
+              "unit": "mm"
+            },
+            {
+              "param": "height"
+            }
+          ],
+          "center": false
+        },
+        {
+          "id": "n3",
+          "op": "translate",
+          "vector": [
+            {
+              "param": "orbit"
+            },
+            0,
+            0
+          ],
+          "input": "n1"
+        },
+        {
+          "id": "n4",
+          "op": "rotate",
+          "vector": [
+            0,
+            0,
+            {
+              "local": "v2"
+            }
+          ],
+          "input": "n3"
+        },
+        {
+          "id": "n5",
+          "op": "collect",
+          "values": {
+            "op": "interval",
+            "start": {
+              "op": "quantity",
+              "value": 0,
+              "unit": "deg"
+            },
+            "end": {
+              "op": "quantity",
+              "value": 360,
+              "unit": "deg"
+            },
+            "inclusive": false,
+            "count": {
+              "param": "count"
+            }
+          },
+          "binding": "v2",
+          "input": "n4"
+        }
+      ],
+      "root": "n5",
+      "geometry_assertions": [
+        {
+          "id": "g1",
+          "target": "n5",
+          "check": "hasBodies",
+          "expected": {
+            "param": "count"
+          },
+          "message": "assert check failed"
+        },
+        {
+          "id": "g2",
+          "target": "n5",
+          "check": "isWatertight",
+          "message": "assert check failed"
+        },
+        {
+          "id": "g3",
+          "target": "n5",
+          "check": "height",
+          "expected": {
+            "param": "height"
+          },
+          "tolerance": {
+            "op": "quantity",
+            "value": 0.01,
+            "unit": "mm"
+          },
+          "message": "assert check failed"
+        }
+      ],
+      "segments": 48
+    },
+    "customizer": [
+      {
+        "name": "count",
+        "label": "count",
+        "value": 18,
+        "valueStart": 36,
+        "valueEnd": 38,
+        "min": 1,
+        "max": 24,
+        "step": 1
+      },
+      {
+        "name": "orbit",
+        "label": "orbit (mm)",
+        "value": 20,
+        "valueStart": 65,
+        "valueEnd": 67,
+        "min": 5,
+        "max": 50
+      },
+      {
+        "name": "height",
+        "label": "height (mm)",
+        "value": 4,
+        "valueStart": 101,
+        "valueEnd": 102,
+        "min": 1,
+        "max": 10
+      }
+    ]
+  },
+  {
+    "path": "examples/modelgraph-text/nurbs-boolean.scad",
+    "source": "// @modelgraph-text/1\nparam width = 20mm range 10mm..40mm\nparam thickness = 4mm range 1mm..8mm\npatch = nurbs_surface(\n  degree_u: 1, degree_v: 1,\n  knots_u: [0,0,1,1], knots_v: [0,0,1,1],\n  control_points: [[[0,0,0],[0,width,0]],[[width,0,0],[width,width,0]]],\n  weights: [[1,1],[1,1]]\n)\nbody = patch.tessellate(2,2).thicken([0,0,thickness])\ncutter = patch.transform([[1,0,0,width/2],[0,1,0,width/2],[0,0,1,0],[0,0,0,1]])\n.tessellate(2,2).thicken([0,0,thickness])\nshow body.mesh_subtract(cutter)\n",
+    "document": {
+      "language": "modelgraph/nurbs-1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "n1",
+          "op": "surface",
+          "degree_u": 1,
+          "degree_v": 1,
+          "knots_u": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "knots_v": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "control_points": [
+            [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                20,
+                0
+              ]
+            ],
+            [
+              [
+                20,
+                0,
+                0
+              ],
+              [
+                20,
+                20,
+                0
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "periodic_u": false,
+          "periodic_v": false
+        },
+        {
+          "id": "n2",
+          "op": "tessellate",
+          "input": "n1",
+          "segments_u": 2,
+          "segments_v": 2,
+          "trim_segments": 32
+        },
+        {
+          "id": "n3",
+          "op": "thicken",
+          "input": "n2",
+          "vector": [
+            0,
+            0,
+            4
+          ]
+        },
+        {
+          "id": "n4",
+          "op": "transform",
+          "input": "n1",
+          "matrix": [
+            [
+              1,
+              0,
+              0,
+              10
+            ],
+            [
+              0,
+              1,
+              0,
+              10
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        {
+          "id": "n5",
+          "op": "tessellate",
+          "input": "n4",
+          "segments_u": 2,
+          "segments_v": 2,
+          "trim_segments": 32
+        },
+        {
+          "id": "n6",
+          "op": "thicken",
+          "input": "n5",
+          "vector": [
+            0,
+            0,
+            4
+          ]
+        },
+        {
+          "id": "n7",
+          "op": "mesh_boolean",
+          "inputs": [
+            "n3",
+            "n6"
+          ],
+          "operation": "difference"
+        }
+      ],
+      "root": "n7"
+    },
+    "customizer": [
+      {
+        "name": "width",
+        "label": "width (mm)",
+        "value": 20,
+        "valueStart": 36,
+        "valueEnd": 38,
+        "min": 10,
+        "max": 40
+      },
+      {
+        "name": "thickness",
+        "label": "thickness (mm)",
+        "value": 4,
+        "valueStart": 76,
+        "valueEnd": 77,
+        "min": 1,
+        "max": 8
+      }
+    ]
+  }
+]

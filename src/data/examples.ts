@@ -12,7 +12,7 @@ translate([30, 28, 0])
   cylinder(h = 18, r1 = 8, r2 = 3, $fn = 6);
 `,
 
-  csg: `// Real Manifold boolean operations
+  csg: `// Own Rust boolean operations
 difference() {
   cube([32, 32, 24], center = true);
   sphere(r = 18, $fn = 48);

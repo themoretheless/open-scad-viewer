@@ -1,3 +1,4 @@
+import { GeometryKernelError } from '../src/services/geometryRustKernel'
 import { describe, expect, it, vi } from 'vitest'
 import {
   ArtifactSizeError,
@@ -108,7 +109,7 @@ cube(width);`
 
   it('rejects non-finite geometry before analysis or export can expose corrupt meshes', async () => {
     await expect(service.analyze('cube([1e100, 1e100, 1e-200]);'))
-      .rejects.toBeInstanceOf(InvalidGeometryError)
+      .rejects.toBeInstanceOf(GeometryKernelError)
     await expect(service.export('translate([1e300, 0, 0]) cube(1);', 'stl'))
       .rejects.toBeInstanceOf(InvalidGeometryError)
   })

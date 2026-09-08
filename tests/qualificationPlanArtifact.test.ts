@@ -603,16 +603,15 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }
   })
 
-  it('recomputes every current frozen artifact and disjoint bundle before rejecting unresolved execution', () => {
+  it('detects archived Manifold artifact drift and keeps its qualification blocked', () => {
     const bindings = objectProperty(plan, 'bindings')
     const artifacts = arrayProperty(bindings, 'artifacts')
+    const changed: string[] = []
     for (const artifact of artifacts) {
       const hash = objectProperty(artifact, 'sha256')
       if (hash.state !== 'frozen') continue
-      expect(frozenFileDigest(String(artifact.path))).toEqual({
-        value: hash.value,
-        byteLength: hash.byteLength,
-      })
+      const actual = frozenFileDigest(String(artifact.path))
+      if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(String(artifact.path))
     }
     const bundles = arrayProperty(bindings, 'bundles')
     expect(artifacts).toHaveLength(15)
@@ -623,11 +622,11 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       const paths = bundle.paths.map(String)
       expect(paths).toEqual([...paths].sort())
       expect(hash.state).toBe('frozen')
-      expect(frozenBundleDigest(paths)).toEqual({
-        value: hash.value,
-        byteLength: hash.byteLength,
-      })
+      const actual = frozenBundleDigest(paths)
+      if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(String(bundle.id))
     }
+    expect(changed.length).toBeGreaterThan(0)
+    expect(changed).toContain('package-lock.json')
     const allBoundPaths = boundPaths(plan)
     expect(new Set(allBoundPaths).size).toBe(allBoundPaths.length)
     expect(allBoundPaths).not.toContain('docs/qualification/semantic-manifold-g1-plan-v5.json')

@@ -1,0 +1,7016 @@
+[
+  {
+    "name": "MODELGRAPH_ASSEMBLY_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "gap",
+          "value": 0.3
+        }
+      ],
+      "nodes": [
+        {
+          "id": "body",
+          "op": "box",
+          "size": [
+            20,
+            10,
+            5
+          ]
+        },
+        {
+          "id": "cover",
+          "op": "box",
+          "size": [
+            20,
+            10,
+            2
+          ]
+        },
+        {
+          "id": "product",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "base",
+              "input": "body",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    5
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            {
+              "id": "lid",
+              "input": "cover",
+              "anchors": [
+                {
+                  "id": "bottom",
+                  "origin": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "base",
+                "anchor": "top",
+                "own_anchor": "bottom",
+                "gap": {
+                  "param": "gap"
+                },
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "product"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "gap",
+            "value": 0.3
+          }
+        ],
+        "nodes": [
+          {
+            "id": "body",
+            "op": "box",
+            "size": [
+              20,
+              10,
+              5
+            ],
+            "center": false
+          },
+          {
+            "id": "cover",
+            "op": "box",
+            "size": [
+              20,
+              10,
+              2
+            ],
+            "center": false
+          },
+          {
+            "id": "product",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "base",
+                "input": "body",
+                "anchors": [
+                  {
+                    "id": "top",
+                    "origin": [
+                      0,
+                      0,
+                      5
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "placement": {
+                  "origin": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              },
+              {
+                "id": "lid",
+                "input": "cover",
+                "anchors": [
+                  {
+                    "id": "bottom",
+                    "origin": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "mate": {
+                  "component": "base",
+                  "anchor": "top",
+                  "own_anchor": "bottom",
+                  "gap": {
+                    "param": "gap"
+                  },
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "root": "product",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [
+        {
+          "id": "base",
+          "input": "body",
+          "joint": null,
+          "matrix": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "top",
+              "matrix": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                5,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/product/components/base",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]){\ncube([20,10,5],center=false);\n}"
+        },
+        {
+          "id": "lid",
+          "input": "cover",
+          "joint": null,
+          "matrix": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            5.3,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "bottom",
+              "matrix": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                5.3,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/product/components/lid",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,5.3],[0,0,0,1]]){\ncube([20,10,2],center=false);\n}"
+        }
+      ],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]){\ncube([20,10,5],center=false);\n}\nmultmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,5.3],[0,0,0,1]]){\ncube([20,10,2],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "product",
+          "line": 3,
+          "instance_path": "/product"
+        },
+        {
+          "node_id": "body",
+          "line": 4,
+          "instance_path": "/product/components/base/body"
+        },
+        {
+          "node_id": "cover",
+          "line": 7,
+          "instance_path": "/product/components/lid/cover"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "MODELGRAPH_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 40
+        }
+      ],
+      "segments": 48,
+      "nodes": [
+        {
+          "id": "body",
+          "op": "box",
+          "size": [
+            {
+              "param": "width"
+            },
+            30,
+            8
+          ]
+        },
+        {
+          "id": "hole",
+          "op": "cylinder",
+          "radius": 4,
+          "height": 10
+        },
+        {
+          "id": "placedHole",
+          "op": "translate",
+          "vector": [
+            20,
+            15,
+            -1
+          ],
+          "input": "hole"
+        },
+        {
+          "id": "part",
+          "op": "difference",
+          "base": "body",
+          "subtract": [
+            "placedHole"
+          ]
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 40
+          }
+        ],
+        "nodes": [
+          {
+            "id": "body",
+            "op": "box",
+            "size": [
+              {
+                "param": "width"
+              },
+              30,
+              8
+            ],
+            "center": false
+          },
+          {
+            "id": "hole",
+            "op": "cylinder",
+            "radius": 4,
+            "height": 10,
+            "center": false
+          },
+          {
+            "id": "placedHole",
+            "op": "translate",
+            "vector": [
+              20,
+              15,
+              -1
+            ],
+            "input": "hole"
+          },
+          {
+            "id": "part",
+            "op": "difference",
+            "base": "body",
+            "subtract": [
+              "placedHole"
+            ]
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ndifference(){\ncube([40,30,8],center=false);\ntranslate([20,15,-1]){\ncylinder(r=4,h=10,center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "body",
+          "line": 4,
+          "instance_path": "/part/body"
+        },
+        {
+          "node_id": "placedHole",
+          "line": 5,
+          "instance_path": "/part/placedHole"
+        },
+        {
+          "node_id": "hole",
+          "line": 6,
+          "instance_path": "/part/placedHole/hole"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "MODELGRAPH_FUNCTIONAL_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "count",
+          "value": 3
+        }
+      ],
+      "functions": [
+        {
+          "id": "block",
+          "kind": "geometry",
+          "parameters": [
+            "width"
+          ],
+          "nodes": [
+            {
+              "id": "solid",
+              "op": "box",
+              "size": [
+                {
+                  "local": "width"
+                },
+                2,
+                2
+              ]
+            }
+          ],
+          "root": "solid"
+        }
+      ],
+      "assertions": [
+        {
+          "condition": {
+            "op": "le",
+            "args": [
+              {
+                "param": "count"
+              },
+              20
+            ]
+          },
+          "message": "Use at most 20 blocks."
+        }
+      ],
+      "nodes": [
+        {
+          "id": "block",
+          "op": "call",
+          "function": "block",
+          "args": {
+            "width": {
+              "op": "apply",
+              "function": {
+                "op": "lambda",
+                "parameters": [
+                  "x"
+                ],
+                "body": {
+                  "op": "multiply",
+                  "args": [
+                    {
+                      "local": "x"
+                    },
+                    2
+                  ]
+                }
+              },
+              "args": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "placed",
+          "op": "translate",
+          "vector": [
+            {
+              "op": "multiply",
+              "args": [
+                {
+                  "local": "i"
+                },
+                3
+              ]
+            },
+            0,
+            0
+          ],
+          "input": "block"
+        },
+        {
+          "id": "parts",
+          "op": "map",
+          "count": {
+            "param": "count"
+          },
+          "index": "i",
+          "input": "placed"
+        }
+      ],
+      "root": "parts"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "count",
+            "value": 3
+          }
+        ],
+        "nodes": [
+          {
+            "id": "block",
+            "op": "call",
+            "function": "block",
+            "args": {
+              "width": {
+                "op": "apply",
+                "function": {
+                  "op": "lambda",
+                  "parameters": [
+                    "x"
+                  ],
+                  "body": {
+                    "op": "multiply",
+                    "args": [
+                      {
+                        "local": "x"
+                      },
+                      2
+                    ]
+                  }
+                },
+                "args": [
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "id": "placed",
+            "op": "translate",
+            "vector": [
+              {
+                "op": "multiply",
+                "args": [
+                  {
+                    "local": "i"
+                  },
+                  3
+                ]
+              },
+              0,
+              0
+            ],
+            "input": "block"
+          },
+          {
+            "id": "parts",
+            "op": "map",
+            "count": {
+              "param": "count"
+            },
+            "index": "i",
+            "input": "placed"
+          }
+        ],
+        "root": "parts",
+        "functions": [
+          {
+            "id": "block",
+            "kind": "geometry",
+            "parameters": [
+              "width"
+            ],
+            "nodes": [
+              {
+                "id": "solid",
+                "op": "box",
+                "size": [
+                  {
+                    "local": "width"
+                  },
+                  2,
+                  2
+                ],
+                "center": false
+              }
+            ],
+            "root": "solid"
+          }
+        ],
+        "assertions": [
+          {
+            "condition": {
+              "op": "le",
+              "args": [
+                {
+                  "param": "count"
+                },
+                20
+              ]
+            },
+            "message": "Use at most 20 blocks."
+          }
+        ],
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nunion(){\ntranslate([0,0,0]){\ncube([2,2,2],center=false);\n}\ntranslate([3,0,0]){\ncube([2,2,2],center=false);\n}\ntranslate([6,0,0]){\ncube([2,2,2],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "parts",
+          "line": 3,
+          "instance_path": "/parts"
+        },
+        {
+          "node_id": "placed",
+          "line": 4,
+          "instance_path": "/parts[0]/placed"
+        },
+        {
+          "node_id": "block",
+          "line": 5,
+          "instance_path": "/parts[0]/placed/block"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/parts[0]/placed/block/call:block/solid"
+        },
+        {
+          "node_id": "placed",
+          "line": 7,
+          "instance_path": "/parts[1]/placed"
+        },
+        {
+          "node_id": "block",
+          "line": 8,
+          "instance_path": "/parts[1]/placed/block"
+        },
+        {
+          "node_id": "solid",
+          "line": 8,
+          "instance_path": "/parts[1]/placed/block/call:block/solid"
+        },
+        {
+          "node_id": "placed",
+          "line": 10,
+          "instance_path": "/parts[2]/placed"
+        },
+        {
+          "node_id": "block",
+          "line": 11,
+          "instance_path": "/parts[2]/placed/block"
+        },
+        {
+          "node_id": "solid",
+          "line": 11,
+          "instance_path": "/parts[2]/placed/block/call:block/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "MODELGRAPH_LOFT_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "adapter",
+          "op": "loft",
+          "profile": [
+            [
+              -10,
+              -10
+            ],
+            [
+              10,
+              -10
+            ],
+            [
+              10,
+              10
+            ],
+            [
+              -10,
+              10
+            ]
+          ],
+          "sections": [
+            {
+              "z": 0,
+              "scale": [
+                1,
+                1
+              ],
+              "offset": [
+                0,
+                0
+              ]
+            },
+            {
+              "z": 20,
+              "scale": [
+                0.5,
+                0.5
+              ],
+              "offset": [
+                5,
+                0
+              ]
+            }
+          ]
+        }
+      ],
+      "root": "adapter"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "adapter",
+            "op": "loft",
+            "profile": [
+              [
+                -10,
+                -10
+              ],
+              [
+                10,
+                -10
+              ],
+              [
+                10,
+                10
+              ],
+              [
+                -10,
+                10
+              ]
+            ],
+            "sections": [
+              {
+                "z": 0,
+                "scale": [
+                  1,
+                  1
+                ],
+                "offset": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "z": 20,
+                "scale": [
+                  0.5,
+                  0.5
+                ],
+                "offset": [
+                  5,
+                  0
+                ]
+              }
+            ]
+          }
+        ],
+        "root": "adapter",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\npolyhedron(points=[[-10,-10,0],[10,-10,0],[10,10,0],[-10,10,0],[0,-5,20],[10,-5,20],[10,5,20],[0,5,20]],faces=[[0,1,2],[4,6,5],[0,2,3],[4,7,6],[0,5,1],[0,4,5],[1,6,2],[1,5,6],[2,7,3],[2,6,7],[3,4,0],[3,7,4]]);",
+      "source_map": [
+        {
+          "node_id": "adapter",
+          "line": 3,
+          "instance_path": "/adapter"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "MODELGRAPH_SKETCH_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "origin",
+              "kind": "fix",
+              "point": "a",
+              "at": [
+                0,
+                0
+              ]
+            },
+            {
+              "id": "bottom",
+              "kind": "horizontal",
+              "a": "a",
+              "b": "b"
+            },
+            {
+              "id": "right",
+              "kind": "vertical",
+              "a": "b",
+              "b": "c"
+            },
+            {
+              "id": "top",
+              "kind": "horizontal",
+              "a": "c",
+              "b": "d"
+            },
+            {
+              "id": "left",
+              "kind": "vertical",
+              "a": "d",
+              "b": "a"
+            },
+            {
+              "id": "width",
+              "kind": "distance",
+              "a": "a",
+              "b": "b",
+              "value": {
+                "param": "width"
+              }
+            },
+            {
+              "id": "height",
+              "kind": "distance",
+              "a": "b",
+              "b": "c",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [
+              {
+                "id": "origin",
+                "kind": "fix",
+                "point": "a",
+                "at": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "id": "bottom",
+                "kind": "horizontal",
+                "a": "a",
+                "b": "b"
+              },
+              {
+                "id": "right",
+                "kind": "vertical",
+                "a": "b",
+                "b": "c"
+              },
+              {
+                "id": "top",
+                "kind": "horizontal",
+                "a": "c",
+                "b": "d"
+              },
+              {
+                "id": "left",
+                "kind": "vertical",
+                "a": "d",
+                "b": "a"
+              },
+              {
+                "id": "width",
+                "kind": "distance",
+                "a": "a",
+                "b": "b",
+                "value": {
+                  "param": "width"
+                }
+              },
+              {
+                "id": "height",
+                "kind": "distance",
+                "a": "b",
+                "b": "c",
+                "value": 10
+              }
+            ],
+            "allow_underconstrained": false
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "solved",
+          "iterations": 3,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 0,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 2.160650902908361e-7,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                1.578206987335872e-8,
+                2.160650902908361e-7
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                20.00000002788851,
+                4.093873490169453e-7
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                20.000000034051883,
+                10.000000557231065
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                1.8108430557368184e-8,
+                10.00000063683924
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "id": "origin",
+              "residual_mm": 2.160650902908361e-7,
+              "satisfied": true
+            },
+            {
+              "id": "bottom",
+              "residual_mm": 1.9332225872610923e-7,
+              "satisfied": true
+            },
+            {
+              "id": "right",
+              "residual_mm": 6.163372034961867e-9,
+              "satisfied": true
+            },
+            {
+              "id": "top",
+              "residual_mm": 7.96081742748811e-8,
+              "satisfied": true
+            },
+            {
+              "id": "left",
+              "residual_mm": 2.326360684009465e-9,
+              "satisfied": true
+            },
+            {
+              "id": "width",
+              "residual_mm": 1.2106440294701315e-8,
+              "satisfied": true
+            },
+            {
+              "id": "height",
+              "residual_mm": 1.478437159363466e-7,
+              "satisfied": true
+            }
+          ],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[1.578206987335872e-8,2.160650902908361e-7],[20.00000002788851,4.093873490169453e-7],[20.000000034051883,10.000000557231065],[1.8108430557368184e-8,10.00000063683924]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "MODELGRAPH_UNITS_EXAMPLE",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "type_policy": "strict",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 4,
+          "unit": "cm",
+          "min": 1,
+          "max": 20
+        },
+        {
+          "id": "wall",
+          "value": 2,
+          "unit": "mm",
+          "min": 0.1,
+          "max": 10
+        }
+      ],
+      "constraints": [
+        {
+          "id": "minimumWall",
+          "left": {
+            "param": "wall"
+          },
+          "relation": "ge",
+          "right": {
+            "op": "quantity",
+            "value": 1.2,
+            "unit": "mm"
+          },
+          "message": "Declared plate thickness must be at least 1.2 mm."
+        }
+      ],
+      "nodes": [
+        {
+          "id": "plate",
+          "op": "box",
+          "size": [
+            {
+              "param": "width"
+            },
+            {
+              "op": "quantity",
+              "value": 20,
+              "unit": "mm"
+            },
+            {
+              "param": "wall"
+            }
+          ]
+        }
+      ],
+      "root": "plate"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "type_policy": "strict",
+        "constraints": [
+          {
+            "id": "minimumWall",
+            "left": {
+              "param": "wall"
+            },
+            "relation": "ge",
+            "right": {
+              "op": "quantity",
+              "value": 1.2,
+              "unit": "mm"
+            },
+            "message": "Declared plate thickness must be at least 1.2 mm."
+          }
+        ],
+        "parameters": [
+          {
+            "id": "width",
+            "value": 4,
+            "unit": "cm",
+            "min": 1,
+            "max": 20
+          },
+          {
+            "id": "wall",
+            "value": 2,
+            "unit": "mm",
+            "min": 0.1,
+            "max": 10
+          }
+        ],
+        "nodes": [
+          {
+            "id": "plate",
+            "op": "box",
+            "size": [
+              {
+                "param": "width"
+              },
+              {
+                "op": "quantity",
+                "value": 20,
+                "unit": "mm"
+              },
+              {
+                "param": "wall"
+              }
+            ],
+            "center": false
+          }
+        ],
+        "root": "plate",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [
+        {
+          "id": "minimumWall",
+          "path": "/constraints/0",
+          "passed": true,
+          "status": "passed",
+          "actual": 2,
+          "expected": 1.2,
+          "relation": "ge",
+          "tolerance": 0,
+          "dimension": [
+            1,
+            0
+          ],
+          "message": "Declared plate thickness must be at least 1.2 mm."
+        }
+      ],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ncube([40,20,2],center=false);",
+      "source_map": [
+        {
+          "node_id": "plate",
+          "line": 3,
+          "instance_path": "/plate"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "union",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "union",
+          "inputs": [
+            "solid",
+            "solid"
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "union",
+            "inputs": [
+              "solid",
+              "solid"
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nunion(){\ncube([2,3,4],center=false);\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "intersection",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "intersection",
+          "inputs": [
+            "solid",
+            "solid"
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "intersection",
+            "inputs": [
+              "solid",
+              "solid"
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nintersection(){\ncube([2,3,4],center=false);\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "hull",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "hull",
+          "inputs": [
+            "solid",
+            "solid"
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "hull",
+            "inputs": [
+              "solid",
+              "solid"
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nhull(){\ncube([2,3,4],center=false);\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "difference",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "difference",
+          "base": "solid",
+          "subtract": [
+            "solid"
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "difference",
+            "base": "solid",
+            "subtract": [
+              "solid"
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ndifference(){\ncube([2,3,4],center=false);\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "translate",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "translate",
+          "vector": [
+            2,
+            15,
+            -3
+          ],
+          "input": "solid"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "translate",
+            "vector": [
+              2,
+              15,
+              -3
+            ],
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ntranslate([2,15,-3]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "rotate",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "rotate",
+          "vector": [
+            2,
+            15,
+            -3
+          ],
+          "input": "solid"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "rotate",
+            "vector": [
+              2,
+              15,
+              -3
+            ],
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nrotate([2,15,-3]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "scale",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "scale",
+          "vector": [
+            1,
+            2,
+            -3
+          ],
+          "input": "solid"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "scale",
+            "vector": [
+              1,
+              2,
+              -3
+            ],
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nscale([1,2,-3]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "rectangle_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "rectangle",
+          "size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "result",
+          "op": "extrude",
+          "input": "p",
+          "height": 2
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "rectangle",
+            "size": [
+              2,
+              3
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "extrude",
+            "input": "p",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\nsquare([2,3],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "rectangle_revolve",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "rectangle",
+          "size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "result",
+          "op": "revolve",
+          "input": "p",
+          "angle": 180
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "rectangle",
+            "size": [
+              2,
+              3
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "revolve",
+            "input": "p",
+            "angle": 180
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nrotate_extrude(angle=180){\nsquare([2,3],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "rectangle_advanced_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "rectangle",
+          "size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "result",
+          "op": "advanced_extrude",
+          "input": "p",
+          "height": 3,
+          "twist": 25,
+          "top_scale": [
+            1,
+            2
+          ],
+          "slices": 4
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "rectangle",
+            "size": [
+              2,
+              3
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "advanced_extrude",
+            "input": "p",
+            "height": 3,
+            "twist": 25,
+            "top_scale": [
+              1,
+              2
+            ],
+            "slices": 4,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,twist=25,scale=[1,2],slices=4,center=false){\nsquare([2,3],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "rectangle_offset",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "rectangle",
+          "size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "result",
+          "op": "offset",
+          "input": "p",
+          "distance": -0.2,
+          "mode": "delta"
+        },
+        {
+          "id": "out",
+          "op": "extrude",
+          "input": "result",
+          "height": 2
+        }
+      ],
+      "root": "out"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "rectangle",
+            "size": [
+              2,
+              3
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "offset",
+            "distance": -0.2,
+            "input": "p",
+            "mode": "delta"
+          },
+          {
+            "id": "out",
+            "op": "extrude",
+            "input": "result",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "out",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\noffset(delta=-0.2){\nsquare([2,3],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "out",
+          "line": 3,
+          "instance_path": "/out"
+        },
+        {
+          "node_id": "result",
+          "line": 4,
+          "instance_path": "/out/result"
+        },
+        {
+          "node_id": "p",
+          "line": 5,
+          "instance_path": "/out/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "circle_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "circle",
+          "radius": 2
+        },
+        {
+          "id": "result",
+          "op": "extrude",
+          "input": "p",
+          "height": 2
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "circle",
+            "radius": 2
+          },
+          {
+            "id": "result",
+            "op": "extrude",
+            "input": "p",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\ncircle(r=2);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "circle_revolve",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "circle",
+          "radius": 2
+        },
+        {
+          "id": "result",
+          "op": "revolve",
+          "input": "p",
+          "angle": 180
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "circle",
+            "radius": 2
+          },
+          {
+            "id": "result",
+            "op": "revolve",
+            "input": "p",
+            "angle": 180
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nrotate_extrude(angle=180){\ncircle(r=2);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "circle_advanced_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "circle",
+          "radius": 2
+        },
+        {
+          "id": "result",
+          "op": "advanced_extrude",
+          "input": "p",
+          "height": 3,
+          "twist": 25,
+          "top_scale": [
+            1,
+            2
+          ],
+          "slices": 4
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "circle",
+            "radius": 2
+          },
+          {
+            "id": "result",
+            "op": "advanced_extrude",
+            "input": "p",
+            "height": 3,
+            "twist": 25,
+            "top_scale": [
+              1,
+              2
+            ],
+            "slices": 4,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,twist=25,scale=[1,2],slices=4,center=false){\ncircle(r=2);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "circle_offset",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "circle",
+          "radius": 2
+        },
+        {
+          "id": "result",
+          "op": "offset",
+          "input": "p",
+          "distance": -0.2,
+          "mode": "delta"
+        },
+        {
+          "id": "out",
+          "op": "extrude",
+          "input": "result",
+          "height": 2
+        }
+      ],
+      "root": "out"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "circle",
+            "radius": 2
+          },
+          {
+            "id": "result",
+            "op": "offset",
+            "distance": -0.2,
+            "input": "p",
+            "mode": "delta"
+          },
+          {
+            "id": "out",
+            "op": "extrude",
+            "input": "result",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "out",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\noffset(delta=-0.2){\ncircle(r=2);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "out",
+          "line": 3,
+          "instance_path": "/out"
+        },
+        {
+          "node_id": "result",
+          "line": 4,
+          "instance_path": "/out/result"
+        },
+        {
+          "node_id": "p",
+          "line": 5,
+          "instance_path": "/out/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "polygon_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "polygon",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        },
+        {
+          "id": "result",
+          "op": "extrude",
+          "input": "p",
+          "height": 2
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                3,
+                0
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                0,
+                3
+              ]
+            ]
+          },
+          {
+            "id": "result",
+            "op": "extrude",
+            "input": "p",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\npolygon(points=[[0,0],[3,0],[2,2],[0,3]]);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "polygon_revolve",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "polygon",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        },
+        {
+          "id": "result",
+          "op": "revolve",
+          "input": "p",
+          "angle": 180
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                3,
+                0
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                0,
+                3
+              ]
+            ]
+          },
+          {
+            "id": "result",
+            "op": "revolve",
+            "input": "p",
+            "angle": 180
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nrotate_extrude(angle=180){\npolygon(points=[[0,0],[3,0],[2,2],[0,3]]);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "polygon_advanced_extrude",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "polygon",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        },
+        {
+          "id": "result",
+          "op": "advanced_extrude",
+          "input": "p",
+          "height": 3,
+          "twist": 25,
+          "top_scale": [
+            1,
+            2
+          ],
+          "slices": 4
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                3,
+                0
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                0,
+                3
+              ]
+            ]
+          },
+          {
+            "id": "result",
+            "op": "advanced_extrude",
+            "input": "p",
+            "height": 3,
+            "twist": 25,
+            "top_scale": [
+              1,
+              2
+            ],
+            "slices": 4,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,twist=25,scale=[1,2],slices=4,center=false){\npolygon(points=[[0,0],[3,0],[2,2],[0,3]]);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "p",
+          "line": 4,
+          "instance_path": "/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "polygon_offset",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "polygon",
+          "points": [
+            [
+              0,
+              0
+            ],
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        },
+        {
+          "id": "result",
+          "op": "offset",
+          "input": "p",
+          "distance": -0.2,
+          "mode": "delta"
+        },
+        {
+          "id": "out",
+          "op": "extrude",
+          "input": "result",
+          "height": 2
+        }
+      ],
+      "root": "out"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "p",
+            "op": "polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                3,
+                0
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                0,
+                3
+              ]
+            ]
+          },
+          {
+            "id": "result",
+            "op": "offset",
+            "distance": -0.2,
+            "input": "p",
+            "mode": "delta"
+          },
+          {
+            "id": "out",
+            "op": "extrude",
+            "input": "result",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "out",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\noffset(delta=-0.2){\npolygon(points=[[0,0],[3,0],[2,2],[0,3]]);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "out",
+          "line": 3,
+          "instance_path": "/out"
+        },
+        {
+          "node_id": "result",
+          "line": 4,
+          "instance_path": "/out/result"
+        },
+        {
+          "node_id": "p",
+          "line": 5,
+          "instance_path": "/out/result/p"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "projection",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "profile",
+          "op": "projection",
+          "input": "solid"
+        },
+        {
+          "id": "result",
+          "op": "extrude",
+          "input": "profile",
+          "height": 2
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "profile",
+            "op": "projection",
+            "input": "solid"
+          },
+          {
+            "id": "result",
+            "op": "extrude",
+            "input": "profile",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\nprojection(cut=false){\ncube([2,3,4],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "profile",
+          "line": 4,
+          "instance_path": "/result/profile"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/profile/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "section",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "profile",
+          "op": "section",
+          "input": "solid",
+          "height": 2
+        },
+        {
+          "id": "result",
+          "op": "extrude",
+          "input": "profile",
+          "height": 2
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "profile",
+            "op": "section",
+            "height": 2,
+            "input": "solid"
+          },
+          {
+            "id": "result",
+            "op": "extrude",
+            "input": "profile",
+            "height": 2,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=2,center=false){\nprojection(cut=true){\ntranslate([0,0,-2]){\ncube([2,3,4],center=false);\n}\n}\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "profile",
+          "line": 4,
+          "instance_path": "/result/profile"
+        },
+        {
+          "node_id": "solid",
+          "line": 6,
+          "instance_path": "/result/profile/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "affine",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "affine",
+          "input": "solid",
+          "rows": [
+            [
+              1,
+              0,
+              0,
+              2
+            ],
+            [
+              0,
+              2,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              -3,
+              4
+            ]
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "affine",
+            "input": "solid",
+            "rows": [
+              [
+                1,
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                2,
+                0,
+                3
+              ],
+              [
+                0,
+                0,
+                -3,
+                4
+              ]
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[1,0,0,2],[0,2,0,3],[0,0,-3,4],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "mirror",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "mirror",
+          "input": "solid",
+          "normal": [
+            0,
+            1,
+            0
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "mirror",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmirror([0,1,0]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "cone",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "result",
+          "op": "cone",
+          "height": 3,
+          "radius_bottom": 2,
+          "radius_top": 0
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "result",
+            "op": "cone",
+            "radius_bottom": 2,
+            "radius_top": 0,
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ncylinder(r1=2,r2=0,h=3,center=false);",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "torus",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "result",
+          "op": "torus",
+          "major_radius": 3,
+          "minor_radius": 1
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "result",
+            "op": "torus",
+            "major_radius": 3,
+            "minor_radius": 1
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nrotate_extrude(angle=360){translate([3,0,0]){circle(r=1);}}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "linear_pattern",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "linear_pattern",
+          "input": "solid",
+          "count": 4,
+          "step": [
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "linear_pattern",
+            "input": "solid",
+            "count": 4,
+            "step": [
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nunion(){\ntranslate([0,0,0]){\ncube([2,3,4],center=false);\n}\ntranslate([2,3,4]){\ncube([2,3,4],center=false);\n}\ntranslate([4,6,8]){\ncube([2,3,4],center=false);\n}\ntranslate([6,9,12]){\ncube([2,3,4],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result[0]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 8,
+          "instance_path": "/result[1]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 11,
+          "instance_path": "/result[2]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 14,
+          "instance_path": "/result[3]/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "circular_pattern",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "circular_pattern",
+          "input": "solid",
+          "count": 4,
+          "angle_step": 35
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "circular_pattern",
+            "input": "solid",
+            "count": 4,
+            "angle_step": 35
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nunion(){\nrotate([0,0,0]){\ncube([2,3,4],center=false);\n}\nrotate([0,0,35]){\ncube([2,3,4],center=false);\n}\nrotate([0,0,70]){\ncube([2,3,4],center=false);\n}\nrotate([0,0,105]){\ncube([2,3,4],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result[0]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 8,
+          "instance_path": "/result[1]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 11,
+          "instance_path": "/result[2]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 14,
+          "instance_path": "/result[3]/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "geometry_if",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "no",
+          "op": "sphere",
+          "radius": -1
+        },
+        {
+          "id": "result",
+          "op": "if",
+          "condition": 1,
+          "then": "solid",
+          "else": "no"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "no",
+            "op": "sphere",
+            "radius": -1
+          },
+          {
+            "id": "result",
+            "op": "if",
+            "condition": 1,
+            "then": "solid",
+            "else": "no"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ncube([2,3,4],center=false);",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 3,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "map",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            {
+              "op": "add",
+              "args": [
+                {
+                  "local": "i"
+                },
+                1
+              ]
+            },
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "map",
+          "count": 3,
+          "index": "i",
+          "input": "solid"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "local": "i"
+                  },
+                  1
+                ]
+              },
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "map",
+            "count": 3,
+            "index": "i",
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nunion(){\ncube([1,3,4],center=false);\ncube([2,3,4],center=false);\ncube([3,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result[0]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result[1]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 6,
+          "instance_path": "/result[2]/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "collect",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            {
+              "local": "x"
+            },
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "collect",
+          "values": {
+            "op": "list",
+            "items": [
+              1,
+              2,
+              3
+            ]
+          },
+          "binding": "x",
+          "input": "solid"
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              {
+                "local": "x"
+              },
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "collect",
+            "values": {
+              "op": "list",
+              "items": [
+                1,
+                2,
+                3
+              ]
+            },
+            "binding": "x",
+            "input": "solid"
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ncube([1,3,4],center=false);\ncube([2,3,4],center=false);\ncube([3,3,4],center=false);",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 3,
+          "instance_path": "/result[0]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result[1]/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result[2]/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "group",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "group",
+          "inputs": [
+            "solid",
+            "solid"
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "group",
+            "inputs": [
+              "solid",
+              "solid"
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\ncube([2,3,4],center=false);\ncube([2,3,4],center=false);",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 3,
+          "instance_path": "/result/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "assemblyundefined",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ]
+              }
+            },
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    4
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  10,
+                  20,
+                  30
+                ],
+                "rotation": [
+                  15,
+                  25,
+                  35
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "b",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "base",
+                    "origin": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "rotation": [
+                      15,
+                      25,
+                      35
+                    ]
+                  }
+                ],
+                "mate": {
+                  "component": "a",
+                  "anchor": "top",
+                  "own_anchor": "base",
+                  "gap": 0.3,
+                  "rotation": [
+                    0,
+                    90,
+                    0
+                  ]
+                }
+              },
+              {
+                "id": "a",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "top",
+                    "origin": [
+                      0,
+                      0,
+                      4
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "placement": {
+                  "origin": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [
+        {
+          "id": "b",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            0.21569716340274947,
+            -0.6311848978999135,
+            0.7450371523374408,
+            10.558245376526889,
+            -0.16204546588030472,
+            0.7292798849283302,
+            0.6647496644802134,
+            15.57242028275143,
+            -0.9629205578279252,
+            -0.2641145094499676,
+            0.055022951668920406,
+            36.262425059012116,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "base",
+              "matrix": [
+                -0.482845027670328,
+                -0.4644320869650904,
+                0.7424038765061038,
+                12.07623361898241,
+                -0.022132014813177225,
+                0.853978855082683,
+                0.5198367907256843,
+                20.095167663696664,
+                -0.8754260980655931,
+                0.23456971600980456,
+                -0.4226182617406994,
+                33.76433222168205,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/b",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.21569716340274947,-0.6311848978999135,0.7450371523374408,10.558245376526889],[-0.16204546588030472,0.7292798849283302,0.6647496644802134,15.57242028275143],[-0.9629205578279252,-0.2641145094499676,0.055022951668920406,36.262425059012116],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        },
+        {
+          "id": "a",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            0.7424038765061041,
+            -0.4644320869650906,
+            0.4828450276703281,
+            10,
+            0.5198367907256845,
+            0.853978855082683,
+            0.02213201481317717,
+            20,
+            -0.42261826174069944,
+            0.23456971600980447,
+            0.875426098065593,
+            30,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "top",
+              "matrix": [
+                0.7424038765061041,
+                -0.4644320869650906,
+                0.4828450276703281,
+                11.931380110681312,
+                0.5198367907256845,
+                0.853978855082683,
+                0.02213201481317717,
+                20.08852805925271,
+                -0.42261826174069944,
+                0.23456971600980447,
+                0.875426098065593,
+                33.50170439226237,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/a",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        }
+      ],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[0.21569716340274947,-0.6311848978999135,0.7450371523374408,10.558245376526889],[-0.16204546588030472,0.7292798849283302,0.6647496644802134,15.57242028275143],[-0.9629205578279252,-0.2641145094499676,0.055022951668920406,36.262425059012116],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/components/b/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 7,
+          "instance_path": "/result/components/a/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "assemblyrevolute",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ],
+                "joint": {
+                  "kind": "revolute",
+                  "position": 35,
+                  "min": -90,
+                  "max": 90
+                }
+              }
+            },
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    4
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  10,
+                  20,
+                  30
+                ],
+                "rotation": [
+                  15,
+                  25,
+                  35
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "b",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "base",
+                    "origin": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "rotation": [
+                      15,
+                      25,
+                      35
+                    ]
+                  }
+                ],
+                "mate": {
+                  "component": "a",
+                  "anchor": "top",
+                  "own_anchor": "base",
+                  "gap": 0.3,
+                  "rotation": [
+                    0,
+                    90,
+                    0
+                  ],
+                  "joint": {
+                    "kind": "revolute",
+                    "position": 35,
+                    "min": -90,
+                    "max": 90
+                  }
+                }
+              },
+              {
+                "id": "a",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "top",
+                    "origin": [
+                      0,
+                      0,
+                      4
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "placement": {
+                  "origin": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [
+        {
+          "id": "b",
+          "input": "solid",
+          "joint": {
+            "kind": "revolute",
+            "position": 35,
+            "min": -90,
+            "max": 90
+          },
+          "matrix": [
+            -0.08487412977753439,
+            -0.41603463694971077,
+            0.9053792370894245,
+            9.872568841028913,
+            0.2704032465688734,
+            0.8649400954622803,
+            0.4228010353661804,
+            15.268336742707355,
+            -0.9589986790082243,
+            0.28070235503077545,
+            0.039086078604245844,
+            34.683878200189184,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "base",
+              "matrix": [
+                -0.6619107928594397,
+                -0.10349196318988768,
+                0.742403876506104,
+                12.07623361898241,
+                0.47169266323902326,
+                0.7122329271063632,
+                0.5198367907256843,
+                20.095167663696664,
+                -0.5825634160695855,
+                0.694272044014884,
+                -0.42261826174069933,
+                33.76433222168205,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/b",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[-0.08487412977753439,-0.41603463694971077,0.9053792370894245,9.872568841028913],[0.2704032465688734,0.8649400954622803,0.4228010353661804,15.268336742707355],[-0.9589986790082243,0.28070235503077545,0.039086078604245844,34.683878200189184],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        },
+        {
+          "id": "a",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            0.7424038765061041,
+            -0.4644320869650906,
+            0.4828450276703281,
+            10,
+            0.5198367907256845,
+            0.853978855082683,
+            0.02213201481317717,
+            20,
+            -0.42261826174069944,
+            0.23456971600980447,
+            0.875426098065593,
+            30,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "top",
+              "matrix": [
+                0.7424038765061041,
+                -0.4644320869650906,
+                0.4828450276703281,
+                11.931380110681312,
+                0.5198367907256845,
+                0.853978855082683,
+                0.02213201481317717,
+                20.08852805925271,
+                -0.42261826174069944,
+                0.23456971600980447,
+                0.875426098065593,
+                33.50170439226237,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/a",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        }
+      ],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[-0.08487412977753439,-0.41603463694971077,0.9053792370894245,9.872568841028913],[0.2704032465688734,0.8649400954622803,0.4228010353661804,15.268336742707355],[-0.9589986790082243,0.28070235503077545,0.039086078604245844,34.683878200189184],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/components/b/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 7,
+          "instance_path": "/result/components/a/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "assemblyslider",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ],
+                "joint": {
+                  "kind": "slider",
+                  "position": 3,
+                  "min": 0,
+                  "max": 10
+                }
+              }
+            },
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    4
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  10,
+                  20,
+                  30
+                ],
+                "rotation": [
+                  15,
+                  25,
+                  35
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "result",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "b",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "base",
+                    "origin": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "rotation": [
+                      15,
+                      25,
+                      35
+                    ]
+                  }
+                ],
+                "mate": {
+                  "component": "a",
+                  "anchor": "top",
+                  "own_anchor": "base",
+                  "gap": 0.3,
+                  "rotation": [
+                    0,
+                    90,
+                    0
+                  ],
+                  "joint": {
+                    "kind": "slider",
+                    "position": 3,
+                    "min": 0,
+                    "max": 10
+                  }
+                }
+              },
+              {
+                "id": "a",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "top",
+                    "origin": [
+                      0,
+                      0,
+                      4
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "placement": {
+                  "origin": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [
+        {
+          "id": "b",
+          "input": "solid",
+          "joint": {
+            "kind": "slider",
+            "position": 3,
+            "min": 0,
+            "max": 10
+          },
+          "matrix": [
+            0.21569716340274947,
+            -0.6311848978999135,
+            0.7450371523374408,
+            12.7854570060452,
+            -0.16204546588030472,
+            0.7292798849283302,
+            0.6647496644802134,
+            17.13193065492848,
+            -0.9629205578279252,
+            -0.2641145094499676,
+            0.055022951668920406,
+            34.99457027379002,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "base",
+              "matrix": [
+                -0.482845027670328,
+                -0.4644320869650904,
+                0.7424038765061038,
+                14.303445248500722,
+                -0.022132014813177225,
+                0.853978855082683,
+                0.5198367907256843,
+                21.654678035873715,
+                -0.8754260980655931,
+                0.23456971600980456,
+                -0.4226182617406994,
+                32.49647743645995,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/b",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.21569716340274947,-0.6311848978999135,0.7450371523374408,12.7854570060452],[-0.16204546588030472,0.7292798849283302,0.6647496644802134,17.13193065492848],[-0.9629205578279252,-0.2641145094499676,0.055022951668920406,34.99457027379002],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        },
+        {
+          "id": "a",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            0.7424038765061041,
+            -0.4644320869650906,
+            0.4828450276703281,
+            10,
+            0.5198367907256845,
+            0.853978855082683,
+            0.02213201481317717,
+            20,
+            -0.42261826174069944,
+            0.23456971600980447,
+            0.875426098065593,
+            30,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "top",
+              "matrix": [
+                0.7424038765061041,
+                -0.4644320869650906,
+                0.4828450276703281,
+                11.931380110681312,
+                0.5198367907256845,
+                0.853978855082683,
+                0.02213201481317717,
+                20.08852805925271,
+                -0.42261826174069944,
+                0.23456971600980447,
+                0.875426098065593,
+                33.50170439226237,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/a",
+          "parent_path": null,
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        }
+      ],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[0.21569716340274947,-0.6311848978999135,0.7450371523374408,12.7854570060452],[-0.16204546588030472,0.7292798849283302,0.6647496644802134,17.13193065492848],[-0.9629205578279252,-0.2641145094499676,0.055022951668920406,34.99457027379002],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "solid",
+          "line": 4,
+          "instance_path": "/result/components/b/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 7,
+          "instance_path": "/result/components/a/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "nested_assembly",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "child",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    4
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  10,
+                  20,
+                  30
+                ],
+                "rotation": [
+                  15,
+                  25,
+                  35
+                ]
+              }
+            },
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "sub",
+              "input": "child",
+              "anchors": [],
+              "placement": {
+                "origin": [
+                  1,
+                  2,
+                  3
+                ],
+                "rotation": [
+                  20,
+                  30,
+                  40
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [],
+        "nodes": [
+          {
+            "id": "solid",
+            "op": "box",
+            "size": [
+              2,
+              3,
+              4
+            ],
+            "center": false
+          },
+          {
+            "id": "child",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "a",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "top",
+                    "origin": [
+                      0,
+                      0,
+                      4
+                    ],
+                    "rotation": [
+                      0,
+                      0,
+                      0
+                    ]
+                  }
+                ],
+                "placement": {
+                  "origin": [
+                    10,
+                    20,
+                    30
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              },
+              {
+                "id": "b",
+                "input": "solid",
+                "anchors": [
+                  {
+                    "id": "base",
+                    "origin": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "rotation": [
+                      15,
+                      25,
+                      35
+                    ]
+                  }
+                ],
+                "mate": {
+                  "component": "a",
+                  "anchor": "top",
+                  "own_anchor": "base",
+                  "gap": 0.3,
+                  "rotation": [
+                    0,
+                    90,
+                    0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "result",
+            "op": "assembly",
+            "components": [
+              {
+                "id": "sub",
+                "input": "child",
+                "anchors": [],
+                "placement": {
+                  "origin": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "rotation": [
+                    20,
+                    30,
+                    40
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "root": "result",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [],
+      "assembly_components": [
+        {
+          "id": "sub",
+          "input": "child",
+          "joint": null,
+          "matrix": [
+            0.6634139481689384,
+            -0.47302145844036114,
+            0.5797694655894312,
+            1,
+            0.5566703992264194,
+            0.8297694655894312,
+            0.040008756548141844,
+            2,
+            -0.49999999999999994,
+            0.29619813272602386,
+            0.8137976813493738,
+            3,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [],
+          "instance_path": "/result/components/sub",
+          "parent_path": null,
+          "is_assembly": true
+        },
+        {
+          "id": "a",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            0.001605966191079694,
+            -0.5760646890838219,
+            0.8174025292738898,
+            15.566794280565098,
+            0.827710527209288,
+            0.4594548256036191,
+            0.32217471405507647,
+            25.362356000497073,
+            -0.5611530130182993,
+            0.6760552767491037,
+            0.47755267642447286,
+            28.33789309500169,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "top",
+              "matrix": [
+                0.001605966191079694,
+                -0.5760646890838219,
+                0.8174025292738898,
+                18.836404397660655,
+                0.827710527209288,
+                0.4594548256036191,
+                0.32217471405507647,
+                26.65105485671738,
+                -0.5611530130182993,
+                0.6760552767491037,
+                0.47755267642447286,
+                30.24810380069958,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/sub/child/components/a",
+          "parent_path": "/result/components/sub",
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[0.001605966191079694,-0.5760646890838219,0.8174025292738898,15.566794280565098],[0.827710527209288,0.4594548256036191,0.32217471405507647,25.362356000497073],[-0.5611530130182993,0.6760552767491037,0.47755267642447286,28.33789309500169],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        },
+        {
+          "id": "b",
+          "input": "solid",
+          "joint": null,
+          "matrix": [
+            -0.338524447830765,
+            -0.9168274279186299,
+            0.21172781025879622,
+            21.662245094825053,
+            -0.05291340773461448,
+            0.24320533817305517,
+            0.9685305027545803,
+            22.249796060865645,
+            -0.9394686633958507,
+            0.3166680136992667,
+            -0.1308434163302642,
+            31.843676554641878,
+            0,
+            0,
+            0,
+            1
+          ],
+          "anchors": [
+            {
+              "id": "base",
+              "matrix": [
+                -0.8174025292738898,
+                -0.5760646890838219,
+                0.001605966191079694,
+                19.08162515644282,
+                -0.32217471405507647,
+                0.4594548256036192,
+                0.8277105272092877,
+                26.747707270933905,
+                -0.4775526764244731,
+                0.6760552767491037,
+                -0.5611530130182992,
+                30.391369603626924,
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ],
+          "instance_path": "/result/components/sub/child/components/b",
+          "parent_path": "/result/components/sub",
+          "is_assembly": false,
+          "source": "$fn=48;\nmultmatrix([[-0.338524447830765,-0.9168274279186299,0.21172781025879622,21.662245094825053],[-0.05291340773461448,0.24320533817305517,0.9685305027545803,22.249796060865645],[-0.9394686633958507,0.3166680136992667,-0.1308434163302642,31.843676554641878],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}"
+        }
+      ],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nmultmatrix([[0.6634139481689384,-0.47302145844036114,0.5797694655894312,1],[0.5566703992264194,0.8297694655894312,0.040008756548141844,2],[-0.49999999999999994,0.29619813272602386,0.8137976813493738,3],[0,0,0,1]]){\nmultmatrix([[0.7424038765061041,-0.4644320869650906,0.4828450276703281,10],[0.5198367907256845,0.853978855082683,0.02213201481317717,20],[-0.42261826174069944,0.23456971600980447,0.875426098065593,30],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}\nmultmatrix([[0.21569716340274947,-0.6311848978999135,0.7450371523374408,10.558245376526889],[-0.16204546588030472,0.7292798849283302,0.6647496644802134,15.57242028275143],[-0.9629205578279252,-0.2641145094499676,0.055022951668920406,36.262425059012116],[0,0,0,1]]){\ncube([2,3,4],center=false);\n}\n}",
+      "source_map": [
+        {
+          "node_id": "result",
+          "line": 3,
+          "instance_path": "/result"
+        },
+        {
+          "node_id": "child",
+          "line": 4,
+          "instance_path": "/result/components/sub/child"
+        },
+        {
+          "node_id": "solid",
+          "line": 5,
+          "instance_path": "/result/components/sub/child/components/a/solid"
+        },
+        {
+          "node_id": "solid",
+          "line": 8,
+          "instance_path": "/result/components/sub/child/components/b/solid"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "sketch_underconstrained",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [],
+          "allow_underconstrained": true
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [],
+            "allow_underconstrained": true
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "underconstrained",
+          "iterations": 0,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 8,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 0,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "constraints": [],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[0.2,-0.1],[19,1],[21,9],[-1,11]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "sketch_inconsistent",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "a",
+              "kind": "fix",
+              "point": "a",
+              "at": [
+                0,
+                0
+              ]
+            },
+            {
+              "id": "b",
+              "kind": "fix",
+              "point": "a",
+              "at": [
+                10,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "error": {
+      "code": "sketch_inconsistent",
+      "path": "/part/outline",
+      "message": "Sketch could not produce a fully constrained profile. Inspect the solver report.",
+      "details": {
+        "status": "inconsistent",
+        "iterations": 64,
+        "tolerance_mm": 0.000001,
+        "degrees_of_freedom": 6,
+        "redundant_equations": 2,
+        "maximum_residual_mm": 5.000000000022206,
+        "degenerate_constraints": [],
+        "points": [
+          {
+            "id": "a",
+            "position": [
+              4.999999999977794,
+              -4.626287873992828e-13
+            ]
+          },
+          {
+            "id": "b",
+            "position": [
+              19,
+              1
+            ]
+          },
+          {
+            "id": "c",
+            "position": [
+              21,
+              9
+            ]
+          },
+          {
+            "id": "d",
+            "position": [
+              -1,
+              11
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "id": "a",
+            "residual_mm": 4.999999999977794,
+            "satisfied": false
+          },
+          {
+            "id": "b",
+            "residual_mm": 5.000000000022206,
+            "satisfied": false
+          }
+        ],
+        "instance_path": "/part/outline"
+      }
+    }
+  },
+  {
+    "name": "sketch_not_converged",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0,
+                0
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                0,
+                0
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                0,
+                0
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                0,
+                0
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "d",
+              "kind": "distance",
+              "a": "a",
+              "b": "b",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "error": {
+      "code": "sketch_not_converged",
+      "path": "/part/outline",
+      "message": "Sketch could not produce a fully constrained profile. Inspect the solver report.",
+      "details": {
+        "status": "not_converged",
+        "iterations": 64,
+        "tolerance_mm": 0.000001,
+        "degrees_of_freedom": 8,
+        "redundant_equations": 1,
+        "maximum_residual_mm": 10,
+        "degenerate_constraints": [],
+        "points": [
+          {
+            "id": "a",
+            "position": [
+              0,
+              0
+            ]
+          },
+          {
+            "id": "b",
+            "position": [
+              0,
+              0
+            ]
+          },
+          {
+            "id": "c",
+            "position": [
+              0,
+              0
+            ]
+          },
+          {
+            "id": "d",
+            "position": [
+              0,
+              0
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "id": "d",
+            "residual_mm": 10,
+            "satisfied": false
+          }
+        ],
+        "instance_path": "/part/outline"
+      }
+    }
+  },
+  {
+    "name": "sketch_parallel",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "kind": "parallel",
+              "a": "a",
+              "b": "b",
+              "c": "c",
+              "d": "d"
+            }
+          ],
+          "allow_underconstrained": true
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [
+              {
+                "id": "relation",
+                "kind": "parallel",
+                "a": "a",
+                "b": "b",
+                "c": "c",
+                "d": "d"
+              }
+            ],
+            "allow_underconstrained": true
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "underconstrained",
+          "iterations": 2,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 7,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 7.947527011880783e-8,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.274012735772834,
+                0.7143040759637617
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                18.925987264227167,
+                0.18569592403623805
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21.06239516288336,
+                9.686485034945617
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1.0623951628833488,
+                10.313514965054383
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "residual_mm": 7.947527011880783e-8,
+              "satisfied": true
+            }
+          ],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[0.274012735772834,0.7143040759637617],[18.925987264227167,0.18569592403623805],[21.06239516288336,9.686485034945617],[-1.0623951628833488,10.313514965054383]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "sketch_perpendicular",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "kind": "perpendicular",
+              "a": "a",
+              "b": "b",
+              "c": "c",
+              "d": "d"
+            }
+          ],
+          "allow_underconstrained": true
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [
+              {
+                "id": "relation",
+                "kind": "perpendicular",
+                "a": "a",
+                "b": "b",
+                "c": "c",
+                "d": "d"
+              }
+            ],
+            "allow_underconstrained": true
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "underconstrained",
+          "iterations": 3,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 7,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 8.16907348700307e-11,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                9.326894981019858,
+                -0.930187910923939
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                9.873105018979087,
+                1.8301879109234025
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                20.89486551578049,
+                7.844175833258047
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -0.8948655157806635,
+                12.155824166741416
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "residual_mm": 8.16907348700307e-11,
+              "satisfied": true
+            }
+          ],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[9.326894981019858,-0.930187910923939],[9.873105018979087,1.8301879109234025],[20.89486551578049,7.844175833258047],[-0.8948655157806635,12.155824166741416]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "sketch_equal_length",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "kind": "equal_length",
+              "a": "a",
+              "b": "b",
+              "c": "c",
+              "d": "d"
+            }
+          ],
+          "allow_underconstrained": true
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [
+              {
+                "id": "relation",
+                "kind": "equal_length",
+                "a": "a",
+                "b": "b",
+                "c": "c",
+                "d": "d"
+              }
+            ],
+            "allow_underconstrained": true
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "underconstrained",
+          "iterations": 2,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 7,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 6.786508066625174e-8,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                -0.6132512613158226,
+                -0.1475838504041985
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19.813251261315727,
+                1.0475838504041985
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                20.188703414046014,
+                9.073754233508112
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -0.1887034140463745,
+                10.926245766491888
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "residual_mm": 6.786508066625174e-8,
+              "satisfied": true
+            }
+          ],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[-0.6132512613158226,-0.1475838504041985],[19.813251261315727,1.0475838504041985],[20.188703414046014,9.073754233508112],[-0.1887034140463745,10.926245766491888]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "sketch_coincident",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [
+        {
+          "id": "width",
+          "value": 20
+        }
+      ],
+      "nodes": [
+        {
+          "id": "outline",
+          "op": "sketch",
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                0.2,
+                -0.1
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                19,
+                1
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "boundary": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "kind": "coincident",
+              "a": "a",
+              "b": "b"
+            }
+          ],
+          "allow_underconstrained": true
+        },
+        {
+          "id": "part",
+          "op": "extrude",
+          "input": "outline",
+          "height": 3
+        }
+      ],
+      "root": "part"
+    },
+    "result": {
+      "document": {
+        "language": "modelgraph/1",
+        "units": "mm",
+        "parameters": [
+          {
+            "id": "width",
+            "value": 20
+          }
+        ],
+        "nodes": [
+          {
+            "id": "outline",
+            "op": "sketch",
+            "points": [
+              {
+                "id": "a",
+                "position": [
+                  0.2,
+                  -0.1
+                ]
+              },
+              {
+                "id": "b",
+                "position": [
+                  19,
+                  1
+                ]
+              },
+              {
+                "id": "c",
+                "position": [
+                  21,
+                  9
+                ]
+              },
+              {
+                "id": "d",
+                "position": [
+                  -1,
+                  11
+                ]
+              }
+            ],
+            "boundary": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "constraints": [
+              {
+                "id": "relation",
+                "kind": "coincident",
+                "a": "a",
+                "b": "b"
+              }
+            ],
+            "allow_underconstrained": true
+          },
+          {
+            "id": "part",
+            "op": "extrude",
+            "input": "outline",
+            "height": 3,
+            "center": false
+          }
+        ],
+        "root": "part",
+        "segments": 48
+      },
+      "geometry_assertions": [],
+      "constraint_report": [],
+      "sketch_solutions": [
+        {
+          "status": "underconstrained",
+          "iterations": 3,
+          "tolerance_mm": 0.000001,
+          "degrees_of_freedom": 6,
+          "redundant_equations": 0,
+          "maximum_residual_mm": 8.697398357071506e-11,
+          "degenerate_constraints": [],
+          "points": [
+            {
+              "id": "a",
+              "position": [
+                9.599999999957214,
+                0.4499999999974797
+              ]
+            },
+            {
+              "id": "b",
+              "position": [
+                9.600000000044188,
+                0.45000000000256857
+              ]
+            },
+            {
+              "id": "c",
+              "position": [
+                21,
+                9
+              ]
+            },
+            {
+              "id": "d",
+              "position": [
+                -1,
+                11
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "id": "relation",
+              "residual_mm": 8.697398357071506e-11,
+              "satisfied": true
+            }
+          ],
+          "instance_path": "/part/outline"
+        }
+      ],
+      "assembly_components": [],
+      "mechanical_reports": [],
+      "mechanical_parts": [],
+      "source": "// Generated from modelgraph/1; execution target: legacy/current + Manifold\n$fn = 48;\nlinear_extrude(height=3,center=false){\npolygon(points=[[9.599999999957214,0.4499999999974797],[9.600000000044188,0.45000000000256857],[21,9],[-1,11]]);\n}",
+      "source_map": [
+        {
+          "node_id": "part",
+          "line": 3,
+          "instance_path": "/part"
+        },
+        {
+          "node_id": "outline",
+          "line": 4,
+          "instance_path": "/part/outline"
+        }
+      ],
+      "execution_target": "legacy/current+manifold"
+    }
+  },
+  {
+    "name": "box_zero",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            0,
+            1,
+            1
+          ]
+        }
+      ],
+      "root": "solid"
+    },
+    "error": {
+      "code": "invalid_dimension",
+      "path": "/solid/size",
+      "message": "Box dimensions must be positive."
+    }
+  },
+  {
+    "name": "negative_sphere",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "sphere",
+          "radius": -1
+        }
+      ],
+      "root": "p"
+    },
+    "error": {
+      "code": "invalid_dimension",
+      "path": "/p/radius",
+      "message": "Radius must be positive."
+    }
+  },
+  {
+    "name": "bad_torus",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "torus",
+          "major_radius": 2,
+          "minor_radius": 3
+        }
+      ],
+      "root": "p"
+    },
+    "error": {
+      "code": "invalid_dimension",
+      "path": "/p",
+      "message": "Torus requires major_radius > minor_radius > 0."
+    }
+  },
+  {
+    "name": "bad_cone",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "p",
+          "op": "cone",
+          "radius_bottom": 0,
+          "radius_top": 0,
+          "height": 3
+        }
+      ],
+      "root": "p"
+    },
+    "error": {
+      "code": "invalid_dimension",
+      "path": "/p",
+      "message": "Cone needs nonnegative radii, at least one positive radius, and positive height."
+    }
+  },
+  {
+    "name": "unknown_root",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "root": "missing"
+    },
+    "error": {
+      "code": "unknown_node",
+      "path": "/nodes",
+      "message": "Unknown node missing."
+    }
+  },
+  {
+    "name": "unused",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "p",
+          "op": "sphere",
+          "radius": 2
+        }
+      ],
+      "root": "p"
+    },
+    "error": {
+      "code": "unreachable_node",
+      "path": "/nodes",
+      "message": "Every node must be reachable from root; remove unused nodes."
+    }
+  },
+  {
+    "name": "duplicate_nodes",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "root": "solid"
+    },
+    "error": {
+      "code": "duplicate_id",
+      "path": "/nodes",
+      "message": "Node IDs must be unique."
+    }
+  },
+  {
+    "name": "cycle",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "a",
+          "op": "translate",
+          "vector": [
+            1,
+            2,
+            3
+          ],
+          "input": "b"
+        },
+        {
+          "id": "b",
+          "op": "translate",
+          "vector": [
+            1,
+            2,
+            3
+          ],
+          "input": "a"
+        }
+      ],
+      "root": "b"
+    },
+    "error": {
+      "code": "cycle",
+      "path": "/nodes",
+      "message": "Cycle through b."
+    }
+  },
+  {
+    "name": "invalid_assembly_anchors",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "same",
+                  "origin": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "id": "same",
+                  "origin": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "placement": {
+                "origin": [
+                  10,
+                  20,
+                  30
+                ],
+                "rotation": [
+                  15,
+                  25,
+                  35
+                ]
+              }
+            },
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "error": {
+      "code": "invalid_assembly",
+      "path": "/result",
+      "message": "Duplicate anchor in a."
+    }
+  },
+  {
+    "name": "invalid_assembly_placement",
+    "document": {
+      "language": "modelgraph/1",
+      "units": "mm",
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "solid",
+          "op": "box",
+          "size": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "id": "result",
+          "op": "assembly",
+          "components": [
+            {
+              "id": "a",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "top",
+                  "origin": [
+                    0,
+                    0,
+                    4
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "b",
+              "input": "solid",
+              "anchors": [
+                {
+                  "id": "base",
+                  "origin": [
+                    2,
+                    3,
+                    4
+                  ],
+                  "rotation": [
+                    15,
+                    25,
+                    35
+                  ]
+                }
+              ],
+              "mate": {
+                "component": "a",
+                "anchor": "top",
+                "own_anchor": "base",
+                "gap": 0.3,
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "root": "result"
+    },
+    "error": {
+      "code": "invalid_assembly",
+      "path": "/result",
+      "message": "Component a must have exactly one placement or mate."
+    }
+  }
+]

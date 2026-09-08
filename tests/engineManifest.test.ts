@@ -48,7 +48,7 @@ describe('immutable geometry manifest archive', () => {
     }).toThrow()
   })
 
-  it('keeps v1 immutable and binds the current Manifold evidence to repository artifacts', async () => {
+  it('keeps v1 immutable and binds the current own Rust evidence to repository artifacts', async () => {
     const historical = GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1']
     const manifest = GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold]
     const notices = await readFile(new URL('../THIRD_PARTY_NOTICES.md', import.meta.url))
@@ -65,12 +65,14 @@ describe('immutable geometry manifest archive', () => {
         lockfileSha256: 'b4fc02ba7ec6cb446763577536cdef9f830797852886f15a9af174b21edc9f2f',
       },
     })
-    expect(manifest.capabilityManifestVersion).toBe('manifold-node-v3')
+    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v1')
     expect(GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v2'].manifestDigest).toBe('54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe')
     expect(sha256(notices)).toBe(manifest.dependency.sbomSha256)
     expect(sha256(lockfile)).toBe(manifest.dependency.lockfileSha256)
-    expect(parsedLockfile.packages['node_modules/manifold-3d']?.version)
-      .toBe(manifest.dependency.version)
+    expect(parsedLockfile.packages['node_modules/manifold-3d']).toBeUndefined()
+    expect(manifest.dependency.packageName).toBe('workspace:geometry-bridge')
+    const wasm = await readFile(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url))
+    expect(manifest.kernelFingerprint).toBe(`sha256:${sha256(wasm)}`)
   })
 
   it('resolves only archived version and engine-class pairs', () => {

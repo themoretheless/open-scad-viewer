@@ -20,3 +20,9 @@ it('highlights generator clauses and range operators',()=>{
  expect(html).toContain('syntax-keyword">where')
  expect(html).toContain('syntax-operator">..&lt;')
 })
+
+it('highlights exact selected identifiers without matching strings or comments',()=>{
+ const html=highlightCode('width + width_extra + width // width\n"width"', 'width')
+ expect(html.match(/syntax-occurrence/g)).toHaveLength(2)
+ expect(html).toContain('syntax-comment')
+})

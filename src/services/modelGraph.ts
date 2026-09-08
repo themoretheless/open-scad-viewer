@@ -1,16 +1,10 @@
-import { checkModelGraphNumericType, type ModelGraphNumericType } from './modelGraphNumericType'
-import { resolveInterval } from './modelGraphRange'
-import { planetarySpinnerTemplate } from './planetarySpinnerTemplate'
-import { buildModelGraphGear } from './modelGraphGears'
-import { buildModelGraphThread } from './modelGraphThreads'
-import { buildModelGraphPlanetary } from './modelGraphPlanetary'
-import { MECHANICAL_GENERATOR_GUIDE, createMechanicalDocument } from './mechanicalGeneratorContract'
-import { buildModelGraphLoft } from './modelGraphLoft'
-import { placeAssembly, multiplyFrames, type Matrix, type Frame, type AssemblyComponent } from './modelGraphAssembly'
-import { solveModelGraphSketch, type SketchConstraint } from './modelGraphSketch'
+import { prepareGraphRust } from './geometryRustKernel'
+import type { ModelGraphNumericType } from './modelGraphNumericType'
+import { MECHANICAL_GENERATOR_GUIDE } from './mechanicalGeneratorContract'
+import type { placeAssembly } from './modelGraphAssembly'
+import type { solveModelGraphSketch } from './modelGraphSketch'
 import { z } from 'zod/v4'
-import { validateProfilePolygon } from './modelGraphProfiles'
-import { createUnitArithmetic, LENGTH, ANGLE, SCALAR, magnitude, dimensionOf, type Dimension, type NumericValue, type Quantity, type Unit } from './modelGraphUnits'
+import type { Dimension, Unit } from './modelGraphUnits'
 import { sha256Hex } from '../core/sha256'
 
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/)
@@ -38,28 +32,31 @@ export type Expression =
   | { op: 'if'; condition: Expression; then: Expression; else: Expression }
   | { op: 'let'; name: string; value: Expression; body: Expression }
   | { op: 'call'; function: string; args: Record<string, Expression> }
+// MCP validates this schema before Rust execution; dispatch recursive operations once.
 export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
-  z.object({op:z.literal('checked'),checks:z.array(expressionSchema).max(256),value:expressionSchema}).strict(),
-  z.object({op:z.literal('typed'),type:z.enum(['int','f32','f64','length','angle']),value:expressionSchema}).strict(),
-  z.object({ op: z.literal('quantity'), value: number, unit }).strict(),
-  z.object({ op: z.literal('geometry'), function: id, args: z.record(id, expressionSchema) }).strict(),
-  z.object({ op: z.literal('lambda'), parameters: z.array(id).max(32), body: expressionSchema }).strict(),
-  z.object({ op: z.literal('apply'), function: expressionSchema, args: z.array(expressionSchema).max(32) }).strict(),
-  z.object({ op: z.literal('list'), items: z.array(expressionSchema).max(256) }).strict(),
-  z.object({ op: z.literal('range'), count: expressionSchema, start: expressionSchema, step: expressionSchema }).strict(),
-  z.object({ op: z.literal('interval'), start: expressionSchema, end: expressionSchema, inclusive: z.boolean(), count: expressionSchema.optional(), step: expressionSchema.optional() }).strict(),
-  z.object({ op: z.literal('zip'), inputs: z.array(expressionSchema).min(2).max(8) }).strict(),
-  z.object({ op: z.literal('enumerate'), input: expressionSchema }).strict(),
-  z.object({ op: z.enum(['map', 'filter', 'flatmap']), input: expressionSchema, function: expressionSchema }).strict(),
-  z.object({ op: z.literal('reduce'), input: expressionSchema, function: expressionSchema, initial: expressionSchema }).strict(),
-  z.object({ op: z.literal('at'), input: expressionSchema, index: expressionSchema }).strict(),
-  z.object({ op: z.literal('length'), input: expressionSchema }).strict(),
   number, z.object({ param: id }).strict(), z.object({ local: id }).strict(),
-  z.object({ op: z.enum(['add', 'subtract', 'multiply', 'divide', 'min', 'max', 'pow', 'mod', 'lt', 'le', 'eq', 'and', 'or']), args: z.tuple([expressionSchema, expressionSchema]) }).strict(),
-  z.object({ op: z.enum(['negate', 'abs', 'sqrt', 'sin', 'cos', 'floor', 'ceil', 'not']), value: expressionSchema }).strict(),
-  z.object({ op: z.literal('if'), condition: expressionSchema, then: expressionSchema, else: expressionSchema }).strict(),
-  z.object({ op: z.literal('let'), name: id, value: expressionSchema, body: expressionSchema }).strict(),
-  z.object({ op: z.literal('call'), function: id, args: z.record(id, expressionSchema) }).strict(),
+  z.discriminatedUnion('op', [
+    z.object({op:z.literal('checked'),checks:z.array(expressionSchema).max(256),value:expressionSchema}).strict(),
+    z.object({op:z.literal('typed'),type:z.enum(['int','f32','f64','length','angle']),value:expressionSchema}).strict(),
+    z.object({ op: z.literal('quantity'), value: number, unit }).strict(),
+    z.object({ op: z.literal('geometry'), function: id, args: z.record(id, expressionSchema) }).strict(),
+    z.object({ op: z.literal('lambda'), parameters: z.array(id).max(32), body: expressionSchema }).strict(),
+    z.object({ op: z.literal('apply'), function: expressionSchema, args: z.array(expressionSchema).max(32) }).strict(),
+    z.object({ op: z.literal('list'), items: z.array(expressionSchema).max(256) }).strict(),
+    z.object({ op: z.literal('range'), count: expressionSchema, start: expressionSchema, step: expressionSchema }).strict(),
+    z.object({ op: z.literal('interval'), start: expressionSchema, end: expressionSchema, inclusive: z.boolean(), count: expressionSchema.optional(), step: expressionSchema.optional() }).strict(),
+    z.object({ op: z.literal('zip'), inputs: z.array(expressionSchema).min(2).max(8) }).strict(),
+    z.object({ op: z.literal('enumerate'), input: expressionSchema }).strict(),
+    z.object({ op: z.enum(['map', 'filter', 'flatmap']), input: expressionSchema, function: expressionSchema }).strict(),
+    z.object({ op: z.literal('reduce'), input: expressionSchema, function: expressionSchema, initial: expressionSchema }).strict(),
+    z.object({ op: z.literal('at'), input: expressionSchema, index: expressionSchema }).strict(),
+    z.object({ op: z.literal('length'), input: expressionSchema }).strict(),
+    z.object({ op: z.enum(['add', 'subtract', 'multiply', 'divide', 'min', 'max', 'pow', 'mod', 'lt', 'le', 'eq', 'and', 'or']), args: z.tuple([expressionSchema, expressionSchema]) }).strict(),
+    z.object({ op: z.enum(['negate', 'abs', 'sqrt', 'sin', 'cos', 'floor', 'ceil', 'not']), value: expressionSchema }).strict(),
+    z.object({ op: z.literal('if'), condition: expressionSchema, then: expressionSchema, else: expressionSchema }).strict(),
+    z.object({ op: z.literal('let'), name: id, value: expressionSchema, body: expressionSchema }).strict(),
+    z.object({ op: z.literal('call'), function: id, args: z.record(id, expressionSchema) }).strict(),
+  ]),
 ]))
 const scalar = expressionSchema
 const vector = z.tuple([scalar, scalar, scalar])
@@ -142,438 +139,26 @@ function canonical(value: unknown): string {
   return JSON.stringify(value)
 }
 
-/** Own declarative frontend; v1 deliberately compiles to the existing Manifold route. */
-export function compileModelGraph(value: unknown) {
-  const pending = [{ value, depth: 0 }]
-  let inputNodes = 0
-  while (pending.length) {
-    const item = pending.pop()!
-    if (++inputNodes > 20000 || item.depth > 64) throw new ModelGraphError('input_limit', '/', 'Document nesting or size limit exceeded.')
-    if (item.value && typeof item.value === 'object') for (const child of Object.values(item.value)) pending.push({ value: child, depth: item.depth + 1 })
-  }
-  const parsed = modelGraphSchema.safeParse(value)
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0]
-    throw new ModelGraphError('invalid_document', '/' + issue.path.join('/'), issue.message)
-  }
-  const document = parsed.data
-  const fail = (code: string, path: string, message: string): never => { throw new ModelGraphError(code, path, message) }
-  const arithmetic = createUnitArithmetic(fail)
-  const strict = document.type_policy === 'strict'
-  const parameters = new Map<string, NumericValue>()
-  for (const [i, parameter] of document.parameters.entries()) {
-    if (parameters.has(parameter.id)) throw new ModelGraphError('duplicate_id', `/parameters/${i}/id`, 'Parameter IDs must be unique.')
-    const path = `/parameters/${i}`
-    if ((parameter.min !== undefined && parameter.max !== undefined && parameter.min > parameter.max) || (parameter.min !== undefined && parameter.value < parameter.min) || (parameter.max !== undefined && parameter.value > parameter.max) || (parameter.integer && !Number.isInteger(parameter.value))) fail('parameter_constraint', path, `Parameter ${parameter.id} violates its declared bounds or integer requirement.`)
-    parameters.set(parameter.id, parameter.unit ? arithmetic.quantity(parameter.value, parameter.unit, path) : parameter.value)
-  }
-  const functions = new Map((document.functions ?? []).map(fn => [fn.id, fn]))
-  if (functions.size !== (document.functions ?? []).length) fail('duplicate_id', '/functions', 'Function IDs must be unique.')
-  for (const fn of functions.values()) if (new Set(fn.parameters).size !== fn.parameters.length) fail('duplicate_id', `/functions/${fn.id}`, 'Function parameters must be unique.')
-  type Closure = { kind: 'closure'; parameters: string[]; body: Expression; scope: Scope }
-  type GeometryValue = { kind: 'geometry'; function: string; scope: Scope }
-  type Value = number | Quantity | readonly Value[] | Closure | GeometryValue
-  type Scope = ReadonlyMap<string, Value>
-  let steps = 0, allocated = 0
-  const allocate = (count: number, path: string) => { if ((allocated += count) > 16384) fail('allocation_limit', path, 'List allocation budget 16384 exceeded.') }
-  const tick = (depth: number, path: string) => {
-    if (depth > 32 || ++steps > 100_000) fail('evaluation_limit', path, 'Evaluation depth 32 or step budget 100000 exceeded.')
-  }
-  const bind = (name: string, args: Record<string, Expression>, scope: Scope, path: string, depth: number) => {
-    const fn = functions.get(name)
-    if (!fn) return fail('unknown_function', path, `Unknown function ${name}.`)
-    if (Object.keys(args).length !== fn.parameters.length || fn.parameters.some(key => !Object.prototype.hasOwnProperty.call(args, key))) fail('invalid_arguments', path, 'Arguments must exactly match function parameters.')
-    return { fn, scope: new Map(fn.parameters.map(key => [key, resolve(args[key]!, scope, `${path}/args/${key}`, depth + 1)])) }
-  }
-  const numericValue = (value: Value, path: string): NumericValue => typeof value === 'number' || (!Array.isArray(value) && 'kind' in value && value.kind === 'quantity') ? value as NumericValue : fail('type_error', path, 'Expected a number or quantity.')
-  const numeric = (value: Value, path: string): number => arithmetic.scalar(numericValue(value, path), path)
-  const sequence = (value: Value, path: string): readonly Value[] => Array.isArray(value) ? value : fail('type_error', path, 'Expected a list.')
-  const invoke = (value: Value, args: Value[], path: string, depth: number): Value => {
-    if (typeof value === 'number' || Array.isArray(value) || !('kind' in value) || value.kind !== 'closure') return fail('type_error', path, 'Expected a function value.')
-    if (args.length !== value.parameters.length) fail('invalid_arguments', path, 'Lambda arity mismatch.')
-    const scope = new Map(value.scope)
-    value.parameters.forEach((key, i) => scope.set(key, args[i]!))
-    return resolve(value.body, scope, path + '/apply', depth + 1)
-  }
-  const evaluate = (expr: Expression, scope: Scope, path: string, depth = 0): number => numeric(resolve(expr, scope, path, depth), path)
-  const resolve = (expr: Expression, scope: Scope, path: string, depth = 0): Value => {
-    tick(depth, path)
-    if (typeof expr !== 'number' && 'op' in expr) {
-      const sub = (value: Expression, field: string) => resolve(value, scope, `${path}/${field}`, depth + 1)
-      if (expr.op === 'quantity') return arithmetic.quantity(expr.value, expr.unit, path)
-      if (expr.op === 'geometry') {
-        const bound = bind(expr.function, expr.args, scope, path, depth)
-        if (bound.fn.kind !== 'geometry') return fail('type_error', path, 'Expected a geometry function.')
-        return { kind: 'geometry', function: expr.function, scope: bound.scope }
-      }
-      if (expr.op === 'lambda') {
-        if (new Set(expr.parameters).size !== expr.parameters.length) fail('duplicate_id', path, 'Lambda parameters must be unique.')
-        return { kind: 'closure', parameters: expr.parameters, body: expr.body, scope: new Map(scope) }
-      }
-      if (expr.op === 'apply') return invoke(sub(expr.function, 'function'), expr.args.map((a, i) => sub(a, `args/${i}`)), path, depth + 1)
-      if (expr.op === 'list') { allocate(expr.items.length, path); return expr.items.map((a, i) => sub(a, `items/${i}`)) }
-      if (expr.op === 'interval') {
-        const items = resolveInterval(numericValue(sub(expr.start, 'start'), path), numericValue(sub(expr.end, 'end'), path), expr.inclusive,
-          { ...(expr.count === undefined ? {} : {count: numericValue(sub(expr.count, 'count'), path)}), ...(expr.step === undefined ? {} : {step: numericValue(sub(expr.step, 'step'), path)}) }, fail, path)
-        allocate(items.length, path); return items
-      }
-      if (expr.op === 'zip') {
-        const lists = expr.inputs.map((input, i) => sequence(sub(input, `inputs/${i}`), path))
-        const count = lists[0]!.length
-        if (lists.some(list => list.length !== count)) fail('length_mismatch', path, 'zip requires equal length sequences.')
-        allocate(count * (lists.length + 1), path)
-        return Array.from({length:count}, (_, i) => lists.map(list => list[i]!))
-      }
-      if (expr.op === 'enumerate') {
-        const items = sequence(sub(expr.input, 'input'), path)
-        allocate(items.length * 3, path); return items.map((value, i) => [i, value])
-      }
-      if (expr.op === 'range') {
-        const count = numeric(sub(expr.count, 'count'), path)
-        const start = numericValue(sub(expr.start, 'start'), path), step = numericValue(sub(expr.step, 'step'), path)
-        arithmetic.equal(start, step, path)
-        if (!Number.isInteger(count) || count < 0 || count > 256) fail('invalid_count', path, 'Range count must be an integer from 0 to 256.')
-        allocate(count, path)
-        return Array.from({ length: count }, (_, i) => arithmetic.binary('add', start, arithmetic.binary('multiply', i, step, path), path))
-      }
-      if (expr.op === 'length') return sequence(sub(expr.input, 'input'), path).length
-      if (expr.op === 'at') {
-        const items = sequence(sub(expr.input, 'input'), path), index = numeric(sub(expr.index, 'index'), path)
-        if (!Number.isInteger(index) || index < 0 || index >= items.length) fail('invalid_index', path, 'List index is out of bounds.')
-        return items[index]!
-      }
-      if (expr.op === 'map' || expr.op === 'filter' || expr.op === 'flatmap' || expr.op === 'reduce') {
-        const items = sequence(sub(expr.input, 'input'), path), fn = sub(expr.function, 'function')
-        allocate(items.length, path)
-        if (expr.op === 'flatmap') {
-          const output: Value[] = []
-          for (const [i, a] of items.entries()) {
-            const batch = sequence(invoke(fn, [a], `${path}[${i}]`, depth + 1), path)
-            allocate(batch.length, path)
-            if (output.length + batch.length > 256) fail('invalid_count', path, 'Generated sequence exceeds 256 values.')
-            output.push(...batch)
-          }
-          return output
-        }
-        if (expr.op === 'map') return items.map((a, i) => invoke(fn, [a], `${path}[${i}]`, depth + 1))
-        if (expr.op === 'filter') return items.filter((a, i) => numeric(invoke(fn, [a], `${path}[${i}]`, depth + 1), path) !== 0)
-        if (!('initial' in expr)) return fail('type_error', path, 'Expected reduce initial value.')
-        let accumulator = sub(expr.initial, 'initial')
-        for (const [i, item] of items.entries()) accumulator = invoke(fn, [accumulator, item], `${path}[${i}]`, depth + 1)
-        return accumulator
-      }
-    }
-    let result: number
-    if (typeof expr === 'number') result = expr
-    else if ('param' in expr) return parameters.get(expr.param) ?? fail('unknown_parameter', path, `Unknown parameter ${expr.param}.`)
-    else if ('local' in expr) return scope.get(expr.local) ?? fail('unknown_local', path, `Unknown local ${expr.local}.`)
-    else if (expr.op === 'checked') {
-      for(const [i,check] of expr.checks.entries())resolve(check,scope,`${path}/checks/${i}`,depth+1)
-      return resolve(expr.value,scope,path+'/value',depth+1)
-    }
-    else if (expr.op === 'typed') return checkModelGraphNumericType(numericValue(resolve(expr.value,scope,path+'/value',depth+1),path),expr.type,message=>fail('type_error',path,message))
-    else if (expr.op === 'if') return resolve(evaluate(expr.condition, scope, path + '/condition', depth + 1) !== 0 ? expr.then : expr.else, scope, path, depth + 1)
-    else if (expr.op === 'let') {
-      const next = new Map(scope); next.set(expr.name, resolve(expr.value, scope, path + '/value', depth + 1))
-      return resolve(expr.body, next, path + '/body', depth + 1)
-    } else if (expr.op === 'call') {
-      const bound = bind(expr.function, expr.args, scope, path, depth)
-      if (bound.fn.kind === 'geometry') return fail('type_error', path, 'Expected a scalar function.')
-      const output = resolve(bound.fn.body, bound.scope, `${path}/call:${expr.function}`, depth + 1)
-      return bound.fn.kind === 'scalar' ? numericValue(output, path) : output
-    } else if ('args' in expr) {
-      const a = numericValue(resolve(expr.args[0], scope, path + '/args/0', depth + 1), path)
-      if (expr.op === 'and' && arithmetic.scalar(a, path) === 0) return 0
-      if (expr.op === 'or' && arithmetic.scalar(a, path) !== 0) return 1
-      const b = numericValue(resolve(expr.args[1], scope, path + '/args/1', depth + 1), path)
-      return arithmetic.binary(expr.op, a, b, path)
-    } else if ('value' in expr) {
-      return arithmetic.unary(expr.op, numericValue(resolve(expr.value, scope, path + '/value', depth + 1), path), path, strict)
-    }
-    else return fail('type_error', path, 'Invalid expression.')
-    if (!Number.isFinite(result) || Math.abs(result) > 1_000_000) fail('invalid_number', path, 'Expression must produce a finite number within +/-1000000.')
-    return result
-  }
-  type Node = z.infer<typeof node>
-  const children = (item: Node): string[] => item.op === 'assembly' ? item.components.map(c => c.input) : 'input' in item ? [item.input] : 'inputs' in item ? item.inputs : 'base' in item ? [item.base, ...item.subtract] : item.op === 'if' ? [item.then, item.else] : []
-  const indexNodes = (items: Node[], root: string, path: string) => {
-    const nodes = new Map(items.map(item => [item.id, item]))
-    if (nodes.size !== items.length) fail('duplicate_id', path, 'Node IDs must be unique.')
-    const active = new Set<string>(), visited = new Set<string>()
-    const walk = (key: string, depth: number) => {
-      if (depth > 32) fail('graph_limit', path, 'Maximum depth 32.')
-      if (active.has(key)) fail('cycle', path, `Cycle through ${key}.`)
-      if (visited.has(key)) return
-      const item = nodes.get(key)
-      if (!item) return fail('unknown_node', path, `Unknown node ${key}.`)
-      active.add(key)
-      for (const child of children(item)) walk(child, depth + 1)
-      active.delete(key); visited.add(key)
-    }
-    walk(root, 1)
-    if (visited.size !== nodes.size) fail('unreachable_node', path, 'Every node must be reachable from root; remove unused nodes.')
-    return nodes
-  }
-  const main = indexNodes(document.nodes, document.root, '/nodes')
-  const bodies = new Map<string, Map<string, Node>>()
-  for (const fn of functions.values()) if (fn.kind === 'geometry') bodies.set(fn.id, indexNodes(fn.nodes, fn.root, `/functions/${fn.id}/nodes`))
-  const empty = new Map<string, number>()
-  for (const [i, assertion] of (document.assertions ?? []).entries()) if (!evaluate(assertion.condition, empty, `/assertions/${i}/condition`)) fail('assertion_failed', `/assertions/${i}`, assertion.message)
-  const constraintIds = new Set<string>()
-  const constraint_report = (document.constraints ?? []).map((constraint, i) => {
-    const path = `/constraints/${i}`
-    if (constraintIds.has(constraint.id)) fail('duplicate_id', path, 'Constraint IDs must be unique.')
-    constraintIds.add(constraint.id)
-    const left = numericValue(resolve(constraint.left, empty, path + '/left'), path)
-    const right = numericValue(resolve(constraint.right, empty, path + '/right'), path)
-    arithmetic.equal(left, right, path)
-    if (['lt','gt'].includes(constraint.relation) && constraint.tolerance !== undefined) fail('invalid_tolerance', path, 'Strict comparisons do not accept tolerance.')
-    let tolerance = 0
-    if (constraint.tolerance !== undefined) {
-      const value = numericValue(resolve(constraint.tolerance, empty, path + '/tolerance'), path)
-      arithmetic.equal(left, value, path)
-      tolerance = magnitude(value)
-      if (tolerance < 0) fail('invalid_tolerance', path, 'Tolerance must be nonnegative.')
-    }
-    const a = magnitude(left), b = magnitude(right)
-    const passed = constraint.relation === 'lt' ? a < b : constraint.relation === 'gt' ? a > b : constraint.relation === 'eq' ? Math.abs(a - b) <= tolerance : constraint.relation === 'le' ? a <= b + tolerance : a >= b - tolerance
-    return { id: constraint.id, path, passed, status: passed ? 'passed' as const : 'failed' as const, actual: a, expected: b, relation: constraint.relation, tolerance, dimension: dimensionOf(left), message: constraint.message }
-  })
-  if (constraint_report.some(item => !item.passed)) throw new ModelGraphError('constraint_failed', '/constraints', 'Declared constraints were not satisfied.', constraint_report)
-  const geometry_assertions = (document.geometry_assertions ?? []).map((check, i) => {
-    const path = `/geometry_assertions/${i}`
-    if (check.target !== document.root) fail('unsupported_assertion_target', path, 'Geometry checks currently target the shown root only.')
-    if (document.geometry_assertions!.slice(0, i).some(c => c.id === check.id)) fail('duplicate_id', path, 'Check IDs must be unique.')
-    const measured = ['height', 'width', 'depth'].includes(check.check)
-    const expectedValue = check.expected === undefined ? undefined : numericValue(resolve(check.expected, empty, path), path)
-    if (measured && expectedValue !== undefined) arithmetic.equal(expectedValue, arithmetic.quantity(1, 'mm', path), path)
-    if (!measured && expectedValue !== undefined) arithmetic.scalar(expectedValue, path)
-    const expected = expectedValue === undefined ? (check.check === 'hasBodies' || measured ? fail('missing_expected', path, 'Expected value required.') : 0) : magnitude(expectedValue)
-    if (expected < 0 || (check.check === 'hasBodies' && !Number.isInteger(expected))) fail('invalid_expected', path, 'Expected value must be nonnegative; body count must be integral.')
-    let tolerance = 0
-    if (check.tolerance !== undefined) {
-      const v = numericValue(resolve(check.tolerance, empty, path), path)
-      if (!measured) fail('invalid_tolerance', path, 'Tolerance applies only to measurements.')
-      arithmetic.equal(v, arithmetic.quantity(1, 'mm', path), path)
-      tolerance = magnitude(v)
-      if (tolerance < 0) fail('invalid_tolerance', path, 'Tolerance must be nonnegative.')
-    }
-    if (!measured && check.check !== 'hasBodies' && check.expected !== undefined) fail('invalid_expected', path, 'Topology checks take no expected argument.')
-    return { ...check, expected, tolerance }
-  })
-  const lines = ['// Generated from modelgraph/1; execution target: legacy/current + Manifold', `$fn = ${document.segments};`]
-  const sourceMap: Array<{ node_id: string; line: number; instance_path: string }> = []
-  const sketch_solutions: Array<ReturnType<typeof solveModelGraphSketch> & { instance_path: string }> = []
-  const assembly_components: Array<ReturnType<typeof placeAssembly>[number] & { instance_path: string; parent_path: string | null; is_assembly: boolean; source?: string }> = []
-  let expanded = 0, profileWork = 0
-  const mechanical_reports: Array<Record<string, unknown>> = []
-  const mechanical_parts: Array<Record<string,unknown>> = []
-  let mechanicalSourceCharacters = 0
-  const emit = (key: string, nodes: Map<string, Node>, scope: Scope, path: string, depth = 1, expected: 'profile' | 'solid' = 'solid', assemblyParent: { path: string; matrix: Matrix } | null = null, allowAssembly = depth === 1): void => {
-    if (++expanded > 4096 || depth > 32) fail('graph_limit', path, 'Maximum depth 32 and expanded node uses 4096.')
-    const item = nodes.get(key)!
-    const current = `${path}/${key}`
-    const produced = ['sketch', 'rectangle', 'circle', 'polygon', 'offset', 'projection', 'section'].includes(item.op) ? 'profile' : ['box', 'sphere', 'cylinder', 'extrude', 'revolve', 'loft', 'advanced_extrude', 'cone', 'torus', 'gear', 'thread', 'planetary_gears', 'planetary_spinner'].includes(item.op) ? 'solid' : expected
-    if (produced !== expected) fail('geometry_type_mismatch', current, `Expected ${expected}, received ${produced}. Extrude or revolve a profile before using it as a solid.`)
-    sourceMap.push({ node_id: key, line: lines.length + 1, instance_path: current })
-    const value = (expr: Expression, field: string, expected: Dimension = SCALAR) => arithmetic.field(numericValue(resolve(expr, scope, `${current}/${field}`), `${current}/${field}`), expected, `${current}/${field}`, strict)
-    if (item.op === 'planetary_spinner') {
-      if(depth!==1)fail('mechanism_scope',current,'Planetary spinner must be the root to preserve separate parts.')
-      const r=value(item.inner_radius,'inner_radius',LENGTH),outer=value(item.outer_radius,'outer_radius',LENGTH),bore=value(item.bore,'bore',LENGTH),gap=value(item.gap,'gap',LENGTH),height=value(item.height,'height',LENGTH),helix=value(item.helix_angle,'helix_angle',ANGLE)
-      const scale=r/30.845
-      if(r<=0||outer<=r||height<=0||gap<0||gap>0.6*scale||helix<0||helix>=80||bore<0||bore>=2*(23.154388*scale-gap/2)*Math.cos(Math.PI/45)||outer*Math.cos(Math.PI/96)<=r+gap/2)fail('invalid_spinner',current,'Invalid spinner dimensions, gap, bore or rim thickness.')
-      lines.push(`inner_radius=${r};outer_radius=${outer};center_hole_diameter=${bore};gap=${gap};spinner_height=${height};helix_angle=${helix};`,planetarySpinnerTemplate)
-      mechanical_reports.push({node_id:key,kind:'planetary_spinner',sun_teeth:32,planet_teeth:4,ring_teeth:40,planet_count:18,gap_mm:gap,profile:'fixed sampled prototype',printability:'unknown'})
-    } else if (item.op === 'gear' || item.op === 'thread' || item.op === 'planetary_gears') {
-      if (item.op === 'planetary_gears' && depth !== 1) fail('mechanism_scope',current,'Planetary gears must be the document root; export or edit individual parts separately.')
-      const length = (field:string) => value((item as unknown as Record<string,Expression>)[field],field,LENGTH)
-      const angle = (field:string) => value((item as unknown as Record<string,Expression>)[field],field,ANGLE)
-      const scalar = (field:string) => value((item as unknown as Record<string,Expression>)[field],field,SCALAR)
-      try {
-        const generated = item.op === 'thread'
-          ? buildModelGraphThread({diameter:length('diameter'),pitch:length('pitch'),length:length('length'),wall:length('wall'),clearance:length('clearance'),starts:scalar('starts'),segments_per_turn:scalar('segments_per_turn'),internal:item.internal,left_handed:item.left_handed})
-          : item.op === 'gear'
-            ? buildModelGraphGear({teeth:scalar('teeth'),module:length('module'),pressure_angle:angle('pressure_angle'),thickness:length('thickness'),bore:length('bore'),backlash:length('backlash'),clearance:length('clearance'),internal:item.internal,rim_width:length('rim_width'),flank_segments:scalar('flank_segments')})
-            : buildModelGraphPlanetary({sun_teeth:scalar('sun_teeth'),planet_teeth:scalar('planet_teeth'),planet_count:scalar('planet_count'),module:length('module'),pressure_angle:angle('pressure_angle'),thickness:length('thickness'),bore:length('bore'),backlash:length('backlash'),clearance:length('clearance'),rim_width:length('rim_width'),flank_segments:scalar('flank_segments'),carrier_angle:angle('carrier_angle')})
-        mechanicalSourceCharacters += generated.source.length
-        if (mechanicalSourceCharacters > 220000) fail('mechanical_limit',current,'Generated mechanical source exceeds 220000 characters; reduce resolution or instances.')
-        mechanical_reports.push({node_id:key,instance_path:current,...generated.report})
-        if ('parts' in generated) for (const part of generated.parts) mechanical_parts.push({id:part.id,role:part.role,pose:part.pose,document:createMechanicalDocument({kind:'gear',...part.gear_options})})
-        lines.push(...generated.source.split('\n'))
-      } catch (error) {
-        if (error instanceof ModelGraphError) throw error
-        fail('invalid_mechanical_geometry',current,error instanceof Error ? error.message : 'Mechanical generator failed.')
-      }
-    } else if (item.op === 'assembly') {
-      if (!allowAssembly || expected !== 'solid') fail('assembly_scope', current, 'Assembly must be the root or a direct assembly component; boolean/transform wrappers are not allowed.')
-      const frame = (f: z.infer<typeof frameSchema>, path: string): Frame => ({ origin: f.origin.map((v, i) => value(v, `${path}/origin/${i}`, LENGTH)) as Frame['origin'], rotation: f.rotation.map((v, i) => value(v, `${path}/rotation/${i}`, ANGLE)) as Frame['rotation'] })
-      const components: AssemblyComponent[] = item.components.map((c, i) => ({ id: c.id, input: c.input, anchors: c.anchors.map((a, j) => ({ id: a.id, ...frame(a, `components/${i}/anchors/${j}`) })), ...(c.placement ? { placement: frame(c.placement, `components/${i}/placement`) } : {}), ...(c.mate ? { mate: { component: c.mate.component, anchor: c.mate.anchor, own_anchor: c.mate.own_anchor, ...(c.mate.joint ? { joint: { kind: c.mate.joint.kind, position: value(c.mate.joint.position, `components/${i}/joint/position`, c.mate.joint.kind === 'revolute' ? ANGLE : LENGTH), min: value(c.mate.joint.min, `components/${i}/joint/min`, c.mate.joint.kind === 'revolute' ? ANGLE : LENGTH), max: value(c.mate.joint.max, `components/${i}/joint/max`, c.mate.joint.kind === 'revolute' ? ANGLE : LENGTH) } } : {}), gap: value(c.mate.gap, `components/${i}/mate/gap`, LENGTH), rotation: c.mate.rotation.map((v, j) => value(v, `components/${i}/mate/rotation/${j}`, ANGLE)) as Frame['rotation'] } } : {}) }))
-      let placed: ReturnType<typeof placeAssembly>
-      try { placed = placeAssembly(components) } catch (error) { return fail('invalid_assembly', current, error instanceof Error ? error.message : 'Assembly placement failed.') }
-      for (const component of placed) {
-        if (assembly_components.length >= 64) fail('assembly_limit', current, 'Maximum 64 expanded assembly components.')
-        const m = component.matrix
-        lines.push(`multmatrix(${JSON.stringify([m.slice(0,4),m.slice(4,8),m.slice(8,12),m.slice(12,16)])}){`)
-        const world = assemblyParent ? multiplyFrames(assemblyParent.matrix, m) : m
-        if (world.some(v => !Number.isFinite(v) || Math.abs(v) > 1e6)) fail('assembly_limit', current, 'World transform exceeds numeric limits.')
-        const componentPath = `${current}/components/${component.id}`
-        const isAssembly = nodes.get(component.input)?.op === 'assembly'
-        const record = { ...component, matrix: world, anchors: component.anchors.map(a => ({ ...a, matrix: assemblyParent ? multiplyFrames(assemblyParent.matrix, a.matrix) : a.matrix })), instance_path: componentPath, parent_path: assemblyParent?.path ?? null, is_assembly: isAssembly, source: undefined as string | undefined }
-        assembly_components.push(record)
-        const start = lines.length
-        emit(component.input, nodes, scope, componentPath, depth + 1, 'solid', { path: componentPath, matrix: world }, true)
-        if (!isAssembly) record.source = `$fn=${document.segments};\nmultmatrix(${JSON.stringify([world.slice(0,4),world.slice(4,8),world.slice(8,12),world.slice(12,16)])}){\n${lines.slice(start).join('\n')}\n}`
-        lines.push('}')
-      }
-    } else if (item.op === 'evaluate') {
-      const shape = resolve(item.value, scope, current + '/value')
-      if (typeof shape === 'number' || Array.isArray(shape) || !('kind' in shape) || shape.kind !== 'geometry') return fail('type_error', current, 'Expected a geometry value.')
-      const fn = functions.get(shape.function)!
-      if (fn.kind !== 'geometry') return fail('type_error', current, 'Expected a geometry function.')
-      emit(fn.root, bodies.get(fn.id)!, shape.scope, `${current}/value:${fn.id}`, depth + 1, expected)
-    } else if (item.op === 'call') {
-      const bound = bind(item.function, item.args, scope, current, 0)
-      if (bound.fn.kind !== 'geometry') return fail('type_error', current, 'Expected a geometry function.')
-      emit(bound.fn.root, bodies.get(bound.fn.id)!, bound.scope, `${current}/call:${bound.fn.id}`, depth + 1, expected)
-    } else if (item.op === 'if') emit(value(item.condition, 'condition') !== 0 ? item.then : item.else, nodes, scope, current, depth + 1, expected)
-    else if (item.op === 'group') {
-      for (const child of item.inputs) emit(child, nodes, scope, current, depth + 1, expected)
-    } else if (item.op === 'collect') {
-      const items = sequence(resolve(item.values, scope, current + '/values'), current)
-      if (items.length > 256) fail('invalid_count', current, 'Collection exceeds 256 elements.')
-      for (const [i, v] of items.entries()) {
-        const local = new Map(scope); local.set(item.binding, v)
-        emit(item.input, nodes, local, `${current}[${i}]`, depth + 1, expected)
-      }
-    } else if (item.op === 'map') {
-      const count = value(item.count, 'count')
-      if (!Number.isInteger(count) || count < 1 || count > 256) fail('invalid_count', current, 'Map count must be an integer from 1 to 256.')
-      lines.push('union(){')
-      for (let i = 0; i < count; i++) { const local = new Map(scope); local.set(item.index, i); emit(item.input, nodes, local, `${current}[${i}]`, depth + 1, expected) }
-      lines.push('}')
-    } else if (item.op === 'affine') {
-      const m = item.rows.map((row,i) => row.map((v,j) => value(v,`rows/${i}/${j}`,j === 3 ? LENGTH : SCALAR)))
-      const det = m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0])
-      if (!Number.isFinite(det) || det === 0) fail('invalid_transform',current,'Affine matrix must be invertible.')
-      if (expected === 'profile' && (m[2][0] !== 0 || m[2][1] !== 0 || m[2][3] !== 0)) fail('nonplanar_profile',current,'Affine transform must preserve XY.')
-      lines.push(`multmatrix(${JSON.stringify([...m,[0,0,0,1]])}){`)
-      emit(item.input,nodes,scope,current,depth+1,expected); lines.push('}')
-    } else if (item.op === 'mirror') {
-      const normal = item.normal.map((v, i) => value(v, `normal/${i}`))
-      if (Math.hypot(...normal) === 0) fail('invalid_normal', current, 'Mirror normal must be nonzero.')
-      if (expected === 'profile' && normal[2] !== 0) fail('nonplanar_profile', current, 'Profile mirror normal must be in XY.')
-      lines.push(`mirror(${JSON.stringify(normal)}){`)
-      emit(item.input, nodes, scope, current, depth + 1, expected); lines.push('}')
-    } else if (item.op === 'projection' || item.op === 'section') {
-      lines.push(`projection(cut=${item.op === 'section'}){`)
-      if (item.op === 'section') lines.push(`translate([0,0,${-value(item.height, 'height', LENGTH)}]){`)
-      emit(item.input, nodes, scope, current, depth + 1, 'solid')
-      if (item.op === 'section') lines.push('}')
-      lines.push('}')
-    } else if (item.op === 'offset') {
-      lines.push(`offset(${item.mode === 'delta' ? 'delta' : 'r'}=${value(item.distance, 'distance', LENGTH)}){`)
-      emit(item.input, nodes, scope, current, depth + 1, 'profile'); lines.push('}')
-    } else if (item.op === 'advanced_extrude') {
-      const height = value(item.height, 'height', LENGTH)
-      const twist = value(item.twist, 'twist', ANGLE)
-      const scale = item.top_scale.map((v, i) => value(v, `top_scale/${i}`))
-      if (height <= 0 || scale.some(v => v <= 0)) fail('invalid_dimension', current, 'Height and top scales must be positive.')
-      if (Math.abs(twist) > 3600) fail('invalid_angle', current, 'Twist must be within +/-3600 degrees.')
-      lines.push(`linear_extrude(height=${height},twist=${twist},scale=${JSON.stringify(scale)},slices=${item.slices},center=${item.center}){`)
-      emit(item.input, nodes, scope, current, depth + 1, 'profile'); lines.push('}')
-    } else if (item.op === 'cone') {
-      const bottom = value(item.radius_bottom, 'radius_bottom', LENGTH), top = value(item.radius_top, 'radius_top', LENGTH), height = value(item.height, 'height', LENGTH)
-      if (bottom < 0 || top < 0 || bottom + top <= 0 || height <= 0) fail('invalid_dimension', current, 'Cone needs nonnegative radii, at least one positive radius, and positive height.')
-      lines.push(`cylinder(r1=${bottom},r2=${top},h=${height},center=${item.center});`)
-    } else if (item.op === 'torus') {
-      const major = value(item.major_radius, 'major_radius', LENGTH), minor = value(item.minor_radius, 'minor_radius', LENGTH)
-      if (minor <= 0 || major <= minor) fail('invalid_dimension', current, 'Torus requires major_radius > minor_radius > 0.')
-      lines.push(`rotate_extrude(angle=360){translate([${major},0,0]){circle(r=${minor});}}`)
-    } else if (item.op === 'linear_pattern' || item.op === 'circular_pattern') {
-      const count = value(item.count, 'count')
-      if (!Number.isInteger(count) || count < 1 || count > 256) fail('invalid_count', current, 'Pattern count must be an integer from 1 to 256.')
-      const step = item.op === 'linear_pattern' ? item.step.map((v, i) => value(v, `step/${i}`, LENGTH)) : [0, 0, value(item.angle_step, 'angle_step', ANGLE)]
-      if (expected === 'profile' && item.op === 'linear_pattern' && step[2] !== 0) fail('nonplanar_profile', current, 'Profile pattern must remain in XY.')
-      lines.push('union(){')
-      for (let i = 0; i < count; i++) {
-        const vector = step.map(v => v * i)
-        if (vector.some(v => Math.abs(v) > 1e6)) fail('graph_limit', current, 'Pattern transform exceeds numeric limits.')
-        lines.push(`${item.op === 'linear_pattern' ? 'translate' : 'rotate'}(${JSON.stringify(vector)}){`)
-        emit(item.input, nodes, scope, `${current}[${i}]`, depth + 1, expected); lines.push('}')
-      }
-      lines.push('}')
-    } else if (item.op === 'loft') {
-      if ((profileWork += item.profile.length ** 2 + item.profile.length * item.sections.length) > 262144) fail('profile_limit', current, 'Loft work budget exceeded.')
-      const profile = item.profile.map((p, i) => p.map((v, j) => value(v, `profile/${i}/${j}`, LENGTH)) as [number, number])
-      const sections = item.sections.map((s, i) => ({ z: value(s.z, `sections/${i}/z`, LENGTH), scale: s.scale.map((v, j) => value(v, `sections/${i}/scale/${j}`, SCALAR)) as [number, number], offset: s.offset.map((v, j) => value(v, `sections/${i}/offset/${j}`, LENGTH)) as [number, number] }))
-      let mesh: ReturnType<typeof buildModelGraphLoft>
-      try { mesh = buildModelGraphLoft(profile, sections) } catch (error) { return fail('invalid_loft', current, error instanceof Error ? error.message : 'Invalid loft.') }
-      lines.push(`polyhedron(points=${JSON.stringify(mesh.points)},faces=${JSON.stringify(mesh.faces)});`)
-    } else if (item.op === 'sketch') {
-      if (sketch_solutions.length >= 16) fail('sketch_limit', current, 'Maximum 16 sketch solves per compilation.')
-      const points = item.points.map((point, i) => ({ id: point.id, position: point.position.map((v, j) => value(v, `points/${i}/position/${j}`, LENGTH)) as [number, number] }))
-      const constraints: SketchConstraint[] = item.constraints.map((c, i) => c.kind === 'fix' ? { ...c, at: c.at.map((v, j) => value(v, `constraints/${i}/at/${j}`, LENGTH)) as [number, number] } : c.kind === 'distance' ? { ...c, value: value(c.value, `constraints/${i}/value`, LENGTH) } : c)
-      if (new Set(item.boundary).size !== item.boundary.length || item.boundary.some(key => !points.some(p => p.id === key))) fail('invalid_boundary', current, 'Boundary IDs must exist and be unique; closing is implicit.')
-      let solved: ReturnType<typeof solveModelGraphSketch>
-      try { solved = solveModelGraphSketch(points, constraints) } catch (error) { return fail('invalid_sketch', current, error instanceof Error ? error.message : 'Invalid sketch.') }
-      const report = { ...solved, instance_path: current }
-      sketch_solutions.push(report)
-      if (solved.status !== 'solved' && !(solved.status === 'underconstrained' && item.allow_underconstrained)) throw new ModelGraphError(`sketch_${solved.status}`, current, 'Sketch could not produce a fully constrained profile. Inspect the solver report.', report)
-      const polygon = item.boundary.map(key => solved.points.find(p => p.id === key)!.position)
-      validateProfilePolygon(polygon, current, fail)
-      lines.push(`polygon(points=${JSON.stringify(polygon)});`)
-    } else if (item.op === 'rectangle') {
-      const size = item.size.map((v, i) => value(v, `size/${i}`, LENGTH))
-      if (size.some(v => v <= 0)) fail('invalid_dimension', current, 'Rectangle dimensions must be positive.')
-      lines.push(`square([${size.join(',')}],center=${item.center});`)
-    } else if (item.op === 'circle') {
-      const radius = value(item.radius, 'radius', LENGTH)
-      if (radius <= 0) fail('invalid_dimension', current, 'Circle radius must be positive.')
-      lines.push(`circle(r=${radius});`)
-    } else if (item.op === 'polygon') {
-      const points = item.points.map((point, i) => point.map((v, j) => value(v, `points/${i}/${j}`, LENGTH)) as [number, number])
-      if ((profileWork += points.length ** 2) > 262144) fail('profile_limit', current, 'Polygon validation work budget exceeded.')
-      validateProfilePolygon(points, current, fail)
-      lines.push(`polygon(points=${JSON.stringify(points)});`)
-    } else if (item.op === 'extrude' || item.op === 'revolve') {
-      if (item.op === 'extrude') {
-        const height = value(item.height, 'height', LENGTH)
-        if (height <= 0) fail('invalid_dimension', current, 'Extrusion height must be positive.')
-        lines.push(`linear_extrude(height=${height},center=${item.center}){`)
-      } else {
-        const angle = value(item.angle, 'angle', ANGLE)
-        if (angle <= 0 || angle > 360) fail('invalid_angle', current, 'Revolution angle must be greater than zero and at most 360 degrees.')
-        lines.push(`rotate_extrude(angle=${angle}){`)
-      }
-      emit(item.input, nodes, scope, current, depth + 1, 'profile')
-      lines.push('}')
-    } else if (item.op === 'box') {
-      const size = item.size.map((v, i) => value(v, `size/${i}`, LENGTH))
-      if (size.some(v => v <= 0)) fail('invalid_dimension', current + '/size', 'Box dimensions must be positive.')
-      lines.push(`cube([${size.join(',')}],center=${item.center});`)
-    } else if (item.op === 'sphere' || item.op === 'cylinder') {
-      const radius = value(item.radius, 'radius', LENGTH)
-      if (radius <= 0) fail('invalid_dimension', current + '/radius', 'Radius must be positive.')
-      if (item.op === 'sphere') lines.push(`sphere(r=${radius});`)
-      else {
-        const height = value(item.height, 'height', LENGTH)
-        if (height <= 0) fail('invalid_dimension', current + '/height', 'Height must be positive.')
-        lines.push(`cylinder(r=${radius},h=${height},center=${item.center});`)
-      }
-    } else if ('vector' in item) {
-      const vector = item.vector.map((v, i) => value(v, `vector/${i}`, item.op === 'rotate' ? ANGLE : item.op === 'translate' ? LENGTH : SCALAR))
-      if (expected === 'profile' && ((item.op === 'translate' && vector[2] !== 0) || (item.op === 'rotate' && (vector[0] !== 0 || vector[1] !== 0)) || (item.op === 'scale' && vector[2] !== 1))) fail('nonplanar_profile', current, 'Profiles must remain in XY: translate Z=0, rotate X=Y=0, scale Z=1.')
-      if (item.op === 'scale' && vector.some(v => v === 0)) fail('invalid_scale', current + '/vector', 'Scale factors must be nonzero.')
-      lines.push(`${item.op}([${vector.join(',')}]){`)
-      emit(item.input, nodes, scope, current, depth + 1, expected); lines.push('}')
-    } else {
-      lines.push(`${item.op}(){`)
-      for (const child of children(item)) emit(child, nodes, scope, current, depth + 1, expected)
-      lines.push('}')
-    }
-  }
-  emit(document.root, main, empty, '')
-  return { document, geometry_assertions, constraint_report, sketch_solutions, assembly_components, mechanical_reports, mechanical_parts, document_sha256: sha256Hex(canonical(document)), source: lines.join('\n'), source_map: sourceMap, execution_target: 'legacy/current+manifold' as const }
+export const hashModelGraphDocument = (document: unknown) => sha256Hex(canonical(document))
+
+export type ModelGraphCompilation = {
+  document: ModelGraph
+  geometry_assertions: Array<Omit<NonNullable<ModelGraph['geometry_assertions']>[number], 'expected' | 'tolerance'> & {expected:number; tolerance:number}>
+  constraint_report: Array<{id:string;path:string;passed:boolean;status:'passed'|'failed';actual:number;expected:number;relation:string;tolerance:number;dimension:Dimension;message:string}>
+  sketch_solutions: Array<ReturnType<typeof solveModelGraphSketch> & {instance_path:string}>
+  assembly_components: Array<ReturnType<typeof placeAssembly>[number] & {instance_path:string;parent_path:string|null;is_assembly:boolean;source?:string}>
+  mechanical_reports: Array<Record<string,unknown>>
+  mechanical_parts: Array<Record<string,unknown>>
+  document_sha256: string
+  source: string
+  source_map: Array<{node_id:string;line:number;instance_path:string}>
+  execution_target: 'legacy/current+own-rust-cad'
+}
+/** Rust validates and evaluates the graph; JS only handles transport and revision hashing. */
+export function compileModelGraph(value: unknown): ModelGraphCompilation {
+  const result = prepareGraphRust<Omit<ModelGraphCompilation,'document_sha256'>>('graph',value)
+  if (!result.ok) throw new ModelGraphError(result.error.code,result.error.path,result.error.message,result.error.details)
+  return {...result.value,document_sha256:sha256Hex(canonical(result.value.document))}
 }
 
 export function setModelGraphParameters(value: unknown, expectedHash: string, updates: Array<{ id: string; value: number }>) {

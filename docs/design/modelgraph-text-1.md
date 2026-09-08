@@ -4,7 +4,7 @@ Implemented compact authoring syntax, lowered to the existing ModelGraph/1 docum
 
 See `examples/modelgraph-text/ring-pattern.scad` for a runnable example.
 
-- Newlines or semicolons separate declarations. Continue a pipeline on the next line with `|>`.
+- Newlines or semicolons separate declarations. Continue a pipeline on the next line with `.`.
 - Arithmetic: `+`, `-`, `*`, `/`, unary minus, parentheses and vectors.
 - Units: `mm`, `cm`, `m`, `in`, `deg`, `rad`.
 - `param radius = 24mm range 15mm..40mm` produces a parameter and editor slider. Defaults and endpoints are literals using the same unit. Slider edits replace only the numeric span.
@@ -26,13 +26,13 @@ Validation covers actual Manifold construction, the repeat example, parameter/un
 
 See `examples/modelgraph-text/nurbs-boolean.scad`. Use `nurbs_surface(degree_u,degree_v,knots_u,knots_v,control_points,weights)` or `nurbs_curve(degree,knots,control_points,weights)`, with positional or named arguments. Pipe surfaces into `tessellate(segments_u,segments_v)` and meshes into `thicken(vector)`. NURBS constructors are `surface_extrude(vector)` and `surface_revolve(origin,axis,angle)`; `transform(matrix)` takes an affine 4x4 matrix. Both piped and dotted call forms work.
 
-`mesh_union(a,b)`, `mesh_intersection(a,b)` and `a |> mesh_subtract(b)` lower to own Rust mesh CSG. They require exactly two closed oriented meshes. This branch produces `modelgraph/nurbs-1` with `execution_target: own-nurbs`; the viewer publishes the resulting mesh directly, without compiling generated SCAD or invoking Manifold. Empty results clear the scene. Use `modelgraph_nurbs_build/evaluate/export` with the returned document over MCP.
+`mesh_union(a,b)`, `mesh_intersection(a,b)` and `a.mesh_subtract(b)` lower to own Rust mesh CSG. They require exactly two closed oriented meshes. This branch produces `modelgraph/nurbs-1` with `execution_target: own-nurbs`; the viewer publishes the resulting mesh directly, without compiling generated SCAD or invoking Manifold. Empty results clear the scene. Use `modelgraph_nurbs_build/evaluate/export` with the returned document over MCP.
 
 The compiled NURBS JSON is a numeric snapshot: source parameter defaults, units and arithmetic are resolved at compilation. Source text and Customizer sliders remain editable and recompile all dependent expressions. Snapshot `parameters` is empty to avoid implying that changing a JSON parameter recomputes an already resolved expression. Bare lengths use millimeters, angles degrees; incompatible explicit units fail. The existing NURBS graph and Rust geometry budgets apply.
 
 This branch currently rejects legacy primitives, groups, repeat and assertions in the same graph. Curve/surface roots can be compiled for numerical queries; the viewer requires a tessellated mesh. The existing `planetary_spinner` program remains on its original route, with its separate 20 meshes and six parameters unchanged.
 
-`brep_box(min,max) |> brep_tessellate(segments)` uses the shared B-rep topology and publishes authored face IDs, so selecting a tessellated face selects its whole source surface. The native/API B-rep adapters support both NURBS and polygon face geometry; this text constructor currently exposes the NURBS box.
+`brep_box(min,max).brep_tessellate(segments)` uses the shared B-rep topology and publishes authored face IDs, so selecting a tessellated face selects its whole source surface. The native/API B-rep adapters support both NURBS and polygon face geometry; this text constructor currently exposes the NURBS box.
 
 ## SKADIS dovetail example
 
@@ -172,3 +172,25 @@ fn get_first[T]
 ```
 
 Signature lists and named returns require commas between items, including across lines. The final item has no trailing comma. `ret x1: b, x2: count,` can continue on a deeper-indented line. Body statements share one indentation; return field continuation lines share a deeper indentation. Blank lines do not delimit lists. Local bindings use `=` and are immutable. A single unnamed return uses `ret value`. Existing brace-based functions remain supported. Explicit generic calls continue to use `get_first<int>(1, 2)`.
+
+
+## Rust compiler and runtime (2026-09-08)
+
+The source compiler lives in `crates/modelgraph-text`; canonical graph execution planning
+lives in `crates/modelgraph-runtime`. `geometry-bridge` exposes `execute_modelgraph_text`
+as a fused WASM call. Source parsing, functions, generics, graph lowering, strict graph
+validation, expression evaluation, units, constraints, source generation, assemblies,
+sketch solving and mechanical profile generation run in Rust. NURBS graph validation
+and numeric snapshot preparation also run in Rust.
+
+TypeScript adapters handle transport, public metadata schemas and compatible document
+hashes. Canonical geometry still executes generated SCAD through the existing geometry
+pipeline; own-NURBS graphs go to the existing Rust geometry kernels. The editor, renderer
+and browser integration remain TypeScript. No JavaScript compiler fallback is used.
+
+Existing source syntax is preserved. Golden graphs captured before replacement cover
+SKADIS, generic records, ranges and NURBS; native tests also check UTF-16 editor offsets.
+See `crates/modelgraph-text/README.md`, `crates/modelgraph-runtime/README.md`
+and `scripts/bench-modelgraph-text.mts` for bounds,
+optimizations and repeatable performance measurements. A language transfer alone does
+not imply faster geometry generation; cold WASM initialization is measured separately.

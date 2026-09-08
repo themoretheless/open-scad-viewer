@@ -7,7 +7,7 @@ patch = nurbs_surface(
   control_points: [[[0,0,0],[0,width,0]],[[width,0,0],[width,width,0]]],
   weights: [[1,1],[1,1]]
 )
-body = patch |> tessellate(2,2) |> thicken([0,0,thickness])
-cutter = patch |> transform([[1,0,0,width/2],[0,1,0,width/2],[0,0,1,0],[0,0,0,1]])
-  |> tessellate(2,2) |> thicken([0,0,thickness])
-show body |> mesh_subtract(cutter)
+body = patch.tessellate(2,2).thicken([0,0,thickness])
+cutter = patch.transform([[1,0,0,width/2],[0,1,0,width/2],[0,0,1,0],[0,0,0,1]])
+.tessellate(2,2).thicken([0,0,thickness])
+show body.mesh_subtract(cutter)

@@ -83,6 +83,7 @@ fn scale(p: Point, k: f64) -> Point {
     p.map(|v| v * k)
 }
 struct Budget {
+    stage: &'static str,
     work: usize,
     fragments: usize,
     options: Options,
@@ -91,7 +92,10 @@ impl Budget {
     fn tick(&mut self, amount: usize) -> Result<()> {
         self.work = self.work.checked_add(amount).ok_or_else(limit)?;
         if self.work > self.options.max_work {
-            Err(limit())
+            Err(error(
+                "POLYGON_BOOLEAN_RESOURCE_LIMIT",
+                format!("Boolean work budget exceeded during {}", self.stage),
+            ))
         } else {
             Ok(())
         }
@@ -99,7 +103,10 @@ impl Budget {
     fn fragment(&mut self) -> Result<()> {
         self.fragments += 1;
         if self.fragments > self.options.max_fragments {
-            Err(limit())
+            Err(error(
+                "POLYGON_BOOLEAN_RESOURCE_LIMIT",
+                format!("Boolean work budget exceeded during {}", self.stage),
+            ))
         } else {
             Ok(())
         }
@@ -289,6 +296,13 @@ impl Bsp {
                     score = next;
                     best = candidate;
                 }
+                // A supporting plane cannot fragment this set. In particular,
+                // every plane of a convex solid has this property; sampling
+                // more planes only repeats a quadratic scan of curved solids.
+                if cuts == 0 && (front == 0 || back == 0) {
+                    best = candidate;
+                    break;
+                }
             }
             let mut parts = split(best, polys, eps, budget)?;
             parts.same.append(&mut parts.opposite);
@@ -439,7 +453,8 @@ fn normalized(mesh: &Mesh, origin: Point, scale: f64) -> Result<Mesh> {
     Ok(result)
 }
 fn polygons(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
-    mesh.indices
+    let polygons = mesh
+        .indices
         .chunks_exact(3)
         .map(|t| {
             Polygon::new(
@@ -449,8 +464,99 @@ fn polygons(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> 
             )?
             .ok_or_else(|| numeric("Input triangle is smaller than the Boolean tolerance"))
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()?;
+    merge_coplanar(polygons, eps, budget)
 }
+// Reuse planar faces instead of repeatedly splitting their triangulation edges.
+// Only adjacent, coplanar polygons whose union is convex may be merged.
+fn merge_coplanar(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
+    let key = |a: Point, b: Point| {
+        (
+            a.map(|x| (x / eps).round() as i64),
+            b.map(|x| (x / eps).round() as i64),
+        )
+    };
+    let mut edges = BTreeMap::new();
+    let mut slots: Vec<_> = polygons.into_iter().map(Some).collect();
+    for (i, p) in slots.iter().enumerate() {
+        let p = p.as_ref().unwrap();
+        for k in 0..p.vertices.len() {
+            edges.insert(
+                key(p.vertices[k], p.vertices[(k + 1) % p.vertices.len()]),
+                (i, k),
+            );
+        }
+    }
+    for i in 0..slots.len() {
+        while let Some(p) = slots[i].as_ref() {
+            let mut pair = None;
+            for k in 0..p.vertices.len() {
+                budget.tick(1)?;
+                let Some(&(j, l)) =
+                    edges.get(&key(p.vertices[(k + 1) % p.vertices.len()], p.vertices[k]))
+                else {
+                    continue;
+                };
+                if i == j {
+                    continue;
+                }
+                let Some(q) = slots[j].as_ref() else { continue };
+                if dot(p.plane.normal, q.plane.normal) <= 1. - 1e-10
+                    || p.plane.distance(q.plane.origin).abs() >= eps
+                {
+                    continue;
+                }
+                let mut v = Vec::new();
+                for offset in 1..=p.vertices.len() {
+                    v.push(p.vertices[(k + offset) % p.vertices.len()]);
+                }
+                for offset in 2..q.vertices.len() {
+                    v.push(q.vertices[(l + offset) % q.vertices.len()]);
+                }
+                budget.tick(v.len().saturating_mul(v.len()))?;
+                if (0..v.len()).all(|a| (a + 1..v.len()).all(|b| norm(&sub(v[a], v[b])) > eps))
+                    && (0..v.len()).all(|t| {
+                        dot(
+                            cross(
+                                sub(v[(t + 1) % v.len()], v[t]),
+                                sub(v[(t + 2) % v.len()], v[(t + 1) % v.len()]),
+                            ),
+                            p.plane.normal,
+                        ) >= -eps * eps
+                    })
+                {
+                    pair = Some((j, v));
+                    break;
+                }
+            }
+            let Some((j, v)) = pair else { break };
+            let Some(merged) = Polygon::new(v, eps, budget)? else {
+                break;
+            };
+            for index in [i, j] {
+                let old = slots[index].take().unwrap();
+                for k in 0..old.vertices.len() {
+                    edges.remove(&key(
+                        old.vertices[k],
+                        old.vertices[(k + 1) % old.vertices.len()],
+                    ));
+                }
+            }
+            for k in 0..merged.vertices.len() {
+                edges.insert(
+                    key(
+                        merged.vertices[k],
+                        merged.vertices[(k + 1) % merged.vertices.len()],
+                    ),
+                    (i, k),
+                );
+            }
+            slots[i] = Some(merged);
+        }
+    }
+    Ok(slots.into_iter().flatten().collect())
+}
+
 struct Vertices {
     points: Vec<Point>,
     cells: BTreeMap<[i64; 3], Vec<usize>>,
@@ -526,7 +632,12 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
                     return Err(numeric("Collapsed Boolean edge"));
                 }
                 let axis = (0..3)
-                    .max_by(|a, b| direction[*a].abs().total_cmp(&direction[*b].abs()))
+                    .min_by_key(|&axis| {
+                        let low = p[axis].min(q[axis]) - eps;
+                        let high = p[axis].max(q[axis]) + eps;
+                        sorted[axis].partition_point(|i| vertices.points[*i][axis] <= high)
+                            - sorted[axis].partition_point(|i| vertices.points[*i][axis] < low)
+                    })
                     .unwrap();
                 let sorted = &sorted[axis];
                 let low = p[axis].min(q[axis]) - eps;
@@ -669,17 +780,88 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
     validate_solid(&b)?;
     let eps = options.relative_tolerance;
     let mut budget = Budget {
+        stage: "input validation",
         work: 0,
         fragments: 0,
         options: options.clone(),
     };
-    for mesh in [&a, &b] {
-        validation::geometry(mesh, eps, &mut budget)?;
+    for (index, mesh) in [&a, &b].into_iter().enumerate() {
+        validation::geometry(mesh, eps, &mut budget)
+            .map_err(|e| error(e.code, format!("Input {index}: {}", e.message)))?;
         validation::orientation(mesh, eps, &mut budget)?;
     }
     // Exact mesh identity avoids unnecessary splitting of densely sampled surfaces.
     // Validation above still applies: identity cannot admit malformed solids.
-    let mut result = if a.positions == b.positions && a.indices == b.indices {
+    let contains = |outer: &Mesh, inner: &Mesh| -> Result<bool> {
+        if outer.indices.is_empty() || inner.indices.is_empty() || outer.indices.len() / 3 > 128 {
+            return Ok(false);
+        }
+        for t in outer.indices.chunks_exact(3) {
+            let p = outer.point(t[0])?;
+            let n = cross(sub(outer.point(t[1])?, p), sub(outer.point(t[2])?, p));
+            let tolerance = eps * norm(&n);
+            if outer
+                .positions
+                .chunks_exact(3)
+                .any(|v| dot(n, sub([v[0], v[1], v[2]], p)) > tolerance)
+                || inner
+                    .positions
+                    .chunks_exact(3)
+                    .any(|v| dot(n, sub([v[0], v[1], v[2]], p)) >= -tolerance)
+            {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    };
+    let center = |m: &Mesh| {
+        std::array::from_fn::<_, 3, _>(|k| {
+            (m.positions
+                .chunks_exact(3)
+                .map(|p| p[k])
+                .fold(f64::INFINITY, f64::min)
+                + m.positions
+                    .chunks_exact(3)
+                    .map(|p| p[k])
+                    .fold(f64::NEG_INFINITY, f64::max))
+                / 2.
+        })
+    };
+    let axis = sub(center(&b), center(&a));
+    let separated = !a.indices.is_empty()
+        && !b.indices.is_empty()
+        && a.positions
+            .chunks_exact(3)
+            .map(|p| dot(axis, [p[0], p[1], p[2]]))
+            .fold(f64::NEG_INFINITY, f64::max)
+            + eps * norm(&axis)
+            < b.positions
+                .chunks_exact(3)
+                .map(|p| dot(axis, [p[0], p[1], p[2]]))
+                .fold(f64::INFINITY, f64::min);
+    let mut result = if separated {
+        match operation {
+            Operation::Union => crate::cad::join(&[a, b])?,
+            Operation::Difference => a,
+            Operation::Intersection => crate::cad::empty(),
+        }
+    } else if contains(&a, &b)? {
+        match operation {
+            Operation::Union => a,
+            Operation::Intersection => b,
+            Operation::Difference => {
+                let mut cavity = b;
+                cavity.reverse_winding();
+                crate::cad::join(&[a, cavity])?
+            }
+        }
+    } else if contains(&b, &a)? {
+        match operation {
+            Operation::Union => b,
+            Operation::Intersection => a,
+            Operation::Difference => crate::cad::empty(),
+        }
+    } else if a.positions == b.positions && a.indices == b.indices {
         match operation {
             Operation::Union | Operation::Intersection => a,
             Operation::Difference => Mesh {
@@ -689,6 +871,7 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             },
         }
     } else if a.indices.is_empty() || b.indices.is_empty() {
+        budget.stage = "clipping";
         match operation {
             Operation::Union => {
                 if a.indices.is_empty() {
@@ -705,8 +888,12 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             },
         }
     } else {
-        let mut a = Bsp::build(polygons(&a, eps, &mut budget)?, eps, &mut budget)?;
-        let mut b = Bsp::build(polygons(&b, eps, &mut budget)?, eps, &mut budget)?;
+        budget.stage = "BSP construction";
+        let mut a = Bsp::build(polygons(&a, eps, &mut budget)?, eps, &mut budget)
+            .map_err(|e| error(e.code, format!("Build A: {}", e.message)))?;
+        let mut b = Bsp::build(polygons(&b, eps, &mut budget)?, eps, &mut budget)
+            .map_err(|e| error(e.code, format!("Build B: {}", e.message)))?;
+        budget.stage = "clipping";
         match operation {
             Operation::Union => {
                 a.clip_to(&b, eps, &mut budget)?;
@@ -738,10 +925,17 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
                 p.flip();
             }
         }
-        stitch(polys, eps, &mut budget)?
+        budget.stage = "stitch";
+        stitch(polys, eps, &mut budget)
+            .map_err(|e| error(e.code, format!("Stitch: {}", e.message)))?
     };
     if result.indices.len() / 3 > options.max_output_triangles {
         return Err(limit());
+    }
+    // Remove internal triangulation seams before the expensive intersection
+    // audit. The audit still checks the final surface, including its topology.
+    if !result.indices.is_empty() {
+        result = crate::cad::simplify(&result)?;
     }
     validate_solid(&result).map_err(|e| {
         error(
@@ -752,6 +946,7 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             ),
         )
     })?;
+    budget.stage = "result validation";
     validation::geometry(&result, eps, &mut budget).map_err(|e| {
         if e.code == "POLYGON_BOOLEAN_RESOURCE_LIMIT" {
             e
@@ -787,3 +982,15 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
 }
 #[cfg(test)]
 mod tests;
+
+/// Reconnect triangulated planar face boundaries after exact planar remeshing.
+pub(crate) fn stitch_mesh(mesh: &Mesh, eps: f64) -> Result<Mesh> {
+    let mut budget = Budget {
+        stage: "stitch",
+        work: 0,
+        fragments: 0,
+        options: Options::default(),
+    };
+    let p = polygons(mesh, eps, &mut budget)?;
+    stitch(p, eps, &mut budget)
+}

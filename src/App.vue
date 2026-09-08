@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { modelGraphTextControls, isModelGraphText } from './services/modelGraphText'
-import { editorBlocks, indentSelection } from './services/editorBlocks'
+import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
+import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
@@ -147,7 +148,7 @@ const L: Record<Language, Record<string, string>> = {
     workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
     workerRestarted: 'Сборка не отвечала 30 секунд — Worker перезапущен',
     storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
-    unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
+    format: 'Форматировать', saveBrowser: 'Сохранить в браузере', saveBrowserHelp: 'Сохранить текущий код в IndexedDB, заменив сохранённый черновик', savedBrowser: 'Сохранено в IndexedDB', failedBrowser: 'Не удалось сохранить в IndexedDB', unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
     storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
     gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
     gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
@@ -194,7 +195,7 @@ const L: Record<Language, Record<string, string>> = {
     workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
     workerRestarted: 'Build was unresponsive for 30 seconds — worker restarted',
     storageFailed: 'Could not save data: browser storage is unavailable or full',
-    unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
+    format: 'Format', saveBrowser: 'Save in browser', saveBrowserHelp: 'Save current code to IndexedDB, replacing the saved draft', savedBrowser: 'Saved to IndexedDB', failedBrowser: 'Could not save to IndexedDB', unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
     storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
     gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
     gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
@@ -230,16 +231,23 @@ const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 30
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const highlightRef = ref<HTMLPreElement | null>(null)
+const selectedEditorName = ref('')
 const blocks = computed(() => editorBlocks(code.value))
 const foldedLines = ref(new Set<number>())
 const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 const editorRows = computed(() => {
-  const highlighted = highlightCode(code.value).replace(/\n$/, '').split('\n')
+  const highlighted = highlightCode(code.value, selectedEditorName.value).replace(/\n$/, '').split('\n')
+  const lines = code.value.split('\n')
+  const guideEnds = new Map(blocks.value.map(b => {
+    let end = b.end
+    while(end > b.start && !guideFitsIndent(lines[end] ?? '', b.column)) end--
+    return [b.start, end]
+  }))
   const byStart = new Map(blocks.value.map(b=>[b.start,b]))
   let active: typeof blocks.value = []
-  return code.value.split('\n').map((text, line) => {
+  return lines.map((text, line) => {
     active = active.filter(b=>b.end>=line)
-    const row={line,text,html:highlighted[line]??'',block:byStart.get(line),guides:[...active]}
+    const row={line,text,html:highlighted[line]??'',block:byStart.get(line),guides:active.filter(b=>guideFitsIndent(text,b.column)).map(b=>({...b,last:line===guideEnds.get(b.start)}))}
     if(row.block)active.push(row.block)
     return row
   })
@@ -264,7 +272,7 @@ async function editFoldedLine(line: number) {
   editor.scrollTop = Math.max(0,line * parseFloat(getComputedStyle(editor).lineHeight)-40)
   syncHighlightScroll()
 }
-const highlightedCode = computed(() => highlightCode(code.value))
+const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => code.value.split('\n').length)
@@ -1088,13 +1096,28 @@ function retryWorkspacePersistence() {
   void persistWorkspaceNow(true)
 }
 
+const savingBrowser = ref(false)
+const storageFailureDetail = ref('')
+async function saveBrowserDraft() {
+  if(savingBrowser.value) return
+  savingBrowser.value = true
+  if(storageDebounce) { clearTimeout(storageDebounce); storageDebounce = null }
+  try {
+    if(!workspaceSourceValid || !workspaceFileNameValid) { showNotice(t('failedBrowser')); return }
+    await resolveWorkspaceConflict(true)
+    showNotice(t(workspacePersistenceStatus.value === 'saved' && props.workspacePersistence.backend === 'indexeddb' ? 'savedBrowser' : 'failedBrowser'))
+  } finally { savingBrowser.value = false }
+}
+
 async function resolveWorkspaceConflict(preferCurrentDraft: boolean) {
   const generation = workspaceEditGeneration
   const snapshot = workspaceDocument.value
   workspacePersistenceStatus.value = 'saving'
   let result: WorkspaceRetryResult
   try {
-    result = await props.workspacePersistence.resolveConflict(preferCurrentDraft, snapshot)
+    result = preferCurrentDraft
+      ? await props.workspacePersistence.saveCurrentDraft(snapshot)
+      : await props.workspacePersistence.resolveConflict(false, snapshot)
   } catch {
     result = { saved: false }
   }
@@ -1124,6 +1147,7 @@ async function resolveWorkspaceConflict(preferCurrentDraft: boolean) {
 }
 
 function reportStorageFailure() {
+  storageFailureDetail.value = props.workspacePersistence.failureReason || (lang.value === 'ru' ? 'Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода.' : 'Could not write draft. Use Save in browser to retry the current code.')
   const now = Date.now()
   if (now - lastStorageNotice < STORAGE_NOTICE_THROTTLE_MS) return
   lastStorageNotice = now
@@ -1823,6 +1847,13 @@ function sourceIdAtEditorCaret(): number | null {
 }
 
 function syncSourceHighlightFromEditor() {
+  const input = editorRef.value
+  if(input) {
+    const start=input.selectionStart, end=input.selectionEnd
+    const selected=input.value.slice(start,end)
+    selectedEditorName.value = /^\$?[A-Za-z_][\w$]*$/.test(selected)
+      && !/[\w$]/.test(input.value[start-1] ?? '') && !/[\w$]/.test(input.value[end] ?? '') ? selected : ''
+  }
   renderer?.setSourceHighlight(sourceIdAtEditorCaret())
 }
 
@@ -2079,7 +2110,23 @@ function recordCommandUsage(id: string) {
   storageSetJSON('scad-command-mru', next)
 }
 
+function formatEditor() {
+  const formatted = formatCode(code.value)
+  if(formatted === code.value) return
+  const editor = editorRef.value
+  const caret = editor?.selectionStart ?? 0
+  if(editor) editor.setRangeText(formatted,0,editor.value.length,'preserve')
+  code.value = formatted
+  foldedLines.value = new Set()
+  void nextTick(()=>{
+    if(editor) { editor.focus(); editor.setSelectionRange(Math.min(caret,formatted.length),Math.min(caret,formatted.length)) }
+    syncHighlightScroll()
+  })
+  handleEditorInput()
+}
+
 function handleEditorKey(event: KeyboardEvent) {
+  if(event.altKey && event.shiftKey && event.code === 'KeyF') { event.preventDefault(); formatEditor(); return }
   if(event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
     event.preventDefault()
     const editor=editorRef.value; if(!editor) return
@@ -2188,8 +2235,9 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :title="t('retrySave')"
           @click="retryWorkspacePersistence"
         >⚠ {{ t('unsavedDraft') }}</button>
+        <span v-if="workspacePersistenceStatus === 'error' && storageFailureDetail" class="persistence-error-detail" role="status">{{ storageFailureDetail }}</span>
         <span
-          v-else-if="workspacePersistenceStatus === 'saving'"
+          v-if="!workspaceConflict && workspacePersistenceStatus === 'saving'"
           class="persistence-status"
           role="status"
         >{{ t('savingDraft') }}</span>
@@ -2238,6 +2286,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         <div class="toolbar file-toolbar">
           <button class="btn" type="button" :title="t('openFile')" @click="triggerOpen">↥ {{ t('open') }}</button>
           <button class="btn" type="button" :title="t('saveFile')" @click="saveSource">↧ {{ t('save') }}</button>
+          <button class="btn" type="button" title="Alt+Shift+F" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }}</button>
+          <button class="btn" type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
           <button class="btn" type="button" :title="t('shareFile')" @click="shareSource">⌁ {{ t('share') }}</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportStl">STL</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportObj">OBJ</button>
@@ -2283,13 +2333,13 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <span class="folded-number">{{ row.line + 1 }}</span>
             <button v-if="row.block" class="fold-toggle" :aria-label="`${foldedLines.has(row.line) ? 'Развернуть' : 'Свернуть'} блок, строка ${row.line + 1}`" :aria-expanded="!foldedLines.has(row.line)" @click="toggleFold(row.line)">{{ foldedLines.has(row.line) ? '▸' : '▾' }}</button>
             <span v-else class="fold-spacer" />
-            <span class="folded-text" @click="editFoldedLine(row.line)"><span v-html="row.html || ' '" /><span v-if="row.block && foldedLines.has(row.line)" class="fold-summary"> ⋯ {{ row.block.end - row.line }} строк</span></span>
+            <span class="folded-text" @click="editFoldedLine(row.line)"><i v-for="guide in row.guides" :key="guide.start" class="folded-guide" aria-hidden="true" :style="{ left: `${guide.column}ch`, background: guide.last ? `linear-gradient(to bottom, ${blockColors[guide.depth % blockColors.length]} 75%, transparent 100%)` : blockColors[guide.depth % blockColors.length], bottom: '0' }" /><span v-html="row.html || ' '" /><span v-if="row.block && foldedLines.has(row.line)" class="fold-summary"> ⋯ {{ row.block.end - row.line }} строк</span></span>
           </div>
           <button class="unfold-all" @click="editFoldedLine(0)">Развернуть всё для редактирования</button>
         </div>
         <div v-show="!foldedLines.size" class="code-gutter"><div ref="lineNumbersRef" class="gutter-lines"><div v-for="row in editorRows" :key="row.line" class="gutter-row"><span aria-hidden="true">{{ row.line + 1 }}</span><button v-if="row.block" class="fold-toggle" :aria-label="`Свернуть блок, строка ${row.line + 1}`" aria-expanded="true" @click="toggleFold(row.line)">▾</button><span v-else class="fold-spacer" /></div></div></div>
         <div v-show="!foldedLines.size" class="code-content">
-        <div class="code-guides" aria-hidden="true"><div ref="guidesRef" class="guide-lines"><div v-for="row in editorRows" :key="row.line" class="guide-row"><i v-for="guide in row.guides" :key="guide.start" :style="{ left: `${guide.column}ch`, borderColor: blockColors[guide.depth % blockColors.length] }" /></div></div></div>
+        <div class="code-guides" aria-hidden="true"><div ref="guidesRef" class="guide-lines"><div v-for="row in editorRows" :key="row.line" class="guide-row"><i v-for="guide in row.guides" :key="guide.start" :style="{ left: `${guide.column}ch`, background: guide.last ? `linear-gradient(to bottom, ${blockColors[guide.depth % blockColors.length]} 75%, transparent 100%)` : blockColors[guide.depth % blockColors.length], bottom: '0' }" /></div></div></div>
         <pre ref="highlightRef" class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="highlightedCode" /></pre>
         <textarea
           ref="editorRef"
@@ -2742,16 +2792,16 @@ button, select { color: inherit; }
   background: var(--bg); color: var(--text); caret-color: var(--accent);
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .82rem; line-height: 1.58;
   font-weight: 400; font-style: normal; font-kerning: none; font-variant-ligatures: none; letter-spacing: 0; word-spacing: 0;
-  tab-size: 4; white-space: pre; overflow: auto;
+  tab-size: 2; white-space: pre; overflow: auto;
 }
 .code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
-.code-content { position: relative; flex: 1; min-width: 0; }
+.code-content { position: relative; isolation: isolate; flex: 1; min-width: 0; }
 .code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; border-right: 1px solid var(--border); color: var(--text-dim); user-select: none; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
 .code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
 .code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
-.code-highlight { pointer-events: none; overflow: hidden; }
+.code-highlight { z-index: 0; pointer-events: none; overflow: hidden; }
 .highlight-content { display: block; width: max-content; min-width: 100%; transform-origin: top left; }
-.code-input { background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
+.code-input { z-index: 2; background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
 .code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
 .code-highlight :deep(.syntax-comment) { color: #84929f; }
 .code-highlight :deep(.syntax-keyword) { color: #c792ea; }
@@ -2943,11 +2993,20 @@ button, select { color: inherit; }
 .code-guides { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
 .guide-lines { padding: 14px 15px; }
 .guide-row { position: relative; height: 1.58em; }
-.guide-row i { position: absolute; top: 0; bottom: 0; border-left: 1px solid; opacity: .55; }
+.guide-row i { position: absolute; top: 0; bottom: 0; width: 1px; opacity: .5; }
 .folded-editor { z-index: 3; }
 .folded-row { display: flex; min-height: 1.58em; }
 .folded-number { color: var(--text-dim); width: 4ch; text-align: right; flex: 0 0 4ch; }
-.folded-text { cursor: text; }
+.folded-text { position: relative; cursor: text; }
+.folded-guide { position: absolute; top: 0; bottom: 0; width: 1px; opacity: .5; pointer-events: none; }
 .fold-summary { color: var(--text-dim); background: var(--surface-raised); border-radius: 4px; }
 .unfold-all { position: sticky; bottom: 0; left: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; }
+</style>
+
+<style scoped>
+.persistence-error-detail { max-width: 380px; color: var(--danger); font-size: .7rem; overflow-wrap: anywhere; }
+</style>
+
+<style scoped>
+.code-editor :deep(.syntax-occurrence) { background: color-mix(in srgb, var(--accent) 23%, transparent); outline: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 2px; }
 </style>

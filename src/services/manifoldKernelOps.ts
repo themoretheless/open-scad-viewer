@@ -8,7 +8,7 @@ import Module, {
   type Polygons,
   type Vec2,
   type Vec3,
-} from 'manifold-3d/manifold'
+} from './ownGeometryModule'
 
 const MANIFOLD_KERNEL_HANDLE = Symbol('ManifoldKernelHandle')
 
@@ -44,7 +44,7 @@ export interface ManifoldKernelSolidAnalysis {
 }
 
 export interface ManifoldKernelOps {
-  readonly implementationKey: 'manifold-wasm-plan-v1'
+  readonly implementationKey: 'own-rust-cad-plan-v1'
   empty2(): ManifoldKernelHandle
   empty3(): ManifoldKernelHandle
   box(size: readonly [number, number, number], center: boolean): ManifoldKernelHandle
@@ -180,7 +180,7 @@ export function createManifoldKernelOps(
   const geometries3 = (values: readonly ManifoldKernelHandle[]) => values.map(geometry3)
 
   const ops: ManifoldKernelOps = {
-    implementationKey: 'manifold-wasm-plan-v1' as const,
+    implementationKey: 'own-rust-cad-plan-v1' as const,
     empty2() {
       return handle(2, wasm.CrossSection.square([0, 0]))
     },

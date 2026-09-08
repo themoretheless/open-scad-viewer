@@ -320,26 +320,16 @@ describe('WebGPURenderer retained geometry resources', () => {
 
 describe('parameter geometry animation', () => {
   afterEach(() => vi.unstubAllGlobals())
-  it('interpolates display buffers, retargets continuously and retains exact source geometry', () => {
+  it('replaces rebuilt vertices without interpolating unrelated CSG vertices', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
     const { renderer, internal } = harness()
-    const animation = renderer as unknown as { advanceGeometryAnimation(now: number, finish?: boolean): boolean; meshes: Array<{ morph?: { started: number } }> }
-    const first = { ...fixture(0), entityId: 'entity:part' as const }
-    const next = { ...fixture(10), entityId: 'entity:part' as const }
-    renderer.setMeshes([first])
+    const state = renderer as unknown as { meshes: Array<{ morph?: unknown }> }
+    renderer.setMeshes([fixture(0)])
+    const next = fixture(10)
     renderer.setMeshes([next], { animate: true })
-    const start = animation.meshes[0].morph!.started
-    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(first.vertices)
-    animation.advanceGeometryAnimation(start + 90)
-    const midway = new Float32Array(internal.meshes[0].vb.contents.buffer).slice()
-    expect(midway[0]).toBeCloseTo((first.vertices[0] + next.vertices[0]) / 2)
-    expect(next.vertices).toEqual(fixture(10).vertices)
-    const latest = { ...fixture(20), entityId: 'entity:part' as const }
-    renderer.setMeshes([latest], { animate: true })
-    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(midway)
-    expect(animation.advanceGeometryAnimation(start + 1000)).toBe(false)
-    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(latest.vertices)
-    expect(animation.meshes[0].morph).toBeUndefined()
+    expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(next.vertices)
+    expect(state.meshes[0].morph).toBeUndefined()
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(1)
   })
   it('retains exact destination geometry for topology changes and honors reduced motion', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
@@ -357,7 +347,7 @@ describe('parameter geometry animation', () => {
 })
 
 
-it('dissolves changed topology, does not stop on hover, and releases retired buffers', () => {
+it('replaces changed topology opaquely and releases retired buffers', () => {
   vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
   try {
     const { renderer, internal } = harness()
@@ -370,14 +360,7 @@ it('dissolves changed topology, does not stop on hover, and releases retired buf
     renderer.setMeshes([fixture()])
     const old = internal.meshes[0].vb
     renderer.setMeshes([{ ...fixture(10), indices: new Uint32Array([2,1,0]) }], { animate: true })
-    const start = state.geometryFade!.started
-    expect(old.destroyCalls).toBe(0)
-    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(0)
-    state.updateHoverAt(0, 0)
-    expect(state.geometryFade).not.toBeNull()
-    state.advanceGeometryAnimation(start + 90)
-    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBeCloseTo(0.5)
-    state.advanceGeometryAnimation(start + 181)
+    expect(state.geometryFade).toBeNull()
     expect(old.destroyCalls).toBe(1)
     expect(state.geometryGhosts).toHaveLength(0)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(1)
@@ -403,7 +386,9 @@ it('animates transform-only changes and continues through quality publications',
     state.advanceGeometryAnimation(start + 90)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBeCloseTo(10)
     renderer.setMeshes([moved])
-    expect(state.meshes[0].morph).toBeDefined()
+    expect(state.meshes[0].morph?.started).toBe(start)
+    state.advanceGeometryAnimation(start + 135)
+    expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBeCloseTo(16.875)
     state.advanceGeometryAnimation(start + 1000)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBe(20)
     expect(moved.transform[3]).toBe(20)

@@ -1,17 +1,15 @@
 # Third-party notices
 
-## Manifold
+## Own Rust geometry kernel
 
-- Package: `manifold-3d`
-- Version: `3.5.1`
-- Source: <https://github.com/elalish/manifold/tree/v3.5.1>
-- License: Apache License 2.0
-- License text: <https://raw.githubusercontent.com/elalish/manifold/v3.5.1/LICENSE>
-
-The browser geometry kernel includes Manifold JavaScript/WebAssembly artifacts.
-The installed package also carries its `LICENSE` file. Release packaging must
-copy the full Apache-2.0 license alongside deployed artifacts and re-check the
-upstream package for a `NOTICE` file whenever the pinned version changes.
+The application uses the repository's Rust CAD implementation in
+`crates/polygon-kernel` through `crates/geometry-bridge`. It contains no Manifold,
+OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
+Rust serialization and WebAssembly bindings still use serde/serde_json and
+wasm-bindgen, recorded in `crates/Cargo.lock`; host transport uses fflate.
+This is not a claim that the UI, transport or build tooling has zero dependencies.
+Historical Manifold qualification fixtures and manifests describe old releases;
+they are not dependencies or attestations of the current runtime.
 
 ## Model Context Protocol TypeScript SDK
 

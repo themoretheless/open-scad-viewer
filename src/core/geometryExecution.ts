@@ -1,3 +1,4 @@
+import { OWN_RUST_CAD_EVIDENCE } from './ownRustCadEvidence'
 import type { GeometryQuality } from './build'
 import { sha256Hex } from './sha256'
 import {
@@ -250,7 +251,25 @@ export interface GeometryEngineManifest extends GeometryEngineStaticManifest {
   unavailableReason: string | null
 }
 
+const ownRustCadManifest: GeometryEngineStaticManifest = {
+  engineClass: 'manifold', // Historical routing class; the implementation is own Rust.
+  displayName: 'Own Rust CAD', permanent: true, maturity: 'production',
+  engineKey: 'own-rust-cad-v1', kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
+  semanticProgramVersion: 'legacy-direct-evaluator-v1', capabilityManifestVersion: 'own-rust-node-v1',
+  languageContracts: ['legacy/current'], inputContract: 'legacy-source-direct',
+  capabilities: ['analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'geometry.mesh'],
+  plannedCapabilities: ['provenance.source-ranges'], qualities: ['preview', 'full'],
+  representations: ['mesh'], plannedRepresentations: [], exportFormats: ['stl', 'obj'], plannedExportFormats: [],
+  limits: {sourceCharacters: 250_000, triangles: 750_000}, isolation: 'in-process-serialized', deployment: 'node-mcp',
+  qualification: {status: 'qualified', recordId: 'docs/qualification/own-rust-cad-v1.json', corpusVersion: 'own-rust-cad-v1', target: 'browser-worker/node-mcp'},
+  dependency: {packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md', sbomSha256: OWN_RUST_CAD_EVIDENCE.noticesSha256, lockfileSha256: OWN_RUST_CAD_EVIDENCE.lockfileSha256},
+  rollbackCompatibility: {disableEngineCapability: true, sourceContractPreserved: true, crossEngineFallback: false, minimumCatalogSchema: 3},
+  manifestDigest: '', automaticFallback: false,
+}
+ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadManifest)
+
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
+  'own-rust-node-v1': deepFreeze(ownRustCadManifest),
   'manifold-node-v1': deepFreeze({
     engineClass: 'manifold',
     displayName: 'Manifold mesh kernel',
@@ -460,7 +479,7 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  manifold: 'manifold-node-v3',
+  manifold: 'own-rust-node-v1',
   brep: 'brep-contract-v1',
 } as const)
 

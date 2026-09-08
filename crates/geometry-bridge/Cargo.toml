@@ -8,6 +8,8 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+modelgraph-runtime = { path = "../modelgraph-runtime" }
+modelgraph-text = { path = "../modelgraph-text" }
 sketch-kernel = { path = "../sketch-kernel" }
 brep-topology = { path = "../brep-topology" }
 subdivision-kernel = { path = "../subdivision-kernel" }

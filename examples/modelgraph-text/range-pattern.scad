@@ -11,5 +11,5 @@ parts = [
 ]
 show parts
 
-assert parts |> hasBodies(count) |> isWatertight()
-assert measure(parts).height |> approximately(height, tolerance: 0.01mm)
+assert parts. hasBodies(count).isWatertight()
+assert measure(parts).height. approximately(height, tolerance: 0.01mm)

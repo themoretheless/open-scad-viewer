@@ -719,12 +719,6 @@ export class WebGPURenderer {
 
     const previousById = new Map(previous.filter(mesh => mesh.entityId).map(mesh => [mesh.entityId, mesh]))
     const started = performance.now()
-    const morphBudget = meshes.reduce((bytes, mesh) => bytes + mesh.vertices.byteLength, 0) <= 8 * 1024 * 1024
-    const dissolve = animate && (this.geometryFade !== null || !morphBudget || meshes.length !== previous.length || meshes.some(mesh => {
-      const old = mesh.entityId ? previousById.get(mesh.entityId) : undefined
-      return !old || old.vertices.length !== mesh.vertices.length || !sameTypedArray(old.indices, mesh.indices)
-        || !geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, mesh.transform)
-    }))
     const reusableByAsset = new Map<GeometryAssetId, GMesh[]>()
     for (const mesh of previous) {
       if (!mesh.assetId) continue
@@ -747,8 +741,11 @@ export class WebGPURenderer {
         const inverseTransform = invert(transform)
 
         const old = m.entityId ? previousById.get(m.entityId) : undefined
-        const matrix = animate && !dissolve && old ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
-        const morphFrom = animate && !dissolve && old && matrix
+        // Equal index counts do not establish vertex correspondence after CSG.
+        // Animate only rigid transforms of unchanged geometry, per entity.
+        const matrix = animate && old && sameTypedArray(old.vertices, m.vertices)
+          && sameTypedArray(old.indices, m.indices) ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
+        const morphFrom = animate && old && matrix
           && (!sameTypedArray(old.morph?.current ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
           ? new Float32Array(old.morph?.current ?? old.vertices) : null
         // Animated geometry must own its buffer: instances may have different start shapes.
@@ -768,7 +765,7 @@ export class WebGPURenderer {
           if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
           if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
           ub = dev.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-          const initialAlpha = dissolve ? 0 : effectiveDisplayAlpha(m.color[3], this.displayMode)
+          const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
           if (ownsGeometryBuffers) {
             metrics.geometryBuffersCreated += 2
@@ -796,7 +793,7 @@ export class WebGPURenderer {
           const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
           next.push({
             entityId: m.entityId,
-            morph: morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined,
+            morph: matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined,
             assetId: animate ? undefined : m.geometryAssetId,
             nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
@@ -839,7 +836,6 @@ export class WebGPURenderer {
     }
 
     const nextBounds = this.combineBounds(next.map(mesh => mesh.worldBounds))
-    const previousVisible = new Set(previous.filter((_, index) => this.isMeshVisible(index)))
     const selectionChanged = this.selected !== null || this.isolated
     const hoverChanged = this.hovered !== null || this.hoveredHit !== null
     this.clearDrawCaches()
@@ -864,13 +860,8 @@ export class WebGPURenderer {
     this.sourceHighlightId = null
     this.clearSourceHighlightOverlayBuffers()
     this.emitMeasurementChange()
-    if (dissolve) {
-      this.geometryGhosts.push({ meshes: previous, started, alphas: previous.map(mesh => previousVisible.has(mesh) ? mesh.styleAlpha : 0) })
-      this.geometryFade = { started, progress: 0 }
-    } else {
-      this.destroyMeshes(previous, retainedGeometryBuffers)
-      this.geometryFade = null
-    }
+    this.destroyMeshes(previous, retainedGeometryBuffers)
+    this.geometryFade = null
     if (this.displayMode === 'edges') {
       for (const mesh of next) this.ensureEdgeBuffer(mesh)
     }

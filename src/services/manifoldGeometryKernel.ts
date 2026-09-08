@@ -1,4 +1,4 @@
-import Module, { type Manifold, type ManifoldToplevel } from 'manifold-3d/manifold'
+import Module, { type Manifold, type ManifoldToplevel } from './ownGeometryModule'
 import type { GeometryKernel, GeometryKernelSession } from './geometryKernel'
 
 export interface ManifoldKernelDependencies {
@@ -138,7 +138,7 @@ function defaultDependencies(): ManifoldKernelDependencies {
  * ownership registry; callers serialize leases within that kernel's module.
  */
 export class ManifoldGeometryKernel implements GeometryKernel<ManifoldToplevel> {
-  readonly implementationKey = 'manifold-wasm-v1'
+  readonly implementationKey = 'own-rust-cad-v1'
   private modulePromise: Promise<ManifoldToplevel> | undefined
 
   constructor(private readonly dependencies: ManifoldKernelDependencies = defaultDependencies()) {}

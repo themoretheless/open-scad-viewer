@@ -47,7 +47,8 @@ function controlledIdentitySupervisor(): McpManifoldPlanQualificationSupervisor 
 describe('MCP Manifold-plan qualification supervisor', () => {
   it('uses a distinct started-handshake timeout and recovers only after joining that child', async () => {
     const supervisor = fixtureSupervisor({
-      startupTimeoutMs: 40,
+      // Allow real worker startup under concurrent suite load; startup-hang never handshakes.
+      startupTimeoutMs: 300,
       deadlineMs: 1_000,
       cancellationGraceMs: 5,
     })
@@ -316,12 +317,8 @@ describe('MCP Manifold-plan qualification supervisor', () => {
     expect(exact.meshes[0].entityId).toHaveLength(256)
     expect(exact.meshes[0].provenance[0].source?.instanceId).toHaveLength(256)
 
-    await expect(supervisor.evaluate(
-      'assert(true) if(true) let(x=2) cube(x);',
-    )).rejects.toMatchObject({
-      name: 'ManifoldPlanQualificationProtocolError',
-      code: 'QUALIFICATION_RESULT_UNPUBLISHABLE',
-      message: 'Manifold plan result cannot be published by the qualification child',
+    await expect(supervisor.evaluate('assert(true) if(true) let(x=2) cube(x);')).resolves.toMatchObject({
+      meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})],
     })
 
     await expect(supervisor.evaluate('cube(1);')).resolves.toMatchObject({

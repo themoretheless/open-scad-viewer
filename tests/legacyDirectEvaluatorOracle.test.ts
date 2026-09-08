@@ -63,6 +63,9 @@ const SUCCESS_FIXTURES = Object.freeze([
   },
 ])
 
+// Separate kernel-specific snapshot. The Manifold constants above are archival.
+const OWN_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url),'utf8')) as Record<string,{meshLength:number;meshHash:string;sceneLength:number;sceneHash:string;volume:number;surfaceArea:number}>
+
 const outcomes = new Map<string, ReferenceLegacyOutcome>()
 
 function success(id: string): Extract<ReferenceLegacyOutcome, { tag: 'success' }> {
@@ -136,11 +139,13 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     })
   })
 
-  it('classifies a direct 257-character identity as a bounded worker-v5 publication blocker', async () => {
+  it('accepts hashed long identities and rejects a forged oversized identity', async () => {
     const source = 'assert(true) if(true) let(x=2) cube(x);'
     const raw = await parseOpenSCAD(source)
     expect(raw.meshes).toHaveLength(1)
-    expect(raw.meshes[0].entityId).toHaveLength(257)
+    expect(raw.meshes[0].entityId).toMatch(/^entity:sha256:/)
+    await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw))).resolves.toMatchObject({tag:'success'})
+    raw.meshes[0].entityId = 'x'.repeat(257)
 
     await expect(referenceCaptureLegacyOutcome(() => Promise.resolve(raw)))
       .rejects.toMatchObject({
@@ -151,16 +156,17 @@ describe('independent pinned direct-evaluator differential oracle', () => {
       .rejects.toThrow('expected well-formed text of at most 256 UTF-16 code units')
   })
 
-  it.each(SUCCESS_FIXTURES)('pins independent LME1/LSE1 bytes for $id', fixture => {
+  it.each(SUCCESS_FIXTURES)('pins own Rust LME1/LSE1 bytes for $id', fixture => {
     const outcome = success(fixture.id)
+    const snapshot = OWN_SNAPSHOTS[fixture.id]!
     const meshBytes = referenceLegacyMeshBytes(outcome)
     const sceneBytes = referenceLegacySceneBytes(outcome)
     expect(new TextDecoder().decode(meshBytes.subarray(0, 4))).toBe('LME1')
     expect(new TextDecoder().decode(sceneBytes.subarray(0, 4))).toBe('LSE1')
-    expect(meshBytes).toHaveLength(fixture.meshLength)
-    expect(referenceLegacySha256(meshBytes)).toBe(fixture.meshHash)
-    expect(sceneBytes).toHaveLength(fixture.sceneLength)
-    expect(referenceLegacySha256(sceneBytes)).toBe(fixture.sceneHash)
+    expect(meshBytes).toHaveLength(snapshot.meshLength)
+    expect(referenceLegacySha256(meshBytes)).toBe(snapshot.meshHash)
+    expect(sceneBytes).toHaveLength(snapshot.sceneLength)
+    expect(referenceLegacySha256(sceneBytes)).toBe(snapshot.sceneHash)
   })
 
   it('pins colors, stable evaluated identities, source spans, and independent scene deduplication', () => {
@@ -199,8 +205,8 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(colored.surfaceArea).toBe(52)
 
     const difference = success('boolean-difference').success
-    expect(difference.volume).toBeCloseTo(60.16968259019412, 10)
-    expect(difference.surfaceArea).toBeCloseTo(107.97276157095422, 10)
+    expect(difference.volume).toBeCloseTo(OWN_SNAPSHOTS['boolean-difference']!.volume, 10)
+    expect(difference.surfaceArea).toBeCloseTo(OWN_SNAPSHOTS['boolean-difference']!.surfaceArea, 10)
   })
 
   it('pins ordered success warnings including a geometry-free 2D publication', async () => {

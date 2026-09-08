@@ -5,7 +5,7 @@ const source=`// @modelgraph-text/1
 param radius = 20mm range 1mm..50mm
 param height = 10mm range 1mm..30mm
 expand = x => x + 1mm
-body = circle(expand(radius)) |> extrude(height)
+body = circle(expand(radius)).extrude(height)
 show body
 `
 it('lowers parameters, units, closures and pipelines and preserves slider spans',()=>{
@@ -22,10 +22,10 @@ it('builds compact source through the real parser',async()=>{
  expect(built.meshes[0]!.provenance.every(p=>p.source===null)).toBe(true)
 })
 it('expands repeat with lexical index and short functions',()=>{
- const c=compileModelGraphText('// @modelgraph-text/1\nstep = x => x * 3mm\nparts = repeat(18, i => sphere(1mm) |> translate([step(i),0,0]))\nshow parts')
+ const c=compileModelGraphText('// @modelgraph-text/1\nstep = x => x * 3mm\nparts = repeat(18, i => sphere(1mm).translate([step(i),0,0]))\nshow parts')
  expect(c.document.nodes.some(n=>n.op==='map')).toBe(true)
 })
-it.each(['param x = 2mm range 3mm..4mm\na = sphere(x)','a = unknown(2)','a = sphere(1mm) |> box([1,2,3])','a = sphere(1mm)\na = sphere(2mm)','a = sphere(1mm); @'])('rejects invalid source: %s',body=>{
+it.each(['param x = 2mm range 3mm..4mm\na = sphere(x)','a = unknown(2)','a = sphere(1mm).box([1,2,3])','a = sphere(1mm)\na = sphere(2mm)','a = sphere(1mm); @'])('rejects invalid source: %s',body=>{
  expect(()=>compileModelGraphText('// @modelgraph-text/1\n'+body)).toThrow()
 })
 it('builds the documented ring pattern with parameter editing',async()=>{
@@ -38,7 +38,7 @@ it('builds the documented ring pattern with parameter editing',async()=>{
  expect((await parseOpenSCAD(text)).meshes).toHaveLength(1)
 })
 it('makes direct repeat-count parameters integer sliders',()=>{
- const c=compileModelGraphText('// @modelgraph-text/1\nparam count = 3 range 1..10\nbody = repeat(count, i => sphere(1) |> translate([i*3,0,0]))')
+ const c=compileModelGraphText('// @modelgraph-text/1\nparam count = 3 range 1..10\nbody = repeat(count, i => sphere(1).translate([i*3,0,0]))')
  expect(c.customizer[0]!.step).toBe(1)
  expect(c.document.parameters[0]!.integer).toBe(true)
 })

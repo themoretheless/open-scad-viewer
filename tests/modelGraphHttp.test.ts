@@ -42,7 +42,7 @@ describe('remote ModelGraph MCP', () => {
     const resource = await (await call('resources/read', { uri: 'openscad://language/modelgraph-1' })).json()
     expect(language.result.structuredContent).toEqual(JSON.parse(resource.result.contents[0].text))
     expect(language.result.structuredContent.mechanical_examples).toBeDefined()
-    const compact = await (await call('tools/call', { name: 'modelgraph_text_compile', arguments: { source: '// @modelgraph-text/1\nparam r = 2mm range 1mm..5mm\nbody = circle(r) |> extrude(3mm)' } })).json()
+    const compact = await (await call('tools/call', { name: 'modelgraph_text_compile', arguments: { source: '// @modelgraph-text/1\nparam r = 2mm range 1mm..5mm\nbody = circle(r).extrude(3mm)' } })).json()
     expect(compact.result.isError).toBe(false)
     const compactBuild = await (await call('tools/call', { name: 'modelgraph_check', arguments: { document: compact.result.structuredContent.document } })).json()
     expect(compactBuild.result.isError).toBe(false)
@@ -63,7 +63,7 @@ describe('remote ModelGraph MCP', () => {
   it('preserves fluent checks through MCP compilation, reporting and export', async () => {
     const {call}=await start()
     const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result
-    const source='// @modelgraph-text/1\nbody = box([2mm,3mm,4mm])\nshow body\nassert body |> hasBodies(2)'
+    const source='// @modelgraph-text/1\nbody = box([2mm,3mm,4mm])\nshow body\nassert body. hasBodies(2)'
     const compiled=await tool('modelgraph_text_compile',{source})
     expect(compiled.isError).toBe(false)
     const document=compiled.structuredContent.document
@@ -76,7 +76,7 @@ describe('remote ModelGraph MCP', () => {
     const exported=await tool('modelgraph_export',{document,format:'3mf'})
     expect(exported.isError).toBe(true)
     expect(exported.content.some((c:{type:string})=>c.type==='resource')).toBe(false)
-    const invalid=await tool('modelgraph_text_compile',{source:source+'\nvalidate 2mm |> atMost(1mm) |> message("Gap too large")'})
+    const invalid=await tool('modelgraph_text_compile',{source:source+'\nvalidate 2mm. atMost(1mm).message("Gap too large")'})
     expect(invalid.structuredContent.error.code).toBe('constraint_failed')
     expect(invalid.structuredContent.error.details[0]).toMatchObject({status:'failed',message:'Gap too large'})
     document.geometry_assertions[0].expected=1

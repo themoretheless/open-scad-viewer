@@ -1,3 +1,4 @@
+import { GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -290,7 +291,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'manifold',
           availability: 'available',
-          manifest_resource_uri: 'openscad://engines/manifold/capabilities/manifold-node-v3',
+          manifest_resource_uri: 'openscad://engines/manifold/capabilities/own-rust-node-v1',
         },
         { engine_class: 'brep', availability: 'unavailable' },
       ],
@@ -401,7 +402,7 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'manifold',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-          kernel_fingerprint: 'manifold-wasm-v1',
+          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].kernelFingerprint,
           browser_mcp_status: 'qualification-pending',
           mcp_target: 'node-wasm-disposable-worker',
           mcp_isolation: 'in-process-serialized',
@@ -1027,8 +1028,8 @@ describe('OpenSCAD MCP server', () => {
       arguments: { source, quality: 'full' },
     }) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
     expect(current.structuredContent.analysis.execution).toMatchObject({
-      capability_manifest_version: 'manifold-node-v3',
-      manifest_digest: '4d0ed5a1dad0d54656b1508dd045b6ad911343dd5ba4b00aafca03b9d9128a84',
+      capability_manifest_version: 'own-rust-node-v1',
+      manifest_digest: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest,
       evidence: 'runtime',
     })
   })

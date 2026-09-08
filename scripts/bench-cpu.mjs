@@ -70,7 +70,9 @@ async function sourceSnapshot() {
   for (const name of await readdir(root)) {
     if (/^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\..*|env\.d\.ts)$/.test(name)) paths.push(name)
   }
-  paths.push('node_modules/manifold-3d/manifold.js', 'node_modules/manifold-3d/manifold.wasm', 'node_modules/manifold-3d/package.json')
+  paths.push('crates/Cargo.lock')
+  await visit('crates/geometry-bridge/src')
+  await visit('crates/polygon-kernel/src')
   const files = await Promise.all(paths.sort().map(async name => ({ path: name, sha256: sha256(await readFile(path.join(root, name))) })))
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim()
   return {

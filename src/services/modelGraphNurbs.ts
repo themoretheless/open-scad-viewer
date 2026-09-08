@@ -1,3 +1,4 @@
+import { prepareGraphRust } from './geometryRustKernel'
 import { z } from 'zod/v4';
 import { sha256Hex } from '../core/sha256';
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/);
@@ -63,65 +64,20 @@ export class ModelGraphNurbsError extends Error {
     constructor(readonly code: string, readonly path: string, message: string) { super(message); this.name = 'ModelGraphNurbsError'; }
 }
 function fail(code: string, path: string, message: string): never { throw new ModelGraphNurbsError(code, path, message); }
-export function compileModelGraphNurbs(input: unknown) {
-    const raw = JSON.stringify(input);
-    if (raw.length > 250000)
-        fail('document_limit', '/', 'Document exceeds 250000 characters.');
-    const document = modelGraphNurbsSchema.parse(input), params = new Map(document.parameters.map(p => [p.id, p.value]));
-    if (params.size !== document.parameters.length)
-        fail('duplicate_parameter', '/parameters', 'Duplicate parameter ID.');
-    let visitedValues = 0;
-    const resolve = (value: unknown, path: string): unknown => {
-        if (++visitedValues > 30000)
-            fail('value_limit', path, 'Maximum 30000 document values.');
-        if (Array.isArray(value))
-            return value.map((v, i) => resolve(v, `${path}/${i}`));
-        if (value && typeof value === 'object') {
-            const obj = value as Record<string, unknown>;
-            if ('param' in obj) {
-                const v = params.get(String(obj.param));
-                if (v === undefined)
-                    fail('unknown_parameter', path, 'Unknown parameter ' + String(obj.param));
-                return v;
-            }
-            return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, resolve(v, `${path}/${k}`)]));
-        }
-        return value;
-    };
-    const resolved_document = resolve(document, '') as ResolvedModelGraphNurbs;
-    const nodes = new Map(resolved_document.nodes.map(n => [n.id, n]));
-    if (nodes.size !== resolved_document.nodes.length)
-        fail('duplicate_node', '/nodes', 'Duplicate node ID.');
-    const reached = new Set<string>(), active = new Set<string>(), heights = new Map<string, number>();
-    const visit = (key: string, depth: number): number => {
-        const n = nodes.get(key);
-        if (!n)
-            fail('unknown_node', '/nodes', 'Unknown node ' + key);
-        if (active.has(key))
-            fail('cycle', `/nodes/${key}`, 'Cyclic NURBS graph.');
-        const cached = heights.get(key);
-        if (cached !== undefined) {
-            if (depth + cached - 1 > 32)
-                fail('depth_limit', `/nodes/${key}`, 'Maximum graph depth 32.');
-            return cached;
-        }
-        if (depth > 32)
-            fail('depth_limit', `/nodes/${key}`, 'Maximum graph depth 32.');
-        active.add(key);
-        const refs = 'inputs' in n ? [...n.inputs] : 'input' in n ? [n.input] : [];
-        if (n.op === 'tessellate' && n.trim_curves)
-            refs.push(n.trim_curves.outer, ...n.trim_curves.holes);
-        const height = 1 + Math.max(0, ...refs.map(r => visit(r, depth + 1)));
-        active.delete(key);
-        reached.add(key);
-        heights.set(key, height);
-        return height;
-    };
-    visit(document.root, 1);
-    if (reached.size !== nodes.size)
-        fail('unreachable_node', '/nodes', 'Every node must be reachable from root.');
-    const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(',')}]` : v && typeof v === 'object' ? `{${Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => JSON.stringify(k) + ':' + canonical(x)).join(',')}}` : JSON.stringify(v);
-    return { document, resolved_document, document_sha256: sha256Hex(canonical(document)), execution_target: 'own-nurbs' as const };
+export type ModelGraphNurbsCompilation = {
+    document: ModelGraphNurbs
+    resolved_document: ResolvedModelGraphNurbs
+    document_sha256: string
+    execution_target: 'own-nurbs'
+}
+export function compileModelGraphNurbs(input: unknown): ModelGraphNurbsCompilation {
+    const result=prepareGraphRust<Omit<ModelGraphNurbsCompilation,'document_sha256'>>('nurbs',input)
+    if(!result.ok)fail(result.error.code,result.error.path,result.error.message)
+    return {...result.value,document_sha256:hashNurbsDocument(result.value.document)}
+}
+export function hashNurbsDocument(document: unknown): string {
+    const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(',')}]` : v && typeof v === 'object' ? `{${Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => JSON.stringify(k) + ':' + canonical(x)).join(',')}}` : JSON.stringify(v)
+    return sha256Hex(canonical(document))
 }
 export const MODELGRAPH_NURBS_GUIDE = `ModelGraph NURBS uses our own Rust numerical kernel, with no third-party spline or B-rep kernel. Select language:"modelgraph/nurbs-1",units:"mm". Scalars are finite numbers or {param:"id"}; define parameters:[{id,value}],nodes and root. Read the accompanying schema. Graph IDs are unique, all nodes reachable, cycles forbidden. Maximum128nodes, depth32 and30000values. This contract uses own Rust geometry and the shared brep-topology library, without routing into Manifold.
 curve nodes specify degree, expanded knots, control_points (all2D orall3D), positive weights and periodic. surface nodes specify degree_u/v, knots_u/v, control_points[u][v][xyz], weights[u][v], periodic_u/v. Expanded knots have controlCount+degree+1 entries, finite nondecreasing values and active domain[knots[degree],knots[controlCount]]. Periodic data uses explicitly wrapped control points and extended knots, not an implicit one-period kernel-specific convention. Evaluation is homogeneous rational B-spline evaluation with first and second derivatives. At insufficient-continuity knots derivatives can be unavailable. Degenerate surface normals/curvatures are null; inspect derivative_status.

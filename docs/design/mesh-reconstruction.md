@@ -73,16 +73,16 @@ B-rep, включая 256 граней. Общая геометрическая 
 
 ```text
 // @modelgraph-text/1
-mesh = brep_box([-10,-10,-10],[10,10,10]) |> brep_tessellate(1)
-show mesh |> mesh_to_sdf() |> sdf_offset(1mm) |> sdf_tessellate([-15,-15,-15],[15,15,15],[12,12,12])
+mesh = brep_box([-10,-10,-10],[10,10,10]).brep_tessellate(1)
+show mesh.mesh_to_sdf().sdf_offset(1mm).sdf_tessellate([-15,-15,-15],[15,15,15],[12,12,12])
 ```
 
 Другие цепочки:
 
-- `mesh |> mesh_to_subdivision(8) |> subdivision_tessellate(1)`
-- `mesh |> mesh_to_nurbs() |> nurbs_patches_tessellate(2)`
-- `mesh |> mesh_fit_nurbs(2mm) |> nurbs_patches_tessellate(2)`
-- `mesh |> mesh_to_nurbs_brep() |> brep_tessellate(2)`
+- `mesh.mesh_to_subdivision(8).subdivision_tessellate(1)`
+- `mesh.mesh_to_nurbs().nurbs_patches_tessellate(2)`
+- `mesh.mesh_fit_nurbs(2mm).nurbs_patches_tessellate(2)`
+- `mesh.mesh_to_nurbs_brep().brep_tessellate(2)`
 
 Для произвольных данных есть `triangle_mesh(vertices,triangles)` — массивы
 трёхмерных координат и троек индексов. Полные исходные определения сохраняются

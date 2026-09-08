@@ -102,15 +102,76 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
             )
         })
         .collect();
-    let mut sorted: Vec<usize> = (0..triangles.len()).collect();
-    sorted.sort_by(|a, b| bounds[*a].0[0].total_cmp(&bounds[*b].0[0]));
-    for (position, &a) in sorted.iter().enumerate() {
-        for &b in &sorted[position + 1..] {
-            if bounds[b].0[0] > bounds[a].1[0] + eps {
-                break;
-            }
+    // AABB hierarchy avoids quadratic scans for thin fragments whose x
+    // intervals overlap but which are separated on another axis.
+    struct Node {
+        lo: Point,
+        hi: Point,
+        children: Option<(usize, usize)>,
+        triangles: Vec<usize>,
+    }
+    fn build(ids: &mut [usize], bounds: &[(Point, Point)], nodes: &mut Vec<Node>) -> usize {
+        let lo = std::array::from_fn(|k| {
+            ids.iter()
+                .map(|&i| bounds[i].0[k])
+                .fold(f64::INFINITY, f64::min)
+        });
+        let hi = std::array::from_fn(|k| {
+            ids.iter()
+                .map(|&i| bounds[i].1[k])
+                .fold(f64::NEG_INFINITY, f64::max)
+        });
+        let at = nodes.len();
+        nodes.push(Node {
+            lo,
+            hi,
+            children: None,
+            triangles: vec![],
+        });
+        if ids.len() <= 8 {
+            nodes[at].triangles = ids.to_vec()
+        } else {
+            let axis = (0..3)
+                .max_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
+                .unwrap();
+            ids.sort_by(|&a, &b| {
+                (bounds[a].0[axis] + bounds[a].1[axis])
+                    .total_cmp(&(bounds[b].0[axis] + bounds[b].1[axis]))
+            });
+            let (left, right) = ids.split_at_mut(ids.len() / 2);
+            let l = build(left, bounds, nodes);
+            let r = build(right, bounds, nodes);
+            nodes[at].children = Some((l, r));
+        }
+        at
+    }
+    let mut ids: Vec<_> = (0..triangles.len()).collect();
+    let mut nodes = vec![];
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let root = build(&mut ids, &bounds, &mut nodes);
+    for a in 0..triangles.len() {
+        let mut stack = vec![root];
+        let mut candidates = vec![];
+        while let Some(i) = stack.pop() {
             budget.tick(1)?;
-            if (1..3).any(|i| {
+            let node = &nodes[i];
+            if (0..3)
+                .any(|k| bounds[a].0[k] > node.hi[k] + eps || node.lo[k] > bounds[a].1[k] + eps)
+            {
+                continue;
+            }
+            if let Some((left, right)) = node.children {
+                stack.extend([left, right])
+            } else {
+                candidates.extend(node.triangles.iter().copied().filter(|&b| b > a))
+            }
+        }
+        candidates.sort_unstable();
+        for b in candidates {
+            budget.tick(1)?;
+            if (0..3).any(|i| {
                 bounds[a].0[i] > bounds[b].1[i] + eps || bounds[b].0[i] > bounds[a].1[i] + eps
             }) {
                 continue;
@@ -129,7 +190,7 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                     _ => false,
                 };
                 if !allowed {
-                    return Err(invalid("Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance"));
+                    return Err(invalid(&format!("Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={}, point={p:?}",shared.len())));
                 }
             }
         }

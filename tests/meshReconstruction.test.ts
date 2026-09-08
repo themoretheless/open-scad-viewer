@@ -26,11 +26,11 @@ it('fits subdivision controls and reports actual sampled deviation',()=>{
  expect(tessellateSubdivision(fitted.cage,1).report.closed).toBe(true)
 })
 it('supports explicit reverse-conversion pipelines in compact text',async()=>{
- const base='// @modelgraph-text/1\nmesh=brep_box([-1,-1,-1],[1,1,1]) |> brep_tessellate(1)\n'
- for(const pipe of ['mesh_to_nurbs_brep() |> brep_tessellate(2)','mesh_to_nurbs() |> nurbs_patches_tessellate(2)','mesh_fit_nurbs(1mm) |> nurbs_patches_tessellate(2)','mesh_to_subdivision(8) |> subdivision_tessellate(1)','mesh_to_sdf() |> sdf_tessellate([-1.5,-1.5,-1.5],[1.5,1.5,1.5],[8,8,8])']){
-  const scene=await parseOpenSCAD(base+'show mesh |> '+pipe);expect(scene.meshes).toHaveLength(1);expect(scene.meshes[0].indices.length).toBeGreaterThan(0)
+ const base='// @modelgraph-text/1\nmesh=brep_box([-1,-1,-1],[1,1,1]).brep_tessellate(1)\n'
+ for(const pipe of ['mesh_to_nurbs_brep().brep_tessellate(2)','mesh_to_nurbs().nurbs_patches_tessellate(2)','mesh_fit_nurbs(1mm).nurbs_patches_tessellate(2)','mesh_to_subdivision(8).subdivision_tessellate(1)','mesh_to_sdf().sdf_tessellate([-1.5,-1.5,-1.5],[1.5,1.5,1.5],[8,8,8])']){
+  const scene=await parseOpenSCAD(base+'show mesh.'+pipe);expect(scene.meshes).toHaveLength(1);expect(scene.meshes[0].indices.length).toBeGreaterThan(0)
  }
- const direct=await parseOpenSCAD('// @modelgraph-text/1\nshow triangle_mesh([[0,0,0],[1,0,0],[0,1,0]],[[0,1,2]]) |> mesh_to_nurbs() |> nurbs_patches_tessellate(2)');expect(direct.meshes).toHaveLength(1)
+ const direct=await parseOpenSCAD('// @modelgraph-text/1\nshow triangle_mesh([[0,0,0],[1,0,0],[0,1,0]],[[0,1,2]]).mesh_to_nurbs().nurbs_patches_tessellate(2)');expect(direct.meshes).toHaveLength(1)
 })
 it('welds duplicated triangle positions before reverse conversion and rejects degenerate sources',()=>{
  const mesh=cube();const positions=mesh.indices.flatMap(i=>mesh.positions.slice(i*3,i*3+3));const soup={positions,indices:mesh.indices.map((_,i)=>i)}

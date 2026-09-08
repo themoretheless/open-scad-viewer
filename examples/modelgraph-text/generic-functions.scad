@@ -24,4 +24,4 @@ param height = 12 range 1..40
 { point, count } = makePoint(10, 20, height)
 body = box([point.x, point.y, point.z])
 show body
-assert body |> hasBodies(count)
+assert body. hasBodies(count)

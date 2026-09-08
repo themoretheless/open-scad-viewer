@@ -1,7 +1,7 @@
 # OpenSCAD Viewer
 
-A client-side OpenSCAD workspace built with Vue, WebGPU, and the
-[Manifold](https://github.com/elalish/manifold) geometry kernel. The browser is
+A client-side OpenSCAD workspace built with Vue, WebGPU, and its own Rust
+geometry kernel. The browser is
 a fast, independent subset viewer: supported operations produce real geometry,
 while unsupported OpenSCAD syntax returns a line/column error instead of a
 misleading preview. The optional local MCP server also exposes the
@@ -16,7 +16,26 @@ Two independent domain libraries live in the Cargo workspace under `crates/`:
 - `nurbs-kernel`: rational curves and surfaces, analytic derivatives, knot/degree edits, iso-curves, extrusion, revolution and lofts.
 - `polygon-kernel`: owned triangle meshes, polygonal UV meshing, boundary loops, topology inspection, affine transforms, fixed-vector thickening and STL output. It accepts plain imported meshes and arbitrary parametric samplers, without depending on NURBS.
 
-`geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in ModelGraph. A full NURBS B-rep modeler is not implemented; the existing OpenSCAD route still uses Manifold.
+`geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in ModelGraph. A full NURBS B-rep modeler is not implemented. Both ModelGraph and the legacy OpenSCAD route now use the repository-owned Rust CAD kernel; no external CAD runtime or fallback is loaded.
+
+The ModelGraph Text frontend and canonical graph compiler also run in Rust.
+The legacy OpenSCAD evaluator and host/renderer adapters remain TypeScript.
+`src/services/ownGeometryModule.ts` implements the legacy handle API; its
+`Manifold` class name is compatibility terminology, not an imported package.
+The persisted routing class `manifold` is retained for historical records, while
+new results identify `own-rust-cad-v1` and an exact WASM SHA-256 fingerprint.
+
+The CAD implementation includes planar arrangements, offsets, ear-clipped caps,
+extrusion/revolution, hulls, bounded BSP booleans, slicing/projection and convex
+decomposition for Minkowski sums. It uses floating-point predicates and explicit
+budgets; it is not an exact-arithmetic geometry kernel. The UI, serialization,
+WASM bindings and build tooling still have dependencies (see `THIRD_PARTY_NOTICES.md`).
+
+Qualification evidence: `docs/qualification/own-rust-cad-v1.json`. Re-run
+`node scripts/record-own-cad-evidence.mjs` after rebuilding and validating a changed
+Rust artifact. Builds never silently regenerate qualification evidence.
+Archived Manifold snapshots are retained separately and do not qualify the new
+kernel. Browser/MCP parity remains a separate, pending qualification.
 
 Build prerequisites (in addition to Node.js):
 
@@ -31,7 +50,7 @@ The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge aut
 
 ## Highlights
 
-- Real manifold `union()`, `difference()`, `intersection()`, and `hull()`.
+- Own Rust `union()`, `difference()`, `intersection()`, and `hull()`.
 - Variables, expressions, ranges, `for`, `if`, `let`, user modules,
   `children()`, and fail-fast OpenSCAD statement-form
   `assert(condition, message)`.
@@ -211,7 +230,7 @@ Available tools:
 - `openscad_official_export` — upstream-oracle reference export to a bounded,
   content-addressed, session-local MCP resource. Official artifacts are kept out
   of the legacy DuckDB engine-attestation schema rather than being mislabeled as
-  independent Manifold builds; its result also carries the stable-language
+  independent Rust builds; its result also carries the stable-language
   contract summary;
 - `openscad_build_history` — recent DuckDB-backed build results;
 - `openscad_catalog_stats` — model/revision/build/artifact counts, stored bytes,
@@ -312,7 +331,7 @@ Select a part from a current full build, open **Inspect**, and choose
 **Compute surface area on GPU**. A WebGPU compute shader calculates triangle
 surface area with the object's transform, with CPU verification and an explicit
 CPU fallback. Cancellation and scene/source changes invalidate the analysis.
-This opt-in pilot does not accelerate or replace Manifold construction/booleans;
+This opt-in pilot does not accelerate or replace Rust construction/booleans;
 CUDA is not implemented. See the
 [compute boundaries and live smoke checks](docs/design/geometry-compute-pilot.md).
 
@@ -416,7 +435,7 @@ subprocess lifetime, and session-local artifact cache.
 - `src/core/mesh.ts` and `src/core/build.ts`: renderer-neutral geometry,
   identity, provenance, transfer, and build-quality contracts.
 - `src/services/openscadParser.ts`: lexer, expression/statement parser,
-  evaluator, Manifold geometry conversion, diagnostics, and budgets.
+  legacy evaluator, Rust geometry calls, diagnostics, and budgets.
 - `src/services/buildCoordinator.ts`: protocol-v3 jobs, preview/full ordering,
   stale-result rejection, cancellation, and Worker replacement.
 - `src/services/workspaceDocument.ts`: validated, migratable single-document
