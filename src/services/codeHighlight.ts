@@ -2,7 +2,7 @@
 export function highlightCode(source: string): string {
   const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const tokens = /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*|"(?:\\[\s\S]|[^"\\])*(?:"|$)|\b(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?:mm|cm|in|deg|rad|m)?\b|\$?[A-Za-z_][\w$]*|\.\.<|\.\.|[+*/%=!<>?:&|^-]+/g;
-  const keywords = new Set(['in', 'by', 'count', 'where', 'validate', 'param', 'range', 'show', 'module', 'function', 'let', 'each', 'for', 'if', 'else', 'assert', 'echo', 'include', 'use', 'true', 'false', 'undef']);
+  const keywords = new Set(['fn', 'ret', 'struct', 'int', 'f32', 'f64', 'str', 'Geometry', 'in', 'by', 'count', 'where', 'validate', 'param', 'range', 'show', 'module', 'function', 'let', 'each', 'for', 'if', 'else', 'assert', 'echo', 'include', 'use', 'true', 'false', 'undef']);
   let result = '', end = 0;
   for (const match of source.matchAll(tokens)) {
     const value = match[0], index = match.index!;

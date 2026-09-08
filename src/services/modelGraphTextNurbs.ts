@@ -1,3 +1,4 @@
+import { checkModelGraphNumericType, type ModelGraphNumericType } from './modelGraphNumericType'
 /** Lower compact expressions to a numeric NURBS document; source remains editable. */
 import { compileModelGraphNurbs } from './modelGraphNurbs'
 import { createUnitArithmetic, LENGTH, SCALAR, ANGLE, type NumericValue, type Dimension, type Unit } from './modelGraphUnits'
@@ -11,6 +12,12 @@ export function compileTextNurbs(nodes: Record<string, unknown>[], parameters: R
     if (!v || typeof v !== 'object' || Array.isArray(v)) return fail('',path,'Expected a scalar expression')
     const e=v as Record<string,unknown>
     if ('param' in e) return values.get(e.param) ?? fail('',path,'Unknown parameter')
+    if (e.op === 'checked') {
+      for(const check of e.checks as unknown[])scalar(check,path,depth+1)
+      return scalar(e.value,path,depth+1)
+    }
+    if (e.op === 'typed') return checkModelGraphNumericType(scalar(e.value,path,depth+1),e.type as ModelGraphNumericType,message=>fail('',path,message))
+    if (e.op === 'if') return scalar(math.scalar(scalar(e.condition,path,depth+1),path)!==0?e.then:e.else,path,depth+1)
     if (e.op === 'quantity') return math.quantity(e.value as number,e.unit as Unit,path)
     if (Array.isArray(e.args) && e.args.length === 2) return math.binary(String(e.op),scalar(e.args[0],path,depth+1),scalar(e.args[1],path,depth+1),path)
     if ('value' in e) return math.unary(String(e.op),scalar(e.value,path,depth+1),path,false)
@@ -18,6 +25,25 @@ export function compileTextNurbs(nodes: Record<string, unknown>[], parameters: R
   }
   function field(v: unknown, dimension: Dimension, path: string): unknown {
     return Array.isArray(v) ? v.map((x,i)=>field(x,dimension,`${path}/${i}`)) : math.field(scalar(v,path),dimension,path,false)
+  }
+  // Own geometry documents are numeric snapshots: resolve choices before
+  // lowering fields so invalid dimensions in an unselected branch stay unused.
+  if(nodes.some(node=>node.op==='if')) {
+    const byId=new Map(nodes.map(node=>[String(node.id),node]))
+    const selected=new Map<string,Record<string,unknown>>()
+    const visit=(id:string,depth=0):string=>{
+      if(depth>64) return fail('',id,'Conditional geometry depth exceeds 64')
+      const node=byId.get(id)
+      if(!node)return fail('',id,'Unknown geometry node')
+      if(node.op==='if')return visit(String(math.scalar(scalar(node.condition,id),id)!==0?node.then:node.else),depth+1)
+      if(selected.has(id))return id
+      const n={...node};selected.set(id,n)
+      if(typeof n.input==='string')n.input=visit(n.input,depth+1)
+      if(Array.isArray(n.inputs))n.inputs=n.inputs.map(input=>visit(String(input),depth+1))
+      return id
+    }
+    root=visit(root)
+    nodes=[...selected.values()]
   }
   const lowered=nodes.map(node=>{
     const n:Record<string,unknown>={...node}

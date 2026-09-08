@@ -518,6 +518,13 @@
               "input": {
                 "type": "string",
                 "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "radius",
+                  "delta"
+                ]
               }
             },
             "required": [
@@ -2353,6 +2360,13 @@
                         "input": {
                           "type": "string",
                           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "radius",
+                            "delta"
+                          ]
                         }
                       },
                       "required": [
@@ -3821,6 +3835,59 @@
   "$defs": {
     "__schema0": {
       "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "checked"
+            },
+            "checks": {
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "value": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "checks",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string",
+              "const": "typed"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "int",
+                "f32",
+                "f64",
+                "length",
+                "angle"
+              ]
+            },
+            "value": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "op",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
         {
           "type": "object",
           "properties": {

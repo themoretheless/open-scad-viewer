@@ -13,6 +13,15 @@ async function start() {
   return { url, call }
 }
 describe('remote ModelGraph MCP', () => {
+  it('builds generic block functions and named records through MCP', async () => {
+    const {call}=await start()
+    const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result
+    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/generic-functions.scad','utf8')})
+    expect(compiled.isError,JSON.stringify(compiled)).not.toBe(true)
+    const checked=await tool('modelgraph_check',{document:compiled.structuredContent.document})
+    expect(checked.isError,JSON.stringify(checked)).not.toBe(true)
+    expect(checked.structuredContent.analysis.volume).toBeCloseTo(2400)
+  })
   it('compiles own NURBS text and exports through the indicated MCP route', async () => {
     const {call}=await start()
     const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result

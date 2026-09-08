@@ -38,6 +38,7 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 480_000) {
   throw new Error('Expected one shared geometry kernel chunk within 480000 bytes')
 }
 // Direct NURBS text compilation and mesh publication add ~28 kB of host code.
-const totalBudget = 2_200_000 + 480_000 + 30_000
+// Typed block functions and generic records add ~21 kB across UI and worker.
+const totalBudget = 2_200_000 + 480_000 + 30_000 + 30_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

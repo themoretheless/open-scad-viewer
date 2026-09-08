@@ -1,3 +1,4 @@
+import { checkModelGraphNumericType, type ModelGraphNumericType } from './modelGraphNumericType'
 import { resolveInterval } from './modelGraphRange'
 import { planetarySpinnerTemplate } from './planetarySpinnerTemplate'
 import { buildModelGraphGear } from './modelGraphGears'
@@ -16,6 +17,8 @@ const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/)
 const unit = z.enum(['mm', 'cm', 'm', 'in', 'deg', 'rad'])
 const number = z.number().finite().min(-1_000_000).max(1_000_000)
 export type Expression =
+  { op: 'checked'; checks: Expression[]; value: Expression } |
+  { op: 'typed'; type: ModelGraphNumericType; value: Expression } |
   { op: 'quantity'; value: number; unit: Unit }
   |   { op: 'geometry'; function: string; args: Record<string, Expression> }
   |   { op: 'lambda'; parameters: string[]; body: Expression }
@@ -36,6 +39,8 @@ export type Expression =
   | { op: 'let'; name: string; value: Expression; body: Expression }
   | { op: 'call'; function: string; args: Record<string, Expression> }
 export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
+  z.object({op:z.literal('checked'),checks:z.array(expressionSchema).max(256),value:expressionSchema}).strict(),
+  z.object({op:z.literal('typed'),type:z.enum(['int','f32','f64','length','angle']),value:expressionSchema}).strict(),
   z.object({ op: z.literal('quantity'), value: number, unit }).strict(),
   z.object({ op: z.literal('geometry'), function: id, args: z.record(id, expressionSchema) }).strict(),
   z.object({ op: z.literal('lambda'), parameters: z.array(id).max(32), body: expressionSchema }).strict(),
@@ -76,7 +81,7 @@ const node = z.discriminatedUnion('op', [
   z.object({ id, op: z.literal('affine'), input: id, rows: z.tuple([affineRow, affineRow, affineRow]) }).strict(),
   z.object({ id, op: z.literal('hull'), inputs: z.array(id).min(1).max(32) }).strict(),
   z.object({ id, op: z.literal('mirror'), normal: vector, input: id }).strict(),
-  z.object({ id, op: z.literal('offset'), distance: scalar, input: id }).strict(),
+  z.object({ id, op: z.literal('offset'), distance: scalar, input: id, mode: z.enum(['radius', 'delta']).optional() }).strict(),
   z.object({ id, op: z.literal('projection'), input: id }).strict(),
   z.object({ id, op: z.literal('section'), height: scalar, input: id }).strict(),
   z.object({ id, op: z.literal('advanced_extrude'), input: id, height: scalar, twist: scalar, top_scale: vector2, slices: z.number().int().min(1).max(64), center: z.boolean().default(false) }).strict(),
@@ -262,6 +267,11 @@ export function compileModelGraph(value: unknown) {
     if (typeof expr === 'number') result = expr
     else if ('param' in expr) return parameters.get(expr.param) ?? fail('unknown_parameter', path, `Unknown parameter ${expr.param}.`)
     else if ('local' in expr) return scope.get(expr.local) ?? fail('unknown_local', path, `Unknown local ${expr.local}.`)
+    else if (expr.op === 'checked') {
+      for(const [i,check] of expr.checks.entries())resolve(check,scope,`${path}/checks/${i}`,depth+1)
+      return resolve(expr.value,scope,path+'/value',depth+1)
+    }
+    else if (expr.op === 'typed') return checkModelGraphNumericType(numericValue(resolve(expr.value,scope,path+'/value',depth+1),path),expr.type,message=>fail('type_error',path,message))
     else if (expr.op === 'if') return resolve(evaluate(expr.condition, scope, path + '/condition', depth + 1) !== 0 ? expr.then : expr.else, scope, path, depth + 1)
     else if (expr.op === 'let') {
       const next = new Map(scope); next.set(expr.name, resolve(expr.value, scope, path + '/value', depth + 1))
@@ -461,7 +471,7 @@ export function compileModelGraph(value: unknown) {
       if (item.op === 'section') lines.push('}')
       lines.push('}')
     } else if (item.op === 'offset') {
-      lines.push(`offset(r=${value(item.distance, 'distance', LENGTH)}){`)
+      lines.push(`offset(${item.mode === 'delta' ? 'delta' : 'r'}=${value(item.distance, 'distance', LENGTH)}){`)
       emit(item.input, nodes, scope, current, depth + 1, 'profile'); lines.push('}')
     } else if (item.op === 'advanced_extrude') {
       const height = value(item.height, 'height', LENGTH)
