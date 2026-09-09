@@ -17,6 +17,9 @@ struct Session {
     rectify_high: BTreeMap<(String, usize, usize), f64>,
     sparse: Option<Reconstruction>,
     dense: Option<Surface>,
+    /// Opt-in GPU stages (native builds with the `gpu` feature); wasm32 and
+    /// unsupported platforms fall back to the CPU reference.
+    acceleration: photogrammetry_kernel::Acceleration,
     diagnostics: Option<Value>,
     /// Options and kernel bookkeeping between `dense_prepare` and
     /// `dense_finish` on the host-GPU (browser WebGPU) path.
@@ -547,9 +550,11 @@ impl Session {
     fn sparse(&mut self) -> Result<Vec<u8>> {
         self.sparse = None;
         self.dense = None;
+        let mut options = ReconstructionOptions::default();
+        options.feature_options.acceleration = self.acceleration;
         let outcome = photogrammetry_kernel::reconstruct_detailed(
             &self.images,
-            &ReconstructionOptions::default(),
+            &options,
             |_, _, _| true,
         );
         let mut diagnostics = report_value(&outcome.report);
@@ -564,7 +569,8 @@ impl Session {
     }
 
     fn dense(&mut self, side: usize, preset: u32) -> Result<Vec<u8>> {
-        let options = browser_dense_options(side, preset)?;
+        let mut options = browser_dense_options(side, preset)?;
+        options.acceleration = self.acceleration;
         let sparse = self
             .sparse
             .as_ref()
@@ -729,6 +735,19 @@ fn pack_sweep_payload(images: &[Image], views: &[Option<HostSweepView>]) -> Vec<
 
 /// Host-GPU (browser WebGPU) dense entry points; not part of the Value dispatch
 /// because the score stream arrives as a raw buffer.
+/// Selects the compute backend for subsequent sparse/dense runs: 0 = CPU
+/// (default), 1 = GPU (opt-in, qualified separately; falls back to CPU when no
+/// adapter or no `gpu` feature). Errors reset nothing.
+pub fn set_acceleration_host(value: u32) -> Result<Vec<u8>> {
+    let acceleration = match value {
+        0 => photogrammetry_kernel::Acceleration::Cpu,
+        1 => photogrammetry_kernel::Acceleration::Gpu,
+        _ => return Err(input("Unknown acceleration mode")),
+    };
+    PHOTO.with(|session| session.borrow_mut().acceleration = acceleration);
+    response::value(&Value::Bool(true))
+}
+
 pub fn dense_prepare_host(side: usize, preset: u32) -> Result<Value> {
     PHOTO.with(|session| session.borrow_mut().dense_prepare(side, preset))
 }

@@ -125,11 +125,26 @@ fn packed(result: Result<Value>) -> u64 {
     packed_bytes(Ok(response_bytes(result)))
 }
 
+thread_local! {
+    static LAST_RESPONSE: std::cell::Cell<(usize, usize)> = std::cell::Cell::new((0, 0));
+}
+/// Native hosts fetch responses through these (the packed u64 return truncates
+/// the pointer to 32 bits, which only wasm32 linear memory can promise).
+#[no_mangle]
+pub extern "C" fn photo_response_ptr() -> usize {
+    LAST_RESPONSE.with(|last| last.get().0)
+}
+#[no_mangle]
+pub extern "C" fn photo_response_len() -> usize {
+    LAST_RESPONSE.with(|last| last.get().1)
+}
 fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
     let bytes = result.unwrap_or_else(|message| response_bytes(Err(message)));
     let len = bytes.len();
     let ptr = Box::into_raw(bytes.into_boxed_slice()) as *mut u8 as usize;
-    ((len as u64) << 32) | ptr as u64
+    LAST_RESPONSE.with(|last| last.set((ptr, len)));
+    // wasm32 pointers fit u32; native callers use photo_response_ptr/len.
+    ((len as u64) << 32) | (ptr as u64 & 0xffff_ffff)
 }
 /// # Safety
 /// ptr/len must reference a live caller-owned allocation returned by photo_alloc.
@@ -194,6 +209,14 @@ pub extern "C" fn photo_dense(resolution: usize, preset: u32) -> u64 {
     packed_bytes(session::dispatch_bytes(
         json!({"action": "dense", "resolution": resolution, "preset": preset}),
     ))
+}
+
+/// Selects the compute backend for subsequent runs: 0 = CPU (default),
+/// 1 = GPU (native builds with the `gpu` feature; otherwise a recorded no-op
+/// that keeps the CPU reference).
+#[no_mangle]
+pub extern "C" fn photo_set_acceleration(value: u32) -> u64 {
+    packed_bytes(session::set_acceleration_host(value))
 }
 
 /// Stage 1 of the browser WebGPU dense sweep; the response value carries the

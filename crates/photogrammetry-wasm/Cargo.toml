@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib", "staticlib"]
+
+# Native builds may enable the kernel's GPU stages; wasm32 stays CPU-only.
+[features]
+gpu = ["photogrammetry-kernel/gpu"]
 [dependencies]
 photogrammetry-kernel = { path = "../photogrammetry-kernel" }
 value-codec = { path = "../value-codec" }

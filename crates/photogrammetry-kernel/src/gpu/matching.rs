@@ -214,14 +214,16 @@ impl GpuMatcher {
         });
         let packed_a = pack_descriptors(da);
         let packed_b = pack_descriptors(db);
+        // Zero-feature inputs (blank photos) still bind: wgpu rejects
+        // zero-size storage buffers.
         let buf_a = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("da"),
-            contents: &packed_a,
+            contents: if packed_a.is_empty() { &[0u8; 4] } else { &packed_a },
             usage: wgpu::BufferUsages::STORAGE,
         });
         let buf_b = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("db"),
-            contents: &packed_b,
+            contents: if packed_b.is_empty() { &[0u8; 4] } else { &packed_b },
             usage: wgpu::BufferUsages::STORAGE,
         });
         let row_bytes = (rows as u64) * 12;
