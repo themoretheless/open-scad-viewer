@@ -21,7 +21,7 @@
 flowchart TD
   UI[Vue: снимки и жизненный цикл] --> Input[photoInput: EXIF, RGB, отмена]
   Input --> Worker[Typed Worker protocol]
-  Worker --> ABI[photogrammetry-wasm: память, сессия, Value]
+  Worker --> ABI[photogrammetry-ffi: память, сессия, Value]
   ABI --> Features[features: признаки]
   Features --> Matches[matching: общий кэш и связи]
   Matches --> Seeds[seeding: ограниченные стартовые пары]

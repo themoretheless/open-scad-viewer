@@ -1,4 +1,4 @@
-# photogrammetry-wasm
+# photogrammetry-ffi
 
 Import-free host ABI for the photogrammetry kernel, compiled both to
 `wasm32-unknown-unknown` (the browser viewer) and to native dynamic/static
@@ -7,8 +7,8 @@ libraries — the same sources, the same pointer-based ABI.
 ## Native builds
 
 ```sh
-cargo build --release --manifest-path crates/Cargo.toml -p photogrammetry-wasm
-# crates/target/release/libphotogrammetry_wasm.{dylib,so} and .a
+cargo build --release --manifest-path crates/Cargo.toml -p photogrammetry-ffi
+# crates/target/release/libphotogrammetry_ffi.{dylib,so} and .a
 ```
 
 C/C++/Swift hosts use `native/photogrammetry.h`; `native/smoke.c` is the ABI

@@ -40,7 +40,7 @@ Every native sparse/surface PLY and all three dense work counters match exactly 
 
 ## Separate compiler profile contribution
 
-The workspace retains opt-level="s" and LTO. Only photogrammetry-kernel and photogrammetry-wasm use opt-level=3. The following comparison isolates the release profile: combined-size has all accepted source changes but retains the old size profile.
+The workspace retains opt-level="s" and LTO. Only photogrammetry-kernel and photogrammetry-ffi use opt-level=3. The following comparison isolates the release profile: combined-size has all accepted source changes but retains the old size profile.
 
 | Node WASM default / input | Original, s | Source changes only, s | Source changes + opt3, s |
 | --- | ---: | ---: | ---: |

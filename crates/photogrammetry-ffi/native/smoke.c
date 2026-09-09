@@ -1,4 +1,4 @@
-/* Native smoke for libphotogrammetry_wasm: ABI calls, envelope shape, GPU flag.
+/* Native smoke for libphotogrammetry_ffi: ABI calls, envelope shape, GPU flag.
  * Build: cc -O2 -o smoke smoke.c -L../../target/release -lphotogrammetry_wasm
  * Run:   DYLD_LIBRARY_PATH=../../target/release ./smoke   (macOS)
  *        LD_LIBRARY_PATH=../../target/release ./smoke     (Linux)

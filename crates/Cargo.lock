@@ -188,6 +188,7 @@ name = "geometry-bridge"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
+ "gpu-compute",
  "modelgraph-runtime",
  "modelgraph-text",
  "nurbs-kernel",
@@ -517,18 +518,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "photogrammetry-kernel"
-version = "0.1.0"
-dependencies = [
- "gpu-compute",
-]
-
-[[package]]
-name = "photogrammetry-wasm"
+name = "photogrammetry-ffi"
 version = "0.1.0"
 dependencies = [
  "photogrammetry-kernel",
  "value-codec",
+]
+
+[[package]]
+name = "photogrammetry-kernel"
+version = "0.1.0"
+dependencies = [
+ "gpu-compute",
 ]
 
 [[package]]

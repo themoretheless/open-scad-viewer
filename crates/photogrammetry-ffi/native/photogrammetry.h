@@ -1,4 +1,4 @@
-/* photogrammetry-kernel native ABI (libphotogrammetry_wasm.dylib/.so/.dll).
+/* photogrammetry-kernel native ABI (libphotogrammetry_ffi.dylib/.so/.dll).
  *
  * The same import-free ABI serves the browser WASM build and native hosts.
  * Responses are MGV1 binary envelopes ({ok, value} / {ok:false, message})
