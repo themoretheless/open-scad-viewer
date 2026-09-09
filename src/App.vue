@@ -11,6 +11,7 @@ import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import MechanicalGenerator from './features/MechanicalGenerator.vue'
 import DirectModeler from './features/DirectModeler.vue'
+import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import MainModelingTools from './features/MainModelingTools.vue'
 import ScanPlanePanel from './features/ScanPlanePanel.vue'
 import SvgPanel from './features/SvgPanel.vue'
@@ -342,8 +343,19 @@ const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
 const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
-const mainEditPast = ref<{before:string;after:string}[]>([])
-const mainEditFuture = ref<{before:string;after:string}[]>([])
+const sourceHistoryKey=()=> 'scad-source-history-v1:'+fileName.value
+const restoredMainHistory=restoreSourceHistory(storageGet(sourceHistoryKey()),code.value)
+const mainEditPast = ref(restoredMainHistory.past)
+const mainEditFuture = ref(restoredMainHistory.future)
+watch(fileName,()=>{const d=restoreSourceHistory(storageGet(sourceHistoryKey()),code.value);mainEditPast.value=d.past;mainEditFuture.value=d.future},{flush:'post'})
+watch([mainEditPast,mainEditFuture],()=>{const d=boundedSourceHistory({past:mainEditPast.value,future:mainEditFuture.value});if(!storageSet(sourceHistoryKey(),JSON.stringify(d)))notice.value='Could not persist modeling history.'},{deep:true,flush:'post'})
+const mainCameraRevision=ref(0)
+const mainSelectedIndices=ref<number[]>([])
+const mainShiftSelection=ref(false)
+const mainProject=(point:readonly number[])=>renderer?.projectWorldPoint(point)??null
+const mainRay=(x:number,y:number)=>renderer?.worldRay(x,y)??null
+let mainPreserveGroup=false
+function mainSelectMany(indices:number[]){mainSelectedIndices.value=indices;mainPreserveGroup=true;try{renderer?.selectMesh(indices[0]??null)}finally{mainPreserveGroup=false}}
 let mainPreviewActive = false
 let mainEditSelection: {source:string;index:number}|null = null
 function previewMainGeometry(meshes:MeshData[]|null) {
@@ -354,6 +366,8 @@ function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  try {
   if(source.length>MAX_WORKSPACE_SOURCE_LENGTH)throw Error('source limit')
   previewMainGeometry(null)
+  if(source===code.value)return
+  if(mainEditPast.value.at(-1)?.after!==code.value)mainEditPast.value=[]
   mainEditPast.value.push({before:code.value,after:source});while(mainEditPast.value.length>30||(mainEditPast.value.length>1&&mainEditPast.value.reduce((n,e)=>n+e.before.length+e.after.length,0)>8_000_000))mainEditPast.value.shift();mainEditFuture.value=[]
   mainEditSelection=selectIndex===null?null:{source,index:selectIndex}
   replacePresetSource(source);void nextTick(()=>doRender('full'))
@@ -786,6 +800,9 @@ async function initializeViewportRenderer() {
 function bindRendererCallbacks(instance: WebGPURenderer) {
   instance.onSelectionChange = (index, isIsolated, hit) => {
     if (activeRendererRecoveryToken !== null || mainPreviewActive) return
+    if(mainShiftSelection.value&&index!==null){const ids=new Set(mainSelectedIndices.value);ids.has(index)?ids.delete(index):ids.add(index);mainSelectedIndices.value=[...ids];if(!ids.has(index)){index=mainSelectedIndices.value.at(-1)??null;hit=null}}
+    else if(!mainPreserveGroup)mainSelectedIndices.value=index===null?[]:[index]
+    mainShiftSelection.value=false
     sceneController.applyRendererSelection(index, isIsolated, hit)
   }
   instance.onHoverChange = hit => {
@@ -1351,6 +1368,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   try {
     const publicationStartedAt = performance.now()
     const displayMeshes = response.meshes.map(withSelectionSurfaces)
+    mainSelectedIndices.value=[]
     const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
     const previousFaceHit = renderer?.currentHit
     const previousMeshes = sceneMeshes.value
@@ -1734,6 +1752,7 @@ const FACE_VIEWS: readonly StandardView[] = ['front', 'back', 'left', 'right', '
 
 /** Mirrors the renderer camera into the UI so the view cube stays truthful. */
 function syncCameraState(state: CameraState) {
+  mainCameraRevision.value++
   cameraYaw.value = state.yaw
   cameraPitch.value = state.pitch
   projection.value = state.projection
@@ -2452,8 +2471,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         @keydown="resizeEditorWithKeyboard"
       ><span /></div>
 
-      <section class="canvas-panel" :aria-label="t('viewport')">
-        <MainModelingTools :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
+      <section class="canvas-panel" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
+        <MainModelingTools :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
         <div class="viewer-toolbar">
           <button class="view-btn" type="button" :title="t('fit')" @click="fitView">⌗ <span>{{ t('fit') }}</span></button>
           <button class="view-btn icon-only" type="button" :title="t('reset')" @click="resetView">↺</button>

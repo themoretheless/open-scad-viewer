@@ -136,6 +136,7 @@ export function buildModelGraphThread(options: ThreadOptions) {
   const radialOffset = (internal ? 1 : -1) * options.clearance / 2
   return {
     source,
+    mesh: {positions: points.flat(), indices: faces.flatMap(face => [...face].reverse())},
     report: {
       generator: 'own_helical_thread', profile: 'metric_60_degree_basic_faceted', units: 'mm',
       nominal_diameter_mm: options.diameter, pitch_mm: pitch, lead_mm: starts * pitch,

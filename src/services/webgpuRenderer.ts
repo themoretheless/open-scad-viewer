@@ -292,6 +292,7 @@ export class WebGPURenderer {
   private bounds: Bounds | null = null
   private initialFitDone = false
   private projection: ProjectionMode = 'perspective'
+  private perspectiveFovY = FOV_Y
   private gridVisible = true
   private displayMode: DisplayMode = 'shaded'
   private selected: number | null = null
@@ -956,6 +957,14 @@ export class WebGPURenderer {
     return { center, radius: Math.hypot(max[0]-min[0], max[1]-min[1], max[2]-min[2]) / 2, min, max }
   }
 
+  /** Match a recovered photo camera without changing the default CAD field of view. */
+  setPerspectiveFieldOfView(radians: number) {
+    if (!Number.isFinite(radians) || radians < 0.005 || radians > Math.PI * 0.85) return
+    this.perspectiveFovY = radians
+    this.resetDepthCycle()
+    this.requestRender()
+  }
+
   fitView() {
     if (this.bounds) this.fitBounds(this.bounds)
   }
@@ -968,7 +977,7 @@ export class WebGPURenderer {
     const [x, y, z] = bounds.center
     this.tx = x; this.ty = y; this.tz = z
     const aspect = this.getAspect()
-    const halfVertical = FOV_Y / 2
+    const halfVertical = this.perspectiveFovY / 2
     const halfHorizontal = Math.atan(Math.tan(halfVertical) * aspect)
     const limitingHalfFov = Math.max(1e-6, Math.min(halfVertical, halfHorizontal))
     const radius = Math.max(bounds.radius, 0.5)
@@ -1554,7 +1563,7 @@ export class WebGPURenderer {
       distance: this.dist,
       target: [this.tx, this.ty, this.tz],
       aspect: this.getAspect(),
-      fovY: FOV_Y,
+      fovY: this.perspectiveFovY,
       projection: this.projection,
       bounds: activeBounds ?? null,
       backgroundRadius: this.gridVisible ? Math.hypot(GRID_SIZE, GRID_SIZE, GRID_SIZE) : 1,
@@ -1809,6 +1818,16 @@ export class WebGPURenderer {
     this.lastNotifiedCamera = state
     try { this.onCameraChange(state) } catch { /* UI callbacks must not break rendering. */ }
   }
+
+  /** CSS-pixel projection shared by interactive tools drawn over the native viewport. */
+  projectWorldPoint(point: readonly number[]): [number, number] | null {
+    if(!this.canvas)return null
+    const m=this.cameraState().viewProjection
+    const q=[0,1,2,3].map(r=>m[r*4]*point[0]+m[r*4+1]*point[1]+m[r*4+2]*point[2]+m[r*4+3])
+    if(q[3]<=1e-8)return null
+    return [(q[0]/q[3]+1)*this.canvas.clientWidth/2,(1-q[1]/q[3])*this.canvas.clientHeight/2]
+  }
+  worldRay(clientX:number,clientY:number){return this.rayForClientPoint(clientX,clientY)}
 
   private rayForClientPoint(clientX: number, clientY: number) {
     const canvas = this.canvas
@@ -2367,6 +2386,7 @@ export class WebGPURenderer {
         { x: e.clientX, y: e.clientY }, other,
         { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz },
         this.canvas?.clientHeight || 1,
+        this.perspectiveFovY,
       )
       this.dist = next.dist
       this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
@@ -2388,7 +2408,7 @@ export class WebGPURenderer {
     if (dx !== 0 || dy !== 0) this.lastWheelHistoryAt = -Infinity
     const camera = { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
     const next = this.pan
-      ? computePanUpdate(camera, dx, dy, this.canvas?.clientHeight || 1)
+      ? computePanUpdate(camera, dx, dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
       : computeOrbitUpdate(camera, dx, dy)
     this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
     this.tx = next.tx; this.ty = next.ty; this.tz = next.tz

@@ -28,8 +28,8 @@ export function computeOrbitUpdate(state: OrbitCameraState, dx: number, dy: numb
   return { ...state, yaw, pitch }
 }
 
-export function computePanUpdate(state: OrbitCameraState, dx: number, dy: number, viewportHeight: number): OrbitCameraState {
-  const scale = 2 * state.dist * Math.tan(FOV_Y / 2) / Math.max(1, viewportHeight)
+export function computePanUpdate(state: OrbitCameraState, dx: number, dy: number, viewportHeight: number, fovY = FOV_Y): OrbitCameraState {
+  const scale = 2 * state.dist * Math.tan(fovY / 2) / Math.max(1, viewportHeight)
   const cy = Math.cos(state.yaw), sy = Math.sin(state.yaw)
   const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch)
   const rx = cy, ry = sy
@@ -54,6 +54,7 @@ export function computePinchUpdate(
   curB: PinchPoint,
   state: PinchCameraState,
   viewportHeight: number,
+  fovY = FOV_Y,
 ): PinchCameraState {
   const prevSpan = Math.hypot(prevB.x - prevA.x, prevB.y - prevA.y)
   const curSpan = Math.hypot(curB.x - curA.x, curB.y - curA.y)
@@ -65,6 +66,6 @@ export function computePinchUpdate(
   const moved = computePanUpdate({ ...state, dist },
     (curA.x + curB.x - prevA.x - prevB.x) / 2,
     (curA.y + curB.y - prevA.y - prevB.y) / 2,
-    viewportHeight)
+    viewportHeight, fovY)
   return moved
 }

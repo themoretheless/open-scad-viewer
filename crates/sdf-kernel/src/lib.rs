@@ -656,6 +656,10 @@ impl<'de> value_codec::Deserialize<'de> for Grid {
 /// Also accepts user-defined scalar fields. Sampling is bounded; sub-cell features
 /// can be missed. A negative boundary sample is rejected rather than capped.
 pub fn polygonize_with(field: impl Fn(Point) -> f64, grid: &Grid) -> Result<Mesh> {
+    polygonize_tile(field, grid, true)
+}
+/// Extract an open tile for a caller that welds and validates the complete surface.
+pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed_bounds: bool) -> Result<Mesh> {
     if !finite(grid.min)
         || !finite(grid.max)
         || grid.cells.iter().any(|&n| n == 0 || n > 64)
@@ -689,7 +693,7 @@ pub fn polygonize_with(field: impl Fn(Point) -> f64, grid: &Grid) -> Result<Mesh
                 if !v.is_finite() {
                     return Err(Error::new("Field returned a non-finite value"));
                 }
-                if (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz) && v <= 0. {
+                if require_closed_bounds && (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz) && v <= 0. {
                     return Err(Error::new("Surface touches grid boundary; enlarge bounds"));
                 }
                 points.push(p);

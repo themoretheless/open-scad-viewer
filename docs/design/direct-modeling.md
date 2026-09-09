@@ -80,3 +80,112 @@ Source undo/redo restores the original source, and stops when unrelated edits
 make its snapshot stale. Histories are bounded by count and retained text size.
 Operations require a current completed build; the existing convex/planar limits
 for Push/Pull, edge treatment and Shell still apply.
+
+### Native viewport interaction pass
+
+- Main viewport tools now project their handles with the renderer's actual camera.
+  Move/rotate/scale gestures preview in WebGPU and commit once on pointer release.
+  Push/Pull has a face handle; edge operations draw selectable, highlighted edges.
+- Shift-click adds/removes bodies; Box select encloses projected vertices. Group
+  transforms share a world-space pivot; duplicate/delete use the entire selection.
+- Split accepts arbitrary XYZ normals and a draggable plane. Shell lets users
+  click multiple face openings. Overlaid edges/faces currently include occluded
+  geometry; use the highlighted result and preview to disambiguate.
+- Face profile opens a drawing layer over the main viewport, not DirectModeler.
+  XY drawing is also available. Rectangles, polylines, analytic circles/arcs,
+  vertex/curve handles, Trim, either-end Extend, Offset, extrusion and cut share
+  the existing geometry services. Sketch histories are local; sketches persist
+  by workplane in browser storage. Mixed line/analytic-arc wires remain unsupported.
+- Solid extensions recognize straight prisms before applying profile-based Shell
+  and longitudinal edge fillet/chamfer, including nonconvex profiles. Cylinder
+  shells use tessellated profiles. Spherical shells construct a concentric inner
+  skin and bridge the chosen openings. Arbitrary curved/nonconvex B-rep offsets
+  and general surface fillets are still outside the supported geometry envelope.
+- Added checks cover group pivots, oblique splits, nonconvex prism/sphere shells,
+  gesture commit count and sketch drawing/extrusion through mounted components.
+
+### General mesh Shell and local edge blends
+
+Unsupported specialized Shell cases now fall back to a sampled signed-distance
+construction in Rust. The material is the source interior within the requested
+thickness of retained (non-opening) faces. A BVH accelerates nearest-triangle and
+ray-parity queries. Extraction validates its final closed, positive-volume mesh.
+The requested grid step must resolve at least three samples across the wall;
+limits are 64 cells per axis and 30,000 source triangles. Openings too small to
+resolve are rejected. This reconstruction can change sub-cell detail and is not
+an analytically exact surface offset or certified Hausdorff tolerance.
+
+Unsupported specialized edge blends use a local circular cutter/filler bounded
+by the selected straight mesh edge and its two incident faces. Convex edges cut
+material; concave edges add material. Radius limits protect adjacent face extents
+and endpoints. This is a tessellated local blend, with planar end termination,
+not a general analytic rolling-ball B-rep fillet across a curved edge chain.
+
+Shell/fillet/chamfer calculations run in a cancellable worker. New requests and
+parameter/source changes terminate obsolete work; stale responses cannot apply
+geometry. The UI labels the mesh approximation and exposes Shell grid spacing.
+Tests cover a tapered nonconvex shell and edge blend, resolution rejection,
+BVH/reference signed-distance agreement, and worker supersession/error cleanup.
+
+## Main viewport CAD workbench — next 20 features (2026-09-09)
+
+Entry points: **Операции CAD**, **Размеры**, **Эскиз XY** and the existing selected-body toolbar in the main WebGPU viewport. Heavy geometry runs in a cancellable worker. Preview is temporary; Apply publishes one source edit with Undo/Redo.
+
+| # | Implemented behavior | Current boundary |
+|---|---|---|
+| 1 | Replace only top-level source calls owning changed meshes; preserve other primitives, variables, modules and comments | Changed calls become polyhedra. Ambiguous provenance is rejected; this is not a parametric feature-tree editor |
+| 2 | Persist source Undo/Redo per filename; validate matching source and chain on reload | Browser storage, 2 MB / 80 persisted entries; manual source edits start a new modeling chain |
+| 3 | Face sketches use native body/face identity; stored planes refresh after parameter rebuilds | Identity must survive. Changing operation type/topology can require reattachment; derived extrusions do not rebuild automatically |
+| 4 | Snap sketch points to coplanar vertices, feature-edge midpoints and body centers; axis movement snaps its center to collinear targets | 10 CSS-pixel threshold, 5000 candidate budget; Alt bypasses movement snapping |
+| 5 | Editable X/Y/Z dimensions drawn on selected model/group | Axis-aligned group bounds, not arbitrary annotation constraints |
+| 6 | Selected-body union, ordered difference, intersection | First selected body is the base; empty results are rejected |
+| 7 | Loft between ordered closed sketch sections | Polygonal sections, resampled to matching vertex counts; no analytic loft surface |
+| 8 | Sweep closed profile along open sketch path | Polygonal transport; self-intersecting or collapsed results may be rejected |
+| 9 | Shift-select multiple edges and specify start/end blend radii | Local straight-edge cutters; no rolling-ball corner patches or general curved edge chains |
+| 10 | Axis-directed body draft deformation | Radial mesh deformation, not a general neutral-plane face-draft solver |
+| 11 | Mirror selected bodies across arbitrary plane, copy or replace | Reverses triangle orientation to preserve outward solids |
+| 12 | Linear or arc-length path arrays of body groups | 2–100 instances; orientation stays fixed along path |
+| 13 | Align min/center/max to first body and evenly distribute | World axes; distribution spaces reference positions, not necessarily equal gaps |
+| 14 | Plain, counterbored and countersunk holes from picked face axis/origin | Explicit diameters/depths; polygonal circular cutters |
+| 15 | Internal/external helical thread geometry placed on selected body | Diameter/pitch/depth inputs; external adds a threaded rod, internal subtracts one; no automatic cylindrical face inference |
+| 16 | Hinge/slider reference, absolute position and limits saved in source comment | Two components per joint; changed component geometry invalidates reference. No linked assembly constraint propagation |
+| 17 | Pairwise intersection volume and triangle-surface minimum gap | At most two million triangle pairs; mesh result, not analytic clearance |
+| 18 | SVG/PDF vector drawing: three orthographic views, dimensions, horizontal section | All feature edges visible; no hidden-line removal or drawing standards certification |
+| 19 | STEP import/export with millimetre faceted BREP | Import accepts convex planar poly-loops, uniform m/mm. Rejects analytic BREP, void shells, mapped assemblies and converted units; interoperability beyond local round-trip is not yet verified |
+| 20 | Adaptive sparse Shell tiles skip blocks excluding the surface and weld shared boundaries | Same requested spacing in active tiles; ≤256 cells/axis, four million samples and 100000 output triangles. Not variable surface LOD; sub-cell detail may be missed |
+
+STEP topology follows [ISO 10303-42 faceted_brep](https://www.steptools.com/stds/smrl/data/resource_docs/geometric_and_topological_representation/sys/6_schema.htm) and [poly_loop / closed_shell](https://steptools.com/stds/smrl/data/resource_docs/geometric_and_topological_representation/sys/5_schema.htm). Export uses AP214 product/shape contexts and planar FACE_SURFACE entities. Unsupported input is rejected explicitly rather than partly imported.
+
+Validation: CAD geometry tests cover boolean ordering, mirror orientation, group sizing/arrays, alignment/distribution, holes/thread, Loft/Sweep, clearance, drawing structure, STEP round-trip, persistent bounded joints after a real parser rebuild, source preservation and sketch support after parameter rebuild. Adaptive Shell tests exercise cross-tile closedness above the dense-grid axis limit. Browser smoke: main CAD panel, mirror preview/apply, unchanged original source calls, Undo and reload-persisted Redo. File-picker STEP import and external CAD interchange were not browser-tested.
+
+## Surface texture generator
+
+Use **Текстура** in the main viewport toolbar after selecting a body. Available patterns: ribs, recessed grooves, diamond knurl, deterministic fuzzy skin, dimples, and waves. Pitch, height/depth, angle, detail, inversion and fuzzy seed are editable. The picked-face option uses that face's local frame and tapers displacement to zero at its boundary; whole-body mode uses world XY for periodic patterns and 3D noise for fuzzy skin.
+
+This generates actual mesh relief, retained by source edits and STL export. It is not a shader or slicer extrusion-path setting. Shared-edge uniform subdivision keeps the indexed surface connected, then vertex normals displace the refined mesh. The generator rejects excessive subdivision (40000 triangles), height above pitch/4, invalid faces, flipped triangles and invalid closed-solid results. General distant self-intersections and minimum wall thickness are not checked. Fine textures on large bodies can exceed the editor source limit; increase pitch or reduce detail. Preview is cancellable and does not edit source; Apply is undoable. CAD computations are worker-owned to avoid duplicating the geometry operations in the main bundle.
+
+Validation: six-pattern closure, source immutability, fixed selected-face borders, deterministic/different seeds, bounds rejection, and a texture/source/parser round-trip preserving unrelated source. Browser smoke applied default ribs to a 20×15×10 box: 3072 triangles, 78650-character scene source, all other three bodies retained, no reported errors, Undo available.
+
+## Solid lightening / skeletal walls
+
+Two additional volumetric modes are available under **Облегчение → Структура**: **3D узлы и стержни** and **Кость — объёмная пористость**. Both connect nodes throughout X/Y/Z and clip the result to the source signed-distance field. Spatial mode has optional cell diagonals. Bone mode jitters internal nodes, varies strut radii and blends junctions; it is an organic graph approximation, not 3D Voronoi or mechanical topology optimization.
+
+Controls include cell size, strut diameter, seed/jitter, outer skin and sampling step. Opening the +Z skin leaves the lattice struts in place. Limits are 125 nodes, 400 edges, 30000 input triangles and 64 sampling cells per axis; step must be at most diameter/2.5 and skin/2. Output is simplified toward 2600 triangles using local topology-preserving edge collapses with vertex-cluster radius bounded by 1.5 steps. Final checks reject open/degenerate meshes, increased volume and extra positive-volume components; cavity boundaries are allowed. Source budgets still apply. Minimum final thickness, global self-intersections, strength and support-free printing are not certified.
+
+Six new tests cover XYZ connectivity, seeds, both modes, closed reduced-volume output, skin opening, source/parser round-trip and limits. All 49 related tests and build checks passed. Browser spatial preview/apply on a 20×15×10 mm box produced 2600 triangles and reduced volume from 3.00 to 0.77 cm³ (74.3%), retaining the other three objects.
+
+The main viewport **Облегчение** button opens four structures: rectangular grid, diagonal triangular skeleton, honeycomb-like Voronoi cells and seeded irregular Voronoi web. Cells are inset by half the rib width, then their extruded volumes are subtracted from the original solid in one Boolean operation. All original geometry outside the cut volumes remains. Channel direction is X/Y/Z; this is an extruded wall lattice, not an arbitrary spatial truss or stress-based topology optimizer.
+
+Controls include cell size, minimum rib width, bounding-box frame, bottom/top skins measured along the channel axis, seed and jitter. The print controls use the actual extrusion line width and requested line count to reject thinner ribs; rounding to a multiple of line width is available. Z channels avoid adding transverse bridges within the generated lattice when Z is also the print direction; a top skin introduces bridging. Original geometry may still need supports. The rectangular bounding frame is not a contour-offset frame on arbitrary curved bodies. Preserve a bottom skin or increase ribs/frame if clipping would produce detached pieces.
+
+Validation rejects invalid dimensions, more than 144 sites, vanished material, non-closed output, extra disconnected components and export-scale degenerate triangles. Output volume must decrease. The panel reports percentage and cm³ before/after; no strength, stiffness, fatigue or print-time claim is made. This complements slicer infill by changing the actual exported geometry. Print preparation follows the distinction between solid geometry, wall thickness and overhangs in [Prusa's modeling guidance](https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135).
+
+A Boolean fix treats coplanar retriangulation as optional: if its multi-hole bridge heuristic fails, the stitched triangles continue through unchanged topology, intersection and orientation audits. No validation is skipped. The distribution budget increases by 10 kB for the measured ~8 kB lightening generator and controls.
+
+Verification: four patterns, repeatable/different seeds, all channel axes, complete retained bottom face, rejected sub-line ribs and generation budget, source/parser round-trip. 43 related Vitest tests and 10 native Boolean tests passed. Browser applied an irregular web to a 20×15×10 box: volume 3.00 → 1.97 cm³ (34.4% reduction), 84 triangles, other scene bodies retained and Undo available. Physical print and mechanical tests have not been performed.
+
+### Skeletal walls
+
+The volumetric modes support **Область сетки → Только стенки**. Wall depth restricts the lattice to a signed-distance band at all source surfaces, including floor and roof. The interior is optionally hollow (default) or a solid core. Outer skin remains independent: set it to zero to expose lattice openings. Existing thin-walled solids can also use whole-volume mode to lattice their existing material. This is a clipped spatial graph, not a surface-conforming remesher; disconnected results are rejected. Wall depth must span at least two sampling steps. FDM fitting respects this additional sampling bound.
+
+Geometry tests cover hollow walls versus full-volume lattice, optional solid core, closed output and rejected undersampled wall depth. Nineteen related tests, type checking, geometry build and distribution checks passed.

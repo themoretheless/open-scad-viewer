@@ -29,3 +29,28 @@ describe('main viewport editing',()=>{
  for(const cut of [false,true]){const d=mainOperation(meshes(),0,hit,'profile',{...p,cut});const v=inspectPolygonMesh(d.bodies[0].mesh).signedVolumeMm3;expect(v).toBeCloseTo(cut?992:1008)}
  })
 })
+
+it('transforms a group around its shared pivot and supports oblique cuts',()=>{
+ const m=meshes(),two=[...m,...meshes()];two[1].transform[3]=20
+ const d=mainOperation(two,0,hit,'rotate',{...p,amount:180,selection:[0,1]})
+ expect(Math.min(...d.bodies[0].mesh.positions.filter((_,i)=>i%3===0))).toBeCloseTo(20)
+ const split=mainOperation(m,0,hit,'split',{...p,normal:[1,1,0],amount:7})
+ expect(split.bodies).toHaveLength(2);expect(split.bodies.reduce((v,b)=>v+inspectPolygonMesh(b.mesh).signedVolumeMm3,0)).toBeCloseTo(1000)
+})
+it('shells nonconvex prisms through either or both end caps',()=>{
+ const body=extrudeDirectSketch({id:'l',name:'L',closed:true,points:[[0,0],[20,0],[20,10],[10,10],[10,20],[0,20]]},10,'l'),m=previewMeshes({version:1,sketches:[],bodies:[body]})
+ const t=sceneFace(m[0],null).topology,top=t.faces.findIndex(f=>f.normal[2]>.99),bottom=t.faces.findIndex(f=>f.normal[2]<-.99)
+ const picked={...hit,triangleIndex:t.faces[top].triangles[0]}
+ for(const openings of [[top],[top,bottom]]){const d=mainOperation(m,0,picked,'shell',{...p,amount:1,openings});const r=inspectPolygonMesh(d.bodies[0].mesh);expect(r.closed).toBe(true);expect(r.signedVolumeMm3).toBeGreaterThan(0);expect(r.signedVolumeMm3).toBeLessThan(3000)}
+})
+it('shells a tessellated spherical surface with a selected opening',async()=>{
+ const {revolvePolygonProfile}=await import('../src/services/polygonKernel')
+ const profile=Array.from({length:13},(_,i)=>i===0?[0,-10]:i===12?[0,10]:[10*Math.sin(i*Math.PI/12),-10*Math.cos(i*Math.PI/12)])
+ const mesh=revolvePolygonProfile(profile,360,24,true),m=previewMeshes({version:1,sketches:[],bodies:[{id:'sphere',name:'sphere',mesh}]})
+ const d=mainOperation(m,0,hit,'shell',{...p,amount:1});expect(inspectPolygonMesh(d.bodies[0].mesh).closed).toBe(true)
+})
+it('fillets a longitudinal edge on a nonconvex prism',()=>{
+ const body=extrudeDirectSketch({id:'l',name:'L',closed:true,points:[[0,0],[20,0],[20,10],[10,10],[10,20],[0,20]]},10,'l'),m=previewMeshes({version:1,sketches:[],bodies:[body]}),s=sceneFace(m[0],null)
+ const edge=s.topology.edges.findIndex(e=>Math.abs(s.body.mesh.positions[e.a*3+2]-s.body.mesh.positions[e.b*3+2])>9)
+ const d=mainOperation(m,0,hit,'fillet',{...p,amount:1,edge});expect(inspectPolygonMesh(d.bodies[0].mesh).closed).toBe(true)
+})

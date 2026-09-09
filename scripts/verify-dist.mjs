@@ -37,6 +37,7 @@ const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+
 if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
   throw new Error('Expected one shared geometry kernel chunk within 900000 bytes')
 }
-const totalBudget = 2_882_000
+// CAD workbench, lattice generation and print controls.
+const totalBudget = 2_920_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

@@ -1068,7 +1068,12 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
     // Remove internal triangulation seams before the expensive intersection
     // audit. The audit still checks the final surface, including its topology.
     if !result.indices.is_empty() {
-        result = crate::cad::simplify(&result)?;
+        // Coplanar retriangulation is an optimization; difficult multi-hole caps
+        // may fail its polygon bridge heuristic. Keep the stitched triangles in
+        // that case and run the same topology/intersection/orientation audits.
+        if let Ok(simplified) = crate::cad::simplify(&result) {
+            result = simplified;
+        }
     }
     validate_solid(&result).map_err(|e| {
         error(

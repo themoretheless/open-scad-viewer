@@ -4,6 +4,7 @@
 pub mod brep;
 mod cad;
 pub mod reconstruction;
+pub mod mesh_shell;
 use nurbs_kernel::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -264,6 +265,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "sdf_evaluate" => {
             encode(field::<sdf_kernel::Field>(&v, "field")?.evaluate(field(&v, "point")?)?)
         }
+        "mesh_spatial_lattice" => encode(mesh_shell::lattice(&field(&v,"mesh")?,field(&v,"nodes")?,field(&v,"edges")?,field(&v,"radius")?,field(&v,"skin")?,field(&v,"step")?,field(&v,"organic")?,field(&v,"openTop")?,v.get("wallDepth").and_then(|x|x.as_f64()).unwrap_or(0.),v.get("keepCore").and_then(|x|x.as_bool()).unwrap_or(false))?),
+        "mesh_shell_adaptive" => encode(mesh_shell::shell_options(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?, true)?),
+        "mesh_shell_sampled" => encode(mesh_shell::shell(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?)?),
         "sdf_tessellate" => {
             let mesh = sdf_kernel::polygonize(&field(&v, "field")?, &field(&v, "grid")?)?;
             let report = mesh.inspect()?;
