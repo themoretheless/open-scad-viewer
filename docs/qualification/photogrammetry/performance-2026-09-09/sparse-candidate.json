@@ -1,0 +1,31 @@
+{
+  "integrate": [
+    {
+      "path": "crates/photogrammetry-kernel/src/features.rs",
+      "baseline_sha256": "9030c21a69156a521eb0b9574532bd7a4a6de5c5b0f0c2c682eb4f67b5d00d52",
+      "candidate_sha256": "5bf5af85956d639da46e8c2a9172cd95bf7fb6638527db0c295e5c36b99e4b9c"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/features_tests.rs",
+      "baseline_sha256": "3af3319408d225b9f2a205d338875650f8e162221665c43fa9e53404db2e8b30",
+      "candidate_sha256": "41ab486b0bca5bd6b227bbc5e9242b8acf5e4cd149bf500821b235777284537c"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/camera.rs",
+      "baseline_sha256": "98b09e9e51b6fbbfa292e43f1fe256d3fd368316a048d0a7e8b59914ed69bb1b",
+      "candidate_sha256": "cf6c7139b20963d99bb1061614eab463df25ce23332f12d08d436ef170f32678"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/math.rs",
+      "baseline_sha256": "d465d63eccc4a72569c362e344dfab780f973fb3aeb1c6203b57e4e3dd843e0f",
+      "candidate_sha256": "19662966debcabcf34cfd4fec7d12ed62f5df30cd0eeec654d42f505a1a5671f"
+    }
+  ],
+  "do_not_integrate": [
+    "crates/photogrammetry-kernel/examples/sparse_optimization.rs",
+    "crates/photogrammetry-kernel/examples/sparse_geometry_exact.rs",
+    "crates/photogrammetry-kernel/examples/profile_pipeline.rs",
+    "reports/"
+  ],
+  "dependencies_added": false
+}

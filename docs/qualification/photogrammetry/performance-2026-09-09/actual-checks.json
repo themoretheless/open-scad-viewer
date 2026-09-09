@@ -1,0 +1,93 @@
+[
+  {
+    "check": "rust",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "photogrammetry-kernel",
+      "-p",
+      "photogrammetry-wasm",
+      "-p",
+      "value-codec",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 23.920225143432617
+  },
+  {
+    "check": "wasm-build",
+    "command": [
+      "node",
+      "scripts/build-photogrammetry.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.0812232494354248
+  },
+  {
+    "check": "typecheck-vue",
+    "command": [
+      "node",
+      "node_modules/vue-tsc/bin/vue-tsc.js",
+      "--noEmit"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 2.9413161277770996
+  },
+  {
+    "check": "typecheck-mcp",
+    "command": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "--noEmit",
+      "-p",
+      "tsconfig.mcp.json"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.953035831451416
+  },
+  {
+    "check": "vitest",
+    "command": [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--configLoader",
+      "runner",
+      "tests/photoAdapters.test.ts",
+      "tests/photoCalibration.test.ts",
+      "tests/photoCalibrationKernel.test.ts",
+      "tests/photoDensePreset.test.ts",
+      "tests/photoTransportBudget.test.ts",
+      "tests/photoWorker.test.ts",
+      "tests/photogrammetry.test.ts"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.44952893257141113
+  },
+  {
+    "check": "vite-build",
+    "command": [
+      "node",
+      "node_modules/vite/bin/vite.js",
+      "build",
+      "--configLoader",
+      "runner"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.48198413848876953
+  },
+  {
+    "check": "verify-dist",
+    "command": [
+      "node",
+      "scripts/verify-dist.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.02807903289794922
+  }
+]

@@ -1,0 +1,106 @@
+{
+  "scope": "analytic known-frame point samples, scene units; no physical scan",
+  "binary_sha256": "e6ba093d2df34e17f90b727c1d9c14d23e9953e26c618c09a5d94aa81d40f603",
+  "reference_sha256": "23385997b25cf1dbda9bffec782853393868190b0bb49bab7ed0d43e189d39ca",
+  "results": [
+    {
+      "format": "open-scad-viewer/cloud-evaluation",
+      "version": 1,
+      "metric": "point_to_point",
+      "scale_fitted": false,
+      "tolerance": 0.01,
+      "voxel_size": 0.01,
+      "input_model": 2601,
+      "input_reference": 2601,
+      "model_to_reference": {
+        "samples": 2601,
+        "mean": 0.002006144136046619,
+        "median": 0.0020159263675718748,
+        "p95": 0.0039753493575523605,
+        "maximum": 0.003999999875921112,
+        "within_tolerance": 2601
+      },
+      "reference_to_model": {
+        "samples": 2601,
+        "mean": 0.002006144136046619,
+        "median": 0.0020159263675718748,
+        "p95": 0.0039753493575523605,
+        "maximum": 0.003999999875921112,
+        "within_tolerance": 2601
+      },
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "symmetric_mean": 0.002006144136046619,
+      "evaluation_ms": 2.997292,
+      "case": "full_noisy",
+      "input_sha256": "15e64cc02c4e8ed3df95b4f35d56eb9feee7b9b504209be1fecf56544c29eaab"
+    },
+    {
+      "format": "open-scad-viewer/cloud-evaluation",
+      "version": 1,
+      "metric": "point_to_point",
+      "scale_fitted": false,
+      "tolerance": 0.01,
+      "voxel_size": 0.01,
+      "input_model": 765,
+      "input_reference": 2601,
+      "model_to_reference": {
+        "samples": 765,
+        "mean": 0,
+        "median": 0,
+        "p95": 0,
+        "maximum": 0,
+        "within_tolerance": 765
+      },
+      "reference_to_model": {
+        "samples": 2601,
+        "mean": 0.26117647058823507,
+        "median": 0.21999999999999997,
+        "p95": 0.6799999999999999,
+        "maximum": 0.72,
+        "within_tolerance": 765
+      },
+      "precision": 1,
+      "recall": 0.29411764705882354,
+      "f1": 0.45454545454545453,
+      "symmetric_mean": 0.13058823529411753,
+      "evaluation_ms": 1.660375,
+      "case": "clean_partial",
+      "input_sha256": "f409d0ad939933483bb03ddbad99e5ad265f78092fd3e8912b796a84121b5a06"
+    },
+    {
+      "format": "open-scad-viewer/cloud-evaluation",
+      "version": 1,
+      "metric": "point_to_point",
+      "scale_fitted": false,
+      "tolerance": 0.01,
+      "voxel_size": 0.01,
+      "input_model": 2601,
+      "input_reference": 2601,
+      "model_to_reference": {
+        "samples": 2601,
+        "mean": 0.017099235926526186,
+        "median": 0.008944271909999118,
+        "p95": 0.0784091831356507,
+        "maximum": 0.14142135623730964,
+        "within_tolerance": 1524
+      },
+      "reference_to_model": {
+        "samples": 2601,
+        "mean": 0.00846056676988646,
+        "median": 0.008944271909999118,
+        "p95": 0.01280624847486578,
+        "maximum": 0.01414213562373112,
+        "within_tolerance": 1524
+      },
+      "precision": 0.5859284890426759,
+      "recall": 0.5859284890426759,
+      "f1": 0.5859284890426759,
+      "symmetric_mean": 0.012779901348206323,
+      "evaluation_ms": 3.3385,
+      "case": "wrong_scale",
+      "input_sha256": "2af5b95bfc62af04a0c2029ca1e5a3a111d520d85e6d8c59ceabb5db1676ab92"
+    }
+  ]
+}

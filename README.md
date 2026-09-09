@@ -70,6 +70,10 @@ The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge aut
   two-point measurements, virtual section-plane clipping, and viewport-scoped shortcuts.
 - Lightweight OpenSCAD Customizer controls for top-level literal variables,
   including `// [min:step:max]` sliders and choice lists.
+- Built-in function reference from the editor toolbar, command palette, or F1:
+  searchable RU/EN descriptions, signatures, parameters, and copyable examples
+  for OpenSCAD and ModelGraph Text. It opens in the current document's language;
+  select a function name in the editor and press F1 to look it up.
 - Binary STL and OBJ export with object transforms baked into the result.
 - Optional local MCP server with typed OpenSCAD tools/resources and a
   persistent DuckDB catalog for models, revisions, builds, and bounded exports.

@@ -1,0 +1,9 @@
+import {compileTextRust} from '../src/services/geometryRustKernel'
+import {compileModelGraph} from '../src/services/modelGraph'
+import {parseOpenSCAD} from '../src/services/openscadParser'
+import {readFileSync} from 'node:fs'
+const g:any=compileTextRust(readFileSync('examples/skadis-box/skadis-dovetail.modelgraph.scad','utf8'))
+for(const root of ['n23','n35','n55','n50','n56','n54','n57','n80','n83','n73','n84','n95']){
+ const reachable=new Set<string>();function visit(id:string){if(reachable.has(id))return;reachable.add(id);const n=g.nodes.find((n:any)=>n.id===id);for(const child of [n.input,n.base,...(n.inputs??[]),...(n.subtract??[]),n.then,n.else].filter(Boolean))visit(child)}visit(root)
+ try{const c=compileModelGraph({language:'modelgraph/1',units:'mm',nodes:g.nodes.filter((n:any)=>reachable.has(n.id)),parameters:g.parameters,root,segments:40});const start=performance.now();let r=await parseOpenSCAD(c.source);console.log(root,Math.round(performance.now()-start),r.volume,r.meshes.map(m=>m.indices.length/3))}catch(e){console.log(root,String(e))}
+}

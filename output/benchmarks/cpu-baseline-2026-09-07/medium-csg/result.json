@@ -1,0 +1,4468 @@
+{
+  "schemaVersion": 1,
+  "kind": "cpu-fixture",
+  "fixture": {
+    "id": "medium-csg",
+    "description": "64 cylindrical cuts in a panel; boolean evaluation and mesh analysis.",
+    "source": "$fn=32;\ndifference() {\n  cube([86,86,8], center=true);\n  translate([-35,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([5,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([15,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([25,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([35,-35,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([5,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([15,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([25,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([35,-25,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([5,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([15,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([25,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([35,-15,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([5,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([15,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([25,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([35,-5,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,5,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,5,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,5,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,5,0]) cylinder(h=12, r=3, center=true);\n  translate([5,5,0]) cylinder(h=12, r=3, center=true);\n  translate([15,5,0]) cylinder(h=12, r=3, center=true);\n  translate([25,5,0]) cylinder(h=12, r=3, center=true);\n  translate([35,5,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,15,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,15,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,15,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,15,0]) cylinder(h=12, r=3, center=true);\n  translate([5,15,0]) cylinder(h=12, r=3, center=true);\n  translate([15,15,0]) cylinder(h=12, r=3, center=true);\n  translate([25,15,0]) cylinder(h=12, r=3, center=true);\n  translate([35,15,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,25,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,25,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,25,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,25,0]) cylinder(h=12, r=3, center=true);\n  translate([5,25,0]) cylinder(h=12, r=3, center=true);\n  translate([15,25,0]) cylinder(h=12, r=3, center=true);\n  translate([25,25,0]) cylinder(h=12, r=3, center=true);\n  translate([35,25,0]) cylinder(h=12, r=3, center=true);\n  translate([-35,35,0]) cylinder(h=12, r=3, center=true);\n  translate([-25,35,0]) cylinder(h=12, r=3, center=true);\n  translate([-15,35,0]) cylinder(h=12, r=3, center=true);\n  translate([-5,35,0]) cylinder(h=12, r=3, center=true);\n  translate([5,35,0]) cylinder(h=12, r=3, center=true);\n  translate([15,35,0]) cylinder(h=12, r=3, center=true);\n  translate([25,35,0]) cylinder(h=12, r=3, center=true);\n  translate([35,35,0]) cylinder(h=12, r=3, center=true);\n}",
+    "sourceSha256": "4302049cd2881a11a2975d6496086a6ad34018bb76ffe5da9ead1daa78c9c561",
+    "sourceBytes": 3736
+  },
+  "source": {
+    "head": "500acde1cc47899b16bbbbe761404f32ff5b6759",
+    "status": "M README.md\n M docs/languages/modelgraph-1-prompt.md\n M src/App.vue\n M src/mcp/modelGraphTools.ts\n M src/services/commandRegistry.ts\n M src/services/modelGraph.ts\n M src/services/openScadImport.ts\n M src/services/webgpuRenderer.ts\n M tests/webgpuRendererCamera.test.ts\n M tests/webgpuRendererResources.test.ts\n?? benchmarks/cpu-fixtures.mjs\n?? benchmarks/gpu.html\n?? benchmarks/gpu.ts\n?? docs/design/performance-benchmarks.md\n?? output/benchmarks/cpu-baseline-2026-09-07/manifest.json\n?? output/benchmarks/cpu-baseline-2026-09-07/small-bracket/build.cpuprofile\n?? output/benchmarks/cpu-baseline-2026-09-07/small-bracket/build.heapprofile\n?? output/benchmarks/cpu-baseline-2026-09-07/small-bracket/result.json\n?? output/benchmarks/cpu-baseline-2026-09-07/small-bracket/stl.cpuprofile\n?? output/benchmarks/cpu-baseline-2026-09-07/small-bracket/stl.heapprofile\n?? output/benchmarks/cpu-smoke-2026-09-07/failure.json\n?? output/benchmarks/cpu-smoke-2026-09-07/manifest.json\n?? output/benchmarks/cpu-smoke2-2026-09-07/failure.json\n?? output/benchmarks/cpu-smoke2-2026-09-07/manifest.json\n?? output/benchmarks/cpu-smoke3-2026-09-07/manifest.json\n?? output/benchmarks/cpu-smoke3-2026-09-07/report.json\n?? output/benchmarks/cpu-smoke3-2026-09-07/small-bracket/build.cpuprofile\n?? output/benchmarks/cpu-smoke3-2026-09-07/small-bracket/build.heapprofile\n?? output/benchmarks/cpu-smoke3-2026-09-07/small-bracket/result.json\n?? output/benchmarks/cpu-smoke3-2026-09-07/small-bracket/stl.cpuprofile\n?? output/benchmarks/cpu-smoke3-2026-09-07/small-bracket/stl.heapprofile\n?? output/pdf/rectangular_sling_macbook_air_13_A4.pdf\n?? output/pdf/shoulder_bag_30x18x8_A4.pdf\n?? output/pdf/shoulder_bag_30x18x8_fullscale.svg\n?? output/pdf/shoulder_sling_macbook13_fullscale.svg\n?? scripts/bench-cpu.mjs\n?? scripts/bench-gpu.mjs\n?? src/features/ScanPlanePanel.vue\n?? src/features/SvgPanel.vue\n?? src/features/scanPlaneAnimation.ts\n?? src/mcp/modelGraphSvgTools.ts\n?? src/services/orbitCameraProjection.ts\n?? src/services/svgGeometry.ts\n?? tests/orbitCameraProjection.test.ts\n?? tests/scanPlaneAnimation.test.ts\n?? tests/svgGeometry.test.ts",
+    "inputSha256": "b9b781fd33375e2066800c4beb466bec6f63d2fe2c2c365c9f683776b54b23f3",
+    "files": [
+      {
+        "path": "benchmarks/cpu-fixtures.mjs",
+        "sha256": "05ce4a5701b400eed9eff97d6134b7c550137695d6cc5ee58c89bae62bf12327"
+      },
+      {
+        "path": "benchmarks/gpu.html",
+        "sha256": "aefd19e6ea526eadb83dc921369c25505b1141ba4981fe40ef1c24668ad14cf1"
+      },
+      {
+        "path": "benchmarks/gpu.ts",
+        "sha256": "572eca7dc6ecd3e66aa792858cffcac7123b3595c6630a4cd09fc966df7ede91"
+      },
+      {
+        "path": "env.d.ts",
+        "sha256": "7a0786cb3ff6878169f210badeb72bd06bef394afdb9f626ba4b84a6d328b1e6"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e66b694dab2fe923d4b7ef66cd433a00ebdfda919a5887370ee2c85084d8a043"
+      },
+      {
+        "path": "package.json",
+        "sha256": "b3673fc094c039c19b530ec61884b28366a22ed76dfe50d8fed16aaa7fd20f6f"
+      },
+      {
+        "path": "scripts/bench-cpu.mjs",
+        "sha256": "8fed7690d0a5d2a18d815bab4498215e200a0ac11b3a48cac46d0e403c475fcd"
+      },
+      {
+        "path": "scripts/bench-gpu.mjs",
+        "sha256": "c02ee25ec9b86848b1c4e2507b1699244b1f107e083af5877dd00cce034cac11"
+      },
+      {
+        "path": "scripts/export-modelgraph-language.mjs",
+        "sha256": "3d93483919a85e81ae393d838e29269a1e16e11160a7492b306232a5a92b83d1"
+      },
+      {
+        "path": "scripts/export-modelgraph-nurbs-language.mjs",
+        "sha256": "fe7f23ac57860fe407813fb13457f5c6b616d9f98ddbeb61733ff6b84a3f755c"
+      },
+      {
+        "path": "scripts/official-openscad-runtime.mjs",
+        "sha256": "e4a69097435f768dbdfba312447eca5ad1ca0ef66fa9e00c0708ecaf038026f9"
+      },
+      {
+        "path": "scripts/package-modelgraph-plugin.mjs",
+        "sha256": "1b86ebc24d870d6f11db82542bc15fa1e330a5a4e016dd7672d1b9063051a0f9"
+      },
+      {
+        "path": "scripts/qualificationPlaywrightPackage.mjs",
+        "sha256": "6368a5c8ff653fe1fd598faceb5c4e4a8587553dc4c66bab9411408cafb785ce"
+      },
+      {
+        "path": "scripts/run-browser-qualification-supervisor.mjs",
+        "sha256": "6a31bd2a4e7fd6b504ad2d2633a0f39de33a04b9db41ebf5885adafe50435a42"
+      },
+      {
+        "path": "scripts/run-browser-qualification.mjs",
+        "sha256": "bd5f99b80b8f420efc25559ba4440fcf8e4805b0f4a8f7ee5497d5b02f3d80dd"
+      },
+      {
+        "path": "scripts/run-manifold-g1-memory-qualification.mjs",
+        "sha256": "d65eda0efae4623d7a811fc8855a37d8ff4a33cd0deddadae35046b1b37c8c97"
+      },
+      {
+        "path": "scripts/smoke-modelgraph-plugin.mjs",
+        "sha256": "f08b50156f210d97b2f3b91c4d7eb6e4eb4b30b15cf4e29bab11be68a87f040f"
+      },
+      {
+        "path": "scripts/verify-dist.mjs",
+        "sha256": "b24c864758b2b95eec57143f8baebe25438f4518ce1fed925995da6f4f55a6c0"
+      },
+      {
+        "path": "src/App.vue",
+        "sha256": "6252a861a2067bb9261dad5cb2e8855f7239a1ce48fd30911f54c312e678a554"
+      },
+      {
+        "path": "src/components/CommandPalette.vue",
+        "sha256": "babce908f16be6f72be5bd5d63086674713b54591585fa1f753d6705f161a0f7"
+      },
+      {
+        "path": "src/components/CustomizerPanel.vue",
+        "sha256": "97edf14eac9d6f192f8b009b8adc9576b039059f5016ac5f35c4b69fecc8f510"
+      },
+      {
+        "path": "src/components/ExampleGallery.vue",
+        "sha256": "7fd8fdb2803e979ecda8ef972847dd258172287cf2a08a1e45b94b532dae5e43"
+      },
+      {
+        "path": "src/components/InspectPanel.vue",
+        "sha256": "3779bc33f023343d42a312c726accb9e2a8cd03b8a5c12d05029c1dc15066425"
+      },
+      {
+        "path": "src/components/KeyboardShortcuts.vue",
+        "sha256": "1b65bda339d55844aa0eda495fce488b15b2b8372a1fd1f920512fc066545c40"
+      },
+      {
+        "path": "src/components/SceneOutliner.vue",
+        "sha256": "5fe5ce6948127a25203e0e06fdc495616dd2971ceac5a1de7832bc6916d61ecb"
+      },
+      {
+        "path": "src/components/ViewCube.vue",
+        "sha256": "0bf4ca09d69fa876c88348931485f8a1c1cf85ccd13438fc7349295536da6adc"
+      },
+      {
+        "path": "src/components/cadPanels.types.ts",
+        "sha256": "70c4b50439e07ead8a2c0df79da4aae64d21f754021ced9b40d353dda93da87f"
+      },
+      {
+        "path": "src/config/index.ts",
+        "sha256": "fb6fe6f78ec5bde07b7a7ba037b07bf63754741f3fc903fff9f3cb207a68fc67"
+      },
+      {
+        "path": "src/core/build.ts",
+        "sha256": "5830b30607e47baba9e760637f284bd3ece5a1858f545d500450e549e72f6011"
+      },
+      {
+        "path": "src/core/geometryExecution.ts",
+        "sha256": "4bc4c7862849af31d2407c439f6dab95a97bea2b39bb6396488a3b74e41737a3"
+      },
+      {
+        "path": "src/core/geometryRouting.ts",
+        "sha256": "929a67a383c3b31be93d85880415d2c0da78eb02a4c4a1b93724b73bd585cb05"
+      },
+      {
+        "path": "src/core/languageContract.ts",
+        "sha256": "ee3c9bad28f4fc64e379adc0658acdf4aca225046d82b0dd3e0dce70f37fab4d"
+      },
+      {
+        "path": "src/core/mesh.ts",
+        "sha256": "e3e004796bd9d69de95aced2135375671f8c65b01bdf6ac44661701c6d5cc47a"
+      },
+      {
+        "path": "src/core/openScad2021Contract.ts",
+        "sha256": "5c46c2e731d5f64dd370916de36884a37ef76559bec15c4d743e28acfda5b80f"
+      },
+      {
+        "path": "src/core/qualityTargets.ts",
+        "sha256": "0e31c35b22908fb52a5b457b6df89fcb30e962ffa642769e06443a66b004990b"
+      },
+      {
+        "path": "src/core/scene.ts",
+        "sha256": "3971acbe2defdcdca168b24356b9f2c2551841028d66c04b608764698556b66a"
+      },
+      {
+        "path": "src/core/semanticProgram.ts",
+        "sha256": "362f04f01542725cfdc4c3dfa6ceb1ac873b4da4f45609d3dc01a44464b39e99"
+      },
+      {
+        "path": "src/core/sha256.ts",
+        "sha256": "6a77e763817c7f99acc137fdf307ab252159b47f668ee0ef299bbb16743fd615"
+      },
+      {
+        "path": "src/data/examples.ts",
+        "sha256": "05271c86bfefc551c59e76cc796e9981914d63ca34c3d20751885f46643c48a7"
+      },
+      {
+        "path": "src/features/MechanicalGenerator.vue",
+        "sha256": "e88e2670703f2a62498bc1bc1f911eba3a2e4c6d29b887c4d4e72cf3669b0d7e"
+      },
+      {
+        "path": "src/features/ScanPlanePanel.vue",
+        "sha256": "c5121a1869f30ff42b4ea8db62ebb2cfa3c8e83ef87d950fe4e25235c1194c58"
+      },
+      {
+        "path": "src/features/SvgPanel.vue",
+        "sha256": "8a2c1704936241783bc3e6da3467ed214361e2cd47f6a1817fddf4dbebe8179e"
+      },
+      {
+        "path": "src/features/scanPlaneAnimation.ts",
+        "sha256": "9e0bae666d6d16307a0d2a28f0dee192422bc179ff09d3811b9acfd41af48935"
+      },
+      {
+        "path": "src/harfbuzzjs.d.ts",
+        "sha256": "514fa7a7aed2cb1d193e9f448f2be6770b3872120b5f909beffe684f64044b78"
+      },
+      {
+        "path": "src/i18n/index.ts",
+        "sha256": "f40f3c881c810a374fc94f8f727f8a6917fe52cbb59d34c4c1fd1df7f86a0fca"
+      },
+      {
+        "path": "src/main.ts",
+        "sha256": "158bc96b6fecb79ae6502ec7e34ad041fcf275ffc9be881ff44f99728af4637a"
+      },
+      {
+        "path": "src/mcp/boundedTransport.ts",
+        "sha256": "c5618d55c1d9a67dda871371ced3ff307f26478413857f84b44c2e82eb5afd27"
+      },
+      {
+        "path": "src/mcp/createModelGraphServer.ts",
+        "sha256": "4e2384833d67ff10003d1e31374fbfae3df1c841fa2bf20bdefd57b88fc157e5"
+      },
+      {
+        "path": "src/mcp/createServer.ts",
+        "sha256": "26d36774389a916182f4823fb769df585b49c519492cd21b4e0704b7f0f6a0ba"
+      },
+      {
+        "path": "src/mcp/directGeometry.worker.mjs",
+        "sha256": "826e8b09a2c3c6fd029025b9099f9fa70cf948de411c501bbfa079bbaf38fe21"
+      },
+      {
+        "path": "src/mcp/directGeometry.worker.ts",
+        "sha256": "9d9f65b5c5da061c34c7b245844aa5043ef2d3f9097c722e0935d5262d39c1b3"
+      },
+      {
+        "path": "src/mcp/directGeometryProtocol.ts",
+        "sha256": "a4dbb6d46ff06352a7b659101edd4249e3d6a27a496fc61caa8bb277bcdf988a"
+      },
+      {
+        "path": "src/mcp/directGeometrySupervisor.ts",
+        "sha256": "8d38c4e2c62bc6b85c5816b04aa81e15c210434a5e04b3f6f709b283a17cebca"
+      },
+      {
+        "path": "src/mcp/duckdbModelStore.ts",
+        "sha256": "257457524f7a2e1b7652fa9a78f3025f671f2e9e2348e265385be76ee3171b7c"
+      },
+      {
+        "path": "src/mcp/engineManifest.ts",
+        "sha256": "3fb285f82520ffa46c607e515e2a3525b2b6d7886d5d103d24f3be1f1e0d2e24"
+      },
+      {
+        "path": "src/mcp/errorContract.ts",
+        "sha256": "6c5e53ef2833427b19b5eb866e8cc96fdf47fe463eaa1bedc0dfb04fa85351ff"
+      },
+      {
+        "path": "src/mcp/geometryService.ts",
+        "sha256": "8e20c1fe0bcbefabce82bb2aa482372a8e3ed0896f71de666bcc317ff914fafa"
+      },
+      {
+        "path": "src/mcp/independentArtifactCache.ts",
+        "sha256": "6fa69240fb5c75c9c3fa28f57fcec28dffe69abe8a040bc7fe9eb063522f204c"
+      },
+      {
+        "path": "src/mcp/independentOpenScadExecution.ts",
+        "sha256": "a48723cc1d712b509917513d7e6bbf6129c9eb670b49827c013683c7cc3d062b"
+      },
+      {
+        "path": "src/mcp/manifoldPlanQualification.worker.mjs",
+        "sha256": "01184aa65fdb4d99fddf4697b749ee82e0ef34895efaf5e2d7ffee7916e3184d"
+      },
+      {
+        "path": "src/mcp/manifoldPlanQualification.worker.ts",
+        "sha256": "de14ac1c9a805f378543a22c48069496171306fead2bf41c8f6b90dac02ea002"
+      },
+      {
+        "path": "src/mcp/manifoldPlanQualificationSupervisor.ts",
+        "sha256": "939cffeaf157c1b4e4c0c40463818f1d5153525f83a226fcf3908c95d3dc17a9"
+      },
+      {
+        "path": "src/mcp/modelGraphGenerate.ts",
+        "sha256": "938091aec9639bf810f653b028eaf46516656f9809ad63f71eb3af9675181703"
+      },
+      {
+        "path": "src/mcp/modelGraphHttp.ts",
+        "sha256": "74ada4db657c82b584d0b4c51283f9e13c70cdfce49d375c3cfe3a65c8008419"
+      },
+      {
+        "path": "src/mcp/modelGraphInterference.ts",
+        "sha256": "fa29dc69b5b456c808e0ab8cc136cfbe31dd0e8ae4f4ba1e7ab7bf3cc4d3e723"
+      },
+      {
+        "path": "src/mcp/modelGraphMeshExport.ts",
+        "sha256": "0297390535d044dc83583b41ae08b6a19a7a64261ae4ba7eb74b3cadc0e0f404"
+      },
+      {
+        "path": "src/mcp/modelGraphModify.ts",
+        "sha256": "e23c698d42a24c4ad924aa271e4d54d058169c86cceb6c4bc54ae326e80b3d1b"
+      },
+      {
+        "path": "src/mcp/modelGraphNurbsRuntime.ts",
+        "sha256": "615261387cb6087b064d5d191798c49141430b05c31da67da6e417f9b4e481a8"
+      },
+      {
+        "path": "src/mcp/modelGraphNurbsTools.ts",
+        "sha256": "7ade9ec1455d11d59a614828010a30328a24a28ba412b3632ab42ddba497db5c"
+      },
+      {
+        "path": "src/mcp/modelGraphPreview.ts",
+        "sha256": "aea06970002d09ced3f822b84c604c140828c74da14173af16c760a3068bca4e"
+      },
+      {
+        "path": "src/mcp/modelGraphReport.ts",
+        "sha256": "850340db829c9de8ce5c6dc137e1d520c8f3920bdd825ec7d3793ef714b5956b"
+      },
+      {
+        "path": "src/mcp/modelGraphSvgTools.ts",
+        "sha256": "b71a5e3af03a9df1fa1a93a5572c640ebec3ea1e977779b4ba76c4d2501f5c35"
+      },
+      {
+        "path": "src/mcp/modelGraphTools.ts",
+        "sha256": "231b95d0fdf36592f25e55b61fe9a76cb03508ffc4acc6cf33532ad7f55d98d2"
+      },
+      {
+        "path": "src/mcp/modelStore.ts",
+        "sha256": "4a5ce51b8efa2117e03f6b16f6d4ec39c9d6cfa67301e08b3b9dcdfbbad7fada"
+      },
+      {
+        "path": "src/mcp/officialArtifactCache.ts",
+        "sha256": "1afd0a2e9b595ac16c840f7b81969509b9be8d448a255e107a25dcfc3508584c"
+      },
+      {
+        "path": "src/mcp/officialOpenScadRuntimePatch.ts",
+        "sha256": "6799a4374b26135c382b672ecca17c597db25437f7d9cec928731d509813cfb8"
+      },
+      {
+        "path": "src/mcp/officialOpenScadRuntimeProtocol.ts",
+        "sha256": "36fc460aae84b8f59c4e795f2bfb3c3bbf8f6f559bc595fd1ef9fe253d522fca"
+      },
+      {
+        "path": "src/mcp/officialOpenScadRuntimeRunner.mjs",
+        "sha256": "de62eaffc98de087f6a9ca8e0b873139b128f34b0d1c114af17705313b2e4279"
+      },
+      {
+        "path": "src/mcp/officialOpenScadRuntimeService.ts",
+        "sha256": "439be6469dc643dc12f6cfee3745f145811cd2256cd4e77062d41e6b940f1be4"
+      },
+      {
+        "path": "src/mcp/ownNurbsProcess.ts",
+        "sha256": "2312f5119c85df861901320e5c6770b090c8a13a4917ee825e0a6952b8ff58e8"
+      },
+      {
+        "path": "src/mcp/publicError.ts",
+        "sha256": "0beea98441f07746f3ace9f65e79cfa08f074188bd56318fc6add59e366bb189"
+      },
+      {
+        "path": "src/mcp/server.ts",
+        "sha256": "96434218ac70e0f3e78d8e814e1156d4a10673a61193c5bde0862955e01b11fd"
+      },
+      {
+        "path": "src/parser/geometry.ts",
+        "sha256": "97cb7adda0c6bf3702ce9a4965e844d528182fff40c602816fd4444c231572a8"
+      },
+      {
+        "path": "src/parser/limits.ts",
+        "sha256": "cf1ac5097955bba513230000b4c71f88fe1d765ba139194f0630f46e503c6f88"
+      },
+      {
+        "path": "src/renderer/shaders.ts",
+        "sha256": "f06b6d3fba30ef8b42886ce02edb22668d048102a31e005a30a4cb19b14f81a5"
+      },
+      {
+        "path": "src/services/autoBuildScheduler.ts",
+        "sha256": "305e893b8ce80d0a9d3f6a29a1f56d6230ef2fda580677f196f20ccc97507ce6"
+      },
+      {
+        "path": "src/services/backendQuality.ts",
+        "sha256": "66a10ba849cd3f848dba180b6f1529604ed664652337f9b515eba88d03a7824f"
+      },
+      {
+        "path": "src/services/buildCoordinator.ts",
+        "sha256": "d8b5e400eeccfafb41d485e3c3e60b032d16c593d65bba341d85bb84928b1b5a"
+      },
+      {
+        "path": "src/services/buildPerformance.ts",
+        "sha256": "b2befe303fe76f35ca33440b61950a77bd91dc1765c5e08f1bcbdece31e215c8"
+      },
+      {
+        "path": "src/services/buildPromotionPolicy.ts",
+        "sha256": "322c267b769460f24e2683fe6e4ce06f7beb7666433604685c4bb80b6e255427"
+      },
+      {
+        "path": "src/services/cameraGestures.ts",
+        "sha256": "09971effc1accb59b7be43ef775b9a1b8435f7a8ac215d14e32f394c7553b2e5"
+      },
+      {
+        "path": "src/services/cameraHistory.ts",
+        "sha256": "1a16ea83843ba3bc4f6a111e39e886f988ca8a17dde98e5c79dd957adb52bdc7"
+      },
+      {
+        "path": "src/services/commandRegistry.ts",
+        "sha256": "dde190362a585dd666badf5092455fcc23951f0fd2546a987d030eea986e1cc5"
+      },
+      {
+        "path": "src/services/commandSearch.ts",
+        "sha256": "f1729e63cf2e411e9fe547c919f999a39b940c04aa50d93406d122164247b0c6"
+      },
+      {
+        "path": "src/services/editorDiagnostics.ts",
+        "sha256": "6f3cf056b309439864055f51947ba4debc0c68478b137a419d8151edb81e7602"
+      },
+      {
+        "path": "src/services/exampleCatalog.ts",
+        "sha256": "b4f460ae27095eefb282af9da81b6a1639fcf8c4c348ef6fb823ea275ec49427"
+      },
+      {
+        "path": "src/services/geometryBuildEngine.ts",
+        "sha256": "54538f86391d83975afb115c3447c9229cf49e0bd58eb1ea249a12ff3dbd93eb"
+      },
+      {
+        "path": "src/services/geometryCompute.ts",
+        "sha256": "882cbd95d9007593ab15de2cdf97cd3bf04d8c26eed616b7b5538f9f2944fa26"
+      },
+      {
+        "path": "src/services/geometryKernel.ts",
+        "sha256": "7e2e7723392eac3848c712893afc24e5ce391edc4949bb758bf9fe288fe27615"
+      },
+      {
+        "path": "src/services/geometryWorkerProtocol.ts",
+        "sha256": "8afb9a5109ea3aacdce9b01ee12607d68a1d7746be3385c79b0d9584a5d572bd"
+      },
+      {
+        "path": "src/services/layoutSizing.ts",
+        "sha256": "26b1a951f62de16e173dd9d1d0e3e1c4bebdc7b5a5b515431d0174836e1221bf"
+      },
+      {
+        "path": "src/services/legacyV5Assembler.ts",
+        "sha256": "cce094a1256a1ad444681783f1b1b416fdf1564adc4bf906947f76fce9ea8e9a"
+      },
+      {
+        "path": "src/services/manifoldGeometryKernel.ts",
+        "sha256": "79e8669405b577a02da051c1b9f6563dced26ea2ca013438fbad7b1f260a6a87"
+      },
+      {
+        "path": "src/services/manifoldKernelOps.ts",
+        "sha256": "2ed3f1d866b965240aa764e382fba60eab0e33878379e187f6063a37cba15d34"
+      },
+      {
+        "path": "src/services/manifoldPlanBackend.ts",
+        "sha256": "07272f65c0a58959b9179b78f336811674a5d89aea2b09cfd5e190286d8d477e"
+      },
+      {
+        "path": "src/services/manifoldPlanEvaluator.ts",
+        "sha256": "c47efa38221805a09fe94838717c664f36e6746a77574db5d28d0d910ae5fc2f"
+      },
+      {
+        "path": "src/services/manifoldPlanQualificationProtocol.ts",
+        "sha256": "5954a879fbc3619b1b9aa30516c709a98777e768ab6f368c7d8ece8490f3496f"
+      },
+      {
+        "path": "src/services/manifoldPlanQualificationWorkerLane.ts",
+        "sha256": "3afa9d487455ba8a05e4768189602b7156530d585773e0a0147ccd7c9b8b1dbe"
+      },
+      {
+        "path": "src/services/math3d.ts",
+        "sha256": "74d2d64fa530ab6d011bbb2f15cf297bbbcd0b5efb6c71917bfbb16a59552d3b"
+      },
+      {
+        "path": "src/services/mechanicalGeneratorContract.ts",
+        "sha256": "ac7e761d2222c195d5a169a4e6d2db071c839caa7fe16df34e87db315572daa8"
+      },
+      {
+        "path": "src/services/meshBvh.ts",
+        "sha256": "69b0107ae0ee3389117fe2e82ec189f495b8c98482c92a248a9628cae5cb2cc4"
+      },
+      {
+        "path": "src/services/meshExport.ts",
+        "sha256": "889de64117266cd3feb27c96c2df98e3c416e97d3accf666de1a4c858a01b72f"
+      },
+      {
+        "path": "src/services/meshExportAdapter.ts",
+        "sha256": "46c45710245ae7287fecd28877b4b866b37a5dadde8448eaf524ea6cce3a56c3"
+      },
+      {
+        "path": "src/services/meshExportFormats.ts",
+        "sha256": "426fa66fc39c9c9a8d3d2cf57370822701f72a43feec66c780daf0e245faede3"
+      },
+      {
+        "path": "src/services/meshInspection.ts",
+        "sha256": "5f011a4c43df38aa0b3495b4650813c56c4166db5bb51980761686b601aa136f"
+      },
+      {
+        "path": "src/services/meshSelectionOverlay.ts",
+        "sha256": "be2d1608931bf164514b6f1a5b5940e9c99ae5508aaeda5fdde5fb36e495fcf5"
+      },
+      {
+        "path": "src/services/meshTopology.ts",
+        "sha256": "98a485c8406a68bfd4330b31869d1ffcd46ed364de9bcc2afb9d51df14d56c37"
+      },
+      {
+        "path": "src/services/modelGraph.ts",
+        "sha256": "d5d2e0e6ff25c4ad4f44f696e036bc53c2dbe05980f1a685c1f8820998fa5ea2"
+      },
+      {
+        "path": "src/services/modelGraphAssembly.ts",
+        "sha256": "f56e9e033bad08c103613e6cc96dfe147dd76672cfddcc6bf93053c5be5a008f"
+      },
+      {
+        "path": "src/services/modelGraphGears.ts",
+        "sha256": "d6a39728a51b6a10dd07878f2f450db05c7921f16e0733d26a723f487f8d2061"
+      },
+      {
+        "path": "src/services/modelGraphLoft.ts",
+        "sha256": "6071b8853a3062cf1e517e6370021f743509c89b36e708905c3df594d61725fc"
+      },
+      {
+        "path": "src/services/modelGraphNurbs.ts",
+        "sha256": "e1688f41403ff82f9c7ac7404c8788428337c63f76fc8eef88f9f8da80c11c90"
+      },
+      {
+        "path": "src/services/modelGraphNurbsKernel.ts",
+        "sha256": "038d406f582fa550d4bcca111f057c4cec086320b641a1fb3e972c141effd62b"
+      },
+      {
+        "path": "src/services/modelGraphPlanetary.ts",
+        "sha256": "8bcfd819945edb5f4818f5a61b30e278036845d20d1f5f0900034e26f0668eb3"
+      },
+      {
+        "path": "src/services/modelGraphProfiles.ts",
+        "sha256": "e41c7e8bccb9be36ca5b74ec877e060722df549d5edf0d68cc8805f82ac57718"
+      },
+      {
+        "path": "src/services/modelGraphSketch.ts",
+        "sha256": "3a876c488b005dab81157e0fd9a75515c79c991d684f1feae2a2393e589d6b6d"
+      },
+      {
+        "path": "src/services/modelGraphThreads.ts",
+        "sha256": "3e3304b695cdf9b8cc5030300be4cbd527bad65760512f3343c0ba93d7599fd3"
+      },
+      {
+        "path": "src/services/modelGraphUnits.ts",
+        "sha256": "2da8856f1117f8c1310d37958c13637cb9ced8a4469926a83db885a7573edce2"
+      },
+      {
+        "path": "src/services/nurbsConstructors.ts",
+        "sha256": "e8b83396304decf6d91795bb0cb77bb2dad0c2a5e548710e66655a5d08d582fb"
+      },
+      {
+        "path": "src/services/nurbsCurve.ts",
+        "sha256": "74c78cff38648941d1017604e70f08f2f97eb047ab5eff556122d405813b6b88"
+      },
+      {
+        "path": "src/services/nurbsSurface.ts",
+        "sha256": "d27b8093cdf902ee2e801106dafc21e52b02db4b5de96391fef5ee7b751b41d5"
+      },
+      {
+        "path": "src/services/nurbsTessellation.ts",
+        "sha256": "44f1d487e1d29fcec9c3baf9893ab123585e6e3b76b6d0b45528a64417eee763"
+      },
+      {
+        "path": "src/services/objExport.ts",
+        "sha256": "089ec176500c37e9d9639af64f3dc35f3e3f3cffd6f47a206379f7e5b6bc2453"
+      },
+      {
+        "path": "src/services/openScadBuiltinFunctions.ts",
+        "sha256": "d503421ea44a20edd014849f579478804bf47c83193eaded0be74c7f94376555"
+      },
+      {
+        "path": "src/services/openScadImport.ts",
+        "sha256": "1f6f6aca088e2b3ac70dd10ea7790aabebbec32dac49b5b897c9769ebe94a497"
+      },
+      {
+        "path": "src/services/openScadProject.ts",
+        "sha256": "edb095ddb69cdbdf2b20e0beda1f3370e58aef00750b62c9662909db85231c61"
+      },
+      {
+        "path": "src/services/openScadProjectCompiler.ts",
+        "sha256": "bcf6fc6cb6a4e0f4d652d0f3759b4ee078677abd1adb36862e7b811529cd98a0"
+      },
+      {
+        "path": "src/services/openScadStableGeometrySemantics.ts",
+        "sha256": "f84742f3070eb8070306df4dd3dfcd075ccef308cbd78ea48e3ef6ea07303161"
+      },
+      {
+        "path": "src/services/openScadStableModuleSemantics.ts",
+        "sha256": "6546c802003205e735951cbf1c923cbeab2fd50d214d446b43ee299ceeeaef03"
+      },
+      {
+        "path": "src/services/openScadStablePrimitiveSemantics.ts",
+        "sha256": "989d39e091c1bd0d9291451e83420086d2c078ef0c2028d03fed8beb34019e79"
+      },
+      {
+        "path": "src/services/openScadStableRuntime.ts",
+        "sha256": "1ed581877b4dc52c49ae4bc48a07174b4fae142726fe736664227a28109c36f0"
+      },
+      {
+        "path": "src/services/openScadStableScope.ts",
+        "sha256": "e1ec7d27d296b362b30c07e9b471d59ad1fd3bca2b79a2d4cdb8220861135715"
+      },
+      {
+        "path": "src/services/openScadStableTransformSemantics.ts",
+        "sha256": "ac64f1275a80b62d3f4c22fc5f3d8bd39c63624fdf9046f8890fa82f7b1bf930"
+      },
+      {
+        "path": "src/services/openScadSurface.ts",
+        "sha256": "3c4b994e902f216956f285b951c5a5f4ced064e6f14df84a2b3461a137986f88"
+      },
+      {
+        "path": "src/services/openScadText.ts",
+        "sha256": "9b97cf03345b8b5d8ab8d4c4e89ddd9fe10677b05a07347e997582eec0a09075"
+      },
+      {
+        "path": "src/services/openScadValueSemantics.ts",
+        "sha256": "0a424247f69cd7f5bc8660863b84ea4508a416828e276bc34d36dfcae259952c"
+      },
+      {
+        "path": "src/services/openscadCompiler.ts",
+        "sha256": "f0cd73087c8334c024f4f8ddf9e50019d41acda081b97fb5dd501a78854508ae"
+      },
+      {
+        "path": "src/services/openscadErrors.ts",
+        "sha256": "5a7df6aabb1ff04583ae3b8c26b2465df0fb5d8e6e8ffc65ecdc4e56feccf52f"
+      },
+      {
+        "path": "src/services/openscadParser.ts",
+        "sha256": "276cb90f037eba9a0bad51224fde7622e7c5623399df5266d103dda7ce116277"
+      },
+      {
+        "path": "src/services/openscadSemanticLowerer.ts",
+        "sha256": "f0c0c6075f0c38214d94511c756c1eac91a4289031297e7bb1644e5415b788f5"
+      },
+      {
+        "path": "src/services/orbitCameraProjection.ts",
+        "sha256": "7c83c3836235195060bc268647e6a661ed24911f4662d774ed2a22fc6fc6b45e"
+      },
+      {
+        "path": "src/services/parameterPresets.ts",
+        "sha256": "536321f060e8135d250274f7d39b7411934a4152868fa47e2450571496f8dc42"
+      },
+      {
+        "path": "src/services/rendererContracts.ts",
+        "sha256": "cf9beb9111c64d9d1e59b8c45ca7899654373e70e75371abf8f57b7d6d268fd1"
+      },
+      {
+        "path": "src/services/rendererRecoveryGate.ts",
+        "sha256": "10fa64d4adf95689ebfd3408c61ffa6ce87625342549a6e03a594c5f269b252e"
+      },
+      {
+        "path": "src/services/rovingFocus.ts",
+        "sha256": "356cb521236d365a3d75a92907066e66963a7386c2f7abf0b1bc56eff84f5ee3"
+      },
+      {
+        "path": "src/services/safeStorage.ts",
+        "sha256": "b1172ca31d2bdfb231f76a0e253b5d3b96ac316e4c6fb94a17f3a4979f718e36"
+      },
+      {
+        "path": "src/services/scadCustomizer.ts",
+        "sha256": "622ddeb97359412df9b43fcf61a6e7125cb1126cecb8fdbf077fed2d45d0f444"
+      },
+      {
+        "path": "src/services/sceneAabbIndex.ts",
+        "sha256": "594a38ffdc87f6e8ad9e41cf25309e59245be08a35acbaeb8fbcb4e776cb893a"
+      },
+      {
+        "path": "src/services/sceneController.ts",
+        "sha256": "336f4e53a1aa28024343b767d2101c688ec4afa21892702f8be0c988a83247b5"
+      },
+      {
+        "path": "src/services/scenePublication.ts",
+        "sha256": "814a0c81fb8867e970c6b06f2c61235315c196339d5ceedcf54863d5316591da"
+      },
+      {
+        "path": "src/services/selectionCycling.ts",
+        "sha256": "75e7fd0a12b5c31b954fc5d7d91d72ee87fcb56166c9f9e5fbc114d307952849"
+      },
+      {
+        "path": "src/services/semanticProgramCodec.ts",
+        "sha256": "cecb8a6462f8333bba30b9b7c1b369dc64093893375c39471c7583560fa1ea3d"
+      },
+      {
+        "path": "src/services/semanticProgramExecutor.ts",
+        "sha256": "f4226f43656108fcc81d404e4991e792461204d6a686b0688da5237fdedbe5c7"
+      },
+      {
+        "path": "src/services/semanticProgramLowerer.ts",
+        "sha256": "bbf37a0e817bbb850a0778fdeb43311b3366ff5a5b9498cd9b0d9f185b1098e8"
+      },
+      {
+        "path": "src/services/semanticProgramTrust.ts",
+        "sha256": "904e864ee1f66e1527813325925ec829f61da3bd951319c836a56fd26823a66a"
+      },
+      {
+        "path": "src/services/semanticProgramValidator.ts",
+        "sha256": "46b2d7ff1bd10bb819958801a5c0f9c5bfc9a878e12d63a5adcd7862fb3aff76"
+      },
+      {
+        "path": "src/services/sourceSplice.ts",
+        "sha256": "4c666fa585550155095edc4c00089d23b14db3db90e5d15de02c2470989e8f66"
+      },
+      {
+        "path": "src/services/stlExport.ts",
+        "sha256": "c3fa2739f53a6ea9166fe15a2914a9a118b90e99f5f4b0d8476a4038f8fbc324"
+      },
+      {
+        "path": "src/services/stlImport.ts",
+        "sha256": "3c60a27626ed40fa51357066b2c4729726eef7adbe48597b7abe4adee7a1e13b"
+      },
+      {
+        "path": "src/services/svgGeometry.ts",
+        "sha256": "5628757e298a3c015105d578569cf8aa0e9dbfd5b21891140cccf91974f2c84a"
+      },
+      {
+        "path": "src/services/textSearch.ts",
+        "sha256": "a01d1aada8cc095e15660d97f93d34209c457df6e73db2ad184f8468cfe84115"
+      },
+      {
+        "path": "src/services/themePreferences.ts",
+        "sha256": "093517e4ec6907463954ebead229ddb5b1d91a19f664981936d7c3b293644c37"
+      },
+      {
+        "path": "src/services/threemfExport.ts",
+        "sha256": "fed1718a462dcd9ae4696996202ff18d385af5b77b64efd8f67c32a81c7af580"
+      },
+      {
+        "path": "src/services/transparentOrdering.ts",
+        "sha256": "31b4eca9cbfd8f0933dced257c1521d2869b67f375931869bc54300f9ce0ca88"
+      },
+      {
+        "path": "src/services/viewportModel.ts",
+        "sha256": "a0f2f976042d939061a2e0e4a7c8ebe6a5dfc49119ee811017696554907df1f4"
+      },
+      {
+        "path": "src/services/virtualFileSystem.ts",
+        "sha256": "2a5e640d87cdcadcbc8542129c4c2e11d9853127d362bab6575f11aadee45f88"
+      },
+      {
+        "path": "src/services/webgpuRenderer.ts",
+        "sha256": "2ccf153df77f8e4cb8498b717d212c39e0342085366048db9b9264f241693524"
+      },
+      {
+        "path": "src/services/workspaceDocument.ts",
+        "sha256": "305eae150c24b665267017bdb9e2505b3d22fc7882311061d76d311438041a5e"
+      },
+      {
+        "path": "src/services/workspaceIndexedDb.ts",
+        "sha256": "62e53de6c5b99bbb78b7abfcb5674cb8799a55656cf8bc49a70990f133b91ab2"
+      },
+      {
+        "path": "src/services/workspacePersistence.ts",
+        "sha256": "7f4c13985aa987b394fa1ac69bd640e3f53070720b48f35088254642e512df00"
+      },
+      {
+        "path": "src/services/workspaceShare.ts",
+        "sha256": "8c1afb8baaca88a2c72e94ed31a93c903f3bbbda716fcfd35ea450da64e656ed"
+      },
+      {
+        "path": "src/services/zipExport.ts",
+        "sha256": "b8e1628b6ed026543478707f9b857c7afb74619c7060bd6ddf3800f1bf5bf30a"
+      },
+      {
+        "path": "src/workers/geometry.worker.ts",
+        "sha256": "005620ff150cf77c0c9002bcc3325d9694a51dedb2f406ef551aaecdc21a493d"
+      },
+      {
+        "path": "src/workers/manifoldPlanQualification.worker.ts",
+        "sha256": "6bd6da212ef9d398232ff0f1f1aafa67872a52ec296170970a57a70645864b1c"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "c3cb64bbb78e3bc8996b328865d6bbc7be8464524377da048d8de84e8395afbb"
+      },
+      {
+        "path": "tsconfig.mcp.json",
+        "sha256": "426221d2b3fe53a7d90eaea786e72c719fb6392e1a403dfdcfdec60363afb587"
+      },
+      {
+        "path": "vite.config.ts",
+        "sha256": "51c68e9726a5b1c8c56512523a1ad5073d12cd802cb9470e539ad99c9d86f307"
+      }
+    ]
+  },
+  "sourceUnchangedAtEnd": true,
+  "moduleImportMs": 30.86829200000001,
+  "geometry": {
+    "sha256": "30d60fb64ed6c973429587c7406ad3b5c2fb9adcd8ba96bfbfc3cc9112857c40",
+    "meshes": 1,
+    "vertices": 8216,
+    "triangles": 8460,
+    "geometryBytes": 298704,
+    "volume": 44784.3807383949,
+    "surfaceArea": 23583.57214755585
+  },
+  "coldBuild": {
+    "operation": "build",
+    "iteration": 0,
+    "wallMs": 103.56845899999999,
+    "cpuUserMs": 183.901,
+    "cpuSystemMs": 4.108,
+    "memoryBefore": {
+      "rss": 76742656,
+      "heapTotal": 29818880,
+      "heapUsed": 11385240,
+      "external": 3818359,
+      "arrayBuffers": 1075967
+    },
+    "memoryAfter": {
+      "rss": 101236736,
+      "heapTotal": 31653888,
+      "heapUsed": 19504872,
+      "external": 21949928,
+      "arrayBuffers": 2430320
+    },
+    "memoryDelta": {
+      "rss": 24494080,
+      "heapTotal": 1835008,
+      "heapUsed": 8119632,
+      "external": 18131569,
+      "arrayBuffers": 1354353
+    },
+    "gc": [
+      {
+        "startMs": 215.031667,
+        "durationMs": 0.37420809268951416,
+        "kind": 1,
+        "forced": false
+      },
+      {
+        "startMs": 228.882084,
+        "durationMs": 0.281791090965271,
+        "kind": 1,
+        "forced": false
+      },
+      {
+        "startMs": 240.440209,
+        "durationMs": 0.08720803260803223,
+        "kind": 1,
+        "forced": false
+      },
+      {
+        "startMs": 241.582625,
+        "durationMs": 0.07908403873443604,
+        "kind": 1,
+        "forced": false
+      },
+      {
+        "startMs": 242.645167,
+        "durationMs": 0.04562497138977051,
+        "kind": 1,
+        "forced": false
+      }
+    ],
+    "phases": {
+      "parseMs": 2.444666000000012,
+      "initializeMs": 4.8880419999999845,
+      "evaluateMs": 10.431624999999997,
+      "analyzeMs": 85.503042
+    }
+  },
+  "iterations": 9,
+  "warmups": 2,
+  "stageSummaries": {
+    "build": {
+      "wallMs": {
+        "n": 9,
+        "min": 52.65220799999997,
+        "p50": 54.64708299999995,
+        "p95": 70.602667,
+        "max": 70.602667,
+        "mean": 56.765527888888876
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 52.715,
+        "p50": 62.795,
+        "p95": 118.559,
+        "max": 118.559,
+        "mean": 69.65288888888888
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.712,
+        "p50": 1.166,
+        "p95": 1.45,
+        "max": 1.45,
+        "mean": 1.0915555555555556
+      },
+      "gcCount": 18,
+      "gcDurationMs": 4.085621953010559,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": -4490464,
+        "p50": 469528,
+        "p95": 3988104,
+        "max": 3988104,
+        "mean": 741316.4444444445
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": 2156904,
+        "p50": 7989645,
+        "p95": 12249485,
+        "max": 12249485,
+        "mean": 7148306.555555556
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": -905276,
+        "p50": 2156941,
+        "p95": 2156941,
+        "max": 2156941,
+        "mean": 1671596
+      },
+      "phases": {
+        "parseMs": {
+          "n": 9,
+          "min": 0.45491600000002563,
+          "p50": 0.7220419999999876,
+          "p95": 0.9955830000000105,
+          "max": 0.9955830000000105,
+          "mean": 0.6984767777777657
+        },
+        "initializeMs": {
+          "n": 9,
+          "min": 0.014084000000025299,
+          "p50": 0.02800000000002001,
+          "p95": 0.10799999999994725,
+          "max": 0.10799999999994725,
+          "mean": 0.03444455555554921
+        },
+        "evaluateMs": {
+          "n": 9,
+          "min": 3.9263329999999996,
+          "p50": 4.095708000000002,
+          "p95": 4.288124999999923,
+          "max": 4.288124999999923,
+          "mean": 4.093166777777804
+        },
+        "analyzeMs": {
+          "n": 9,
+          "min": 48.1875,
+          "p50": 49.69741699999997,
+          "p95": 65.40974999999997,
+          "max": 65.40974999999997,
+          "mean": 51.87477777777778
+        }
+      }
+    },
+    "bvh": {
+      "wallMs": {
+        "n": 9,
+        "min": 2.289875000000052,
+        "p50": 2.462750000000028,
+        "p95": 2.5787090000000035,
+        "max": 2.5787090000000035,
+        "mean": 2.4557082222222246
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 2.349,
+        "p50": 3.507,
+        "p95": 7.52,
+        "max": 7.52,
+        "mean": 3.7523333333333335
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.014,
+        "p50": 0.022,
+        "p95": 0.06,
+        "max": 0.06,
+        "mean": 0.026444444444444444
+      },
+      "gcCount": 0,
+      "gcDurationMs": 0,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 4672,
+        "p50": 4696,
+        "p95": 4864,
+        "max": 4864,
+        "mean": 4724.444444444444
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": -3485301,
+        "p50": 619776,
+        "p95": 619776,
+        "max": 619776,
+        "mean": -24939.777777777777
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": 619776,
+        "p50": 619776,
+        "p95": 619776,
+        "max": 619776,
+        "mean": 619776
+      }
+    },
+    "edges-position-weld": {
+      "wallMs": {
+        "n": 9,
+        "min": 2.5669580000001133,
+        "p50": 2.684500000000071,
+        "p95": 3.4646249999999554,
+        "max": 3.4646249999999554,
+        "mean": 2.8326295555555765
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 2.518,
+        "p50": 3.704,
+        "p95": 6.194,
+        "max": 6.194,
+        "mean": 3.8373333333333335
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.05,
+        "p50": 0.071,
+        "p95": 0.079,
+        "max": 0.079,
+        "mean": 0.06633333333333333
+      },
+      "gcCount": 0,
+      "gcDurationMs": 0,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 2954152,
+        "p50": 3013000,
+        "p95": 3135464,
+        "max": 3135464,
+        "mean": 3021439.111111111
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": -2364473,
+        "p50": 835472,
+        "p95": 835472,
+        "max": 835472,
+        "mean": 193237.11111111112
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": 835472,
+        "p50": 835472,
+        "p95": 835472,
+        "max": 835472,
+        "mean": 835472
+      }
+    },
+    "asset-hash": {
+      "wallMs": {
+        "n": 9,
+        "min": 2.430291000000011,
+        "p50": 2.4632500000000164,
+        "p95": 2.5540419999999813,
+        "max": 2.5540419999999813,
+        "mean": 2.477337999999994
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 2.431,
+        "p50": 3.842,
+        "p95": 10.277,
+        "max": 10.277,
+        "mean": 4.530222222222222
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0,
+        "p50": 0.006,
+        "p95": 0.078,
+        "max": 0.078,
+        "mean": 0.017333333333333333
+      },
+      "gcCount": 0,
+      "gcDurationMs": 0,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 1984,
+        "p50": 2032,
+        "p95": 61360,
+        "max": 61360,
+        "mean": 11880.888888888889
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0
+      }
+    },
+    "result-validation": {
+      "wallMs": {
+        "n": 9,
+        "min": 0.6356670000000122,
+        "p50": 0.7264579999999796,
+        "p95": 1.7293750000000045,
+        "max": 1.7293750000000045,
+        "mean": 0.8379627777777741
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 0.638,
+        "p50": 1.269,
+        "p95": 3.616,
+        "max": 3.616,
+        "mean": 1.3585555555555555
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0,
+        "p50": 0.019,
+        "p95": 0.051,
+        "max": 0.051,
+        "mean": 0.018777777777777775
+      },
+      "gcCount": 0,
+      "gcDurationMs": 0,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 1273608,
+        "p50": 1328984,
+        "p95": 3287416,
+        "max": 3287416,
+        "mean": 1540718.2222222222
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": -3077854,
+        "p50": 19567,
+        "p95": 19567,
+        "max": 19567,
+        "mean": -668748.7777777778
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": 19567,
+        "p50": 19567,
+        "p95": 19567,
+        "max": 19567,
+        "mean": 19567
+      }
+    },
+    "scene-publication": {
+      "wallMs": {
+        "n": 9,
+        "min": 0.13025000000004638,
+        "p50": 0.17729100000002518,
+        "p95": 0.27529200000003584,
+        "max": 0.27529200000003584,
+        "mean": 0.17816666666669156
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 0.131,
+        "p50": 0.283,
+        "p95": 2.527,
+        "max": 2.527,
+        "mean": 0.5344444444444445
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.001,
+        "p50": 0.003,
+        "p95": 0.008,
+        "max": 0.008,
+        "mean": 0.003888888888888889
+      },
+      "gcCount": 0,
+      "gcDurationMs": 0,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 4456,
+        "p50": 8704,
+        "p95": 29496,
+        "max": 29496,
+        "mean": 10907.555555555555
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0
+      }
+    },
+    "inspection": {
+      "wallMs": {
+        "n": 9,
+        "min": 0.25641699999994216,
+        "p50": 0.271541999999954,
+        "p95": 2.144834000000003,
+        "max": 2.144834000000003,
+        "mean": 0.684254666666618
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 0.256,
+        "p50": 0.268,
+        "p95": 6.321,
+        "max": 6.321,
+        "mean": 1.6727777777777777
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.001,
+        "p50": 0.004,
+        "p95": 0.091,
+        "max": 0.091,
+        "mean": 0.020666666666666667
+      },
+      "gcCount": 2,
+      "gcDurationMs": 0.34129202365875244,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": -2537176,
+        "p50": 2959800,
+        "p95": 3019632,
+        "max": 3019632,
+        "mean": 1745399.111111111
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": -1474751,
+        "p50": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": -327722.44444444444
+      }
+    },
+    "stl": {
+      "wallMs": {
+        "n": 9,
+        "min": 5.509750000000054,
+        "p50": 6.18141700000001,
+        "p95": 6.5919999999999845,
+        "max": 6.5919999999999845,
+        "mean": 6.1585231111111325
+      },
+      "cpuUserMs": {
+        "n": 9,
+        "min": 5.496,
+        "p50": 7.379,
+        "p95": 11.546,
+        "max": 11.546,
+        "mean": 7.4608888888888885
+      },
+      "cpuSystemMs": {
+        "n": 9,
+        "min": 0.143,
+        "p50": 0.2,
+        "p95": 0.86,
+        "max": 0.86,
+        "mean": 0.2912222222222222
+      },
+      "gcCount": 31,
+      "gcDurationMs": 3.1904611587524414,
+      "netHeapUsedBytes": {
+        "n": 9,
+        "min": 251648,
+        "p50": 1508672,
+        "p95": 1722808,
+        "max": 1722808,
+        "mean": 1156309.3333333333
+      },
+      "netExternalBytes": {
+        "n": 9,
+        "min": -2726667,
+        "p50": -1051587,
+        "p95": 370834,
+        "max": 370834,
+        "mean": -928984.1111111111
+      },
+      "netArrayBuffersBytes": {
+        "n": 9,
+        "min": -2726704,
+        "p50": 423164,
+        "p95": 423164,
+        "max": 423164,
+        "mean": 61541.555555555555
+      }
+    }
+  },
+  "samples": [
+    {
+      "operation": "build",
+      "iteration": 0,
+      "wallMs": 70.602667,
+      "cpuUserMs": 118.559,
+      "cpuSystemMs": 1.052,
+      "memoryBefore": {
+        "rss": 116916224,
+        "heapTotal": 32178176,
+        "heapUsed": 13390976,
+        "external": 28001215,
+        "arrayBuffers": 1981039
+      },
+      "memoryAfter": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 13860504,
+        "external": 34701593,
+        "arrayBuffers": 2832092
+      },
+      "memoryDelta": {
+        "rss": 6111232,
+        "heapTotal": 0,
+        "heapUsed": 469528,
+        "external": 6700378,
+        "arrayBuffers": 851053
+      },
+      "gc": [
+        {
+          "startMs": 469.872459,
+          "durationMs": 0.04308295249938965,
+          "kind": 8,
+          "forced": false
+        },
+        {
+          "startMs": 470.199917,
+          "durationMs": 0.29674994945526123,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 476.120959,
+          "durationMs": 0.34929096698760986,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 484.137417,
+          "durationMs": 0.16641700267791748,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 485.378167,
+          "durationMs": 0.19737505912780762,
+          "kind": 1,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.9955830000000105,
+        "initializeMs": 0.02904200000000401,
+        "evaluateMs": 4.095708000000002,
+        "analyzeMs": 65.40974999999997
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 0,
+      "wallMs": 2.3434159999999906,
+      "cpuUserMs": 3.525,
+      "cpuSystemMs": 0.018,
+      "memoryBefore": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 13616704,
+        "external": 34701593,
+        "arrayBuffers": 2409008
+      },
+      "memoryAfter": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 13621400,
+        "external": 34898285,
+        "arrayBuffers": 3028784
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4696,
+        "external": 196692,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 0,
+      "wallMs": 3.4646249999999554,
+      "cpuUserMs": 5.393,
+      "cpuSystemMs": 0.071,
+      "memoryBefore": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 13627784,
+        "external": 34898285,
+        "arrayBuffers": 3028784
+      },
+      "memoryAfter": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 16728688,
+        "external": 35733757,
+        "arrayBuffers": 3864256
+      },
+      "memoryDelta": {
+        "rss": 245760,
+        "heapTotal": 245760,
+        "heapUsed": 3100904,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 0,
+      "wallMs": 2.4898749999999836,
+      "cpuUserMs": 4.514,
+      "cpuSystemMs": 0.005,
+      "memoryBefore": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 16734520,
+        "external": 35733757,
+        "arrayBuffers": 3864256
+      },
+      "memoryAfter": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 16755504,
+        "external": 35733757,
+        "arrayBuffers": 3864256
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 20984,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 0,
+      "wallMs": 1.7293750000000045,
+      "cpuUserMs": 3.616,
+      "cpuSystemMs": 0.051,
+      "memoryBefore": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 16760760,
+        "external": 35733757,
+        "arrayBuffers": 3864256
+      },
+      "memoryAfter": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 20048176,
+        "external": 35753324,
+        "arrayBuffers": 3883823
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 3287416,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 0,
+      "wallMs": 0.17729100000002518,
+      "cpuUserMs": 0.277,
+      "cpuSystemMs": 0.004,
+      "memoryBefore": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 20053472,
+        "external": 35753324,
+        "arrayBuffers": 3883823
+      },
+      "memoryAfter": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 20064744,
+        "external": 35753324,
+        "arrayBuffers": 3883823
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 11272,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 0,
+      "wallMs": 2.144834000000003,
+      "cpuUserMs": 6.321,
+      "cpuSystemMs": 0.091,
+      "memoryBefore": {
+        "rss": 123273216,
+        "heapTotal": 32423936,
+        "heapUsed": 20070328,
+        "external": 35753324,
+        "arrayBuffers": 3883823
+      },
+      "memoryAfter": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 17537536,
+        "external": 35753324,
+        "arrayBuffers": 2409072
+      },
+      "memoryDelta": {
+        "rss": -245760,
+        "heapTotal": -245760,
+        "heapUsed": -2532792,
+        "external": 0,
+        "arrayBuffers": -1474751
+      },
+      "gc": [
+        {
+          "startMs": 498.891834,
+          "durationMs": 0.15149998664855957,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "stl",
+      "iteration": 0,
+      "wallMs": 6.27333299999998,
+      "cpuUserMs": 11.546,
+      "cpuSystemMs": 0.222,
+      "memoryBefore": {
+        "rss": 123027456,
+        "heapTotal": 32178176,
+        "heapUsed": 17557592,
+        "external": 35753324,
+        "arrayBuffers": 2409072
+      },
+      "memoryAfter": {
+        "rss": 123043840,
+        "heapTotal": 32178176,
+        "heapUsed": 19131816,
+        "external": 34701737,
+        "arrayBuffers": 2832236
+      },
+      "memoryDelta": {
+        "rss": 16384,
+        "heapTotal": 0,
+        "heapUsed": 1574224,
+        "external": -1051587,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 501.343584,
+          "durationMs": 0.11349999904632568,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 502.644125,
+          "durationMs": 0.06954193115234375,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 504.31425,
+          "durationMs": 0.0555419921875,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 505.827917,
+          "durationMs": 0.0576249361038208,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 1,
+      "wallMs": 56.00433400000003,
+      "cpuUserMs": 62.795,
+      "cpuSystemMs": 1.166,
+      "memoryBefore": {
+        "rss": 123043840,
+        "heapTotal": 32178176,
+        "heapUsed": 19195416,
+        "external": 34701737,
+        "arrayBuffers": 2832236
+      },
+      "memoryAfter": {
+        "rss": 128253952,
+        "heapTotal": 32178176,
+        "heapUsed": 14704952,
+        "external": 42691382,
+        "arrayBuffers": 4989177
+      },
+      "memoryDelta": {
+        "rss": 5210112,
+        "heapTotal": 0,
+        "heapUsed": -4490464,
+        "external": 7989645,
+        "arrayBuffers": 2156941
+      },
+      "gc": [
+        {
+          "startMs": 556.225959,
+          "durationMs": 0.18016600608825684,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 556.4095,
+          "durationMs": 0.05766701698303223,
+          "kind": 8,
+          "forced": false
+        },
+        {
+          "startMs": 556.488667,
+          "durationMs": 0.23920798301696777,
+          "kind": 1,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.7364999999999782,
+        "initializeMs": 0.0272499999999809,
+        "evaluateMs": 4.037959000000001,
+        "analyzeMs": 51.15162500000008
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 1,
+      "wallMs": 2.5640409999999747,
+      "cpuUserMs": 3.507,
+      "cpuSystemMs": 0.06,
+      "memoryBefore": {
+        "rss": 128253952,
+        "heapTotal": 32178176,
+        "heapUsed": 13293888,
+        "external": 42691382,
+        "arrayBuffers": 3714896
+      },
+      "memoryAfter": {
+        "rss": 128253952,
+        "heapTotal": 32178176,
+        "heapUsed": 13298712,
+        "external": 42036877,
+        "arrayBuffers": 4334672
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4824,
+        "external": -654505,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 1,
+      "wallMs": 3.387042000000065,
+      "cpuUserMs": 5.049,
+      "cpuSystemMs": 0.075,
+      "memoryBefore": {
+        "rss": 128253952,
+        "heapTotal": 32178176,
+        "heapUsed": 13307160,
+        "external": 42036877,
+        "arrayBuffers": 4334672
+      },
+      "memoryAfter": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 16442624,
+        "external": 42872349,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 245760,
+        "heapTotal": 245760,
+        "heapUsed": 3135464,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 1,
+      "wallMs": 2.5540419999999813,
+      "cpuUserMs": 4.152,
+      "cpuSystemMs": 0.078,
+      "memoryBefore": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 16448536,
+        "external": 42872349,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 16460896,
+        "external": 42872349,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 12360,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 1,
+      "wallMs": 0.7161660000000438,
+      "cpuUserMs": 1.1,
+      "cpuSystemMs": 0.019,
+      "memoryBefore": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 16466152,
+        "external": 42872349,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 17794208,
+        "external": 42891916,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1328056,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 1,
+      "wallMs": 0.17995799999994233,
+      "cpuUserMs": 0.265,
+      "cpuSystemMs": 0.003,
+      "memoryBefore": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 17800352,
+        "external": 42891916,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 17813096,
+        "external": 42891916,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 12744,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 1,
+      "wallMs": 2.090624999999932,
+      "cpuUserMs": 3.55,
+      "cpuSystemMs": 0.064,
+      "memoryBefore": {
+        "rss": 128499712,
+        "heapTotal": 32423936,
+        "heapUsed": 17818648,
+        "external": 42891916,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 128270336,
+        "heapTotal": 32178176,
+        "heapUsed": 15281472,
+        "external": 42891916,
+        "arrayBuffers": 3714960
+      },
+      "memoryDelta": {
+        "rss": -229376,
+        "heapTotal": -245760,
+        "heapUsed": -2537176,
+        "external": 0,
+        "arrayBuffers": -1474751
+      },
+      "gc": [
+        {
+          "startMs": 575.0195,
+          "durationMs": 0.18979203701019287,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "stl",
+      "iteration": 1,
+      "wallMs": 6.315958000000023,
+      "cpuUserMs": 7.698,
+      "cpuSystemMs": 0.15,
+      "memoryBefore": {
+        "rss": 128303104,
+        "heapTotal": 32178176,
+        "heapUsed": 15328992,
+        "external": 42891916,
+        "arrayBuffers": 3714960
+      },
+      "memoryAfter": {
+        "rss": 128303104,
+        "heapTotal": 32178176,
+        "heapUsed": 17051800,
+        "external": 41840329,
+        "arrayBuffers": 4138124
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1722808,
+        "external": -1051587,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 577.188042,
+          "durationMs": 0.15558302402496338,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 578.515209,
+          "durationMs": 0.05970799922943115,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 580.317084,
+          "durationMs": 0.06358301639556885,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 581.705167,
+          "durationMs": 0.04225003719329834,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 2,
+      "wallMs": 53.880957999999964,
+      "cpuUserMs": 60.407,
+      "cpuSystemMs": 1.316,
+      "memoryBefore": {
+        "rss": 128303104,
+        "heapTotal": 32178176,
+        "heapUsed": 17105688,
+        "external": 41840329,
+        "arrayBuffers": 4138124
+      },
+      "memoryAfter": {
+        "rss": 135315456,
+        "heapTotal": 32178176,
+        "heapUsed": 15284016,
+        "external": 51009622,
+        "arrayBuffers": 6295065
+      },
+      "memoryDelta": {
+        "rss": 7012352,
+        "heapTotal": 0,
+        "heapUsed": -1821672,
+        "external": 9169293,
+        "arrayBuffers": 2156941
+      },
+      "gc": [
+        {
+          "startMs": 628.951959,
+          "durationMs": 0.23829102516174316,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 629.192167,
+          "durationMs": 0.03033304214477539,
+          "kind": 8,
+          "forced": false
+        },
+        {
+          "startMs": 629.240875,
+          "durationMs": 0.28554201126098633,
+          "kind": 1,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.8182499999999209,
+        "initializeMs": 0.02800000000002001,
+        "evaluateMs": 3.9630420000000868,
+        "analyzeMs": 49.01675
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 2,
+      "wallMs": 2.289875000000052,
+      "cpuUserMs": 2.349,
+      "cpuSystemMs": 0.019,
+      "memoryBefore": {
+        "rss": 135315456,
+        "heapTotal": 32178176,
+        "heapUsed": 15328312,
+        "external": 51009622,
+        "arrayBuffers": 6295065
+      },
+      "memoryAfter": {
+        "rss": 135413760,
+        "heapTotal": 32178176,
+        "heapUsed": 15332984,
+        "external": 51629398,
+        "arrayBuffers": 6914841
+      },
+      "memoryDelta": {
+        "rss": 98304,
+        "heapTotal": 0,
+        "heapUsed": 4672,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 2,
+      "wallMs": 2.596832999999947,
+      "cpuUserMs": 3.704,
+      "cpuSystemMs": 0.067,
+      "memoryBefore": {
+        "rss": 135413760,
+        "heapTotal": 32178176,
+        "heapUsed": 13460912,
+        "external": 51629398,
+        "arrayBuffers": 4334672
+      },
+      "memoryAfter": {
+        "rss": 135659520,
+        "heapTotal": 32423936,
+        "heapUsed": 16473912,
+        "external": 49884701,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 245760,
+        "heapTotal": 245760,
+        "heapUsed": 3013000,
+        "external": -1744697,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 2,
+      "wallMs": 2.463916999999924,
+      "cpuUserMs": 2.444,
+      "cpuSystemMs": 0.027,
+      "memoryBefore": {
+        "rss": 135659520,
+        "heapTotal": 32423936,
+        "heapUsed": 16480024,
+        "external": 49884701,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 135659520,
+        "heapTotal": 32423936,
+        "heapUsed": 16482056,
+        "external": 49884701,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2032,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 2,
+      "wallMs": 0.7265830000000051,
+      "cpuUserMs": 1.331,
+      "cpuSystemMs": 0.03,
+      "memoryBefore": {
+        "rss": 135659520,
+        "heapTotal": 32423936,
+        "heapUsed": 16487648,
+        "external": 49884701,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 135692288,
+        "heapTotal": 32423936,
+        "heapUsed": 17816632,
+        "external": 49904268,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 32768,
+        "heapTotal": 0,
+        "heapUsed": 1328984,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 2,
+      "wallMs": 0.27529200000003584,
+      "cpuUserMs": 0.371,
+      "cpuSystemMs": 0.003,
+      "memoryBefore": {
+        "rss": 135692288,
+        "heapTotal": 32423936,
+        "heapUsed": 17821984,
+        "external": 49904268,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 135692288,
+        "heapTotal": 32423936,
+        "heapUsed": 17851480,
+        "external": 49904268,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 29496,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 2,
+      "wallMs": 0.271541999999954,
+      "cpuUserMs": 0.268,
+      "cpuSystemMs": 0.004,
+      "memoryBefore": {
+        "rss": 135692288,
+        "heapTotal": 32423936,
+        "heapUsed": 17857400,
+        "external": 49904268,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 135692288,
+        "heapTotal": 32423936,
+        "heapUsed": 20817208,
+        "external": 49904268,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959808,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 2,
+      "wallMs": 6.1287079999999605,
+      "cpuUserMs": 7.359,
+      "cpuSystemMs": 0.149,
+      "memoryBefore": {
+        "rss": 135446528,
+        "heapTotal": 32178176,
+        "heapUsed": 13743592,
+        "external": 49904268,
+        "arrayBuffers": 4334736
+      },
+      "memoryAfter": {
+        "rss": 135446528,
+        "heapTotal": 32178176,
+        "heapUsed": 15252264,
+        "external": 49472457,
+        "arrayBuffers": 4757900
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1508672,
+        "external": -431811,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 647.972042,
+          "durationMs": 0.08829200267791748,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 649.223417,
+          "durationMs": 0.060958027839660645,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 651.001875,
+          "durationMs": 0.0733339786529541,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 652.330417,
+          "durationMs": 0.07254207134246826,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 3,
+      "wallMs": 55.39904200000001,
+      "cpuUserMs": 73.583,
+      "cpuSystemMs": 1.386,
+      "memoryBefore": {
+        "rss": 135446528,
+        "heapTotal": 32178176,
+        "heapUsed": 15306200,
+        "external": 49472457,
+        "arrayBuffers": 4757900
+      },
+      "memoryAfter": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 15504976,
+        "external": 60018006,
+        "arrayBuffers": 6914841
+      },
+      "memoryDelta": {
+        "rss": 6029312,
+        "heapTotal": 0,
+        "heapUsed": 198776,
+        "external": 10545549,
+        "arrayBuffers": 2156941
+      },
+      "gc": [
+        {
+          "startMs": 700.897375,
+          "durationMs": 0.24054193496704102,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 701.140459,
+          "durationMs": 0.04616594314575195,
+          "kind": 8,
+          "forced": false
+        },
+        {
+          "startMs": 701.216084,
+          "durationMs": 0.21979105472564697,
+          "kind": 1,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.7220419999999876,
+        "initializeMs": 0.030624999999986358,
+        "evaluateMs": 4.282000000000039,
+        "analyzeMs": 50.30737499999998
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 3,
+      "wallMs": 2.462750000000028,
+      "cpuUserMs": 2.507,
+      "cpuSystemMs": 0.014,
+      "memoryBefore": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 15556696,
+        "external": 60018006,
+        "arrayBuffers": 6914841
+      },
+      "memoryAfter": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 15561440,
+        "external": 60637782,
+        "arrayBuffers": 7534617
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4744,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 3,
+      "wallMs": 2.666500000000042,
+      "cpuUserMs": 3.769,
+      "cpuSystemMs": 0.077,
+      "memoryBefore": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 13573360,
+        "external": 60637782,
+        "arrayBuffers": 4334672
+      },
+      "memoryAfter": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 16588880,
+        "external": 58273309,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 245760,
+        "heapTotal": 245760,
+        "heapUsed": 3015520,
+        "external": -2364473,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 3,
+      "wallMs": 2.4591669999999795,
+      "cpuUserMs": 2.459,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 16596688,
+        "external": 58273309,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 16598720,
+        "external": 58273309,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2032,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 3,
+      "wallMs": 0.7264579999999796,
+      "cpuUserMs": 1.342,
+      "cpuSystemMs": 0.013,
+      "memoryBefore": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 16604296,
+        "external": 58273309,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 17933304,
+        "external": 58292876,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1329008,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 3,
+      "wallMs": 0.2001670000000786,
+      "cpuUserMs": 0.308,
+      "cpuSystemMs": 0.008,
+      "memoryBefore": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 17938800,
+        "external": 58292876,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 17953072,
+        "external": 58292876,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 14272,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 3,
+      "wallMs": 0.2634169999998903,
+      "cpuUserMs": 0.263,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 17958944,
+        "external": 58292876,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 141721600,
+        "heapTotal": 32423936,
+        "heapUsed": 20918744,
+        "external": 58292876,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959800,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 3,
+      "wallMs": 6.18141700000001,
+      "cpuUserMs": 7.451,
+      "cpuSystemMs": 0.143,
+      "memoryBefore": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 13806568,
+        "external": 58292876,
+        "arrayBuffers": 4334736
+      },
+      "memoryAfter": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 15362904,
+        "external": 57861065,
+        "arrayBuffers": 4757900
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1556336,
+        "external": -431811,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 720.028542,
+          "durationMs": 0.16079199314117432,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 721.387459,
+          "durationMs": 0.05954098701477051,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 723.193917,
+          "durationMs": 0.042208075523376465,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 724.473625,
+          "durationMs": 0.03887498378753662,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 4,
+      "wallMs": 53.285541999999964,
+      "cpuUserMs": 52.715,
+      "cpuSystemMs": 0.756,
+      "memoryBefore": {
+        "rss": 141475840,
+        "heapTotal": 32178176,
+        "heapUsed": 15416624,
+        "external": 57861065,
+        "arrayBuffers": 4757900
+      },
+      "memoryAfter": {
+        "rss": 147030016,
+        "heapTotal": 32178176,
+        "heapUsed": 19207368,
+        "external": 60018006,
+        "arrayBuffers": 6914841
+      },
+      "memoryDelta": {
+        "rss": 5554176,
+        "heapTotal": 0,
+        "heapUsed": 3790744,
+        "external": 2156941,
+        "arrayBuffers": 2156941
+      },
+      "gc": [],
+      "phases": {
+        "parseMs": 0.5634999999999764,
+        "initializeMs": 0.031209000000103515,
+        "evaluateMs": 4.288124999999923,
+        "analyzeMs": 48.33024999999998
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 4,
+      "wallMs": 2.5303749999999354,
+      "cpuUserMs": 7.52,
+      "cpuSystemMs": 0.022,
+      "memoryBefore": {
+        "rss": 147030016,
+        "heapTotal": 32178176,
+        "heapUsed": 19214968,
+        "external": 60018006,
+        "arrayBuffers": 6914841
+      },
+      "memoryAfter": {
+        "rss": 147062784,
+        "heapTotal": 32178176,
+        "heapUsed": 19219640,
+        "external": 60637782,
+        "arrayBuffers": 7534617
+      },
+      "memoryDelta": {
+        "rss": 32768,
+        "heapTotal": 0,
+        "heapUsed": 4672,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 4,
+      "wallMs": 2.722250000000031,
+      "cpuUserMs": 6.194,
+      "cpuSystemMs": 0.079,
+      "memoryBefore": {
+        "rss": 147062784,
+        "heapTotal": 32178176,
+        "heapUsed": 19226192,
+        "external": 60637782,
+        "arrayBuffers": 7534617
+      },
+      "memoryAfter": {
+        "rss": 148029440,
+        "heapTotal": 32423936,
+        "heapUsed": 22197304,
+        "external": 61473254,
+        "arrayBuffers": 8370089
+      },
+      "memoryDelta": {
+        "rss": 966656,
+        "heapTotal": 245760,
+        "heapUsed": 2971112,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 4,
+      "wallMs": 2.4427500000000464,
+      "cpuUserMs": 3.842,
+      "cpuSystemMs": 0.006,
+      "memoryBefore": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 14002136,
+        "external": 61473254,
+        "arrayBuffers": 5272668
+      },
+      "memoryAfter": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 14004120,
+        "external": 61473254,
+        "arrayBuffers": 5272668
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1984,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 4,
+      "wallMs": 0.6565419999999449,
+      "cpuUserMs": 0.659,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 14009760,
+        "external": 61473254,
+        "arrayBuffers": 5272668
+      },
+      "memoryAfter": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 15334600,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1324840,
+        "external": -3077854,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 4,
+      "wallMs": 0.14333400000009533,
+      "cpuUserMs": 0.144,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 15340192,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryAfter": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 15345064,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4872,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 4,
+      "wallMs": 0.2970829999999296,
+      "cpuUserMs": 3.359,
+      "cpuSystemMs": 0.01,
+      "memoryBefore": {
+        "rss": 147783680,
+        "heapTotal": 32178176,
+        "heapUsed": 15351000,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryAfter": {
+        "rss": 147800064,
+        "heapTotal": 32440320,
+        "heapUsed": 18370632,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryDelta": {
+        "rss": 16384,
+        "heapTotal": 262144,
+        "heapUsed": 3019632,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 4,
+      "wallMs": 5.509750000000054,
+      "cpuUserMs": 5.496,
+      "cpuSystemMs": 0.164,
+      "memoryBefore": {
+        "rss": 147800064,
+        "heapTotal": 32440320,
+        "heapUsed": 18377848,
+        "external": 58395400,
+        "arrayBuffers": 5292235
+      },
+      "memoryAfter": {
+        "rss": 147800064,
+        "heapTotal": 32440320,
+        "heapUsed": 18737992,
+        "external": 58766197,
+        "arrayBuffers": 5663032
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 360144,
+        "external": 370797,
+        "arrayBuffers": 370797
+      },
+      "gc": [
+        {
+          "startMs": 788.796625,
+          "durationMs": 0.14050006866455078,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 790.096834,
+          "durationMs": 0.09066593647003174,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 791.422959,
+          "durationMs": 0.03437495231628418,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 792.744125,
+          "durationMs": 0.045667052268981934,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 5,
+      "wallMs": 54.64708299999995,
+      "cpuUserMs": 65.117,
+      "cpuSystemMs": 1.45,
+      "memoryBefore": {
+        "rss": 147800064,
+        "heapTotal": 32440320,
+        "heapUsed": 18791760,
+        "external": 58766197,
+        "arrayBuffers": 5663032
+      },
+      "memoryAfter": {
+        "rss": 153714688,
+        "heapTotal": 32440320,
+        "heapUsed": 15829760,
+        "external": 71015682,
+        "arrayBuffers": 7819973
+      },
+      "memoryDelta": {
+        "rss": 5914624,
+        "heapTotal": 0,
+        "heapUsed": -2962000,
+        "external": 12249485,
+        "arrayBuffers": 2156941
+      },
+      "gc": [
+        {
+          "startMs": 840.316209,
+          "durationMs": 0.30991601943969727,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 840.628042,
+          "durationMs": 0.024791955947875977,
+          "kind": 8,
+          "forced": false
+        },
+        {
+          "startMs": 840.674375,
+          "durationMs": 0.2578749656677246,
+          "kind": 1,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.6319999999999482,
+        "initializeMs": 0.10799999999994725,
+        "evaluateMs": 4.1450000000000955,
+        "analyzeMs": 49.69741699999997
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 5,
+      "wallMs": 2.412290999999982,
+      "cpuUserMs": 3.595,
+      "cpuSystemMs": 0.033,
+      "memoryBefore": {
+        "rss": 153731072,
+        "heapTotal": 32440320,
+        "heapUsed": 12789456,
+        "external": 71015682,
+        "arrayBuffers": 3714896
+      },
+      "memoryAfter": {
+        "rss": 153731072,
+        "heapTotal": 32440320,
+        "heapUsed": 12794128,
+        "external": 67530381,
+        "arrayBuffers": 4334672
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4672,
+        "external": -3485301,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 5,
+      "wallMs": 2.684500000000071,
+      "cpuUserMs": 2.63,
+      "cpuSystemMs": 0.053,
+      "memoryBefore": {
+        "rss": 153731072,
+        "heapTotal": 32440320,
+        "heapUsed": 12803568,
+        "external": 67530381,
+        "arrayBuffers": 4334672
+      },
+      "memoryAfter": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 15805592,
+        "external": 68365853,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 245760,
+        "heapTotal": 245760,
+        "heapUsed": 3002024,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 5,
+      "wallMs": 2.5378749999999854,
+      "cpuUserMs": 10.277,
+      "cpuSystemMs": 0.012,
+      "memoryBefore": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 15812016,
+        "external": 68365853,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 15873376,
+        "external": 68365853,
+        "arrayBuffers": 5170144
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 61360,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 5,
+      "wallMs": 0.836832999999956,
+      "cpuUserMs": 1.269,
+      "cpuSystemMs": 0.028,
+      "memoryBefore": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 15879848,
+        "external": 68365853,
+        "arrayBuffers": 5170144
+      },
+      "memoryAfter": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 17208384,
+        "external": 68385420,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1328536,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 5,
+      "wallMs": 0.18529100000000653,
+      "cpuUserMs": 0.504,
+      "cpuSystemMs": 0.007,
+      "memoryBefore": {
+        "rss": 153976832,
+        "heapTotal": 32686080,
+        "heapUsed": 17215040,
+        "external": 68385420,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 153993216,
+        "heapTotal": 32686080,
+        "heapUsed": 17223744,
+        "external": 68385420,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 16384,
+        "heapTotal": 0,
+        "heapUsed": 8704,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 5,
+      "wallMs": 0.25641699999994216,
+      "cpuUserMs": 0.256,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 153993216,
+        "heapTotal": 32686080,
+        "heapUsed": 17229840,
+        "external": 68385420,
+        "arrayBuffers": 5189711
+      },
+      "memoryAfter": {
+        "rss": 153993216,
+        "heapTotal": 32686080,
+        "heapUsed": 20189624,
+        "external": 68385420,
+        "arrayBuffers": 5189711
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959784,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 5,
+      "wallMs": 6.147042000000056,
+      "cpuUserMs": 7.379,
+      "cpuSystemMs": 0.216,
+      "memoryBefore": {
+        "rss": 153747456,
+        "heapTotal": 32440320,
+        "heapUsed": 13077440,
+        "external": 68385420,
+        "arrayBuffers": 3714960
+      },
+      "memoryAfter": {
+        "rss": 153747456,
+        "heapTotal": 32440320,
+        "heapUsed": 14593472,
+        "external": 67333833,
+        "arrayBuffers": 4138124
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1516032,
+        "external": -1051587,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 860.46875,
+          "durationMs": 0.08945906162261963,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 861.745667,
+          "durationMs": 0.05487489700317383,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 863.582875,
+          "durationMs": 0.06562507152557373,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 864.898167,
+          "durationMs": 0.05216705799102783,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 6,
+      "wallMs": 53.54216699999995,
+      "cpuUserMs": 53.852,
+      "cpuSystemMs": 0.716,
+      "memoryBefore": {
+        "rss": 153747456,
+        "heapTotal": 32440320,
+        "heapUsed": 14647416,
+        "external": 67333833,
+        "arrayBuffers": 4138124
+      },
+      "memoryAfter": {
+        "rss": 159252480,
+        "heapTotal": 32440320,
+        "heapUsed": 18409128,
+        "external": 69490774,
+        "arrayBuffers": 6295065
+      },
+      "memoryDelta": {
+        "rss": 5505024,
+        "heapTotal": 0,
+        "heapUsed": 3761712,
+        "external": 2156941,
+        "arrayBuffers": 2156941
+      },
+      "gc": [],
+      "phases": {
+        "parseMs": 0.5978750000000446,
+        "initializeMs": 0.022457999999915046,
+        "evaluateMs": 3.9797090000000708,
+        "analyzeMs": 48.87270799999999
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 6,
+      "wallMs": 2.5787090000000035,
+      "cpuUserMs": 2.543,
+      "cpuSystemMs": 0.032,
+      "memoryBefore": {
+        "rss": 159252480,
+        "heapTotal": 32440320,
+        "heapUsed": 18415320,
+        "external": 69490774,
+        "arrayBuffers": 6295065
+      },
+      "memoryAfter": {
+        "rss": 159252480,
+        "heapTotal": 32440320,
+        "heapUsed": 18420184,
+        "external": 70110550,
+        "arrayBuffers": 6914841
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4864,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 6,
+      "wallMs": 2.6669580000000224,
+      "cpuUserMs": 2.597,
+      "cpuSystemMs": 0.072,
+      "memoryBefore": {
+        "rss": 159252480,
+        "heapTotal": 32440320,
+        "heapUsed": 18425552,
+        "external": 70110550,
+        "arrayBuffers": 6914841
+      },
+      "memoryAfter": {
+        "rss": 160432128,
+        "heapTotal": 32686080,
+        "heapUsed": 21471080,
+        "external": 70946022,
+        "arrayBuffers": 7750313
+      },
+      "memoryDelta": {
+        "rss": 1179648,
+        "heapTotal": 245760,
+        "heapUsed": 3045528,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 6,
+      "wallMs": 2.430291000000011,
+      "cpuUserMs": 2.431,
+      "cpuSystemMs": 0,
+      "memoryBefore": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 13385456,
+        "external": 70946022,
+        "arrayBuffers": 4652892
+      },
+      "memoryAfter": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 13387632,
+        "external": 70946022,
+        "arrayBuffers": 4652892
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2176,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 6,
+      "wallMs": 0.7249160000000074,
+      "cpuUserMs": 0.725,
+      "cpuSystemMs": 0,
+      "memoryBefore": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 13392072,
+        "external": 70946022,
+        "arrayBuffers": 4652892
+      },
+      "memoryAfter": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 14726968,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1334896,
+        "external": -3077854,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 6,
+      "wallMs": 0.13025000000004638,
+      "cpuUserMs": 0.131,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 14731360,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryAfter": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 14735840,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4480,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 6,
+      "wallMs": 0.26141599999994014,
+      "cpuUserMs": 0.263,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 14740576,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryAfter": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 17700504,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959928,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 6,
+      "wallMs": 6.588958000000048,
+      "cpuUserMs": 5.961,
+      "cpuSystemMs": 0.86,
+      "memoryBefore": {
+        "rss": 160186368,
+        "heapTotal": 32440320,
+        "heapUsed": 17706616,
+        "external": 67868168,
+        "arrayBuffers": 4672459
+      },
+      "memoryAfter": {
+        "rss": 169050112,
+        "heapTotal": 49217536,
+        "heapUsed": 18225368,
+        "external": 68239002,
+        "arrayBuffers": 5043256
+      },
+      "memoryDelta": {
+        "rss": 8863744,
+        "heapTotal": 16777216,
+        "heapUsed": 518752,
+        "external": 370834,
+        "arrayBuffers": 370797
+      },
+      "gc": [
+        {
+          "startMs": 929.533375,
+          "durationMs": 0.3219170570373535,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 931.04625,
+          "durationMs": 0.4445838928222656,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 934.480209,
+          "durationMs": 0.07145798206329346,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 7,
+      "wallMs": 60.87575000000004,
+      "cpuUserMs": 86.345,
+      "cpuSystemMs": 1.27,
+      "memoryBefore": {
+        "rss": 169050112,
+        "heapTotal": 49217536,
+        "heapUsed": 18277920,
+        "external": 68238965,
+        "arrayBuffers": 5043256
+      },
+      "memoryAfter": {
+        "rss": 174374912,
+        "heapTotal": 49479680,
+        "heapUsed": 22266024,
+        "external": 79448588,
+        "arrayBuffers": 4137980
+      },
+      "memoryDelta": {
+        "rss": 5324800,
+        "heapTotal": 262144,
+        "heapUsed": 3988104,
+        "external": 11209623,
+        "arrayBuffers": -905276
+      },
+      "gc": [
+        {
+          "startMs": 982.841125,
+          "durationMs": 0.9024170637130737,
+          "kind": 4,
+          "forced": false
+        }
+      ],
+      "phases": {
+        "parseMs": 0.765625,
+        "initializeMs": 0.01933299999996052,
+        "evaluateMs": 4.120625000000018,
+        "analyzeMs": 55.899625000000015
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 7,
+      "wallMs": 2.4728750000000446,
+      "cpuUserMs": 2.461,
+      "cpuSystemMs": 0.014,
+      "memoryBefore": {
+        "rss": 174374912,
+        "heapTotal": 49479680,
+        "heapUsed": 22287912,
+        "external": 79448588,
+        "arrayBuffers": 4137980
+      },
+      "memoryAfter": {
+        "rss": 174374912,
+        "heapTotal": 49479680,
+        "heapUsed": 22292616,
+        "external": 80068364,
+        "arrayBuffers": 4757756
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4704,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 7,
+      "wallMs": 2.7379999999999427,
+      "cpuUserMs": 2.682,
+      "cpuSystemMs": 0.053,
+      "memoryBefore": {
+        "rss": 174374912,
+        "heapTotal": 49479680,
+        "heapUsed": 22298048,
+        "external": 80068364,
+        "arrayBuffers": 4757756
+      },
+      "memoryAfter": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 25253296,
+        "external": 80903836,
+        "arrayBuffers": 5593228
+      },
+      "memoryDelta": {
+        "rss": 344064,
+        "heapTotal": 245760,
+        "heapUsed": 2955248,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 7,
+      "wallMs": 2.4548750000000155,
+      "cpuUserMs": 2.456,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 25258392,
+        "external": 80903836,
+        "arrayBuffers": 5593228
+      },
+      "memoryAfter": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 25260408,
+        "external": 80903836,
+        "arrayBuffers": 5593228
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2016,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 7,
+      "wallMs": 0.7891250000000127,
+      "cpuUserMs": 1.547,
+      "cpuSystemMs": 0.026,
+      "memoryBefore": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 25264880,
+        "external": 80903836,
+        "arrayBuffers": 5593228
+      },
+      "memoryAfter": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 26596000,
+        "external": 80923403,
+        "arrayBuffers": 5612795
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1331120,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 7,
+      "wallMs": 0.17420900000001893,
+      "cpuUserMs": 0.283,
+      "cpuSystemMs": 0.006,
+      "memoryBefore": {
+        "rss": 174718976,
+        "heapTotal": 49725440,
+        "heapUsed": 26600392,
+        "external": 80923403,
+        "arrayBuffers": 5612795
+      },
+      "memoryAfter": {
+        "rss": 174735360,
+        "heapTotal": 49725440,
+        "heapUsed": 26608264,
+        "external": 80923403,
+        "arrayBuffers": 5612795
+      },
+      "memoryDelta": {
+        "rss": 16384,
+        "heapTotal": 0,
+        "heapUsed": 7872,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 7,
+      "wallMs": 0.2650830000000042,
+      "cpuUserMs": 0.264,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 174735360,
+        "heapTotal": 49725440,
+        "heapUsed": 26613032,
+        "external": 80923403,
+        "arrayBuffers": 5612795
+      },
+      "memoryAfter": {
+        "rss": 174735360,
+        "heapTotal": 49725440,
+        "heapUsed": 29572848,
+        "external": 80923403,
+        "arrayBuffers": 5612795
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959816,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 7,
+      "wallMs": 6.5919999999999845,
+      "cpuUserMs": 8.256,
+      "cpuSystemMs": 0.517,
+      "memoryBefore": {
+        "rss": 174489600,
+        "heapTotal": 49479680,
+        "heapUsed": 13705016,
+        "external": 80923403,
+        "arrayBuffers": 2832156
+      },
+      "memoryAfter": {
+        "rss": 182337536,
+        "heapTotal": 49479680,
+        "heapUsed": 15103184,
+        "external": 78565965,
+        "arrayBuffers": 3255320
+      },
+      "memoryDelta": {
+        "rss": 7847936,
+        "heapTotal": 0,
+        "heapUsed": 1398168,
+        "external": -2357438,
+        "arrayBuffers": 423164
+      },
+      "gc": [
+        {
+          "startMs": 1009.459167,
+          "durationMs": 0.17066705226898193,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 1012.604792,
+          "durationMs": 0.11554205417633057,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    },
+    {
+      "operation": "build",
+      "iteration": 8,
+      "wallMs": 52.65220799999997,
+      "cpuUserMs": 53.503,
+      "cpuSystemMs": 0.712,
+      "memoryBefore": {
+        "rss": 182337536,
+        "heapTotal": 49479680,
+        "heapUsed": 15133288,
+        "external": 78565965,
+        "arrayBuffers": 3255320
+      },
+      "memoryAfter": {
+        "rss": 187957248,
+        "heapTotal": 49479680,
+        "heapUsed": 18870408,
+        "external": 80722869,
+        "arrayBuffers": 5412261
+      },
+      "memoryDelta": {
+        "rss": 5619712,
+        "heapTotal": 0,
+        "heapUsed": 3737120,
+        "external": 2156904,
+        "arrayBuffers": 2156941
+      },
+      "gc": [],
+      "phases": {
+        "parseMs": 0.45491600000002563,
+        "initializeMs": 0.014084000000025299,
+        "evaluateMs": 3.9263329999999996,
+        "analyzeMs": 48.1875
+      }
+    },
+    {
+      "operation": "bvh",
+      "iteration": 8,
+      "wallMs": 2.4470420000000104,
+      "cpuUserMs": 5.764,
+      "cpuSystemMs": 0.026,
+      "memoryBefore": {
+        "rss": 187957248,
+        "heapTotal": 49479680,
+        "heapUsed": 18876440,
+        "external": 80722869,
+        "arrayBuffers": 5412261
+      },
+      "memoryAfter": {
+        "rss": 187957248,
+        "heapTotal": 49479680,
+        "heapUsed": 18881112,
+        "external": 81342645,
+        "arrayBuffers": 6032037
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4672,
+        "external": 619776,
+        "arrayBuffers": 619776
+      },
+      "gc": []
+    },
+    {
+      "operation": "edges-position-weld",
+      "iteration": 8,
+      "wallMs": 2.5669580000001133,
+      "cpuUserMs": 2.518,
+      "cpuSystemMs": 0.05,
+      "memoryBefore": {
+        "rss": 187957248,
+        "heapTotal": 49479680,
+        "heapUsed": 18886480,
+        "external": 81342645,
+        "arrayBuffers": 6032037
+      },
+      "memoryAfter": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 21840632,
+        "external": 82178117,
+        "arrayBuffers": 6867509
+      },
+      "memoryDelta": {
+        "rss": 344064,
+        "heapTotal": 245760,
+        "heapUsed": 2954152,
+        "external": 835472,
+        "arrayBuffers": 835472
+      },
+      "gc": []
+    },
+    {
+      "operation": "asset-hash",
+      "iteration": 8,
+      "wallMs": 2.4632500000000164,
+      "cpuUserMs": 8.197,
+      "cpuSystemMs": 0.026,
+      "memoryBefore": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 21845728,
+        "external": 82178117,
+        "arrayBuffers": 6867509
+      },
+      "memoryAfter": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 21847712,
+        "external": 82178117,
+        "arrayBuffers": 6867509
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1984,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "result-validation",
+      "iteration": 8,
+      "wallMs": 0.6356670000000122,
+      "cpuUserMs": 0.638,
+      "cpuSystemMs": 0.001,
+      "memoryBefore": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 21852152,
+        "external": 82178117,
+        "arrayBuffers": 6867509
+      },
+      "memoryAfter": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 23125760,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 1273608,
+        "external": 19567,
+        "arrayBuffers": 19567
+      },
+      "gc": []
+    },
+    {
+      "operation": "scene-publication",
+      "iteration": 8,
+      "wallMs": 0.13770799999997507,
+      "cpuUserMs": 2.527,
+      "cpuSystemMs": 0.002,
+      "memoryBefore": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 23130152,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryAfter": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 23134608,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 4456,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "inspection",
+      "iteration": 8,
+      "wallMs": 0.30787499999996726,
+      "cpuUserMs": 0.511,
+      "cpuSystemMs": 0.013,
+      "memoryBefore": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 23139344,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryAfter": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 26099136,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryDelta": {
+        "rss": 0,
+        "heapTotal": 0,
+        "heapUsed": 2959792,
+        "external": 0,
+        "arrayBuffers": 0
+      },
+      "gc": []
+    },
+    {
+      "operation": "stl",
+      "iteration": 8,
+      "wallMs": 5.689542000000074,
+      "cpuUserMs": 6.002,
+      "cpuSystemMs": 0.2,
+      "memoryBefore": {
+        "rss": 188301312,
+        "heapTotal": 49725440,
+        "heapUsed": 26105152,
+        "external": 82197684,
+        "arrayBuffers": 6887076
+      },
+      "memoryAfter": {
+        "rss": 188121088,
+        "heapTotal": 49479680,
+        "heapUsed": 26356800,
+        "external": 79471017,
+        "arrayBuffers": 4160372
+      },
+      "memoryDelta": {
+        "rss": -180224,
+        "heapTotal": -245760,
+        "heapUsed": 251648,
+        "external": -2726667,
+        "arrayBuffers": -2726704
+      },
+      "gc": [
+        {
+          "startMs": 1076.06425,
+          "durationMs": 0.16091692447662354,
+          "kind": 1,
+          "forced": false
+        },
+        {
+          "startMs": 1078.69,
+          "durationMs": 0.11816704273223877,
+          "kind": 1,
+          "forced": false
+        }
+      ]
+    }
+  ],
+  "memory": {
+    "beforeCold": {
+      "rss": 76742656,
+      "heapTotal": 29818880,
+      "heapUsed": 11380000,
+      "external": 4241896,
+      "arrayBuffers": 1075967
+    },
+    "beforeSamples": {
+      "rss": 116916224,
+      "heapTotal": 32178176,
+      "heapUsed": 13390312,
+      "external": 28001215,
+      "arrayBuffers": 1981039
+    },
+    "afterSamples": {
+      "rss": 188121088,
+      "heapTotal": 49479680,
+      "heapUsed": 26386400,
+      "external": 79471017,
+      "arrayBuffers": 4160372
+    },
+    "afterReleaseAndGc": {
+      "rss": 226902016,
+      "heapTotal": 49217536,
+      "heapUsed": 13032048,
+      "external": 108368163,
+      "arrayBuffers": 1075987
+    },
+    "releasedRetainedDeltaBytes": {
+      "rss": 109985792,
+      "heapTotal": 17039360,
+      "heapUsed": -358264,
+      "external": 80366948,
+      "arrayBuffers": -905052
+    },
+    "maxRssBytes": 227196928
+  },
+  "outputSignatures": {
+    "bvh": "f235eb3e02733765dd8463cbf635334b2ba5a98462eee46ce10fe036dff170cc",
+    "edges-position-weld": "19acbf55b050608c0709b485b553b5deb2a52beb368074b9c6e9dcb3f55ffd6d",
+    "asset-hash": [
+      "asset:v1:bceaf0fb89b46f87:197184:101520"
+    ],
+    "result-validation": true,
+    "scene-publication": {
+      "assets": 1,
+      "entities": 1,
+      "transferBytes": 481968,
+      "buffers": 8
+    },
+    "inspection": [
+      {
+        "index": 0,
+        "vertices": 8216,
+        "triangles": 8460,
+        "bounds": {
+          "min": [
+            -43,
+            -43,
+            -4
+          ],
+          "max": [
+            43,
+            43,
+            4
+          ]
+        },
+        "dimensions": [
+          86,
+          86,
+          8
+        ],
+        "center": [
+          0,
+          0,
+          0
+        ],
+        "topology": {
+          "boundary": 0,
+          "crease": 4108,
+          "nonManifold": 0,
+          "degenerate": 0
+        }
+      }
+    ],
+    "stl": {
+      "bytes": 423084,
+      "triangles": 8460,
+      "sha256": "e4bbb37c6ed6279d9270d98dc3f239ad6ac40025a10523be8aec86ee947e9e44"
+    }
+  },
+  "profiles": [
+    {
+      "operation": "build",
+      "iterations": 3,
+      "heapFile": "build.heapprofile",
+      "cpuFile": "build.cpuprofile",
+      "allocationSamplingIntervalBytes": 32768,
+      "collectedObjectsIncluded": true,
+      "sampledAllocationBytes": 17470752,
+      "topAllocationStacks": [
+        {
+          "sampledBytes": 1508088,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "extractSemanticEdges file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshTopology.ts:1:325",
+            "hypot (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 1477200,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:112336",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "compileAst file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107474",
+            "compileOpenSCAD file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23390",
+            "tokenize file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:1367"
+          ]
+        },
+        {
+          "sampledBytes": 1442144,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 1343824,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447"
+          ]
+        },
+        {
+          "sampledBytes": 852176,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:3625",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:3322"
+          ]
+        },
+        {
+          "sampledBytes": 655520,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "extractSemanticEdges file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshTopology.ts:1:325"
+          ]
+        },
+        {
+          "sampledBytes": 573568,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 458864,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 294992,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 263168,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "evalTopLevel file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:38455",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "differenceChildren file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:87562",
+            "evalNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36163",
+            "evalPreparedNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:37060",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "arg file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:30497",
+            "evalExpression file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:15890",
+            "map (native):0:0",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:16190",
+            "evalExpression file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:15890",
+            "__name file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:48"
+          ]
+        },
+        {
+          "sampledBytes": 262208,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "max (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 262208,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:3625",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:3322"
+          ]
+        },
+        {
+          "sampledBytes": 229440,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 229440,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        },
+        {
+          "sampledBytes": 197216,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "evalTopLevel file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:38455",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "differenceChildren file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:87562",
+            "evalNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36163",
+            "evalPreparedNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:37060",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40877",
+            "evalNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36163",
+            "evalPreparedNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:37060",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302"
+          ]
+        },
+        {
+          "sampledBytes": 196928,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:112336",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "compileAst file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107474",
+            "compileOpenSCAD file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23390",
+            "finalizeOpenScadProgram file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:22993",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "values (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 196720,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:112336",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "compileAst file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107474",
+            "compileOpenSCAD file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23390",
+            "finalizeOpenScadProgram file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:22993",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "deepFreeze file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23819",
+            "values (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 164608,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "evalTopLevel file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:38455",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "differenceChildren file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:87562",
+            "evalNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36163",
+            "evalPreparedNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:37060",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40877",
+            "evalNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36163",
+            "evalPreparedNodes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:37060",
+            "evalPreparedCall file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:36615",
+            "evalNode file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:40302",
+            "makeCylinder file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:63607",
+            "arg file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:30497",
+            "evalExpression file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:15890",
+            "__name file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:48"
+          ]
+        },
+        {
+          "sampledBytes": 164208,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:112336",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "compileAst file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107474",
+            "compileOpenSCAD file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:23390",
+            "parseAll file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:4585",
+            "statement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5654",
+            "parseStatement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5882",
+            "call file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:10075",
+            "body file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:11227",
+            "statement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5654",
+            "parseStatement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5882",
+            "call file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:10075",
+            "body file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:11227",
+            "statement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5654",
+            "parseStatement file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:5882",
+            "call file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:10075",
+            "expression file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadCompiler.ts:1:11513"
+          ]
+        },
+        {
+          "sampledBytes": 163888,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447",
+            "buildMeshBvh file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:819",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+          ]
+        }
+      ],
+      "cpuSamplingIntervalMicroseconds": 1000,
+      "cpuSamples": 118,
+      "topCpuFunctions": [
+        {
+          "samples": 18,
+          "frame": "wasm-function[68] wasm://wasm/00210c7a:1:22937"
+        },
+        {
+          "samples": 11,
+          "frame": "wasm-function[352] wasm://wasm/00210c7a:1:163928"
+        },
+        {
+          "samples": 5,
+          "frame": "hashBytes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/core/scene.ts:1:133"
+        },
+        {
+          "samples": 4,
+          "frame": "vectorValue file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:30300"
+        },
+        {
+          "samples": 3,
+          "frame": "wasm-function[631] wasm://wasm/00210c7a:1:394563"
+        },
+        {
+          "samples": 2,
+          "frame": "parseInternal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/openscadParser.ts:1:107447"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[237] wasm://wasm/00210c7a:1:76659"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[631] wasm://wasm/00210c7a:1:394563"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[627] wasm://wasm/00210c7a:1:389991"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[187] wasm://wasm/00210c7a:1:58451"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[518] wasm://wasm/00210c7a:1:320170"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[578] wasm://wasm/00210c7a:1:362866"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[376] wasm://wasm/00210c7a:1:175051"
+        },
+        {
+          "samples": 2,
+          "frame": "wasm-function[276] wasm://wasm/00210c7a:1:104619"
+        },
+        {
+          "samples": 2,
+          "frame": "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+        },
+        {
+          "samples": 2,
+          "frame": "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshBvh.ts:1:4480"
+        },
+        {
+          "samples": 1,
+          "frame": "post node:inspector:118:7"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[93] wasm://wasm/00210c7a:1:30615"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[655] wasm://wasm/00210c7a:1:413367"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[49] wasm://wasm/00210c7a:1:18960"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[482] wasm://wasm/00210c7a:1:280391"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[80] wasm://wasm/00210c7a:1:25032"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[276] wasm://wasm/00210c7a:1:104619"
+        },
+        {
+          "samples": 1,
+          "frame": "wasm-function[93] wasm://wasm/00210c7a:1:30615"
+        },
+        {
+          "samples": 1,
+          "frame": "set WebSocket (native):0:0"
+        }
+      ]
+    },
+    {
+      "operation": "stl",
+      "iterations": 3,
+      "heapFile": "stl.heapprofile",
+      "cpuFile": "stl.cpuprofile",
+      "allocationSamplingIntervalBytes": 32768,
+      "collectedObjectsIncluded": true,
+      "sampledAllocationBytes": 98736968,
+      "topAllocationStacks": [
+        {
+          "sampledBytes": 30729432,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072"
+          ]
+        },
+        {
+          "sampledBytes": 24162416,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072",
+            "transformPoint file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/math3d.ts:1:4602",
+            "next (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 18039552,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072",
+            "transformPoint file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/math3d.ts:1:4602"
+          ]
+        },
+        {
+          "sampledBytes": 12366304,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072",
+            "normal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:1723"
+          ]
+        },
+        {
+          "sampledBytes": 7407376,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072",
+            "every (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 2654864,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "validateMeshes file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:371",
+            "every (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 1540832,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072",
+            "normal file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:1723",
+            "hypot (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 1442640,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:3144"
+          ]
+        },
+        {
+          "sampledBytes": 229520,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:3144",
+            "next (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 98400,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521",
+            "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:3144",
+            "values (native):0:0"
+          ]
+        },
+        {
+          "sampledBytes": 32832,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "encodeStlHeader file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:2:55",
+            "encode node:internal/encoding:351:9"
+          ]
+        },
+        {
+          "sampledBytes": 32800,
+          "stack": [
+            "(root) (native):0:0",
+            "(anonymous) (native):0:0",
+            "profileOperation file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:117:32",
+            "stl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/bench-cpu.mjs:188:10",
+            "buildBinaryStl file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2809",
+            "encodeStlHeader file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:2:55",
+            "next (native):0:0"
+          ]
+        }
+      ],
+      "cpuSamplingIntervalMicroseconds": 1000,
+      "cpuSamples": 12,
+      "topCpuFunctions": [
+        {
+          "samples": 5,
+          "frame": "vertex file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:1184"
+        },
+        {
+          "samples": 2,
+          "frame": "transformPoint file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/math3d.ts:1:4602"
+        },
+        {
+          "samples": 1,
+          "frame": "post node:inspector:118:7"
+        },
+        {
+          "samples": 1,
+          "frame": "visitTriangles file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2521"
+        },
+        {
+          "samples": 1,
+          "frame": "triangleAt file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:2072"
+        },
+        {
+          "samples": 1,
+          "frame": "(anonymous) file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:1:3144"
+        },
+        {
+          "samples": 1,
+          "frame": "encodeStlHeader file:///Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/meshExport.ts:2:55"
+        }
+      ]
+    }
+  ]
+}

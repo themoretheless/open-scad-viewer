@@ -1,0 +1,247 @@
+{
+  "method": "Same binary includes pinned pre-optimization reference; alternating order;1 warmup +3 measured; exact float bit fingerprints; timings indicative during parallel development",
+  "profile": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+  "rustc": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+  "results": [
+    {
+      "step": "step1",
+      "case": "shell6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 99.131334,
+          "matching_ms": 261.25425
+        },
+        "candidate": {
+          "extraction_ms": 97.538958,
+          "matching_ms": 260.077625
+        }
+      }
+    },
+    {
+      "step": "step1",
+      "case": "shell12",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 200.041542,
+          "matching_ms": 1198.556375
+        },
+        "candidate": {
+          "extraction_ms": 199.5195,
+          "matching_ms": 1231.174625
+        }
+      }
+    },
+    {
+      "step": "step1",
+      "case": "monstree6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 251.280208,
+          "matching_ms": 861.861292
+        },
+        "candidate": {
+          "extraction_ms": 252.851708,
+          "matching_ms": 862.822791
+        }
+      }
+    },
+    {
+      "step": "step1b",
+      "case": "shell6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 97.556375,
+          "matching_ms": 258.603667
+        },
+        "candidate": {
+          "extraction_ms": 97.095167,
+          "matching_ms": 266.082375
+        }
+      }
+    },
+    {
+      "step": "step1b",
+      "case": "shell12",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 198.661542,
+          "matching_ms": 1194.521917
+        },
+        "candidate": {
+          "extraction_ms": 199.504166,
+          "matching_ms": 1235.645042
+        }
+      }
+    },
+    {
+      "step": "step1b",
+      "case": "monstree6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 248.744375,
+          "matching_ms": 863.857917
+        },
+        "candidate": {
+          "extraction_ms": 251.651375,
+          "matching_ms": 860.164875
+        }
+      }
+    },
+    {
+      "step": "step2",
+      "case": "shell6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 97.689542,
+          "matching_ms": 257.580667
+        },
+        "candidate": {
+          "extraction_ms": 84.277584,
+          "matching_ms": 259.410875
+        }
+      }
+    },
+    {
+      "step": "step2",
+      "case": "shell12",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 196.394375,
+          "matching_ms": 1190.685542
+        },
+        "candidate": {
+          "extraction_ms": 170.818792,
+          "matching_ms": 1196.881583
+        }
+      }
+    },
+    {
+      "step": "step2",
+      "case": "monstree6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 250.01075,
+          "matching_ms": 852.209959
+        },
+        "candidate": {
+          "extraction_ms": 156.522167,
+          "matching_ms": 865.13275
+        }
+      }
+    },
+    {
+      "step": "step3",
+      "case": "shell6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 97.601167,
+          "matching_ms": 258.723875
+        },
+        "candidate": {
+          "extraction_ms": 84.771375,
+          "matching_ms": 239.008375
+        }
+      }
+    },
+    {
+      "step": "step3",
+      "case": "shell12",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 195.681458,
+          "matching_ms": 1194.738125
+        },
+        "candidate": {
+          "extraction_ms": 172.436542,
+          "matching_ms": 1093.445542
+        }
+      }
+    },
+    {
+      "step": "step3",
+      "case": "monstree6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 245.993542,
+          "matching_ms": 854.324292
+        },
+        "candidate": {
+          "extraction_ms": 156.103167,
+          "matching_ms": 794.344958
+        }
+      }
+    },
+    {
+      "step": "step4",
+      "case": "shell6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 98.213708,
+          "matching_ms": 257.9815
+        },
+        "candidate": {
+          "extraction_ms": 86.0225,
+          "matching_ms": 241.317583
+        }
+      }
+    },
+    {
+      "step": "step4",
+      "case": "shell12",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 193.318625,
+          "matching_ms": 1171.721209
+        },
+        "candidate": {
+          "extraction_ms": 167.350834,
+          "matching_ms": 1079.07525
+        }
+      }
+    },
+    {
+      "step": "step4",
+      "case": "monstree6",
+      "exact_descriptor_bits": true,
+      "exact_match_bits": true,
+      "median_ms": {
+        "reference": {
+          "extraction_ms": 240.78875,
+          "matching_ms": 851.951708
+        },
+        "candidate": {
+          "extraction_ms": 150.648667,
+          "matching_ms": 784.248291
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "format": "open-scad-viewer/photo-calibration",
+  "version": 1,
+  "coordinateSystem": "oriented-pixel-centers",
+  "groups": [
+    {
+      "id": "synthetic-a",
+      "label": "DEMO: synthetic camera A",
+      "source": "Synthetic test values only. Replace with measured calibration; not Canon/iPhone measurements.",
+      "imageWidth": 320,
+      "imageHeight": 240,
+      "fx": 245,
+      "fy": 270,
+      "cx": 157,
+      "cy": 122,
+      "distortion": {
+        "model": "brown-conrady",
+        "k1": 0.42,
+        "k2": 0.04,
+        "k3": 0.002,
+        "p1": 0.015,
+        "p2": -0.01
+      }
+    },
+    {
+      "id": "synthetic-b",
+      "label": "DEMO: synthetic camera B",
+      "source": "Synthetic test values only. Replace with measured calibration; not Canon/iPhone measurements.",
+      "imageWidth": 320,
+      "imageHeight": 240,
+      "fx": 270,
+      "fy": 240,
+      "cx": 162,
+      "cy": 117,
+      "distortion": {
+        "model": "brown-conrady",
+        "k1": 0.3,
+        "k2": 0.04,
+        "k3": 0.002,
+        "p1": -0.012,
+        "p2": 0.017
+      }
+    }
+  ]
+}

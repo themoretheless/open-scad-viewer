@@ -1,0 +1,96 @@
+[
+  {
+    "name": "rust-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "photogrammetry-kernel",
+      "-p",
+      "photogrammetry-wasm",
+      "-p",
+      "value-codec",
+      "--all-targets"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 28716.62487508729
+  },
+  {
+    "name": "wasm-build",
+    "command": [
+      "node",
+      "scripts/build-photogrammetry.mjs"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 1184.3637499259785
+  },
+  {
+    "name": "vue-typecheck",
+    "command": [
+      "./node_modules/.bin/vue-tsc",
+      "--noEmit"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 3262.023749994114
+  },
+  {
+    "name": "mcp-typecheck",
+    "command": [
+      "./node_modules/.bin/tsc",
+      "--noEmit",
+      "-p",
+      "tsconfig.mcp.json"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 2289.7855000337586
+  },
+  {
+    "name": "photo-vitest",
+    "command": [
+      "./node_modules/.bin/vitest",
+      "run",
+      "--configLoader",
+      "runner",
+      "tests/photoAdapters.test.ts",
+      "tests/photoWorker.test.ts",
+      "tests/photoTransportBudget.test.ts",
+      "tests/photogrammetry.test.ts",
+      "tests/photoCalibration.test.ts",
+      "tests/photoCalibrationKernel.test.ts",
+      "tests/photoDensePreset.test.ts"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 594.0783340483904
+  },
+  {
+    "name": "vite-build",
+    "command": [
+      "./node_modules/.bin/vite",
+      "build",
+      "--configLoader",
+      "runner"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 581.6457091132179
+  },
+  {
+    "name": "dist-check",
+    "command": [
+      "node",
+      "scripts/verify-dist.mjs"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/open-scad-viewer",
+    "exit_code": 0,
+    "wall_ms": 49.29620795883238
+  }
+]

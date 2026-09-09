@@ -1,0 +1,10 @@
+[package]
+name = "photogrammetry-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+[lib]
+crate-type = ["cdylib", "rlib"]
+[dependencies]
+photogrammetry-kernel = { path = "../photogrammetry-kernel" }
+value-codec = { path = "../value-codec" }

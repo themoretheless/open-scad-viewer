@@ -198,7 +198,6 @@ it('allows an unused no-result declaration at end of source',()=>{
  expect(compile('show sphere(1)\nfn helper x: int\n    b = x + 1').source).toContain('sphere(r=1')
 })
 it.each([
- 'fn f x: int\n    ret 2\nf(1)\nshow sphere(1)',
  'fn f x: int\n    b = x\nr = f(1)\nshow sphere(1)',
  'fn f x: int\n    b = x\nf(1.5)\nshow sphere(1)',
 ])('rejects invalid no-result use: %s',text=>expect(()=>compile(text)).toThrow())

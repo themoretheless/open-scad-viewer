@@ -296,6 +296,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'components/CommandPalette.vue',
       'components/CustomizerPanel.vue',
       'components/ExampleGallery.vue',
+      'components/FunctionReference.vue',
       'components/InspectPanel.vue',
       'components/KeyboardShortcuts.vue',
       'components/SceneOutliner.vue',

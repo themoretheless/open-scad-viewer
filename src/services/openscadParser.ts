@@ -1,5 +1,5 @@
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
-import { checkModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
+import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by Manifold WASM.
  *
@@ -3897,7 +3897,7 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
         return result
       }
       const result = await parseInternal(compiled.source, options)
-      requireModelGraphChecks(checkModelGraphGeometry(compiled.geometry_assertions, result.meshes))
+      requireModelGraphChecks(await evaluateModelGraphGeometry(compiled.geometry_assertions, result.meshes, async source => (await parseInternal(source, options)).meshes))
       // Generated SCAD spans are not spans in the authored compact document.
       for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
       return result

@@ -214,7 +214,12 @@ impl Parser<'_> {
         if depth > 16 {
             return self.err("Type nesting exceeds 16");
         }
-        let name = self.id()?;
+        let mut name = self.id()?;
+        if self.peek() == "." {
+            self.pop()?;
+            name.push('.');
+            name.push_str(&self.id()?);
+        }
         let mut args = Vec::new();
         if self.peek() == "<" {
             self.pop()?;
@@ -259,17 +264,106 @@ impl Parser<'_> {
         }
         Ok(xs)
     }
-    fn fields(&mut self, end: &str, alt: &str) -> R<Vec<J>> {
+    fn function_generics(&mut self, open: &str, close: &str) -> R<(Vec<String>, J)> {
+        let mut names = Vec::new();
+        let mut bounds = value_codec::Map::new();
+        if self.peek() == open {
+            self.pop()?;
+            self.inner();
+            while self.peek() != close {
+                let name = self.id()?;
+                if names.contains(&name) { return self.err("Duplicate generic parameter"); }
+                names.push(name.clone());
+                if names.len() > 16 { return self.err("At most 16 generic parameters"); }
+                let mut required = Vec::new();
+                if self.peek() == ":" {
+                    self.pop()?;
+                    loop {
+                        self.inner();
+                        let bound = self.id()?;
+                        if required.contains(&bound) { return self.err("Duplicate trait constraint"); }
+                        required.push(bound);
+                        if required.len() > 16 { return self.err("At most 16 trait constraints"); }
+                        if self.peek() != "+" { break; }
+                        self.pop()?;
+                    }
+                }
+                bounds.insert(name, json!(required));
+                self.inner();
+                if self.peek() != "," { break; }
+                self.pop()?;
+                self.inner();
+            }
+            self.take(close)?;
+        }
+        Ok((names, J::Object(bounds)))
+    }
+    fn trait_members(&mut self, implementation: bool) -> R<J> {
+        self.inner();
+        self.take("{")?;
+        self.commas();
+        let mut fields = Vec::new();
+        let mut methods = Vec::new();
+        let mut associated = Vec::new();
+        let mut names = Vec::new();
+        while self.peek() != "}" {
+            let base = self.indent();
+            let kind = self.peek().to_owned();
+            if kind == "fn" || kind == "type" { self.pop()?; }
+            let name = self.id()?;
+            if names.contains(&name) { return self.err(format!("Duplicate trait member {name}")); }
+            names.push(name.clone());
+            if names.len() > 64 { return self.err("At most 64 trait members"); }
+            match kind.as_str() {
+                "type" => {
+                    let mut entry = json!({"name":name});
+                    if implementation { self.take("=")?; entry["type"] = self.ty(0)?; }
+                    associated.push(entry);
+                }
+                "fn" => {
+                    let start = self.p;
+                    let inputs = if self.next() == ":" { self.layout_fields(&base,true)? } else { Vec::new() };
+                    let outputs = if self.peek() == "->" { self.pop()?; vec![json!({"name":"value","type":self.ty(0)?})] } else { Vec::new() };
+                    let end = self.p;
+                    self.inner();
+                    let body = ["ret","=>"].contains(&self.peek()) || (self.p != end && self.indent().len() > base.len());
+                    self.p = if body { start } else { end };
+                    let mut method = if body { self.layout(&base)? } else {
+                        json!({"kind":"function","generics":[],"inputs":inputs,"outputs":outputs,"singleResult":true,"required":true})
+                    };
+                    if !implementation && method["outputs"].as_array().is_none_or(Vec::is_empty) { return self.err("Trait methods require an explicit result type"); }
+                    if implementation && !body { return self.err("impl methods require a body"); }
+                    method["name"] = json!(name);
+                    methods.push(method);
+                }
+                _ => {
+                    if implementation { return self.err("impl accepts only type and fn members"); }
+                    self.take(":")?;
+                    fields.push(json!({"name":name,"type":self.ty(0)?}));
+                }
+            }
+            if self.peek() != "}" && !["\n",",",";"].contains(&self.peek()) { return self.err("Expected trait member separator"); }
+            self.commas();
+        }
+        self.take("}")?;
+        Ok(json!({"fields":fields,"methods":methods,"associated":associated}))
+    }
+    fn fields(&mut self, end: &str, alt: &str, defaults: bool) -> R<Vec<J>> {
         let mut xs = Vec::new();
         self.commas();
-        while self.peek() != end && self.peek() != alt {
+        while self.peek() != end && self.peek() != alt && self.peek() != "ret" && !(defaults && self.peek() == "{") {
             let name = self.id()?;
             self.take(":")?;
-            xs.push(json!({"name":&name,"type":self.ty(0)?}));
+            let mut field = json!({"name":&name,"type":self.ty(0)?});
+            if defaults && self.peek() == "=" {
+                self.pop()?;
+                field["default"] = self.expr(2)?;
+            }
+            xs.push(field);
             if xs.len() > 32 {
                 return self.err("At most 32 fields or parameters");
             }
-            if self.peek() != end && self.peek() != alt && !["\n", ",", ";"].contains(&self.peek())
+            if self.peek() != end && self.peek() != alt && self.peek() != "ret" && !(defaults && self.peek() == "{") && !["\n", ",", ";"].contains(&self.peek())
             {
                 return self.err(format!("Expected a field separator or {end}"));
             }
@@ -313,55 +407,63 @@ impl Parser<'_> {
         Ok(json!({"kind":"record","args":xs}))
     }
     fn pattern(&mut self) -> R<J> {
-        self.take("{")?;
+        let list = self.peek() == "[";
+        let close = if list { "]" } else { "}" };
+        self.take(if list { "[" } else { "{" })?;
         self.commas();
         let mut xs = Vec::new();
-        while self.peek() != "}" {
+        while self.peek() != close {
             xs.push(json!({"kind":"name","value":self.id()?}));
             if xs.len() > 32 {
                 return self.err("At most 32 destructured fields");
             }
-            if self.peek() != "}" && !["\n", ","].contains(&self.peek()) {
+            if self.peek() != close && !["\n", ","].contains(&self.peek()) {
                 return self.err("Expected pattern separator");
             }
             self.commas()
         }
-        self.take("}")?;
+        self.take(close)?;
         if xs.is_empty() || !unique(xs.iter().map(|x| x["value"].as_str().unwrap().into())) {
             return self.err("Empty or duplicate destructuring pattern");
         }
-        Ok(json!({"kind":"pattern","items":xs}))
+        Ok(json!({"kind":if list {"list_pattern"} else {"pattern"},"items":xs}))
     }
     fn binding(&mut self) -> R<J> {
-        if self.peek() == "{" {
+        if ["{", "["].contains(&self.peek()) {
             self.pattern()
         } else {
             Ok(json!({"kind":"name","value":self.id()?}))
         }
+    }
+    fn destructuring_ahead(&self) -> bool {
+        if !["[", "{"].contains(&self.peek()) { return false; }
+        let close = if self.peek() == "[" { "]" } else { "}" };
+        self.tokens[self.p..].windows(2).take(100).find(|tokens| tokens[0].text == close)
+            .is_some_and(|tokens| tokens[1].text == "=")
     }
     fn check_statement(&mut self) -> R<J> {
         let kind = self.pop()?;
         Ok(json!({"kind":kind,"left":self.expr(0)?}))
     }
     fn function(&mut self) -> R<J> {
-        let gs = self.generics("<", ">")?;
+        let (gs, bounds) = self.function_generics("<", ">")?;
         self.inner();
-        let inputs = self.fields("->", "")?;
-        self.take("->")?;
-        self.inner();
-        let single = self.next() != ":";
-        let outputs = if single {
+        let inputs = self.fields("->", "=>", true)?;
+        let inferred = self.peek() != "->";
+        if !inferred { self.take("->")?; self.inner(); }
+        let single = inferred || self.next() != ":";
+        let outputs = if inferred { Vec::new() } else if single {
             vec![json!({"name":"value","type":self.ty(0)?})]
         } else {
-            self.fields("{", "=>")?
+            self.fields("{", "=>", false)?
         };
-        if outputs.is_empty() {
+        if !inferred && outputs.is_empty() {
             return self.err("Function requires a result type");
         }
         self.inner();
         let mut items = Vec::new();
         let result;
-        if self.peek() == "=>" {
+        if ["=>", "ret"].contains(&self.peek()) {
             self.pop()?;
             self.inner();
             result = self.expr(0)?
@@ -394,7 +496,7 @@ impl Parser<'_> {
             self.take("}")?
         }
         Ok(
-            json!({"kind":"function","generics":gs,"inputs":inputs,"outputs":outputs,"singleResult":single,"items":items,"left":result}),
+            json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"inferResult":inferred,"items":items,"left":result}),
         )
     }
     fn indent(&self) -> String {
@@ -419,12 +521,17 @@ impl Parser<'_> {
         }
         Ok(Some(indent))
     }
-    fn layout_fields(&mut self, base: &str) -> R<Vec<J>> {
+    fn layout_fields(&mut self, base: &str, defaults: bool) -> R<Vec<J>> {
         let mut xs = Vec::new();
         loop {
             let name = self.id()?;
             self.take(":")?;
-            xs.push(json!({"name":&name,"type":self.ty(0)?}));
+            let mut field = json!({"name":&name,"type":self.ty(0)?});
+            if defaults && self.peek() == "=" {
+                self.pop()?;
+                field["default"] = self.expr(2)?;
+            }
+            xs.push(field);
             if xs.len() > 32 {
                 return self.err("At most 32 fields or parameters");
             }
@@ -438,15 +545,23 @@ impl Parser<'_> {
         Ok(xs)
     }
     fn layout(&mut self, base: &str) -> R<J> {
-        let gs = self.generics("[", "]")?;
+        let (gs, bounds) = self.function_generics("[", "]")?;
         self.inner();
         let inputs = if self.peek() == "->" || self.next() != ":" {
             Vec::new()
         } else {
-            self.layout_fields(base)?
+            self.layout_fields(base, true)?
         };
         let signature_end = self.p;
         self.inner();
+        if self.peek() == "=>" || (self.peek() == "ret" && !["\n", "EOF"].contains(&self.next())) || (self.peek() == "ret" && self.p == signature_end) {
+            if self.peek() == "ret" && self.p != signature_end && self.indent().len() <= base.len() {
+                return self.err("Expected indented function body");
+            }
+            self.pop()?;
+            self.continuation(base, "Expected indented return expression")?;
+            return Ok(json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":[],"singleResult":true,"inferResult":true,"items":[],"left":self.expr(0)?}));
+        }
         let void = self.peek() != "->";
         if void {
             self.p = signature_end
@@ -460,8 +575,13 @@ impl Parser<'_> {
         } else if single {
             vec![json!({"name":"value","type":self.ty(0)?})]
         } else {
-            self.layout_fields(base)?
+            self.layout_fields(base, false)?
         };
+        if !void && ["=>", "ret"].contains(&self.peek()) {
+            self.pop()?;
+            self.inner();
+            return Ok(json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"items":[],"left":self.expr(0)?}));
+        }
         if self.peek() != "\n" {
             return self.err("Expected newline after function signature");
         }
@@ -506,6 +626,7 @@ impl Parser<'_> {
             body_end = self.p;
             self.inner()
         }
+        let mut inferred = false;
         let result;
         if implicit {
             result = json!({"kind":"record","args":[]})
@@ -514,7 +635,10 @@ impl Parser<'_> {
                 return self.err("Expected ret at function body indentation");
             }
             self.take("ret")?;
-            if void {
+            if void && !["\n", "EOF"].contains(&self.peek()) {
+                inferred = true;
+                result = self.expr(0)?
+            } else if void {
                 result = json!({"kind":"record","args":[]})
             } else if single {
                 self.continuation(&indent, "Expected indented return expression")?;
@@ -559,7 +683,7 @@ impl Parser<'_> {
             self.p = end;
         }
         Ok(
-            json!({"kind":"function","generics":gs,"inputs":inputs,"outputs":outputs,"singleResult":single,"voidResult":void,"items":items,"left":result}),
+            json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"voidResult":void && !inferred,"inferResult":inferred,"items":items,"left":result}),
         )
     }
     fn args(&mut self) -> R<Vec<J>> {
@@ -640,10 +764,10 @@ impl Parser<'_> {
             if kind == "where" {
                 clauses.push(json!({"kind":kind,"left":self.expr(2)?}));
             } else {
-                let name = self.id()?;
+                let pattern = self.binding()?;
                 self.take("=")?;
                 clauses.push(
-                    json!({"kind":"let","items":[json!({"value":name})],"left":self.expr(2)?}),
+                    json!({"kind":"let","pattern":pattern,"left":self.expr(2)?}),
                 );
             }
         }
@@ -683,10 +807,10 @@ impl Parser<'_> {
                         json!({"kind":if kind=="break"{"while"}else{"where"},"left":condition}),
                     );
                 } else {
-                    let name = self.id()?;
+                    let pattern = self.binding()?;
                     self.take("=")?;
                     clauses.push(
-                        json!({"kind":"let","items":[json!({"value":name})],"left":self.expr(0)?}),
+                        json!({"kind":"let","pattern":pattern,"left":self.expr(0)?}),
                     );
                 }
                 if clauses.len() > 64 {
@@ -844,7 +968,16 @@ impl Parser<'_> {
                 }
             }
         };
-        while self.peek() == "." || (self.peek() == "\n" && self.next() == ".") {
+        while self.peek() == "." || self.peek() == "[" || (self.peek() == "\n" && self.next() == ".") {
+            if self.peek() == "[" {
+                self.pop()?;
+                self.inner();
+                let index = self.expr(0)?;
+                self.inner();
+                self.take("]")?;
+                a = json!({"kind":"index","left":a,"right":index});
+                continue;
+            }
             if self.peek() == "\n" {
                 let end = self.p;
                 self.pop()?;
@@ -867,6 +1000,12 @@ impl Parser<'_> {
         loop {
             if self.peek() == "|>" {
                 return self.err("Use .method(...) instead of |>");
+            }
+            if self.peek() == "with" && min <= 2 {
+                self.pop()?;
+                self.inner();
+                a = json!({"kind":"with","left":a,"right":self.record()?});
+                continue;
             }
             let op = self.peek().to_owned();
             let prec = match op.as_str() {
@@ -985,17 +1124,36 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
                 let name = p.id()?;
                 json!({"kind":"bind","name":&name,"value":p.layout(&base)?})
             }
-            "struct" => {
+            "trait" => {
                 p.pop()?;
                 let name = p.id()?;
-                let gs = p.generics("<", ">")?;
+                let mut result = p.trait_members(false)?;
+                result["kind"] = json!("trait");
+                result["name"] = json!(name);
+                result
+            }
+            "impl" => {
+                p.pop()?;
+                let name = p.id()?;
+                p.take("for")?;
+                let target = p.ty(0)?;
+                let mut result = p.trait_members(true)?;
+                result["kind"] = json!("impl");
+                result["name"] = json!(name);
+                result["target"] = target;
+                result
+            }
+            "struct" => {
+                let kind = p.pop()?;
+                let name = p.id()?;
+                let gs = if kind == "struct" { p.generics("<", ">")? } else { Vec::new() };
                 p.inner();
                 p.take("{")?;
-                let fields = p.fields("}", "")?;
+                let fields = p.fields("}", "", false)?;
                 p.take("}")?;
-                json!({"kind":"struct","name":&name,"generics":gs,"fields":fields})
+                json!({"kind":kind,"name":&name,"generics":gs,"fields":fields})
             }
-            "{" => {
+            "{" | "[" => {
                 let pat = p.pattern()?;
                 p.take("=")?;
                 json!({"kind":"destructure","pattern":pat,"value":p.expr(0)?})
@@ -1077,3 +1235,134 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
 }
 
 include!("parser_match.rs");
+
+#[cfg(test)]
+mod statement_check_tests {
+    use super::*;
+
+    fn first_value(source: &str) -> J {
+        parse(source).unwrap()[0].node["value"].clone()
+    }
+
+    fn kinds(items: &J) -> Vec<&str> {
+        items
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["kind"].as_str().unwrap_or("binding"))
+            .collect()
+    }
+
+    #[test]
+    fn checks_preserve_order_and_expressions_in_brace_functions() {
+        let function = first_value(
+            "check = fn value: f64 -> f64 {\n\
+             assert value > 0\n\
+             doubled = value * 2\n\
+             validate doubled.atLeast(1)\n\
+             assert(doubled >= value)\n\
+             ret doubled\n\
+             }",
+        );
+        assert_eq!(
+            kinds(&function["items"]),
+            ["assert", "binding", "validate", "assert"]
+        );
+        assert_eq!(function["items"][0]["left"]["kind"], "binary");
+        assert_eq!(function["items"][0]["left"]["value"], ">");
+        assert_eq!(function["items"][2]["left"]["kind"], "pipe");
+        assert_eq!(function["items"][3]["left"]["value"], ">=");
+        assert_eq!(function["left"]["value"], "doubled");
+    }
+
+    #[test]
+    fn checks_work_in_layout_and_void_functions() {
+        let statements = parse(
+            "fn checked value: f64 -> f64\n  assert(value > 0)\n  ret value\n\
+             fn checkOnly value: f64\n  validate value.atLeast(0)\n  assert value >= 0\n\
+             output = 1",
+        )
+        .unwrap();
+        assert_eq!(statements.len(), 3);
+        assert_eq!(kinds(&statements[0].node["value"]["items"]), ["assert"]);
+        let void_function = &statements[1].node["value"];
+        assert_eq!(void_function["voidResult"], true);
+        assert_eq!(kinds(&void_function["items"]), ["validate", "assert"]);
+        assert_eq!(statements[2].node["name"], "output");
+    }
+
+    #[test]
+    fn checks_preserve_foreach_clause_order() {
+        let sequence = first_value(
+            "values = foreach value in [1, 2]\n  where value > 0\n  assert value.atLeast(1)\n  doubled = value * 2\n  validate(doubled >= value)\n  yield doubled",
+        );
+        assert_eq!(
+            kinds(&sequence["items"]),
+            ["for", "where", "assert", "let", "validate"]
+        );
+        assert_eq!(sequence["items"][2]["left"]["kind"], "pipe");
+        assert_eq!(sequence["items"][4]["left"]["kind"], "binary");
+        assert_eq!(sequence["left"]["value"], "doubled");
+    }
+
+    #[test]
+    fn match_blocks_can_start_with_either_check_keyword() {
+        let expression = first_value(
+            "value = match 1\n  1 =>\n    assert 1 > 0\n    local = 2\n    validate local.atLeast(1)\n    ret local\n  _ =>\n    validate(1 > 0)\n    ret 0",
+        );
+        let first = &expression["items"][0]["result"];
+        assert_eq!(first["kind"], "match_block");
+        assert_eq!(kinds(&first["items"]), ["assert", "binding", "validate"]);
+        assert_eq!(first["items"][1]["name"], "local");
+        assert_eq!(first["items"][0]["left"]["kind"], "binary");
+        assert_eq!(
+            kinds(&expression["items"][1]["result"]["items"]),
+            ["validate"]
+        );
+    }
+
+    #[test]
+    fn top_level_check_ast_keeps_value_field() {
+        let statements = parse("assert(1 > 0)\nvalidate 2 >= 1").unwrap();
+        assert_eq!(statements[0].node["kind"], "assert");
+        assert_eq!(statements[0].node["value"]["kind"], "binary");
+        assert!(statements[0].node.get("left").is_none());
+        assert_eq!(statements[1].node["kind"], "validate");
+        assert_eq!(statements[1].node["value"]["value"], ">=");
+    }
+
+    #[test]
+    fn checks_follow_block_indentation_and_statement_limits() {
+        for source in [
+            "fn checked value: f64 -> f64\n  assert value > 0\n    validate value > 0\n  ret value",
+            "values = foreach value in [1]\n  assert value > 0\n    validate value > 0\n  yield value",
+            "value = match 1\n  _ =>\n    assert 1 > 0\n      validate 1 > 0\n    ret 1",
+            "check = fn value: f64 -> f64 { assert value > 0 ret value }",
+        ] {
+            assert!(parse(source).is_err(), "Unexpectedly accepted {source}");
+        }
+        for source in [
+            format!(
+                "check = fn value: f64 -> f64 {{\n{}ret value\n}}",
+                "assert value > 0\n".repeat(65)
+            ),
+            format!(
+                "fn checked value: f64 -> f64\n{}  ret value",
+                "  assert value > 0\n".repeat(65)
+            ),
+            format!(
+                "values = foreach value in [1]\n{}  yield value",
+                "  assert value > 0\n".repeat(64)
+            ),
+            format!(
+                "value = match 1\n  _ =>\n{}    ret 1",
+                "    assert 1 > 0\n".repeat(65)
+            ),
+        ] {
+            let error = parse(&source)
+                .err()
+                .expect("Statement budget must apply to checks");
+            assert!(error.contains("At most 64"), "{error}");
+        }
+    }
+}

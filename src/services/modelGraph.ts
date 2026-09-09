@@ -7,11 +7,7 @@ import { z } from 'zod/v4'
 import type { Dimension, Unit } from './modelGraphUnits'
 import { sha256Hex } from '../core/sha256'
 
-const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/)
-const unit = z.enum(['mm', 'cm', 'm', 'in', 'deg', 'rad'])
-const number = z.number().finite().min(-1_000_000).max(1_000_000)
 export type CheckedValueType = {name:string;args?:CheckedValueType[];fields?:Record<string,CheckedValueType>}
-const checkedValueTypeSchema: z.ZodType<CheckedValueType> = z.lazy(()=>z.object({name:id,args:z.array(checkedValueTypeSchema).max(16).optional(),fields:z.record(id,checkedValueTypeSchema).optional()}).strict())
 export type MatchPattern =
   | {kind:'wildcard'}
   | {kind:'bind';name:string}
@@ -22,18 +18,12 @@ export type MatchPattern =
   | {kind:'list';prefix:MatchPattern[];suffix:MatchPattern[];rest?:string}
   | {kind:'record';fields:Record<string,MatchPattern>;exact:boolean}
   | {kind:'type';name:'int'|'f32'|'f64'|'str'|'length'|'angle'|'list'|'record';pattern:MatchPattern}
-export const matchPatternSchema: z.ZodType<MatchPattern> = z.lazy(()=>z.discriminatedUnion('kind',[
-  z.object({kind:z.literal('wildcard')}).strict(),
-  z.object({kind:z.literal('bind'),name:id}).strict(),
-  z.object({kind:z.literal('literal'),value:expressionSchema}).strict(),
-  z.object({kind:z.literal('as'),name:id,pattern:matchPatternSchema}).strict(),
-  z.object({kind:z.literal('or'),patterns:z.array(matchPatternSchema).min(1).max(32)}).strict(),
-  z.object({kind:z.literal('range'),start:expressionSchema,end:expressionSchema,inclusive:z.boolean()}).strict(),
-  z.object({kind:z.literal('list'),prefix:z.array(matchPatternSchema).max(256),suffix:z.array(matchPatternSchema).max(256),rest:z.union([id,z.literal('_')]).optional()}).strict(),
-  z.object({kind:z.literal('record'),fields:z.record(id,matchPatternSchema),exact:z.boolean()}).strict(),
-  z.object({kind:z.literal('type'),name:z.enum(['int','f32','f64','str','length','angle','list','record']),pattern:matchPatternSchema}).strict(),
-]))
+export type ScalarConstraint = {id:string;left:Expression;relation:'le'|'ge'|'eq'|'lt'|'gt';right:Expression;tolerance?:Expression;message:string}
+export type GeometryAssertion = {id:string;target:string;check:'hasBodies'|'isWatertight'|'hasNoDegenerateTriangles'|'height'|'width'|'depth';expected?:Expression;tolerance?:Expression;message:string}
 export type Expression =
+  {op:'memo';id:string;value:Expression} |
+  {op:'geometry_effects';input:string;value:Expression} |
+  {op:'guarded';input:Expression;binding:string;steps:{kind:'assert'|'where'|'while';value:Expression}[]} |  {op:'assert_value';constraints?:ScalarConstraint[];geometry_assertions?:GeometryAssertion[];value:Expression} |
   { op: 'checked'; checks: Expression[]; value: Expression } |
   { op: 'typed'; type: ModelGraphNumericType; value: Expression } |
   { op: 'quantity'; value: number; unit: Unit }
@@ -61,10 +51,32 @@ export type Expression =
   | { op: 'if'; condition: Expression; then: Expression; else: Expression }
   | { op: 'let'; name: string; value: Expression; body: Expression }
   | { op: 'call'; function: string; args: Record<string, Expression> }
+
+// Keep MCP schema construction removable from browser builds, which validate in Rust.
+function createModelGraphSchemas() {
+const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/)
+const unit = z.enum(['mm', 'cm', 'm', 'in', 'deg', 'rad'])
+const number = z.number().finite().min(-1_000_000).max(1_000_000)
+const checkedValueTypeSchema: z.ZodType<CheckedValueType> = z.lazy(()=>z.object({name:id,args:z.array(checkedValueTypeSchema).max(16).optional(),fields:z.record(id,checkedValueTypeSchema).optional()}).strict())
+const matchPatternSchema: z.ZodType<MatchPattern> = z.lazy(()=>z.discriminatedUnion('kind',[
+  z.object({kind:z.literal('wildcard')}).strict(),
+  z.object({kind:z.literal('bind'),name:id}).strict(),
+  z.object({kind:z.literal('literal'),value:expressionSchema}).strict(),
+  z.object({kind:z.literal('as'),name:id,pattern:matchPatternSchema}).strict(),
+  z.object({kind:z.literal('or'),patterns:z.array(matchPatternSchema).min(1).max(32)}).strict(),
+  z.object({kind:z.literal('range'),start:expressionSchema,end:expressionSchema,inclusive:z.boolean()}).strict(),
+  z.object({kind:z.literal('list'),prefix:z.array(matchPatternSchema).max(256),suffix:z.array(matchPatternSchema).max(256),rest:z.union([id,z.literal('_')]).optional()}).strict(),
+  z.object({kind:z.literal('record'),fields:z.record(id,matchPatternSchema),exact:z.boolean()}).strict(),
+  z.object({kind:z.literal('type'),name:z.enum(['int','f32','f64','str','length','angle','list','record']),pattern:matchPatternSchema}).strict(),
+]))
 // MCP validates this schema before Rust execution; dispatch recursive operations once.
-export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
+const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
   number, z.object({ param: id }).strict(), z.object({ local: id }).strict(),
   z.discriminatedUnion('op', [
+    z.object({op:z.literal('memo'),id,value:expressionSchema}).strict(),
+    z.object({op:z.literal('geometry_effects'),input:id,value:expressionSchema}).strict(),
+    z.object({op:z.literal('guarded'),input:expressionSchema,binding:id,steps:z.array(z.object({kind:z.enum(['assert','where','while']),value:expressionSchema}).strict()).max(64)}).strict(),
+    z.object({op:z.literal('assert_value'),constraints:z.array(scalarConstraintSchema).max(64).optional(),geometry_assertions:z.array(geometryAssertionSchema).max(64).optional(),value:expressionSchema}).strict(),
     z.object({op:z.literal('checked'),checks:z.array(expressionSchema).max(256),value:expressionSchema}).strict(),
     z.object({op:z.literal('typed'),type:z.enum(['int','f32','f64','length','angle']),value:expressionSchema}).strict(),
     z.object({ op: z.literal('quantity'), value: number, unit }).strict(),
@@ -93,6 +105,8 @@ export const expressionSchema: z.ZodType<Expression> = z.lazy(() => z.union([
     z.object({ op: z.literal('call'), function: id, args: z.record(id, expressionSchema) }).strict(),
   ]),
 ]))
+const scalarConstraintSchema: z.ZodType<ScalarConstraint> = z.object({id,left:expressionSchema,relation:z.enum(['le','ge','eq','lt','gt']),right:expressionSchema,tolerance:expressionSchema.optional(),message:z.string().min(1).max(256)}).strict()
+const geometryAssertionSchema: z.ZodType<GeometryAssertion> = z.object({id,target:id,check:z.enum(['hasBodies','isWatertight','hasNoDegenerateTriangles','height','width','depth']),expected:expressionSchema.optional(),tolerance:expressionSchema.optional(),message:z.string().min(1).max(256)}).strict()
 const scalar = expressionSchema
 const vector = z.tuple([scalar, scalar, scalar])
 const vector2 = z.tuple([scalar, scalar])
@@ -105,6 +119,7 @@ const sketchConstraint = z.discriminatedUnion('kind', [
 const frameSchema = z.object({ origin: vector, rotation: vector }).strict()
 const affineRow = z.tuple([scalar, scalar, scalar, scalar])
 const node = z.discriminatedUnion('op', [
+  z.object({id,op:z.literal('assert'),input:id,constraints:z.array(scalarConstraintSchema).max(64).optional(),geometry_assertions:z.array(geometryAssertionSchema).max(64).optional()}).strict(),
   z.object({id,op:z.literal('gear'),teeth:scalar,module:scalar,pressure_angle:scalar.default(20),thickness:scalar,bore:scalar.default(0),backlash:scalar.default(0.15),clearance:scalar.default(0.5),internal:z.boolean().default(false),rim_width:scalar.default(6),flank_segments:scalar.default(6)}).strict(),
   z.object({id,op:z.literal('planetary_spinner'),inner_radius:scalar,outer_radius:scalar,bore:scalar,gap:scalar,height:scalar,helix_angle:scalar}).strict(),
   z.object({id,op:z.literal('planetary_gears'),sun_teeth:scalar,planet_teeth:scalar,planet_count:scalar,module:scalar,pressure_angle:scalar.default(20),thickness:scalar,bore:scalar.default(0),backlash:scalar.default(0.15),clearance:scalar.default(0.5),rim_width:scalar.default(6),flank_segments:scalar.default(6),carrier_angle:scalar.default(0)}).strict(),
@@ -145,11 +160,11 @@ const node = z.discriminatedUnion('op', [
   z.object({ id, op: z.literal('difference'), base: id, subtract: z.array(id).min(1).max(32) }).strict(),
 ])
 
-export const modelGraphSchema = z.object({
+const modelGraphSchema = z.object({
   language: z.literal('modelgraph/1'),
   units: z.literal('mm'),
   type_policy: z.enum(['legacy', 'strict']).optional(),
-  constraints: z.array(z.object({ id, left: scalar, relation: z.enum(['le', 'ge', 'eq', 'lt', 'gt']), right: scalar, tolerance: scalar.optional(), message: z.string().min(1).max(256) }).strict()).max(64).optional(),
+  constraints: z.array(scalarConstraintSchema).max(64).optional(),
   parameters: z.array(z.object({ id, value: number, unit: unit.optional(), min: number.optional(), max: number.optional(), integer: z.boolean().optional() }).strict()).max(64),
   nodes: z.array(node).min(1).max(128),
   root: id,
@@ -157,13 +172,13 @@ export const modelGraphSchema = z.object({
     z.object({ id, kind: z.enum(['scalar', 'value']), parameters: z.array(id).max(32), body: scalar }).strict(),
     z.object({ id, kind: z.literal('geometry'), parameters: z.array(id).max(32), nodes: z.array(node).min(1).max(128), root: id }).strict(),
   ])).max(32).optional(),
-  geometry_assertions: z.array(z.object({
-    id, target: id, check: z.enum(['hasBodies', 'isWatertight', 'hasNoDegenerateTriangles', 'height', 'width', 'depth']),
-    expected: scalar.optional(), tolerance: scalar.optional(), message: z.string().min(1).max(256),
-  }).strict()).max(64).optional(),
+  geometry_assertions: z.array(geometryAssertionSchema).max(64).optional(),
   assertions: z.array(z.object({ condition: scalar, message: z.string().min(1).max(256) }).strict()).max(64).optional(),
   segments: z.number().int().min(12).max(128).default(48),
 }).strict()
+  return { modelGraphSchema, expressionSchema, matchPatternSchema }
+}
+export const { modelGraphSchema, expressionSchema, matchPatternSchema } = /* @__PURE__ */ createModelGraphSchemas()
 export type ModelGraph = z.infer<typeof modelGraphSchema>
 export class ModelGraphError extends Error {
   constructor(readonly code: string, readonly path: string, message: string, readonly details?: unknown) { super(message) }
@@ -179,7 +194,7 @@ export const hashModelGraphDocument = (document: unknown) => sha256Hex(canonical
 
 export type ModelGraphCompilation = {
   document: ModelGraph
-  geometry_assertions: Array<Omit<NonNullable<ModelGraph['geometry_assertions']>[number], 'expected' | 'tolerance'> & {expected:number; tolerance:number}>
+  geometry_assertions: Array<Omit<NonNullable<ModelGraph['geometry_assertions']>[number], 'expected' | 'tolerance'> & {expected:number; tolerance:number; source?:string; instance_path?:string}>
   constraint_report: Array<{id:string;path:string;passed:boolean;status:'passed'|'failed';actual:number;expected:number;relation:string;tolerance:number;dimension:Dimension;message:string}>
   sketch_solutions: Array<ReturnType<typeof solveModelGraphSketch> & {instance_path:string}>
   assembly_components: Array<ReturnType<typeof placeAssembly>[number] & {instance_path:string;parent_path:string|null;is_assembly:boolean;source?:string}>

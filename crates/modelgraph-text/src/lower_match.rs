@@ -1,9 +1,13 @@
 // Compile each arm in an independent scope. Pattern bindings are renamed to
 // fresh runtime locals, so generated loop locals and outer names cannot collide.
+fn empty_value_sequence(value: &J) -> bool {
+    (s(value, "op") == "list" && arr(value, "items").is_empty())
+        || (["checked", "memo"].contains(&s(value, "op")) && empty_value_sequence(&value["value"]))
+}
 fn empty_match_sequence(value: &J) -> bool {
     s(value, "op") == "match" && !arr(value, "arms").is_empty()
         && arr(value, "arms").iter().all(|arm| {
-            s(&arm["body"], "op") == "list" && arr(&arm["body"], "items").is_empty()
+            empty_value_sequence(&arm["body"])
         })
 }
 fn pattern_bindings(p: &J) -> R<Set<String>> {
@@ -144,7 +148,7 @@ impl Compiler {
         if results.iter().any(is_geometry) {
             if !results
                 .iter()
-                .all(|r| is_geometry(r) || matches!(r,V::Array(a) if a.is_empty()))
+                .all(|r| is_geometry(r) || matches!(r,V::Array(a) if a.is_empty()) || matches!(r,V::Json(j) if empty_value_sequence(&j["sequence"])))
             {
                 return Err("Match arms must all return geometry or all return values".into());
             }

@@ -193,9 +193,13 @@ impl Parser<'_> {
             if ["assert", "validate"].contains(&self.peek()) {
                 items.push(self.check_statement()?);
             } else {
-                let name = self.id()?;
+                let pattern = self.binding()?;
                 self.take("=")?;
-                items.push(json!({"name":name,"value":self.expr(0)?}));
+                if pattern["kind"] == "name" {
+                    items.push(json!({"name":&pattern["value"],"value":self.expr(0)?}));
+                } else {
+                    items.push(json!({"pattern":pattern,"value":self.expr(0)?}));
+                }
             }
             if items.len() > 64 {
                 return self.err("At most 64 match body statements");
@@ -244,7 +248,7 @@ impl Parser<'_> {
                 .is_some();
             let previous_indent = self.match_indent.replace(indent.len());
             let result = if multiline
-                && (["ret", "assert", "validate"].contains(&self.peek()) || self.next() == "=")
+                && (["ret", "assert", "validate"].contains(&self.peek()) || self.next() == "=" || self.destructuring_ahead())
             {
                 self.match_arm_block(&indent)
             } else {

@@ -1,0 +1,72 @@
+{
+  "decision": "Restore exact original estimation.rs; no sufficiently stable material speedup in bounded experiments",
+  "restored_sha256": "933511293f66bdf81308efa53a28d183a8e54a14ca91e21d8cc1e78474865fc9",
+  "measurements": [
+    {
+      "candidate": "counter",
+      "results": [
+        {
+          "variant": "stage2",
+          "wall_ms": 3599.8421249999988,
+          "post_sparse_ms": 1964.4321249999987
+        },
+        {
+          "variant": "stage3",
+          "wall_ms": 3837.228958999999,
+          "post_sparse_ms": 2196.322958999999
+        },
+        {
+          "variant": "counter",
+          "wall_ms": 3805.5786250000024,
+          "post_sparse_ms": 2142.4616250000026
+        }
+      ],
+      "identical_surface_bytes": true,
+      "identical_sparse_bytes": true
+    },
+    {
+      "candidate": "specialized",
+      "results": [
+        {
+          "variant": "stage2",
+          "wall_ms": 3682.730624999998,
+          "post_sparse_ms": 2006.652624999998
+        },
+        {
+          "variant": "stage3",
+          "wall_ms": 3871.9409579999997,
+          "post_sparse_ms": 2225.6349579999996
+        },
+        {
+          "variant": "specialized",
+          "wall_ms": 3930.743666999998,
+          "post_sparse_ms": 2285.721666999998
+        }
+      ],
+      "identical_surface_bytes": true,
+      "identical_sparse_bytes": true
+    },
+    {
+      "candidate": "inline",
+      "results": [
+        {
+          "variant": "stage2",
+          "wall_ms": 3616.6602500000026,
+          "post_sparse_ms": 1961.3662500000025
+        },
+        {
+          "variant": "stage3",
+          "wall_ms": 3871.074083,
+          "post_sparse_ms": 2214.471499999999
+        },
+        {
+          "variant": "inline",
+          "wall_ms": 3835.841959,
+          "post_sparse_ms": 2191.236959
+        }
+      ],
+      "identical_surface_bytes": true,
+      "identical_sparse_bytes": true
+    }
+  ]
+}

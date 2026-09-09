@@ -1,4 +1,4 @@
-import { checkModelGraphGeometry } from '../services/modelGraphChecks'
+import { evaluateModelGraphGeometry } from '../services/modelGraphChecks'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
@@ -12,7 +12,7 @@ export function registerModelGraphReport(server: McpServer, geometry: McpGeometr
     try {
       const compiled = compileModelGraph(input.document)
       const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
-      const checks = checkModelGraphGeometry(compiled.geometry_assertions, built.meshes)
+      const checks = await evaluateModelGraphGeometry(compiled.geometry_assertions, built.meshes, async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes)
       const references = built.meshes.flatMap((mesh, meshIndex) => mesh.provenance.map(run => {
         const line = run.source ? compiled.source.slice(0, run.source.start).split('\n').length : null
         const match = line === null ? undefined : [...compiled.source_map].reverse().find(item => item.line <= line)

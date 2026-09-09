@@ -1,0 +1,1407 @@
+{
+  "browser": "155.0.8040.2",
+  "scope": "Actual JPEG import and EXIF hints, fresh browser context per run, one Chrome process, full UI; warm-up + 3 measured runs per version/dataset, alternating order; host source differs only in generated photogrammetry WASM; parent reserved an exclusive benchmark window",
+  "records": [
+    {
+      "dataset": "shell12",
+      "stage": "baseline",
+      "iteration": 0,
+      "warmup": true,
+      "elapsedMs": 6470.693334,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 2285.5,
+        "denseMs": 2328.899999976158,
+        "preparationMs": 3.600000023841858
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "current",
+      "iteration": 0,
+      "warmup": true,
+      "elapsedMs": 4972.088750000001,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 1887.0999999046326,
+        "denseMs": 1208.8000000715256,
+        "preparationMs": 3.5
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "current",
+      "iteration": 1,
+      "warmup": false,
+      "elapsedMs": 4972.056457999999,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 1862.1000000238419,
+        "denseMs": 1217.8999999761581,
+        "preparationMs": 3.700000047683716
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "baseline",
+      "iteration": 1,
+      "warmup": false,
+      "elapsedMs": 6485.879792,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 2331,
+        "denseMs": 2360.7000000476837,
+        "preparationMs": 3.4000000953674316
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "baseline",
+      "iteration": 2,
+      "warmup": false,
+      "elapsedMs": 7029.425208000001,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 2347.100000023842,
+        "denseMs": 2395.899999976158,
+        "preparationMs": 4.100000023841858
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "current",
+      "iteration": 2,
+      "warmup": false,
+      "elapsedMs": 4978.099500000004,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 1857.6000000238419,
+        "denseMs": 1184.2000000476837,
+        "preparationMs": 3.5
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "current",
+      "iteration": 3,
+      "warmup": false,
+      "elapsedMs": 4998.333542,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 1858.5999999046326,
+        "denseMs": 1187.1000000238419,
+        "preparationMs": 3.8000000715255737
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "shell12",
+      "stage": "baseline",
+      "iteration": 3,
+      "warmup": false,
+      "elapsedMs": 6468.993333000006,
+      "files": [
+        "M97A2474.JPG",
+        "M97A2475.JPG",
+        "M97A2476.JPG",
+        "M97A2477.JPG",
+        "M97A2478.JPG",
+        "M97A2479.JPG",
+        "M97A2480.JPG",
+        "M97A2481.JPG",
+        "M97A2482.JPG",
+        "M97A2483.JPG",
+        "M97A2484.JPG",
+        "M97A2485.JPG"
+      ],
+      "focals": [
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85",
+        "85"
+      ],
+      "inputHashes": [
+        {
+          "name": "M97A2474.JPG",
+          "sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+      ],
+      "vertexCount": 17838,
+      "faceCount": 10419,
+      "registered": 12,
+      "plyHash": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "geometryReportHash": "a7fbf940e15086e5e7e1ab8ceb2c8180c6e020c0bd6169188b4016d717ad7472",
+      "reportTimings": {
+        "sparseMs": 2296.600000023842,
+        "denseMs": 2421.9000000953674,
+        "preparationMs": 3.399999976158142
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "baseline",
+      "iteration": 0,
+      "warmup": true,
+      "elapsedMs": 6346.718000000001,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1626,
+        "denseMs": 4045.600000023842,
+        "preparationMs": 2.100000023841858
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "current",
+      "iteration": 0,
+      "warmup": true,
+      "elapsedMs": 4333.405583000007,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1164.1000000238419,
+        "denseMs": 2302.5,
+        "preparationMs": 2.700000047683716
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "current",
+      "iteration": 1,
+      "warmup": false,
+      "elapsedMs": 4347.798999999999,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1154.3999999761581,
+        "denseMs": 2337.5,
+        "preparationMs": 2.100000023841858
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "baseline",
+      "iteration": 1,
+      "warmup": false,
+      "elapsedMs": 6361.383167000007,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1635.5999999046326,
+        "denseMs": 4088.7000000476837,
+        "preparationMs": 2
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "baseline",
+      "iteration": 2,
+      "warmup": false,
+      "elapsedMs": 6343.467957999994,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1620.5,
+        "denseMs": 4098.799999952316,
+        "preparationMs": 2.5
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "current",
+      "iteration": 2,
+      "warmup": false,
+      "elapsedMs": 4353.156959,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1165.7000000476837,
+        "denseMs": 2324,
+        "preparationMs": 3.100000023841858
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "current",
+      "iteration": 3,
+      "warmup": false,
+      "elapsedMs": 4338.817707999988,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1159.2000000476837,
+        "denseMs": 2306.7000000476837,
+        "preparationMs": 2.5
+      },
+      "errors": [],
+      "external": []
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "stage": "baseline",
+      "iteration": 3,
+      "warmup": false,
+      "elapsedMs": 6356.588457999998,
+      "files": [
+        "IMG_1024.JPG",
+        "IMG_1025.JPG",
+        "IMG_1026.JPG",
+        "IMG_1027.JPG",
+        "IMG_1028.JPG",
+        "IMG_1029.JPG"
+      ],
+      "focals": [
+        "28",
+        "28",
+        "28",
+        "28",
+        "28",
+        "28"
+      ],
+      "inputHashes": [
+        {
+          "name": "IMG_1024.JPG",
+          "sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d"
+        }
+      ],
+      "stats": [
+        "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+      ],
+      "vertexCount": 28562,
+      "faceCount": 57319,
+      "registered": 6,
+      "plyHash": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "geometryReportHash": "fb6e8a3156c81bebed1445d1527815650d8735066c9fb33f9fe6f28d7f0eb999",
+      "reportTimings": {
+        "sparseMs": 1614.1000000238419,
+        "denseMs": 4054.399999976158,
+        "preparationMs": 3
+      },
+      "errors": [],
+      "external": []
+    }
+  ],
+  "controls": [
+    {
+      "dataset": "shell12",
+      "rotation": {
+        "totalHorizontalPixels": 3120,
+        "renderChanged": true
+      },
+      "mobile": {
+        "width": 390,
+        "overflow": false,
+        "photos": 12
+      },
+      "cadGuard": {
+        "openMessage": 1,
+        "appendButton": 0
+      },
+      "calibrationGuard": {
+        "invalidCalibration": [
+          "DEMO: synthetic camera A: calibration is for 320×240; oriented photo is 6720×4480"
+        ]
+      },
+      "cancellation": {
+        "status": [
+          "Обработка остановлена. Уже полученный результат сохранён."
+        ],
+        "photos": 12,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "rotation": {
+        "totalHorizontalPixels": 3120,
+        "renderChanged": true
+      },
+      "mobile": {
+        "width": 390,
+        "overflow": false,
+        "photos": 6
+      },
+      "cadGuard": {
+        "openMessage": 1,
+        "appendButton": 0
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "dataset": "shell12",
+      "baseline": {
+        "elapsedMs": 6485.879792,
+        "sparseMs": 2331,
+        "denseMs": 2395.899999976158,
+        "preparationMs": 3.4000000953674316,
+        "samples": 3
+      },
+      "current": {
+        "elapsedMs": 4978.099500000004,
+        "sparseMs": 1858.5999999046326,
+        "denseMs": 1187.1000000238419,
+        "preparationMs": 3.700000047683716,
+        "samples": 3
+      },
+      "totalSpeedup": 1.3028827149798823,
+      "exactPlyBytes": true,
+      "exactGeometryReport": true
+    },
+    {
+      "dataset": "monstree6-slanted",
+      "baseline": {
+        "elapsedMs": 6356.588457999998,
+        "sparseMs": 1620.5,
+        "denseMs": 4088.7000000476837,
+        "preparationMs": 2.5,
+        "samples": 3
+      },
+      "current": {
+        "elapsedMs": 4347.798999999999,
+        "sparseMs": 1159.2000000476837,
+        "denseMs": 2324,
+        "preparationMs": 2.5,
+        "samples": 3
+      },
+      "totalSpeedup": 1.4620244537523468,
+      "exactPlyBytes": true,
+      "exactGeometryReport": true
+    }
+  ],
+  "complete": true
+}

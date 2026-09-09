@@ -1,0 +1,80 @@
+{
+  "engine": "own-rust-cad-v1",
+  "node": "v22.23.2",
+  "samples": [
+    {
+      "compileMs": 365.3272079999999,
+      "geometryMs": 1392.6669590000001,
+      "totalMs": 1757.996917
+    },
+    {
+      "compileMs": 73.86716699999988,
+      "geometryMs": 1461.5394999999999,
+      "totalMs": 1535.4075829999997
+    },
+    {
+      "compileMs": 12.626624999999876,
+      "geometryMs": 1087.828,
+      "totalMs": 1100.455375
+    },
+    {
+      "compileMs": 13.132665999999517,
+      "geometryMs": 940.621709,
+      "totalMs": 953.7555409999995
+    },
+    {
+      "compileMs": 6.100499999999556,
+      "geometryMs": 1165.3940830000001,
+      "totalMs": 1171.4951659999997
+    },
+    {
+      "compileMs": 4.753665999999612,
+      "geometryMs": 1055.848167,
+      "totalMs": 1060.6025829999999
+    }
+  ],
+  "cold": {
+    "compileMs": 365.3272079999999,
+    "geometryMs": 1392.6669590000001,
+    "totalMs": 1757.996917
+  },
+  "warmMedianMs": 1100.455375,
+  "volume": 160348.21347019283,
+  "bounds": {
+    "min": [
+      0,
+      -9.600000381469727,
+      0
+    ],
+    "max": [
+      120,
+      75,
+      80
+    ]
+  },
+  "triangles": [
+    612,
+    168,
+    168
+  ],
+  "topology": [
+    {
+      "boundary": 0,
+      "crease": 322,
+      "nonManifold": 0,
+      "degenerate": 0
+    },
+    {
+      "boundary": 0,
+      "crease": 67,
+      "nonManifold": 0,
+      "degenerate": 0
+    },
+    {
+      "boundary": 0,
+      "crease": 67,
+      "nonManifold": 0,
+      "degenerate": 0
+    }
+  ]
+}

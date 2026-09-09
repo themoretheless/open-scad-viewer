@@ -1,0 +1,67 @@
+{
+  "source_files": [
+    {
+      "stage": "sparse",
+      "path": "crates/photogrammetry-kernel/src/features.rs",
+      "baseline_sha256": "9030c21a69156a521eb0b9574532bd7a4a6de5c5b0f0c2c682eb4f67b5d00d52",
+      "sha256": "5bf5af85956d639da46e8c2a9172cd95bf7fb6638527db0c295e5c36b99e4b9c"
+    },
+    {
+      "stage": "sparse",
+      "path": "crates/photogrammetry-kernel/src/features_tests.rs",
+      "baseline_sha256": "3af3319408d225b9f2a205d338875650f8e162221665c43fa9e53404db2e8b30",
+      "sha256": "41ab486b0bca5bd6b227bbc5e9242b8acf5e4cd149bf500821b235777284537c"
+    },
+    {
+      "stage": "sparse",
+      "path": "crates/photogrammetry-kernel/src/camera.rs",
+      "baseline_sha256": "98b09e9e51b6fbbfa292e43f1fe256d3fd368316a048d0a7e8b59914ed69bb1b",
+      "sha256": "cf6c7139b20963d99bb1061614eab463df25ce23332f12d08d436ef170f32678"
+    },
+    {
+      "stage": "sparse",
+      "path": "crates/photogrammetry-kernel/src/math.rs",
+      "baseline_sha256": "d465d63eccc4a72569c362e344dfab780f973fb3aeb1c6203b57e4e3dd843e0f",
+      "sha256": "19662966debcabcf34cfd4fec7d12ed62f5df30cd0eeec654d42f505a1a5671f"
+    },
+    {
+      "stage": "dense",
+      "path": "crates/photogrammetry-kernel/src/dense/estimation.rs",
+      "baseline_sha256": "933511293f66bdf81308efa53a28d183a8e54a14ca91e21d8cc1e78474865fc9",
+      "sha256": "4428f57def70dc4046be09033c400440793f9e54318530143420306cf6d261a6"
+    },
+    {
+      "stage": "dense",
+      "path": "crates/photogrammetry-kernel/src/dense/plane.rs",
+      "baseline_sha256": "de7f979093dc7f91e286793ddf4cc1db542155f907b8e7059a3a8509bbe0d4b2",
+      "sha256": "45dcdb4495e1aab6553d63ade86acc48b69127d3f69968c0165eee36e8842fb1"
+    },
+    {
+      "stage": "transport",
+      "path": "crates/photogrammetry-wasm/src/response.rs",
+      "baseline_sha256": null,
+      "sha256": "b67a9a3d439db4855de1ae3f54fc05bbd5ab3936d1e85c698479869d9cf5f278"
+    },
+    {
+      "stage": "transport",
+      "path": "crates/photogrammetry-wasm/src/session.rs",
+      "baseline_sha256": "efbab5a9cff1d38fb14205968d78361550a858d38692cb2fb23e1baa10c721ce",
+      "sha256": "2cc29f4577b7a93b50121a710031a69a094f4c164562c14e7a4432384eb02942"
+    },
+    {
+      "stage": "transport",
+      "path": "crates/photogrammetry-wasm/src/lib.rs",
+      "baseline_sha256": "4060c1e0f523828aa3fe07d53340869ddf6492e8e90d8f740717f1b751a683b8",
+      "sha256": "9630c0c42fbe862a63b4536de9eed4335b6c1727700f11bb8f4a2b86bb76c3d5"
+    },
+    {
+      "stage": "transport",
+      "path": "crates/photogrammetry-wasm/src/response/tests.rs",
+      "baseline_sha256": null,
+      "sha256": "e1b642afa76583cc3ffab65cd464525973aca958097f3031a67c0f51ecae20ac"
+    }
+  ],
+  "workspace_before_sha256": "4216b736d46e0cb4a6cf8afa09b7ef7c94f463f1e69adca229d67ceb28802af6",
+  "workspace_after_sha256": "12d4a7bb6f35cc64dee8fcbed2157924ce217c6b33502d5c1e4acc79ec72a42a",
+  "dependencies_added": false
+}

@@ -1,0 +1,7 @@
+{
+  "cpu": "Apple M4 Max",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7\nBuildVersion:\t\t25G224\n",
+  "rustc": "rustc 1.98.0-nightly (57d06900f 2026-05-27)\nbinary: rustc\ncommit-hash: 57d06900fd7d9ee06d3a7f323bb77f17ab3cfaf8\ncommit-date: 2026-05-27\nhost: aarch64-apple-darwin\nrelease: 1.98.0-nightly\nLLVM version: 22.1.6\n",
+  "node": "v26.8.1\n",
+  "wasm_imports": []
+}

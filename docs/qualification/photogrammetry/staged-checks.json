@@ -1,0 +1,107 @@
+[
+  {
+    "name": "rust-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "--workspace",
+      "--all-targets"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/stage4-evaluation",
+    "exit_code": 0,
+    "wall_ms": 27702.818333986215
+  },
+  {
+    "name": "native-release",
+    "command": [
+      "cargo",
+      "build",
+      "--offline",
+      "--release",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "photogrammetry-kernel",
+      "--examples"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/stage4-evaluation",
+    "exit_code": 0,
+    "wall_ms": 4224.312707898207
+  },
+  {
+    "name": "wasm-build",
+    "command": [
+      "node",
+      "scripts/build-photogrammetry.mjs"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 1251.6878329915926
+  },
+  {
+    "name": "vue-typecheck",
+    "command": [
+      "./node_modules/.bin/vue-tsc",
+      "--noEmit"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 3464.5927909296006
+  },
+  {
+    "name": "mcp-typecheck",
+    "command": [
+      "./node_modules/.bin/tsc",
+      "--noEmit",
+      "-p",
+      "tsconfig.mcp.json"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 2462.6377089880407
+  },
+  {
+    "name": "photo-vitest",
+    "command": [
+      "./node_modules/.bin/vitest",
+      "run",
+      "--configLoader",
+      "runner",
+      "tests/photoAdapters.test.ts",
+      "tests/photoWorker.test.ts",
+      "tests/photoTransportBudget.test.ts",
+      "tests/photogrammetry.test.ts",
+      "tests/photoCalibration.test.ts",
+      "tests/photoCalibrationKernel.test.ts",
+      "tests/photoDensePreset.test.ts"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 623.9925420377403
+  },
+  {
+    "name": "vite-build",
+    "command": [
+      "./node_modules/.bin/vite",
+      "build",
+      "--configLoader",
+      "runner"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 564.9405840085819
+  },
+  {
+    "name": "dist-check",
+    "command": [
+      "node",
+      "scripts/verify-dist.mjs"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/app",
+    "exit_code": 0,
+    "wall_ms": 50.236625014804304
+  }
+]

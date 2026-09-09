@@ -44,6 +44,7 @@ enum Rule {
     Function,
     Assertion,
     GeometryAssertion,
+    GuardedStep,
 }
 
 #[derive(Clone, Copy)]
@@ -510,6 +511,10 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
                 required("message", Rule::Message),
             ],
         )?,
+        Rule::GuardedStep => object(value, path, &[
+            required("kind", Rule::Enum(&["assert", "where", "while"])),
+            required("value", Rule::Expr),
+        ])?,
         Rule::GeometryAssertion => object(
             value,
             path,
@@ -666,6 +671,20 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
             OP,
             required("input", Rule::Expr),
             required("name", Rule::Id),
+        ],
+        "memo" => &[OP, ID, required("value", Rule::Expr)],
+        "geometry_effects" => &[OP, INPUT, required("value", Rule::Expr)],
+        "guarded" => &[
+            OP,
+            required("input", Rule::Expr),
+            required("binding", Rule::Id),
+            required("steps", Rule::Array(&Rule::GuardedStep, 0, 64)),
+        ],
+        "assert_value" => &[
+            OP,
+            optional("constraints", Rule::Array(&Rule::Constraint, 0, 64)),
+            optional("geometry_assertions", Rule::Array(&Rule::GeometryAssertion, 0, 64)),
+            required("value", Rule::Expr),
         ],
         "checked" => &[
             OP,
@@ -1155,6 +1174,11 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
         ],
         "extrude" => &[ID, OP, INPUT, HEIGHT, CENTER],
         "revolve" => &[ID, OP, INPUT, required("angle", Rule::Expr)],
+        "assert" => &[
+            ID, OP, INPUT,
+            optional("constraints", Rule::Array(&Rule::Constraint, 0, 64)),
+            optional("geometry_assertions", Rule::Array(&Rule::GeometryAssertion, 0, 64)),
+        ],
         "evaluate" => &[ID, OP, required("value", Rule::Expr)],
         "call" => &[ID, OP, FUNCTION, ARGS],
         "if" => &[

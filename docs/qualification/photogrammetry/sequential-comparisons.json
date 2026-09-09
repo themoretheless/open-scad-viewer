@@ -1,0 +1,2111 @@
+{
+  "baseline": {
+    "stage": "baseline",
+    "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+    "source_sha256": "10c7d1b8b007c386915241a0b349bab5b71f158575ca5bb4220ece18f37f5938",
+    "binary_sha256": "69008b3fa79e7e1b27eeed93c618cb9700a5d11921bbf2cb94dd7a980c168294",
+    "method": "Native release, one warmup then repeated runs, identical frozen PPM and focal. Wall time includes reading and PLY writing. Stage timing is indicative while other development may run; final alternating comparison is separate.",
+    "physical_accuracy_measured": false,
+    "inputs": [
+      {
+        "id": "shell6",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "shell12",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2480.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+            "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+            "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2481.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+            "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+            "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2482.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+            "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+            "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2483.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+            "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+            "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2484.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+            "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+            "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2485.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+            "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+            "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "monstree6",
+        "images": [
+          {
+            "name": "IMG_1024.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+            "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+            "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1025.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+            "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+            "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1026.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+            "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+            "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1027.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+            "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+            "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1028.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+            "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+            "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1029.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+            "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+            "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 776.5802747153207,
+        "geometry_ground_truth": false
+      }
+    ],
+    "runs": [
+      {
+        "case": "shell6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2059.308666968718,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 616.974,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 1644.5577919948846,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 611.829,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 1624.1308340104297,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 608.939,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 1678.529042052105,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 607.024,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell12",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 3277.81458303798,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2142.642,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 3232.7206659829244,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2131.365,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 3227.8353329747915,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2123.84,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 3238.7781250290573,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2123.688,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "monstree6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2658.793249982409,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1209.682,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 2707.667624927126,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1213.871,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 2679.45120902732,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1220.484,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 2716.041125007905,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1225.174,
+        "vertices": 19151,
+        "faces": 17475
+      }
+    ],
+    "summary": [
+      {
+        "case": "shell6",
+        "median_wall_ms": 1644.5577919948846,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 445,
+          "reprojection_rmse": 0.5212331344690957,
+          "sparse_ms": 607.024,
+          "vertices": 10281,
+          "faces": 5542
+        }
+      },
+      {
+        "case": "shell12",
+        "median_wall_ms": 3232.7206659829244,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell12",
+          "exit_code": 0,
+          "registered": 7,
+          "images": 12,
+          "sparse_points": 482,
+          "reprojection_rmse": 0.5156121934346878,
+          "sparse_ms": 2123.688,
+          "vertices": 10085,
+          "faces": 6010
+        }
+      },
+      {
+        "case": "monstree6",
+        "median_wall_ms": 2707.667624927126,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "monstree6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 421,
+          "reprojection_rmse": 0.308627252658767,
+          "sparse_ms": 1225.174,
+          "vertices": 19151,
+          "faces": 17475
+        }
+      }
+    ],
+    "verified_workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n"
+  },
+  "stage1-calibration": {
+    "stage": "stage1-calibration",
+    "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+    "source_sha256": "484545557af1533edf29ba1775f1b81d317ad2675febc58fd88e4f09df9b4d18",
+    "binary_sha256": "c1899b8e87703e8a3bf016efe4073473d909350531e96d677a26c5f989fceb21",
+    "method": "Native release, one warmup then repeated runs, identical frozen PPM and focal. Wall time includes reading and PLY writing. Stage timing is indicative while other development may run; final alternating comparison is separate.",
+    "physical_accuracy_measured": false,
+    "inputs": [
+      {
+        "id": "shell6",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "shell12",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2480.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+            "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+            "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2481.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+            "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+            "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2482.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+            "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+            "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2483.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+            "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+            "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2484.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+            "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+            "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2485.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+            "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+            "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "monstree6",
+        "images": [
+          {
+            "name": "IMG_1024.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+            "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+            "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1025.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+            "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+            "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1026.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+            "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+            "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1027.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+            "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+            "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1028.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+            "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+            "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1029.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+            "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+            "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 776.5802747153207,
+        "geometry_ground_truth": false
+      }
+    ],
+    "runs": [
+      {
+        "case": "shell6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2051.1850839247927,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 610.244,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 1597.8988340357319,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 603.339,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 1650.9307500673458,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 607.042,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 1652.915250044316,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 445,
+        "reprojection_rmse": 0.5212331344690957,
+        "sparse_ms": 610.738,
+        "vertices": 10281,
+        "faces": 5542
+      },
+      {
+        "case": "shell12",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 3330.501417047344,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2177.908,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 3324.9305420322344,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2161.708,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 3283.7235420010984,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2117.208,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "shell12",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 3248.109541949816,
+        "exit_code": 0,
+        "registered": 7,
+        "images": 12,
+        "sparse_points": 482,
+        "reprojection_rmse": 0.5156121934346878,
+        "sparse_ms": 2119.761,
+        "vertices": 10085,
+        "faces": 6010
+      },
+      {
+        "case": "monstree6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2677.24954104051,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1196.101,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 2695.4939999850467,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1199.097,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 2727.4567080894485,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1218.627,
+        "vertices": 19151,
+        "faces": 17475
+      },
+      {
+        "case": "monstree6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 2744.2901670001447,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 421,
+        "reprojection_rmse": 0.308627252658767,
+        "sparse_ms": 1244.458,
+        "vertices": 19151,
+        "faces": 17475
+      }
+    ],
+    "summary": [
+      {
+        "case": "shell6",
+        "median_wall_ms": 1650.9307500673458,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 445,
+          "reprojection_rmse": 0.5212331344690957,
+          "sparse_ms": 610.738,
+          "vertices": 10281,
+          "faces": 5542
+        }
+      },
+      {
+        "case": "shell12",
+        "median_wall_ms": 3283.7235420010984,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell12",
+          "exit_code": 0,
+          "registered": 7,
+          "images": 12,
+          "sparse_points": 482,
+          "reprojection_rmse": 0.5156121934346878,
+          "sparse_ms": 2119.761,
+          "vertices": 10085,
+          "faces": 6010
+        }
+      },
+      {
+        "case": "monstree6",
+        "median_wall_ms": 2727.4567080894485,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "monstree6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 421,
+          "reprojection_rmse": 0.308627252658767,
+          "sparse_ms": 1244.458,
+          "vertices": 19151,
+          "faces": 17475
+        }
+      }
+    ],
+    "verified_workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n"
+  },
+  "stage2-features": {
+    "stage": "stage2-features",
+    "dense_profile": "baseline",
+    "compiler": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+    "workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+    "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+    "source_sha256": "035d9df035ca3bb2ffd97f226f0367b112389a71015dbd45d029cf5e9f778b7c",
+    "binary_sha256": "5a2b7ef52d0b3ddec794698151843a69cb5711262a68a97a13689daffb667b78",
+    "method": "Native release, one warmup then repeated runs, identical frozen PPM and focal. Wall time includes reading and PLY writing. Stage timing is indicative while other development may run; final alternating comparison is separate.",
+    "physical_accuracy_measured": false,
+    "inputs": [
+      {
+        "id": "shell6",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "shell12",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2480.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+            "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+            "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2481.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+            "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+            "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2482.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+            "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+            "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2483.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+            "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+            "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2484.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+            "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+            "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2485.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+            "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+            "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "monstree6",
+        "images": [
+          {
+            "name": "IMG_1024.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+            "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+            "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1025.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+            "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+            "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1026.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+            "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+            "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1027.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+            "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+            "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1028.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+            "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+            "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1029.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+            "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+            "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 776.5802747153207,
+        "geometry_ground_truth": false
+      }
+    ],
+    "runs": [
+      {
+        "case": "shell6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 1838.2994589628652,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 521.123,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 1530.401666997932,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 529.987,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 1525.775707908906,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 518.817,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 1527.7338749729097,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 514.647,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell12",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 3539.6014590514824,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1642.385,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 3562.8327920567244,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1638.459,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 3542.261124937795,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1636.569,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 3605.0771669251844,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1660.527,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "monstree6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2731.4379999879748,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1272.94,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 2749.0029589971527,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1287.608,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 2722.488750005141,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1262.595,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 2824.115916970186,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1304.077,
+        "vertices": 19422,
+        "faces": 18210
+      }
+    ],
+    "summary": [
+      {
+        "case": "shell6",
+        "median_wall_ms": 1527.7338749729097,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 597,
+          "reprojection_rmse": 0.3457641145797722,
+          "sparse_ms": 514.647,
+          "vertices": 10507,
+          "faces": 6139
+        }
+      },
+      {
+        "case": "shell12",
+        "median_wall_ms": 3562.8327920567244,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell12",
+          "exit_code": 0,
+          "registered": 12,
+          "images": 12,
+          "sparse_points": 977,
+          "reprojection_rmse": 0.40805940673713126,
+          "sparse_ms": 1660.527,
+          "vertices": 17158,
+          "faces": 10782
+        }
+      },
+      {
+        "case": "monstree6",
+        "median_wall_ms": 2749.0029589971527,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "monstree6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 570,
+          "reprojection_rmse": 0.2603874953623804,
+          "sparse_ms": 1304.077,
+          "vertices": 19422,
+          "faces": 18210
+        }
+      }
+    ],
+    "verified_workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n"
+  },
+  "stage3-dense": {
+    "stage": "stage3-dense",
+    "dense_profile": "baseline",
+    "compiler": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+    "workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+    "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+    "source_sha256": "bcd1b0aa44d7148afe501d241344963c9457850996f807b5c6a57589591bc0a8",
+    "binary_sha256": "28b2ff5c091637eff57d99c36054d5d81c316a3996ca3e1e8d25f4decd7eebbd",
+    "method": "Native release, one warmup then repeated runs, identical frozen PPM and focal. Wall time includes reading and PLY writing. Stage timing is indicative while other development may run; final alternating comparison is separate.",
+    "physical_accuracy_measured": false,
+    "inputs": [
+      {
+        "id": "shell6",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "shell12",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2480.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+            "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+            "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2481.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+            "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+            "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2482.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+            "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+            "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2483.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+            "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+            "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2484.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+            "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+            "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2485.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+            "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+            "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "monstree6",
+        "images": [
+          {
+            "name": "IMG_1024.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+            "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+            "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1025.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+            "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+            "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1026.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+            "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+            "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1027.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+            "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+            "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1028.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+            "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+            "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1029.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+            "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+            "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 776.5802747153207,
+        "geometry_ground_truth": false
+      }
+    ],
+    "runs": [
+      {
+        "case": "shell6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2062.446750001982,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 527.232,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 1646.2912909919396,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 521.808,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 1647.1827080240473,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 524.198,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 1654.2929999995977,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 519.891,
+        "vertices": 10507,
+        "faces": 6139
+      },
+      {
+        "case": "shell12",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 3795.142791001126,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1637.67,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 3829.674124950543,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1646.559,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 3799.959541996941,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1634.608,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "shell12",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 3817.207209067419,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1642.825,
+        "vertices": 17158,
+        "faces": 10782
+      },
+      {
+        "case": "monstree6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 2946.091084042564,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1273.588,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 2897.2918330691755,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1275.509,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 2883.943042019382,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1267.851,
+        "vertices": 19422,
+        "faces": 18210
+      },
+      {
+        "case": "monstree6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 2893.227915978059,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1266.878,
+        "vertices": 19422,
+        "faces": 18210
+      }
+    ],
+    "summary": [
+      {
+        "case": "shell6",
+        "median_wall_ms": 1647.1827080240473,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 597,
+          "reprojection_rmse": 0.3457641145797722,
+          "sparse_ms": 519.891,
+          "vertices": 10507,
+          "faces": 6139
+        }
+      },
+      {
+        "case": "shell12",
+        "median_wall_ms": 3817.207209067419,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell12",
+          "exit_code": 0,
+          "registered": 12,
+          "images": 12,
+          "sparse_points": 977,
+          "reprojection_rmse": 0.40805940673713126,
+          "sparse_ms": 1642.825,
+          "vertices": 17158,
+          "faces": 10782
+        }
+      },
+      {
+        "case": "monstree6",
+        "median_wall_ms": 2893.227915978059,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "monstree6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 570,
+          "reprojection_rmse": 0.2603874953623804,
+          "sparse_ms": 1266.878,
+          "vertices": 19422,
+          "faces": 18210
+        }
+      }
+    ],
+    "verified_workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n"
+  },
+  "stage3-dense-slanted": {
+    "stage": "stage3-dense",
+    "dense_profile": "slanted",
+    "compiler": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+    "workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+    "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+    "source_sha256": "bcd1b0aa44d7148afe501d241344963c9457850996f807b5c6a57589591bc0a8",
+    "binary_sha256": "28b2ff5c091637eff57d99c36054d5d81c316a3996ca3e1e8d25f4decd7eebbd",
+    "method": "Native release, one warmup then repeated runs, identical frozen PPM and focal. Wall time includes reading and PLY writing. Stage timing is indicative while other development may run; final alternating comparison is separate.",
+    "physical_accuracy_measured": false,
+    "inputs": [
+      {
+        "id": "shell6",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "shell12",
+        "images": [
+          {
+            "name": "M97A2474.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+            "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+            "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2475.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+            "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+            "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2476.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+            "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+            "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2477.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+            "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+            "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2478.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+            "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+            "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2479.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+            "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+            "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+            "decode": "Previously frozen P6 PPM; SHA256 preserved"
+          },
+          {
+            "name": "M97A2480.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+            "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+            "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2481.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+            "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+            "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2482.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+            "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+            "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2483.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+            "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+            "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2484.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+            "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+            "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "M97A2485.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+            "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+            "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 2266.6666667,
+        "geometry_ground_truth": false
+      },
+      {
+        "id": "monstree6",
+        "images": [
+          {
+            "name": "IMG_1024.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+            "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+            "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1025.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+            "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+            "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1026.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+            "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+            "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1027.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+            "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+            "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1028.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+            "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+            "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          },
+          {
+            "name": "IMG_1029.JPG",
+            "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+            "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+            "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+            "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+          }
+        ],
+        "focal_pixels": 776.5802747153207,
+        "geometry_ground_truth": false
+      }
+    ],
+    "runs": [
+      {
+        "case": "shell6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 4038.4747079806402,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 529.238,
+        "vertices": 20652,
+        "faces": 34022
+      },
+      {
+        "case": "shell6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 3651.3124170014635,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 538.468,
+        "vertices": 20652,
+        "faces": 34022
+      },
+      {
+        "case": "shell6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 3544.2284159362316,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 517.391,
+        "vertices": 20652,
+        "faces": 34022
+      },
+      {
+        "case": "shell6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 3579.311209032312,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 597,
+        "reprojection_rmse": 0.3457641145797722,
+        "sparse_ms": 522.211,
+        "vertices": 20652,
+        "faces": 34022
+      },
+      {
+        "case": "shell12",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 7673.380584106781,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1646.924,
+        "vertices": 32168,
+        "faces": 64792
+      },
+      {
+        "case": "shell12",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 7652.52937504556,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1633.526,
+        "vertices": 32168,
+        "faces": 64792
+      },
+      {
+        "case": "shell12",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 7905.507291085087,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1637.378,
+        "vertices": 32168,
+        "faces": 64792
+      },
+      {
+        "case": "shell12",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 7677.343875053339,
+        "exit_code": 0,
+        "registered": 12,
+        "images": 12,
+        "sparse_points": 977,
+        "reprojection_rmse": 0.40805940673713126,
+        "sparse_ms": 1636.231,
+        "vertices": 32168,
+        "faces": 64792
+      },
+      {
+        "case": "monstree6",
+        "run": 0,
+        "warmup": true,
+        "wall_ms": 5303.527040989138,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1287.792,
+        "vertices": 28833,
+        "faces": 63970
+      },
+      {
+        "case": "monstree6",
+        "run": 1,
+        "warmup": false,
+        "wall_ms": 5342.0429999241605,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1271.317,
+        "vertices": 28833,
+        "faces": 63970
+      },
+      {
+        "case": "monstree6",
+        "run": 2,
+        "warmup": false,
+        "wall_ms": 5398.16699991934,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1269.813,
+        "vertices": 28833,
+        "faces": 63970
+      },
+      {
+        "case": "monstree6",
+        "run": 3,
+        "warmup": false,
+        "wall_ms": 5501.666333992034,
+        "exit_code": 0,
+        "registered": 6,
+        "images": 6,
+        "sparse_points": 570,
+        "reprojection_rmse": 0.2603874953623804,
+        "sparse_ms": 1421.562,
+        "vertices": 28833,
+        "faces": 63970
+      }
+    ],
+    "summary": [
+      {
+        "case": "shell6",
+        "median_wall_ms": 3579.311209032312,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 597,
+          "reprojection_rmse": 0.3457641145797722,
+          "sparse_ms": 522.211,
+          "vertices": 20652,
+          "faces": 34022
+        }
+      },
+      {
+        "case": "shell12",
+        "median_wall_ms": 7677.343875053339,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "shell12",
+          "exit_code": 0,
+          "registered": 12,
+          "images": 12,
+          "sparse_points": 977,
+          "reprojection_rmse": 0.40805940673713126,
+          "sparse_ms": 1636.231,
+          "vertices": 32168,
+          "faces": 64792
+        }
+      },
+      {
+        "case": "monstree6",
+        "median_wall_ms": 5398.16699991934,
+        "deterministic_geometry": true,
+        "result": {
+          "case": "monstree6",
+          "exit_code": 0,
+          "registered": 6,
+          "images": 6,
+          "sparse_points": 570,
+          "reprojection_rmse": 0.2603874953623804,
+          "sparse_ms": 1421.562,
+          "vertices": 28833,
+          "faces": 63970
+        }
+      }
+    ],
+    "verified_workspace_manifest": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n"
+  }
+}

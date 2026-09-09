@@ -3,6 +3,9 @@ import { flattenExportMeshes } from './meshExportAdapter'
 
 export interface GeometryCheck {
   id: string
+  target?: string
+  instance_path?: string
+  source?: string
   check: string
   expected: number
   tolerance: number
@@ -48,6 +51,32 @@ export function checkModelGraphGeometry(checks: readonly GeometryCheck[], meshes
     return checks.map(check => ({ ...check, actual: null, status: 'unknown', reason: error instanceof Error ? error.message : 'Measurement unavailable' }))
   }
 }
+/** Resolve each assertion against the exact target snapshot emitted by the runtime. */
+export async function evaluateModelGraphGeometry(
+  checks: readonly GeometryCheck[],
+  meshes: readonly MeshData[],
+  buildTarget: (source: string) => Promise<readonly MeshData[]>,
+): Promise<GeometryCheckResult[]> {
+  const groups = new Map<string | undefined, {check:GeometryCheck; index:number}[]>()
+  checks.forEach(({source, ...check}, index) => {
+    const group = groups.get(source) ?? []
+    group.push({check, index})
+    groups.set(source, group)
+  })
+  const report: GeometryCheckResult[] = new Array(checks.length)
+  for (const [source, group] of groups) {
+    let results: GeometryCheckResult[]
+    try {
+      const target = source === undefined ? meshes : await buildTarget(source)
+      results = checkModelGraphGeometry(group.map(item => item.check), target)
+    } catch (error) {
+      results = group.map(({check}) => ({...check, actual:null, status:'unknown', reason:error instanceof Error ? error.message : 'Assertion target could not be built'}))
+    }
+    group.forEach(({index}, offset) => { report[index] = results[offset]! })
+  }
+  return report
+}
+
 export class ModelGraphCheckError extends Error {
   constructor(readonly checks: readonly GeometryCheckResult[]) {
     super('Geometry assertions: ' + JSON.stringify(checks))

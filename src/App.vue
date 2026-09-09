@@ -3,7 +3,7 @@ import { modelGraphTextControls, isModelGraphText } from './services/modelGraphT
 import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { flattenExportMeshes } from './services/meshExportAdapter'
 import { exportMeshFormatCompressed, type MeshExportFormat } from './services/meshExportFormats'
 import CommandPalette from './components/CommandPalette.vue'
@@ -15,6 +15,7 @@ import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEd
 import MainModelingTools from './features/MainModelingTools.vue'
 import ScanPlanePanel from './features/ScanPlanePanel.vue'
 import SvgPanel from './features/SvgPanel.vue'
+import PhotogrammetryPanel from './features/PhotogrammetryPanel.vue'
 import InspectPanel from './components/InspectPanel.vue'
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
 import SceneOutliner from './components/SceneOutliner.vue'
@@ -124,7 +125,7 @@ const props = defineProps<{
 const L: Record<Language, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD Viewer',
-    render: 'Собрать', auto: 'Авто', examples: 'Примеры',
+    render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
     basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
     open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
     exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
@@ -171,7 +172,7 @@ const L: Record<Language, Record<string, string>> = {
   },
   en: {
     title: 'OpenSCAD Viewer',
-    render: 'Render', auto: 'Auto', examples: 'Examples',
+    render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
     basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
     open: 'Open', save: 'Save', share: 'Share',
     exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
@@ -341,6 +342,10 @@ const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
 )
 const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
+const FunctionReference = defineAsyncComponent(() => import('./components/FunctionReference.vue'))
+const functionReferenceOpen = ref(false)
+const functionReferenceQuery = ref('')
+const functionReferenceButton = ref<HTMLButtonElement | null>(null)
 const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
 const sourceHistoryKey=()=> 'scad-source-history-v1:'+fileName.value
@@ -2120,6 +2125,10 @@ function executeCommand(id: string) {
     case 'find': openEditorFind(false); break
     case 'replace': openEditorFind(true); break
     case 'shortcut-help': shortcutHelpOpen.value = true; break
+    case 'function-reference':
+      if (paletteWasOpen) functionReferenceButton.value?.focus()
+      openFunctionReference(document.activeElement === editorRef.value ? selectedEditorName.value : '')
+      break
     case 'export-stl': exportStl(); break
     case 'export-obj': exportObj(); break
     case 'share': void shareSource(); break
@@ -2166,6 +2175,11 @@ function recordCommandUsage(id: string) {
   storageSetJSON('scad-command-mru', next)
 }
 
+function openFunctionReference(query = '') {
+  functionReferenceQuery.value = query
+  functionReferenceOpen.value = true
+}
+
 function formatEditor() {
   const formatted = formatCode(code.value)
   if(formatted === code.value) return
@@ -2205,7 +2219,7 @@ function handleGlobalKey(event: KeyboardEvent) {
 function dispatchKeyboardCommand(event: KeyboardEvent, scope: CommandScope) {
   const id = resolveKeyboardCommand(event, scope, { isEnabled: isCommandEnabled })
   if (!id) return
-  if (shortcutHelpOpen.value || exampleGalleryOpen.value || mechanicalGeneratorOpen.value) return
+  if (shortcutHelpOpen.value || exampleGalleryOpen.value || mechanicalGeneratorOpen.value || functionReferenceOpen.value) return
   if (paletteOpen.value && id !== 'command-palette') return
   event.preventDefault()
   executeCommand(id)
@@ -2266,7 +2280,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 
 <template>
   <div class="app" @dragover.prevent @drop.prevent="handleDrop">
-    <nav class="topbar" aria-label="Application">
+    <nav class="topbar" aria-label="Application" :inert="functionReferenceOpen">
       <div class="topbar-left">
         <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
@@ -2327,7 +2341,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
     </nav>
 
-    <main ref="mainRef" class="main" :inert="directModelerOpen">
+    <main ref="mainRef" class="main" :inert="directModelerOpen || functionReferenceOpen">
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
@@ -2338,6 +2352,16 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button class="btn" type="button" @click="directModelerOpen = true">{{ lang === 'ru' ? 'Прямое моделирование' : 'Direct modeling' }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">⚙ {{ lang === 'ru' ? 'Генераторы' : 'Generators' }}</button>
           <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
+          <button
+            ref="functionReferenceButton"
+            class="btn"
+            type="button"
+            :title="`${t('functionReference')} (F1)`"
+            aria-keyshortcuts="F1"
+            aria-haspopup="dialog"
+            :aria-expanded="functionReferenceOpen"
+            @click="openFunctionReference()"
+          >{{ t('functionReference') }}</button>
         </div>
 
         <div class="toolbar file-toolbar">
@@ -2438,6 +2462,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
         <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" @append="source => replacePresetSource(code + '\n\n' + source)" />
+        <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
 <details class="performance-panel">
     <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
     <div class="performance-content">
@@ -2673,7 +2698,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     <CommandPalette
       :open="paletteOpen"
       :commands="paletteCommands"
-      :restore-focus="!shortcutHelpOpen"
+      :restore-focus="!shortcutHelpOpen && !functionReferenceOpen"
       @close="paletteOpen = false"
       @execute="executeCommand"
     />
@@ -2686,6 +2711,13 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @close="exampleGalleryOpen = false"
       @select="loadExample"
       @download-current="saveSource"
+    />
+    <FunctionReference
+      :open="functionReferenceOpen"
+      :locale="lang"
+      :language="isModelGraphText(code) ? 'modelgraph' : 'openscad'"
+      :initial-query="functionReferenceQuery"
+      @close="functionReferenceOpen = false"
     />
     <KeyboardShortcuts
       :open="shortcutHelpOpen"

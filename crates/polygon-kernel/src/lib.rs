@@ -7,6 +7,7 @@ pub mod cad;
 pub mod edit;
 pub mod modeling;
 pub mod proximity;
+pub mod section;
 pub mod tessellation;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;

@@ -1,0 +1,810 @@
+{
+  "profile": "release opt-level=s lto=true",
+  "rustVersion": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+  "platform": "macOS-26.7-arm64-arm-64bit",
+  "timingScope": "Serialization only, no allocation tracking, iterations 2-7 median; parallel agent work means indicative timings; test allocator wrapper remains installed with tracking disabled, so ordinary production pipeline timings are the final cross-check",
+  "memoryScope": "Fresh whole-process RSS includes reading fixture and one separately tracked serialization; allocator bytes cover only encoding, excluding already-resident input",
+  "runs": [
+    {
+      "case": "shell12",
+      "mode": "baseline",
+      "exitCode": 0,
+      "processPeakRssBytes": 12222464,
+      "processWallMs": 26.653083000000002,
+      "records": [
+        {
+          "mode": "baseline",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.819,
+          "allocations": 45154,
+          "allocatedBytes": 9969742,
+          "peakLiveBytes": 7872486
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.440042,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.423916,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.32375,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.416375,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.37675,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.38425,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 2.368208,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"baseline\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.819000,\"allocations\":45154,\"allocatedBytes\":9969742,\"peakLiveBytes\":7872486}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.440042,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.423916,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.323750,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.416375,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.376750,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.384250,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":2.368208,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.02s\n\n",
+      "stderr": "",
+      "medianMs": 2.3805,
+      "outputSha256": "b5373eaa275f382b51e7835aa27e0beabfa71a08f519619c0c8a7c315088ce16"
+    },
+    {
+      "case": "shell12",
+      "mode": "direct",
+      "exitCode": 0,
+      "processPeakRssBytes": 6094848,
+      "processWallMs": 9.075375000000003,
+      "records": [
+        {
+          "mode": "direct",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.372333,
+          "allocations": 17,
+          "allocatedBytes": 1444034,
+          "peakLiveBytes": 1443712
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.299,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.294625,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.292875,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.319625,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.311708,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.302042,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 17158,
+          "faces": 10782,
+          "bytes": 1443444,
+          "elapsedMs": 0.299,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"direct\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.372333,\"allocations\":17,\"allocatedBytes\":1444034,\"peakLiveBytes\":1443712}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.299000,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.294625,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.292875,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.319625,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.311708,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.302042,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":17158,\"faces\":10782,\"bytes\":1443444,\"elapsedMs\":0.299000,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.01s\n\n",
+      "stderr": "",
+      "medianMs": 0.300521,
+      "outputSha256": "b5373eaa275f382b51e7835aa27e0beabfa71a08f519619c0c8a7c315088ce16"
+    },
+    {
+      "case": "monstree6",
+      "mode": "baseline",
+      "exitCode": 0,
+      "processPeakRssBytes": 13582336,
+      "processWallMs": 31.717125,
+      "records": [
+        {
+          "mode": "baseline",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.43925,
+          "allocations": 57110,
+          "allocatedBytes": 11500110,
+          "peakLiveBytes": 9402854
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.000959,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.004083,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.066541,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.015791,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 3.096416,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 2.995292,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 2.979666,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"baseline\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.439250,\"allocations\":57110,\"allocatedBytes\":11500110,\"peakLiveBytes\":9402854}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.000959,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.004083,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.066541,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.015791,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":3.096416,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":2.995292,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":2.979666,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.03s\n\n",
+      "stderr": "",
+      "medianMs": 3.009937,
+      "outputSha256": "57f08c8c961704d5edbaaa0488c117d4f514757f14bc9eeb83597be3d183d139"
+    },
+    {
+      "case": "monstree6",
+      "mode": "direct",
+      "exitCode": 0,
+      "processPeakRssBytes": 6995968,
+      "processWallMs": 10.417708000000005,
+      "records": [
+        {
+          "mode": "direct",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.469667,
+          "allocations": 17,
+          "allocatedBytes": 1826626,
+          "peakLiveBytes": 1826304
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.363291,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.362916,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.35675,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.383666,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.368042,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.377334,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 19422,
+          "faces": 18210,
+          "bytes": 1826036,
+          "elapsedMs": 0.366584,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"direct\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.469667,\"allocations\":17,\"allocatedBytes\":1826626,\"peakLiveBytes\":1826304}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.363291,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.362916,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.356750,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.383666,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.368042,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.377334,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":19422,\"faces\":18210,\"bytes\":1826036,\"elapsedMs\":0.366584,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.01s\n\n",
+      "stderr": "",
+      "medianMs": 0.367313,
+      "outputSha256": "57f08c8c961704d5edbaaa0488c117d4f514757f14bc9eeb83597be3d183d139"
+    },
+    {
+      "case": "large",
+      "mode": "baseline",
+      "exitCode": 0,
+      "processPeakRssBytes": 167755776,
+      "processWallMs": 241.58279199999998,
+      "records": [
+        {
+          "mode": "baseline",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 34.172708,
+          "allocations": 500059,
+          "allocatedBytes": 97557326,
+          "peakLiveBytes": 80779997
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 31.320041,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 30.085334,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 27.590333,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 27.75375,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 27.08425,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 26.99725,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "baseline",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 27.285625,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"baseline\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":34.172708,\"allocations\":500059,\"allocatedBytes\":97557326,\"peakLiveBytes\":80779997}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":31.320041,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":30.085334,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":27.590333,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":27.753750,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":27.084250,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":26.997250,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"baseline\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":27.285625,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.24s\n\n",
+      "stderr": "",
+      "medianMs": 27.437979,
+      "outputSha256": "fe7d913b29195e89677c37ed7f7ce5d2dbc6e01ebc10269ac23c903390b063e9"
+    },
+    {
+      "case": "large",
+      "mode": "direct",
+      "exitCode": 0,
+      "processPeakRssBytes": 24772608,
+      "processWallMs": 33.794916,
+      "records": [
+        {
+          "mode": "direct",
+          "allocationTracking": true,
+          "iteration": 0,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 4.343292,
+          "allocations": 17,
+          "allocatedBytes": 16000898,
+          "peakLiveBytes": 16000576
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 1,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.056792,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 2,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.165958,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 3,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.33175,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 4,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.2825,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 5,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.102125,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 6,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.168,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        },
+        {
+          "mode": "direct",
+          "allocationTracking": false,
+          "iteration": 7,
+          "vertices": 125000,
+          "faces": 250000,
+          "bytes": 16000308,
+          "elapsedMs": 3.1975,
+          "allocations": 0,
+          "allocatedBytes": 0,
+          "peakLiveBytes": 0
+        }
+      ],
+      "stdout": "\nrunning 1 test\ntest response::tests::benchmark_surface_transport ... {\"mode\":\"direct\",\"allocationTracking\":true,\"iteration\":0,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":4.343292,\"allocations\":17,\"allocatedBytes\":16000898,\"peakLiveBytes\":16000576}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":1,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.056792,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":2,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.165958,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":3,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.331750,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":4,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.282500,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":5,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.102125,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":6,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.168000,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\n{\"mode\":\"direct\",\"allocationTracking\":false,\"iteration\":7,\"vertices\":125000,\"faces\":250000,\"bytes\":16000308,\"elapsedMs\":3.197500,\"allocations\":0,\"allocatedBytes\":0,\"peakLiveBytes\":0}\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.03s\n\n",
+      "stderr": "",
+      "medianMs": 3.18275,
+      "outputSha256": "fe7d913b29195e89677c37ed7f7ce5d2dbc6e01ebc10269ac23c903390b063e9"
+    }
+  ],
+  "pairs": [
+    {
+      "case": "shell12",
+      "exactBytes": true,
+      "baselineMs": 2.3805,
+      "directMs": 0.300521,
+      "speedup": 7.921243440558231,
+      "baselineRssBytes": 12222464,
+      "directRssBytes": 6094848,
+      "baselineAllocation": {
+        "mode": "baseline",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 17158,
+        "faces": 10782,
+        "bytes": 1443444,
+        "elapsedMs": 2.819,
+        "allocations": 45154,
+        "allocatedBytes": 9969742,
+        "peakLiveBytes": 7872486
+      },
+      "directAllocation": {
+        "mode": "direct",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 17158,
+        "faces": 10782,
+        "bytes": 1443444,
+        "elapsedMs": 0.372333,
+        "allocations": 17,
+        "allocatedBytes": 1444034,
+        "peakLiveBytes": 1443712
+      }
+    },
+    {
+      "case": "monstree6",
+      "exactBytes": true,
+      "baselineMs": 3.009937,
+      "directMs": 0.367313,
+      "speedup": 8.19447446727995,
+      "baselineRssBytes": 13582336,
+      "directRssBytes": 6995968,
+      "baselineAllocation": {
+        "mode": "baseline",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 19422,
+        "faces": 18210,
+        "bytes": 1826036,
+        "elapsedMs": 3.43925,
+        "allocations": 57110,
+        "allocatedBytes": 11500110,
+        "peakLiveBytes": 9402854
+      },
+      "directAllocation": {
+        "mode": "direct",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 19422,
+        "faces": 18210,
+        "bytes": 1826036,
+        "elapsedMs": 0.469667,
+        "allocations": 17,
+        "allocatedBytes": 1826626,
+        "peakLiveBytes": 1826304
+      }
+    },
+    {
+      "case": "large",
+      "exactBytes": true,
+      "baselineMs": 27.437979,
+      "directMs": 3.18275,
+      "speedup": 8.620840153954912,
+      "baselineRssBytes": 167755776,
+      "directRssBytes": 24772608,
+      "baselineAllocation": {
+        "mode": "baseline",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 125000,
+        "faces": 250000,
+        "bytes": 16000308,
+        "elapsedMs": 34.172708,
+        "allocations": 500059,
+        "allocatedBytes": 97557326,
+        "peakLiveBytes": 80779997
+      },
+      "directAllocation": {
+        "mode": "direct",
+        "allocationTracking": true,
+        "iteration": 0,
+        "vertices": 125000,
+        "faces": 250000,
+        "bytes": 16000308,
+        "elapsedMs": 4.343292,
+        "allocations": 17,
+        "allocatedBytes": 16000898,
+        "peakLiveBytes": 16000576
+      }
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "crates/photogrammetry-wasm/src/response.rs",
+      "sha256": "b67a9a3d439db4855de1ae3f54fc05bbd5ab3936d1e85c698479869d9cf5f278",
+      "baselineSha256": null
+    },
+    {
+      "path": "crates/photogrammetry-wasm/src/session.rs",
+      "sha256": "2cc29f4577b7a93b50121a710031a69a094f4c164562c14e7a4432384eb02942",
+      "baselineSha256": "efbab5a9cff1d38fb14205968d78361550a858d38692cb2fb23e1baa10c721ce"
+    },
+    {
+      "path": "crates/photogrammetry-wasm/src/lib.rs",
+      "sha256": "9630c0c42fbe862a63b4536de9eed4335b6c1727700f11bb8f4a2b86bb76c3d5",
+      "baselineSha256": "4060c1e0f523828aa3fe07d53340869ddf6492e8e90d8f740717f1b751a683b8"
+    },
+    {
+      "path": "crates/photogrammetry-wasm/src/response/tests.rs",
+      "sha256": "e1b642afa76583cc3ffab65cd464525973aca958097f3031a67c0f51ecae20ac",
+      "baselineSha256": null
+    },
+    {
+      "path": "crates/value-codec/src/lib.rs",
+      "sha256": "38750e90b078bc4ad1606a2d279942066957b21875a66ba0e5dcdbd1ddb2ce4c",
+      "unchanged": true
+    },
+    {
+      "path": "crates/Cargo.toml",
+      "sha256": "62e180997b64c918f21594f147fd6483ecac5cbcd63dbf29b7b59698bc133f4a"
+    }
+  ],
+  "testBinarySha256": "96bd59c726d738cde681a3fad32747b6a6454d816cbf96a348c60b6e3b31fac0",
+  "wasmSha256": "d089c1b3870b545c083a7bb451781da985221ab00cd6f70bdfdfcec3c5d4f0ee",
+  "reference": "generic_surface reproduces previous json! -> ResponseBudget -> value_codec::encode_binary exactly; fixture geometry held identical",
+  "fixtures": [
+    {
+      "case": "shell12",
+      "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/reports/stage3-dense/shell12.ply.surface.ply",
+      "sha256": "aa197e935fd356179aab13ba70360f01525cc2e721c1a683cd9111df4e854a03"
+    },
+    {
+      "case": "monstree6",
+      "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/reports/stage3-dense/monstree6.ply.surface.ply",
+      "sha256": "52b60b58d5a9fa3033bc4b310ec6124c83a767c58ff3f608c0ff8faad9e8d72e"
+    }
+  ]
+}

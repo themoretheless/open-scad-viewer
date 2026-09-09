@@ -1,0 +1,2959 @@
+{
+  "method": "Node V8 WASM + real TypeScript adapter, same frozen PPM, 128 depth side; new process each observation, warmup+rotating measured order; total excludes input read/TS import/JPEG decode/UI but includes unpack/compile/add/sparse/dense+decode; RSS entireNode notonlyWASM",
+  "node": "v22.23.2",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "runs": [
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 18.362459,
+      "add_ms": 2.3162499999999966,
+      "sparse_ms": 839.828041,
+      "dense_ms": 3296.8739170000003,
+      "total_ms": 4157.380667,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 154779648
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 20.281999999999996,
+      "add_ms": 2.345250000000007,
+      "sparse_ms": 605.4573330000001,
+      "dense_ms": 1729.9212499999999,
+      "total_ms": 2358.005833,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 153321472
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 19.339042000000006,
+      "add_ms": 2.2046670000000006,
+      "sparse_ms": 600.0835,
+      "dense_ms": 1737.3636659999997,
+      "total_ms": 2358.990875,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 157384704
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 18.285540999999995,
+      "add_ms": 2.0466669999999993,
+      "sparse_ms": 841.9488749999999,
+      "dense_ms": 3326.144375,
+      "total_ms": 4188.425458,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 154730496
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 18.372333000000012,
+      "add_ms": 2.5499169999999935,
+      "sparse_ms": 836.4925420000001,
+      "dense_ms": 3334.37325,
+      "total_ms": 4191.788042,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 154697728
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 19.86862500000001,
+      "add_ms": 2.217917,
+      "sparse_ms": 599.286625,
+      "dense_ms": 1714.8255829999998,
+      "total_ms": 2336.19875,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 157745152
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 19.202042000000006,
+      "add_ms": 2.1259999999999906,
+      "sparse_ms": 598.6877079999999,
+      "dense_ms": 1722.338833,
+      "total_ms": 2342.354583,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 152993792
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "slanted",
+      "init_ms": 18.607375000000005,
+      "add_ms": 2.037125000000003,
+      "sparse_ms": 840.785792,
+      "dense_ms": 3358.048708,
+      "total_ms": 4219.478999999999,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 20570,
+      "faces": 33821,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "c0b53f2acd8d5c2f68743dd6de246b0c04260acb175069d15513eddf470c46f8",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 23582,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3694080,
+        "evaluatedSourcePatches": 9952956,
+        "fusedSamples": 3012,
+        "patchRadius": 2,
+        "photometricSamples": 34082,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 10500,
+        "sampledSourcePixels": 201151310,
+        "selectedSourcePairs": 18,
+        "triangles": 33821,
+        "vertices": 20570,
+        "viewReports": [
+          {
+            "consistentSamples": 3832,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4527,
+            "image": 1,
+            "photometricSamples": 5791,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3966,
+            "image": 2,
+            "photometricSamples": 5511,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3451,
+            "image": 3,
+            "photometricSamples": 5507,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3787,
+            "image": 4,
+            "photometricSamples": 5521,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 4019,
+            "image": 5,
+            "photometricSamples": 5818,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 154599424
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 18.410041000000007,
+      "add_ms": 3.1283339999999953,
+      "sparse_ms": 2113.340666,
+      "dense_ms": 6818.811084000001,
+      "total_ms": 8953.690125000001,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 213762048
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 19.692834000000005,
+      "add_ms": 3.18995799999999,
+      "sparse_ms": 1600.931292,
+      "dense_ms": 3503.764083,
+      "total_ms": 5127.578167,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 226279424
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 19.393916000000004,
+      "add_ms": 3.2732499999999902,
+      "sparse_ms": 1592.344625,
+      "dense_ms": 3523.156167,
+      "total_ms": 5138.167958,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 223559680
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 18.202957999999995,
+      "add_ms": 3.3915000000000077,
+      "sparse_ms": 2113.597,
+      "dense_ms": 6829.73875,
+      "total_ms": 8964.930208,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 214548480
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 18.48191700000001,
+      "add_ms": 3.2584579999999903,
+      "sparse_ms": 2100.9402919999998,
+      "dense_ms": 6849.710666000001,
+      "total_ms": 8972.391333000001,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 222117888
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 19.439583,
+      "add_ms": 3.9485829999999993,
+      "sparse_ms": 1586.944292,
+      "dense_ms": 3688.169167,
+      "total_ms": 5298.501625,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 222068736
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 19.459417000000002,
+      "add_ms": 4.705583000000004,
+      "sparse_ms": 1597.235209,
+      "dense_ms": 3500.8793330000003,
+      "total_ms": 5122.279542,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 226066432
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "slanted",
+      "init_ms": 18.254084000000006,
+      "add_ms": 3.2790409999999923,
+      "sparse_ms": 2090.182125,
+      "dense_ms": 6859.587125,
+      "total_ms": 8971.302375000001,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 32193,
+      "faces": 64852,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "7126df5982301886c062799e56475e7b4f684da7145fee6ee4363ddd3d8482b7",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 43535,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 7391936,
+        "evaluatedSourcePatches": 20659332,
+        "fusedSamples": 11342,
+        "patchRadius": 2,
+        "photometricSamples": 62133,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 18598,
+        "sampledSourcePixels": 413467214,
+        "selectedSourcePairs": 36,
+        "triangles": 64852,
+        "vertices": 32193,
+        "viewReports": [
+          {
+            "consistentSamples": 4313,
+            "image": 0,
+            "photometricSamples": 5934,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 4380,
+            "image": 1,
+            "photometricSamples": 5822,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4161,
+            "image": 2,
+            "photometricSamples": 5650,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3698,
+            "image": 3,
+            "photometricSamples": 5528,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3788,
+            "image": 4,
+            "photometricSamples": 4858,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4087,
+            "image": 5,
+            "photometricSamples": 5218,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 3130,
+            "image": 6,
+            "photometricSamples": 5345,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2976,
+            "image": 7,
+            "photometricSamples": 4983,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 3280,
+            "image": 8,
+            "photometricSamples": 5065,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 3326,
+            "image": 9,
+            "photometricSamples": 4791,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 3553,
+            "image": 10,
+            "photometricSamples": 4618,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 2843,
+            "image": 11,
+            "photometricSamples": 4321,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 209928192
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 19.053250000000006,
+      "add_ms": 2.397291999999993,
+      "sparse_ms": 1770.143417,
+      "dense_ms": 4123.7507909999995,
+      "total_ms": 5915.34475,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 183926784
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 19.42379100000001,
+      "add_ms": 3.0207089999999965,
+      "sparse_ms": 1224.873541,
+      "dense_ms": 2251.208542,
+      "total_ms": 3498.526583,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 198574080
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 19.616292,
+      "add_ms": 2.3434999999999917,
+      "sparse_ms": 1246.932708,
+      "dense_ms": 2242.63325,
+      "total_ms": 3511.52575,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 194691072
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 18.625083000000004,
+      "add_ms": 2.278624999999991,
+      "sparse_ms": 1771.6579579999998,
+      "dense_ms": 4091.769042,
+      "total_ms": 5884.3307079999995,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 181174272
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 18.337125,
+      "add_ms": 2.4056250000000006,
+      "sparse_ms": 1770.589208,
+      "dense_ms": 4109.056458999999,
+      "total_ms": 5900.388417,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 197181440
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 19.422083,
+      "add_ms": 2.1615420000000114,
+      "sparse_ms": 1226.892833,
+      "dense_ms": 2246.793334,
+      "total_ms": 3495.269792,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 198852608
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 19.20845899999999,
+      "add_ms": 2.4303330000000045,
+      "sparse_ms": 1221.795583,
+      "dense_ms": 2230.9106249999995,
+      "total_ms": 3474.345,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 199360512
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "slanted",
+      "init_ms": 18.764957999999993,
+      "add_ms": 2.446916999999999,
+      "sparse_ms": 1773.09775,
+      "dense_ms": 4102.237583,
+      "total_ms": 5896.547208,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 28865,
+      "faces": 64009,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "0df61fe620c370156891f4bba5e923e59b6995a10d8c4b673a1ea1b63109e251",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 41733,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12169550,
+        "fusedSamples": 12868,
+        "patchRadius": 2,
+        "photometricSamples": 45397,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3664,
+        "sampledSourcePixels": 275137610,
+        "selectedSourcePairs": 18,
+        "triangles": 64009,
+        "vertices": 28865,
+        "viewReports": [
+          {
+            "consistentSamples": 6642,
+            "image": 0,
+            "photometricSamples": 7183,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 8140,
+            "image": 1,
+            "photometricSamples": 8575,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7709,
+            "image": 2,
+            "photometricSamples": 8149,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7545,
+            "image": 3,
+            "photometricSamples": 8134,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 6384,
+            "image": 4,
+            "photometricSamples": 7169,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 5313,
+            "image": 5,
+            "photometricSamples": 6187,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 184516608
+    }
+  ],
+  "summary": [
+    {
+      "case": "shell6",
+      "stage": "baseline",
+      "total_ms": 4191.788042,
+      "init_ms": 18.372333000000012,
+      "add_ms": 2.0466669999999993,
+      "sparse_ms": 840.785792,
+      "dense_ms": 3334.37325,
+      "max_rss_bytes": 154697728,
+      "wasm_memory_bytes": 41811968
+    },
+    {
+      "case": "shell6",
+      "stage": "current",
+      "total_ms": 2342.354583,
+      "init_ms": 19.339042000000006,
+      "add_ms": 2.2046670000000006,
+      "sparse_ms": 599.286625,
+      "dense_ms": 1722.338833,
+      "max_rss_bytes": 157384704,
+      "wasm_memory_bytes": 44302336
+    },
+    {
+      "case": "shell12",
+      "stage": "baseline",
+      "total_ms": 8971.302375000001,
+      "init_ms": 18.254084000000006,
+      "add_ms": 3.2790409999999923,
+      "sparse_ms": 2100.9402919999998,
+      "dense_ms": 6849.710666000001,
+      "max_rss_bytes": 214548480,
+      "wasm_memory_bytes": 55705600
+    },
+    {
+      "case": "shell12",
+      "stage": "current",
+      "total_ms": 5138.167958,
+      "init_ms": 19.439583,
+      "add_ms": 3.9485829999999993,
+      "sparse_ms": 1592.344625,
+      "dense_ms": 3523.156167,
+      "max_rss_bytes": 223559680,
+      "wasm_memory_bytes": 60686336
+    },
+    {
+      "case": "monstree6",
+      "stage": "baseline",
+      "total_ms": 5896.547208,
+      "init_ms": 18.625083000000004,
+      "add_ms": 2.4056250000000006,
+      "sparse_ms": 1771.6579579999998,
+      "dense_ms": 4102.237583,
+      "max_rss_bytes": 184516608,
+      "wasm_memory_bytes": 46792704
+    },
+    {
+      "case": "monstree6",
+      "stage": "current",
+      "total_ms": 3495.269792,
+      "init_ms": 19.422083,
+      "add_ms": 2.3434999999999917,
+      "sparse_ms": 1226.892833,
+      "dense_ms": 2242.63325,
+      "max_rss_bytes": 198852608,
+      "wasm_memory_bytes": 49610752
+    }
+  ],
+  "comparisons": [
+    {
+      "case": "shell6",
+      "all_decoded_outputs_equal": true
+    },
+    {
+      "case": "shell12",
+      "all_decoded_outputs_equal": true
+    },
+    {
+      "case": "monstree6",
+      "all_decoded_outputs_equal": true
+    }
+  ],
+  "modules": {
+    "baseline": {
+      "workspace": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+      "sha256": "d5a0b70874660068dc3489de3512ed42ec7fd1a29f5561f63d13e69dfe4cbffa",
+      "generated_source_bytes": 221292,
+      "raw_wasm_bytes": 588227
+    },
+    "current": {
+      "workspace": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n\n[profile.release.package.photogrammetry-kernel]\nopt-level = 3\n\n[profile.release.package.photogrammetry-wasm]\nopt-level = 3\n",
+      "sha256": "65f31ae47bc931775092ac417f3a47693bfec53b0b84414de1e5059ca6c4183e",
+      "generated_source_bytes": 245984,
+      "raw_wasm_bytes": 549881
+    }
+  }
+}

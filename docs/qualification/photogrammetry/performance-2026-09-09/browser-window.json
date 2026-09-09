@@ -1,0 +1,8 @@
+{
+  "recordedStartUtc": "2026-09-09T00:24:33.003967+00:00",
+  "scope": "Chrome comparison run; root reserved compute window before Vite app builds",
+  "browserRunStartedUtc": "2026-09-09T00:24:22.587761+00:00",
+  "comparisonCompletedUtc": "2026-09-09T00:26:07.718949+00:00",
+  "denseCancelCompletedUtc": "2026-09-09T00:26:48.465084+00:00",
+  "chromeClosedBeforeRootMeasurements": true
+}

@@ -100,7 +100,7 @@ fn children(node: &Value) -> Vec<&str> {
     }
 }
 type Nodes<'a> = HashMap<&'a str, &'a Value>;
-fn index_nodes<'a>(items: &'a Value, root: &str, path: &str) -> Result<Rc<Nodes<'a>>> {
+fn index_nodes<'a>(items: &'a Value, root: &str, path: &str, assertion_targets: &HashSet<&str>) -> Result<Rc<Nodes<'a>>> {
     let items = array(items);
     let mut nodes = HashMap::with_capacity(items.len());
     for item in items {
@@ -149,6 +149,12 @@ fn index_nodes<'a>(items: &'a Value, root: &str, path: &str) -> Result<Rc<Nodes<
         &mut visited,
         path,
     )?;
+    // A checked intermediate is a graph use even when it is not displayed.
+    for target in assertion_targets {
+        if let Some((key, _)) = nodes.get_key_value(target) {
+            walk(key, 1, &nodes, &mut HashSet::new(), &mut visited, path)?;
+        }
+    }
     if visited.len() != nodes.len() {
         return Err(Error::new(
             "unreachable_node",
@@ -160,23 +166,29 @@ fn index_nodes<'a>(items: &'a Value, root: &str, path: &str) -> Result<Rc<Nodes<
 }
 #[derive(Clone, Copy, PartialEq)]
 enum GeometryType {
+    Any,
     Profile,
     Solid,
 }
 impl GeometryType {
     fn name(self) -> &'static str {
-        if self == Self::Profile {
-            "profile"
-        } else {
-            "solid"
-        }
+        match self { Self::Any => "geometry", Self::Profile => "profile", Self::Solid => "solid" }
     }
 }
 struct Parent {
     path: String,
     matrix: assembly::Matrix,
 }
+struct AssertionSnapshot<'a> {
+    geometry_type: GeometryType,
+    // Retain the scope so its pointer cannot be reused by another invocation.
+    _scope: Scope<'a>,
+    source: Option<String>,
+}
 struct Emitter<'a> {
+    assertion_targets: HashSet<&'a str>,
+    assertion_snapshots: HashMap<(usize, usize), AssertionSnapshot<'a>>,
+    assertion_snapshot_bytes: usize,
     eval: Evaluator<'a>,
     bodies: HashMap<&'a str, Rc<Nodes<'a>>>,
     lines: Vec<String>,
@@ -309,6 +321,7 @@ impl<'a> Emitter<'a> {
             ));
         }
         let item = *nodes.get(key).unwrap();
+        let source_start = self.lines.len();
         let current = format!("{path}/{key}");
         let op = str_at(item, "op");
         let fail = |code: &str, message: &str| Error::new(code, &current, message);
@@ -345,9 +358,10 @@ impl<'a> Emitter<'a> {
         } else {
             expected
         };
-        if produced != expected {
+        if expected != GeometryType::Any && produced != expected {
             return Err(fail("geometry_type_mismatch",&format!("Expected {}, received {}. Extrude or revolve a profile before using it as a solid.",expected.name(),produced.name())));
         }
+        let expected = if expected == GeometryType::Any { produced } else { expected };
         self.source_map
             .push(json!({"node_id":key,"line":self.lines.len()+1,"instance_path":current}));
         match op {
@@ -560,6 +574,10 @@ impl<'a> Emitter<'a> {
                     }
                     self.lines.push("}".into());
                 }
+            }
+            "assert" => {
+                self.eval.scoped_checks(item, scope, &current)?;
+                self.emit(str_at(item, "input"), nodes, scope, &current, depth + 1, expected, parent, allow_assembly)?;
             }
             "evaluate" => {
                 let shape =
@@ -1205,12 +1223,73 @@ impl<'a> Emitter<'a> {
             }
             _ => return Err(fail("invalid_document", "Unsupported geometry operation.")),
         }
+        if self.assertion_targets.contains(key) {
+            let snapshot_key = (item as *const Value as usize, Rc::as_ptr(scope) as usize);
+            if !self.assertion_snapshots.contains_key(&snapshot_key) {
+                let source = format!("$fn = {};\n{}", self.segments, self.lines[source_start..].join("\n"));
+                let source = if self.assertion_snapshot_bytes + source.len() <= 1_000_000 {
+                    self.assertion_snapshot_bytes += source.len();
+                    Some(source)
+                } else { None };
+                self.assertion_snapshots.insert(snapshot_key, AssertionSnapshot { geometry_type: expected, _scope: scope.clone(), source });
+            }
+        }
         Ok(())
     }
 }
+fn collect_assertion_targets<'a>(value: &'a Value, targets: &mut HashSet<&'a str>) {
+    match value {
+        Value::Object(fields) => {
+            if fields.get("op").and_then(Value::as_str) == Some("geometry_effects") {
+                if let Some(target) = fields.get("input").and_then(Value::as_str) { targets.insert(target); }
+            }
+            if let Some(checks) = fields.get("geometry_assertions").and_then(Value::as_array) {
+                targets.extend(checks.iter().filter_map(|check| check["target"].as_str()));
+            }
+            for child in fields.values() { collect_assertion_targets(child, targets); }
+        }
+        Value::Array(values) => for child in values { collect_assertion_targets(child, targets); },
+        _ => (),
+    }
+}
+impl<'a> Emitter<'a> {
+    fn assertion_source(&mut self, target: &str, nodes: &Rc<Nodes<'a>>, scope: &Scope<'a>, effects_only: bool) -> Result<String> {
+        if !nodes.contains_key(target) {
+            return Err(Error::new("unknown_node", "/geometry_assertions", format!("Unknown assertion target {target}.")));
+        }
+        let snapshot_key = (*nodes.get(target).unwrap() as *const Value as usize, Rc::as_ptr(scope) as usize);
+        let previously_emitted = self.assertion_snapshots.contains_key(&snapshot_key);
+        if !effects_only && self.assertion_snapshots.get(&snapshot_key).is_some_and(|snapshot| snapshot.geometry_type == GeometryType::Profile) {
+            return Err(Error::new("geometry_type_mismatch", "/geometry_assertions", "Geometry assertions require a solid; extrude or revolve profiles first."));
+        }
+        if let Some(source) = self.assertion_snapshots.get(&snapshot_key).filter(|snapshot| effects_only || snapshot.geometry_type == GeometryType::Solid).and_then(|snapshot| snapshot.source.as_ref()) {
+            return Ok(source.clone());
+        }
+        let lines = std::mem::replace(&mut self.lines, vec![format!("$fn = {};", self.segments)]);
+        let source_map = std::mem::take(&mut self.source_map);
+        let lengths = (self.sketch_solutions.len(), self.assembly_components.len(), self.mechanical_reports.len(), self.mechanical_parts.len());
+        // Hidden targets execute their embedded checks on first use. A previously
+        // evaluated target is only rendered again when the bounded cache was full.
+        self.eval.suppress_checks = previously_emitted;
+        let result = self.emit(target, nodes, scope, "/assertion_target", 1, if effects_only { GeometryType::Any } else { GeometryType::Solid }, None, true);
+        self.eval.suppress_checks = false;
+        let source = self.lines.join("\n");
+        self.lines = lines;
+        self.source_map = source_map;
+        self.sketch_solutions.truncate(lengths.0);
+        self.assembly_components.truncate(lengths.1);
+        self.mechanical_reports.truncate(lengths.2);
+        self.mechanical_parts.truncate(lengths.3);
+        result?;
+        Ok(source)
+    }
+}
+
 pub fn compile(document: &Value) -> Result<Value> {
     let eval = Evaluator::new(document)?;
-    let main = index_nodes(&document["nodes"], str_at(document, "root"), "/nodes")?;
+    let mut assertion_targets = HashSet::new();
+    collect_assertion_targets(document, &mut assertion_targets);
+    let main = index_nodes(&document["nodes"], str_at(document, "root"), "/nodes", &assertion_targets)?;
     let mut bodies = HashMap::new();
     for fn_value in document["functions"].as_array().into_iter().flatten() {
         if str_at(fn_value, "kind") == "geometry" {
@@ -1221,12 +1300,16 @@ pub fn compile(document: &Value) -> Result<Value> {
                     &fn_value["nodes"],
                     str_at(fn_value, "root"),
                     &format!("/functions/{id}/nodes"),
+                    &assertion_targets,
                 )?,
             );
         }
     }
     let segments = document["segments"].as_f64().unwrap() as u64;
     let mut emitter = Emitter {
+        assertion_targets,
+        assertion_snapshots: HashMap::new(),
+        assertion_snapshot_bytes: 0,
         eval,
         bodies,
         lines: vec![
@@ -1244,18 +1327,72 @@ pub fn compile(document: &Value) -> Result<Value> {
         segments,
     };
     let checks = emitter.eval.validate_checks()?;
+    let global_scope = emitter.eval.global_scope.clone();
     emitter.emit(
         str_at(document, "root"),
         &main,
-        &Rc::new(HashMap::new()),
+        &global_scope,
         "",
         1,
         GeometryType::Solid,
         None,
         true,
     )?;
+    let mut geometry_assertions = checks.geometry_assertions.as_array().unwrap().clone();
+    let mut constraint_report = checks.constraint_report.as_array().unwrap().clone();
+    if geometry_assertions.len() + emitter.eval.pending_geometry_checks.iter().filter(|pending| pending.check["check"] != "__effects").count() > 256 {
+        return Err(Error::new("assertion_limit", "/geometry_assertions", "Maximum 256 expanded geometry checks."));
+    }
+    let mut source_characters = 0;
+    let mut source_cache: HashMap<(String, usize, usize, bool), String> = HashMap::new();
+    for check in &mut geometry_assertions {
+        let target = str_at(check, "target").to_owned();
+        if !main.contains_key(target.as_str()) {
+            return Err(Error::new("unknown_node", "/geometry_assertions", format!("Unknown assertion target {target}.")));
+        }
+        if target != str_at(document, "root") {
+            let cache_key = (target.clone(), Rc::as_ptr(&global_scope) as usize, Rc::as_ptr(&main) as usize, false);
+            let source = if let Some(source) = source_cache.get(&cache_key) { source.clone() } else {
+                let source = emitter.assertion_source(&target, &main, &global_scope, false)?;
+                source_cache.insert(cache_key, source.clone());
+                source
+            };
+            source_characters += source.len();
+            if source_characters > 1_000_000 { return Err(Error::new("assertion_limit", "/geometry_assertions", "Assertion sources exceed 1000000 bytes.")); }
+            check["source"] = json!(source);
+        }
+    }
+    let mut pending_index = 0;
+    while pending_index < emitter.eval.pending_geometry_checks.len() {
+        let queued = &emitter.eval.pending_geometry_checks[pending_index];
+        let mut pending = crate::eval::PendingGeometryCheck { check: queued.check.clone(), scope: queued.scope.clone() };
+        pending_index += 1;
+        let effects_only = pending.check["check"] == "__effects";
+        if !effects_only && geometry_assertions.len() >= 256 {
+            return Err(Error::new("assertion_limit", "/geometry_assertions", "Maximum 256 expanded geometry checks."));
+        }
+        let target = str_at(&pending.check, "target").to_owned();
+        let candidates: Vec<_> = std::iter::once(&main).chain(emitter.bodies.values()).filter(|nodes| nodes.contains_key(target.as_str())).cloned().collect();
+        let nodes = match candidates.as_slice() {
+            [nodes] => nodes.clone(),
+            [] => return Err(Error::new("unknown_node", "/geometry_assertions", format!("Unknown assertion target {target}."))),
+            _ => return Err(Error::new("ambiguous_assertion_target", "/geometry_assertions", format!("Assertion target {target} occurs in multiple geometry graphs."))),
+        };
+        let cache_key = (target.clone(), Rc::as_ptr(&pending.scope) as usize, Rc::as_ptr(&nodes) as usize, effects_only);
+        let source = if let Some(source) = source_cache.get(&cache_key) { source.clone() } else {
+            let source = emitter.assertion_source(&target, &nodes, &pending.scope, effects_only)?;
+            source_cache.insert(cache_key, source.clone());
+            source
+        };
+        if effects_only { continue; }
+        source_characters += source.len();
+        if source_characters > 1_000_000 { return Err(Error::new("assertion_limit", "/geometry_assertions", "Assertion sources exceed 1000000 bytes.")); }
+        pending.check["source"] = json!(source);
+        geometry_assertions.push(pending.check);
+    }
+    constraint_report.append(&mut emitter.eval.constraint_report);
     Ok(
-        json!({"geometry_assertions":checks.geometry_assertions,"constraint_report":checks.constraint_report,"sketch_solutions":emitter.sketch_solutions,"assembly_components":emitter.assembly_components,"mechanical_reports":emitter.mechanical_reports,"mechanical_parts":emitter.mechanical_parts,"source":emitter.lines.join("\n"),"source_map":emitter.source_map,"execution_target":"legacy/current+own-rust-cad"}),
+        json!({"geometry_assertions":geometry_assertions,"constraint_report":constraint_report,"sketch_solutions":emitter.sketch_solutions,"assembly_components":emitter.assembly_components,"mechanical_reports":emitter.mechanical_reports,"mechanical_parts":emitter.mechanical_parts,"source":emitter.lines.join("\n"),"source_map":emitter.source_map,"execution_target":"legacy/current+own-rust-cad"}),
     )
 }
 
@@ -1342,5 +1479,160 @@ mod dynamic_vector_tests {
             crate::compile(document(nodes, "shape")).unwrap_err().code,
             "unit_mismatch"
         );
+    }
+}
+
+#[cfg(test)]
+mod assertion_tests {
+    use super::*;
+
+    fn quantity(value: f64) -> Value { json!({"op":"quantity","value":value,"unit":"mm"}) }
+    fn width(id: &str, target: &str, expected: Value) -> Value {
+        json!({"id":id,"target":target,"check":"width","expected":expected,"message":"Width"})
+    }
+
+    #[test]
+    fn hidden_and_transformed_targets_have_separate_sources() {
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"scaled","nodes":[
+            {"id":"original","op":"box","size":[2,3,4]},
+            {"id":"scaled","op":"scale","input":"original","vector":[5,1,1]},
+            {"id":"hidden","op":"box","size":[7,8,9]}
+        ],"geometry_assertions":[width("before","original",quantity(2.0)),width("after","scaled",quantity(10.0)),width("invisible","hidden",quantity(7.0))]});
+        let result = crate::compile(document).unwrap();
+        let checks = result["geometry_assertions"].as_array().unwrap();
+        assert!(checks[0]["source"].as_str().unwrap().contains("[2,3,4]"));
+        assert!(!checks[0]["source"].as_str().unwrap().contains("scale("));
+        assert!(checks[1].get("source").is_none());
+        assert!(checks[2]["source"].as_str().unwrap().contains("[7,8,9]"));
+        assert!(!result["source"].as_str().unwrap().contains("[7,8,9]"));
+        assert!(result["source_map"].as_array().unwrap().iter().all(|m| m["node_id"] != "hidden"));
+    }
+
+    #[test]
+    fn scalar_checks_capture_each_loop_scope_and_ignore_inactive_branches() {
+        let checked = json!({"op":"assert_value","value":1,"geometry_assertions":[width("localWidth","part",json!({"op":"multiply","args":[{"local":"i"},quantity(1.0)]}))]});
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"instances","nodes":[
+            {"id":"instances","op":"collect","binding":"i","values":{"op":"list","items":[2,3]},"input":"selected"},
+            {"id":"selected","op":"if","condition":checked,"then":"part","else":"inactive"},
+            {"id":"part","op":"box","size":[{"local":"i"},1,1]},
+            {"id":"inactive","op":"if","condition":{"op":"assert_value","value":1,"constraints":[{"id":"never","left":0,"relation":"eq","right":1,"message":"Inactive"}]},"then":"part","else":"part"}
+        ]});
+        let result = crate::compile(document).unwrap();
+        let checks = result["geometry_assertions"].as_array().unwrap();
+        assert_eq!(checks.len(), 2);
+        assert_eq!(checks[0]["expected"], 2.0);
+        assert_eq!(checks[1]["expected"], 3.0);
+        assert!(checks[0]["source"].as_str().unwrap().contains("[2,1,1]"));
+        assert!(checks[1]["source"].as_str().unwrap().contains("[3,1,1]"));
+    }
+
+    #[test]
+    fn geometry_checks_in_numeric_functions_keep_bound_arguments() {
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":{"op":"call","function":"checkedRadius","args":{"r":3}}},
+            {"id":"target","op":"sphere","radius":{"local":"r"}}
+        ],"functions":[{"id":"checkedRadius","kind":"scalar","parameters":["r"],"body":{"op":"assert_value","value":{"local":"r"},"geometry_assertions":[width("diameter","target",quantity(6.0))]}}]});
+        let result = crate::compile(document).unwrap();
+        assert!(result["geometry_assertions"][0]["source"].as_str().unwrap().contains("sphere(r=3)"));
+        assert_eq!(result["geometry_assertions"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn scalar_assertions_return_values_and_preserve_all_failures_in_a_chain() {
+        let constraints = json!([
+            {"id":"low","left":{"local":"r"},"relation":"ge","right":4,"message":"Too small"},
+            {"id":"high","left":{"local":"r"},"relation":"le","right":2,"message":"Too large"}
+        ]);
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":{"op":"let","name":"r","value":3,"body":{"op":"assert_value","value":{"local":"r"},"constraints":constraints}}}
+        ]});
+        let error = crate::compile(document).unwrap_err();
+        assert_eq!(error.code, "constraint_failed");
+        assert_eq!(error.details.unwrap().as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn geometry_effects_check_discarded_function_results_without_displaying_them() {
+        let mut document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":{"op":"geometry_effects","input":"hidden","value":1}},
+            {"id":"hidden","op":"if","condition":{"op":"assert_value","value":1,"constraints":[{"id":"local","left":1,"relation":"eq","right":1,"message":"Discarded local"}]},"then":"profile","else":"profile"},
+            {"id":"profile","op":"circle","radius":2}
+        ]});
+        let result = crate::compile(document.clone()).unwrap();
+        assert!(result["geometry_assertions"].as_array().unwrap().is_empty());
+        assert_eq!(result["constraint_report"].as_array().unwrap().len(), 1);
+        assert!(!result["source"].as_str().unwrap().contains("circle("));
+        document["nodes"][1]["condition"]["constraints"][0]["right"] = json!(2);
+        assert_eq!(crate::compile(document).unwrap_err().code, "constraint_failed");
+    }
+
+    #[test]
+    fn memoized_assertions_preserve_one_hundred_distinct_loop_iterations() {
+        let check = json!({"op":"memo","id":"checkedOnce","value":{"op":"assert_value","value":1,"geometry_assertions":[{"id":"local","target":"part","check":"hasBodies","expected":1,"message":"Each instance"}]}});
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"instances","nodes":[
+            {"id":"instances","op":"map","count":100,"index":"i","input":"shown"},
+            {"id":"shown","op":"sphere","radius":{"op":"checked","checks":[check.clone(),check.clone()],"value":check}},
+            {"id":"part","op":"box","size":[{"op":"add","args":[{"local":"i"},1]},1,1]}
+        ]});
+        let result = crate::compile(document).unwrap();
+        assert_eq!(result["geometry_assertions"].as_array().unwrap().len(), 100);
+        assert!(result["geometry_assertions"][99]["source"].as_str().unwrap().contains("[100,1,1]"));
+    }
+
+    #[test]
+    fn document_checks_and_geometry_share_the_global_memo_scope() {
+        let value = json!({"op":"memo","id":"global","value":{"op":"assert_value","value":1,"geometry_assertions":[{"id":"single","target":"shown","check":"hasBodies","expected":1,"message":"Global"}]}});
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[{"id":"shown","op":"sphere","radius":value.clone()}],"constraints":[{"id":"rootConstraint","left":value,"relation":"eq","right":1,"message":"Global constraint"}]});
+        let result = crate::compile(document).unwrap();
+        assert_eq!(result["geometry_assertions"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn hidden_target_executes_its_embedded_assertions_exactly_once() {
+        let mut document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":1},
+            {"id":"hidden","op":"if","condition":{"op":"assert_value","value":1,"geometry_assertions":[width("inner","hidden",quantity(2.0))]},"then":"part","else":"part"},
+            {"id":"part","op":"box","size":[2,3,4]}
+        ],"geometry_assertions":[width("outer","hidden",quantity(2.0))]});
+        let result = crate::compile(document.clone()).unwrap();
+        assert_eq!(result["geometry_assertions"].as_array().unwrap().len(), 2);
+        assert_eq!(result["geometry_assertions"][0]["source"], result["geometry_assertions"][1]["source"]);
+        assert!(!result["source"].as_str().unwrap().contains("cube("));
+        document["nodes"][1]["condition"]["constraints"] = json!([{"id":"fails","left":1,"relation":"eq","right":2,"message":"Hidden nested check"}]);
+        assert_eq!(crate::compile(document).unwrap_err().code, "constraint_failed");
+    }
+
+    #[test]
+    fn sibling_local_scalar_assertions_are_aggregated_before_the_return_value() {
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":{"op":"checked","checks":[
+                {"op":"assert_value","value":1,"constraints":[{"id":"first","left":1,"relation":"eq","right":2,"message":"First failure"}]},
+                {"op":"assert_value","value":1,"constraints":[{"id":"second","left":3,"relation":"eq","right":4,"message":"Second failure"}]}
+            ],"value":{"op":"divide","args":[1,0]}}}
+        ]});
+        let error = crate::compile(document).unwrap_err();
+        assert_eq!(error.code, "constraint_failed");
+        assert_eq!(error.details.unwrap().as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn expanded_geometry_assertions_are_bounded() {
+        let document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"instances","nodes":[
+            {"id":"instances","op":"map","index":"i","count":256,"input":"checked"},
+            {"id":"checked","op":"if","condition":{"op":"assert_value","value":1,"geometry_assertions":[width("first","part",quantity(1.0)),width("second","part",quantity(1.0))]},"then":"part","else":"part"},
+            {"id":"part","op":"box","size":[1,1,1]}
+        ]});
+        assert_eq!(crate::compile(document).unwrap_err().code, "assertion_limit");
+    }
+
+    #[test]
+    fn unknown_and_ambiguous_pending_targets_fail_explicitly() {
+        let mut document = json!({"language":"modelgraph/1","units":"mm","parameters":[],"root":"shown","nodes":[
+            {"id":"shown","op":"sphere","radius":{"op":"assert_value","value":1,"geometry_assertions":[width("test","missing",quantity(1.0))]}}
+        ]});
+        assert_eq!(crate::compile(document.clone()).unwrap_err().code, "unknown_node");
+        document["nodes"][0]["radius"]["geometry_assertions"][0]["target"] = json!("shown");
+        document["functions"] = json!([{"id":"other","kind":"geometry","parameters":[],"root":"shown","nodes":[{"id":"shown","op":"sphere","radius":2}]}]);
+        assert_eq!(crate::compile(document).unwrap_err().code, "ambiguous_assertion_target");
     }
 }

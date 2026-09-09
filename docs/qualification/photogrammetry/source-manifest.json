@@ -1,0 +1,125 @@
+{
+  "date": "2026-09-09",
+  "files": [
+    {
+      "path": "crates/photogrammetry-kernel/examples/features.rs",
+      "sha256": "ef8601fb6020bdfcc0a4586151dc86aa1085e8e788aee3567d85079785c3a837"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/examples/reconstruct.rs",
+      "sha256": "e892e78c4918301602ee332dedd98ee735bb41b3d4b6045dd17a103afa0a5beb"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/bundle.rs",
+      "sha256": "44328ba0ffe5fc70f13e13b1115418c0c3420c8593f06be04ea8c10af9c2f4c3"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/camera.rs",
+      "sha256": "d36a9e59adff69b7d23268ca162dcf69aaa3d2f5607de3bb2bddb48e2e092989"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/consistency.rs",
+      "sha256": "9894dad7d06f23a24ea740ca4d146286acb83ca26ff554eadb2be37b52e2d093"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/estimation.rs",
+      "sha256": "a454e57a2ca06c73f91b10186d3cddd93a200e9a83991b60ef6264f0ac1e16f5"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/fusion.rs",
+      "sha256": "a12a622baaf9c984669c11739a0b6362a2fc15eb676471dfc54f1370751e1388"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/mesh.rs",
+      "sha256": "9e7ebfd677e9abec507f99cfed14a7f739661bc89924da3585878a9a3c2056b4"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense.rs",
+      "sha256": "22b82a4af89a7e308102aedec194bc93ac5cce248df5b297be43cc794cb4005b"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/diagnostics.rs",
+      "sha256": "2e4ca013fb7c45ab675e97bf0918b1a1f11510fcba1c3e32ced6c264c5dfcc8f"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/features.rs",
+      "sha256": "2ff9ae026292abcaaf000e97536b8371339e85ec538c3e8bcd7e95d95061f440"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/integration_tests.rs",
+      "sha256": "5e86473abdca30bdc4c2dc98a7b6bfcc5eb24addce3e83d583a5ffa754623d16"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/lib.rs",
+      "sha256": "64cdb701efbaf5b69dfc12a45bbeca3bbcd81edb0f3a2e98c06dbd78befcebb0"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/matching.rs",
+      "sha256": "a4fdae6850a5a1885b6140a86db8d22fa538b34affbd5acc0ee88238645ab535"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/math.rs",
+      "sha256": "d465d63eccc4a72569c362e344dfab780f973fb3aeb1c6203b57e4e3dd843e0f"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/model.rs",
+      "sha256": "5d974e3ee4793ca558afd3626712c6d5b3c43e0d8ac22ba4fd1ea87ad4b8999e"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/pipeline.rs",
+      "sha256": "8ffa2108e25813a5bf03d65a5e5110945cb7f35122128a4a6c889ef60937a309"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/seeding.rs",
+      "sha256": "5db97ce29f77c2c10547a82f9f1a1686e82fb6bb61bdf4cd45122b17cc807dde"
+    },
+    {
+      "path": "crates/photogrammetry-wasm/src/lib.rs",
+      "sha256": "6b651e5434542d11ef8fe766071a7f9e7f7fa21ea2008b0defc67343a4c280b6"
+    },
+    {
+      "path": "crates/photogrammetry-wasm/src/session.rs",
+      "sha256": "2a76fb68106f5ff02b28e49b553b54c34677664ce113ba3dc05bf6b65517b69c"
+    },
+    {
+      "path": "src/services/photoExport.ts",
+      "sha256": "112043e0ce437faaac6f2e46111d5d1bbb66b37bd39a8ae79a315f48c2548fa4"
+    },
+    {
+      "path": "src/services/photoInput.ts",
+      "sha256": "27e483e7e8a35c1c4b61dcf598fae677d59c36f18739bb149d63c50441607ac7"
+    },
+    {
+      "path": "src/services/photoPreview.ts",
+      "sha256": "f636957d90b95edc0393627270cec459f29032e7d64d2a596eb83d9ee30aa254"
+    },
+    {
+      "path": "src/services/photoReconstruction.ts",
+      "sha256": "c527b8c3820486c1f830ea49bb563814b113787dec7f5a49398e920e4e998b11"
+    },
+    {
+      "path": "src/services/photoReport.ts",
+      "sha256": "7cef77e836be7362656a8af1dd19ad21f6493f7d3e06814649bfb86f73e85c4a"
+    },
+    {
+      "path": "src/services/photoWorkerProtocol.ts",
+      "sha256": "7e74584211b29aa51fdd1bf33be8933017249a5ae06126d74194d4e47e933869"
+    },
+    {
+      "path": "src/services/photogrammetryKernel.ts",
+      "sha256": "fff031d40f4a41ba7888c19cd9d55dd634da9840f52f69863e6dea3db5e1471f"
+    },
+    {
+      "path": "src/workers/photogrammetry.worker.ts",
+      "sha256": "ef3eeeb4173bcc7bbda602778eaf609daef9b2ebbef71d62ef9168a8ce94d24e"
+    },
+    {
+      "path": "src/features/PhotogrammetryPanel.vue",
+      "sha256": "a476e05bba28422a6aa54a6ee96766450102349f5dd282b4d86ec21a200e0116"
+    },
+    {
+      "path": "src/generated/photogrammetry/bytes.ts",
+      "sha256": "12292ab98d97393b80c82d772227ff100676b834fb9390f2d85f89ed37e77d1a"
+    }
+  ]
+}

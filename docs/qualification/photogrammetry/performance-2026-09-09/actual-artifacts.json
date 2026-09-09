@@ -1,0 +1,12 @@
+{
+  "src/generated/photogrammetry/bytes.ts": {
+    "actual_sha256": "65f31ae47bc931775092ac417f3a47693bfec53b0b84414de1e5059ca6c4183e",
+    "qualified_sha256": "65f31ae47bc931775092ac417f3a47693bfec53b0b84414de1e5059ca6c4183e",
+    "identical": true
+  },
+  "crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm": {
+    "actual_sha256": "d754cc83124396bf6f1f81d38dc7db2f04b9d8897f457662e60263b9e7761cc7",
+    "qualified_sha256": "d754cc83124396bf6f1f81d38dc7db2f04b9d8897f457662e60263b9e7761cc7",
+    "identical": true
+  }
+}

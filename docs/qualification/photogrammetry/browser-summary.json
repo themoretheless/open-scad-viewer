@@ -1,0 +1,792 @@
+[
+  {
+    "cadGuard": {
+      "openMessage": 1,
+      "appendButton": 0
+    },
+    "dataset": "monstree",
+    "elapsedMs": 3869.1951249999997,
+    "files": [
+      "IMG_1024.JPG",
+      "IMG_1025.JPG",
+      "IMG_1026.JPG",
+      "IMG_1027.JPG",
+      "IMG_1028.JPG",
+      "IMG_1029.JPG"
+    ],
+    "focals": [
+      "28",
+      "28",
+      "28",
+      "28",
+      "28",
+      "28"
+    ],
+    "stats": [
+      "Связано снимков: 6 / 6 · 16,092 точек · 12,110 треугольников"
+    ],
+    "panelErrors": [],
+    "documentErrors": [],
+    "errors": [],
+    "external": [],
+    "vertexCount": 16092,
+    "faceCount": 12110,
+    "mobile": {
+      "width": 390,
+      "overflow": false,
+      "photos": 6
+    },
+    "report": {
+      "format": "open-scad-viewer/photo-report",
+      "version": 1,
+      "settings": {
+        "dense": true,
+        "resolution": 128,
+        "maxImageSide": 960
+      },
+      "inputs": [
+        {
+          "image": 0,
+          "name": "IMG_1024.JPG",
+          "bytes": 4369015,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 1,
+          "name": "IMG_1025.JPG",
+          "bytes": 3819662,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 2,
+          "name": "IMG_1026.JPG",
+          "bytes": 4234131,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 3,
+          "name": "IMG_1027.JPG",
+          "bytes": 3809194,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 4,
+          "name": "IMG_1028.JPG",
+          "bytes": 3843331,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 5,
+          "name": "IMG_1029.JPG",
+          "bytes": 3827121,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        }
+      ],
+      "sparse": {
+        "bundleRuns": [
+          {
+            "acceptedSteps": 8,
+            "finalCost": 16.08889135745782,
+            "initialCost": 25.148853961556384,
+            "iterations": 8,
+            "observations": 393
+          },
+          {
+            "acceptedSteps": 7,
+            "finalCost": 23.820628756543304,
+            "initialCost": 30.652530128606468,
+            "iterations": 7,
+            "observations": 553
+          },
+          {
+            "acceptedSteps": 6,
+            "finalCost": 27.386097540314484,
+            "initialCost": 34.013074967899605,
+            "iterations": 6,
+            "observations": 642
+          },
+          {
+            "acceptedSteps": 8,
+            "finalCost": 33.72989132989548,
+            "initialCost": 42.81794950485736,
+            "iterations": 8,
+            "observations": 739
+          },
+          {
+            "acceptedSteps": 1,
+            "finalCost": 33.72989132989416,
+            "initialCost": 33.72989132989548,
+            "iterations": 1,
+            "observations": 739
+          }
+        ],
+        "computedPairs": 15,
+        "images": [
+          {
+            "acceptedObservations": 140,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 0,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 185,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 1,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 142,
+            "candidateCorrespondences": 20,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 2,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 127,
+            "candidateCorrespondences": 26,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 3,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 89,
+            "candidateCorrespondences": 18,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 4,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 56,
+            "candidateCorrespondences": 19,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 5,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          }
+        ],
+        "initialPair": [
+          0,
+          1
+        ],
+        "matchingRequests": 68,
+        "seedPairsTested": 9,
+        "seedTrials": [
+          {
+            "error": null,
+            "pair": [
+              0,
+              1
+            ],
+            "points": 333,
+            "registeredImages": 6,
+            "reprojectionRmse": 0.3021344516500358
+          }
+        ],
+        "warnings": []
+      },
+      "dense": {
+        "consistentSamples": 17143,
+        "estimatedMaps": 6,
+        "fusedSamples": 1051,
+        "photometricSamples": 23229,
+        "rejectedInconsistentSamples": 6086,
+        "selectedSourcePairs": 18,
+        "triangles": 12110,
+        "vertices": 16092,
+        "viewReports": [
+          {
+            "consistentSamples": 2460,
+            "image": 0,
+            "photometricSamples": 3333,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3567,
+            "image": 1,
+            "photometricSamples": 4750,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 3264,
+            "image": 2,
+            "photometricSamples": 4207,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 3300,
+            "image": 3,
+            "photometricSamples": 4372,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 2394,
+            "image": 4,
+            "photometricSamples": 3389,
+            "sourceImages": [
+              5,
+              3,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2158,
+            "image": 5,
+            "photometricSamples": 3178,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "timings": {
+        "sparseMs": 1603.0999999046326,
+        "denseMs": 1509.4000000953674
+      }
+    }
+  },
+  {
+    "cadGuard": {
+      "openMessage": 1,
+      "appendButton": 0
+    },
+    "dataset": "seashell",
+    "elapsedMs": 6275.159375,
+    "files": [
+      "M97A2474.JPG",
+      "M97A2475.JPG",
+      "M97A2476.JPG",
+      "M97A2477.JPG",
+      "M97A2478.JPG",
+      "M97A2479.JPG",
+      "M97A2480.JPG",
+      "M97A2481.JPG",
+      "M97A2482.JPG",
+      "M97A2483.JPG",
+      "M97A2484.JPG",
+      "M97A2485.JPG"
+    ],
+    "focals": [
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85"
+    ],
+    "stats": [
+      "Связано снимков: 8 / 12 · 10,027 точек · 5,224 треугольников"
+    ],
+    "panelErrors": [],
+    "documentErrors": [],
+    "errors": [],
+    "external": [],
+    "vertexCount": 10027,
+    "faceCount": 5224,
+    "mobile": {
+      "width": 390,
+      "overflow": false,
+      "photos": 12
+    },
+    "report": {
+      "format": "open-scad-viewer/photo-report",
+      "version": 1,
+      "settings": {
+        "dense": true,
+        "resolution": 128,
+        "maxImageSide": 960
+      },
+      "inputs": [
+        {
+          "image": 0,
+          "name": "M97A2474.JPG",
+          "bytes": 6024958,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 1,
+          "name": "M97A2475.JPG",
+          "bytes": 6122614,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 2,
+          "name": "M97A2476.JPG",
+          "bytes": 6077379,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 3,
+          "name": "M97A2477.JPG",
+          "bytes": 6059604,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 4,
+          "name": "M97A2478.JPG",
+          "bytes": 5815773,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 5,
+          "name": "M97A2479.JPG",
+          "bytes": 6118144,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 6,
+          "name": "M97A2480.JPG",
+          "bytes": 5551877,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 7,
+          "name": "M97A2481.JPG",
+          "bytes": 5435922,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 8,
+          "name": "M97A2482.JPG",
+          "bytes": 5559164,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 9,
+          "name": "M97A2483.JPG",
+          "bytes": 5810989,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 10,
+          "name": "M97A2484.JPG",
+          "bytes": 6154250,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 11,
+          "name": "M97A2485.JPG",
+          "bytes": 6267230,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        }
+      ],
+      "sparse": {
+        "bundleRuns": [
+          {
+            "acceptedSteps": 9,
+            "finalCost": 36.852126967433605,
+            "initialCost": 54.957530800015604,
+            "iterations": 9,
+            "observations": 319
+          },
+          {
+            "acceptedSteps": 10,
+            "finalCost": 57.99115224148952,
+            "initialCost": 71.35278130862415,
+            "iterations": 10,
+            "observations": 443
+          },
+          {
+            "acceptedSteps": 10,
+            "finalCost": 67.83276862668616,
+            "initialCost": 84.8069886410411,
+            "iterations": 10,
+            "observations": 545
+          },
+          {
+            "acceptedSteps": 10,
+            "finalCost": 144.36892425735877,
+            "initialCost": 200.99379868334697,
+            "iterations": 10,
+            "observations": 935
+          },
+          {
+            "acceptedSteps": 12,
+            "finalCost": 181.092833661903,
+            "initialCost": 241.0280807836901,
+            "iterations": 12,
+            "observations": 1033
+          },
+          {
+            "acceptedSteps": 12,
+            "finalCost": 209.48545860597068,
+            "initialCost": 233.98748852650843,
+            "iterations": 12,
+            "observations": 1126
+          },
+          {
+            "acceptedSteps": 6,
+            "finalCost": 209.47592259135388,
+            "initialCost": 209.48545860597068,
+            "iterations": 6,
+            "observations": 1126
+          }
+        ],
+        "computedPairs": 66,
+        "images": [
+          {
+            "acceptedObservations": 124,
+            "candidateCorrespondences": 26,
+            "conflictingMatches": 1,
+            "features": 639,
+            "image": 0,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 148,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 656,
+            "image": 1,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 134,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 612,
+            "image": 2,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 125,
+            "candidateCorrespondences": 20,
+            "conflictingMatches": 0,
+            "features": 547,
+            "image": 3,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 231,
+            "candidateCorrespondences": 51,
+            "conflictingMatches": 2,
+            "features": 453,
+            "image": 4,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 229,
+            "candidateCorrespondences": 33,
+            "conflictingMatches": 0,
+            "features": 579,
+            "image": 5,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 81,
+            "candidateCorrespondences": 39,
+            "conflictingMatches": 4,
+            "features": 417,
+            "image": 6,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 52,
+            "candidateCorrespondences": 24,
+            "conflictingMatches": 5,
+            "features": 416,
+            "image": 7,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 0,
+            "candidateCorrespondences": 31,
+            "conflictingMatches": 2,
+            "features": 448,
+            "image": 8,
+            "poseAttempts": 3,
+            "reason": "pose_rejected",
+            "registered": false
+          },
+          {
+            "acceptedObservations": 0,
+            "candidateCorrespondences": 16,
+            "conflictingMatches": 0,
+            "features": 584,
+            "image": 9,
+            "poseAttempts": 3,
+            "reason": "pose_rejected",
+            "registered": false
+          },
+          {
+            "acceptedObservations": 0,
+            "candidateCorrespondences": 22,
+            "conflictingMatches": 1,
+            "features": 728,
+            "image": 10,
+            "poseAttempts": 3,
+            "reason": "pose_rejected",
+            "registered": false
+          },
+          {
+            "acceptedObservations": 0,
+            "candidateCorrespondences": 34,
+            "conflictingMatches": 0,
+            "features": 760,
+            "image": 11,
+            "poseAttempts": 6,
+            "reason": "pose_rejected",
+            "registered": false
+          }
+        ],
+        "initialPair": [
+          1,
+          2
+        ],
+        "matchingRequests": 613,
+        "seedPairsTested": 12,
+        "seedTrials": [
+          {
+            "error": null,
+            "pair": [
+              4,
+              5
+            ],
+            "points": 291,
+            "registeredImages": 5,
+            "reprojectionRmse": 0.5002991175229831
+          },
+          {
+            "error": null,
+            "pair": [
+              0,
+              1
+            ],
+            "points": 143,
+            "registeredImages": 4,
+            "reprojectionRmse": 0.7859698663317155
+          },
+          {
+            "error": null,
+            "pair": [
+              1,
+              2
+            ],
+            "points": 500,
+            "registeredImages": 8,
+            "reprojectionRmse": 0.582670150413133
+          },
+          {
+            "error": null,
+            "pair": [
+              9,
+              10
+            ],
+            "points": 112,
+            "registeredImages": 4,
+            "reprojectionRmse": 0.48174963608164617
+          }
+        ],
+        "warnings": []
+      },
+      "dense": {
+        "consistentSamples": 10216,
+        "estimatedMaps": 8,
+        "fusedSamples": 189,
+        "photometricSamples": 21905,
+        "rejectedInconsistentSamples": 11689,
+        "selectedSourcePairs": 24,
+        "triangles": 5224,
+        "vertices": 10027,
+        "viewReports": [
+          {
+            "consistentSamples": 1249,
+            "image": 0,
+            "photometricSamples": 2504,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1533,
+            "image": 1,
+            "photometricSamples": 2674,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1400,
+            "image": 2,
+            "photometricSamples": 2438,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1389,
+            "image": 3,
+            "photometricSamples": 2846,
+            "sourceImages": [
+              2,
+              4,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1713,
+            "image": 4,
+            "photometricSamples": 3790,
+            "sourceImages": [
+              3,
+              6,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1251,
+            "image": 5,
+            "photometricSamples": 2349,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1095,
+            "image": 6,
+            "photometricSamples": 2784,
+            "sourceImages": [
+              7,
+              4,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 586,
+            "image": 7,
+            "photometricSamples": 2520,
+            "sourceImages": [
+              6,
+              5,
+              4
+            ]
+          }
+        ]
+      },
+      "timings": {
+        "sparseMs": 2809.600000023842,
+        "denseMs": 1532
+      }
+    }
+  }
+]

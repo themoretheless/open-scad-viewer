@@ -40,8 +40,11 @@ it('counts disconnected components inside a boolean mesh',async()=>{
 it.each(['assert body. nonexistent()','assert body. isWatertight(1)','assert measure(body).volume. approximately(1mm)','validate 1mm. equalTo(1mm).message(2)','assert body. hasBodies(-1)'])('rejects unsupported or malformed checks: %s',s=>{
  expect(()=>compileModelGraphText(header+body+s)).toThrow()
 })
-it('rejects non-root geometry checks',()=>{
- expect(()=>compileModelGraphText(header+'a = sphere(1mm)\nbody = a.translate([1mm,0,0])\nshow body\nassert a. isWatertight()')).toThrow('shown root')
+it('resolves non-root geometry checks with their own source',()=>{
+ const compiled = compileModelGraphText(header+'a = sphere(1mm)\nbody = a.translate([1mm,0,0])\nshow body\nassert a. isWatertight()')
+ expect(compiled.geometry_assertions[0]?.source).toContain('sphere')
+ expect(compiled.geometry_assertions[0]?.source).not.toContain('translate')
+ expect(compiled.source).toContain('translate')
 })
 it('returns unknown for empty dimensions rather than passing',()=>{
  expect(checkModelGraphGeometry([{id:'g1',check:'height',expected:0,tolerance:0,message:'Height'}],[])[0]?.status).toBe('unknown')

@@ -1,0 +1,66 @@
+{
+  "method": "one warmup; 3 alternating runs; production opt-level=s/lto; exact bidirectional comparisons, isolated from reconstruction/browser timings",
+  "compiler": "rustc 1.98.0-nightly (57d06900f 2026-05-27)",
+  "binary_sha256": "9bd53a39430b88a300635a4336b09d07e205461669a8c4b114f3d87aea1cc30e",
+  "indexed_median_ms": 5.029667,
+  "exhaustive_median_ms": 120.242125,
+  "speedup_for_this_fixture": 23.90657771180478,
+  "runs": [
+    {
+      "run": 0,
+      "warmup": true,
+      "model_samples": 7529,
+      "reference_samples": 8000,
+      "indexed_ms": 5.215708,
+      "exhaustive_ms": 124.694583,
+      "accuracy_mean": 0.0031824978944000747,
+      "completeness_mean": 0.0035917227344605417,
+      "precision": 0.5906494886439102,
+      "recall": 0.555875,
+      "f1": 0.572734883121901,
+      "matches_exhaustive": true
+    },
+    {
+      "run": 1,
+      "warmup": false,
+      "model_samples": 7529,
+      "reference_samples": 8000,
+      "indexed_ms": 5.029667,
+      "exhaustive_ms": 121.86783299999999,
+      "accuracy_mean": 0.0031824978944000747,
+      "completeness_mean": 0.0035917227344605417,
+      "precision": 0.5906494886439102,
+      "recall": 0.555875,
+      "f1": 0.572734883121901,
+      "matches_exhaustive": true
+    },
+    {
+      "run": 2,
+      "warmup": false,
+      "model_samples": 7529,
+      "reference_samples": 8000,
+      "indexed_ms": 4.931583,
+      "exhaustive_ms": 119.20729200000001,
+      "accuracy_mean": 0.0031824978944000747,
+      "completeness_mean": 0.0035917227344605417,
+      "precision": 0.5906494886439102,
+      "recall": 0.555875,
+      "f1": 0.572734883121901,
+      "matches_exhaustive": true
+    },
+    {
+      "run": 3,
+      "warmup": false,
+      "model_samples": 7529,
+      "reference_samples": 8000,
+      "indexed_ms": 5.108125,
+      "exhaustive_ms": 120.242125,
+      "accuracy_mean": 0.0031824978944000747,
+      "completeness_mean": 0.0035917227344605417,
+      "precision": 0.5906494886439102,
+      "recall": 0.555875,
+      "f1": 0.572734883121901,
+      "matches_exhaustive": true
+    }
+  ]
+}

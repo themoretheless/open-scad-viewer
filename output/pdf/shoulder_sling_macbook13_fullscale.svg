@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900mm" height="1100mm" viewBox="0 0 900 1100">
+<rect width="100%" height="100%" fill="white"/>
+<text x="25" y="35" font-family="Arial" font-size="22" font-weight="bold" fill="#26364A">SHOULDER SLING — ПОЛНОРАЗМЕРНЫЙ РАСКРОЙ</text>
+<text x="25" y="58" font-family="Arial" font-size="13" fill="#26364A">Под MacBook Air 13″ • готовый размер 34×25×11 см • все размеры в мм • припуск 10 мм включён</text>
+<g transform="translate(25,80)">
+<rect width="360" height="270" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="340" height="250" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="180.0" y="125.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">A — КОРПУС</text>
+<text x="180.0" y="147.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">2× кожа • 2× подкладка • 2× уплотнитель</text>
+</g>
+<g transform="translate(25,380)">
+<rect width="760" height="130" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="740" height="110" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="380.0" y="55.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">B — БОКОВИНА + ДНО</text>
+<text x="380.0" y="77.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">1× кожа • 1× подкладка • 1× уплотнитель</text>
+</g>
+<g transform="translate(25,550)">
+<rect width="380" height="60" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="360" height="40" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="190.0" y="20.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">C — ПЛАНКА ОСНОВНОЙ МОЛНИИ</text>
+<text x="190.0" y="42.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">2× кожа • 2× подкладка • 2× уплотнитель</text>
+</g>
+<g transform="translate(430,80)">
+<rect width="340" height="270" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="320" height="250" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="170.0" y="125.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">D — КАРМАН НОУТБУКА</text>
+<text x="170.0" y="147.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">1× подкладка • 1× уплотнитель • сгиб по центру</text>
+</g>
+<g transform="translate(430,380)">
+<rect width="220" height="230" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="200" height="210" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="110.0" y="105.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">E — БОКОВОЙ ОРГАНАЙЗЕР</text>
+<text x="110.0" y="127.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">2× подкладка • верх обработать</text>
+</g>
+<g transform="translate(430,680)">
+<rect width="120" height="100" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="100" height="80" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="60.0" y="40.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">F — УГОЛОК НА ЛЯМКЕ</text>
+<text x="60.0" y="62.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">2× кожа • зеркально</text>
+</g>
+<g transform="translate(600,680)">
+<rect width="100" height="80" fill="none" stroke="#26364A" stroke-width="1"/>
+<rect x="10" y="10" width="80" height="60" fill="none" stroke="#D96C55" stroke-width="0.7" stroke-dasharray="5 5"/>
+<text x="50.0" y="30.0" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#26364A">G — ЯЗЫЧОК ПОЛУКОЛЬЦА</text>
+<text x="50.0" y="52.0" text-anchor="middle" font-family="Arial" font-size="11" fill="#26364A">2× кожа/стропа • сгиб по центру</text>
+</g>
+<rect x="25" y="870" width="50" height="50" fill="none" stroke="#D96C55" stroke-width="1"/>
+<text x="90" y="900" font-family="Arial" font-size="13" fill="#26364A">КОНТРОЛЬНЫЙ КВАДРАТ 50×50 мм — печатать 100%, без масштабирования</text>
+<text x="25" y="960" font-family="Arial" font-size="13" fill="#26364A">A корпус • B боковина/дно • C основная молния • D карман ноутбука/документов • E боковые отделения • F уголок лямки • G крепления полуколец</text>
+</svg>

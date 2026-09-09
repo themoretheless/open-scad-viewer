@@ -55,6 +55,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "photogrammetry-kernel"
+version = "0.1.0"
+
+[[package]]
+name = "photogrammetry-wasm"
+version = "0.1.0"
+dependencies = [
+ "photogrammetry-kernel",
+ "value-codec",
+]
+
+[[package]]
 name = "polygon-kernel"
 version = "0.1.0"
 dependencies = [

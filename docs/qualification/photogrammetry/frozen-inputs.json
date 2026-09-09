@@ -1,0 +1,194 @@
+{
+  "cases": [
+    {
+      "id": "shell6",
+      "images": [
+        {
+          "name": "M97A2474.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2474.ppm",
+          "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+          "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2475.ppm",
+          "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+          "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2476.ppm",
+          "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+          "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2477.ppm",
+          "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+          "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2478.ppm",
+          "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+          "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell6/M97A2479.ppm",
+          "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+          "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        }
+      ],
+      "focal_pixels": 2266.6666667,
+      "geometry_ground_truth": false
+    },
+    {
+      "id": "shell12",
+      "images": [
+        {
+          "name": "M97A2474.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2474.ppm",
+          "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2",
+          "source_sha256": "171a3e0ab8db95730600ccacb10ee27c83ec98521272d6d3df468b7a72907561",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2475.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2475.ppm",
+          "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630",
+          "source_sha256": "979d0538a065c415b88098840e71ca73682b09de18e7e25929e08d875db3abb2",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2476.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2476.ppm",
+          "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe",
+          "source_sha256": "a46c162991b5b025dbc4a361316e77ca6f3fb49640ed94dfc2c1f6caacea2f2a",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2477.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2477.ppm",
+          "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd",
+          "source_sha256": "5002e53e751b79e020efb8d53b846c391abe981a95b6aee58b1054e3f4f7aae7",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2478.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2478.ppm",
+          "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd",
+          "source_sha256": "5da4f66aa5dc460f062e65c7202105887840678e290d3e4ec89785d3ed2f6f32",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2479.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2479.ppm",
+          "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18",
+          "source_sha256": "84ae71b58883db022641c40209353bae47425c063e22a6fdf37846fea419e695",
+          "decode": "Previously frozen P6 PPM; SHA256 preserved"
+        },
+        {
+          "name": "M97A2480.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2480.ppm",
+          "sha256": "ec8dec1a237e41c6c1c8d91c63e6bd19b8a9ca61587cd86c2bf5e5a518b866db",
+          "source_sha256": "2f4ebfce2f9eae1a0232e65825656d6349f35a9d0281cc0b32350be8392c157a",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "M97A2481.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2481.ppm",
+          "sha256": "3ec093a3a06971c2605e4552c5bc29b2baf727d8ba7edf83b667fcdfca7bb822",
+          "source_sha256": "85a8a4fa5e05315f02104ddc0e608bdac13383d430240915d8d951cf30822eac",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "M97A2482.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2482.ppm",
+          "sha256": "dc3e3f43a451cdd3019a79ba12717cf460cd6ab892e299303fe7cd8fa0fdaa21",
+          "source_sha256": "09272d95144cc391048b9f587f029028afd60d23a81eeba4f9a71b9fb629c957",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "M97A2483.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2483.ppm",
+          "sha256": "bbd4b4ce12b482579a29bd33ce337423dcf4fb23f67ee23f181e87569a192b0e",
+          "source_sha256": "4bc068a08a3f1981a1061676f5bda315314722d4f3586ae158f67c50dbe770e9",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "M97A2484.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2484.ppm",
+          "sha256": "1979170e0c4999bb8f7f5e97ea554dfcd2d71e490c9139df41bd4ded8ac1f452",
+          "source_sha256": "52fec1cacf6ea9735e54ee1ff35a1318888a3e8ef0d5bcfc26d662360065e136",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "M97A2485.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/shell12/M97A2485.ppm",
+          "sha256": "120e6d875f1bd193c6fa965a4a1d0e7a0166e7eac23e34e8f5c7efb3504176b7",
+          "source_sha256": "cb4be8f969cf08bf6322f4a42ff24706dad88664b6d907dd81faa46cd4973f9e",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        }
+      ],
+      "focal_pixels": 2266.6666667,
+      "geometry_ground_truth": false
+    },
+    {
+      "id": "monstree6",
+      "images": [
+        {
+          "name": "IMG_1024.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1024.ppm",
+          "sha256": "7a0ad5cf23c7ff14ffece9276ebc0d9029d88d17b59904c9de2aa5d899fca456",
+          "source_sha256": "6a4e1b819c25bfd73d33b76553b185de612ee919e8d9dea5d65dc0d3af4c6214",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "IMG_1025.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1025.ppm",
+          "sha256": "c51d76bc409cc1120ce9e7e10bf0e286b1c81726a20eb7fa37cfaf1eb5a04153",
+          "source_sha256": "03da95f149c8822132976d9cad7fc55c8bd592ab6045eab906c301f11cb33d76",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "IMG_1026.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1026.ppm",
+          "sha256": "022f7807e768f2216c98b0e56d60a43b678cb5f67a823d7ddd521d358ff25f46",
+          "source_sha256": "28116672a98a0038b3f636a6f153ffef1f83006614a9a1353103fa18b228bc7d",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "IMG_1027.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1027.ppm",
+          "sha256": "c32ccab47073ef8739b80d4fbef310b4db93b9bfc50299c124aef47174be8f1d",
+          "source_sha256": "c4b53f3d386f4dd4993f37bd69adba5e52be22b50b66555ea0ac059ce0fb9660",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "IMG_1028.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1028.ppm",
+          "sha256": "7162ef94e35e25fd7993108027f13e353071a2054852af098a16765392407787",
+          "source_sha256": "e75598533533028c67ae208fda517b022c962666492bcbaaf4fa983c7d1e28e3",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        },
+        {
+          "name": "IMG_1029.JPG",
+          "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/inputs/monstree6/IMG_1029.ppm",
+          "sha256": "5969da5d5f9699cac809d71d948f95b93bb9807bed45d4bda5e05733001e2eaf",
+          "source_sha256": "7860003da93924f778b7ace40b62798699b0f358346aab135bf3a0ae6995f29d",
+          "decode": "Pillow 12.1.1 EXIF transpose, RGB, Lanczos long side 960"
+        }
+      ],
+      "focal_pixels": 776.5802747153207,
+      "geometry_ground_truth": false
+    }
+  ],
+  "scope": "Same frozen pixels per stage. These sample datasets are not a Canon R8 plus iPhone test. No physical geometry truth for these photographs."
+}

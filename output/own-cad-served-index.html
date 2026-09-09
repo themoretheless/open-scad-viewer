@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Browser-based OpenSCAD 3D viewer using WebGPU. Edit, render and view models directly in the browser." />
+  <meta name="color-scheme" content="dark light" />
+  <title>OpenSCAD WebGPU Viewer</title>
+  <script type="module" crossorigin src="/assets/index-Cai21qTr.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vue-BqI-E49n.js">
+  <link rel="modulepreload" crossorigin href="/assets/geometry-kernel-bytes--3YsqLgP.js">
+  <link rel="modulepreload" crossorigin href="/assets/modelgraph-text-KlOWNTCd.js">
+  <link rel="modulepreload" crossorigin href="/assets/renderer-D5ympmNf.js">
+  <link rel="modulepreload" crossorigin href="/assets/surface-selection-CQCb-cuk.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-vxr4pdh5.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {})
+      })
+    }
+  </script>
+</body>
+</html>

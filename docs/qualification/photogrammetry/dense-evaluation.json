@@ -1,0 +1,1431 @@
+{
+  "schema": "photogrammetry-dense-independent-evaluation/1",
+  "date": "2026-09-09",
+  "evaluator_source": {
+    "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/current/crates/photogrammetry-kernel/src/evaluation.rs": "39d19987abb0bf854eb40973351f8d6e5d7ba9679bd2c8e176663a9a9d661a4e",
+    "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/current/crates/photogrammetry-kernel/examples/evaluate.rs": "8b8ad49688a19de17f4cbf26834d93cb2ff6ed63ae45e69dc8c8d7a0e869750f"
+  },
+  "evaluator_binary_sha256": "f204284c6392bf6334925cf17cf73687e6114e2ecd38429ae1be282b064474a3",
+  "build_command": [
+    "cargo",
+    "build",
+    "--release",
+    "--offline",
+    "--manifest-path",
+    "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/current/crates/photogrammetry-kernel/Cargo.toml",
+    "--example",
+    "evaluate",
+    "--target-dir",
+    "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target"
+  ],
+  "profile": "Cargo release defaults opt-level=3, lto=false. Evaluation timing is not dense reconstruction timing.",
+  "scene_units": "arbitrary; rear plane center z=4; foreground z=3; ribbon width=0.14; no millimeter interpretation",
+  "coordinate_contract": "Identical supplied frame and scale; no ICP, similarity alignment, cropping, or deletion of difficult output points.",
+  "sampling": "XYZ vertices vs visible GT samples from four known 80x80 cameras, focal=110; GT has two-pixel image stride. Common zero-origin voxel grid, one centroid per occupied voxel separately for both clouds.",
+  "settings": [
+    {
+      "id": "primary",
+      "tolerance": 0.04,
+      "voxel_size": 0.02
+    },
+    {
+      "id": "tolerance_sensitivity",
+      "tolerance": 0.08,
+      "voxel_size": 0.02
+    },
+    {
+      "id": "voxel_sensitivity",
+      "tolerance": 0.04,
+      "voxel_size": 0.04
+    }
+  ],
+  "comparisons": [
+    [
+      "baseline3x3",
+      "slanted5x5"
+    ],
+    [
+      "baseline5x5",
+      "slanted5x5"
+    ]
+  ],
+  "measurements": [
+    {
+      "setting": "primary",
+      "scene": "plane-30",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "sha256": "2b476ee9f22382fe50c1eb4163f3ece99fb370bf0822a07f6316851bc2f25825"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 10797,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 9590,
+          "mean": 0.02702603613079875,
+          "median": 0.026796320956330617,
+          "p95": 0.05548895254008859,
+          "maximum": 0.5186687636498242,
+          "within_tolerance": 7596
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.025732106672426702,
+          "median": 0.011330984887453092,
+          "p95": 0.12118045762729003,
+          "maximum": 0.3803019443164736,
+          "within_tolerance": 3707
+        },
+        "precision": 0.792075078206465,
+        "recall": 0.8949782713664897,
+        "f1": 0.8403883427458191,
+        "symmetric_mean": 0.026379071401612726,
+        "evaluation_ms": 5.575374999999999
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-30",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "sha256": "137446f3d145305896dca64502392aa96dfc68d3a2903b91431a364bc767fba9"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 7793,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7138,
+          "mean": 0.025536132883788844,
+          "median": 0.023839485045017976,
+          "p95": 0.05594874172278901,
+          "maximum": 0.5534972379609885,
+          "within_tolerance": 5916
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.025234034858019765,
+          "median": 0.01056573024912301,
+          "p95": 0.1244667493408171,
+          "maximum": 0.41871632327211683,
+          "within_tolerance": 3704
+        },
+        "precision": 0.8288035864387784,
+        "recall": 0.8942539835828103,
+        "f1": 0.860285717291862,
+        "symmetric_mean": 0.025385083870904303,
+        "evaluation_ms": 4.353125
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-30",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "sha256": "708277de979b212cbe230efd82720394d6a390e4eab2f2799b94ec60c12a595d"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 8612,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7903,
+          "mean": 0.02443962062249846,
+          "median": 0.023326349995069974,
+          "p95": 0.05733193276265356,
+          "maximum": 0.1342942325568469,
+          "within_tolerance": 6582
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.023371856210698802,
+          "median": 0.008936982347968137,
+          "p95": 0.1214906389349312,
+          "maximum": 0.3791996880282508,
+          "within_tolerance": 3717
+        },
+        "precision": 0.8328482854612173,
+        "recall": 0.8973925639787542,
+        "f1": 0.8639165565155396,
+        "symmetric_mean": 0.023905738416598633,
+        "evaluation_ms": 4.578708
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-60",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "sha256": "5157b58fa7ce5ce126af9592878fda5891e82992a944d1d29ddb7fe59a5e5afa"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 13028,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 11959,
+          "mean": 0.05111805577845349,
+          "median": 0.035196781702378874,
+          "p95": 0.13097154129132105,
+          "maximum": 4.848622092721327,
+          "within_tolerance": 6913
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.04741381090923666,
+          "median": 0.017076880390766665,
+          "p95": 0.19622464217651125,
+          "maximum": 1.1280400812861213,
+          "within_tolerance": 3377
+        },
+        "precision": 0.5780583660841208,
+        "recall": 0.7828001854427445,
+        "f1": 0.6650275234846059,
+        "symmetric_mean": 0.049265933343845075,
+        "evaluation_ms": 6.7434579999999995
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-60",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "sha256": "24961fb2582a4ed14e8f3cfb007edc13986850f0a429dca3b600d9bb7ad7a4cc"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 12175,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 11159,
+          "mean": 0.047164941141999164,
+          "median": 0.03294110016373055,
+          "p95": 0.12732031757115633,
+          "maximum": 4.994710761881311,
+          "within_tolerance": 6880
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.048063441917577346,
+          "median": 0.018068982339690898,
+          "p95": 0.19623962386078578,
+          "maximum": 1.1762898043854848,
+          "within_tolerance": 3388
+        },
+        "precision": 0.6165427009588673,
+        "recall": 0.7853500231803431,
+        "f1": 0.6907829909553559,
+        "symmetric_mean": 0.047614191529788255,
+        "evaluation_ms": 6.816333
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-60",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "sha256": "4ee51e3afd56c6e6fafcf009b3c4e66bcd8af489241a246131f873482c07f5e4"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 11157,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 10475,
+          "mean": 0.046221100477117714,
+          "median": 0.03274573035819743,
+          "p95": 0.13170201794068961,
+          "maximum": 4.561756976562571,
+          "within_tolerance": 6261
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.04267386747240825,
+          "median": 0.00980001581586843,
+          "p95": 0.25236851676492184,
+          "maximum": 1.2014214443434406,
+          "within_tolerance": 3636
+        },
+        "precision": 0.597708830548926,
+        "recall": 0.8428372739916551,
+        "f1": 0.6994170888286282,
+        "symmetric_mean": 0.04444748397476298,
+        "evaluation_ms": 6.303125
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "sha256": "059fe410bb0b03487e7a4b655d0a5b71c6b1a7a1f1d5de801dbdac070d1ea918"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 11574,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 10223,
+          "mean": 0.03589426859554316,
+          "median": 0.030415872009733124,
+          "p95": 0.08169447056921929,
+          "maximum": 1.0668913264358864,
+          "within_tolerance": 7224
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.029341289097415648,
+          "median": 0.011953000973855439,
+          "p95": 0.13190777062913528,
+          "maximum": 0.3820283471891442,
+          "within_tolerance": 3465
+        },
+        "precision": 0.7066418859434608,
+        "recall": 0.8385769603097774,
+        "f1": 0.7669769316868943,
+        "symmetric_mean": 0.03261777884647941,
+        "evaluation_ms": 7.080834
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "sha256": "c426123adbd915f2fce56e115c9b29c0fac8e3d64f2f98289e58a9c297033d53"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 8725,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7907,
+          "mean": 0.04044359486750974,
+          "median": 0.03152558683206699,
+          "p95": 0.11903050407489017,
+          "maximum": 0.774588283156544,
+          "within_tolerance": 5273
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.0338477743257983,
+          "median": 0.013837442912352026,
+          "p95": 0.133443543247021,
+          "maximum": 0.41938841764719714,
+          "within_tolerance": 3272
+        },
+        "precision": 0.6668774503604401,
+        "recall": 0.7918683446272992,
+        "f1": 0.7240180496158813,
+        "symmetric_mean": 0.037145684596654016,
+        "evaluation_ms": 5.6675830000000005
+      }
+    },
+    {
+      "setting": "primary",
+      "scene": "plane-30-occlusion",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "sha256": "4e92046fa8e1e466b7e268ed0993e193108f203ba6d02baa9c285b847bd4593a"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.02,
+        "input_model": 10204,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 9183,
+          "mean": 0.052512655014619616,
+          "median": 0.031157432078387694,
+          "p95": 0.23700875575704594,
+          "maximum": 0.4836727820838385,
+          "within_tolerance": 6206
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.029788305317763962,
+          "median": 0.010777681550656889,
+          "p95": 0.13303151805311994,
+          "maximum": 0.36981597761578705,
+          "within_tolerance": 3392
+        },
+        "precision": 0.6758140041380812,
+        "recall": 0.8209099709583737,
+        "f1": 0.7413290142218804,
+        "symmetric_mean": 0.041150480166191786,
+        "evaluation_ms": 7.035457999999999
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "sha256": "2b476ee9f22382fe50c1eb4163f3ece99fb370bf0822a07f6316851bc2f25825"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 10797,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 9590,
+          "mean": 0.02702603613079875,
+          "median": 0.026796320956330617,
+          "p95": 0.05548895254008859,
+          "maximum": 0.5186687636498242,
+          "within_tolerance": 9547
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.025732106672426702,
+          "median": 0.011330984887453092,
+          "p95": 0.12118045762729003,
+          "maximum": 0.3803019443164736,
+          "within_tolerance": 3863
+        },
+        "precision": 0.9955161626694473,
+        "recall": 0.9326412361178175,
+        "f1": 0.9630535609917158,
+        "symmetric_mean": 0.026379071401612726,
+        "evaluation_ms": 5.498125000000001
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "sha256": "137446f3d145305896dca64502392aa96dfc68d3a2903b91431a364bc767fba9"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 7793,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7138,
+          "mean": 0.025536132883788844,
+          "median": 0.023839485045017976,
+          "p95": 0.05594874172278901,
+          "maximum": 0.5534972379609885,
+          "within_tolerance": 7099
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.025234034858019765,
+          "median": 0.01056573024912301,
+          "p95": 0.1244667493408171,
+          "maximum": 0.41871632327211683,
+          "within_tolerance": 3852
+        },
+        "precision": 0.994536284673578,
+        "recall": 0.9299855142443264,
+        "f1": 0.9611783443106154,
+        "symmetric_mean": 0.025385083870904303,
+        "evaluation_ms": 4.340333
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "sha256": "708277de979b212cbe230efd82720394d6a390e4eab2f2799b94ec60c12a595d"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 8612,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7903,
+          "mean": 0.02443962062249846,
+          "median": 0.023326349995069974,
+          "p95": 0.05733193276265356,
+          "maximum": 0.1342942325568469,
+          "within_tolerance": 7870
+        },
+        "reference_to_model": {
+          "samples": 4142,
+          "mean": 0.023371856210698802,
+          "median": 0.008936982347968137,
+          "p95": 0.1214906389349312,
+          "maximum": 0.3791996880282508,
+          "within_tolerance": 3874
+        },
+        "precision": 0.9958243704922182,
+        "recall": 0.9352969579913085,
+        "f1": 0.9646121045603961,
+        "symmetric_mean": 0.023905738416598633,
+        "evaluation_ms": 4.615333
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-60",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "sha256": "5157b58fa7ce5ce126af9592878fda5891e82992a944d1d29ddb7fe59a5e5afa"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 13028,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 11959,
+          "mean": 0.05111805577845349,
+          "median": 0.035196781702378874,
+          "p95": 0.13097154129132105,
+          "maximum": 4.848622092721327,
+          "within_tolerance": 10169
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.04741381090923666,
+          "median": 0.017076880390766665,
+          "p95": 0.19622464217651125,
+          "maximum": 1.1280400812861213,
+          "within_tolerance": 3802
+        },
+        "precision": 0.8503219332720127,
+        "recall": 0.8813166434863235,
+        "f1": 0.8655419002237634,
+        "symmetric_mean": 0.049265933343845075,
+        "evaluation_ms": 6.827
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-60",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "sha256": "24961fb2582a4ed14e8f3cfb007edc13986850f0a429dca3b600d9bb7ad7a4cc"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 12175,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 11159,
+          "mean": 0.047164941141999164,
+          "median": 0.03294110016373055,
+          "p95": 0.12732031757115633,
+          "maximum": 4.994710761881311,
+          "within_tolerance": 9718
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.048063441917577346,
+          "median": 0.018068982339690898,
+          "p95": 0.19623962386078578,
+          "maximum": 1.1762898043854848,
+          "within_tolerance": 3787
+        },
+        "precision": 0.8708665651044001,
+        "recall": 0.877839592025962,
+        "f1": 0.8743391759708972,
+        "symmetric_mean": 0.047614191529788255,
+        "evaluation_ms": 6.453125
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-60",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "sha256": "4ee51e3afd56c6e6fafcf009b3c4e66bcd8af489241a246131f873482c07f5e4"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 11157,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 10475,
+          "mean": 0.046221100477117714,
+          "median": 0.03274573035819743,
+          "p95": 0.13170201794068961,
+          "maximum": 4.561756976562571,
+          "within_tolerance": 8864
+        },
+        "reference_to_model": {
+          "samples": 4314,
+          "mean": 0.04267386747240825,
+          "median": 0.00980001581586843,
+          "p95": 0.25236851676492184,
+          "maximum": 1.2014214443434406,
+          "within_tolerance": 3853
+        },
+        "precision": 0.8462052505966587,
+        "recall": 0.8931386184515531,
+        "f1": 0.8690387241919224,
+        "symmetric_mean": 0.04444748397476298,
+        "evaluation_ms": 5.696292000000001
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "sha256": "059fe410bb0b03487e7a4b655d0a5b71c6b1a7a1f1d5de801dbdac070d1ea918"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 11574,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 10223,
+          "mean": 0.03589426859554316,
+          "median": 0.030415872009733124,
+          "p95": 0.08169447056921929,
+          "maximum": 1.0668913264358864,
+          "within_tolerance": 9696
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.029341289097415648,
+          "median": 0.011953000973855439,
+          "p95": 0.13190777062913528,
+          "maximum": 0.3820283471891442,
+          "within_tolerance": 3796
+        },
+        "precision": 0.9484495744888976,
+        "recall": 0.9186834462729913,
+        "f1": 0.9333292422326352,
+        "symmetric_mean": 0.03261777884647941,
+        "evaluation_ms": 6.502125
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "sha256": "c426123adbd915f2fce56e115c9b29c0fac8e3d64f2f98289e58a9c297033d53"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 8725,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7907,
+          "mean": 0.04044359486750974,
+          "median": 0.03152558683206699,
+          "p95": 0.11903050407489017,
+          "maximum": 0.774588283156544,
+          "within_tolerance": 7122
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.0338477743257983,
+          "median": 0.013837442912352026,
+          "p95": 0.133443543247021,
+          "maximum": 0.41938841764719714,
+          "within_tolerance": 3691
+        },
+        "precision": 0.9007208802327052,
+        "recall": 0.893272023233301,
+        "f1": 0.8969809874938497,
+        "symmetric_mean": 0.037145684596654016,
+        "evaluation_ms": 5.592416999999999
+      }
+    },
+    {
+      "setting": "tolerance_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "sha256": "4e92046fa8e1e466b7e268ed0993e193108f203ba6d02baa9c285b847bd4593a"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.08",
+        "0.02"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.08,
+        "voxel_size": 0.02,
+        "input_model": 10204,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 9183,
+          "mean": 0.052512655014619616,
+          "median": 0.031157432078387694,
+          "p95": 0.23700875575704594,
+          "maximum": 0.4836727820838385,
+          "within_tolerance": 7947
+        },
+        "reference_to_model": {
+          "samples": 4132,
+          "mean": 0.029788305317763962,
+          "median": 0.010777681550656889,
+          "p95": 0.13303151805311994,
+          "maximum": 0.36981597761578705,
+          "within_tolerance": 3746
+        },
+        "precision": 0.8654034629206142,
+        "recall": 0.9065827686350436,
+        "f1": 0.8855146314677015,
+        "symmetric_mean": 0.041150480166191786,
+        "evaluation_ms": 7.062208
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "sha256": "2b476ee9f22382fe50c1eb4163f3ece99fb370bf0822a07f6316851bc2f25825"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 10797,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 6233,
+          "mean": 0.029720225889441065,
+          "median": 0.030372141778177052,
+          "p95": 0.05973667440568381,
+          "maximum": 0.5062701581477653,
+          "within_tolerance": 4567
+        },
+        "reference_to_model": {
+          "samples": 2996,
+          "mean": 0.03297798113139493,
+          "median": 0.014780344635032111,
+          "p95": 0.15330490242933803,
+          "maximum": 0.3893322910514854,
+          "within_tolerance": 2564
+        },
+        "precision": 0.732712979303706,
+        "recall": 0.855807743658211,
+        "f1": 0.7894910434631117,
+        "symmetric_mean": 0.031349103510418,
+        "evaluation_ms": 3.826166
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "sha256": "137446f3d145305896dca64502392aa96dfc68d3a2903b91431a364bc767fba9"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 7793,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 5092,
+          "mean": 0.028199103257850237,
+          "median": 0.02676080533669087,
+          "p95": 0.061108205440336204,
+          "maximum": 0.5411381915756758,
+          "within_tolerance": 3931
+        },
+        "reference_to_model": {
+          "samples": 2996,
+          "mean": 0.03278118206050896,
+          "median": 0.014114827453997243,
+          "p95": 0.16048445846734677,
+          "maximum": 0.42022748954914046,
+          "within_tolerance": 2567
+        },
+        "precision": 0.7719952867242734,
+        "recall": 0.8568090787716955,
+        "f1": 0.8121940049355212,
+        "symmetric_mean": 0.030490142659179598,
+        "evaluation_ms": 3.2185
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "sha256": "708277de979b212cbe230efd82720394d6a390e4eab2f2799b94ec60c12a595d"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "sha256": "9393dcf3f3ff14fd649be9a3add47dadfb3786098ce102807c8a3af80f314f70"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 8612,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 5424,
+          "mean": 0.027305912400931266,
+          "median": 0.026801678417325933,
+          "p95": 0.06253970982659213,
+          "maximum": 0.1342942325568469,
+          "within_tolerance": 4146
+        },
+        "reference_to_model": {
+          "samples": 2996,
+          "mean": 0.030631571105929626,
+          "median": 0.012301567813761967,
+          "p95": 0.15367343986437598,
+          "maximum": 0.3791996880282508,
+          "within_tolerance": 2586
+        },
+        "precision": 0.7643805309734514,
+        "recall": 0.863150867823765,
+        "f1": 0.8107686514004148,
+        "symmetric_mean": 0.028968741753430446,
+        "evaluation_ms": 3.2686249999999997
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-60",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "sha256": "5157b58fa7ce5ce126af9592878fda5891e82992a944d1d29ddb7fe59a5e5afa"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 13028,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 8717,
+          "mean": 0.05829743927428381,
+          "median": 0.04019831015018438,
+          "p95": 0.14572310153776982,
+          "maximum": 4.842994087042383,
+          "within_tolerance": 4340
+        },
+        "reference_to_model": {
+          "samples": 3689,
+          "mean": 0.054367853595167985,
+          "median": 0.021158849356002523,
+          "p95": 0.22314474571669743,
+          "maximum": 1.1280400812861213,
+          "within_tolerance": 2778
+        },
+        "precision": 0.4978777102214064,
+        "recall": 0.75304960693955,
+        "f1": 0.5994378871461667,
+        "symmetric_mean": 0.056332646434725894,
+        "evaluation_ms": 5.230333
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-60",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "sha256": "24961fb2582a4ed14e8f3cfb007edc13986850f0a429dca3b600d9bb7ad7a4cc"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 12175,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 7959,
+          "mean": 0.05422335013769184,
+          "median": 0.03789684870114782,
+          "p95": 0.14580913257629283,
+          "maximum": 4.9889516140751695,
+          "within_tolerance": 4219
+        },
+        "reference_to_model": {
+          "samples": 3689,
+          "mean": 0.055469451002355445,
+          "median": 0.02185229854985084,
+          "p95": 0.2410071526483882,
+          "maximum": 1.1762898043854848,
+          "within_tolerance": 2791
+        },
+        "precision": 0.5300917200653349,
+        "recall": 0.7565735971808079,
+        "f1": 0.6233997203623537,
+        "symmetric_mean": 0.05484640057002364,
+        "evaluation_ms": 4.730458
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-60",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "sha256": "4ee51e3afd56c6e6fafcf009b3c4e66bcd8af489241a246131f873482c07f5e4"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "sha256": "93d32543cfedb8582e41ae0c95873bc243cb7b01faff02424c6050908b9b5e92"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-60-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 11157,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 8053,
+          "mean": 0.052446557792010004,
+          "median": 0.03848607335225995,
+          "p95": 0.1440920857805261,
+          "maximum": 4.561756976562571,
+          "within_tolerance": 4171
+        },
+        "reference_to_model": {
+          "samples": 3689,
+          "mean": 0.05035581829999799,
+          "median": 0.013981957221829662,
+          "p95": 0.2599852156470207,
+          "maximum": 1.2014214443434406,
+          "within_tolerance": 3032
+        },
+        "precision": 0.51794362349435,
+        "recall": 0.8219029547302792,
+        "f1": 0.6354449851979153,
+        "symmetric_mean": 0.05140118804600399,
+        "evaluation_ms": 4.597708
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline3x3",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "sha256": "059fe410bb0b03487e7a4b655d0a5b71c6b1a7a1f1d5de801dbdac070d1ea918"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r1.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 11574,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 6800,
+          "mean": 0.041333307332037286,
+          "median": 0.033979621317620196,
+          "p95": 0.10635264822915942,
+          "maximum": 1.0668913264358864,
+          "within_tolerance": 4254
+        },
+        "reference_to_model": {
+          "samples": 2984,
+          "mean": 0.03712162526796685,
+          "median": 0.016696090073082127,
+          "p95": 0.1529641969607724,
+          "maximum": 0.3897696269682296,
+          "within_tolerance": 2368
+        },
+        "precision": 0.6255882352941177,
+        "recall": 0.7935656836461126,
+        "f1": 0.6996356758720971,
+        "symmetric_mean": 0.03922746630000207,
+        "evaluation_ms": 4.570292
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "baseline5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "sha256": "c426123adbd915f2fce56e115c9b29c0fac8e3d64f2f98289e58a9c297033d53"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-baseline-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 8725,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 5574,
+          "mean": 0.04516695942458945,
+          "median": 0.03485309768679935,
+          "p95": 0.13135986698222135,
+          "maximum": 0.7646105870353904,
+          "within_tolerance": 3341
+        },
+        "reference_to_model": {
+          "samples": 2984,
+          "mean": 0.04125254046997831,
+          "median": 0.018297712160864347,
+          "p95": 0.17383928647843427,
+          "maximum": 0.41938841764719714,
+          "within_tolerance": 2227
+        },
+        "precision": 0.5993900251166129,
+        "recall": 0.746313672922252,
+        "f1": 0.6648313024771386,
+        "symmetric_mean": 0.04320974994728388,
+        "evaluation_ms": 3.948416
+      }
+    },
+    {
+      "setting": "voxel_sensitivity",
+      "scene": "plane-30-occlusion",
+      "variant": "slanted5x5",
+      "model": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "sha256": "4e92046fa8e1e466b7e268ed0993e193108f203ba6d02baa9c285b847bd4593a"
+      },
+      "reference": {
+        "path": "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "sha256": "46fc213b1f326aed1d8f0e79784f990d66ce24abaf3ec849ce7855aafe8b7323"
+      },
+      "command": [
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/evaluator-target/release/examples/evaluate",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-slanted-r2.xyz",
+        "/Users/themoretheless/Documents/Sources/scan/implementation/photogrammetry-2026-09-09/dense/reports/dense-fixtures/plane-30-occlusion-reference.xyz",
+        "0.04",
+        "0.04"
+      ],
+      "evaluation": {
+        "format": "open-scad-viewer/cloud-evaluation",
+        "version": 1,
+        "metric": "point_to_point",
+        "scale_fitted": false,
+        "tolerance": 0.04,
+        "voxel_size": 0.04,
+        "input_model": 10204,
+        "input_reference": 4900,
+        "model_to_reference": {
+          "samples": 6439,
+          "mean": 0.05930154087149496,
+          "median": 0.0351363035227262,
+          "p95": 0.2574471907187573,
+          "maximum": 0.4837674011378026,
+          "within_tolerance": 3828
+        },
+        "reference_to_model": {
+          "samples": 2984,
+          "mean": 0.03707169259599534,
+          "median": 0.014539822578404664,
+          "p95": 0.1597464913441173,
+          "maximum": 0.36981597761578705,
+          "within_tolerance": 2326
+        },
+        "precision": 0.5945022519024693,
+        "recall": 0.7794906166219839,
+        "f1": 0.6745434238188937,
+        "symmetric_mean": 0.04818661673374515,
+        "evaluation_ms": 4.96375
+      }
+    }
+  ]
+}

@@ -51,9 +51,9 @@ it('preserves separate touching parts unless union is explicit',async()=>{
 it.each(['0mm..10mm','0mm..10deg count 3','0mm..10mm by 1deg','0..10 by 0','0..10 count 2.5','0..10 count 2mm','0..10 count 300','0..10000','0..10 by 2 count 3','0..10 count 3 by 2','0..0 count 1 by 1','0..<0 count 1'])('rejects invalid range %s',range=>{
  expect(()=>compileModelGraphText(header+'xs = '+range+scene+'assert length(xs). atLeast(0)')).toThrow()
 })
-it('rejects unequal zip lengths and accidental transforms of collections',()=>{
+it('rejects unequal zip lengths and implicit topology changes of collections',()=>{
  expect(()=>compileModelGraphText(header+'xs=zip([1,2],[1])'+scene+'assert length(xs). atLeast(0)')).toThrow('equal length')
- expect(()=>compileModelGraphText(header+'parts=[for i in 0..<3 => sphere(1mm)]\nshow parts.translate(x: 1mm)')).toThrow('Transform each')
+ expect(()=>compileModelGraphText(header+'parts=[for i in 0..<3 => circle(1mm)]\nshow parts.extrude(2mm)')).toThrow('Transform each')
 })
 
 it('exports separate generated scene objects to 3MF',async()=>{

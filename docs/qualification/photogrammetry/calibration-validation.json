@@ -1,0 +1,105 @@
+{
+  "format": "open-scad-viewer/calibration-validation",
+  "version": 1,
+  "recordedAt": "2026-09-08T23:34:47.215Z",
+  "scope": "isolated calibration implementation; original application untouched",
+  "runtime": {
+    "node": "v26.8.1",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "profiles": {
+    "numericalRegression": "cargo test dev, unoptimized; geometry comparison, not a performance claim",
+    "wasm": "isolated workspace default release opt-level=3; production opt-level=s/LTO not applied"
+  },
+  "commands": [
+    {
+      "command": "rustfmt",
+      "args": [
+        "--check",
+        "--edition",
+        "2021",
+        "--config",
+        "skip_children=true",
+        "crates/photogrammetry-kernel/src/calibration.rs",
+        "crates/photogrammetry-kernel/src/calibration/tests.rs",
+        "crates/photogrammetry-kernel/src/lib.rs",
+        "crates/photogrammetry-wasm/src/lib.rs",
+        "crates/photogrammetry-wasm/src/session.rs"
+      ],
+      "exitCode": 0,
+      "log": "artifacts/rust-format.log"
+    },
+    {
+      "command": "cargo",
+      "args": [
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "--workspace",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "log": "artifacts/rust-tests.log"
+    },
+    {
+      "command": "/opt/homebrew/Cellar/node/26.8.1/bin/node",
+      "args": [
+        "scripts/build-photogrammetry.mjs"
+      ],
+      "exitCode": 0,
+      "log": "artifacts/wasm-build.log"
+    },
+    {
+      "command": "/opt/homebrew/Cellar/node/26.8.1/bin/node",
+      "args": [
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/node_modules/vitest/vitest.mjs",
+        "run",
+        "--config",
+        "vitest.calibration.config.mjs",
+        "--reporter=json",
+        "--outputFile=artifacts/vitest.json"
+      ],
+      "exitCode": 0,
+      "log": "artifacts/vitest.log"
+    }
+  ],
+  "rustTestsPassed": 56,
+  "vitestTestsPassed": 17,
+  "vueScriptAndTemplateCompiled": true,
+  "measuredScene": {
+    "scene": "brown_rgb_known_extrinsics",
+    "views": 2,
+    "landmarks": 25,
+    "before_3d_rmse": 0.3540108950394201,
+    "after_3d_rmse": 0.0009240607351174299,
+    "units": "synthetic scene units",
+    "output_focals": [
+      328.50138820669883,
+      318.10676752326225
+    ],
+    "blind_sfm": false
+  },
+  "sourceSha256": {
+    "crates/photogrammetry-kernel/src/calibration.rs": "85e055ec5d0001ff94ba06b0e08045a7272caada4a77bbc08786f9870aa76ced",
+    "crates/photogrammetry-kernel/src/calibration/tests.rs": "178644b01b9e268c1e885b74137cec15ec9f239973f020fbbd4bc5758f673276",
+    "crates/photogrammetry-kernel/src/lib.rs": "46c32f9dfb92c561a9ac280c87fc8b12b919e8ee2cbd2e8964f8c858e98dd74d",
+    "crates/photogrammetry-wasm/src/lib.rs": "ad9073a3843dfd461ebcee035de41fd7962505ebdbbfc13987c10eb498d6be81",
+    "crates/photogrammetry-wasm/src/session.rs": "339df53795dbbef2987fd42bdfd6299282c0c157f2120fb6e18579a7af541515",
+    "src/services/photoCalibration.ts": "519f3bab5fd322b3792cd2c67cbca32129713a31ee723db909b4b6031aa53948",
+    "src/services/photoInput.ts": "9a87dad9cad60827e03ca0b840595ec13e59b5bfcf10d259c7f63d801f7510c0",
+    "src/services/photogrammetryKernel.ts": "5608eee7cc524e6a70123617247ba130ad498b5af7f7c6272135d8515fb9d9cb",
+    "src/services/photoWorkerProtocol.ts": "c75705b11d40af49bc5f03748ca68fecd59df6202c0928681aff3e5bee886f48",
+    "src/services/photoReport.ts": "2e8f87cf7524756f7ee80d2dcf11b59a576af8f0010df3e8dcdece56769925b2",
+    "src/workers/photogrammetry.worker.ts": "351e5fe26dc3f39978eabbfae91e8ba85d639807aa2a5ab3eedfcd164a7d0bcb",
+    "src/features/PhotogrammetryPanel.vue": "c4f114bddae46ba12b25675a2e3e90d6eb6adb14b143ad8c6e85851d0fccff6e"
+  },
+  "limitations": [
+    "No automatic calibration or optimization of intrinsics.",
+    "Synthetic RGB comparison uses known camera extrinsics and landmark identities, not blind SfM.",
+    "Real Canon/iPhone measurements and physical reference validation have not been performed.",
+    "Vue compilation and actual WASM adapter tests passed; full staged host typecheck/browser interaction are separate checks."
+  ]
+}

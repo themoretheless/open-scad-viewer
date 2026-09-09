@@ -1,0 +1,20 @@
+//! Deterministic photo reconstruction. Algorithms use Rust std only; host owns codecs and UI.
+pub mod bundle;
+pub mod calibration;
+pub mod camera;
+pub mod dense;
+pub mod diagnostics;
+pub mod evaluation;
+pub mod features;
+mod matching;
+mod math;
+mod model;
+mod pipeline;
+mod seeding;
+pub use model::{Image, Point, Reconstruction};
+pub use pipeline::{
+    reconstruct, reconstruct_detailed, ReconstructionOptions, ReconstructionOutcome,
+};
+pub type Result<T> = std::result::Result<T, String>;
+#[cfg(test)]
+mod integration_tests;

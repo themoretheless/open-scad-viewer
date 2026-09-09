@@ -1,0 +1,363 @@
+//! Bidirectional point-sample evaluation in a caller-established coordinate frame.
+//! No registration, scale fitting, or inferred ground truth is performed here.
+use crate::Result;
+use std::collections::BTreeMap;
+
+type Point = [f64; 3];
+const MAX_POINTS: usize = 2_000_000;
+const NONE: usize = usize::MAX;
+
+#[derive(Clone, Debug)]
+pub struct EvaluationOptions {
+    /// Distance tolerance in the same units as both input clouds.
+    pub tolerance: f64,
+    /// Optional common voxel grid for density-normalized sampling of both clouds.
+    /// Origin is zero in the established common frame. None preserves input density.
+    pub voxel_size: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DistanceSummary {
+    pub samples: usize,
+    pub mean: f64,
+    pub median: f64,
+    pub p95: f64,
+    pub maximum: f64,
+    pub within_tolerance: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct CloudEvaluation {
+    pub input_reconstructed: usize,
+    pub input_reference: usize,
+    /// Reconstructed sample to reference sample: geometric accuracy direction.
+    pub reconstructed_to_reference: DistanceSummary,
+    /// Reference sample to reconstructed sample: completeness direction.
+    pub reference_to_reconstructed: DistanceSummary,
+    pub precision: f64,
+    pub recall: f64,
+    pub f1: f64,
+    pub symmetric_mean: f64,
+}
+
+fn validate(points: &[Point]) -> Result<()> {
+    if points.is_empty() || points.len() > MAX_POINTS {
+        return Err("Evaluation expects 1 to 2000000 samples per cloud".into());
+    }
+    if points
+        .iter()
+        .flatten()
+        .any(|v| !v.is_finite() || v.abs() > 1e12)
+    {
+        return Err("Evaluation coordinates must be finite and at most 1e12 in magnitude".into());
+    }
+    Ok(())
+}
+
+fn sampled(
+    points: &[Point],
+    voxel: Option<f64>,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<Vec<Point>> {
+    let Some(size) = voxel else {
+        return Ok(points.to_vec());
+    };
+    let mut cells = BTreeMap::<[i64; 3], (Point, usize)>::new();
+    for (i, p) in points.iter().enumerate() {
+        if i % 4096 == 0 && !progress("evaluation_sample", i, points.len()) {
+            return Err("Cancelled".into());
+        }
+        let mut key = [0; 3];
+        for k in 0..3 {
+            let q = (p[k] / size).floor();
+            if !q.is_finite() || q.abs() >= (1i64 << 60) as f64 {
+                return Err("Evaluation voxel size is too small for these coordinates".into());
+            }
+            key[k] = q as i64;
+        }
+        let cell = cells.entry(key).or_insert(([0.; 3], 0));
+        cell.1 += 1;
+        for k in 0..3 {
+            cell.0[k] += (p[k] - cell.0[k]) / cell.1 as f64;
+        }
+    }
+    Ok(cells.into_values().map(|(centroid, _)| centroid).collect())
+}
+
+struct Node {
+    point: Point,
+    left: usize,
+    right: usize,
+    axis: usize,
+}
+struct Tree {
+    nodes: Vec<Node>,
+    root: usize,
+}
+
+impl Tree {
+    fn new(
+        mut points: Vec<Point>,
+        progress: &mut impl FnMut(&str, usize, usize) -> bool,
+    ) -> Result<Self> {
+        let total = points.len();
+        let mut tree = Self {
+            nodes: Vec::with_capacity(total),
+            root: NONE,
+        };
+        tree.root = tree.build(&mut points, 0, total, progress)?;
+        Ok(tree)
+    }
+    fn build(
+        &mut self,
+        points: &mut [Point],
+        level: usize,
+        total: usize,
+        progress: &mut impl FnMut(&str, usize, usize) -> bool,
+    ) -> Result<usize> {
+        if points.is_empty() {
+            return Ok(NONE);
+        }
+        if self.nodes.len() % 4096 == 0 && !progress("evaluation_index", self.nodes.len(), total) {
+            return Err("Cancelled".into());
+        }
+        let axis = level % 3;
+        let mid = points.len() / 2;
+        points.select_nth_unstable_by(mid, |a, b| {
+            a[axis]
+                .total_cmp(&b[axis])
+                .then(a[(axis + 1) % 3].total_cmp(&b[(axis + 1) % 3]))
+                .then(a[(axis + 2) % 3].total_cmp(&b[(axis + 2) % 3]))
+        });
+        let index = self.nodes.len();
+        self.nodes.push(Node {
+            point: points[mid],
+            left: NONE,
+            right: NONE,
+            axis,
+        });
+        let (left, right) = points.split_at_mut(mid);
+        let l = self.build(left, level + 1, total, progress)?;
+        let r = self.build(&mut right[1..], level + 1, total, progress)?;
+        self.nodes[index].left = l;
+        self.nodes[index].right = r;
+        Ok(index)
+    }
+    fn nearest(&self, point: Point, keep_going: &mut impl FnMut() -> bool) -> Result<f64> {
+        let mut squared = f64::INFINITY;
+        self.search(self.root, point, &mut squared, &mut 0, keep_going)?;
+        Ok(squared.sqrt())
+    }
+    fn search(
+        &self,
+        index: usize,
+        point: Point,
+        best: &mut f64,
+        visited: &mut usize,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<()> {
+        if index == NONE {
+            return Ok(());
+        }
+        if *visited % 4096 == 0 && !keep_going() {
+            return Err("Cancelled".into());
+        }
+        *visited += 1;
+        let n = &self.nodes[index];
+        let distance = (0..3).map(|k| (point[k] - n.point[k]).powi(2)).sum::<f64>();
+        *best = best.min(distance);
+        let delta = point[n.axis] - n.point[n.axis];
+        let (near, far) = if delta <= 0. {
+            (n.left, n.right)
+        } else {
+            (n.right, n.left)
+        };
+        self.search(near, point, best, visited, keep_going)?;
+        if delta * delta < *best {
+            self.search(far, point, best, visited, keep_going)?;
+        }
+        Ok(())
+    }
+}
+
+fn distances(
+    points: &[Point],
+    tree: &Tree,
+    tolerance: f64,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<DistanceSummary> {
+    let mut values = Vec::with_capacity(points.len());
+    for (i, p) in points.iter().enumerate() {
+        if i % 1024 == 0 && !progress("evaluation_distance", i, points.len()) {
+            return Err("Cancelled".into());
+        }
+        values.push(tree.nearest(*p, &mut || progress("evaluation_distance", i, points.len()))?);
+    }
+    values.sort_unstable_by(f64::total_cmp);
+    let samples = values.len();
+    let quantile = |q: f64| {
+        let position = (samples - 1) as f64 * q;
+        let lower = position.floor() as usize;
+        let upper = position.ceil() as usize;
+        values[lower] + (values[upper] - values[lower]) * position.fract()
+    };
+    Ok(DistanceSummary {
+        samples,
+        mean: values.iter().sum::<f64>() / samples as f64,
+        median: quantile(0.5),
+        p95: quantile(0.95),
+        maximum: values[samples - 1],
+        within_tolerance: values.iter().filter(|&&d| d <= tolerance).count(),
+    })
+}
+
+/// Both inputs must already use the same frame and scale. Reference points must
+/// describe the evaluated/observable domain; unknown reference space is not inferred.
+/// Metrics are point-to-point, not distances to the interior of mesh triangles.
+pub fn evaluate_clouds(
+    reconstructed: &[Point],
+    reference: &[Point],
+    options: &EvaluationOptions,
+    mut progress: impl FnMut(&str, usize, usize) -> bool,
+) -> Result<CloudEvaluation> {
+    if !progress("evaluation", 0, 1) {
+        return Err("Cancelled".into());
+    }
+    validate(reconstructed)?;
+    validate(reference)?;
+    if !options.tolerance.is_finite()
+        || options.tolerance <= 0.
+        || options
+            .voxel_size
+            .is_some_and(|v| !v.is_finite() || v <= 0.)
+    {
+        return Err(
+            "Evaluation tolerance and optional voxel size must be finite and positive".into(),
+        );
+    }
+    let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
+    let b = sampled(reference, options.voxel_size, &mut progress)?;
+    let ta = Tree::new(a.clone(), &mut progress)?;
+    let tb = Tree::new(b.clone(), &mut progress)?;
+    let accuracy = distances(&a, &tb, options.tolerance, &mut progress)?;
+    let completeness = distances(&b, &ta, options.tolerance, &mut progress)?;
+    let precision = accuracy.within_tolerance as f64 / accuracy.samples as f64;
+    let recall = completeness.within_tolerance as f64 / completeness.samples as f64;
+    let f1 = if precision + recall == 0. {
+        0.
+    } else {
+        2. * precision * recall / (precision + recall)
+    };
+    Ok(CloudEvaluation {
+        input_reconstructed: reconstructed.len(),
+        input_reference: reference.len(),
+        symmetric_mean: (accuracy.mean + completeness.mean) / 2.,
+        reconstructed_to_reference: accuracy,
+        reference_to_reconstructed: completeness,
+        precision,
+        recall,
+        f1,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn options() -> EvaluationOptions {
+        EvaluationOptions {
+            tolerance: 0.01,
+            voxel_size: None,
+        }
+    }
+    #[test]
+    fn removing_difficult_surface_improves_one_direction_but_loses_recall() {
+        let reference = [[0., 0., 0.], [1., 0., 0.], [2., 0., 0.], [3., 0., 0.]];
+        let noisy = [[0., 0., 0.], [1., 0., 0.], [2., 0., 0.], [3., 0.005, 0.]];
+        let full = evaluate_clouds(&noisy, &reference, &options(), |_, _, _| true).unwrap();
+        let partial = evaluate_clouds(&noisy[..2], &reference, &options(), |_, _, _| true).unwrap();
+        assert!(partial.reconstructed_to_reference.mean < full.reconstructed_to_reference.mean);
+        assert_eq!(partial.precision, 1.);
+        assert_eq!(partial.recall, 0.5);
+        assert!(partial.f1 < full.f1);
+    }
+    #[test]
+    fn no_scale_fit_hides_wrong_size() {
+        let reference = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]];
+        let scaled = [[0., 0., 0.], [2., 0., 0.], [0., 2., 0.]];
+        let report = evaluate_clouds(&scaled, &reference, &options(), |_, _, _| true).unwrap();
+        assert_eq!(report.precision, 1. / 3.);
+        assert_eq!(report.recall, 1. / 3.);
+        assert_eq!(report.reconstructed_to_reference.maximum, 1.);
+    }
+    #[test]
+    fn exact_tree_matches_brute_force_on_nonuniform_cloud() {
+        let p = (0..700)
+            .map(|i| {
+                [
+                    ((i * 97) % 301) as f64 / 30.,
+                    ((i * 29) % 71) as f64,
+                    ((i * 17) % 89) as f64,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let tree = Tree::new(p.clone(), &mut |_, _, _| true).unwrap();
+        for i in 0..150 {
+            let q = [i as f64 * 0.31, (i % 65) as f64 + 0.23, (i % 89) as f64];
+            let expected = p
+                .iter()
+                .map(|x| (0..3).map(|k| (q[k] - x[k]).powi(2)).sum::<f64>().sqrt())
+                .fold(f64::INFINITY, f64::min);
+            assert!((tree.nearest(q, &mut || true).unwrap() - expected).abs() < 1e-12);
+        }
+    }
+    #[test]
+    fn cancellation_is_checked_inside_an_adversarial_nearest_query() {
+        let sphere = (0..20000)
+            .map(|i| {
+                let z = 1. - 2. * (i as f64 + 0.5) / 20000.;
+                let angle = i as f64 * 2.399963229728653;
+                let r = (1. - z * z).sqrt();
+                [r * angle.cos(), r * angle.sin(), z]
+            })
+            .collect::<Vec<_>>();
+        let tree = Tree::new(sphere, &mut |_, _, _| true).unwrap();
+        let mut checks = 0;
+        let result = tree.nearest([0., 0., 0.], &mut || {
+            checks += 1;
+            checks < 2
+        });
+        assert_eq!(result.unwrap_err(), "Cancelled");
+        assert_eq!(checks, 2);
+    }
+    #[test]
+    fn common_voxel_sampling_prevents_duplicate_density_from_changing_f1() {
+        let reference = [[0., 0., 0.], [1., 0., 0.]];
+        let base = [[0., 0., 0.], [10., 0., 0.]];
+        let mut duplicate = vec![[0., 0., 0.]; 500];
+        duplicate.push([10., 0., 0.]);
+        let opt = EvaluationOptions {
+            voxel_size: Some(0.1),
+            ..options()
+        };
+        let a = evaluate_clouds(&base, &reference, &opt, |_, _, _| true).unwrap();
+        let b = evaluate_clouds(&duplicate, &reference, &opt, |_, _, _| true).unwrap();
+        assert_eq!(a.f1, b.f1);
+        assert_eq!(b.reconstructed_to_reference.samples, 2);
+    }
+    #[test]
+    fn invalid_and_cancelled_evaluation_are_explicit() {
+        let p = [[0., 0., 0.]];
+        assert!(evaluate_clouds(&p, &[], &options(), |_, _, _| true).is_err());
+        assert!(evaluate_clouds(&[[f64::NAN, 0., 0.]], &p, &options(), |_, _, _| true).is_err());
+        assert_eq!(
+            evaluate_clouds(&p, &p, &options(), |_, _, _| false).unwrap_err(),
+            "Cancelled"
+        );
+        assert_eq!(
+            evaluate_clouds(&p, &p, &options(), |stage, _, _| stage
+                != "evaluation_distance")
+            .unwrap_err(),
+            "Cancelled"
+        );
+    }
+}

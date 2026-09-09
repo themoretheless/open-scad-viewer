@@ -61,7 +61,25 @@ pub struct Checks {
     pub constraint_report: Json,
     pub geometry_assertions: Json,
 }
+pub struct PendingGeometryCheck<'a> {
+    pub check: Json,
+    pub scope: Scope<'a>,
+}
+struct MemoEntry<'a> {
+    _scope: Scope<'a>,
+    expression: &'a Json,
+    result: Result<Value<'a>>,
+}
 pub struct Evaluator<'a> {
+    pub global_scope: Scope<'a>,
+    memo: HashMap<(&'a str, usize), MemoEntry<'a>>,
+    active_memo: HashSet<(&'a str, usize)>,
+    geometry_check_count: usize,
+    geometry_effect_count: usize,
+    pub pending_geometry_checks: Vec<PendingGeometryCheck<'a>>,
+    pub constraint_report: Vec<Json>,
+    pub suppress_checks: bool,
+    expanded_checks: usize,
     pub strict: bool,
     pub functions: HashMap<&'a str, &'a Json>,
     parameters: HashMap<&'a str, Numeric>,
@@ -127,12 +145,21 @@ impl<'a> Evaluator<'a> {
             }
         }
         Ok(Self {
+            global_scope: Scope::default(),
+            memo: HashMap::new(),
+            active_memo: HashSet::new(),
+            geometry_check_count: 0,
+            geometry_effect_count: 0,
             strict: document["type_policy"] == "strict",
             functions,
             parameters,
             document,
             steps: 0,
             allocated: 0,
+            pending_geometry_checks: vec![],
+            constraint_report: vec![],
+            suppress_checks: false,
+            expanded_checks: 0,
         })
     }
     fn allocate(&mut self, count: usize, path: &str) -> Result<()> {
@@ -537,6 +564,29 @@ impl<'a> Evaluator<'a> {
                 }
                 return Ok(items[index as usize].clone());
             }
+            "guarded" => {
+                let input = self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let items = sequence(&input, path)?;
+                self.allocate(items.len(), path)?;
+                let mut output = Vec::with_capacity(items.len());
+                'items: for (index, item) in items.iter().enumerate() {
+                    let mut bindings = (**scope).clone();
+                    bindings.insert(string(&expr["binding"]).to_owned(), item.clone());
+                    let bound = Rc::new(bindings);
+                    for (step, guard) in array(&expr["steps"]).iter().enumerate() {
+                        let current = format!("{path}[{index}]/steps/{step}");
+                        let value = self.resolve(&guard["value"], &bound, &current, depth + 1)?;
+                        match string(&guard["kind"]) {
+                            "assert" => (),
+                            "where" => if numeric(&value, &current)? == 0.0 { continue 'items; },
+                            "while" => if numeric(&value, &current)? == 0.0 { break 'items; },
+                            _ => return Err(Error::new("type_error", &current, "Unknown guarded sequence step.")),
+                        }
+                    }
+                    output.push(item.clone());
+                }
+                return Ok(Value::List(output.into()));
+            }
             "map" | "filter" | "flatmap" | "reduce" => {
                 let value =
                     self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
@@ -596,9 +646,61 @@ impl<'a> Evaluator<'a> {
                 }
                 return Ok(Value::List(output.into()));
             }
+            "memo" => {
+                let id = string(&expr["id"]);
+                let key = (id, Rc::as_ptr(scope) as usize);
+                if let Some(entry) = self.memo.get(&key) {
+                    if entry.expression != &expr["value"] {
+                        return Err(Error::new("memo_id_conflict", path, format!("Memo ID {id} has different expressions in the same scope.")));
+                    }
+                    return entry.result.clone();
+                }
+                if self.memo.len() + self.active_memo.len() >= 4096 {
+                    return Err(Error::new("memo_limit", path, "Maximum 4096 memo entries."));
+                }
+                if !self.active_memo.insert(key) {
+                    return Err(Error::new("memo_cycle", path, format!("Cycle through memo {id}.")));
+                }
+                let result = self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+                self.active_memo.remove(&key);
+                self.memo.insert(key, MemoEntry { _scope: scope.clone(), expression: &expr["value"], result: result.clone() });
+                return result;
+            }
+            "geometry_effects" => {
+                if !self.suppress_checks {
+                    self.geometry_effect_count += 1;
+                    if self.geometry_effect_count > 4096 {
+                        return Err(Error::new("assertion_limit", path, "Maximum 4096 geometry effect evaluations."));
+                    }
+                    self.pending_geometry_checks.push(PendingGeometryCheck {
+                        check: json!({"target":expr["input"],"check":"__effects","instance_path":path}),
+                        scope: scope.clone(),
+                    });
+                }
+                return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+            }
+            "assert_value" => {
+                self.scoped_checks(expr, scope, path)?;
+                return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+            }
             "checked" => {
+                let mut failures = Vec::new();
+                let mut failure_paths = HashSet::new();
+                let mut messages = Vec::new();
                 for (i, check) in array(&expr["checks"]).iter().enumerate() {
-                    self.resolve(check, scope, &format!("{path}/checks/{i}"), depth + 1)?;
+                    if let Err(error) = self.resolve(check, scope, &format!("{path}/checks/{i}"), depth + 1) {
+                        if error.code != "constraint_failed" { return Err(error); }
+                        if !messages.contains(&error.message) { messages.push(error.message); }
+                        if let Some(Json::Array(report)) = error.details {
+                            for row in report {
+                                let key = (string(&row["id"]).to_owned(), string(&row["path"]).to_owned());
+                                if failure_paths.insert(key) { failures.push(row); }
+                            }
+                        }
+                    }
+                }
+                if !messages.is_empty() {
+                    return Err(Error::new("constraint_failed", path, messages.join("; ")).with_details(Json::Array(failures)));
                 }
                 return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
             }
@@ -721,7 +823,7 @@ impl<'a> Evaluator<'a> {
         })
     }
     pub fn evaluate_checks(&mut self, document: &'a Json) -> Result<(Json, Json)> {
-        let scope = Scope::default();
+        let scope = self.global_scope.clone();
         for (i, assertion) in array(&document["assertions"]).iter().enumerate() {
             if self.evaluate(
                 &assertion["condition"],
@@ -737,10 +839,31 @@ impl<'a> Evaluator<'a> {
                 ));
             }
         }
+        let report = self.evaluate_constraints(&document["constraints"], &scope, "/constraints")?;
+        let geometry = self.resolve_geometry_checks(&document["geometry_assertions"], &scope, "/geometry_assertions")?;
+        Ok((Json::Array(report), Json::Array(geometry)))
+    }
+    pub fn scoped_checks(&mut self, value: &'a Json, scope: &Scope<'a>, path: &str) -> Result<()> {
+        if self.suppress_checks { return Ok(()); }
+        let report = self.evaluate_constraints(&value["constraints"], scope, &format!("{path}/constraints"))?;
+        self.constraint_report.extend(report);
+        let checks = self.resolve_geometry_checks(&value["geometry_assertions"], scope, &format!("{path}/geometry_assertions"))?;
+        self.geometry_check_count += checks.len();
+        if self.geometry_check_count > 256 {
+            return Err(Error::new("assertion_limit", path, "Maximum 256 expanded geometry checks."));
+        }
+        self.pending_geometry_checks.extend(checks.into_iter().map(|mut check| { check["instance_path"] = json!(path); PendingGeometryCheck { check, scope: scope.clone() } }));
+        Ok(())
+    }
+    fn evaluate_constraints(&mut self, constraints: &'a Json, scope: &Scope<'a>, base: &str) -> Result<Vec<Json>> {
+        self.expanded_checks += array(constraints).len();
+        if self.expanded_checks > 4096 {
+            return Err(Error::new("assertion_limit", base, "Maximum 4096 expanded scalar checks."));
+        }
         let mut ids = HashSet::new();
-        let mut report = Vec::with_capacity(array(&document["constraints"]).len());
-        for (i, constraint) in array(&document["constraints"]).iter().enumerate() {
-            let path = format!("/constraints/{i}");
+        let mut report = Vec::with_capacity(array(constraints).len());
+        for (i, constraint) in array(constraints).iter().enumerate() {
+            let path = format!("{base}/{i}");
             if !ids.insert(string(&constraint["id"])) {
                 return Err(Error::new(
                     "duplicate_id",
@@ -749,11 +872,11 @@ impl<'a> Evaluator<'a> {
                 ));
             }
             let left = numeric_value(
-                &self.resolve(&constraint["left"], &scope, &format!("{path}/left"), 0)?,
+                &self.resolve(&constraint["left"], scope, &format!("{path}/left"), 0)?,
                 &path,
             )?;
             let right = numeric_value(
-                &self.resolve(&constraint["right"], &scope, &format!("{path}/right"), 0)?,
+                &self.resolve(&constraint["right"], scope, &format!("{path}/right"), 0)?,
                 &path,
             )?;
             units::equal(left, right, &path)?;
@@ -768,7 +891,7 @@ impl<'a> Evaluator<'a> {
             let mut tolerance = 0.0;
             if let Some(value) = constraint.get("tolerance") {
                 let value = numeric_value(
-                    &self.resolve(value, &scope, &format!("{path}/tolerance"), 0)?,
+                    &self.resolve(value, scope, &format!("{path}/tolerance"), 0)?,
                     &path,
                 )?;
                 units::equal(left, value, &path)?;
@@ -815,20 +938,16 @@ impl<'a> Evaluator<'a> {
                 })
                 .collect::<Vec<_>>()
                 .join("; ");
-            return Err(Error::new("constraint_failed", "/constraints", &failures)
+            return Err(Error::new("constraint_failed", base, &failures)
                 .with_details(Json::Array(report)));
         }
-        let mut geometry = Vec::with_capacity(array(&document["geometry_assertions"]).len());
-        ids.clear();
-        for (i, check) in array(&document["geometry_assertions"]).iter().enumerate() {
-            let path = format!("/geometry_assertions/{i}");
-            if check["target"] != document["root"] {
-                return Err(Error::new(
-                    "unsupported_assertion_target",
-                    &path,
-                    "Geometry checks currently target the shown root only.",
-                ));
-            }
+        Ok(report)
+    }
+    fn resolve_geometry_checks(&mut self, checks: &'a Json, scope: &Scope<'a>, base: &str) -> Result<Vec<Json>> {
+        let mut geometry = Vec::with_capacity(array(checks).len());
+        let mut ids = HashSet::new();
+        for (i, check) in array(checks).iter().enumerate() {
+            let path = format!("{base}/{i}");
             if !ids.insert(string(&check["id"])) {
                 return Err(Error::new(
                     "duplicate_id",
@@ -839,7 +958,7 @@ impl<'a> Evaluator<'a> {
             let kind = string(&check["check"]);
             let measured = matches!(kind, "height" | "width" | "depth");
             let expected = if let Some(value) = check.get("expected") {
-                let value = numeric_value(&self.resolve(value, &scope, &path, 0)?, &path)?;
+                let value = numeric_value(&self.resolve(value, scope, &path, 0)?, &path)?;
                 if measured {
                     units::equal(value, units::quantity(1.0, "mm", &path)?, &path)?;
                 } else {
@@ -864,7 +983,7 @@ impl<'a> Evaluator<'a> {
             }
             let mut tolerance = 0.0;
             if let Some(value) = check.get("tolerance") {
-                let value = numeric_value(&self.resolve(value, &scope, &path, 0)?, &path)?;
+                let value = numeric_value(&self.resolve(value, scope, &path, 0)?, &path)?;
                 if !measured {
                     return Err(Error::new(
                         "invalid_tolerance",
@@ -894,7 +1013,7 @@ impl<'a> Evaluator<'a> {
             result["tolerance"] = json!(tolerance);
             geometry.push(result);
         }
-        Ok((Json::Array(report), Json::Array(geometry)))
+        Ok(geometry)
     }
 }
 fn array(value: &Json) -> &[Json] {
@@ -1116,5 +1235,71 @@ mod tests {
         let checks = Evaluator::new(&doc).unwrap().validate_checks().unwrap();
         assert_eq!(checks.geometry_assertions[0]["expected"], 20.0);
         assert_eq!(checks.geometry_assertions[0]["tolerance"], 0.0);
+    }
+}
+
+#[cfg(test)]
+mod guarded_tests {
+    use super::*;
+
+    #[test]
+    fn guard_steps_keep_statement_order_and_stop_before_later_items() {
+        let document = json!({"parameters":[]});
+        let expression = json!({"op":"guarded","input":{"op":"list","items":[1,2,3]},"binding":"item","steps":[
+            {"kind":"where","value":{"op":"lt","args":[1,{"local":"item"}]}},
+            {"kind":"assert","value":{"op":"assert_value","value":1,"constraints":[{"id":"check","left":{"local":"item"},"relation":"le","right":2,"message":"Later item must not execute"}]}},
+            {"kind":"while","value":{"op":"lt","args":[{"local":"item"},2]}},
+            {"kind":"assert","value":{"op":"divide","args":[1,0]}}
+        ]});
+        let mut evaluator = Evaluator::new(&document).unwrap();
+        let value = evaluator.resolve(&expression, &Scope::default(), "/test", 0).unwrap();
+        assert!(sequence(&value, "/test").unwrap().is_empty());
+        assert_eq!(evaluator.constraint_report.len(), 1);
+        assert_eq!(evaluator.constraint_report[0]["actual"], 2.0);
+    }
+
+    #[test]
+    fn guarded_sequence_returns_original_values_with_lexical_binding() {
+        let document = json!({"parameters":[]});
+        let expression = json!({"op":"guarded","input":{"op":"list","items":[1,2,3]},"binding":"item","steps":[
+            {"kind":"where","value":{"op":"lt","args":[1,{"local":"item"}]}},
+            {"kind":"while","value":{"op":"lt","args":[{"local":"item"},3]}}
+        ]});
+        let mut evaluator = Evaluator::new(&document).unwrap();
+        let value = evaluator.resolve(&expression, &Scope::default(), "/test", 0).unwrap();
+        let values = sequence(&value, "/test").unwrap();
+        assert_eq!(values.len(), 1);
+        assert_eq!(numeric(&values[0], "/test").unwrap(), 2.0);
+    }
+}
+
+#[cfg(test)]
+mod memo_tests {
+    use super::*;
+
+    #[test]
+    fn memo_reuses_successful_checks_only_within_the_same_scope() {
+        let document = json!({"parameters":[]});
+        let expression = json!({"op":"memo","id":"m1","value":{"op":"assert_value","value":7,"constraints":[{"id":"c1","left":1,"relation":"eq","right":1,"message":"Once"}]}});
+        let mut evaluator = Evaluator::new(&document).unwrap();
+        let scope = Scope::default();
+        for _ in 0..3 { assert_eq!(evaluator.evaluate(&expression, &scope, "/memo", 0).unwrap(), 7.0); }
+        assert_eq!(evaluator.constraint_report.len(), 1);
+        evaluator.evaluate(&expression, &Scope::default(), "/next_iteration", 0).unwrap();
+        assert_eq!(evaluator.constraint_report.len(), 2);
+    }
+
+    #[test]
+    fn memo_rejects_conflicting_bodies_and_caches_failures() {
+        let document = json!({"parameters":[]});
+        let expression = json!({"op":"memo","id":"m1","value":{"op":"divide","args":[1,0]}});
+        let conflict = json!({"op":"memo","id":"m1","value":3});
+        let mut evaluator = Evaluator::new(&document).unwrap();
+        let scope = Scope::default();
+        let first = evaluator.resolve(&expression, &scope, "/first", 0).unwrap_err();
+        let repeated = evaluator.resolve(&expression, &scope, "/repeated", 0).unwrap_err();
+        assert_eq!(first.path, repeated.path);
+        assert_eq!(first.code, repeated.code);
+        assert_eq!(evaluator.resolve(&conflict, &scope, "/conflict", 0).unwrap_err().code, "memo_id_conflict");
     }
 }

@@ -37,7 +37,11 @@ const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+
 if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
   throw new Error('Expected one shared geometry kernel chunk within 900000 bytes')
 }
-// CAD workbench, lattice generation and print controls.
-const totalBudget = 2_920_000
+// Integrated distribution: 3D lattice adds ~13 kB; the current photo worker
+// adds ~26 kB independently. Field traits, record updates and ret functions add
+// ~15 kB over the previous 2928506-byte build. Measured total: 2943117 bytes.
+// Trait methods, defaults and associated types add ~18 kB (2960752 bytes total).
+// Keep a bounded margin; individual chunk limits remain unchanged.
+const totalBudget = 2_970_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

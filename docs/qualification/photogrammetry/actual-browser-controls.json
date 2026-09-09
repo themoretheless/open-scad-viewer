@@ -1,0 +1,10 @@
+{
+  "invalidCalibration": [
+    "DEMO: synthetic camera A: calibration is for 320×240; oriented photo is 6720×4480"
+  ],
+  "status": [
+    "Обработка остановлена. Уже полученный результат сохранён."
+  ],
+  "photos": 12,
+  "ready": true
+}

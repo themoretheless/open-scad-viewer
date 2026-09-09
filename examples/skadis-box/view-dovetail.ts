@@ -1,0 +1,13 @@
+import * as THREE from 'three';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import {STLLoader} from 'three/examples/jsm/loaders/STLLoader.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color('#202830');
+const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.1,2000);camera.position.set(190,-210,170);camera.up.set(0,0,1);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(60,25,40);controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff,0x667788,3));const light=new THREE.DirectionalLight(0xffffff,3);light.position.set(50,-100,200);scene.add(light);
+const loader=new STLLoader();
+loader.load('dovetail-box.stl',g=>{g.computeVertexNormals();scene.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x308fa3,roughness:0.6})));});
+loader.load('dovetail-hook.stl',g=>{g.computeVertexNormals();for(const x of [20,100]){const mesh=new THREE.Mesh(g.clone(),new THREE.MeshStandardMaterial({color:0xf1aa38}));mesh.geometry.translate(-10,0,-2.2);mesh.geometry.rotateY(Math.PI/2);mesh.position.set(x,0,42);scene.add(mesh);}});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+renderer.setAnimationLoop(()=>renderer.render(scene,camera));

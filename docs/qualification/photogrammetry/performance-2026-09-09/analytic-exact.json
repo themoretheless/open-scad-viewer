@@ -1,0 +1,102 @@
+[
+  {
+    "case": "plane-0-thin-false-r1-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "7e8a716bf37f93b6dc4bee695e1e9c1a1f1ac2e636d8f4a677f9fb658daf9e3f"
+  },
+  {
+    "case": "plane-0-thin-false-r1-SlantedPlane",
+    "identical": true,
+    "sha256": "12e52f68efd996e57a32af7abe0f1cd552eec86052be8931582688fd31819213"
+  },
+  {
+    "case": "plane-0-thin-false-r2-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "f60a6575e04040abd1696b82341651dca8bbaa09f01a35ff263f5bd110cdabd3"
+  },
+  {
+    "case": "plane-0-thin-false-r2-SlantedPlane",
+    "identical": true,
+    "sha256": "3609e0173d612773042cbbcfac25227542028626b1f6f93eb2df9b282c458694"
+  },
+  {
+    "case": "plane-15-thin-false-r1-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "656dbb4ada1a5ae2d5a2ee74d78cf3d525d17ac37e2336a4d1ab841dc82ccfda"
+  },
+  {
+    "case": "plane-15-thin-false-r1-SlantedPlane",
+    "identical": true,
+    "sha256": "188ce2af95561fa563172f2f419d2f805aab0a31ee14f9cadb26f92c01f62df8"
+  },
+  {
+    "case": "plane-15-thin-false-r2-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "361bfc6e3d2a3383761a030fcb20bfa290f2120b752441dd28e57c23b4a7b0bb"
+  },
+  {
+    "case": "plane-15-thin-false-r2-SlantedPlane",
+    "identical": true,
+    "sha256": "dd6a3d6bccfdb1a56c0d71636d4f070b3d1c95b1ad484305e38062f2335ab4c5"
+  },
+  {
+    "case": "plane-30-thin-false-r1-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "0b3234ec408e80d23ec0fdba6a0ce179bf880e3a39520c4ebab56ef356be736d"
+  },
+  {
+    "case": "plane-30-thin-false-r1-SlantedPlane",
+    "identical": true,
+    "sha256": "deddaeeaf69538644c7f4f326270aecb009cac39fff68c00c0e52459e813ff75"
+  },
+  {
+    "case": "plane-30-thin-false-r2-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "10196ff98c3323c3079e02e84ec07493c8995effc692e0b6de273061bde821d4"
+  },
+  {
+    "case": "plane-30-thin-false-r2-SlantedPlane",
+    "identical": true,
+    "sha256": "db20da630d8f24a661f9fd8133b8b363fc108981c8077b8f88e10320c6e9e08f"
+  },
+  {
+    "case": "plane-30-thin-true-r1-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "3008f5ce9a9d6b5ed81bfec004e5e4abe0b6bd0f5f4195b491399a3a5da4ae03"
+  },
+  {
+    "case": "plane-30-thin-true-r1-SlantedPlane",
+    "identical": true,
+    "sha256": "458a9f459087793aa0a831a24ef42407b423462b2c5abefffb5935ede27d16da"
+  },
+  {
+    "case": "plane-30-thin-true-r2-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "d4d5f943837a7fdb7e6b7401fc42990c495ab68903f98e6e59af0e3d33870652"
+  },
+  {
+    "case": "plane-30-thin-true-r2-SlantedPlane",
+    "identical": true,
+    "sha256": "e5661f28fb646ad755d6a2c81bc536d87f25a473b22e2074e171ca514fd25fe9"
+  },
+  {
+    "case": "plane-60-thin-false-r1-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "c6a38907fe66619096798adf4a1b2ae74b95311a8986c906a04ccf71e66442b0"
+  },
+  {
+    "case": "plane-60-thin-false-r1-SlantedPlane",
+    "identical": true,
+    "sha256": "26ae60f01f340296524fd059de3901fb72fd0b9e1c2e463bc29d35167cf47bd8"
+  },
+  {
+    "case": "plane-60-thin-false-r2-FrontoparallelSweep",
+    "identical": true,
+    "sha256": "d7b2eb5a6070e033433e824b17f047554bafd7424c4fae429e38b2c15d6af33f"
+  },
+  {
+    "case": "plane-60-thin-false-r2-SlantedPlane",
+    "identical": true,
+    "sha256": "9a9aa5701d91ff143a6878b3c3092bcaf776c5ed36859386251022d80552376a"
+  }
+]

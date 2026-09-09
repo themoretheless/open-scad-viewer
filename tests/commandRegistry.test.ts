@@ -164,6 +164,16 @@ describe('keyboard command routing', () => {
     expect(resolveKeyboardCommand(key('Enter', { ctrlKey: true, target: textarea }), 'editor')).toBe('render')
   })
 
+  it('opens function reference with F1 even while editing without taking modified F1', () => {
+    expect(resolveKeyboardCommand(key('F1'), 'global')).toBe('function-reference')
+    expect(resolveKeyboardCommand(key('F1', { target: { tagName: 'TEXTAREA' } }), 'editor')).toBe('function-reference')
+    expect(resolveKeyboardCommand(key('F1', { ctrlKey: true }), 'editor')).toBeNull()
+    const commands = buildPaletteDescriptors({ resolveLabel: label => label })
+    expect(commands.find(command => command.id === 'function-reference')).toMatchObject({
+      label: 'functionReference', shortcut: 'F1',
+    })
+  })
+
   it('ignores prevented and composing keyboard events', () => {
     expect(resolveKeyboardCommand(key('g', { defaultPrevented: true }), 'viewport')).toBeNull()
     expect(resolveKeyboardCommand(key('g', { isComposing: true }), 'viewport')).toBeNull()

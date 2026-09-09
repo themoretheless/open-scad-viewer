@@ -1,0 +1,139 @@
+{
+  "decision": "Accept fused NCC only. Reject explicit SlantedPlane precomputation (<0.2% full-time change in shell12 comparison).",
+  "changed_source_files": [
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/estimation.rs",
+      "baseline_sha256": "933511293f66bdf81308efa53a28d183a8e54a14ca91e21d8cc1e78474865fc9",
+      "candidate_sha256": "4428f57def70dc4046be09033c400440793f9e54318530143420306cf6d261a6"
+    },
+    {
+      "path": "crates/photogrammetry-kernel/src/dense/plane.rs",
+      "baseline_sha256": "de7f979093dc7f91e286793ddf4cc1db542155f907b8e7059a3a8509bbe0d4b2",
+      "candidate_sha256": "45dcdb4495e1aab6553d63ade86acc48b69127d3f69968c0165eee36e8842fb1"
+    }
+  ],
+  "compiler": "rustc 1.98.0-nightly (57d06900f 2026-05-27)\nbinary: rustc\ncommit-hash: 57d06900fd7d9ee06d3a7f323bb77f17ab3cfaf8\ncommit-date: 2026-05-27\nhost: aarch64-apple-darwin\nrelease: 1.98.0-nightly\nLLVM version: 22.1.6\n",
+  "input_hashes_verified": true,
+  "release_profile": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+  "production_changes": "No new dependency, no unsafe, no API/options/quality/resolution/budget/cancellation changes. Removes source [f64;25] scratch buffer and three subsequent reduction passes. Sum, squared energy and covariance retain original per-accumulator order and -0.0 identity.",
+  "real_cases": [
+    {
+      "case": "shell6",
+      "mode": "baseline",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 1717.177415965125,
+          "sparse_ms": 530.361,
+          "post_sparse_ms": 1185.0309999798237
+        },
+        "fused-ncc": {
+          "wall_ms": 1585.7088329503313,
+          "sparse_ms": 527.195,
+          "post_sparse_ms": 1059.7758329503313
+        }
+      }
+    },
+    {
+      "case": "shell6",
+      "mode": "slanted",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 3598.95904106088,
+          "sparse_ms": 525.718,
+          "post_sparse_ms": 3074.208791970238
+        },
+        "fused-ncc": {
+          "wall_ms": 3452.721790992655,
+          "sparse_ms": 528.486,
+          "post_sparse_ms": 2928.3797909926548
+        }
+      }
+    },
+    {
+      "case": "shell12",
+      "mode": "baseline",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 3827.524874941446,
+          "sparse_ms": 1647.229,
+          "post_sparse_ms": 2185.235874941446
+        },
+        "fused-ncc": {
+          "wall_ms": 3662.2805839870125,
+          "sparse_ms": 1657.102,
+          "post_sparse_ms": 1994.2565839870126
+        }
+      }
+    },
+    {
+      "case": "shell12",
+      "mode": "slanted",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 7544.278041925281,
+          "sparse_ms": 1613.272,
+          "post_sparse_ms": 5924.213999935396
+        },
+        "fused-ncc": {
+          "wall_ms": 7416.228750022128,
+          "sparse_ms": 1637.989,
+          "post_sparse_ms": 5755.706750022128
+        }
+      }
+    },
+    {
+      "case": "monstree6",
+      "mode": "baseline",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 2879.789875005372,
+          "sparse_ms": 1262.614,
+          "post_sparse_ms": 1617.1758750053718
+        },
+        "fused-ncc": {
+          "wall_ms": 2748.8557079341263,
+          "sparse_ms": 1261.912,
+          "post_sparse_ms": 1497.6387079341262
+        }
+      }
+    },
+    {
+      "case": "monstree6",
+      "mode": "slanted",
+      "identical_sparse_bytes": true,
+      "identical_surface_bytes": true,
+      "identical_work_counts": true,
+      "median": {
+        "baseline": {
+          "wall_ms": 5440.70954201743,
+          "sparse_ms": 1277.682,
+          "post_sparse_ms": 4158.561208958417
+        },
+        "fused-ncc": {
+          "wall_ms": 5328.459125012159,
+          "sparse_ms": 1283.557,
+          "post_sparse_ms": 3957.7891250121593
+        }
+      }
+    }
+  ],
+  "real_runs": 48,
+  "analytic_exact_cases": 20,
+  "analytic_all_identical": true,
+  "timing_caveat": "Parallel agent activity; indicative. post_sparse_ms subtracts sparse timer from process wall and includes dense plus PPM reading, PLY writing, process setup. Root must use controlled final comparison."
+}

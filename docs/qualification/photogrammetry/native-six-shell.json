@@ -1,0 +1,148 @@
+{
+  "date": "2026-09-09",
+  "method": "Identical six P6 PPM inputs and focal; alternating before/after native release subprocesses, one warmup plus three measured runs each. Wall clock includes PPM reading, reconstruction and PLY writing. No geometry ground truth for these photos.",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "focal": 2266.6666667,
+  "inputs": [
+    {
+      "name": "M97A2474.ppm",
+      "sha256": "8c8f66685e1264f2678a77cb87b78abe74809f8bdb4f2fc65f21bba96a3b67e2"
+    },
+    {
+      "name": "M97A2475.ppm",
+      "sha256": "98779b57f42ef2857620303a43527bbec2613b96c4c062b947130e18a7da9630"
+    },
+    {
+      "name": "M97A2476.ppm",
+      "sha256": "9869f54049fa83c30cd316f0ff28ca9b26c16024098641e40a2d6aaa9125cfbe"
+    },
+    {
+      "name": "M97A2477.ppm",
+      "sha256": "fcbd9d723f9d8f8762659a04a23bc67efd2c4141753abd31335155e32e0570cd"
+    },
+    {
+      "name": "M97A2478.ppm",
+      "sha256": "a9c7ed63837347ad098f30ba7dfbe566ee515e3f9df90c85703a1d599f3297bd"
+    },
+    {
+      "name": "M97A2479.ppm",
+      "sha256": "5609f1fbfefd7dc24d6a4edfa02e8ad09859ed972dadab2a48c7bf641095bf18"
+    }
+  ],
+  "binaries": [
+    {
+      "mode": "before",
+      "sha256": "00f4a65179ebf50cf7b4cea9aa137b728934b73b84f2ad0af50dfb53d2a29203"
+    },
+    {
+      "mode": "after",
+      "sha256": "cedfed1acaae1078fcad96b60bc5584269d7f8dbff2070753faaf83488abdcb7"
+    }
+  ],
+  "runs": [
+    {
+      "mode": "before",
+      "run": 0,
+      "warmup": true,
+      "wall_ms": 2569.7575829690322,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 451,
+      "reprojection_rmse": 0.6498642454114268,
+      "kernel_elapsed": "2.555052875s",
+      "dense_vertices": 13472,
+      "dense_faces": 11072
+    },
+    {
+      "mode": "after",
+      "run": 0,
+      "warmup": true,
+      "wall_ms": 2074.0627080667764,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 445,
+      "reprojection_rmse": 0.5212331344690957,
+      "kernel_elapsed": "1.652303167s",
+      "dense_vertices": 10281,
+      "dense_faces": 5542
+    },
+    {
+      "mode": "before",
+      "run": 1,
+      "warmup": false,
+      "wall_ms": 2499.132916913368,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 451,
+      "reprojection_rmse": 0.6498642454114268,
+      "kernel_elapsed": "2.493337375s",
+      "dense_vertices": 13472,
+      "dense_faces": 11072
+    },
+    {
+      "mode": "after",
+      "run": 1,
+      "warmup": false,
+      "wall_ms": 1755.4452499607578,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 445,
+      "reprojection_rmse": 0.5212331344690957,
+      "kernel_elapsed": "1.749828833s",
+      "dense_vertices": 10281,
+      "dense_faces": 5542
+    },
+    {
+      "mode": "before",
+      "run": 2,
+      "warmup": false,
+      "wall_ms": 2453.177290968597,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 451,
+      "reprojection_rmse": 0.6498642454114268,
+      "kernel_elapsed": "2.447170834s",
+      "dense_vertices": 13472,
+      "dense_faces": 11072
+    },
+    {
+      "mode": "after",
+      "run": 2,
+      "warmup": false,
+      "wall_ms": 1641.5672090370208,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 445,
+      "reprojection_rmse": 0.5212331344690957,
+      "kernel_elapsed": "1.635539708s",
+      "dense_vertices": 10281,
+      "dense_faces": 5542
+    },
+    {
+      "mode": "before",
+      "run": 3,
+      "warmup": false,
+      "wall_ms": 2463.101875036955,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 451,
+      "reprojection_rmse": 0.6498642454114268,
+      "kernel_elapsed": "2.456936375s",
+      "dense_vertices": 13472,
+      "dense_faces": 11072
+    },
+    {
+      "mode": "after",
+      "run": 3,
+      "warmup": false,
+      "wall_ms": 1656.4645828912035,
+      "registered": 6,
+      "images": 6,
+      "sparse_points": 445,
+      "reprojection_rmse": 0.5212331344690957,
+      "kernel_elapsed": "1.650255958s",
+      "dense_vertices": 10281,
+      "dense_faces": 5542
+    }
+  ]
+}

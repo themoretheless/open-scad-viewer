@@ -220,6 +220,12 @@ export const COMMAND_REGISTRY = [
     keywords: ['dark', 'light'], scopes: ['global'], palette: true,
   },
   {
+    id: 'function-reference', labelKey: 'functionReference', aliasKeys: ['functionReference'],
+    shortcutDisplay: 'F1', keywords: ['functions', 'reference', 'help', 'documentation', 'translate', 'справочник', 'функции'],
+    scopes: ['global'], palette: true,
+    bindings: [{ key: 'F1', scope: 'global', allowInEditable: true }],
+  },
+  {
     id: 'shortcut-help', labelKey: 'shortcuts', aliasKeys: ['commandHelp'],
     shortcutDisplay: '?', keywords: ['keyboard', 'help', 'hotkeys'],
     scopes: ['global'], palette: true,

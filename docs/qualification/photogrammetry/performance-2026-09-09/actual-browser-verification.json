@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "scope": "Two functional UI smoke runs against final actual open-scad-viewer dist; timing values in summary are observational only",
+  "completedUtc": "2026-09-09T00:38:50.313439+00:00",
+  "servedIndex": {
+    "url": "http://127.0.0.1:5203/",
+    "actualPath": "/Users/themoretheless/Documents/Sources/open-scad-viewer/dist/index.html",
+    "actualSha256": "3064bc18acac6d8fe8c49545399d21d858d9f46e45cc42f88b8ed64ef5234a98",
+    "servedSha256": "3064bc18acac6d8fe8c49545399d21d858d9f46e45cc42f88b8ed64ef5234a98",
+    "exactBytes": true
+  },
+  "cases": [
+    {
+      "case": "shell12",
+      "preset": "baseline",
+      "registered": 12,
+      "vertices": 17838,
+      "faces": 10419,
+      "actualPlySha256": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "qualifiedPlySha256": "899c6010e0d387392b08430cdbd51d52672bffa03e253ecb9fa8e611d8d060d4",
+      "exactPlyBytes": true,
+      "exactGeometryReport": true,
+      "pageErrors": [],
+      "reconstructionErrors": [],
+      "documentErrors": [],
+      "externalRequests": [],
+      "mobilePanelOverflow": false,
+      "cadGuard": {
+        "openMessage": 1,
+        "appendButton": 0
+      }
+    },
+    {
+      "case": "monstree6-slanted",
+      "preset": "slanted-plane",
+      "registered": 6,
+      "vertices": 28562,
+      "faces": 57319,
+      "actualPlySha256": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "qualifiedPlySha256": "936c85df4e62e53f891a3086bed4e70105de4b6b067a99e154b1dee921147b49",
+      "exactPlyBytes": true,
+      "exactGeometryReport": true,
+      "pageErrors": [],
+      "reconstructionErrors": [],
+      "documentErrors": [],
+      "externalRequests": [],
+      "mobilePanelOverflow": false,
+      "cadGuard": {
+        "openMessage": 1,
+        "appendButton": 0
+      }
+    }
+  ],
+  "controls": {
+    "invalidCalibration": [
+      "DEMO: synthetic camera A: calibration is for 320\u00d7240; oriented photo is 6720\u00d74480"
+    ],
+    "status": [
+      "\u041e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0430 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0430. \u0423\u0436\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043d\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d."
+    ],
+    "photos": 12,
+    "ready": true
+  },
+  "checked": [
+    "actual served index hash",
+    "JPEG/EXIF import",
+    "camera and dense reconstruction",
+    "exact PLY against qualified optimized current",
+    "exact geometry report excluding timings/work counters",
+    "JSON and PLY download",
+    "long orbit drag and Fit View",
+    "cloud/surface rendering",
+    "mobile photo panel bounds",
+    "open-surface CAD guard",
+    "invalid calibration rejection",
+    "early cancellation"
+  ],
+  "chromeClosed": true
+}

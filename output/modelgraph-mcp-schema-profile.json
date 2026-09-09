@@ -1,0 +1,27 @@
+{
+  "node": "v22.23.2",
+  "cpu": "Apple M4 Max",
+  "method": "Same SKADIS graph; Node Zod schema only; 5 warmups, 6 alternating batches of 10; per-run milliseconds",
+  "median_ms": {
+    "recursive_union": 92.41422914999998,
+    "discriminant_dispatch": 0.4161041999999952
+  },
+  "raw": {
+    "recursive_union": [
+      93.41522499999999,
+      93.84237909999999,
+      89.83608749999999,
+      92.51099999999997,
+      88.15736660000002,
+      92.3174583
+    ],
+    "discriminant_dispatch": [
+      0.5345708000000059,
+      0.4364791999999852,
+      0.43684579999999185,
+      0.3911750000000211,
+      0.3924750000000131,
+      0.3957292000000052
+    ]
+  }
+}

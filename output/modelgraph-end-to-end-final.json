@@ -1,0 +1,298 @@
+{
+  "timestamp": "2026-09-08T18:07:03.701Z",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "os_release": "25.6.0",
+    "cpu": "Apple M4 Max",
+    "cpu_count": 16,
+    "memory_bytes": 137438953472,
+    "explicit_gc": true,
+    "git_head": "58ded5875d8010b225904d5f6f3e8cb9b7ba3787",
+    "worktree_dirty": true
+  },
+  "method": "Same source, identical canonical graph and byte-identical generated SCAD. Ten compiler warmups each, two alternating complete build warmups each, five alternating measured pairs. Every sample recompiles and calls parseOpenSCAD(generatedSource,{quality:full}); same geometry backend/options. GC requested before each timed sample equally. Geometry signatures verified after timer. Excludes browser worker transport/rendering and cold startup; compiler and geometry result caching not introduced.",
+  "hashes_before": {
+    "examples/skadis-box/skadis-dovetail.modelgraph.scad": "26218e507d2d0b0717fb8580002e0790569d61f018b0f775d36596abd72077b7",
+    "output/modelgraph-text-typescript-reference.ts": "6f62234662181189acc7177e20fe5f1aa52ed165b44cf44facf7aade8b95ea71",
+    "output/modelGraph-runtime-reference.ts": "676927a3ba179ea0735b12c85a16c11810f575f4e4122344a7093f23b0710742",
+    "output/modelGraphTextNurbs-runtime-reference.ts": "3617082e845f6895d3cafea89ba61945830be86dbe1118aa59901a1ab50ca942",
+    "output/modelGraphNurbs-runtime-reference.ts": "390cd232f7fcf3d6dad2196b5344851b402ac388c3a6bed9a799414e0c03f59e",
+    "src/services/modelGraphText.ts": "bfa8acc2c3a7854dce41835bc3f3be45789531067f2efd555876873f10db8c34",
+    "src/services/modelGraph.ts": "dc6b5ded52d4384393b6366bb086ce257fc8869d400abab4bd88d9bf270032db",
+    "src/services/openscadParser.ts": "dd88ae8676cec3fac0bd884d220c3cdbaca23a8ea79ad1a54a7ed41aad33a3c5",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "a447e5918cf52a22f59dbf5ce32c75ee30f34209ac0a54d811f573629835b6e3",
+    "output/bench-modelgraph-end-to-end.mts": "5d2e9ddb499ac1b16ac2900edb637d18acdc09377f16accfb9ec1a7043b5236b"
+  },
+  "hashes_after": {
+    "examples/skadis-box/skadis-dovetail.modelgraph.scad": "26218e507d2d0b0717fb8580002e0790569d61f018b0f775d36596abd72077b7",
+    "output/modelgraph-text-typescript-reference.ts": "6f62234662181189acc7177e20fe5f1aa52ed165b44cf44facf7aade8b95ea71",
+    "output/modelGraph-runtime-reference.ts": "676927a3ba179ea0735b12c85a16c11810f575f4e4122344a7093f23b0710742",
+    "output/modelGraphTextNurbs-runtime-reference.ts": "3617082e845f6895d3cafea89ba61945830be86dbe1118aa59901a1ab50ca942",
+    "output/modelGraphNurbs-runtime-reference.ts": "390cd232f7fcf3d6dad2196b5344851b402ac388c3a6bed9a799414e0c03f59e",
+    "src/services/modelGraphText.ts": "bfa8acc2c3a7854dce41835bc3f3be45789531067f2efd555876873f10db8c34",
+    "src/services/modelGraph.ts": "dc6b5ded52d4384393b6366bb086ce257fc8869d400abab4bd88d9bf270032db",
+    "src/services/openscadParser.ts": "dd88ae8676cec3fac0bd884d220c3cdbaca23a8ea79ad1a54a7ed41aad33a3c5",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "a447e5918cf52a22f59dbf5ce32c75ee30f34209ac0a54d811f573629835b6e3",
+    "output/bench-modelgraph-end-to-end.mts": "5d2e9ddb499ac1b16ac2900edb637d18acdc09377f16accfb9ec1a7043b5236b"
+  },
+  "generated_source_sha256": "a496da81bab12a73d4ffdd53e95b4a731376a1751373baba373b4d08af69d9d2",
+  "generated_source_characters": 3476,
+  "scene": {
+    "objects": 3,
+    "vertices": 794,
+    "triangles": 756,
+    "volume": 160352.6604181734,
+    "surface_area": 79882.84953326642,
+    "bounds": {
+      "min": [
+        0,
+        -9.600000381469727,
+        0
+      ],
+      "max": [
+        120,
+        75,
+        80
+      ]
+    },
+    "warnings": [],
+    "quality": "full",
+    "reduced": false,
+    "meshes": [
+      {
+        "vertices_sha256": "97c6fccf54b958cd7299c3321c09035428aff121ced47c8884442de4e79758f8",
+        "indices_sha256": "759b47e5f60442d7d6e008737a58531bf69a78032cd062e3649f972c6c69ac41",
+        "topology": {
+          "boundary": 0,
+          "crease": 316,
+          "nonManifold": 0,
+          "degenerate": 0
+        }
+      },
+      {
+        "vertices_sha256": "681302c173e9cca0dcb1378edad2bbcefe7f40b2920c391c25e958888adb8644",
+        "indices_sha256": "57df9eb0040e79e5f6daf4ab12870e57a3c380d900daf5ca0902935b56b0cc05",
+        "topology": {
+          "boundary": 8,
+          "crease": 57,
+          "nonManifold": 0,
+          "degenerate": 4
+        }
+      },
+      {
+        "vertices_sha256": "6941132f81c6fa4c02d3b4ac73c2cf5670b24e556ca4d31200f5d8f1a5de0100",
+        "indices_sha256": "57df9eb0040e79e5f6daf4ab12870e57a3c380d900daf5ca0902935b56b0cc05",
+        "topology": {
+          "boundary": 8,
+          "crease": 57,
+          "nonManifold": 0,
+          "degenerate": 4
+        }
+      }
+    ]
+  },
+  "warmups": [
+    {
+      "round": 0,
+      "compiler": "typescript",
+      "total_ms": 138.10525000000007,
+      "phases_ms": {
+        "parseMs": 2.7666669999998703,
+        "initializeMs": 11.072583000000122,
+        "evaluateMs": 10.352582999999868,
+        "analyzeMs": 15.117750000000115
+      }
+    },
+    {
+      "round": 0,
+      "compiler": "rust",
+      "total_ms": 14.843875000000025,
+      "phases_ms": {
+        "parseMs": 1.2220839999999953,
+        "initializeMs": 0.04016599999999926,
+        "evaluateMs": 2.415959000000157,
+        "analyzeMs": 8.037040999999817
+      }
+    },
+    {
+      "round": 1,
+      "compiler": "rust",
+      "total_ms": 13.074499999999944,
+      "phases_ms": {
+        "parseMs": 0.9869579999999587,
+        "initializeMs": 0.03920900000002803,
+        "evaluateMs": 2.833750000000009,
+        "analyzeMs": 5.997916000000032
+      }
+    },
+    {
+      "round": 1,
+      "compiler": "typescript",
+      "total_ms": 108.35741699999994,
+      "phases_ms": {
+        "parseMs": 0.8050829999999678,
+        "initializeMs": 0.032500000000027285,
+        "evaluateMs": 2.565208999999868,
+        "analyzeMs": 5.899458000000095
+      }
+    }
+  ],
+  "samples": [
+    {
+      "round": 0,
+      "compiler": "typescript",
+      "compile_ms": 95.26424999999995,
+      "parse_and_geometry_ms": 11.198457999999846,
+      "total_ms": 106.4627079999998,
+      "phases_ms": {
+        "parseMs": 1.019457999999986,
+        "initializeMs": 0.037333000000217,
+        "evaluateMs": 2.421416999999792,
+        "analyzeMs": 7.595416999999998
+      }
+    },
+    {
+      "round": 0,
+      "compiler": "rust",
+      "compile_ms": 2.6287499999998545,
+      "parse_and_geometry_ms": 8.03562500000021,
+      "total_ms": 10.664375000000064,
+      "phases_ms": {
+        "parseMs": 1.0195420000000013,
+        "initializeMs": 0.033208000000058746,
+        "evaluateMs": 2.0744999999999436,
+        "analyzeMs": 4.777000000000044
+      }
+    },
+    {
+      "round": 1,
+      "compiler": "rust",
+      "compile_ms": 2.524541999999883,
+      "parse_and_geometry_ms": 9.163999999999987,
+      "total_ms": 11.68854199999987,
+      "phases_ms": {
+        "parseMs": 1.007334000000128,
+        "initializeMs": 0.03312499999992724,
+        "evaluateMs": 2.045415999999932,
+        "analyzeMs": 5.892166999999972
+      }
+    },
+    {
+      "round": 1,
+      "compiler": "typescript",
+      "compile_ms": 106.97974999999997,
+      "parse_and_geometry_ms": 7.956916000000092,
+      "total_ms": 114.93666600000006,
+      "phases_ms": {
+        "parseMs": 1.0792499999997744,
+        "initializeMs": 0.04275000000006912,
+        "evaluateMs": 2.1580830000000333,
+        "analyzeMs": 4.551042000000052
+      }
+    },
+    {
+      "round": 2,
+      "compiler": "typescript",
+      "compile_ms": 94.95024999999987,
+      "parse_and_geometry_ms": 9.112458999999944,
+      "total_ms": 104.06270899999981,
+      "phases_ms": {
+        "parseMs": 1.0242499999999382,
+        "initializeMs": 0.11904100000037943,
+        "evaluateMs": 2.233541999999943,
+        "analyzeMs": 5.6447079999998095
+      }
+    },
+    {
+      "round": 2,
+      "compiler": "rust",
+      "compile_ms": 2.748291999999765,
+      "parse_and_geometry_ms": 7.844665999999961,
+      "total_ms": 10.592957999999726,
+      "phases_ms": {
+        "parseMs": 1.1042919999999867,
+        "initializeMs": 0.04175000000032014,
+        "evaluateMs": 2.087833000000046,
+        "analyzeMs": 4.505499999999756
+      }
+    },
+    {
+      "round": 3,
+      "compiler": "rust",
+      "compile_ms": 2.6434589999998934,
+      "parse_and_geometry_ms": 9.222416000000067,
+      "total_ms": 11.86587499999996,
+      "phases_ms": {
+        "parseMs": 1.0551249999998618,
+        "initializeMs": 0.04233300000032614,
+        "evaluateMs": 2.2646669999999176,
+        "analyzeMs": 5.730999999999767
+      }
+    },
+    {
+      "round": 3,
+      "compiler": "typescript",
+      "compile_ms": 102.81325000000015,
+      "parse_and_geometry_ms": 7.5808750000001055,
+      "total_ms": 110.39412500000026,
+      "phases_ms": {
+        "parseMs": 1.0367499999997563,
+        "initializeMs": 0.0650420000001759,
+        "evaluateMs": 2.0365419999998267,
+        "analyzeMs": 4.363000000000284
+      }
+    },
+    {
+      "round": 4,
+      "compiler": "typescript",
+      "compile_ms": 94.05529100000012,
+      "parse_and_geometry_ms": 8.814875000000029,
+      "total_ms": 102.87016600000015,
+      "phases_ms": {
+        "parseMs": 0.9990840000000389,
+        "initializeMs": 0.03320799999983137,
+        "evaluateMs": 2.042917000000216,
+        "analyzeMs": 5.623749999999745
+      }
+    },
+    {
+      "round": 4,
+      "compiler": "rust",
+      "compile_ms": 2.580916000000343,
+      "parse_and_geometry_ms": 7.905999999999949,
+      "total_ms": 10.486916000000292,
+      "phases_ms": {
+        "parseMs": 0.9676669999998921,
+        "initializeMs": 0.0314579999999296,
+        "evaluateMs": 2.1233750000001237,
+        "analyzeMs": 4.622458999999708
+      }
+    }
+  ],
+  "median_ms": {
+    "typescript": {
+      "compile_ms": 95.26424999999995,
+      "parse_and_geometry_ms": 8.814875000000029,
+      "total_ms": 106.4627079999998,
+      "phases_ms": {
+        "parseMs": 1.0242499999999382,
+        "initializeMs": 0.04275000000006912,
+        "evaluateMs": 2.1580830000000333,
+        "analyzeMs": 5.623749999999745
+      }
+    },
+    "rust": {
+      "compile_ms": 2.6287499999998545,
+      "parse_and_geometry_ms": 8.03562500000021,
+      "total_ms": 10.664375000000064,
+      "phases_ms": {
+        "parseMs": 1.0195420000000013,
+        "initializeMs": 0.033208000000058746,
+        "evaluateMs": 2.087833000000046,
+        "analyzeMs": 4.777000000000044
+      }
+    }
+  }
+}

@@ -2,8 +2,28 @@
 // parameter-dependent lists execute in the bounded Rust evaluator.
 impl Compiler {
     fn callback(&mut self, ast: &J, e: &Env, b: usize, arity: usize) -> R<(J, V)> {
-        let V::Lambda(f) = self.eval(ast, e, b)? else {
-            return Err("Sequence callback requires a lambda".into());
+        let callable = self.eval(ast, e, b)?;
+        if let V::Function(f) = &callable {
+            let inputs = arr(&f.ast, "inputs");
+            let count = if arity == 1 && inputs.get(1).is_some_and(|input| input.get("default").is_none()) { 2 } else { arity };
+            if inputs.len() < count || inputs[count..].iter().any(|input| input.get("default").is_none()) {
+                return Err(format!("Callback requires {arity} parameters (an optional index is allowed for single-item callbacks)"));
+            }
+            let mut scope = e.clone();
+            let mut names = Vec::new();
+            let mut args = Vec::new();
+            for _ in 0..count {
+                self.serial += 1;
+                let local = format!("q{}", self.serial);
+                scope.insert(local.clone(), V::Json(json!({"local":&local})));
+                args.push(json!({"value":{"kind":"name","value":&local}}));
+                names.push(local);
+            }
+            let body = self.invoke(f, &json!({"args":args}), &scope, b)?;
+            return Ok((json!({"op":"lambda","parameters":names}), body));
+        }
+        let V::Lambda(f) = callable else {
+            return Err("Sequence callback requires a lambda or function".into());
         };
         if f.parameters.len() != arity && !(arity == 1 && f.parameters.len() == 2) {
             return Err(format!("Callback requires {arity} parameters"));

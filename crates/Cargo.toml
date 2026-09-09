@@ -1,7 +1,15 @@
 [workspace]
-members = ["value-codec", "modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "subdivision-kernel", "sdf-kernel"]
+members = ["value-codec", "modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "subdivision-kernel", "sdf-kernel", "photogrammetry-kernel", "photogrammetry-wasm"]
 resolver = "2"
 
 [profile.release]
 opt-level = "s"
 lto = true
+
+# Photogrammetry hot loops: measured against the size profile on native and WASM.
+# Other geometry kernels retain the workspace size profile.
+[profile.release.package.photogrammetry-kernel]
+opt-level = 3
+
+[profile.release.package.photogrammetry-wasm]
+opt-level = 3

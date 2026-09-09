@@ -1,0 +1,1148 @@
+[
+  {
+    "dataset": {
+      "name": "seashell",
+      "count": 12,
+      "preset": "baseline"
+    },
+    "elapsedMs": 6503.607708,
+    "files": [
+      "M97A2474.JPG",
+      "M97A2475.JPG",
+      "M97A2476.JPG",
+      "M97A2477.JPG",
+      "M97A2478.JPG",
+      "M97A2479.JPG",
+      "M97A2480.JPG",
+      "M97A2481.JPG",
+      "M97A2482.JPG",
+      "M97A2483.JPG",
+      "M97A2484.JPG",
+      "M97A2485.JPG"
+    ],
+    "focals": [
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85",
+      "85"
+    ],
+    "stats": [
+      "Связано снимков: 12 / 12 · 17,838 точек · 10,419 треугольников"
+    ],
+    "panelErrors": [],
+    "documentErrors": [],
+    "errors": [],
+    "external": [],
+    "vertexCount": 17838,
+    "faceCount": 10419,
+    "mobile": {
+      "width": 390,
+      "overflow": false,
+      "photos": 12
+    },
+    "cadGuard": {
+      "openMessage": 1,
+      "appendButton": 0
+    },
+    "report": {
+      "format": "open-scad-viewer/photo-report",
+      "version": 1,
+      "settings": {
+        "dense": true,
+        "resolution": 128,
+        "maxImageSide": 960,
+        "densePreset": "baseline"
+      },
+      "inputs": [
+        {
+          "image": 0,
+          "name": "M97A2474.JPG",
+          "bytes": 6024958,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 1,
+          "name": "M97A2475.JPG",
+          "bytes": 6122614,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 2,
+          "name": "M97A2476.JPG",
+          "bytes": 6077379,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 3,
+          "name": "M97A2477.JPG",
+          "bytes": 6059604,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 4,
+          "name": "M97A2478.JPG",
+          "bytes": 5815773,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 5,
+          "name": "M97A2479.JPG",
+          "bytes": 6118144,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 6,
+          "name": "M97A2480.JPG",
+          "bytes": 5551877,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 7,
+          "name": "M97A2481.JPG",
+          "bytes": 5435922,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 8,
+          "name": "M97A2482.JPG",
+          "bytes": 5559164,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 9,
+          "name": "M97A2483.JPG",
+          "bytes": 5810989,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 10,
+          "name": "M97A2484.JPG",
+          "bytes": 6154250,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        },
+        {
+          "image": 11,
+          "name": "M97A2485.JPG",
+          "bytes": 6267230,
+          "equivalent": 85,
+          "width": 960,
+          "height": 640,
+          "focalPixels": 2266.6666666666665
+        }
+      ],
+      "sparse": {
+        "bundleRuns": [
+          {
+            "acceptedSteps": 12,
+            "finalCost": 29.74225220333148,
+            "initialCost": 129.0057361818291,
+            "iterations": 12,
+            "observations": 608
+          },
+          {
+            "acceptedSteps": 12,
+            "finalCost": 36.717871256569126,
+            "initialCost": 75.19915901289556,
+            "iterations": 12,
+            "observations": 718
+          },
+          {
+            "acceptedSteps": 10,
+            "finalCost": 46.24502181609033,
+            "initialCost": 61.97882397748853,
+            "iterations": 10,
+            "observations": 874
+          },
+          {
+            "acceptedSteps": 8,
+            "finalCost": 77.2044695545073,
+            "initialCost": 89.98959774035055,
+            "iterations": 8,
+            "observations": 1067
+          },
+          {
+            "acceptedSteps": 9,
+            "finalCost": 127.42666763232327,
+            "initialCost": 147.17316682763277,
+            "iterations": 9,
+            "observations": 1380
+          },
+          {
+            "acceptedSteps": 9,
+            "finalCost": 149.56248413036894,
+            "initialCost": 165.4605664543283,
+            "iterations": 9,
+            "observations": 1497
+          },
+          {
+            "acceptedSteps": 8,
+            "finalCost": 162.39587260427368,
+            "initialCost": 170.4905237102303,
+            "iterations": 8,
+            "observations": 1592
+          },
+          {
+            "acceptedSteps": 8,
+            "finalCost": 196.90908805485557,
+            "initialCost": 213.74782998826265,
+            "iterations": 8,
+            "observations": 1725
+          },
+          {
+            "acceptedSteps": 8,
+            "finalCost": 231.94523237716635,
+            "initialCost": 256.9905356316812,
+            "iterations": 8,
+            "observations": 1890
+          },
+          {
+            "acceptedSteps": 7,
+            "finalCost": 258.7537510977379,
+            "initialCost": 273.273167553171,
+            "iterations": 7,
+            "observations": 2051
+          },
+          {
+            "acceptedSteps": 1,
+            "finalCost": 258.7537510385436,
+            "initialCost": 258.7537510977379,
+            "iterations": 1,
+            "observations": 2051
+          }
+        ],
+        "calibrations": [
+          {
+            "image": 0,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 1,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 2,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 3,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 4,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 5,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 6,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 7,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 8,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 9,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 10,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          },
+          {
+            "image": 11,
+            "inputSize": [
+              960,
+              640
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 480,
+              "cy": 320,
+              "focal": 2266.6666666666665,
+              "height": 640,
+              "width": 960
+            },
+            "resampled": false
+          }
+        ],
+        "computedPairs": 66,
+        "images": [
+          {
+            "acceptedObservations": 206,
+            "candidateCorrespondences": 83,
+            "conflictingMatches": 8,
+            "features": 638,
+            "image": 0,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 210,
+            "candidateCorrespondences": 55,
+            "conflictingMatches": 3,
+            "features": 656,
+            "image": 1,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 173,
+            "candidateCorrespondences": 50,
+            "conflictingMatches": 3,
+            "features": 604,
+            "image": 2,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 151,
+            "candidateCorrespondences": 73,
+            "conflictingMatches": 0,
+            "features": 547,
+            "image": 3,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 296,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 452,
+            "image": 4,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 305,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 582,
+            "image": 5,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 126,
+            "candidateCorrespondences": 71,
+            "conflictingMatches": 0,
+            "features": 416,
+            "image": 6,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 114,
+            "candidateCorrespondences": 48,
+            "conflictingMatches": 6,
+            "features": 415,
+            "image": 7,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 108,
+            "candidateCorrespondences": 33,
+            "conflictingMatches": 1,
+            "features": 444,
+            "image": 8,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 121,
+            "candidateCorrespondences": 36,
+            "conflictingMatches": 4,
+            "features": 589,
+            "image": 9,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 144,
+            "candidateCorrespondences": 54,
+            "conflictingMatches": 0,
+            "features": 728,
+            "image": 10,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 97,
+            "candidateCorrespondences": 57,
+            "conflictingMatches": 9,
+            "features": 762,
+            "image": 11,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          }
+        ],
+        "initialPair": [
+          4,
+          5
+        ],
+        "matchingRequests": 418,
+        "seedPairsTested": 12,
+        "seedTrials": [
+          {
+            "error": null,
+            "pair": [
+              4,
+              5
+            ],
+            "points": 875,
+            "registeredImages": 12,
+            "reprojectionRmse": 0.5023142454756246
+          }
+        ],
+        "warnings": [
+          "Seed 0-3 declined: only 16/36 correspondences support the pose (required 50%)"
+        ]
+      },
+      "dense": {
+        "consistentSamples": 18181,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6720832,
+        "evaluatedSourcePatches": 20162496,
+        "fusedSamples": 343,
+        "patchRadius": 1,
+        "photometricSamples": 32962,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14781,
+        "sampledSourcePixels": 153956881,
+        "selectedSourcePairs": 36,
+        "triangles": 10419,
+        "vertices": 17838,
+        "viewReports": [
+          {
+            "consistentSamples": 1528,
+            "image": 0,
+            "photometricSamples": 2722,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1654,
+            "image": 1,
+            "photometricSamples": 2672,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1604,
+            "image": 2,
+            "photometricSamples": 2474,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1485,
+            "image": 3,
+            "photometricSamples": 2803,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 2206,
+            "image": 4,
+            "photometricSamples": 3807,
+            "sourceImages": [
+              6,
+              3,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2337,
+            "image": 5,
+            "photometricSamples": 3986,
+            "sourceImages": [
+              3,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1354,
+            "image": 6,
+            "photometricSamples": 2902,
+            "sourceImages": [
+              7,
+              4,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1030,
+            "image": 7,
+            "photometricSamples": 2403,
+            "sourceImages": [
+              6,
+              8,
+              9
+            ]
+          },
+          {
+            "consistentSamples": 1232,
+            "image": 8,
+            "photometricSamples": 2426,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1464,
+            "image": 9,
+            "photometricSamples": 2426,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1375,
+            "image": 10,
+            "photometricSamples": 2420,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 912,
+            "image": 11,
+            "photometricSamples": 1921,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "timings": {
+        "sparseMs": 2294.100000023842,
+        "denseMs": 2331.1999999284744,
+        "preparationMs": 3.700000047683716
+      }
+    }
+  },
+  {
+    "dataset": {
+      "name": "monstree",
+      "count": 6,
+      "preset": "slanted-plane"
+    },
+    "elapsedMs": 6346.314833999999,
+    "files": [
+      "IMG_1024.JPG",
+      "IMG_1025.JPG",
+      "IMG_1026.JPG",
+      "IMG_1027.JPG",
+      "IMG_1028.JPG",
+      "IMG_1029.JPG"
+    ],
+    "focals": [
+      "28",
+      "28",
+      "28",
+      "28",
+      "28",
+      "28"
+    ],
+    "stats": [
+      "Связано снимков: 6 / 6 · 28,562 точек · 57,319 треугольников"
+    ],
+    "panelErrors": [],
+    "documentErrors": [],
+    "errors": [],
+    "external": [],
+    "vertexCount": 28562,
+    "faceCount": 57319,
+    "mobile": {
+      "width": 390,
+      "overflow": false,
+      "photos": 6
+    },
+    "cadGuard": {
+      "openMessage": 1,
+      "appendButton": 0
+    },
+    "report": {
+      "format": "open-scad-viewer/photo-report",
+      "version": 1,
+      "settings": {
+        "dense": true,
+        "resolution": 128,
+        "maxImageSide": 960,
+        "densePreset": "slanted-plane"
+      },
+      "inputs": [
+        {
+          "image": 0,
+          "name": "IMG_1024.JPG",
+          "bytes": 4369015,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 1,
+          "name": "IMG_1025.JPG",
+          "bytes": 3819662,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 2,
+          "name": "IMG_1026.JPG",
+          "bytes": 4234131,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 3,
+          "name": "IMG_1027.JPG",
+          "bytes": 3809194,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 4,
+          "name": "IMG_1028.JPG",
+          "bytes": 3843331,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        },
+        {
+          "image": 5,
+          "name": "IMG_1029.JPG",
+          "bytes": 3827121,
+          "equivalent": 28,
+          "width": 720,
+          "height": 960,
+          "focalPixels": 776.5802747153207
+        }
+      ],
+      "sparse": {
+        "bundleRuns": [
+          {
+            "acceptedSteps": 7,
+            "finalCost": 21.08960496627377,
+            "initialCost": 38.227230946079835,
+            "iterations": 7,
+            "observations": 651
+          },
+          {
+            "acceptedSteps": 6,
+            "finalCost": 31.983584058006187,
+            "initialCost": 45.21427744506561,
+            "iterations": 6,
+            "observations": 906
+          },
+          {
+            "acceptedSteps": 7,
+            "finalCost": 43.03213913748554,
+            "initialCost": 58.733299527241286,
+            "iterations": 7,
+            "observations": 1063
+          },
+          {
+            "acceptedSteps": 6,
+            "finalCost": 56.55733036082897,
+            "initialCost": 65.77682947209377,
+            "iterations": 6,
+            "observations": 1226
+          },
+          {
+            "acceptedSteps": 1,
+            "finalCost": 56.55733035896927,
+            "initialCost": 56.55733036082897,
+            "iterations": 1,
+            "observations": 1226
+          }
+        ],
+        "calibrations": [
+          {
+            "image": 0,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          },
+          {
+            "image": 1,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          },
+          {
+            "image": 2,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          },
+          {
+            "image": 3,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          },
+          {
+            "image": 4,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          },
+          {
+            "image": 5,
+            "inputSize": [
+              720,
+              960
+            ],
+            "mode": "focal-hint",
+            "output": {
+              "cx": 360,
+              "cy": 480,
+              "focal": 776.5802747153207,
+              "height": 960,
+              "width": 720
+            },
+            "resampled": false
+          }
+        ],
+        "computedPairs": 15,
+        "images": [
+          {
+            "acceptedObservations": 231,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 0,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 293,
+            "candidateCorrespondences": 0,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 1,
+            "poseAttempts": 0,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 228,
+            "candidateCorrespondences": 56,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 2,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 211,
+            "candidateCorrespondences": 59,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 3,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 161,
+            "candidateCorrespondences": 49,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 4,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          },
+          {
+            "acceptedObservations": 102,
+            "candidateCorrespondences": 43,
+            "conflictingMatches": 0,
+            "features": 900,
+            "image": 5,
+            "poseAttempts": 1,
+            "reason": "registered",
+            "registered": true
+          }
+        ],
+        "initialPair": [
+          0,
+          1
+        ],
+        "matchingRequests": 69,
+        "seedPairsTested": 10,
+        "seedTrials": [
+          {
+            "error": null,
+            "pair": [
+              0,
+              1
+            ],
+            "points": 513,
+            "registeredImages": 6,
+            "reprojectionRmse": 0.30374855005788315
+          }
+        ],
+        "warnings": []
+      },
+      "dense": {
+        "consistentSamples": 38528,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4216320,
+        "evaluatedSourcePatches": 12141626,
+        "fusedSamples": 9966,
+        "patchRadius": 2,
+        "photometricSamples": 42364,
+        "preset": "slanted-plane",
+        "rejectedInconsistentSamples": 3836,
+        "sampledSourcePixels": 274272658,
+        "selectedSourcePairs": 18,
+        "triangles": 57319,
+        "vertices": 28562,
+        "viewReports": [
+          {
+            "consistentSamples": 5901,
+            "image": 0,
+            "photometricSamples": 6417,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 7718,
+            "image": 1,
+            "photometricSamples": 8248,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 6974,
+            "image": 2,
+            "photometricSamples": 7503,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 7134,
+            "image": 3,
+            "photometricSamples": 7736,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 5843,
+            "image": 4,
+            "photometricSamples": 6681,
+            "sourceImages": [
+              5,
+              3,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 4958,
+            "image": 5,
+            "photometricSamples": 5779,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "timings": {
+        "sparseMs": 1632.2000000476837,
+        "denseMs": 4069.0999999046326,
+        "preparationMs": 2.799999952316284
+      }
+    }
+  }
+]

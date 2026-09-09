@@ -1,0 +1,4426 @@
+{
+  "method": "Node V8 WASM + real TypeScript adapter, same frozen PPM, 128 depth side; new process each observation, warmup+rotating measured order; total excludes input read/TS import/JPEG decode/UI but includes unpack/compile/add/sparse/dense+decode; RSS entireNode notonlyWASM",
+  "node": "v22.23.2",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "runs": [
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 18.564334000000002,
+      "add_ms": 2.362832999999995,
+      "sparse_ms": 849.1191249999999,
+      "dense_ms": 1203.193292,
+      "total_ms": 2073.239584,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 136757248
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 18.99541699999999,
+      "add_ms": 2.351957999999996,
+      "sparse_ms": 732.043334,
+      "dense_ms": 1118.771041,
+      "total_ms": 1872.16175,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 142180352
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 19.455416,
+      "add_ms": 2.2412920000000014,
+      "sparse_ms": 610.7022919999999,
+      "dense_ms": 571.270375,
+      "total_ms": 1203.669375,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 149585920
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 18.315665999999993,
+      "add_ms": 2.612334000000004,
+      "sparse_ms": 738.320833,
+      "dense_ms": 1115.988833,
+      "total_ms": 1875.237666,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 137166848
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 19.494666999999993,
+      "add_ms": 2.4323750000000075,
+      "sparse_ms": 599.566625,
+      "dense_ms": 575.3794170000001,
+      "total_ms": 1196.873084,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 139624448
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 18.403833000000006,
+      "add_ms": 2.147041999999999,
+      "sparse_ms": 839.910708,
+      "dense_ms": 1186.798042,
+      "total_ms": 2047.259625,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 134987776
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 19.44895799999999,
+      "add_ms": 3.106042000000002,
+      "sparse_ms": 602.1765829999999,
+      "dense_ms": 574.4724590000001,
+      "total_ms": 1199.204042,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 137936896
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 19.216459,
+      "add_ms": 2.6014160000000004,
+      "sparse_ms": 853.08875,
+      "dense_ms": 1238.5984589999998,
+      "total_ms": 2113.505084,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 136773632
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 20.011291,
+      "add_ms": 2.5670420000000007,
+      "sparse_ms": 755.468083,
+      "dense_ms": 1115.853125,
+      "total_ms": 1893.899541,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 135069696
+    },
+    {
+      "stage": "baseline",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 18.94695800000001,
+      "add_ms": 2.682582999999994,
+      "sparse_ms": 839.443584,
+      "dense_ms": 1176.8782500000002,
+      "total_ms": 2037.951375,
+      "wasm_memory_bytes": 41811968,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 136691712
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 19.770083,
+      "add_ms": 2.700084000000004,
+      "sparse_ms": 754.820791,
+      "dense_ms": 1128.209,
+      "total_ms": 1905.499958,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 137560064
+    },
+    {
+      "stage": "current",
+      "case": "shell6",
+      "preset": "baseline",
+      "init_ms": 20.318958999999992,
+      "add_ms": 3.15925,
+      "sparse_ms": 601.018916,
+      "dense_ms": 573.5205839999999,
+      "total_ms": 1198.017709,
+      "wasm_memory_bytes": 44302336,
+      "registered": 6,
+      "points": 597,
+      "vertices": 10507,
+      "faces": 6139,
+      "sparse_hash": "0a78928bf7fd2feed2f611a8b0db62422c0abc7faccda3379d5e08a802489736",
+      "surface_hash": "29108a9c5e7aa6aa04e94ac05569893df9abaa7f131b3fd108ed6693b258d0f1",
+      "report_hash": "6ea75747cce4e7f1a4d6e6a01af3eba78901f2fb74966fd4663e620df06e5af4",
+      "counters": {
+        "consistentSamples": 10748,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 3342400,
+        "evaluatedSourcePatches": 10027200,
+        "fusedSamples": 241,
+        "patchRadius": 1,
+        "photometricSamples": 19363,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 8615,
+        "sampledSourcePixels": 76708744,
+        "selectedSourcePairs": 18,
+        "triangles": 6139,
+        "vertices": 10507,
+        "viewReports": [
+          {
+            "consistentSamples": 1564,
+            "image": 0,
+            "photometricSamples": 2795,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1852,
+            "image": 1,
+            "photometricSamples": 2996,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1658,
+            "image": 2,
+            "photometricSamples": 2677,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1595,
+            "image": 3,
+            "photometricSamples": 3033,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1942,
+            "image": 4,
+            "photometricSamples": 3794,
+            "sourceImages": [
+              3,
+              2,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 2137,
+            "image": 5,
+            "photometricSamples": 4068,
+            "sourceImages": [
+              3,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 139755520
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.611292000000006,
+      "add_ms": 3.152249999999995,
+      "sparse_ms": 2131.536458,
+      "dense_ms": 2283.526417,
+      "total_ms": 4436.826417,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 174325760
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.261500000000012,
+      "add_ms": 3.401541999999992,
+      "sparse_ms": 1873.4057500000001,
+      "dense_ms": 2185.0589580000005,
+      "total_ms": 4081.1277500000006,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 181583872
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.64604200000001,
+      "add_ms": 5.073624999999993,
+      "sparse_ms": 1623.272708,
+      "dense_ms": 1126.742292,
+      "total_ms": 2774.7346669999997,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 181698560
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.813541999999998,
+      "add_ms": 3.2119169999999997,
+      "sparse_ms": 1886.1151249999998,
+      "dense_ms": 2184.3723750000004,
+      "total_ms": 4092.512959,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 188235776
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.317542000000003,
+      "add_ms": 3.5882919999999956,
+      "sparse_ms": 1593.0645,
+      "dense_ms": 1136.6909580000001,
+      "total_ms": 2752.6612920000002,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 182910976
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.002332999999993,
+      "add_ms": 4.968500000000006,
+      "sparse_ms": 2111.954625,
+      "dense_ms": 2584.4145829999998,
+      "total_ms": 4720.3400409999995,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 177012736
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.23474999999999,
+      "add_ms": 3.2147500000000093,
+      "sparse_ms": 1588.719208,
+      "dense_ms": 1124.0173330000002,
+      "total_ms": 2735.186041,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 182697984
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.274917000000002,
+      "add_ms": 3.202207999999999,
+      "sparse_ms": 2083.568708,
+      "dense_ms": 2280.840584,
+      "total_ms": 4385.886417,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 176062464
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.461917,
+      "add_ms": 3.601832999999999,
+      "sparse_ms": 1899.371667,
+      "dense_ms": 2184.0856249999997,
+      "total_ms": 4105.521042,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 180371456
+    },
+    {
+      "stage": "baseline",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.644125000000003,
+      "add_ms": 3.810874999999996,
+      "sparse_ms": 2091.166208,
+      "dense_ms": 2295.325542,
+      "total_ms": 4408.94675,
+      "wasm_memory_bytes": 55705600,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 176144384
+    },
+    {
+      "stage": "combined-size",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 18.707250000000002,
+      "add_ms": 3.168707999999995,
+      "sparse_ms": 1867.305833,
+      "dense_ms": 2278.4815839999997,
+      "total_ms": 4167.663375,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 181567488
+    },
+    {
+      "stage": "current",
+      "case": "shell12",
+      "preset": "baseline",
+      "init_ms": 19.560625,
+      "add_ms": 3.808041000000003,
+      "sparse_ms": 1597.350875,
+      "dense_ms": 1146.7340840000002,
+      "total_ms": 2767.453625,
+      "wasm_memory_bytes": 60686336,
+      "registered": 12,
+      "points": 977,
+      "vertices": 17158,
+      "faces": 10782,
+      "sparse_hash": "964957cd43139effaa6507b102be5a106be38b139016186fa404a801c9ddb0ad",
+      "surface_hash": "278532ff223a65390a416fed80b7dd7563de0c744ec676df7e41bcf12377bbea",
+      "report_hash": "81e1180e18115ca4a472519aded3cd4f840536d8c022f731f69b841bef4fda1f",
+      "counters": {
+        "consistentSamples": 17549,
+        "depthHypotheses": 64,
+        "estimatedMaps": 12,
+        "evaluatedHypotheses": 6543040,
+        "evaluatedSourcePatches": 19629120,
+        "fusedSamples": 391,
+        "patchRadius": 1,
+        "photometricSamples": 32090,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 14541,
+        "sampledSourcePixels": 148130522,
+        "selectedSourcePairs": 36,
+        "triangles": 10782,
+        "vertices": 17158,
+        "viewReports": [
+          {
+            "consistentSamples": 1697,
+            "image": 0,
+            "photometricSamples": 2949,
+            "sourceImages": [
+              1,
+              2,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1874,
+            "image": 1,
+            "photometricSamples": 3020,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 1757,
+            "image": 2,
+            "photometricSamples": 2691,
+            "sourceImages": [
+              1,
+              3,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 1547,
+            "image": 3,
+            "photometricSamples": 3049,
+            "sourceImages": [
+              2,
+              5,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1510,
+            "image": 4,
+            "photometricSamples": 2585,
+            "sourceImages": [
+              3,
+              6,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 1574,
+            "image": 5,
+            "photometricSamples": 2716,
+            "sourceImages": [
+              3,
+              2,
+              6
+            ]
+          },
+          {
+            "consistentSamples": 1331,
+            "image": 6,
+            "photometricSamples": 2998,
+            "sourceImages": [
+              4,
+              7,
+              5
+            ]
+          },
+          {
+            "consistentSamples": 1059,
+            "image": 7,
+            "photometricSamples": 2350,
+            "sourceImages": [
+              8,
+              6,
+              4
+            ]
+          },
+          {
+            "consistentSamples": 1249,
+            "image": 8,
+            "photometricSamples": 2526,
+            "sourceImages": [
+              9,
+              7,
+              10
+            ]
+          },
+          {
+            "consistentSamples": 1536,
+            "image": 9,
+            "photometricSamples": 2577,
+            "sourceImages": [
+              10,
+              8,
+              11
+            ]
+          },
+          {
+            "consistentSamples": 1453,
+            "image": 10,
+            "photometricSamples": 2547,
+            "sourceImages": [
+              11,
+              9,
+              8
+            ]
+          },
+          {
+            "consistentSamples": 962,
+            "image": 11,
+            "photometricSamples": 2082,
+            "sourceImages": [
+              10,
+              9,
+              0
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 188252160
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 19.026542000000006,
+      "add_ms": 2.3173749999999984,
+      "sparse_ms": 1764.501916,
+      "dense_ms": 1487.7764590000002,
+      "total_ms": 3273.622292,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 158777344
+    },
+    {
+      "stage": "combined-size",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.912875,
+      "add_ms": 2.294124999999994,
+      "sparse_ms": 1414.13575,
+      "dense_ms": 1445.8335419999999,
+      "total_ms": 2881.1762919999996,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 159940608
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 19.335791999999998,
+      "add_ms": 2.4519580000000047,
+      "sparse_ms": 1216.718458,
+      "dense_ms": 740.0650840000001,
+      "total_ms": 1978.571292,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 0,
+      "warmup": true,
+      "max_rss_bytes": 156319744
+    },
+    {
+      "stage": "combined-size",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.382999999999996,
+      "add_ms": 2.1782090000000096,
+      "sparse_ms": 1403.870416,
+      "dense_ms": 1454.763167,
+      "total_ms": 2879.1947920000002,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 160120832
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 19.189624999999992,
+      "add_ms": 2.501666,
+      "sparse_ms": 1218.975042,
+      "dense_ms": 748.4635420000002,
+      "total_ms": 1989.129875,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 158253056
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.812083,
+      "add_ms": 2.2457080000000076,
+      "sparse_ms": 1877.55325,
+      "dense_ms": 1505.4909590000002,
+      "total_ms": 3404.1020000000003,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 1,
+      "warmup": false,
+      "max_rss_bytes": 156483584
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 19.73770900000001,
+      "add_ms": 2.303083000000001,
+      "sparse_ms": 1220.844,
+      "dense_ms": 748.7545830000001,
+      "total_ms": 1991.6393750000002,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 160579584
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.9165,
+      "add_ms": 2.343208000000004,
+      "sparse_ms": 1761.095417,
+      "dense_ms": 1520.604791,
+      "total_ms": 3302.959916,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 156467200
+    },
+    {
+      "stage": "combined-size",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.30983400000001,
+      "add_ms": 2.9137910000000034,
+      "sparse_ms": 1400.91975,
+      "dense_ms": 1438.9228339999997,
+      "total_ms": 2861.0662089999996,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 2,
+      "warmup": false,
+      "max_rss_bytes": 159924224
+    },
+    {
+      "stage": "baseline",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.830792000000002,
+      "add_ms": 2.320915999999997,
+      "sparse_ms": 1768.458625,
+      "dense_ms": 1481.772125,
+      "total_ms": 3271.382458,
+      "wasm_memory_bytes": 46792704,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 156352512
+    },
+    {
+      "stage": "combined-size",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 18.783125000000013,
+      "add_ms": 2.494499999999988,
+      "sparse_ms": 1421.144208,
+      "dense_ms": 1446.1393749999997,
+      "total_ms": 2888.5612079999996,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 156647424
+    },
+    {
+      "stage": "current",
+      "case": "monstree6",
+      "preset": "baseline",
+      "init_ms": 19.358041999999998,
+      "add_ms": 2.3230410000000035,
+      "sparse_ms": 1222.1074170000002,
+      "dense_ms": 737.0925,
+      "total_ms": 1980.881,
+      "wasm_memory_bytes": 49610752,
+      "registered": 6,
+      "points": 570,
+      "vertices": 19422,
+      "faces": 18210,
+      "sparse_hash": "c5d33f9567ce05e2e8a704cc95bf51926c8df585abbf33acb0537f0640791cae",
+      "surface_hash": "5026cfaabaf5f2466ca28a0fcf637740238157969132469eb4e75dc54b1fca61",
+      "report_hash": "14b8afeee643c2f6188e055dc0f6a769fe154623d70c9d06b36f5ceaefd60742",
+      "counters": {
+        "consistentSamples": 21270,
+        "depthHypotheses": 64,
+        "estimatedMaps": 6,
+        "evaluatedHypotheses": 4201152,
+        "evaluatedSourcePatches": 12603456,
+        "fusedSamples": 1848,
+        "patchRadius": 1,
+        "photometricSamples": 26966,
+        "preset": "baseline",
+        "rejectedInconsistentSamples": 5696,
+        "sampledSourcePixels": 103368848,
+        "selectedSourcePairs": 18,
+        "triangles": 18210,
+        "vertices": 19422,
+        "viewReports": [
+          {
+            "consistentSamples": 3048,
+            "image": 0,
+            "photometricSamples": 3893,
+            "sourceImages": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4396,
+            "image": 1,
+            "photometricSamples": 5504,
+            "sourceImages": [
+              0,
+              2,
+              3
+            ]
+          },
+          {
+            "consistentSamples": 4118,
+            "image": 2,
+            "photometricSamples": 4971,
+            "sourceImages": [
+              3,
+              1,
+              0
+            ]
+          },
+          {
+            "consistentSamples": 4074,
+            "image": 3,
+            "photometricSamples": 5048,
+            "sourceImages": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "consistentSamples": 3087,
+            "image": 4,
+            "photometricSamples": 4045,
+            "sourceImages": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "consistentSamples": 2547,
+            "image": 5,
+            "photometricSamples": 3505,
+            "sourceImages": [
+              4,
+              3,
+              2
+            ]
+          }
+        ]
+      },
+      "trial": 3,
+      "warmup": false,
+      "max_rss_bytes": 160366592
+    }
+  ],
+  "summary": [
+    {
+      "case": "shell6",
+      "stage": "baseline",
+      "total_ms": 2047.259625,
+      "init_ms": 18.94695800000001,
+      "add_ms": 2.6014160000000004,
+      "sparse_ms": 839.910708,
+      "dense_ms": 1186.798042,
+      "max_rss_bytes": 136691712,
+      "wasm_memory_bytes": 41811968
+    },
+    {
+      "case": "shell6",
+      "stage": "combined-size",
+      "total_ms": 1893.899541,
+      "init_ms": 19.770083,
+      "add_ms": 2.612334000000004,
+      "sparse_ms": 754.820791,
+      "dense_ms": 1115.988833,
+      "max_rss_bytes": 137166848,
+      "wasm_memory_bytes": 44302336
+    },
+    {
+      "case": "shell6",
+      "stage": "current",
+      "total_ms": 1198.017709,
+      "init_ms": 19.494666999999993,
+      "add_ms": 3.106042000000002,
+      "sparse_ms": 601.018916,
+      "dense_ms": 574.4724590000001,
+      "max_rss_bytes": 139624448,
+      "wasm_memory_bytes": 44302336
+    },
+    {
+      "case": "shell12",
+      "stage": "baseline",
+      "total_ms": 4408.94675,
+      "init_ms": 18.644125000000003,
+      "add_ms": 3.810874999999996,
+      "sparse_ms": 2091.166208,
+      "dense_ms": 2295.325542,
+      "max_rss_bytes": 176144384,
+      "wasm_memory_bytes": 55705600
+    },
+    {
+      "case": "shell12",
+      "stage": "combined-size",
+      "total_ms": 4105.521042,
+      "init_ms": 18.707250000000002,
+      "add_ms": 3.2119169999999997,
+      "sparse_ms": 1886.1151249999998,
+      "dense_ms": 2184.3723750000004,
+      "max_rss_bytes": 181567488,
+      "wasm_memory_bytes": 60686336
+    },
+    {
+      "case": "shell12",
+      "stage": "current",
+      "total_ms": 2752.6612920000002,
+      "init_ms": 19.317542000000003,
+      "add_ms": 3.5882919999999956,
+      "sparse_ms": 1593.0645,
+      "dense_ms": 1136.6909580000001,
+      "max_rss_bytes": 182910976,
+      "wasm_memory_bytes": 60686336
+    },
+    {
+      "case": "monstree6",
+      "stage": "baseline",
+      "total_ms": 3302.959916,
+      "init_ms": 18.830792000000002,
+      "add_ms": 2.320915999999997,
+      "sparse_ms": 1768.458625,
+      "dense_ms": 1505.4909590000002,
+      "max_rss_bytes": 156467200,
+      "wasm_memory_bytes": 46792704
+    },
+    {
+      "case": "monstree6",
+      "stage": "combined-size",
+      "total_ms": 2879.1947920000002,
+      "init_ms": 18.382999999999996,
+      "add_ms": 2.494499999999988,
+      "sparse_ms": 1403.870416,
+      "dense_ms": 1446.1393749999997,
+      "max_rss_bytes": 159924224,
+      "wasm_memory_bytes": 49610752
+    },
+    {
+      "case": "monstree6",
+      "stage": "current",
+      "total_ms": 1989.129875,
+      "init_ms": 19.358041999999998,
+      "add_ms": 2.3230410000000035,
+      "sparse_ms": 1220.844,
+      "dense_ms": 748.4635420000002,
+      "max_rss_bytes": 160366592,
+      "wasm_memory_bytes": 49610752
+    }
+  ],
+  "comparisons": [
+    {
+      "case": "shell6",
+      "all_decoded_outputs_equal": true
+    },
+    {
+      "case": "shell12",
+      "all_decoded_outputs_equal": true
+    },
+    {
+      "case": "monstree6",
+      "all_decoded_outputs_equal": true
+    }
+  ],
+  "modules": {
+    "baseline": {
+      "workspace": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+      "sha256": "d5a0b70874660068dc3489de3512ed42ec7fd1a29f5561f63d13e69dfe4cbffa",
+      "generated_source_bytes": 221292,
+      "raw_wasm_bytes": 588227
+    },
+    "combined-size": {
+      "workspace": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n",
+      "sha256": "89e44ed34dc1c828dc597b0153107c13ece1240f441fca0cea8df5928af9423e",
+      "generated_source_bytes": 221560,
+      "raw_wasm_bytes": 581688
+    },
+    "current": {
+      "workspace": "[workspace]\nmembers = [\"photogrammetry-kernel\", \"photogrammetry-wasm\", \"value-codec\"]\nresolver = \"2\"\n\n[profile.release]\nopt-level = \"s\"\nlto = true\n\n[profile.release.package.photogrammetry-kernel]\nopt-level = 3\n\n[profile.release.package.photogrammetry-wasm]\nopt-level = 3\n",
+      "sha256": "65f31ae47bc931775092ac417f3a47693bfec53b0b84414de1e5059ca6c4183e",
+      "generated_source_bytes": 245984,
+      "raw_wasm_bytes": 549881
+    }
+  }
+}

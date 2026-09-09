@@ -1,0 +1,349 @@
+{
+  "language": "modelgraph/1",
+  "units": "mm",
+  "parameters": [
+    {
+      "id": "height",
+      "value": 12,
+      "min": 1,
+      "max": 40
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "op": "box",
+      "size": [
+        {
+          "op": "checked",
+          "checks": [
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 10
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 20
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "height"
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "int",
+              "value": 1
+            }
+          ],
+          "value": {
+            "op": "typed",
+            "type": "f32",
+            "value": {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": 10
+              }
+            }
+          }
+        },
+        {
+          "op": "checked",
+          "checks": [
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 10
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 20
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "height"
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "int",
+              "value": 1
+            }
+          ],
+          "value": {
+            "op": "typed",
+            "type": "f32",
+            "value": {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": 20
+              }
+            }
+          }
+        },
+        {
+          "op": "checked",
+          "checks": [
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 10
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": 20
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "param": "height"
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": {
+                  "op": "typed",
+                  "type": "f32",
+                  "value": 20
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "op": "typed",
+                  "type": "f64",
+                  "value": {
+                    "param": "height"
+                  }
+                }
+              }
+            },
+            {
+              "op": "typed",
+              "type": "int",
+              "value": 1
+            }
+          ],
+          "value": {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "height"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "center": false
+    }
+  ],
+  "root": "n1",
+  "geometry_assertions": [
+    {
+      "id": "g1",
+      "target": "n1",
+      "check": "hasBodies",
+      "expected": {
+        "op": "checked",
+        "checks": [
+          {
+            "op": "typed",
+            "type": "f32",
+            "value": 10
+          },
+          {
+            "op": "typed",
+            "type": "f32",
+            "value": 20
+          },
+          {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "param": "height"
+            }
+          },
+          {
+            "op": "typed",
+            "type": "f32",
+            "value": {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": 10
+              }
+            }
+          },
+          {
+            "op": "typed",
+            "type": "f32",
+            "value": {
+              "op": "typed",
+              "type": "f32",
+              "value": {
+                "op": "typed",
+                "type": "f32",
+                "value": 20
+              }
+            }
+          },
+          {
+            "op": "typed",
+            "type": "f64",
+            "value": {
+              "op": "typed",
+              "type": "f64",
+              "value": {
+                "op": "typed",
+                "type": "f64",
+                "value": {
+                  "param": "height"
+                }
+              }
+            }
+          },
+          {
+            "op": "typed",
+            "type": "int",
+            "value": 1
+          }
+        ],
+        "value": {
+          "op": "typed",
+          "type": "int",
+          "value": 1
+        }
+      },
+      "message": "assert check failed"
+    }
+  ],
+  "segments": 48
+}

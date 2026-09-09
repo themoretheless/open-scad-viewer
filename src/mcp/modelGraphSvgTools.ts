@@ -1,4 +1,4 @@
-import { checkModelGraphGeometry, requireModelGraphChecks, ModelGraphCheckError } from '../services/modelGraphChecks'
+import { evaluateModelGraphGeometry, requireModelGraphChecks, ModelGraphCheckError } from '../services/modelGraphChecks'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
@@ -24,7 +24,7 @@ export function registerModelGraphSvgTools(server: McpServer, geometry: McpGeome
   }, async (input, context) => {
     try {
       const compiled = compileModelGraph(input.document), built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
-      requireModelGraphChecks(checkModelGraphGeometry(compiled.geometry_assertions, built.meshes));
+      requireModelGraphChecks(await evaluateModelGraphGeometry(compiled.geometry_assertions, built.meshes, async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes));
       const svg = contoursSvg(await meshSvgContours(built.meshes, input))
       return { content: [{ type: 'resource' as const, resource: { uri: `modelgraph://export/${compiled.document_sha256}.svg`, mimeType: 'image/svg+xml', text: svg } }] }
     } catch (e) { return failure(e) }
