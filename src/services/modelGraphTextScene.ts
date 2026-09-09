@@ -1,11 +1,23 @@
 /** Publish an own-kernel mesh directly to the viewer, without a SCAD/Manifold pass. */
-import { buildOwnNurbs } from './modelGraphNurbsKernel'
+import { buildOwnNurbs, collectSdfJobs } from './modelGraphNurbsKernel'
+import { prepareSdfGpu, primeSdfGpu } from './sdfKernel'
+import { runSdfSweep } from './sdfGpu'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
-export function buildTextNurbsScene(document: unknown, quality: GeometryQuality = 'full'): GeometryEvaluationResult {
+export async function buildTextNurbsScene(document: unknown, quality: GeometryQuality = 'full'): Promise<GeometryEvaluationResult> {
   const start=performance.now()
+  // GPU prefetch: eligible SDF grids are sampled by WebGPU before the
+  // synchronous build; failures silently leave the CPU reference path.
+  if (typeof navigator !== 'undefined' && navigator.gpu) {
+    for (const job of collectSdfJobs(document)) {
+      try {
+        const prepared = prepareSdfGpu(job.field, job.grid)
+        if (prepared) primeSdfGpu(job, prepared.id, await runSdfSweep(prepared.payload))
+      } catch { /* CPU path at tessellation time */ }
+    }
+  }
   const result=buildOwnNurbs(document,{action:'build',display:{segments:quality==='preview'?8:24,subdivisionLevels:quality==='preview'?1:2}})
   if(!('mesh' in result) || !result.mesh)throw new Error('This geometry needs an explicit display conversion (SDF requires grid bounds; curves/profiles do not yet have a line renderer)')
   const mesh=result.mesh,evaluated=performance.now()

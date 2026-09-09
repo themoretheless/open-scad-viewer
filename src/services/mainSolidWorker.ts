@@ -3,30 +3,51 @@ import type {MeshData} from '../core/mesh'
 import type {PickHit} from './rendererContracts'
 import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
-let current:{worker:Worker;reject:(e:Error)=>void}|null=null
-export function cancelMainSolid(){if(current){const job=current;current=null;job.worker.terminate();job.reject(new DOMException('Operation cancelled','AbortError'))}}
-export function computeMainSolid(meshes:MeshData[],selected:number,hit:PickHit|null,operation:MainOperation,parameters:MainParameters):Promise<DirectDocument>{
+
+// One warm worker serves all main-solid/CAD operations; the geometry kernel is
+// initialized once instead of every call paying the WASM inflate+compile.
+// A running computation cannot be interrupted in place, so cancellation (or a
+// superseding call) terminates the worker and the next operation recreates it.
+let shared:Worker|null=null
+let current:{reject:(e:Error)=>void}|null=null
+
+export function cancelMainSolid(){
+ if(!current)return
+ const job=current;current=null
+ if(shared){shared.terminate();shared=null}
+ job.reject(new DOMException('Operation cancelled','AbortError'))
+}
+
+function run<T>(message:unknown,pick:(data:any)=>T):Promise<T>{
  cancelMainSolid()
  return new Promise((resolve,reject)=>{
-  const worker=new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'})
-  current={worker,reject}
-  const finish=()=>{worker.terminate();if(current?.worker===worker)current=null}
-  worker.onmessage=event=>{finish();event.data.error?reject(Error(event.data.error)):resolve(event.data.document)}
-  worker.onerror=event=>{finish();reject(Error(event.message||'Geometry worker failed'))}
-  try{worker.postMessage({meshes,selected,hit,operation,parameters})}catch(e){finish();reject(e)}
+  if(!shared)shared=new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'})
+  const worker=shared
+  const cleanup=()=>{worker.onmessage=null;worker.onerror=null}
+  worker.onmessage=(event:MessageEvent)=>{
+   cleanup()
+   if(current?.reject===reject)current=null
+   event.data.error?reject(Error(event.data.error)):resolve(pick(event.data as never))
+  }
+  worker.onerror=(event:ErrorEvent)=>{
+   // The worker state is unknown; drop it so the next call starts fresh.
+   cleanup();if(shared===worker)shared=null;worker.terminate()
+   if(current?.reject===reject)current=null
+   reject(Error(event.message||'Geometry worker failed'))
+  }
+  current={reject}
+  try{worker.postMessage(message)}catch(e){cleanup();if(current?.reject===reject)current=null;reject(e)}
  })
+}
+
+export function computeMainSolid(meshes:MeshData[],selected:number,hit:PickHit|null,operation:MainOperation,parameters:MainParameters):Promise<DirectDocument>{
+ return run({meshes,selected,hit,operation,parameters},data=>data.document)
 }
 
 export function computeCadOperation(document:DirectDocument,options:CadOptions):Promise<DirectDocument>{
- cancelMainSolid()
- return new Promise((resolve,reject)=>{
-  const worker=new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'});current={worker,reject}
-  const finish=()=>{worker.terminate();if(current?.worker===worker)current=null}
-  worker.onmessage=e=>{finish();e.data.error?reject(Error(e.data.error)):resolve(e.data.document)};worker.onerror=e=>{finish();reject(Error(e.message||'Geometry worker failed'))}
-  try{worker.postMessage({kind:'cad',document,options})}catch(e){finish();reject(e)}
- })
+ return run({kind:'cad',document,options},data=>data.document)
 }
 
 export function computeCadInspection(bodies:import('./directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
- cancelMainSolid();return new Promise((resolve,reject)=>{const worker=new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'});current={worker,reject};const finish=()=>{worker.terminate();if(current?.worker===worker)current=null};worker.onmessage=e=>{finish();e.data.error?reject(Error(e.data.error)):resolve(e.data.report)};worker.onerror=e=>{finish();reject(Error(e.message))};try{worker.postMessage({kind:'inspect',bodies})}catch(e){finish();reject(e)}})
+ return run({kind:'inspect',bodies},data=>data.report)
 }

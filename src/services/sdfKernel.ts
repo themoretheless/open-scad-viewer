@@ -28,3 +28,23 @@ export const tessellateSdf=(field:SdfField,grid:SdfGrid):PolygonBuild=>{validate
 /** Twist preserves the zero set through inverse mapping; distance is not certified. */
 export const deformSdf=(field:SdfField,deformation:GeometryDeformation):SdfField=>{validateSdfBudget(field);return callGeometryRust('sdf_deform',{field,deformation})}
 export const sculptSdfSphere=(field:SdfField,center:number[],radius:number,remove=false):SdfField=>{validateSdfBudget(field);return callGeometryRust('sdf_sculpt_sphere',{field,center,radius,remove})}
+
+/** Browser WebGPU sweep support; see sdfGpu.ts. */
+export interface SdfGpuJob {field:SdfField;grid:SdfGrid}
+const gpuPending=new Map<string,{id:number,values:Float32Array}>()
+const sdfKey=(field:SdfField,grid:SdfGrid)=>JSON.stringify([field,grid])
+/** Prepares a GPU sweep for an eligible field; null when the kernel declines. */
+export function prepareSdfGpu(field:SdfField,grid:SdfGrid):{id:number,payload:import('./sdfGpu').SdfGpuPayload}|null{
+ const value=callGeometryRust<Record<string,unknown>|null>('sdf_prepare',{field,grid})
+ if(value===null)return null
+ return{id:value.id as number,payload:value as unknown as import('./sdfGpu').SdfGpuPayload}
+}
+/** Registers host-computed scores for the later synchronous tessellation. */
+export function primeSdfGpu(job:SdfGpuJob,id:number,values:Float32Array):void{
+ gpuPending.set(sdfKey(job.field,job.grid),{id,values})
+}
+export const tessellateSdfGpuAware=(field:SdfField,grid:SdfGrid):PolygonBuild=>{
+ const primed=gpuPending.get(sdfKey(field,grid))
+ if(primed){gpuPending.delete(sdfKey(field,grid));return callGeometryRust('sdf_finish',{id:primed.id,values:Array.from(primed.values)})}
+ return tessellateSdf(field,grid)
+}

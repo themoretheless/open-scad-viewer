@@ -52,8 +52,9 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_000_000) {
 // add ~22 kB packed (2998447 bytes total). Phase-3 browser WebGPU sweep adds
 // the shared WGSL text and the worker/parse plumbing (3014297 bytes total).
 // polygon-kernel opt-level=3 (measured -22.5% geometry time) adds ~68 kB
-// packed (3082382 bytes total).
+// packed (3082382 bytes total). The browser SDF WebGPU sweep adds the flat
+// field payload ops and the runner (3098760 bytes total).
 // Keep a bounded margin; individual chunk limits remain unchanged.
-const totalBudget = 3_090_000
+const totalBudget = 3_110_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

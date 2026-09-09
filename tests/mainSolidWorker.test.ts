@@ -1,6 +1,9 @@
-import {it,expect,vi,afterEach} from 'vitest'
-import {computeMainSolid,cancelMainSolid} from '../src/services/mainSolidWorker'
+import {it,expect,vi,afterEach,beforeEach} from 'vitest'
 import type {MainParameters} from '../src/services/mainModeling'
+// The warm worker is module state; reset modules so each test starts fresh.
+let computeMainSolid:typeof import('../src/services/mainSolidWorker').computeMainSolid
+let cancelMainSolid:typeof import('../src/services/mainSolidWorker').cancelMainSolid
+beforeEach(async()=>{vi.resetModules();({computeMainSolid,cancelMainSolid}=await import('../src/services/mainSolidWorker'))})
 class FakeWorker {
  static instances:FakeWorker[]=[];onmessage:any;onerror:any;terminate=vi.fn();postMessage=vi.fn()
  constructor(){FakeWorker.instances.push(this)}
@@ -15,9 +18,16 @@ it('cancels superseded geometry without allowing stale results to resolve',async
  const doc={version:1,sketches:[],bodies:[]};FakeWorker.instances[1].onmessage({data:{document:doc}})
  await expect(second).resolves.toEqual(doc)
 })
-it('propagates geometry failures and terminates the worker',async()=>{
+it('propagates geometry failures without killing the warm worker',async()=>{
  vi.stubGlobal('Worker',FakeWorker)
  const task=computeMainSolid([],0,null,'fillet',p)
  FakeWorker.instances[0].onmessage({data:{error:'Radius consumes a face'}})
- await expect(task).rejects.toThrow('Radius consumes a face');expect(FakeWorker.instances[0].terminate).toHaveBeenCalledOnce()
+ await expect(task).rejects.toThrow('Radius consumes a face')
+ expect(FakeWorker.instances[0].terminate).not.toHaveBeenCalled()
+ // The next operation reuses the surviving worker instead of recompiling WASM.
+ const doc={version:1,sketches:[],bodies:[]}
+ const second=computeMainSolid([],0,null,'shell',p)
+ expect(FakeWorker.instances).toHaveLength(1)
+ FakeWorker.instances[0].onmessage({data:{document:doc}})
+ await expect(second).resolves.toEqual(doc)
 })

@@ -1004,7 +1004,8 @@ pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed
     mesh.validate()?;
     Ok(mesh)
 }
-fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
+/// Budget and field validation shared by every extraction path.
+pub fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
     field.validate()?;
     if grid.cells.iter().any(|&n| n > 64)
         || grid
@@ -1025,6 +1026,29 @@ pub fn polygonize(field: &Field, grid: &Grid) -> Result<Mesh> {
     check_grid_budget(field, grid)?;
     polygonize_with(|p| field.sample(p), grid)
 }
+/// Rebuilds the mesh from externally computed grid samples (GPU shader or the
+/// browser WebGPU host path). The snap-to-zero, boundary validation and
+/// marching-tetrahedra extraction run here on the CPU, exactly as in
+/// `polygonize`; only the raw field values arrive precomputed (f32).
+pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Result<Mesh> {
+    check_grid_budget(field, grid)?;
+    let expected = grid.cells.iter().map(|n| n + 1).product::<usize>();
+    if values.len() != expected {
+        return Err(Error::new("Grid sample count does not match the grid"));
+    }
+    if values.iter().any(|v| !v.is_finite()) {
+        return Err(Error::new("Field returned a non-finite value"));
+    }
+    let cursor = std::cell::Cell::new(0usize);
+    polygonize_with(
+        |_| {
+            let i = cursor.get();
+            cursor.set(i + 1);
+            values[i] as f64
+        },
+        grid,
+    )
+}
 /// `polygonize` with an optional GPU grid sampler. Eligible fields (primitive
 /// and CSG trees) sample the grid on the GPU in f32; the snap-to-zero, boundary
 /// validation and marching-tetrahedra extraction stay on the CPU. Everything
@@ -1035,15 +1059,7 @@ pub fn polygonize_accelerated(field: &Field, grid: &Grid, #[allow(unused_variabl
         check_grid_budget(field, grid)?;
         if let Some(flat) = field.to_flat() {
             if let Some(values) = gpu::sample_grid_gpu(&flat, grid) {
-                let cursor = std::cell::Cell::new(0usize);
-                return polygonize_with(
-                    |_| {
-                        let i = cursor.get();
-                        cursor.set(i + 1);
-                        values[i] as f64
-                    },
-                    grid,
-                );
+                return polygonize_with_values(field, grid, &values);
             }
         }
     }

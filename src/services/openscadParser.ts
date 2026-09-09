@@ -3892,7 +3892,7 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
       if (compiled.execution_target === 'own-nurbs') {
         const { buildTextNurbsScene } = await import('./modelGraphTextScene')
         if (options.shouldAbort?.()) throw new AbortedError()
-        const result = buildTextNurbsScene(compiled.document, options.quality)
+        const result = await buildTextNurbsScene(compiled.document, options.quality)
         if (options.shouldAbort?.()) throw new AbortedError()
         return result
       }

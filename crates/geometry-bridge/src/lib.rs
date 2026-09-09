@@ -5,6 +5,7 @@ pub mod brep;
 mod cad;
 pub mod reconstruction;
 pub mod mesh_shell;
+mod sdf_gpu;
 use nurbs_kernel::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -273,6 +274,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let report = mesh.inspect()?;
             encode(BuiltMesh { mesh, report })
         }
+        "sdf_prepare" => sdf_gpu::prepare(&v),
+        "sdf_finish" => sdf_gpu::finish(&v),
         "surface_tessellate" => encode(tessellate_nurbs(
             &field(&v, "surface")?,
             &field(&v, "options")?,

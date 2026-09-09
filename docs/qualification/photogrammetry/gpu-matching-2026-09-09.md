@@ -159,3 +159,28 @@ dominates cheap fields; native polygonize 51.7 ms vs 143 ms through the JS
 dispatch path shows the Value transport costs ~90 ms for an 80k-triangle mesh,
 a separate known finding). CPU defaults are bit-identical; GPU tests skip
 without an adapter. Baseline record: output/geometry-stage-baseline.json.
+
+## Geometry GPU phase C (2026-09-10): browser SDF sweep + warm CAD worker
+
+The browser runs the same SDF grid sampler through WebGPU: geometry-bridge
+gained `sdf_prepare`/`sdf_finish` dispatch ops (pending handles in the session;
+finish reuses `polygonize_with_values`, so snap/validation/marching stay on the
+kernel CPU path), and the modelgraph-text scene builder prefetches eligible
+pure-SDF `sdf_tessellate` jobs before the synchronous evaluation
+(`collectSdfJobs` in modelGraphNurbsKernel.ts; `tessellateSdfGpuAware` consumes
+primed scores). Async lives in the worker only; any failure falls back to the
+CPU `sdf_tessellate`. A browser probe (`tools/browser-qualification/
+sdf-gpu-probe.ts`, headless Chromium) reproduced the unit-sphere field exactly
+(center -10.000, corner +10.785).
+
+mainSolidWorker is now a persistent warm worker with latest-wins semantics:
+job errors reject without terminating, cancellation still terminates
+(mid-computation interrupt is impossible otherwise); each CAD operation no
+longer pays the WASM inflate+compile. tests/mainSolidWorker.test.ts updated to
+pin the new contract (reuse after a job-level error).
+
+Verification: sdf-kernel 5/5 with the gpu feature (3 without), geometry-bridge
+10/10 (prepare/finish roundtrip reproduces the reference indices exactly and
+rejects a reused handle), full vitest 2240/2240 (engineManifest evidence hashes
+updated to the rebuilt kernel: wasm cdc42ed0, cargo lock d5b5636), vue-tsc,
+production build, verify-dist (total budget 3,110,000, documented).
