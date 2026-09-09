@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { modelGraphTextControls, isModelGraphText } from './services/modelGraphText'
+import { isModelGraphText } from './services/modelGraphTextDetect'
 import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { flattenExportMeshes } from './services/meshExportAdapter'
-import { exportMeshFormatCompressed, type MeshExportFormat } from './services/meshExportFormats'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
+import type { MeshExportFormat } from './services/meshExportFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
-import MechanicalGenerator from './features/MechanicalGenerator.vue'
-import DirectModeler from './features/DirectModeler.vue'
+const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
-import MainModelingTools from './features/MainModelingTools.vue'
-import ScanPlanePanel from './features/ScanPlanePanel.vue'
-import SvgPanel from './features/SvgPanel.vue'
-import PhotogrammetryPanel from './features/PhotogrammetryPanel.vue'
-import InspectPanel from './components/InspectPanel.vue'
+const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
+const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.vue'))
+const ScanPlanePanel = defineAsyncComponent(() => import('./features/ScanPlanePanel.vue'))
+const SvgPanel = defineAsyncComponent(() => import('./features/SvgPanel.vue'))
+const PhotogrammetryPanel = defineAsyncComponent(() => import('./features/PhotogrammetryPanel.vue'))
+const InspectPanel = defineAsyncComponent(() => import('./components/InspectPanel.vue'))
+const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.vue'))
 import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
-import SceneOutliner from './components/SceneOutliner.vue'
 import ViewCube from './components/ViewCube.vue'
 import type {
   DistanceMeasurement as PanelMeasurement,
@@ -502,7 +501,18 @@ async function runGeometryAnalysis() {
   }
 }
 
-const compactControls = computed(() => isModelGraphText(code.value) ? modelGraphTextControls(code.value) : {parameters: [], errors: []})
+// The modelgraph compiler pulls the geometry kernel chunk; load it only when a
+// modelgraph-text document is actually open.
+const compactControls = ref<{parameters: import('./services/scadCustomizer').CustomizerParameter[]; errors: string[]}>({parameters: [], errors: []})
+watchEffect(async () => {
+  const source = code.value
+  if (!isModelGraphText(source)) {
+    compactControls.value = {parameters: [], errors: []}
+    return
+  }
+  const controls = (await import('./services/modelGraphText')).modelGraphTextControls(source)
+  if (code.value === source) compactControls.value = controls
+})
 const customizerParameters = computed(() => {
   if (!isModelGraphText(code.value)) return extractCustomizerParameters(code.value)
   return compactControls.value.parameters
@@ -1253,6 +1263,8 @@ function startBuildCoordinator() {
   if (buildCoordinator) return
   buildCoordinator = new BuildCoordinator({
     workerFactory: () => new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
+    // Real Worker events already own their buffers; skip the same-realm snapshot.
+    snapshotEvents: false,
     // The parser cancels cooperatively at its yield points (every ~50ms), so a
     // superseded build normally reports `cancelled` well inside this grace
     // window and the warm worker — with its cached ~541 kB WASM — survives.
@@ -1596,6 +1608,10 @@ const additionalExportFormat = ref<MeshExportFormat>('3mf')
 async function exportAdditionalMesh() {
   if (!canExport.value) return
   try {
+    const [{ exportMeshFormatCompressed }, { flattenExportMeshes }] = await Promise.all([
+      import('./services/meshExportFormats'),
+      import('./services/meshExportAdapter'),
+    ])
     const artifact = await exportMeshFormatCompressed(flattenExportMeshes(sceneMeshes.value), additionalExportFormat.value)
     const buffer = new ArrayBuffer(artifact.data.byteLength)
     new Uint8Array(buffer).set(artifact.data)

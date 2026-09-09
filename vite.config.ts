@@ -14,6 +14,13 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
+          // Shared by the entry graph (photogrammetry loader) and lazy language
+          // chunks; without its own chunk it drags the geometry kernel into
+          // the entry preload list.
+          if (id.endsWith('/src/services/wasmPacking.ts') || id.endsWith('/src/services/valueBinaryCodec.ts')) return 'binary-codec'
+          // The entry graph needs only this regex; keep it out of the lazy
+          // compiler chunk so the geometry kernel is not preloaded.
+          if (id.endsWith('/src/services/modelGraphTextDetect.ts')) return 'modelgraph-text-detect'
           if (id.endsWith('/src/services/modelGraphText.ts')) return 'modelgraph-text'
           if (id.includes('/src/services/meshSurfaceGroups')) return 'surface-selection'
           if (id.includes('/src/services/openscadParser') || id.includes('/src/parser/')) return 'parser'

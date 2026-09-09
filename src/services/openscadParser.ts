@@ -3819,11 +3819,16 @@ async function parseInternal(
       if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
       if (mesh.numProp < 6) evaluationError(ctx, 0, 'Geometry kernel did not produce normals')
       const vertices = new Float32Array(mesh.numVert * 6)
-      for (let vertex = 0; vertex < mesh.numVert; vertex++) {
-        const sourceOffset = vertex * mesh.numProp
-        const targetOffset = vertex * 6
-        for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]
-        if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
+      if (mesh.numProp === 6) {
+        // Exactly position+normal: one memcpy instead of 6 writes per vertex.
+        vertices.set(mesh.vertProperties.subarray(0, mesh.numVert * 6))
+      } else {
+        for (let vertex = 0; vertex < mesh.numVert; vertex++) {
+          const sourceOffset = vertex * mesh.numProp
+          const targetOffset = vertex * 6
+          for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]
+          if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
+        }
       }
       const indices = new Uint32Array(mesh.triVerts)
       const bvh = buildMeshBvh(vertices, indices)

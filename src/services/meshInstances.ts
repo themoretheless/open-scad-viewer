@@ -98,10 +98,26 @@ export class MeshInstances {
       this.data = new Float32Array(capacity / 4)
       changed = true
     }
-    for (let i = 0; !changed && i < meshes.length; i++) {
-      const mesh = meshes[i], offset = i * 40
-      changed = this.data[offset + 36] !== Math.fround(mesh.styleAlpha) || this.data[offset + 37] !== Math.fround(mesh.styleSelected)
-        || this.data[offset + 38] !== Math.fround(mesh.styleEdge) || this.data[offset + 39] !== Math.fround(mesh.styleHovered)
+    if (!changed) {
+      // Hover/selection touches only the 4 style floats of a few instances;
+      // write those 16-byte slices instead of the whole buffer.
+      for (let i = 0; i < meshes.length; i++) {
+        const mesh = meshes[i], offset = i * 40
+        const alpha = Math.fround(mesh.styleAlpha), selected = Math.fround(mesh.styleSelected)
+        const edge = Math.fround(mesh.styleEdge), hovered = Math.fround(mesh.styleHovered)
+        if (this.data[offset + 36] !== alpha || this.data[offset + 37] !== selected
+          || this.data[offset + 38] !== edge || this.data[offset + 39] !== hovered) {
+          this.data[offset + 36] = alpha; this.data[offset + 37] = selected
+          this.data[offset + 38] = edge; this.data[offset + 39] = hovered
+          try {
+            device.queue.writeBuffer(this.buffer!, i * 160 + 144, this.data, offset + 36, 4)
+          } catch (error) {
+            // Retry as a full upload on the next frame, matching the old contract.
+            this.uploadPending = true
+            throw error
+          }
+        }
+      }
     }
     if (changed) this.uploadPending = true
     if (this.uploadPending) {

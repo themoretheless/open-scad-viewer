@@ -51,8 +51,22 @@ export interface GeometryScene {
 
 function hashBytes(hash: number, bytes: Uint8Array) {
   let next = hash >>> 0
-  for (const byte of bytes) {
-    next ^= byte
+  // Consume 4 bytes per iteration through a word view; the little-endian byte
+  // order and the FNV-1a sequence are unchanged, so the id is identical.
+  let index = 0
+  if (bytes.byteOffset % 4 === 0) {
+    const full = bytes.length - (bytes.length % 4)
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, full / 4)
+    for (const word of words) {
+      next ^= word & 0xff; next = Math.imul(next, 0x01000193) >>> 0
+      next ^= (word >>> 8) & 0xff; next = Math.imul(next, 0x01000193) >>> 0
+      next ^= (word >>> 16) & 0xff; next = Math.imul(next, 0x01000193) >>> 0
+      next ^= word >>> 24; next = Math.imul(next, 0x01000193) >>> 0
+    }
+    index = full
+  }
+  for (; index < bytes.length; index++) {
+    next ^= bytes[index]
     next = Math.imul(next, 0x01000193) >>> 0
   }
   return next

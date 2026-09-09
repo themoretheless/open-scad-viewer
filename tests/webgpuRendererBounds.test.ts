@@ -9,9 +9,19 @@ interface MeasuredBounds {
 
 function boundMeasure(renderer: WebGPURenderer) {
   const internal = renderer as unknown as {
-    measureMeshBounds: (vertices: Float32Array, transform: Float32Array) => MeasuredBounds | null
+    measureMeshBounds: (assetId: string | null, vertices: Float32Array, transform: Float32Array) => MeasuredBounds | null
   }
-  return internal.measureMeshBounds.bind(renderer)
+  // The cache is keyed by content identity; the tests key it per buffer object.
+  const ids = new WeakMap<Float32Array, string>()
+  let next = 0
+  return (vertices: Float32Array, transform: Float32Array) => {
+    let id = ids.get(vertices)
+    if (!id) {
+      id = `test:${next++}`
+      ids.set(vertices, id)
+    }
+    return internal.measureMeshBounds(id, vertices, transform)
+  }
 }
 
 const vertices = new Float32Array([
@@ -55,9 +65,10 @@ describe('WebGPURenderer mesh bounds cache', () => {
     // The local extents are transform-independent.
     expect(moved!.local).toEqual(first!.local)
 
-    // A fresh but equal transform reference recomputes to identical values.
+    // A fresh but equal transform now hits the content-keyed cache and
+    // returns the same result object.
     const again = measure(vertices, identity())
-    expect(again).not.toBe(first)
+    expect(again).toBe(first)
     expect(again!.world).toEqual(first!.world)
   })
 

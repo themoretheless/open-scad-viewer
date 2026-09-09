@@ -319,9 +319,11 @@ export class WebGPURenderer {
   private styleScratch = new Float32Array(4)
   private objectUniformScratch = new Float32Array(40)
   private sceneUniformScratch = new Float32Array(36)
-  private meshBoundsCache = new WeakMap<Float32Array, WeakMap<Mat4, {
-    transformSnapshot: Mat4; result: { local: Aabb3; world: Bounds }
-  }>>()
+  // Keyed by geometryAssetId (content) so republished equal meshes hit; per
+  // content id a small list of transform snapshots covers instance edits.
+  private meshBoundsCache = new Map<string, {
+    transformSnapshot: Float32Array; result: { local: Aabb3; world: Bounds } | null
+  }[]>()
   private readonly viewFrustum = new ViewFrustum()
   private readonly opaqueDraws: GMesh[] = []
   private readonly edgeDraws: GMesh[] = []
@@ -736,7 +738,7 @@ export class WebGPURenderer {
           throw new Error('Invalid mesh buffer layout')
         }
 
-        const measured = this.measureMeshBounds(m.vertices, m.transform)
+        const measured = this.measureMeshBounds(m.geometryAssetId ?? null, m.vertices, m.transform)
         if (!measured) throw new Error('Mesh contains no finite positions')
         const transform = new Float32Array(m.transform)
         const inverseTransform = invert(transform)
@@ -889,10 +891,14 @@ export class WebGPURenderer {
    * shared assets do not evict each other's transformed bounds. Weak keys do
    * not keep previous scene instances alive; snapshots detect transform edits.
    */
-  private measureMeshBounds(vertices: Float32Array, transform: Mat4): { local: Aabb3; world: Bounds } | null {
-    let instances = this.meshBoundsCache.get(vertices)
-    const cached = instances?.get(transform)
-    if (cached && sameTypedArray(cached.transformSnapshot, transform)) return cached.result
+  private measureMeshBounds(assetId: string | null, vertices: Float32Array, transform: Mat4): { local: Aabb3; world: Bounds } | null {
+    // Meshes without a content identity compute bounds without caching.
+    const entries = assetId === null ? undefined : this.meshBoundsCache.get(assetId)
+    if (entries) {
+      for (const entry of entries) {
+        if (sameTypedArray(entry.transformSnapshot, transform)) return entry.result
+      }
+    }
 
     const m0 = transform[0], m1 = transform[1], m2 = transform[2], m3 = transform[3]
     const m4 = transform[4], m5 = transform[5], m6 = transform[6], m7 = transform[7]
@@ -935,11 +941,14 @@ export class WebGPURenderer {
         max: [wMaxX, wMaxY, wMaxZ] as [number, number, number],
       },
     }
-    if (!instances) {
-      instances = new WeakMap()
-      this.meshBoundsCache.set(vertices, instances)
+    if (assetId === null) return result
+    let list = this.meshBoundsCache.get(assetId)
+    if (!list) {
+      list = []
+      this.meshBoundsCache.set(assetId, list)
     }
-    instances.set(transform, { transformSnapshot: new Float32Array(transform), result })
+    if (list.length >= 8) list.shift()
+    list.push({ transformSnapshot: new Float32Array(transform), result })
     return result
   }
 

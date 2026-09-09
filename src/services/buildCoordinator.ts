@@ -60,6 +60,12 @@ export interface BuildCoordinatorState {
 
 export interface BuildCoordinatorOptions {
   workerFactory: () => WorkerLike
+  /**
+   * Same-realm worker doubles share object identity with the host, so events
+   * are deep-frozen snapshots by default. A real Worker boundary already
+   * structured-clones events; production passes false to skip the second copy.
+   */
+  snapshotEvents?: boolean
   /** Called for publishable successes and failures only; stale jobs never reach it. */
   onPublish?: (outcome: PublishedGeometryBuild) => void
   onProgress?: (progress: GeometryBuildProgress) => void
@@ -126,10 +132,11 @@ function deepFreezeWorkerSnapshot(value: unknown, seen = new WeakSet<object>()):
   Object.freeze(value)
 }
 
-function freezeAttestedWorkerEvent(event: GeometryWorkerEvent): GeometryWorkerEvent {
-  const snapshot = structuredClone(event) as GeometryWorkerEvent
-  deepFreezeWorkerSnapshot(snapshot)
-  return snapshot
+function freezeAttestedWorkerEvent(event: GeometryWorkerEvent, snapshot: boolean): GeometryWorkerEvent {
+  if (!snapshot) return event
+  const cloned = structuredClone(event) as GeometryWorkerEvent
+  deepFreezeWorkerSnapshot(cloned)
+  return cloned
 }
 
 const DEFAULT_TIMERS: CoordinatorTimers = {
@@ -180,6 +187,7 @@ export class BuildCoordinator {
   private readonly now: () => number
   private readonly timers: CoordinatorTimers
   private readonly supersedeGraceMs: number
+  private readonly snapshotEvents: boolean
   private readonly jobs = new Map<GeometryJobId, JobRecord>()
   private readonly latestJobByQuality = new Map<GeometryQuality, GeometryJobId>()
   private readonly pendingJobIds: GeometryJobId[] = []
@@ -201,6 +209,7 @@ export class BuildCoordinator {
     this.now = options.now ?? (() => performance.now())
     this.timers = options.timers ?? DEFAULT_TIMERS
     this.supersedeGraceMs = grace
+    this.snapshotEvents = options.snapshotEvents ?? true
   }
 
   private counters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
@@ -470,9 +479,9 @@ export class BuildCoordinator {
     }
     let event: GeometryWorkerEvent
     try {
-      // Snapshot immediately after admission. The clone owns every transferable
-      // ArrayBuffer and severs aliases held by same-realm worker test doubles.
-      event = freezeAttestedWorkerEvent(data)
+      // Snapshot immediately after admission for same-realm test doubles; real
+      // Worker events already own their transferred buffers.
+      event = freezeAttestedWorkerEvent(data, this.snapshotEvents)
     } catch {
       this.handleProtocolFailure(generation)
       return
@@ -486,8 +495,10 @@ export class BuildCoordinator {
       })
       return
     }
-    if (event.sourceSha256 !== record.request.sourceSha256
-      || event.sourceSha256 !== sha256Hex(record.request.source)) {
+    // record.request.sourceSha256 was computed once at submission from the same
+    // immutable source string; re-hashing it on every worker event is wasted
+    // main-thread work and catches nothing the first comparison doesn't.
+    if (event.sourceSha256 !== record.request.sourceSha256) {
       this.failForWorker(record, {
         name: 'ProtocolError',
         message: `Geometry Worker source attestation mismatch for job ${event.jobId}`,
@@ -709,7 +720,7 @@ export class BuildCoordinator {
       ...(execution ? { execution } : {}),
       error,
       durationMs: Math.max(0, this.now() - effectiveRecord.requestedAt),
-    } satisfies GeometryBuildFailure) as GeometryBuildFailure
+    } satisfies GeometryBuildFailure, this.snapshotEvents) as GeometryBuildFailure
     for (const candidate of this.jobs.values()) {
       if (generation === null || candidate.workerGeneration === generation) candidate.lifecycle = 'terminal'
     }
