@@ -1,6 +1,6 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
 use polygon_kernel::{proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
-type P = [f64; 3];
+pub(crate) type P = [f64; 3];
 fn sub(a: P, b: P) -> P {
     std::array::from_fn(|i| a[i] - b[i])
 }
@@ -15,16 +15,16 @@ fn cross(a: P, b: P) -> P {
     ]
 }
 #[derive(Clone)]
-struct Triangle {
-    p: [P; 3],
-    min: P,
-    max: P,
+pub(crate) struct Triangle {
+    pub(crate) p: [P; 3],
+    pub(crate) min: P,
+    pub(crate) max: P,
 }
-struct Node {
-    min: P,
-    max: P,
-    triangles: Vec<Triangle>,
-    children: Option<Box<[Node; 2]>>,
+pub(crate) struct Node {
+    pub(crate) min: P,
+    pub(crate) max: P,
+    pub(crate) triangles: Vec<Triangle>,
+    pub(crate) children: Option<Box<[Node; 2]>>,
 }
 impl Node {
     fn build(mut triangles: Vec<Triangle>) -> Self {
@@ -266,6 +266,24 @@ impl TrianglePoints for [usize] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn gpu_lattice_matches_cpu_reference() {
+        let mesh = polygon_kernel::cad::cube([30.; 3], false).unwrap();
+        let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
+        let edges = vec![[0, 1], [0, 2], [0, 3]];
+        let reference = lattice(&mesh, nodes.clone(), edges.clone(), 2., 0., 1., false, false, 0., false).unwrap();
+        let accelerated = lattice_accelerated(&mesh, nodes, edges, 2., 0., 1., false, false, 0., false, sdf_kernel::Acceleration::Gpu).unwrap();
+        if crate::lattice_gpu::try_gpu_available() {
+            let dt = (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
+            assert!(dt <= 0.01 * reference.mesh.indices.len() as f64,
+                "triangle counts diverge: {} vs {}", reference.mesh.indices.len(), accelerated.mesh.indices.len());
+            let dv = (accelerated.report.signed_volume_mm3 - reference.report.signed_volume_mm3).abs() / reference.report.signed_volume_mm3;
+            assert!(dv < 0.001, "volume diverges: {dv}");
+        }
+    }
+
     #[test]
     fn bvh_distance_and_sign_agree_with_reference() {
         let mesh = polygon_kernel::cad::cube([10.; 3], false).unwrap();
@@ -302,8 +320,285 @@ mod tests {
     }
 }
 
+
+/// The lattice field compute shader (WGSL), shared by the native `gpu` feature
+/// and the browser WebGPU host path; both must execute the identical text.
+pub const LATTICE_WGSL: &str = r##"
+struct Params {
+    nx: u32,
+    ny: u32,
+    nz: u32,
+    n_segments: u32,
+    n_nodes: u32,
+    organic: u32,
+    open_top: u32,
+    keep_core: u32,
+    min_x: f32,
+    min_y: f32,
+    min_z: f32,
+    step_x: f32,
+    step_y: f32,
+    step_z: f32,
+    skin: f32,
+    radius_blend: f32,
+    wall_depth: f32,
+    top_z: f32,
+    _pad0: f32,
+    _pad1: f32,
+}
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read> nodes_flat: array<f32>;
+@group(0) @binding(2) var<storage, read> tris: array<f32>;
+@group(0) @binding(3) var<storage, read> segments: array<f32>;
+@group(0) @binding(4) var<storage, read_write> values: array<f32>;
+
+fn node_min(n: u32) -> vec3f { return vec3f(nodes_flat[n*10u], nodes_flat[n*10u+1u], nodes_flat[n*10u+2u]); }
+fn node_max(n: u32) -> vec3f { return vec3f(nodes_flat[n*10u+3u], nodes_flat[n*10u+4u], nodes_flat[n*10u+5u]); }
+fn node_left(n: u32) -> i32 { return bitcast<i32>(nodes_flat[n*10u+6u]); }
+fn node_right(n: u32) -> i32 { return bitcast<i32>(nodes_flat[n*10u+7u]); }
+fn node_start(n: u32) -> u32 { return bitcast<u32>(nodes_flat[n*10u+8u]); }
+fn node_count(n: u32) -> u32 { return bitcast<u32>(nodes_flat[n*10u+9u]); }
+
+fn tri_point(t: u32, k: u32) -> vec3f {
+    let base = t * 9u + k * 3u;
+    return vec3f(tris[base], tris[base+1u], tris[base+2u]);
+}
+
+fn closest_triangle(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> vec3f {
+    let ab = b - a;
+    let ac = c - a;
+    let n = cross(ab, ac);
+    let nn = dot(n, n);
+    if (nn > 0.0) {
+        let q = p - n * (dot(p - a, n) / nn);
+        let aq = q - a;
+        let v = dot(cross(aq, ac), n) / nn;
+        let w = dot(cross(ab, aq), n) / nn;
+        if (v >= 0.0 && w >= 0.0 && v + w <= 1.0) {
+            return q;
+        }
+    }
+    var best = a;
+    var best_dist = 3.402823466e+38;
+    let edges = array<vec3f, 6>(a, b, b, c, c, a);
+    for (var e = 0u; e < 3u; e++) {
+        let ea = edges[e * 2u];
+        let eb = edges[e * 2u + 1u];
+        let d = eb - ea;
+        var t = 0.0;
+        if (dot(d, d) > 0.0) {
+            t = clamp(dot(p - ea, d) / dot(d, d), 0.0, 1.0);
+        }
+        let q = ea + t * d;
+        let de = distance(p, q);
+        if (de < best_dist) {
+            best = q;
+            best_dist = de;
+        }
+    }
+    return best;
+}
+
+// Min-reduction over squared distances is order-free; the iterative walk
+// prunes any node whose bound exceeds the running best, exactly like the
+// recursive reference.
+fn nearest2(p: vec3f) -> f32 {
+    var best = 3.402823466e+38;
+    var stack: array<u32, 64>;
+    var sp = 0u;
+    stack[sp] = 0u;
+    sp++;
+    while (sp > 0u) {
+        sp--;
+        let n = stack[sp];
+        let bmin = node_min(n) - p;
+        let bmax = p - node_max(n);
+        let d2v = max(max(bmin, bmax), vec3f(0.0));
+        let bound = dot(d2v, d2v);
+        if (bound > best) {
+            continue;
+        }
+        let count = node_count(n);
+        if (count > 0u) {
+            for (var i = 0u; i < count; i++) {
+                let t = node_start(n) + i;
+                let q = closest_triangle(p, tri_point(t, 0u), tri_point(t, 1u), tri_point(t, 2u));
+                let dq = p - q;
+                best = min(best, dot(dq, dq));
+            }
+        } else {
+            let l = u32(node_left(n));
+            let r = u32(node_right(n));
+            if (sp + 2u > 64u) { return -1.0; }
+            stack[sp] = l;
+            stack[sp + 1u] = r;
+            sp += 2u;
+        }
+    }
+    return best;
+}
+
+fn ray_hits(p: vec3f) -> vec2u {
+    let dir = vec3f(1.0, 0.3713906763541037, 0.127831);
+    var hits: array<f32, 128>;
+    var count = 0u;
+    var stack: array<u32, 64>;
+    var sp = 0u;
+    stack[sp] = 0u;
+    sp++;
+    while (sp > 0u) {
+        sp--;
+        let n = stack[sp];
+        let nmin = node_min(n);
+        let nmax = node_max(n);
+        var low = 0.0;
+        var high = 3.402823466e+38;
+        for (var k = 0u; k < 3u; k++) {
+            let a = (nmin[k] - p[k]) / dir[k];
+            let b = (nmax[k] - p[k]) / dir[k];
+            low = max(low, min(a, b));
+            high = min(high, max(a, b));
+        }
+        if (high < low) {
+            continue;
+        }
+        let tc = node_count(n);
+        if (tc > 0u) {
+            for (var i = 0u; i < tc; i++) {
+                let t = node_start(n) + i;
+                let a = tri_point(t, 0u);
+                let b = tri_point(t, 1u);
+                let c = tri_point(t, 2u);
+                let e1 = b - a;
+                let e2 = c - a;
+                let h = cross(dir, e2);
+                let det = dot(e1, h);
+                if (abs(det) < 1e-13) {
+                    continue;
+                }
+                let sv = p - a;
+                let u = dot(sv, h) / det;
+                if (u < -1e-10 || u > 1.0 + 1e-10) {
+                    continue;
+                }
+                let q = cross(sv, e1);
+                let v = dot(dir, q) / det;
+                if (v < -1e-10 || u + v > 1.0 + 1e-10) {
+                    continue;
+                }
+                let along = dot(e2, q) / det;
+                if (along > 1e-10) {
+                    if (count >= 128u) { return vec2u(0u, 1u); }
+                    hits[count] = along;
+                    count++;
+                }
+            }
+        } else {
+            let l = u32(node_left(n));
+            let r = u32(node_right(n));
+            if (sp + 2u > 64u) { return vec2u(0u, 1u); }
+            stack[sp] = l;
+            stack[sp + 1u] = r;
+            sp += 2u;
+        }
+    }
+    // Insertion sort over the few collected crossings, then the same relative
+    // dedup and parity as the CPU reference (in f32 here).
+    for (var i = 1u; i < count; i++) {
+        let key = hits[i];
+        var j = i;
+        while (j > 0u && hits[j - 1u] > key) {
+            hits[j] = hits[j - 1u];
+            j--;
+        }
+        hits[j] = key;
+    }
+    var unique = 0u;
+    for (var i = 0u; i < count; i++) {
+        if (i == 0u || abs(hits[i] - hits[i - 1u]) >= 1e-8 * (1.0 + max(abs(hits[i]), abs(hits[i - 1u])))) {
+            unique++;
+        }
+    }
+    return vec2u(unique, 0u);
+}
+
+fn signed_distance(p: vec3f) -> f32 {
+    let d2 = nearest2(p);
+    if (d2 < 0.0) { return bitcast<f32>(0x7fc00000u); }
+    let distance = sqrt(d2);
+    if (distance < 1e-12) { return 0.0; }
+    let h = ray_hits(p);
+    if (h.y > 0u) { return bitcast<f32>(0x7fc00000u); }
+    if (h.x % 2u == 1u) { return -distance; }
+    return distance;
+}
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let row = params.nx + 1u;
+    let total = row * (params.ny + 1u) * (params.nz + 1u);
+    if (id.x >= total) { return; }
+    let x = id.x % row;
+    let y = (id.x / row) % (params.ny + 1u);
+    let z = id.x / (row * (params.ny + 1u));
+    let p = vec3f(
+        params.min_x + f32(x) * params.step_x,
+        params.min_y + f32(y) * params.step_y,
+        params.min_z + f32(z) * params.step_z,
+    );
+    let source = signed_distance(p);
+    if (source != source) {
+        values[id.x] = bitcast<f32>(0x7fc00000u);
+        return;
+    }
+    var graph = 3.402823466e+38;
+    for (var s = 0u; s < params.n_segments; s++) {
+        let base = s * 8u;
+        let a = vec3f(segments[base], segments[base + 1u], segments[base + 2u]);
+        let d = vec3f(segments[base + 3u], segments[base + 4u], segments[base + 5u]);
+        let length2 = segments[base + 6u];
+        let r = segments[base + 7u];
+        let q = p - a;
+        let t = clamp(dot(q, d) / length2, 0.0, 1.0);
+        let delta = q - t * d;
+        let distance = length(delta) - r;
+        if (params.organic > 0u) {
+            let h = max((params.radius_blend - abs(graph - distance)) / params.radius_blend, 0.0);
+            graph = min(graph, distance) - h * h * params.radius_blend / 4.0;
+        } else {
+            graph = min(graph, distance);
+        }
+    }
+    var skin_field = 3.402823466e+38;
+    if (params.skin > 0.0) {
+        var cap = -3.402823466e+38;
+        if (params.open_top > 0u) {
+            cap = p.z - (params.top_z - params.skin);
+        }
+        skin_field = max(-source - params.skin, cap);
+    }
+    var material = min(graph, skin_field);
+    if (params.wall_depth > 0.0) {
+        let band = -source - params.wall_depth;
+        var walls = max(material, band);
+        if (params.keep_core > 0u) {
+            walls = min(walls, source + params.wall_depth);
+        }
+        material = walls;
+    }
+    values[id.x] = max(source, material);
+}
+"##;
 /// A bounded spatial graph of rounded struts, optionally blended into a skin.
 pub fn lattice(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:f64, step:f64, organic:bool, open_top:bool, wall_depth:f64, keep_core:bool)->Result<BuiltMesh>{
+    lattice_accelerated(mesh, nodes, edges, radius, skin, step, organic, open_top, wall_depth, keep_core, sdf_kernel::Acceleration::Cpu)
+}
+
+/// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
+/// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
+/// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
+/// Anything ineligible or unavailable falls back to the CPU reference.
+pub fn lattice_accelerated(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:f64, step:f64, organic:bool, open_top:bool, wall_depth:f64, keep_core:bool, acceleration: sdf_kernel::Acceleration)->Result<BuiltMesh>{
     let report=mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3<=0. || mesh.indices.len()/3>30000 {return Err(Error::new("Spatial lattice requires a closed outward solid with at most 30000 source triangles"))}
     if nodes.is_empty()||nodes.len()>125||edges.is_empty()||edges.len()>400||nodes.iter().flatten().any(|v|!v.is_finite())||edges.iter().any(|e|e[0]>=nodes.len()||e[1]>=nodes.len()||e[0]==e[1]) {return Err(Error::new("Spatial lattice graph exceeds limits or has invalid nodes"))}
@@ -329,7 +624,22 @@ pub fn lattice(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:
         let material=if wall_depth>0. {let band=-source-wall_depth;let walls=material.max(band);if keep_core {walls.min(source+wall_depth)}else{walls}}else{material};
         source.max(material)
     };
-    let output=sdf_kernel::polygonize_with(field,&sdf_kernel::Grid{min,max,cells})?;
+    let output={
+        #[cfg(feature = "gpu")]
+        if acceleration==sdf_kernel::Acceleration::Gpu {
+            match crate::lattice_gpu::try_gpu(&all,&segments,min,max,cells,skin,organic,open_top,wall_depth,keep_core,blend,&field)? {
+                Some(mesh) => mesh,
+                None => sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?,
+            }
+        } else {
+            sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            let _ = acceleration;
+            sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?
+        }
+    };
     let result=output.inspect()?;
     if !result.closed||result.degenerate_triangles>0||result.signed_volume_mm3<=0.||result.signed_volume_mm3>=report.signed_volume_mm3 {return Err(Error::new("Spatial lattice did not produce a valid lighter closed surface; adjust cell size or resolution"))}
     Ok(BuiltMesh{mesh:output,report:result})

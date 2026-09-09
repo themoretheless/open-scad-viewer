@@ -6,6 +6,8 @@ mod cad;
 pub mod reconstruction;
 pub mod mesh_shell;
 mod sdf_gpu;
+#[cfg(feature = "gpu")]
+pub mod lattice_gpu;
 use nurbs_kernel::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},

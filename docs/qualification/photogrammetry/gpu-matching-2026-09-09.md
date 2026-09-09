@@ -184,3 +184,25 @@ Verification: sdf-kernel 5/5 with the gpu feature (3 without), geometry-bridge
 rejects a reused handle), full vitest 2240/2240 (engineManifest evidence hashes
 updated to the rebuilt kernel: wasm cdc42ed0, cargo lock d5b5636), vue-tsc,
 production build, verify-dist (total budget 3,110,000, documented).
+
+## Lattice field on GPU (2026-09-10)
+
+geometry-bridge gained an opt-in GPU evaluation of the spatial-lattice implicit
+field (`lattice_accelerated`, feature `gpu`): the recursive BVH is flattened to
+plain arrays (preorder nodes + leaf triangle windows), and each grid point runs
+the shared `LATTICE_WGSL` shader — iterative nearest-distance walk (min is
+order-free, so the result matches CPU pruning exactly), ray-parity with
+sort/dedup in f32, and the capsule/skin/wall composition. Points whose hit walk
+overflows are marked NaN and recomputed exactly by the CPU closure; snap,
+marching and the final solid audit stay on the CPU reference.
+
+Measured (M4 Max, Metal; 27-node/54-edge strut grid on a 40 mm cube, 64.7k
+triangles): CPU 85-90 ms → GPU 30-33 ms (2.8x) with **identical triangle counts**
+and volume delta 0.000009% (f32 noise), both organic and plain variants. The
+remaining time is the CPU marching/inspection tail. A permanent test
+(`gpu_lattice_matches_cpu_reference`, skips without an adapter) pins counts and
+volume. Max-legal graphs (125 nodes/400 edges/64^3) amplify the win; the
+browser lattice path (prepare/finish like SDF) is the documented next step.
+
+The lattice benchmark example lives at crates/geometry-bridge/examples/
+bench_lattice.rs. Evidence hash updated for the rebuilt kernel (a1300675).

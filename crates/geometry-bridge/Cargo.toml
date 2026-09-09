@@ -7,7 +7,11 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+gpu = ["dep:gpu-compute"]
+
 [dependencies]
+gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 modelgraph-runtime = { path = "../modelgraph-runtime" }
 modelgraph-text = { path = "../modelgraph-text" }
