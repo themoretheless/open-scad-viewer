@@ -8,14 +8,16 @@ vi.mock('../src/services/photogrammetryKernel', () => ({
     constructor() { return factory() }
   },
 }))
+const gpuSweep = vi.hoisted(() => vi.fn())
+vi.mock('../src/services/photoGpuSweep', () => ({runGpuSweep: gpuSweep}))
 
 const sparse: PhotoReconstruction = {
-  positions: [[0, 0, 1]], colors: [[10, 20, 30]], triangles: [],
+  positions: new Float64Array([0, 0, 1]), colors: new Uint8Array([10, 20, 30]), triangles: new Uint32Array(),
   cameras: [], inputImages: 2, reprojectionRmse: 0.5,
 }
 const surface: PhotoSurface = {
-  positions: [[0, 0, 1], [1, 0, 1], [0, 1, 1]],
-  colors: [[10, 20, 30], [40, 50, 60], [70, 80, 90]], triangles: [[0, 1, 2]],
+  positions: new Float64Array([0, 0, 1, 1, 0, 1, 0, 1, 1]),
+  colors: new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80, 90]), triangles: new Uint32Array([0, 1, 2]),
 }
 const diagnostics: PhotoDiagnostics = {
   images: [], initialPair: null, seedPairsTested: 2, matchingRequests: 3,
@@ -23,12 +25,16 @@ const diagnostics: PhotoDiagnostics = {
   seedTrials: [{pair: [0, 1], registeredImages: 0, points: 0, reprojectionRmse: null, error: 'No valid seed'}],
 }
 const request: PhotoWorkerRequest = {
-  images: [], dense: true, resolution: 128,
+  // The panel compiles the module once on the main thread and passes it in; the
+  // mocked kernel below ignores it, any object marks the argument as provided.
+  images: [], dense: true, resolution: 128, module: {} as WebAssembly.Module,
 }
 
 function makeKernel() {
   return {
     add: vi.fn(() => 1),
+    densePrepare: vi.fn(() => null),
+    denseFinish: vi.fn(() => structuredClone(surface)),
     sparse: vi.fn(() => structuredClone(sparse)),
     dense: vi.fn(() => structuredClone(surface)),
     compact: vi.fn(() => structuredClone(surface)),
@@ -58,7 +64,7 @@ afterEach(() => vi.unstubAllGlobals())
 async function run(input = request): Promise<void> {
   // Exercise the real entry point and its error boundaries, not a reimplementation.
   await import('../src/workers/photogrammetry.worker')
-  port.onmessage!({data: input} as MessageEvent<PhotoWorkerRequest>)
+  await port.onmessage!({data: input} as MessageEvent<PhotoWorkerRequest>)!
 }
 
 function terminalEvents() {
@@ -161,4 +167,41 @@ describe('photogrammetry Worker failure isolation', () => {
     expect(event?.type === 'surface' && event.result.denseDiagnostics).toEqual(measured.denseDiagnostics)
   })
 
+
+  it('prefers the WebGPU sweep for baseline dense and skips the CPU dense call', async () => {
+    kernel.densePrepare.mockReturnValue({payload: new Uint8Array(4), wgsl: 'shader'})
+    kernel.compact.mockImplementation(() => { throw new Error('skip compact') })
+    gpuSweep.mockResolvedValue(new Float32Array(8))
+    await run({...request, gpu: true})
+    expect(kernel.densePrepare).toHaveBeenCalledWith(128)
+    expect(kernel.denseFinish).toHaveBeenCalledOnce()
+    expect(kernel.dense).not.toHaveBeenCalled()
+    expect(events).toContainEqual({type: 'surface', result: surface})
+    expect(terminalEvents()).toHaveLength(1)
+    expect(terminalEvents()[0].type).toBe('done')
+  })
+
+  it('falls back to the CPU dense path when the GPU sweep is unavailable', async () => {
+    kernel.compact.mockImplementation(() => { throw new Error('skip compact') })
+    kernel.densePrepare.mockReturnValue(null)
+    await run({...request, gpu: true})
+    expect(kernel.dense).toHaveBeenCalledOnce()
+    expect(events).toContainEqual({type: 'surface', result: surface})
+    expect(terminalEvents()[0].type).toBe('done')
+  })
+
+  it('falls back to the CPU dense path when the GPU sweep rejects', async () => {
+    kernel.compact.mockImplementation(() => { throw new Error('skip compact') })
+    kernel.densePrepare.mockReturnValue({payload: new Uint8Array(4), wgsl: 'shader'})
+    gpuSweep.mockRejectedValue(new Error('no adapter'))
+    await run({...request, gpu: true})
+    expect(kernel.dense).toHaveBeenCalledOnce()
+    expect(terminalEvents()[0].type).toBe('done')
+  })
+
+  it('keeps the CPU path for non-baseline presets even with the GPU flag', async () => {
+    await run({...request, gpu: true, densePreset: 'slanted-plane'})
+    expect(kernel.densePrepare).not.toHaveBeenCalled()
+    expect(kernel.dense).toHaveBeenCalledWith(128, 'slanted-plane')
+  })
 })

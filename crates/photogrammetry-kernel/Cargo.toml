@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[features]
+gpu = ["dep:wgpu"]
+
 [dependencies]
+wgpu = { version = "30", optional = true, default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }

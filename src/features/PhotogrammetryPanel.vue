@@ -5,6 +5,7 @@ import {WebGPURenderer} from '../services/webgpuRenderer'
 import {decodePhoto, PhotoCollection, PhotoInputError, validPhotoFocal, type ImportedPhoto} from '../services/photoInput'
 import {downloadPhoto, photoCanAppend, PhotoExportError, photoPly, photoScadSource} from '../services/photoExport'
 import {PhotoPreview, type PhotoPreviewMode} from '../services/photoPreview'
+import {compilePhotogrammetryKernel} from '../services/photogrammetryModule'
 import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from '../services/photogrammetryKernel'
 import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photoWorkerProtocol'
 import {photoRegistrationReason, photoReportJson, type PhotoReportInput} from '../services/photoReport'
@@ -197,18 +198,33 @@ async function run() {
   const abort = new AbortController()
   decodeAbort = abort
   try {
-    const images: PhotoPixels[] = []
-    for (const photo of photos.value) {
+    // Compilation overlaps decoding; the compiled module is cloned into the disposable Worker.
+    const modulePromise = compilePhotogrammetryKernel()
+    const calibrations = photos.value.map(photo => {
       const calibration = photo.calibrationGroupId
         ? calibrationGroups.value.find(group => group.id === photo.calibrationGroupId) : undefined
       if (photo.calibrationGroupId && !calibration) throw new Error('Assigned calibration group is missing')
-      const pixels = await decodePhoto(photo.file, photo.equivalent, runSettings.maxImageSide, abort.signal, calibration)
-      if (current !== generation || disposed) return
-      runInputs.value = [...runInputs.value, {image: images.length, name: photo.file.name, bytes: photo.file.size,
-        equivalent: photo.equivalent, width: pixels.width, height: pixels.height, focalPixels: pixels.focal,
-        ...(pixels.calibration ? {calibration: pixels.calibration} : {})}]
-      images.push(pixels)
+      return calibration
+    })
+    const images: PhotoPixels[] = new Array(photos.value.length)
+    let nextDecode = 0
+    const decodeLane = async () => {
+      while (nextDecode < photos.value.length) {
+        const image = nextDecode++
+        const photo = photos.value[image]!
+        const pixels = await decodePhoto(photo.file, photo.equivalent, runSettings.maxImageSide, abort.signal, calibrations[image])
+        if (current !== generation || disposed) return
+        images[image] = pixels
+        runInputs.value = [...runInputs.value, {image, name: photo.file.name, bytes: photo.file.size,
+          equivalent: photo.equivalent, width: pixels.width, height: pixels.height, focalPixels: pixels.focal,
+          ...(pixels.calibration ? {calibration: pixels.calibration} : {})}]
+          .sort((a, b) => a.image - b.image)
+      }
     }
+    await Promise.all(Array.from({length: Math.min(4, images.length)}, decodeLane))
+    if (current !== generation || disposed) return
+    const kernelModule = await modulePromise
+    if (current !== generation || disposed) return
     const activeWorker = new Worker(new URL('../workers/photogrammetry.worker.ts', import.meta.url), {type: 'module'})
     worker = activeWorker
     activeWorker.onerror = () => {
@@ -230,7 +246,7 @@ async function run() {
       if (data.type === 'done') timings.value = data.timings
       if (data.type === 'done' || data.type === 'error') finish()
     }
-    const request: PhotoWorkerRequest = {images, dense: runSettings.dense, resolution: runSettings.resolution, densePreset: runSettings.densePreset}
+    const request: PhotoWorkerRequest = {module: kernelModule, images, dense: runSettings.dense, resolution: runSettings.resolution, densePreset: runSettings.densePreset, gpu: runSettings.densePreset === 'baseline'}
     activeWorker.postMessage(request, images.map(image => image.rgb.buffer))
   } catch (error) {
     if (current === generation && !disposed) {
@@ -328,7 +344,7 @@ onBeforeUnmount(() => {
   <label>{{ru?'Режим поверхности':'Surface mode'}} <select v-model="densePreset" :disabled="busy||!dense"><option value="baseline">{{ru?'Обычный':'Standard'}}</option><option value="slanted-plane">{{ru?'Наклонные поверхности · эксперимент':'Slanted surfaces · experimental'}}</option><option value="dual-scale-volume">{{ru?'Общая поверхность · эксперимент':'Shared surface · experimental'}}</option></select></label>
   <p v-if="densePreset!=='baseline'&&dense" class="muted">{{ru?'Экспериментальный режим: обработка может занять больше времени; возможны ошибки на границах поверхности.':'Experimental mode: processing may take longer; errors can occur along surface boundaries.'}}</p>
   <p v-if="busy" role="status">{{status}}…</p><p v-if="message" class="photo-error" role="alert">{{message}}</p><p v-if="warning" role="status">{{warning}}</p>
-  <template v-if="result"><p class="photo-stats">{{ru?'Связано снимков':'Registered photos'}}: {{sparse?.cameras.length}} / {{sparse?.inputImages}} · {{result.positions.length.toLocaleString()}} {{ru?'точек':'points'}} · {{result.triangles.length.toLocaleString()}} {{ru?'треугольников':'triangles'}}</p><p v-if="sparse" class="muted">{{ru?'Ошибка обратной проекции':'Reprojection error'}}: {{sparse.reprojectionRmse.toFixed(2)}} px. {{ru?'Это не оценка точности в миллиметрах.':'This does not measure accuracy in millimetres.'}}</p><select v-model="previewMode" :aria-label="ru?'Вид результата':'Result view'"><option value="points">{{ru?'Цветное облако · до 6 000 точек в просмотре':'Colored cloud · up to 6,000 preview points'}}</option><option value="surface" :disabled="!surface?.triangles.length">{{ru?'Поверхность без текстуры':'Untextured surface'}}</option></select><canvas ref="canvas" class="photo-viewport" :aria-label="ru?'Реконструкция 3D':'3D reconstruction'"></canvas><p v-if="viewportError">{{viewportError}}</p><div class="photo-actions"><button type="button" @click="fitView">{{ru?'Показать целиком':'Fit view'}}</button><button type="button" @click="save">{{ru?'Скачать цветной PLY':'Download colored PLY'}}</button></div><p class="muted">{{ru?'Цветные точки и поверхность доступны отдельно. PLY содержит все восстановленные точки. Невидимые стороны не восстановлены, масштаб относительный.':'Colored points and surface are separate views. PLY contains all reconstructed points. Hidden sides are not reconstructed; scale is relative.'}}</p><p v-if="surface?.triangles.length&&!solidCompatible" class="muted">{{ru?'Поверхность незамкнута или имеет некорректные соединения. Добавление в твердотельный CAD недоступно; используйте просмотр и PLY.':'Surface is open or has invalid connections. Solid CAD insertion is unavailable; use the preview and PLY export.'}}</p><template v-if="surface?.triangles.length&&solidCompatible"><label>{{ru?'Известная полная ширина результата по X, мм':'Known full width of result along X, mm'}} <input v-model.number="widthMm" type="number" min="0.001" step="any"></label><button type="button" :disabled="!canAppend||!validWidth||busy" @click="append">{{ru?'Добавить упрощённую поверхность':'Add simplified surface'}}</button></template></template>
+  <template v-if="result"><p class="photo-stats">{{ru?'Связано снимков':'Registered photos'}}: {{sparse?.cameras.length}} / {{sparse?.inputImages}} · {{(result.positions.length/3).toLocaleString()}} {{ru?'точек':'points'}} · {{(result.triangles.length/3).toLocaleString()}} {{ru?'треугольников':'triangles'}}</p><p v-if="sparse" class="muted">{{ru?'Ошибка обратной проекции':'Reprojection error'}}: {{sparse.reprojectionRmse.toFixed(2)}} px. {{ru?'Это не оценка точности в миллиметрах.':'This does not measure accuracy in millimetres.'}}</p><select v-model="previewMode" :aria-label="ru?'Вид результата':'Result view'"><option value="points">{{ru?'Цветное облако · до 6 000 точек в просмотре':'Colored cloud · up to 6,000 preview points'}}</option><option value="surface" :disabled="!surface?.triangles.length">{{ru?'Поверхность без текстуры':'Untextured surface'}}</option></select><canvas ref="canvas" class="photo-viewport" :aria-label="ru?'Реконструкция 3D':'3D reconstruction'"></canvas><p v-if="viewportError">{{viewportError}}</p><div class="photo-actions"><button type="button" @click="fitView">{{ru?'Показать целиком':'Fit view'}}</button><button type="button" @click="save">{{ru?'Скачать цветной PLY':'Download colored PLY'}}</button></div><p class="muted">{{ru?'Цветные точки и поверхность доступны отдельно. PLY содержит все восстановленные точки. Невидимые стороны не восстановлены, масштаб относительный.':'Colored points and surface are separate views. PLY contains all reconstructed points. Hidden sides are not reconstructed; scale is relative.'}}</p><p v-if="surface?.triangles.length&&!solidCompatible" class="muted">{{ru?'Поверхность незамкнута или имеет некорректные соединения. Добавление в твердотельный CAD недоступно; используйте просмотр и PLY.':'Surface is open or has invalid connections. Solid CAD insertion is unavailable; use the preview and PLY export.'}}</p><template v-if="surface?.triangles.length&&solidCompatible"><label>{{ru?'Известная полная ширина результата по X, мм':'Known full width of result along X, mm'}} <input v-model.number="widthMm" type="number" min="0.001" step="any"></label><button type="button" :disabled="!canAppend||!validWidth||busy" @click="append">{{ru?'Добавить упрощённую поверхность':'Add simplified surface'}}</button></template></template>
   <details v-if="diagnostics||surface?.denseDiagnostics||runInputs.length" class="photo-diagnostics">
    <summary>{{ru?'Отчёт обработки':'Processing report'}}</summary>
    <template v-if="diagnostics?.calibrations?.some(entry=>entry.mode==='measured-brown')">

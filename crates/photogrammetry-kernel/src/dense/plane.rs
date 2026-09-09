@@ -40,6 +40,8 @@ fn patch(gray: &GrayImage, x: usize, y: usize, step: f64, radius: usize) -> Opti
 /// This is photometric visibility selection; no hidden surface is inferred.
 struct PixelCost<'a, 'image> {
     ray: V3,
+    /// unit(ray), fixed per pixel; hoisted out of the per-hypothesis score.
+    unit_ray: V3,
     ray_step: f64,
     patch: &'a Patch,
     sources: &'a [Source<'image>],
@@ -50,6 +52,7 @@ impl PixelCost<'_, '_> {
     fn score(&self, q: V3, diagnostics: &mut DenseDiagnostics) -> f64 {
         let Self {
             ray,
+            unit_ray,
             ray_step,
             patch,
             sources,
@@ -63,7 +66,7 @@ impl PixelCost<'_, '_> {
         }
         let z = 1. / inv;
         let n = unit(q);
-        let ref_cos = dot(n, unit(ray));
+        let ref_cos = dot(n, unit_ray);
         if ref_cos < 0.12 {
             return -1.;
         }
@@ -186,6 +189,143 @@ fn at_depth_with_slope(q: V3, ray: V3, inverse_depth: f64) -> V3 {
     [q[0], q[1], inverse_depth - q[0] * ray[0] - q[1] * ray[1]]
 }
 
+// One bounded local refinement step for a single pixel. Returns whether the
+// pixel's hypothesis strictly improved, for the optional adaptive budget.
+#[allow(clippy::too_many_arguments)]
+fn refine_pixel(
+    gray: &GrayImage,
+    reference: &Camera,
+    sources: &mut [Source<'_>],
+    planes: &mut [Hypothesis],
+    coarse: &[(f64, f64, f64)],
+    width: usize,
+    x: usize,
+    y: usize,
+    step: f64,
+    ray_step: f64,
+    low: f64,
+    high: f64,
+    interval: f64,
+    pass: usize,
+    budget: usize,
+    reverse: bool,
+    adaptive: bool,
+    options: &DenseOptions,
+    diagnostics: &mut DenseDiagnostics,
+) -> bool {
+    let Some(patch) = patch(gray, x, y, step, options.patch_radius) else {
+        return false;
+    };
+    let i = y * width + x;
+    let ray = reference.ray([x as f64 * step, y as f64 * step]);
+    for source in sources.iter_mut() {
+        source.prepare_pixel(ray);
+    }
+    let cost = PixelCost {
+        ray,
+        unit_ray: unit(ray),
+        ray_step,
+        patch: &patch,
+        sources,
+        reference_focal: reference.focal,
+        options,
+    };
+    let mut best = planes[i];
+    let mut proposals = [[0.; 3]; 6];
+    // Four directions keep vertical as well as horizontal slants.
+    proposals[0] = [0., 0., coarse[i].2];
+    for (k, j) in [i - 1, i + 1, i - width, i + width].into_iter().enumerate() {
+        proposals[k + 2] = planes[j].plane;
+    }
+    // Finite differences propose inclination; photometry decides
+    // whether a gradient is a true plane or a depth discontinuity.
+    let ix = if reverse { i + 1 } else { i - 1 };
+    let iy = if reverse { i + width } else { i - width };
+    let signed_step = if reverse { ray_step } else { -ray_step };
+    let inv = dot(best.plane, ray);
+    let adjacent_x = add(ray, [signed_step, 0., 0.]);
+    let adjacent_y = add(ray, [0., signed_step, 0.]);
+    let slope = [
+        (dot(planes[ix].plane, adjacent_x) - inv) / signed_step,
+        (dot(planes[iy].plane, adjacent_y) - inv) / signed_step,
+        0.,
+    ];
+    proposals[1] = at_depth_with_slope(slope, ray, inv);
+    for (proposal_index, &q) in proposals[..budget.min(6)].iter().enumerate() {
+        // The pixel, sources and scoring policy are unchanged within this loop.
+        // Strict improvement means an identical earlier proposal cannot win again.
+        if proposals[..proposal_index].contains(&q) {
+            diagnostics.evaluated_hypotheses += 1;
+            continue;
+        }
+        // offset == 0 makes proposals[0] equal the current best
+        // plane; an equal candidate cannot pass the strict
+        // improvement test, so skip its score entirely.
+        if q == best.plane {
+            diagnostics.evaluated_hypotheses += 1;
+            continue;
+        }
+        let candidate_inv = dot(q, ray);
+        let value = if in_depth_range(candidate_inv, q, ray, low, high) {
+            cost.score(q, diagnostics)
+        } else {
+            diagnostics.evaluated_hypotheses += 1;
+            -1.
+        };
+        if value > best.score {
+            best = Hypothesis {
+                plane: q,
+                score: value,
+            };
+        }
+    }
+    // A full axis/sign cycle without improvement ends the local descent early;
+    // the order and the cycle length are fixed, so the stop is deterministic.
+    let mut cycle_improved = true;
+    for k in 6..budget {
+        if adaptive && (k - 6) % 6 == 0 {
+            if !cycle_improved {
+                break;
+            }
+            cycle_improved = false;
+        }
+        let current_inv = dot(best.plane, ray);
+        let cycle = (k - 6) / 6;
+        let shrink = 0.5f64.powi((pass + cycle) as i32);
+        let (axis, sign) = ((k - 6) % 6 / 2, if k % 2 == 0 { 1. } else { -1. });
+        let mut q = best.plane;
+        if axis == 2 {
+            q = at_depth_with_slope(
+                q,
+                ray,
+                current_inv + sign * interval * 0.5 * shrink,
+            );
+        } else {
+            q[axis] += sign * current_inv * 0.7 * shrink;
+            q = at_depth_with_slope(q, ray, current_inv);
+        }
+        // Evaluate immediately, allowing coordinate updates within
+        // the budget rather than committing to a stale center.
+        let candidate_inv = dot(q, ray);
+        let value = if in_depth_range(candidate_inv, q, ray, low, high) {
+            cost.score(q, diagnostics)
+        } else {
+            diagnostics.evaluated_hypotheses += 1;
+            -1.
+        };
+        if value > best.score {
+            best = Hypothesis {
+                plane: q,
+                score: value,
+            };
+            cycle_improved = true;
+        }
+    }
+    let improved = best.score > planes[i].score;
+    planes[i] = best;
+    improved
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn estimate(
     gray: &GrayImage,
@@ -225,6 +365,7 @@ pub(super) fn estimate(
             }
             let cost = PixelCost {
                 ray,
+                unit_ray: unit(ray),
                 ray_step,
                 patch: &patch,
                 sources,
@@ -264,105 +405,52 @@ pub(super) fn estimate(
                 .fold(-1., f64::max);
         }
     }
+    let red_black = options.red_black_propagation;
+    let adaptive = options.adaptive_refine_budget;
     for (pass, &budget) in pass_budget.iter().enumerate() {
-        let reverse = pass % 2 == 1;
-        for row in 3..height - 3 {
-            cancelled(progress, "depth", height * (pass + 1) + row, height * 3)?;
-            let y = if reverse { height - 1 - row } else { row };
-            for column in 3..width - 3 {
-                let x = if reverse { width - 1 - column } else { column };
-                let Some(patch) = patch(gray, x, y, step, options.patch_radius) else {
-                    continue;
-                };
-                let i = y * width + x;
-                let ray = reference.ray([x as f64 * step, y as f64 * step]);
-                for source in sources.iter_mut() {
-                    source.prepare_pixel(ray);
-                }
-                let cost = PixelCost {
-                    ray,
-                    ray_step,
-                    patch: &patch,
-                    sources,
-                    reference_focal: reference.focal,
-                    options,
-                };
-                let mut best = planes[i];
-                let mut proposals = [[0.; 3]; 6];
-                // Four directions keep vertical as well as horizontal slants.
-                proposals[0] = [0., 0., coarse[i].2];
-                for (k, j) in [i - 1, i + 1, i - width, i + width].into_iter().enumerate() {
-                    proposals[k + 2] = planes[j].plane;
-                }
-                // Finite differences propose inclination; photometry decides
-                // whether a gradient is a true plane or a depth discontinuity.
-                let ix = if reverse { i + 1 } else { i - 1 };
-                let iy = if reverse { i + width } else { i - width };
-                let signed_step = if reverse { ray_step } else { -ray_step };
-                let inv = dot(best.plane, ray);
-                let adjacent_x = add(ray, [signed_step, 0., 0.]);
-                let adjacent_y = add(ray, [0., signed_step, 0.]);
-                let slope = [
-                    (dot(planes[ix].plane, adjacent_x) - inv) / signed_step,
-                    (dot(planes[iy].plane, adjacent_y) - inv) / signed_step,
-                    0.,
-                ];
-                proposals[1] = at_depth_with_slope(slope, ray, inv);
-                for (proposal_index, &q) in proposals[..budget.min(6)].iter().enumerate() {
-                    // The pixel, sources and scoring policy are unchanged within this loop.
-                    // Strict improvement means an identical earlier proposal cannot win again.
-                    if proposals[..proposal_index].contains(&q) {
-                        diagnostics.evaluated_hypotheses += 1;
-                        continue;
-                    }
-                    let candidate_inv = dot(q, ray);
-                    let value = if in_depth_range(candidate_inv, q, ray, low, high) {
-                        cost.score(q, diagnostics)
-                    } else {
-                        diagnostics.evaluated_hypotheses += 1;
-                        -1.
-                    };
-                    if value > best.score {
-                        best = Hypothesis {
-                            plane: q,
-                            score: value,
-                        };
-                    }
-                }
-                for k in 6..budget {
-                    let current_inv = dot(best.plane, ray);
-                    let cycle = (k - 6) / 6;
-                    let shrink = 0.5f64.powi((pass + cycle) as i32);
-                    let (axis, sign) = ((k - 6) % 6 / 2, if k % 2 == 0 { 1. } else { -1. });
-                    let mut q = best.plane;
-                    if axis == 2 {
-                        q = at_depth_with_slope(
-                            q,
-                            ray,
-                            current_inv + sign * interval * 0.5 * shrink,
+        let mut pass_improved = false;
+        if red_black {
+            // Checkerboard propagation (ACMH-style): each color updates against
+            // only the opposite, stable color, so a half-sweep has no
+            // read-after-write dependency. The color selects the finite
+            // difference direction, mirroring the forward/backward alternation.
+            for color in 0..2usize {
+                let reverse = color == 1;
+                for row in 3..height - 3 {
+                    cancelled(progress, "depth", height * (pass + 1) + row, height * 3)?;
+                    let y = row;
+                    for column in 3..width - 3 {
+                        let x = column;
+                        if (x + y) % 2 != color {
+                            continue;
+                        }
+                        pass_improved |= refine_pixel(
+                            gray, reference, sources, &mut planes, &coarse, width, x, y, step,
+                            ray_step, low, high, interval, pass, budget, reverse, adaptive,
+                            options, diagnostics,
                         );
-                    } else {
-                        q[axis] += sign * current_inv * 0.7 * shrink;
-                        q = at_depth_with_slope(q, ray, current_inv);
-                    }
-                    // Evaluate immediately, allowing coordinate updates within
-                    // the budget rather than committing to a stale center.
-                    let candidate_inv = dot(q, ray);
-                    let value = if in_depth_range(candidate_inv, q, ray, low, high) {
-                        cost.score(q, diagnostics)
-                    } else {
-                        diagnostics.evaluated_hypotheses += 1;
-                        -1.
-                    };
-                    if value > best.score {
-                        best = Hypothesis {
-                            plane: q,
-                            score: value,
-                        };
                     }
                 }
-                planes[i] = best;
             }
+        } else {
+            let reverse = pass % 2 == 1;
+            for row in 3..height - 3 {
+                cancelled(progress, "depth", height * (pass + 1) + row, height * 3)?;
+                let y = if reverse { height - 1 - row } else { row };
+                for column in 3..width - 3 {
+                    let x = if reverse { width - 1 - column } else { column };
+                    pass_improved |= refine_pixel(
+                        gray, reference, sources, &mut planes, &coarse, width, x, y, step,
+                        ray_step, low, high, interval, pass, budget, reverse, adaptive,
+                        options, diagnostics,
+                    );
+                }
+            }
+        }
+        // A whole pass without a single strict improvement cannot be rescued
+        // by repeating the same proposals; remaining passes are skipped.
+        if adaptive && !pass_improved {
+            break;
         }
     }
     let mut depth = vec![0.; count];
@@ -392,6 +480,84 @@ pub(super) fn estimate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn red_black_and_adaptive_refinement_are_deterministic() {
+        use crate::Image;
+        let camera = Camera::identity(100., 8., 8.);
+        let mut rgb = Vec::new();
+        for y in 0..16 {
+            for x in 0..16 {
+                let value = ((x * 13 + y * 7 + x * y * 3) % 31) as f64;
+                rgb.extend([((value + 10.) * 4.) as u8; 3]);
+            }
+        }
+        let image = Image {
+            width: 16,
+            height: 16,
+            rgb,
+            focal: 100.,
+        };
+        let gray = GrayImage::new(&image);
+        let run = |options: &DenseOptions| {
+            let mut source_camera = camera.clone();
+            source_camera.translation = [-0.05, 0., 0.];
+            let mut sources = [Source {
+                image: &gray,
+                camera: &source_camera,
+                rotation: ID,
+                translation: [-0.05, 0., 0.],
+                offsets: std::array::from_fn(|i| {
+                    [
+                        ((i % 5) as f64 - 2.) / 100.,
+                        ((i / 5) as f64 - 2.) / 100.,
+                        0.,
+                    ]
+                }),
+                rays: [[0.; 3]; 25],
+            }];
+            estimate(
+                &gray,
+                &camera,
+                &mut sources,
+                16,
+                16,
+                1.,
+                2.,
+                8.,
+                options,
+                &mut DenseDiagnostics::default(),
+                &mut |_, _, _| true,
+            )
+            .unwrap()
+        };
+        let default_a = run(&DenseOptions::default());
+        let default_b = run(&DenseOptions::default());
+        assert_eq!(default_a.0, default_b.0);
+        assert_eq!(default_a.1, default_b.1);
+        for options in [
+            DenseOptions {
+                red_black_propagation: true,
+                ..Default::default()
+            },
+            DenseOptions {
+                adaptive_refine_budget: true,
+                ..Default::default()
+            },
+            DenseOptions {
+                red_black_propagation: true,
+                adaptive_refine_budget: true,
+                ..Default::default()
+            },
+        ] {
+            let a = run(&options);
+            let b = run(&options);
+            assert_eq!(a.0, b.0);
+            assert_eq!(a.1, b.1);
+            for &d in &a.0 {
+                assert!(d == 0. || (1.99..=8.01).contains(&d));
+            }
+        }
+    }
     #[test]
     fn propagated_plane_changes_depth_but_preserves_surface() {
         let q = [0.2, -0.1, 0.25];
@@ -459,6 +625,7 @@ mod tests {
         ];
         let cost = PixelCost {
             ray,
+            unit_ray: unit(ray),
             ray_step: 0.01,
             patch: &patch,
             sources: &sources,

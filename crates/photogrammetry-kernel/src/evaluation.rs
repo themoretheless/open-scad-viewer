@@ -1,11 +1,31 @@
 //! Bidirectional point-sample evaluation in a caller-established coordinate frame.
 //! No registration, scale fitting, or inferred ground truth is performed here.
 use crate::Result;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
 
 type Point = [f64; 3];
 const MAX_POINTS: usize = 2_000_000;
 const NONE: usize = usize::MAX;
+
+/// Tiny deterministic FNV-style hasher for voxel keys; the std SipHash build
+/// dominates small cell maps. Cell order affects only sample order, never the
+/// sorted distance summary.
+#[derive(Default)]
+struct VoxelHasher(u64);
+impl Hasher for VoxelHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0 ^ b as u64).wrapping_mul(0x100000001b3);
+        }
+    }
+    fn write_i64(&mut self, v: i64) {
+        self.0 = (self.0 ^ v as u64).wrapping_mul(0x100000001b3);
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct EvaluationOptions {
@@ -62,7 +82,7 @@ fn sampled(
     let Some(size) = voxel else {
         return Ok(points.to_vec());
     };
-    let mut cells = BTreeMap::<[i64; 3], (Point, usize)>::new();
+    let mut cells = HashMap::<[i64; 3], (Point, usize), BuildHasherDefault<VoxelHasher>>::default();
     for (i, p) in points.iter().enumerate() {
         if i % 4096 == 0 && !progress("evaluation_sample", i, points.len()) {
             return Err("Cancelled".into());
@@ -153,16 +173,21 @@ impl Tree {
         index: usize,
         point: Point,
         best: &mut f64,
-        visited: &mut usize,
+        until_check: &mut usize,
         keep_going: &mut impl FnMut() -> bool,
     ) -> Result<()> {
         if index == NONE {
             return Ok(());
         }
-        if *visited % 4096 == 0 && !keep_going() {
-            return Err("Cancelled".into());
+        // Countdown to the next cancellation check; same cadence as a modulo
+        // on the visited count, without the division on every node.
+        if *until_check == 0 {
+            if !keep_going() {
+                return Err("Cancelled".into());
+            }
+            *until_check = 4096;
         }
-        *visited += 1;
+        *until_check -= 1;
         let n = &self.nodes[index];
         let distance = (0..3).map(|k| (point[k] - n.point[k]).powi(2)).sum::<f64>();
         *best = best.min(distance);
@@ -172,26 +197,30 @@ impl Tree {
         } else {
             (n.right, n.left)
         };
-        self.search(near, point, best, visited, keep_going)?;
+        self.search(near, point, best, until_check, keep_going)?;
         if delta * delta < *best {
-            self.search(far, point, best, visited, keep_going)?;
+            self.search(far, point, best, until_check, keep_going)?;
         }
         Ok(())
     }
 }
 
 fn distances(
-    points: &[Point],
+    queries: &Tree,
     tree: &Tree,
     tolerance: f64,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<DistanceSummary> {
-    let mut values = Vec::with_capacity(points.len());
-    for (i, p) in points.iter().enumerate() {
-        if i % 1024 == 0 && !progress("evaluation_distance", i, points.len()) {
+    let mut values = Vec::with_capacity(queries.nodes.len());
+    for (i, n) in queries.nodes.iter().enumerate() {
+        if i % 1024 == 0 && !progress("evaluation_distance", i, queries.nodes.len()) {
             return Err("Cancelled".into());
         }
-        values.push(tree.nearest(*p, &mut || progress("evaluation_distance", i, points.len()))?);
+        values.push(
+            tree.nearest(n.point, &mut || {
+                progress("evaluation_distance", i, queries.nodes.len())
+            })?,
+        );
     }
     values.sort_unstable_by(f64::total_cmp);
     let samples = values.len();
@@ -237,10 +266,13 @@ pub fn evaluate_clouds(
     }
     let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
     let b = sampled(reference, options.voxel_size, &mut progress)?;
-    let ta = Tree::new(a.clone(), &mut progress)?;
-    let tb = Tree::new(b.clone(), &mut progress)?;
-    let accuracy = distances(&a, &tb, options.tolerance, &mut progress)?;
-    let completeness = distances(&b, &ta, options.tolerance, &mut progress)?;
+    // The trees hold the same point multisets as the sampled vectors, and the
+    // sorted summaries do not depend on query order, so the clones of the
+    // sampled clouds are unnecessary.
+    let ta = Tree::new(a, &mut progress)?;
+    let tb = Tree::new(b, &mut progress)?;
+    let accuracy = distances(&ta, &tb, options.tolerance, &mut progress)?;
+    let completeness = distances(&tb, &ta, options.tolerance, &mut progress)?;
     let precision = accuracy.within_tolerance as f64 / accuracy.samples as f64;
     let recall = completeness.within_tolerance as f64 / completeness.samples as f64;
     let f1 = if precision + recall == 0. {

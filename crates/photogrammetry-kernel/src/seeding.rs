@@ -15,6 +15,14 @@ pub(crate) struct Seed {
     pub matches: Vec<Match>,
     pub score: f64,
 }
+/// Opt-in seed selection extensions; the default reproduces the original ranking.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SeedOptions {
+    /// Also verify the best runner-up pairs that missed the descriptor-score
+    /// selection, then rank all verified seeds by geometric inlier support.
+    /// Costs at most one extra geometric verification per selected pair.
+    pub verify_runners_up: bool,
+}
 fn coverage(
     matches: &[Match],
     features: &[Vec<Feature>],
@@ -37,6 +45,7 @@ fn coverage(
     };
     area(a, true).min(area(b, false))
 }
+#[cfg(test)]
 pub(crate) fn propose(
     images: &[Image],
     features: &[Vec<Feature>],
@@ -46,7 +55,30 @@ pub(crate) fn propose(
     report: &mut ReconstructionReport,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<Vec<Seed>> {
+    propose_with_options(
+        images,
+        features,
+        cache,
+        limit,
+        geometry_options,
+        &SeedOptions::default(),
+        report,
+        progress,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn propose_with_options(
+    images: &[Image],
+    features: &[Vec<Feature>],
+    cache: &mut MatchGraph,
+    limit: usize,
+    geometry_options: &camera::GeometryOptions,
+    seed_options: &SeedOptions,
+    report: &mut ReconstructionReport,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<Vec<Seed>> {
     let mut candidates = Vec::new();
+    let mut matches_by_pair = std::collections::BTreeMap::new();
     // All pairs for browser projects, acquisition-order window for larger native sets.
     for a in 0..images.len() {
         let end = if images.len() <= 24 {
@@ -67,6 +99,7 @@ pub(crate) fn propose(
                 let score =
                     matches.len() as f64 * coverage(&matches, features, images, a, b).sqrt();
                 candidates.push((score, a, b));
+                matches_by_pair.insert((a, b), matches);
             }
         }
     }
@@ -78,7 +111,7 @@ pub(crate) fn propose(
         .copied()
         .collect::<Vec<_>>();
     candidates.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
-    for candidate in candidates {
+    for &candidate in &candidates {
         if selected.len() >= limit {
             break;
         }
@@ -89,13 +122,38 @@ pub(crate) fn propose(
             selected.push(candidate);
         }
     }
+    // Opt-in: the descriptor-score selection can miss pairs with fewer but
+    // geometrically stronger correspondences; verify the best runners-up too
+    // and let the inlier-scored sort below rank every verified seed.
+    if seed_options.verify_runners_up {
+        let mut extras = 0;
+        for &candidate in &candidates {
+            if extras >= limit {
+                break;
+            }
+            if !selected
+                .iter()
+                .any(|c| (c.1, c.2) == (candidate.1, candidate.2))
+            {
+                selected.push(candidate);
+                extras += 1;
+            }
+        }
+    }
     let mut seeds = Vec::new();
     for (_, a, b) in selected {
         if !progress("initial_pair", report.seed_pairs_tested, limit) {
             return Err("Cancelled".into());
         }
         report.seed_pairs_tested += 1;
-        let matches = cache.between(features, a, b).collect::<Vec<_>>();
+        let matches = match matches_by_pair.remove(&(a, b)) {
+            Some(matches) => {
+                // The pair is already cached; keep the observable request count.
+                cache.requests += 1;
+                matches
+            }
+            None => cache.between(features, a, b).collect::<Vec<_>>(),
+        };
         let pairs = matches
             .iter()
             .map(|m| {
@@ -134,7 +192,149 @@ pub(crate) fn propose(
             .then(a.a.cmp(&b.a))
             .then(a.b.cmp(&b.b))
     });
+    if seed_options.verify_runners_up {
+        // Runner-up verification is a widening of the candidate set, not of
+        // the seed budget; keep at most `limit` seeds as in the default path.
+        seeds.truncate(limit);
+    }
     report.matching_requests = cache.requests;
     report.computed_pairs = cache.computed_pairs;
     Ok(seeds)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::camera::GeometryOptions;
+
+    fn rot_y(angle: f64) -> [[f64; 3]; 3] {
+        let (c, s) = (angle.cos(), angle.sin());
+        [[c, 0., s], [0., 1., 0.], [-s, 0., c]]
+    }
+    fn blank() -> Image {
+        Image {
+            width: 64,
+            height: 64,
+            rgb: vec![0; 64 * 64 * 3],
+            focal: 100.,
+        }
+    }
+    /// Three synthetic views of one point cloud. View 1 is a pure rotation
+    /// from view 0, so their pair is homography-degenerate; view 2 has a real
+    /// baseline. Views 0/1 share 40 tracks, view 2 shares 30, so descriptor
+    /// count ranks the degenerate pair first.
+    fn scene() -> (Vec<Image>, Vec<Vec<Feature>>) {
+        let cameras = [
+            Camera::identity(100., 32., 32.),
+            Camera {
+                rotation: rot_y(0.1),
+                translation: [0.; 3],
+                focal: 100.,
+                cx: 32.,
+                cy: 32.,
+            },
+            Camera {
+                rotation: [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+                translation: [0.35, 0.05, -0.02],
+                focal: 100.,
+                cx: 32.,
+                cy: 32.,
+            },
+        ];
+        let mut state = 0x9e3779b97f4a7c15u64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state % 10000) as f64 / 10000.
+        };
+        let points = (0..40)
+            .map(|_| [next() * 1.6 - 0.8, next() * 1.6 - 0.8, 3. + next() * 3.])
+            .collect::<Vec<_>>();
+        let features = cameras
+            .iter()
+            .enumerate()
+            .map(|(view, camera)| {
+                let visible = if view == 2 { 30 } else { 40 };
+                points[..visible]
+                    .iter()
+                    .enumerate()
+                    .map(|(track, point)| {
+                        let [x, y] = camera.project(*point).unwrap();
+                        let mut descriptor = [0.; 128];
+                        descriptor[track] = 1.;
+                        Feature { x, y, descriptor }
+                    })
+                    .collect()
+            })
+            .collect();
+        (vec![blank(); 3], features)
+    }
+    fn verify(
+        features: &[Vec<Feature>],
+        limit: usize,
+        seed_options: &SeedOptions,
+    ) -> Vec<(usize, usize, u64, usize)> {
+        let images = vec![blank(); features.len()];
+        let mut cache = MatchGraph::default();
+        let mut report = ReconstructionReport::default();
+        propose_with_options(
+            &images,
+            features,
+            &mut cache,
+            limit,
+            &GeometryOptions::default(),
+            seed_options,
+            &mut report,
+            &mut |_, _, _| true,
+        )
+        .unwrap()
+        .iter()
+        .map(|s| (s.a, s.b, s.score.to_bits(), s.inliers.len()))
+        .collect()
+    }
+    #[test]
+    fn default_options_reproduce_original_propose_deterministically() {
+        let (_, features) = scene();
+        let first = verify(&features, 2, &SeedOptions::default());
+        assert_eq!(first, verify(&features, 2, &SeedOptions::default()));
+        // The budget covers the degenerate top pair plus one baseline pair.
+        assert_eq!(first.len(), 1);
+        assert!(first[0].0 != first[0].1 && first[0].1 == 2, "{first:?}");
+        // The pub(crate) entry point delegates with default options.
+        let images = vec![blank(); 3];
+        let mut cache = MatchGraph::default();
+        let mut report = ReconstructionReport::default();
+        let seeds = propose(
+            &images,
+            &features,
+            &mut cache,
+            2,
+            &GeometryOptions::default(),
+            &mut report,
+            &mut |_, _, _| true,
+        )
+        .unwrap();
+        let delegated = seeds
+            .iter()
+            .map(|s| (s.a, s.b, s.score.to_bits(), s.inliers.len()))
+            .collect::<Vec<_>>();
+        assert_eq!(first, delegated);
+    }
+    #[test]
+    fn runner_up_verification_finds_baseline_seed_behind_degenerate_top_pair() {
+        let (_, features) = scene();
+        // The whole budget goes to the degenerate pure-rotation pair.
+        assert!(verify(&features, 1, &SeedOptions::default()).is_empty());
+        let seeds = verify(
+            &features,
+            1,
+            &SeedOptions {
+                verify_runners_up: true,
+            },
+        );
+        assert_eq!(seeds.len(), 1);
+        assert_eq!(seeds[0].1, 2);
+        assert!(seeds[0].3 >= 15, "{seeds:?}");
+    }
 }

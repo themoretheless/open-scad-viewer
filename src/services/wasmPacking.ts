@@ -35,7 +35,14 @@ export function unpackWasm(input:Uint8Array):Uint8Array<ArrayBuffer>{
    if(!all[256])throw new Error('Missing end-of-block code');lit=tree(all.slice(0,nl));dist=tree(all.slice(nl))
   }
   for(;;){const s=symbol(lit);if(s===256)break;if(s<256){if(o===size)throw new Error('WASM output overflow');output[o++]=s;continue}
-   if(s>285)throw new Error('Invalid match length');const length=lengthBase[s-257]!+read(lengthExtra[s-257]!);const d=symbol(dist);if(d>29)throw new Error('Invalid match distance');const distance=distanceBase[d]!+read(distanceExtra[d]!);if(distance>o||length>size-o)throw new Error('WASM match out of bounds');for(let j=0;j<length;j++){output[o]=output[o-distance]!;o++}
+   if(s>285)throw new Error('Invalid match length');const length=lengthBase[s-257]!+read(lengthExtra[s-257]!);const d=symbol(dist);if(d>29)throw new Error('Invalid match distance');const distance=distanceBase[d]!+read(distanceExtra[d]!);if(distance>o||length>size-o)throw new Error('WASM match out of bounds')
+   if(distance>=length){output.copyWithin(o,o-distance,o-distance+length);o+=length}
+   else{
+    // Overlapping match replicates the last `distance` bytes; each doubling step reads only settled output.
+    output.copyWithin(o,o-distance,o)
+    for(let filled=distance;filled<length;){const block=Math.min(filled,length-filled);output.copyWithin(o+filled,o,o+block);filled+=block}
+    o+=length
+   }
   }
  }while(!final)
  if(o!==size||i-Math.floor(available/8)!==input.length)throw new Error('WASM package size mismatch')

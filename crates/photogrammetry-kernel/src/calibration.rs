@@ -95,17 +95,22 @@ impl Calibration {
     /// Brown maps; coefficients from another lens model must not look valid.
     pub fn project_ray(&self, ray: [f64; 2]) -> Option<[f64; 2]> {
         let [x, y] = ray;
+        // Coefficient-only products are hoisted; every remaining float op keeps
+        // its exact operand order and rounding.
+        let k2x2 = 2. * self.k2;
+        let p1x2 = 2. * self.p1;
+        let p1x6 = 6. * self.p1;
+        let p2x2 = 2. * self.p2;
+        let p2x6 = 6. * self.p2;
         let r2 = x * x + y * y;
         let radial = 1. + r2 * (self.k1 + r2 * (self.k2 + r2 * self.k3));
-        let derivative = self.k1 + r2 * (2. * self.k2 + 3. * r2 * self.k3);
-        let cross = 2. * x * y * derivative + 2. * self.p1 * x + 2. * self.p2 * y;
-        let dx = radial + 2. * x * x * derivative + 2. * self.p1 * y + 6. * self.p2 * x;
-        let dy = radial + 2. * y * y * derivative + 6. * self.p1 * y + 2. * self.p2 * x;
+        let derivative = self.k1 + r2 * (k2x2 + 3. * r2 * self.k3);
+        let cross = 2. * x * y * derivative + p1x2 * x + p2x2 * y;
+        let dx = radial + 2. * x * x * derivative + p1x2 * y + p2x6 * x;
+        let dy = radial + 2. * y * y * derivative + p1x6 * y + p2x2 * x;
         let determinant = dx * dy - cross * cross;
-        let u =
-            self.fx * (x * radial + 2. * self.p1 * x * y + self.p2 * (r2 + 2. * x * x)) + self.cx;
-        let v =
-            self.fy * (y * radial + self.p1 * (r2 + 2. * y * y) + 2. * self.p2 * x * y) + self.cy;
+        let u = self.fx * (x * radial + p1x2 * x * y + self.p2 * (r2 + 2. * x * x)) + self.cx;
+        let v = self.fy * (y * radial + self.p1 * (r2 + 2. * y * y) + p2x2 * x * y) + self.cy;
         (u.is_finite()
             && v.is_finite()
             && determinant.is_finite()
@@ -170,10 +175,16 @@ fn bilinear(image: &Image, p: [f64; 2], out: &mut [u8]) {
     let (x, y) = (p[0].floor() as usize, p[1].floor() as usize);
     let (nx, ny) = ((x + 1).min(image.width - 1), (y + 1).min(image.height - 1));
     let (a, b) = (p[0] - x as f64, p[1] - y as f64);
+    let (i00, i10) = ((y * image.width + x) * 3, (y * image.width + nx) * 3);
+    let (i01, i11) = ((ny * image.width + x) * 3, (ny * image.width + nx) * 3);
+    let at = |i: usize, channel: usize| image.rgb[i + channel] as f64;
+    let c00 = [at(i00, 0), at(i00, 1), at(i00, 2)];
+    let c10 = [at(i10, 0), at(i10, 1), at(i10, 2)];
+    let c01 = [at(i01, 0), at(i01, 1), at(i01, 2)];
+    let c11 = [at(i11, 0), at(i11, 1), at(i11, 2)];
     for (channel, value) in out.iter_mut().enumerate() {
-        let at = |x: usize, y: usize| image.rgb[(y * image.width + x) * 3 + channel] as f64;
-        *value = ((1. - b) * ((1. - a) * at(x, y) + a * at(nx, y))
-            + b * ((1. - a) * at(x, ny) + a * at(nx, ny)))
+        *value = ((1. - b) * ((1. - a) * c00[channel] + a * c10[channel])
+            + b * ((1. - a) * c01[channel] + a * c11[channel]))
         .round()
         .clamp(0., 255.) as u8;
     }
@@ -283,13 +294,21 @@ pub fn rectify(
     // The coarse grid only chooses a candidate. Every actual output pixel is
     // checked before sampling; hidden folds/invalid intervals cannot be filled.
     let mut rgb = vec![0; image.rgb.len()];
+    let half_width = image.width as f64 / 2.;
+    let half_height = image.height as f64 / 2.;
+    let max_u = (image.width - 1) as f64;
+    let max_v = (image.height - 1) as f64;
     for _ in 0..RENDER_ATTEMPTS {
         let mut valid = true;
         'rows: for y in 0..image.height {
             checkpoint(image.width)?;
+            // Row-invariant normalized coordinate; same expression source_pixel
+            // would compute, evaluated once per row instead of per pixel.
+            let v = (y as f64 - half_height) / high;
             for x in 0..image.width {
-                let Some(p) =
-                    source_pixel(&cal, image.width, image.height, high, x as f64, y as f64)
+                let Some(p) = cal
+                    .project_ray([(x as f64 - half_width) / high, v])
+                    .filter(|p| p[0] >= 0. && p[1] >= 0. && p[0] <= max_u && p[1] <= max_v)
                 else {
                     valid = false;
                     break 'rows;

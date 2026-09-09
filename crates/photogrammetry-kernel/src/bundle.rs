@@ -5,7 +5,7 @@
 //! the initial anchor/scale-camera baseline after each candidate, removing scale drift.
 //! Inputs are committed only after successful completion, including the final callback.
 use crate::camera::Camera;
-use crate::math::{add, cross, det, mm, mv, norm, rotation, scale, sub, tr, unit, M3, V3};
+use crate::math::{add, cross, det, dot, mm, mv, norm, rotation, scale, sub, tr, unit, M3, V3};
 use std::ops::Range;
 
 #[derive(Clone, Copy, Debug)]
@@ -13,6 +13,17 @@ pub struct Observation {
     pub camera: usize,
     pub point: usize,
     pub xy: [f64; 2],
+}
+
+/// Opt-in observation pruning applied by callers between optimization runs.
+/// Huber loss only downweights outliers; this removes them from later runs.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FilterOptions {
+    /// Observations with a larger reprojection error (pixels) are dropped.
+    pub max_reprojection_error: f64,
+    /// Tracks whose widest viewing angle stays below this (radians) are dropped;
+    /// zero disables the parallax test.
+    pub min_parallax: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -26,6 +37,8 @@ pub struct BundleOptions {
     pub max_cameras: usize,
     pub max_points: usize,
     pub max_observations: usize,
+    /// None keeps every observation forever (previous behavior).
+    pub filter: Option<FilterOptions>,
 }
 impl Default for BundleOptions {
     fn default() -> Self {
@@ -38,6 +51,7 @@ impl Default for BundleOptions {
             max_cameras: 24,
             max_points: 50_000,
             max_observations: 200_000,
+            filter: None,
         }
     }
 }
@@ -58,6 +72,16 @@ impl BundleOptions {
             || !(0. ..=0.01).contains(&self.relative_cost_tolerance)
         {
             return Err("Invalid bundle adjustment options".into());
+        }
+        if let Some(filter) = &self.filter {
+            if !filter.max_reprojection_error.is_finite()
+                || !(0. ..=100.).contains(&filter.max_reprojection_error)
+                || filter.max_reprojection_error <= 0.
+                || !filter.min_parallax.is_finite()
+                || !(0. ..=1.).contains(&filter.min_parallax)
+            {
+                return Err("Invalid bundle adjustment filter options".into());
+            }
         }
         Ok(())
     }
@@ -86,7 +110,130 @@ pub struct BundleReport {
     pub iterations: usize,
     pub accepted_steps: usize,
     pub observations: usize,
+    /// Post-run pruning counters, filled by the caller when `BundleOptions::filter`
+    /// is enabled; `optimize` itself never filters and leaves both at zero.
+    pub filtered_observations: usize,
+    pub filtered_tracks: usize,
     pub termination: BundleTermination,
+}
+
+/// Pruning totals of one `filter_observations` pass.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct FilterReport {
+    pub observations_removed: usize,
+    pub tracks_removed: usize,
+}
+
+/// Per-observation keep mask for opt-in outlier pruning at the current state.
+/// An observation is dropped when its reprojection error exceeds the threshold,
+/// when its track is left with a single view, or when the track's widest viewing
+/// angle stays below `min_parallax`. Deterministic: observations are visited in
+/// storage order and per-track aggregates are indexed by point id.
+pub fn outlier_mask(
+    cameras: &[Option<Camera>],
+    positions: &[V3],
+    observations: &[Observation],
+    filter: &FilterOptions,
+) -> Vec<bool> {
+    let limit = filter.max_reprojection_error * filter.max_reprojection_error;
+    let mut keep: Vec<bool> = observations
+        .iter()
+        .map(|observation| {
+            cameras
+                .get(observation.camera)
+                .and_then(Option::as_ref)
+                .and_then(|camera| positions.get(observation.point).and_then(|p| camera.project(*p)))
+                .is_some_and(|uv| {
+                    (uv[0] - observation.xy[0]).powi(2) + (uv[1] - observation.xy[1]).powi(2)
+                        <= limit
+                })
+        })
+        .collect();
+    let mut support = vec![0usize; positions.len()];
+    for (observation, &kept) in observations.iter().zip(&keep) {
+        if kept {
+            support[observation.point] += 1;
+        }
+    }
+    // cos decreases on [0, pi], so the widest angle stays below min_parallax
+    // exactly when the smallest pairwise ray cosine exceeds cos(min_parallax).
+    let mut min_cosine = vec![f64::INFINITY; positions.len()];
+    if filter.min_parallax > 0. {
+        let mut centers: Vec<Option<V3>> = vec![None; cameras.len()];
+        for a in 0..observations.len() {
+            if !keep[a] {
+                continue;
+            }
+            let point = observations[a].point;
+            if centers[observations[a].camera].is_none() {
+                centers[observations[a].camera] =
+                    Some(cameras[observations[a].camera].as_ref().unwrap().center());
+            }
+            let ray = unit(sub(
+                positions[point],
+                centers[observations[a].camera].unwrap(),
+            ));
+            for b in a + 1..observations.len() {
+                if !keep[b] || observations[b].point != point {
+                    continue;
+                }
+                if centers[observations[b].camera].is_none() {
+                    centers[observations[b].camera] =
+                        Some(cameras[observations[b].camera].as_ref().unwrap().center());
+                }
+                let other = unit(sub(
+                    positions[point],
+                    centers[observations[b].camera].unwrap(),
+                ));
+                let cosine = dot(ray, other);
+                if cosine < min_cosine[point] {
+                    min_cosine[point] = cosine;
+                }
+            }
+        }
+    }
+    let cosine_limit = filter.min_parallax.cos();
+    for (index, observation) in observations.iter().enumerate() {
+        if keep[index]
+            && (support[observation.point] < 2
+                || (filter.min_parallax > 0. && min_cosine[observation.point] > cosine_limit))
+        {
+            keep[index] = false;
+        }
+    }
+    keep
+}
+
+/// Applies `outlier_mask` in place, preserving the relative observation order.
+pub fn filter_observations(
+    cameras: &[Option<Camera>],
+    positions: &[V3],
+    observations: &mut Vec<Observation>,
+    filter: &FilterOptions,
+) -> FilterReport {
+    let keep = outlier_mask(cameras, positions, observations, filter);
+    let mut before = vec![0usize; positions.len()];
+    for observation in observations.iter() {
+        before[observation.point] += 1;
+    }
+    let mut index = 0;
+    observations.retain(|_| {
+        let kept = keep[index];
+        index += 1;
+        kept
+    });
+    let mut after = vec![0usize; positions.len()];
+    for observation in observations.iter() {
+        after[observation.point] += 1;
+    }
+    FilterReport {
+        observations_removed: keep.len() - observations.len(),
+        tracks_removed: before
+            .iter()
+            .zip(&after)
+            .filter(|&(&b, &a)| b > 0 && a == 0)
+            .count(),
+    }
 }
 
 /// Cooperative cancellation is shared by every long stage, without publishing candidates.
@@ -125,6 +272,15 @@ struct Layout {
     dimension: usize,
     anchor_center: V3,
     baseline: f64,
+}
+
+/// Iterative union-find root with path halving; deterministic and float-free.
+fn find_root(parent: &mut [usize], mut index: usize) -> usize {
+    while parent[index] != index {
+        parent[index] = parent[parent[index]];
+        index = parent[index];
+    }
+    index
 }
 
 fn validate(
@@ -226,6 +382,8 @@ fn validate(
         offsets[observation.point] += 1;
     }
     let mut last_point = vec![usize::MAX; cameras.len()];
+    // Camera centers are pure functions of the validated poses; cache per camera.
+    let mut centers: Vec<Option<V3>> = vec![None; cameras.len()];
     let mut tracks = Vec::new();
     let mut start = 0;
     while start < order.len() {
@@ -245,14 +403,17 @@ fn validate(
         if end - start < 2 {
             return Err("Bundle points need at least two distinct views".into());
         }
-        let ray = |index: usize| {
-            unit(sub(
-                positions[point],
-                cameras[observations[order[index]].camera]
-                    .as_ref()
-                    .unwrap()
-                    .center(),
-            ))
+        let mut ray = |index: usize| {
+            let camera = observations[order[index]].camera;
+            let center = match centers[camera] {
+                Some(center) => center,
+                None => {
+                    let center = cameras[camera].as_ref().unwrap().center();
+                    centers[camera] = Some(center);
+                    center
+                }
+            };
+            unit(sub(positions[point], center))
         };
         let first_ray = ray(start);
         if !(start + 1..end).any(|index| norm(cross(first_ray, ray(index))) > 1e-6) {
@@ -266,33 +427,26 @@ fn validate(
     }
     // Reject disconnected components: every optimized pose must share a track path
     // with the anchor, otherwise a single gauge cannot constrain the whole problem.
-    let mut connected = vec![false; cameras.len()];
-    connected[anchor] = true;
-    loop {
-        let mut changed = false;
-        for (index, track) in tracks.iter().enumerate() {
-            if !checkpoints.every(index, 128) {
-                return Err("Cancelled".into());
-            }
-            if order[track.clone()]
-                .iter()
-                .any(|&i| connected[observations[i].camera])
-            {
-                for &i in &order[track.clone()] {
-                    let camera = observations[i].camera;
-                    changed |= !connected[camera];
-                    connected[camera] = true;
-                }
-            }
+    // One union-find pass over the camera/track hypergraph replaces repeated sweeps.
+    let mut parent: Vec<usize> = (0..cameras.len()).collect();
+    for (index, track) in tracks.iter().enumerate() {
+        if !checkpoints.every(index, 128) {
+            return Err("Cancelled".into());
         }
-        if !changed {
-            break;
+        let mut members = order[track.clone()].iter().map(|&i| observations[i].camera);
+        let first = members.next().unwrap();
+        for camera in members {
+            let (a, b) = (find_root(&mut parent, first), find_root(&mut parent, camera));
+            if a != b {
+                parent[b] = a;
+            }
         }
     }
+    let anchor_root = find_root(&mut parent, anchor);
     if seen
         .iter()
-        .zip(&connected)
-        .any(|(seen, connected)| *seen && !*connected)
+        .enumerate()
+        .any(|(camera, &seen)| seen && find_root(&mut parent, camera) != anchor_root)
     {
         return Err("Bundle observations contain disconnected camera groups".into());
     }
@@ -443,7 +597,8 @@ fn linearize(
             let (jc, jp) = jacobians(camera, transformed);
             for i in 0..3 {
                 block.rhs[i] -= weight * (jp[0][i] * residual[0] + jp[1][i] * residual[1]);
-                for j in 0..3 {
+                // Symmetric: only the upper triangle is accumulated, then mirrored.
+                for j in i..3 {
                     block.hessian[i][j] += weight * (jp[0][i] * jp[0][j] + jp[1][i] * jp[1][j]);
                 }
             }
@@ -455,7 +610,8 @@ fn linearize(
                 for i in 0..6 {
                     result.camera_rhs[column + i] -=
                         weight * (jc[0][i] * residual[0] + jc[1][i] * residual[1]);
-                    for j in 0..6 {
+                    // Symmetric: only the upper triangle is accumulated, then mirrored.
+                    for j in i..6 {
                         result.camera_hessian[(column + i) * n + column + j] +=
                             weight * (jc[0][i] * jc[0][j] + jc[1][i] * jc[1][j]);
                     }
@@ -466,8 +622,25 @@ fn linearize(
                 result.cross.push(cross);
             }
         }
+        // The symmetric lower triangle mirrors the accumulated upper one.
+        for i in 0..3 {
+            for j in i + 1..3 {
+                block.hessian[j][i] = block.hessian[i][j];
+            }
+        }
         block.cross.end = result.cross.len();
         result.points.push(block);
+    }
+    // The symmetric lower triangle of each camera block mirrors the upper one.
+    for &camera in &layout.active_cameras {
+        if let Some(column) = layout.columns[camera] {
+            for i in 0..6 {
+                for j in i + 1..6 {
+                    result.camera_hessian[(column + j) * n + column + i] =
+                        result.camera_hessian[(column + i) * n + column + j];
+                }
+            }
+        }
     }
     Some(result)
 }
@@ -504,11 +677,12 @@ fn inverse_point(mut h: M3, damping: f64) -> Option<M3> {
 }
 
 /// Diagonally normalized Cholesky. Storage is only quadratic in camera count.
+/// Reuses caller-owned buffers so damping retries do not reallocate the system.
 fn solve_reduced(
-    mut h: Vec<f64>,
-    mut rhs: Vec<f64>,
+    h: &mut [f64],
+    rhs: &mut [f64],
     checkpoints: &mut Checkpoints,
-) -> Option<Vec<f64>> {
+) -> Option<()> {
     let n = rhs.len();
     let mut scales = vec![0.; n];
     for i in 0..n {
@@ -555,17 +729,30 @@ fn solve_reduced(
     for i in 0..n {
         rhs[i] /= scales[i];
     }
-    rhs.iter().all(|v| v.is_finite()).then_some(rhs)
+    rhs.iter().all(|v| v.is_finite()).then_some(())
 }
 
 struct Step {
     cameras: Vec<f64>,
     points: Vec<V3>,
 }
-fn schur_step(linear: &Linearization, damping: f64, checkpoints: &mut Checkpoints) -> Option<Step> {
+/// Reusable camera-system storage shared by every damping trial of one call.
+#[derive(Default)]
+struct SchurScratch {
+    h: Vec<f64>,
+    rhs: Vec<f64>,
+}
+fn schur_step(
+    linear: &Linearization,
+    damping: f64,
+    scratch: &mut SchurScratch,
+    checkpoints: &mut Checkpoints,
+) -> Option<Step> {
     let n = linear.camera_rhs.len();
-    let mut h = linear.camera_hessian.clone();
-    let mut rhs = linear.camera_rhs.clone();
+    scratch.h.clone_from(&linear.camera_hessian);
+    scratch.rhs.clone_from(&linear.camera_rhs);
+    let h = &mut scratch.h;
+    let rhs = &mut scratch.rhs;
     for i in 0..n {
         h[i * n + i] += damping * h[i * n + i].max(1e-9);
     }
@@ -590,14 +777,21 @@ fn schur_step(linear: &Linearization, damping: f64, checkpoints: &mut Checkpoint
                 rhs[wa.column + i] -= (0..3).map(|k| wa.values[i][k] * point_rhs[k]).sum::<f64>();
             }
             for (b, wb) in cross.iter().enumerate().take(a + 1) {
+                // Compute the 6x6 contribution contiguously, then subtract it into
+                // the scattered direct and transposed addresses in the same order.
+                let mut block = [[0.; 6]; 6];
                 for i in 0..6 {
                     for j in 0..6 {
-                        let v = (0..3)
+                        block[i][j] = (0..3)
                             .map(|k| products[a][i][k] * wb.values[j][k])
                             .sum::<f64>();
-                        h[(wa.column + i) * n + wb.column + j] -= v;
+                    }
+                }
+                for i in 0..6 {
+                    for j in 0..6 {
+                        h[(wa.column + i) * n + wb.column + j] -= block[i][j];
                         if a != b {
-                            h[(wb.column + j) * n + wa.column + i] -= v;
+                            h[(wb.column + j) * n + wa.column + i] -= block[i][j];
                         }
                     }
                 }
@@ -605,7 +799,8 @@ fn schur_step(linear: &Linearization, damping: f64, checkpoints: &mut Checkpoint
         }
         inverses.push(inverse);
     }
-    let cameras = solve_reduced(h, rhs, checkpoints)?;
+    solve_reduced(h, rhs, checkpoints)?;
+    let cameras = rhs.clone();
     let mut points = Vec::with_capacity(linear.points.len());
     for (index, (point, inverse)) in linear.points.iter().zip(inverses).enumerate() {
         if !checkpoints.every(index, 128) {
@@ -628,6 +823,7 @@ fn schur_step(linear: &Linearization, damping: f64, checkpoints: &mut Checkpoint
     Some(Step { cameras, points })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn candidate(
     cameras: &[Option<Camera>],
     positions: &[V3],
@@ -635,10 +831,14 @@ fn candidate(
     layout: &Layout,
     scale_camera: usize,
     step: &Step,
+    next_cameras: &mut Vec<Option<Camera>>,
+    next_points: &mut Vec<V3>,
     checkpoints: &mut Checkpoints,
-) -> Option<(Vec<Option<Camera>>, Vec<V3>)> {
-    let mut next_cameras = cameras.to_vec();
-    let mut next_points = positions.to_vec();
+) -> Option<()> {
+    next_cameras.clear();
+    next_cameras.extend_from_slice(cameras);
+    next_points.clear();
+    next_points.extend_from_slice(positions);
     for &index in &layout.active_cameras {
         if let Some(column) = layout.columns[index] {
             next_cameras[index] = Some(perturb(
@@ -681,7 +881,7 @@ fn candidate(
             scale(sub(next_points[point.point], layout.anchor_center), factor),
         );
     }
-    Some((next_cameras, next_points))
+    Some(())
 }
 
 /// Jointly optimize a connected reconstruction. Unobserved points/cameras are preserved.
@@ -725,10 +925,15 @@ pub fn optimize(
         iterations: 0,
         accepted_steps: 0,
         observations: observations.len(),
+        filtered_observations: 0,
+        filtered_tracks: 0,
         termination: BundleTermination::IterationLimit,
     };
     let mut current_cameras = cameras.to_vec();
     let mut current_points = positions.to_vec();
+    let mut trial_cameras: Vec<Option<Camera>> = Vec::new();
+    let mut trial_points: Vec<V3> = Vec::new();
+    let mut schur_scratch = SchurScratch::default();
     let mut damping = options.initial_damping;
     for iteration in 0..options.max_iterations {
         checkpoints.event = BundleProgress {
@@ -753,8 +958,8 @@ pub fn optimize(
             if !checkpoints.check() {
                 return Err("Cancelled".into());
             }
-            if let Some((next_cameras, next_points)) =
-                schur_step(&linear, damping, &mut checkpoints).and_then(|step| {
+            let proposed = schur_step(&linear, damping, &mut schur_scratch, &mut checkpoints)
+                .and_then(|step| {
                     candidate(
                         &current_cameras,
                         &current_points,
@@ -762,20 +967,23 @@ pub fn optimize(
                         &layout,
                         scale_camera,
                         &step,
+                        &mut trial_cameras,
+                        &mut trial_points,
                         &mut checkpoints,
                     )
                 })
-            {
+                .is_some();
+            if proposed {
                 if let Some(next_cost) = cost(
-                    &next_cameras,
-                    &next_points,
+                    &trial_cameras,
+                    &trial_points,
                     observations,
                     options.huber_delta,
                     &mut checkpoints,
                 ) {
                     if next_cost < previous {
-                        current_cameras = next_cameras;
-                        current_points = next_points;
+                        std::mem::swap(&mut current_cameras, &mut trial_cameras);
+                        std::mem::swap(&mut current_points, &mut trial_points);
                         report.final_cost = next_cost;
                         report.accepted_steps += 1;
                         damping = (damping / 3.).max(1e-12);
@@ -903,7 +1111,8 @@ mod tests {
         )
         .unwrap();
         let damping = 0.003;
-        let step = schur_step(&linear, damping, &mut checkpoints).unwrap();
+        let step = schur_step(&linear, damping, &mut SchurScratch::default(), &mut checkpoints)
+            .unwrap();
         let nc = layout.dimension;
         let n = nc + linear.points.len() * 3;
         let mut h = vec![0.; n * n];
@@ -934,7 +1143,8 @@ mod tests {
         for i in 0..n {
             h[i * n + i] += damping * h[i * n + i].max(1e-9);
         }
-        let full = solve_reduced(h, rhs, &mut checkpoints).unwrap();
+        solve_reduced(&mut h, &mut rhs, &mut checkpoints).unwrap();
+        let full = rhs;
         for (actual, expected) in step
             .cameras
             .iter()
@@ -1262,7 +1472,15 @@ mod tests {
             calls < 2
         };
         let mut checkpoints = Checkpoints::new(&mut cancel_during_elimination);
-        assert!(schur_step(&linear, options.initial_damping, &mut checkpoints).is_none());
+        assert!(
+            schur_step(
+                &linear,
+                options.initial_damping,
+                &mut SchurScratch::default(),
+                &mut checkpoints
+            )
+            .is_none()
+        );
         assert!(checkpoints.cancelled);
         assert_eq!(calls, 2);
     }
@@ -1401,6 +1619,173 @@ mod tests {
         assert!(
             (norm(sub(cameras[1].as_ref().unwrap().center(), anchor.center())) - baseline).abs()
                 < 1e-12
+        );
+    }
+
+    #[test]
+    fn filter_options_are_validated_only_when_enabled() {
+        assert!(BundleOptions::default().validate().is_ok());
+        let options = |max_reprojection_error: f64, min_parallax: f64| BundleOptions {
+            filter: Some(FilterOptions {
+                max_reprojection_error,
+                min_parallax,
+            }),
+            ..Default::default()
+        };
+        assert!(options(4., 0.).validate().is_ok());
+        assert!(options(2., 0.01).validate().is_ok());
+        for bad in [0., -1., f64::NAN, f64::INFINITY, 100.5] {
+            assert!(options(bad, 0.).validate().is_err(), "{bad}");
+        }
+        for bad in [-0.1, 1.1, f64::NAN] {
+            assert!(options(4., bad).validate().is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn outlier_mask_drops_only_large_errors_deterministically() {
+        let (cameras, points, mut observations) = scene(true, true);
+        let filter = FilterOptions {
+            max_reprojection_error: 4.,
+            min_parallax: 0.,
+        };
+        let expected: Vec<bool> = observations
+            .iter()
+            .map(|o| (o.point * 4 + o.camera) % 43 != 0)
+            .collect();
+        let first = outlier_mask(&cameras, &points, &observations, &filter);
+        assert_eq!(first, outlier_mask(&cameras, &points, &observations, &filter));
+        assert_eq!(first, expected);
+        let report = filter_observations(&cameras, &points, &mut observations, &filter);
+        assert_eq!(report.observations_removed, expected.iter().filter(|&&k| !k).count());
+        assert_eq!(report.tracks_removed, 0);
+        assert_eq!(observations.len(), expected.iter().filter(|&&k| k).count());
+        // Every surviving observation stays within the threshold.
+        for observation in &observations {
+            let uv = cameras[observation.camera]
+                .as_ref()
+                .unwrap()
+                .project(points[observation.point])
+                .unwrap();
+            let error = (uv[0] - observation.xy[0]).hypot(uv[1] - observation.xy[1]);
+            assert!(error <= 4., "{error}");
+        }
+    }
+
+    #[test]
+    fn filter_drops_tracks_reduced_below_two_views_or_parallax() {
+        let (cameras, points, _) = scene(false, false);
+        // Point 0 keeps only camera 0 within the threshold: a corrupted camera 1
+        // observation is dropped, leaving a single view, so the track goes too.
+        let mut observations = Vec::new();
+        for (point, position) in points.iter().enumerate().take(8) {
+            for (camera, pose) in cameras.iter().enumerate() {
+                let mut xy = pose.as_ref().unwrap().project(*position).unwrap();
+                if point == 0 && camera > 0 {
+                    xy[0] += 30.;
+                }
+                observations.push(Observation { camera, point, xy });
+            }
+        }
+        let filter = FilterOptions {
+            max_reprojection_error: 4.,
+            min_parallax: 0.,
+        };
+        let mut retained = observations.clone();
+        let report = filter_observations(&cameras, &points, &mut retained, &filter);
+        assert_eq!(report.observations_removed, 4);
+        assert_eq!(report.tracks_removed, 1);
+        assert!(retained.iter().all(|o| o.point != 0));
+        // A parallax floor above the widest baseline angle drops every track.
+        let mut retained = observations;
+        let report = filter_observations(
+            &cameras,
+            &points,
+            &mut retained,
+            &FilterOptions {
+                max_reprojection_error: 400.,
+                min_parallax: 0.9,
+            },
+        );
+        assert_eq!(report.tracks_removed, 8);
+        assert!(retained.is_empty());
+    }
+
+    #[test]
+    fn filtering_between_runs_improves_outlier_recovery() {
+        let (mut cameras, truth, observations) = scene(true, true);
+        let mut points = truth.clone();
+        distort(&mut cameras, &mut points);
+        let mut single_pass_cameras = cameras.clone();
+        let mut single_pass_points = points.clone();
+        optimize(
+            &mut single_pass_cameras,
+            &mut single_pass_points,
+            &observations,
+            0,
+            1,
+            &BundleOptions {
+                max_iterations: 20,
+                ..Default::default()
+            },
+            |_| true,
+        )
+        .unwrap();
+        let filter = FilterOptions {
+            max_reprojection_error: 4.,
+            min_parallax: 0.,
+        };
+        optimize(
+            &mut cameras,
+            &mut points,
+            &observations,
+            0,
+            1,
+            &BundleOptions {
+                max_iterations: 20,
+                ..Default::default()
+            },
+            |_| true,
+        )
+        .unwrap();
+        let mut retained = observations.clone();
+        let removed = filter_observations(&cameras, &points, &mut retained, &filter);
+        assert!(removed.observations_removed > 0);
+        let second = optimize(
+            &mut cameras,
+            &mut points,
+            &retained,
+            0,
+            1,
+            &BundleOptions {
+                max_iterations: 20,
+                ..Default::default()
+            },
+            |_| true,
+        )
+        .unwrap();
+        let clean_error = |positions: &[V3]| {
+            let mut errors: Vec<_> = positions
+                .iter()
+                .zip(&truth)
+                .enumerate()
+                .filter(|(i, _)| (0..4).all(|c| (i * 4 + c) % 43 != 0))
+                .map(|(_, (&a, &b))| norm(sub(a, b)))
+                .collect();
+            errors.sort_by(f64::total_cmp);
+            errors[errors.len() / 2]
+        };
+        let filtered_error = clean_error(&points);
+        let unfiltered_error = clean_error(&single_pass_points);
+        assert!(
+            filtered_error < unfiltered_error,
+            "filtered median {filtered_error}, unfiltered {unfiltered_error}"
+        );
+        eprintln!(
+            "bundle filter: removed {} observations / {} tracks, clean median shape error {unfiltered_error} -> {filtered_error}, second run cost {}",
+            removed.observations_removed,
+            removed.tracks_removed,
+            second.final_cost,
         );
     }
 }

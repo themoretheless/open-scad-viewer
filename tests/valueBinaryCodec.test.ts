@@ -18,6 +18,18 @@ describe('dependency-free WASM boundary',()=>{
   const cycle:unknown[]=[];cycle.push(cycle);expect(()=>encodeBinary(cycle)).toThrow('nesting')
   const bad=new Uint8Array([77,71,86,49,5,255,255,255,255]);expect(()=>decodeBinary(bad)).toThrow('limit')
  })
+ it('decodes hinted numeric triples into flat typed arrays and falls back on shape mismatch',()=>{
+  const value={positions:[[0.5,1.5,-2.5],[3.5,4.5,5.5]],colors:[[0,128,255],[1,2,3]],triangles:[[0,1,2],[4294967295,0,128]],empty:[]}
+  const decoded=decodeBinary(encodeBinary(value),{positions:'f64',colors:'u8',triangles:'u32',empty:'u32'}) as Record<string,unknown>
+  expect(decoded.positions).toBeInstanceOf(Float64Array);expect([...decoded.positions as Float64Array]).toEqual([0.5,1.5,-2.5,3.5,4.5,5.5])
+  expect(decoded.colors).toBeInstanceOf(Uint8Array);expect([...decoded.colors as Uint8Array]).toEqual([0,128,255,1,2,3])
+  expect(decoded.triangles).toBeInstanceOf(Uint32Array);expect([...decoded.triangles as Uint32Array]).toEqual([0,1,2,4294967295,0,128])
+  expect(decoded.empty).toBeInstanceOf(Uint32Array);expect(decoded.empty).toHaveLength(0)
+  // Integer tags, ragged rows and out-of-range values keep the generic nested arrays.
+  expect(decodeBinary(encodeBinary({positions:[[1,2,3]]}),{positions:'f64'})).toEqual({positions:[[1,2,3]]})
+  expect(decodeBinary(encodeBinary({positions:[[1.5,2.5],[3.5,4.5,5.5]]}),{positions:'f64'})).toEqual({positions:[[1.5,2.5],[3.5,4.5,5.5]]})
+  expect(decodeBinary(encodeBinary({colors:[[256,0,0]]}),{colors:'u8'})).toEqual({colors:[[256,0,0]]})
+ })
  it('decodes stored, fixed and dynamic DEFLATE streams independently of zlib',()=>{
   let seed=17;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed>>>24}
   for(const size of [0,1,2,17,256,4096,65537])for(const patterned of [true,false])for(const options of [{level:0},{strategy:constants.Z_FIXED},{level:9}]){

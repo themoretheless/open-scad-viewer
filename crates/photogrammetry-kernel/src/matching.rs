@@ -7,8 +7,17 @@ pub(crate) struct MatchGraph {
     pairs: BTreeMap<(usize, usize), Vec<Match>>,
     pub requests: usize,
     pub computed_pairs: usize,
+    options: features::FeatureOptions,
 }
 impl MatchGraph {
+    /// Default construction keeps plain strict matching; this opt-in carries
+    /// feature options (currently `second_chance`) into pair matching.
+    pub fn with_options(options: features::FeatureOptions) -> Self {
+        Self {
+            options,
+            ..Default::default()
+        }
+    }
     pub fn between<'a>(
         &'a mut self,
         features: &[Vec<Feature>],
@@ -17,9 +26,10 @@ impl MatchGraph {
     ) -> impl Iterator<Item = Match> + 'a {
         self.requests += 1;
         let (lo, hi) = (a.min(b), a.max(b));
+        let options = self.options;
         let pairs = self.pairs.entry((lo, hi)).or_insert_with(|| {
             self.computed_pairs += 1;
-            features::matches(&features[lo], &features[hi])
+            features::matches_with_options(&features[lo], &features[hi], &options)
         });
         pairs.iter().map(move |&m| {
             if a <= b {
@@ -38,17 +48,26 @@ impl MatchGraph {
 /// A feature must refer to one world point, and a point to one feature in a view.
 /// Conflicting links are excluded, not resolved by the order cameras happened to register.
 #[derive(Default)]
-pub(crate) struct AssociationVotes(BTreeMap<usize, BTreeMap<usize, usize>>);
+pub(crate) struct AssociationVotes(Vec<Vec<(usize, usize)>>);
 impl AssociationVotes {
     pub fn add(&mut self, feature: usize, point: usize) {
-        *self.0.entry(feature).or_default().entry(point).or_default() += 1;
+        if self.0.len() <= feature {
+            self.0.resize_with(feature + 1, Vec::new);
+        }
+        let points = &mut self.0[feature];
+        match points.iter_mut().find(|(p, _)| *p == point) {
+            Some((_, votes)) => *votes += 1,
+            None => points.push((point, 1)),
+        }
     }
     pub fn resolve(self) -> (BTreeMap<usize, usize>, usize) {
         let mut candidates = Vec::new();
         let mut rejected = 0;
-        for (feature, points) in self.0 {
+        for (feature, points) in self.0.into_iter().enumerate() {
             if points.len() != 1 {
-                rejected += 1;
+                if !points.is_empty() {
+                    rejected += 1;
+                }
                 continue;
             }
             let (point, votes) = points.into_iter().next().unwrap();
@@ -102,5 +121,33 @@ mod tests {
         assert_eq!(forward, reverse);
         assert_eq!(g.computed_pairs, 1);
         assert_eq!(g.requests, 2);
+    }
+    #[test]
+    fn second_chance_relaxes_only_mutual_ratio_rejects() {
+        let a = Feature {
+            x: 10.,
+            y: 10.,
+            descriptor: [0.; 128],
+        };
+        // Mutual nearest neighbor at squared distance 0.7225 with the second
+        // nearest at 1.0: ratio 0.85 fails the strict 0.8 gate, passes 0.9.
+        let mut near = a.clone();
+        near.descriptor[0] = 0.85;
+        let mut far = a.clone();
+        far.descriptor[0] = 1.0;
+        let fs = vec![vec![a], vec![near, far]];
+        let mut strict = MatchGraph::default();
+        assert_eq!(strict.between(&fs, 0, 1).count(), 0);
+        let mut relaxed = MatchGraph::with_options(features::FeatureOptions {
+            second_chance: true,
+            ..features::FeatureOptions::ROOT
+        });
+        let got = relaxed.between(&fs, 0, 1).collect::<Vec<_>>();
+        assert_eq!(got.len(), 1);
+        assert_eq!((got[0].a, got[0].b), (0, 0));
+        assert_eq!(got[0].distance_squared, 0.85f32 * 0.85f32);
+        // The default graph stays strict even when another graph relaxed.
+        let mut strict = MatchGraph::default();
+        assert_eq!(strict.between(&fs, 0, 1).count(), 0);
     }
 }

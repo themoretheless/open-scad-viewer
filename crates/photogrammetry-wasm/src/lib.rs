@@ -99,7 +99,16 @@ pub extern "C" fn photo_alloc(len: usize) -> usize {
     if len == 0 || len > LIMIT {
         return 0;
     }
-    Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
+    // The JS host overwrites all `len` bytes through a fresh Uint8Array view
+    // before photo_add/photo_add_calibrated may read them, and u8 has no
+    // invalid bit patterns, so the zero-fill would be dead work. No Rust code
+    // reads the allocation before that overwrite (closed ABI of this module).
+    let mut buffer: Vec<u8> = Vec::with_capacity(len);
+    #[allow(clippy::uninit_vec)]
+    unsafe {
+        buffer.set_len(len);
+    }
+    Box::into_raw(buffer.into_boxed_slice()) as *mut u8 as usize
 }
 /// # Safety
 /// ptr/len must be a live allocation returned by this module; consumed once.
@@ -124,6 +133,8 @@ fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
 }
 /// # Safety
 /// ptr/len must reference a live caller-owned allocation returned by photo_alloc.
+/// The buffer is consumed on every path: moved into the session image on success
+/// and freed on failure, so the caller must not photo_free it afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn photo_add(
     width: usize,
@@ -138,19 +149,13 @@ pub unsafe extern "C" fn photo_add(
     {
         return packed(Err(input("Invalid photo buffer")));
     }
-    packed(
-        session::add(
-            width,
-            height,
-            focal,
-            std::slice::from_raw_parts(ptr as *const u8, len),
-        )
-        .map(|n| json!(n)),
-    )
+    let rgb = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
+    packed(session::add(width, height, focal, rgb).map(|n| json!(n)))
 }
 /// Add measured calibration without altering the legacy photo_add ABI.
 /// # Safety
-/// Both pointer/length pairs must reference live caller-owned photo_alloc buffers.
+/// ptr/len must reference a live caller-owned photo_alloc buffer and is consumed
+/// like in photo_add; the calibration buffer stays caller-owned and is only read.
 #[no_mangle]
 pub unsafe extern "C" fn photo_add_calibrated(
     width: usize,
@@ -170,12 +175,13 @@ pub unsafe extern "C" fn photo_add_calibrated(
     {
         return packed(Err(input("Invalid calibrated photo buffer")));
     }
+    let rgb = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
     packed(
         session::add_calibrated(
             width,
             height,
             focal,
-            std::slice::from_raw_parts(ptr as *const u8, len),
+            rgb,
             std::slice::from_raw_parts(calibration_ptr as *const u8, calibration_len),
         )
         .map(|n| json!(n)),
@@ -188,6 +194,33 @@ pub extern "C" fn photo_dense(resolution: usize, preset: u32) -> u64 {
     packed_bytes(session::dispatch_bytes(
         json!({"action": "dense", "resolution": resolution, "preset": preset}),
     ))
+}
+
+/// Stage 1 of the browser WebGPU dense sweep; the response value carries the
+/// payload pointer/length and the WGSL shader text, or null when the request
+/// is ineligible (caller then uses photo_dense).
+#[no_mangle]
+pub extern "C" fn photo_dense_prepare(resolution: usize, preset: u32) -> u64 {
+    packed(session::dense_prepare_host(resolution, preset))
+}
+
+/// Stage 2: consumes the score buffer like photo_add consumes rgb.
+/// # Safety
+/// ptr/len must reference a live caller-owned photo_alloc buffer, which this
+/// call takes over and frees on any outcome.
+#[no_mangle]
+pub unsafe extern "C" fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
+    // The score stream is raw f32, not MGV1; the session validates the exact
+    // expected length. 128 MiB caps a 24-view run at the default resolution.
+    if ptr == 0 || len == 0 || len % 4 != 0 || len > 128 * 1024 * 1024 {
+        return packed(Err(input("Invalid host sweep score buffer")));
+    }
+    let bytes = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
+    let scores: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+        .collect();
+    packed_bytes(session::dense_finish_host(scores))
 }
 
 /// Runs in a disposable Worker, so cancellation releases the whole session.

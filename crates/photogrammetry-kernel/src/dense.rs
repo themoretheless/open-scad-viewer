@@ -10,12 +10,19 @@ mod mesh;
 mod plane;
 mod volume;
 mod simplify;
+pub use estimation::{HostSweepSource, HostSweepView, PreparedView, SWEEP_WGSL};
 pub use simplify::{simplify, simplify_with_progress};
 #[cfg(test)]
 mod quality_tests;
 
 use crate::{math::*, Image, Reconstruction, Result};
-pub use mesh::compact;
+pub use mesh::{compact, filter_small_components};
+
+#[cfg(test)]
+use crate::{camera::Camera, Point};
+#[cfg(test)]
+#[path = "../examples/support/dense_fixture.rs"]
+mod fixture;
 
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
@@ -41,6 +48,22 @@ pub struct DenseOptions {
     pub shared_volume: bool,
     /// Experimental two-footprint selection and curvature support; requires radius 2.
     pub dual_scale: bool,
+    /// Opt-in checkerboard (red-black) hypothesis propagation for SlantedPlane;
+    /// false keeps the historical forward/backward scanline order bit-identical.
+    pub red_black_propagation: bool,
+    /// Opt-in early stop when a SlantedPlane refinement pass or descent cycle
+    /// no longer improves any hypothesis.
+    pub adaptive_refine_budget: bool,
+    /// Opt-in reciprocal checks against the selected source views only;
+    /// false keeps polling every depth map.
+    pub selected_sources_consistency: bool,
+    /// Opt-in per-pixel depth intervals from sparse anchors narrow the
+    /// frontoparallel sweep; uncovered pixels keep the global range.
+    pub sparse_depth_prior: bool,
+    /// Opt-in half-resolution sweep, then a full-resolution pass refined
+    /// around the lifted depth. Sparse anchors take precedence where both
+    /// modes cover a pixel. Frontoparallel estimator only.
+    pub coarse_to_fine: bool,
     pub estimator: DenseEstimator,
     pub max_side: usize,
     pub depth_hypotheses: usize,
@@ -55,12 +78,30 @@ pub struct DenseOptions {
     /// Fuse compatible observations; false retains independent observed patches
     /// and is useful for an identical-depth baseline comparison.
     pub fuse: bool,
+    /// Opt-in deterministic second pass merging compatible surfels by their
+    /// accumulated averages; reduces overlapping fragments whose fixed anchors
+    /// rejected each other. Inert when `fuse` is false.
+    pub fusion_merge_pass: bool,
+    /// Opt-in removal of connected surface components with fewer triangles
+    /// than this threshold; 0 (default) keeps every component.
+    pub min_component_triangles: usize,
+    /// Opt-in GPU evaluation of the frontoparallel NCC sweep (requires the
+    /// `gpu` crate feature; falls back to the CPU sweep without an adapter).
+    /// GPU arithmetic is f32 and scores are not bit-identical to the CPU
+    /// reference; the mode is qualified separately. Selection logic and
+    /// geometry checks stay on the CPU.
+    pub acceleration: crate::Acceleration,
 }
 impl Default for DenseOptions {
     fn default() -> Self {
         Self {
             shared_volume: false,
             dual_scale: false,
+            red_black_propagation: false,
+            adaptive_refine_budget: false,
+            selected_sources_consistency: false,
+            sparse_depth_prior: false,
+            coarse_to_fine: false,
             estimator: DenseEstimator::FrontoparallelSweep,
             max_side: 128,
             depth_hypotheses: 64,
@@ -72,6 +113,9 @@ impl Default for DenseOptions {
             relative_depth_tolerance: 0.025,
             reprojection_tolerance: 1.5,
             fuse: true,
+            fusion_merge_pass: false,
+            min_component_triangles: 0,
+            acceleration: crate::Acceleration::Cpu,
         }
     }
 }
@@ -92,6 +136,7 @@ impl DenseOptions {
             || !(0.0001..=0.1).contains(&self.relative_depth_tolerance)
             || !self.reprojection_tolerance.is_finite()
             || !(0.1..=4.).contains(&self.reprojection_tolerance)
+            || self.min_component_triangles > limits::MAX_SURFACE_TRIANGLES
         {
             return Err("Invalid dense reconstruction options".into());
         }
@@ -162,15 +207,20 @@ struct DepthMap {
     confidence: Vec<f32>,
     neighbors: Vec<usize>,
 }
-impl DepthMap {
-    fn point(&self, camera: &crate::camera::Camera, index: usize) -> V3 {
-        let x = (index % self.width) as f64 * self.step;
-        let y = (index / self.width) as f64 * self.step;
-        world(camera, x, y, self.depth[index])
-    }
-}
-fn world(c: &crate::camera::Camera, x: f64, y: f64, z: f64) -> V3 {
-    mv(tr(c.rotation), sub(scale(c.ray([x, y]), z), c.translation))
+// World points per pixel, computed once per map with the rotation transpose hoisted;
+// each value is bit-identical to evaluating mv(tr(r), sub(scale(ray, z), t)) per point.
+fn world_points(map: &DepthMap, camera: &crate::camera::Camera) -> Vec<V3> {
+    let transpose = tr(camera.rotation);
+    (0..map.depth.len())
+        .map(|i| {
+            let x = (i % map.width) as f64 * map.step;
+            let y = (i / map.width) as f64 * map.step;
+            mv(
+                transpose,
+                sub(scale(camera.ray([x, y]), map.depth[i]), camera.translation),
+            )
+        })
+        .collect()
 }
 fn cancelled(
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
@@ -228,6 +278,9 @@ fn estimated_working_bytes(
         } else {
             576
         };
+        // Per-pixel range maps and the coarse half-resolution pass.
+        let bytes_per_pixel = bytes_per_pixel
+            + usize::from(options.sparse_depth_prior || options.coarse_to_fine) * 96;
         let dense_bytes = width.checked_mul(height)?.checked_mul(bytes_per_pixel)?;
         bytes = bytes.checked_add(gray_bytes)?.checked_add(dense_bytes)?;
     }
@@ -286,6 +339,17 @@ pub fn densify_with_options(
         }
     }
     drop(grayscale);
+    finish_densify(images, sparse, options, maps, diagnostics, progress)
+}
+/// Shared post-estimation tail: consistency checks, fusion and meshing.
+fn finish_densify(
+    images: &[Image],
+    sparse: &Reconstruction,
+    options: &DenseOptions,
+    maps: Vec<DepthMap>,
+    mut diagnostics: DenseDiagnostics,
+    mut progress: impl FnMut(&str, usize, usize) -> bool,
+) -> Result<DenseReconstruction> {
     diagnostics.estimated_maps = maps.len();
     diagnostics.selected_source_pairs = maps.iter().map(|m| m.neighbors.len()).sum();
     diagnostics.view_reports = maps
@@ -313,7 +377,18 @@ pub fn densify_with_options(
     let surface = if options.shared_volume {
         volume::reconstruct(&patches, &maps, sparse, options, &mut diagnostics, &mut progress)?
     } else {
-        fusion::fuse(&patches, options.fuse, &mut diagnostics, &mut progress)?
+        fusion::fuse_consolidating(
+            &patches,
+            options.fuse,
+            options.fusion_merge_pass,
+            &mut diagnostics,
+            &mut progress,
+        )?
+    };
+    let surface = if options.min_component_triangles > 0 {
+        mesh::filter_small_components(&surface, options.min_component_triangles)?
+    } else {
+        surface
     };
     if surface.positions.len() < 20 {
         return Err(
@@ -329,9 +404,98 @@ pub fn densify_with_options(
     })
 }
 
+/// Browser WebGPU sweep support, stage 1: per-view plain-data payloads for the
+/// host-run NCC shader. Returns None when the options are ineligible for the
+/// host sweep (slanted/volume estimators, coarse-to-fine, dual scale); callers
+/// then use the regular in-kernel `densify_with_options`. The sparse
+/// depth-prior ranges are computed here and stay kernel-side.
+pub fn prepare_host_sweep(
+    images: &[Image],
+    sparse: &Reconstruction,
+    options: &DenseOptions,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<Option<(Vec<Option<estimation::HostSweepView>>, Vec<Option<estimation::PreparedView>>)>> {
+    options.validate()?;
+    if options.estimator != DenseEstimator::FrontoparallelSweep
+        || options.coarse_to_fine
+        || options.dual_scale
+        || options.shared_volume
+    {
+        return Ok(None);
+    }
+    if images.len() != sparse.cameras.len() {
+        return Err("Expected matching images and camera slots".into());
+    }
+    estimation::prepare_host_views(images, sparse, options, progress).map(Some)
+}
+
+/// Browser WebGPU sweep support, stage 2: builds depth maps from host-computed
+/// scores and runs the shared consistency/fusion/meshing tail.
+pub fn densify_with_host_scores(
+    images: &[Image],
+    sparse: &Reconstruction,
+    options: &DenseOptions,
+    prepared: &[Option<estimation::PreparedView>],
+    scores: &[Option<Vec<f32>>],
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<DenseReconstruction> {
+    options.validate()?;
+    let grayscale = estimation::prepare_grayscale(images, sparse, options, progress)?;
+    let (maps, diagnostics) =
+        estimation::finish_host_views(images, sparse, options, &grayscale, prepared, scores, progress)?;
+    finish_densify(images, sparse, options, maps, diagnostics, progress)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn depth_priors_are_opt_in_and_deterministic() {
+        use fixture::{fixture, Scene};
+        let (images, sparse, _) = fixture(Scene {
+            angle: 30.,
+            thin: true,
+        });
+        let options = DenseOptions {
+            max_side: 64,
+            patch_radius: 2,
+            ..Default::default()
+        };
+        assert!(!options.sparse_depth_prior && !options.coarse_to_fine);
+        let reference =
+            densify_with_options(&images, &sparse, &options, |_, _, _| true).unwrap();
+        // Explicitly disabled modes keep the historical output bit-identical.
+        let disabled = densify_with_options(
+            &images,
+            &sparse,
+            &DenseOptions {
+                sparse_depth_prior: false,
+                coarse_to_fine: false,
+                ..options.clone()
+            },
+            |_, _, _| true,
+        )
+        .unwrap();
+        assert_eq!(reference.surface.positions, disabled.surface.positions);
+        assert_eq!(reference.surface.triangles, disabled.surface.triangles);
+        // Enabled modes are deterministic across repeated runs.
+        let enabled = DenseOptions {
+            sparse_depth_prior: true,
+            coarse_to_fine: true,
+            ..options
+        };
+        let a = densify_with_options(&images, &sparse, &enabled, |_, _, _| true).unwrap();
+        let b = densify_with_options(&images, &sparse, &enabled, |_, _, _| true).unwrap();
+        assert_eq!(a.surface.positions, b.surface.positions);
+        assert_eq!(a.surface.triangles, b.surface.triangles);
+        // Exact anchors on this analytic fixture must not reduce map support.
+        assert!(
+            a.diagnostics.photometric_samples >= reference.diagnostics.photometric_samples,
+            "enabled={} reference={}",
+            a.diagnostics.photometric_samples,
+            reference.diagnostics.photometric_samples
+        );
+    }
     #[test]
     fn cancellation_and_invalid_options_are_explicit() {
         let image = Image {

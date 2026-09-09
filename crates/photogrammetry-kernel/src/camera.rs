@@ -56,8 +56,12 @@ pub fn triangulate(observations: &[(&Camera, [f64; 2])]) -> Option<V3> {
             let rhs = c.translation[k] - ray[k] * c.translation[2];
             for i in 0..3 {
                 b[i] += row[i] * rhs;
-                for j in 0..3 {
-                    a[i][j] += row[i] * row[j];
+                for j in i..3 {
+                    let v = row[i] * row[j];
+                    a[i][j] += v;
+                    if j > i {
+                        a[j][i] += v;
+                    }
                 }
             }
         }
@@ -115,9 +119,9 @@ fn essential(pairs: &[(V3, V3)]) -> M3 {
     mm(mm(tr(tb), f), ta)
 }
 
-fn sampson(e: M3, a: V3, b: V3) -> f64 {
+fn sampson(e: M3, et: M3, a: V3, b: V3) -> f64 {
     let ea = mv(e, a);
-    let eb = mv(tr(e), b);
+    let eb = mv(et, b);
     dot(b, ea).powi(2) / (ea[0] * ea[0] + ea[1] * ea[1] + eb[0] * eb[0] + eb[1] * eb[1]).max(1e-20)
 }
 pub struct Rng(u64);
@@ -154,6 +158,12 @@ pub struct GeometryOptions {
     /// Conservative initialization gate. Weak-consensus seeds may be correct but
     /// are declined; this ratio is support, not a probability or a metric accuracy.
     pub minimum_seed_inlier_ratio: f64,
+    /// Opt-in joint two-view refinement (second camera plus inlier points, Schur
+    /// elimination) after the alternating seed loop. Off by default, so the
+    /// default output stays bit-identical with the frozen estimator.
+    pub joint_refinement: bool,
+    /// Opt-in analytic Jacobian in `refine_epipolar` instead of finite differences.
+    pub analytic_epipolar_jacobian: bool,
 }
 impl Default for GeometryOptions {
     fn default() -> Self {
@@ -177,6 +187,8 @@ impl GeometryOptions {
         pixel_sampson: false,
         reject_degenerate: false,
         minimum_seed_inlier_ratio: 0.,
+        joint_refinement: false,
+        analytic_epipolar_jacobian: false,
     };
     pub const SAFE: Self = Self {
         pixel_sampson: true,
@@ -196,6 +208,11 @@ impl GeometryOptions {
         enforce_essential: true,
         ..Self::CONSENSUS
     };
+    /// Quality-first opt-in profile: CONSENSUS plus joint two-view refinement.
+    pub const JOINT: Self = Self {
+        joint_refinement: true,
+        ..Self::CONSENSUS
+    };
     pub const ROBUST: Self = Self {
         adaptive_ransac: true,
         local_optimization: true,
@@ -204,6 +221,8 @@ impl GeometryOptions {
         pixel_sampson: true,
         reject_degenerate: true,
         minimum_seed_inlier_ratio: 0.5,
+        joint_refinement: false,
+        analytic_epipolar_jacobian: false,
     };
 }
 #[derive(Clone, Debug, Default)]
@@ -232,11 +251,10 @@ fn adaptive_budget(inliers: usize, total: usize, sample: i32, maximum: usize) ->
     ((0.001f64.ln() / (-all_good).ln_1p()).ceil() as usize).clamp(1, maximum)
 }
 /// First-order epipolar distance in pixels, with each view's own focal scale.
-fn pixel_sampson(e: M3, a: V3, b: V3, fa: f64, fb: f64) -> f64 {
+fn pixel_sampson(e: M3, et: M3, a: V3, b: V3, fa2: f64, fb2: f64) -> f64 {
     let ea = mv(e, a);
-    let eb = mv(tr(e), b);
-    let denominator =
-        (ea[0].powi(2) + ea[1].powi(2)) / fb.powi(2) + (eb[0].powi(2) + eb[1].powi(2)) / fa.powi(2);
+    let eb = mv(et, b);
+    let denominator = (ea[0].powi(2) + ea[1].powi(2)) / fb2 + (eb[0].powi(2) + eb[1].powi(2)) / fa2;
     if denominator <= 1e-30 {
         return f64::INFINITY;
     }
@@ -245,12 +263,13 @@ fn pixel_sampson(e: M3, a: V3, b: V3, fa: f64, fb: f64) -> f64 {
 /// Refine the relative pose directly on symmetric epipolar residuals.
 /// Alternating triangulation and one-camera PnP can have a small training error while
 /// retaining a biased rotation, especially when the two focal scales differ greatly.
-fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)]) {
+fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)], analytic: bool) {
     let essential_pose = |c: &Camera| {
         let r = mm(c.rotation, tr(first.rotation));
         let t = sub(c.translation, mv(r, first.translation));
         mm([[0., -t[2], t[1]], [t[2], 0., -t[0]], [-t[1], t[0], 0.]], r)
     };
+    let skew = |v: V3| [[0., -v[2], v[1]], [v[2], 0., -v[0]], [-v[1], v[0], 0.]];
     let perturb = |c: &Camera, delta: &[f64]| {
         let mut next = c.clone();
         next.rotation = mm(rotation([delta[0], delta[1], delta[2]]), c.rotation);
@@ -259,19 +278,22 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)]) {
     };
     let fa = first.focal;
     let fb = camera.focal;
-    let residual = |e, x: V3, y: V3| {
+    let fa2 = fa.powi(2);
+    let fb2 = fb.powi(2);
+    let residual = |e: M3, et: M3, x: V3, y: V3| {
         let ex = mv(e, x);
-        let ey = mv(tr(e), y);
-        let denominator = (ex[0].powi(2) + ex[1].powi(2)) / fb.powi(2)
-            + (ey[0].powi(2) + ey[1].powi(2)) / fa.powi(2);
+        let ey = mv(et, y);
+        let denominator =
+            (ex[0].powi(2) + ex[1].powi(2)) / fb2 + (ey[0].powi(2) + ey[1].powi(2)) / fa2;
         dot(y, ex) / denominator.max(1e-30).sqrt()
     };
     let cost = |c: &Camera| {
         let e = essential_pose(c);
+        let et = tr(e);
         pairs
             .iter()
             .map(|&(x, y)| {
-                let r = residual(e, x, y).abs();
+                let r = residual(e, et, x, y).abs();
                 if r <= 2.5 {
                     r * r
                 } else {
@@ -284,23 +306,57 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)]) {
     let mut damping = 1e-3;
     for _ in 0..40 {
         let e = essential_pose(camera);
+        let et = tr(e);
         let eps = 1e-6;
-        let perturbed: Vec<_> = (0..6)
-            .map(|i| {
-                let mut d = [0.; 6];
-                d[i] = eps;
-                essential_pose(&perturb(camera, &d))
+        let perturbed: [(M3, M3); 6] = std::array::from_fn(|i| {
+            let mut d = [0.; 6];
+            d[i] = eps;
+            let p = essential_pose(&perturb(camera, &d));
+            (p, tr(p))
+        });
+        // Analytic derivatives of E = [t]x R for the six pose perturbations.
+        // Rotation acts on the left; the translation derivative drops the radial
+        // part because the perturb step renormalizes the baseline to unit length.
+        let de: Option<[M3; 6]> = analytic.then(|| {
+            let madd = |a: M3, b: M3| std::array::from_fn(|i| add(a[i], b[i]));
+            let r = mm(camera.rotation, tr(first.rotation));
+            let t = sub(camera.translation, mv(r, first.translation));
+            std::array::from_fn(|i| {
+                let mut axis = [0.; 3];
+                axis[i % 3] = 1.;
+                if i < 3 {
+                    let dr = mm(skew(axis), r);
+                    let dt = scale(mv(dr, first.translation), -1.);
+                    madd(mm(skew(t), dr), mm(skew(dt), r))
+                } else {
+                    mm(skew(sub(axis, scale(camera.translation, camera.translation[i % 3]))), r)
+                }
             })
-            .collect();
+        });
         let mut h = [[0.; 6]; 6];
         let mut g = [0.; 6];
         for &(x, y) in pairs {
-            let r = residual(e, x, y);
+            let r = residual(e, et, x, y);
             let weight = if r.abs() > 2.5 { 2.5 / r.abs() } else { 1. };
-            let j: Vec<_> = perturbed
-                .iter()
-                .map(|&e| (residual(e, x, y) - r) / eps)
-                .collect();
+            let j: [f64; 6] = if let Some(de) = &de {
+                let ex = mv(e, x);
+                let ey = mv(et, y);
+                let denominator = ((ex[0].powi(2) + ex[1].powi(2)) / fb2
+                    + (ey[0].powi(2) + ey[1].powi(2)) / fa2)
+                    .max(1e-30);
+                let root = denominator.sqrt();
+                let n = dot(y, ex);
+                std::array::from_fn(|i| {
+                    let dex = mv(de[i], x);
+                    let dey = mv(tr(de[i]), y);
+                    let dd = 2.
+                        * ((ex[0] * dex[0] + ex[1] * dex[1]) / fb2
+                            + (ey[0] * dey[0] + ey[1] * dey[1]) / fa2);
+                    dot(y, dex) / root - n * dd / (2. * denominator * root)
+                })
+            } else {
+                std::array::from_fn(|i| (residual(perturbed[i].0, perturbed[i].1, x, y) - r) / eps)
+            };
             for i in 0..6 {
                 g[i] -= weight * j[i] * r;
                 for k in 0..6 {
@@ -327,6 +383,189 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)]) {
         } else {
             damping *= 10.;
             if damping > 1e12 {
+                break;
+            }
+        }
+    }
+}
+/// Opt-in joint refinement of the second camera and the triangulated inlier
+/// points. Each LM step updates the pose and all points together, eliminating
+/// the 3x3 point blocks (Schur complement), so the alternating
+/// triangulate-and-resect loop cannot trade a biased rotation for a smaller
+/// training error. The first camera is the fixed identity gauge; the baseline
+/// norm is held at one by rescaling the points together with the translation,
+/// which leaves every projection unchanged.
+fn refine_joint(first: &Camera, camera: &mut Camera, observations: &[([f64; 2], [f64; 2])]) {
+    if observations.len() < 6 {
+        return;
+    }
+    let mut points: Vec<V3> = Vec::with_capacity(observations.len());
+    let mut kept: Vec<([f64; 2], [f64; 2])> = Vec::with_capacity(observations.len());
+    for &(x, y) in observations {
+        if let Some(p) = triangulate(&[(first, x), (camera, y)]) {
+            points.push(p);
+            kept.push((x, y));
+        }
+    }
+    if points.len() < 6 {
+        return;
+    }
+    let loss = |b: &Camera, points: &[V3]| {
+        let mut total = 0.;
+        for (&p, &(x, y)) in points.iter().zip(kept.iter()) {
+            for (cam, q) in [(first, x), (b, y)] {
+                total += cam.project(p).map_or(1e6, |uv| {
+                    ((uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2)).min(100.)
+                });
+            }
+        }
+        total
+    };
+    let n = points.len();
+    let mut v_blocks = vec![[[0.; 3]; 3]; n];
+    let mut w_blocks = vec![[[0.; 6]; 3]; n];
+    let mut g_points = vec![[0.; 3]; n];
+    let mut lambda = 1e-4;
+    let mut value = loss(camera, &points);
+    for _ in 0..30 {
+        let mut u = [[0.; 6]; 6];
+        let mut g = [0.; 6];
+        for i in 0..n {
+            v_blocks[i] = [[0.; 3]; 3];
+            w_blocks[i] = [[0.; 6]; 3];
+            g_points[i] = [0.; 3];
+        }
+        for (i, (&p, &(x, y))) in points.iter().zip(kept.iter()).enumerate() {
+            for (cam, q, second) in [(first, x, false), (camera, y, true)] {
+                let pc = cam.camera_point(p);
+                if pc[2] <= 1e-8 {
+                    continue;
+                }
+                let uv = [
+                    cam.focal * pc[0] / pc[2] + cam.cx,
+                    cam.focal * pc[1] / pc[2] + cam.cy,
+                ];
+                let dp = [
+                    [0., -pc[2], pc[1]],
+                    [pc[2], 0., -pc[0]],
+                    [-pc[1], pc[0], 0.],
+                    [1., 0., 0.],
+                    [0., 1., 0.],
+                    [0., 0., 1.],
+                ];
+                for k in 0..2 {
+                    let project = |d: V3| cam.focal * (d[k] * pc[2] - pc[k] * d[2]) / pc[2].powi(2);
+                    let jc: [f64; 6] = std::array::from_fn(|i| project(dp[i]));
+                    let jp: [f64; 3] =
+                        std::array::from_fn(|j| project([cam.rotation[0][j], cam.rotation[1][j], cam.rotation[2][j]]));
+                    let err = q[k] - uv[k];
+                    let weight = if err.abs() > 3. { 3. / err.abs() } else { 1. };
+                    for a in 0..3 {
+                        g_points[i][a] += weight * jp[a] * err;
+                        for b in a..3 {
+                            let v = weight * jp[a] * jp[b];
+                            v_blocks[i][a][b] += v;
+                            if b > a {
+                                v_blocks[i][b][a] += v;
+                            }
+                        }
+                        if second {
+                            for b in 0..6 {
+                                w_blocks[i][a][b] += weight * jp[a] * jc[b];
+                            }
+                        }
+                    }
+                    if second {
+                        for a in 0..6 {
+                            g[a] += weight * jc[a] * err;
+                            for b in a..6 {
+                                let v = weight * jc[a] * jc[b];
+                                u[a][b] += v;
+                                if b > a {
+                                    u[b][a] += v;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0..6 {
+            u[i][i] += lambda * (u[i][i] + 1.);
+        }
+        for block in v_blocks.iter_mut() {
+            for i in 0..3 {
+                block[i][i] += lambda * (block[i][i] + 1.);
+            }
+        }
+        // Schur complement of the point blocks: S = U - W V^-1 W^T.
+        let mut s = u;
+        let mut gs = g;
+        let mut singular = false;
+        for i in 0..n {
+            let vinv_w: Option<[[f64; 6]; 3]> = (0..6)
+                .map(|b| solve(v_blocks[i], [w_blocks[i][0][b], w_blocks[i][1][b], w_blocks[i][2][b]]))
+                .collect::<Option<Vec<_>>>()
+                .map(|cols| std::array::from_fn(|a| std::array::from_fn(|b| cols[b][a])));
+            let (Some(vinv_w), Some(vinv_g)) = (vinv_w, solve(v_blocks[i], g_points[i])) else {
+                singular = true;
+                break;
+            };
+            for a in 0..6 {
+                gs[a] -= (0..3).map(|k| w_blocks[i][k][a] * vinv_g[k]).sum::<f64>();
+                for b in a..6 {
+                    let v = (0..3).map(|k| w_blocks[i][k][a] * vinv_w[k][b]).sum::<f64>();
+                    s[a][b] -= v;
+                    if b > a {
+                        s[b][a] -= v;
+                    }
+                }
+            }
+        }
+        if singular {
+            break;
+        }
+        let Some(delta) = solve(s, gs) else {
+            break;
+        };
+        let r = rotation([delta[0], delta[1], delta[2]]);
+        let mut candidate = camera.clone();
+        candidate.rotation = mm(r, camera.rotation);
+        candidate.translation = add(mv(r, camera.translation), [delta[3], delta[4], delta[5]]);
+        let mut candidate_points = points.clone();
+        let mut failed = false;
+        for i in 0..n {
+            let coupling: V3 =
+                std::array::from_fn(|a| (0..6).map(|b| w_blocks[i][a][b] * delta[b]).sum());
+            let Some(step) = solve(v_blocks[i], sub(g_points[i], coupling)) else {
+                failed = true;
+                break;
+            };
+            candidate_points[i] = add(points[i], step);
+        }
+        if failed {
+            break;
+        }
+        let length = norm(candidate.translation);
+        if length > 1e-8 {
+            candidate.translation = scale(candidate.translation, 1. / length);
+            for p in &mut candidate_points {
+                *p = scale(*p, 1. / length);
+            }
+        }
+        let candidate_loss = loss(&candidate, &candidate_points);
+        if candidate_loss < value {
+            *camera = candidate;
+            points = candidate_points;
+            let reduction = value - candidate_loss;
+            value = candidate_loss;
+            lambda = (lambda * 0.3).max(1e-9);
+            if reduction < 1e-10 || delta.iter().map(|v| v * v).sum::<f64>() < 1e-16 {
+                break;
+            }
+        } else {
+            lambda *= 10.;
+            if lambda > 1e12 {
                 break;
             }
         }
@@ -369,8 +608,12 @@ fn homography_supported(pairs: &[(V3, V3)], fa: f64, fb: f64) -> bool {
             for (row, rhs) in rows {
                 for i in 0..8 {
                     atb[i] += row[i] * rhs;
-                    for j in 0..8 {
-                        ata[i][j] += row[i] * row[j];
+                    for j in i..8 {
+                        let v = row[i] * row[j];
+                        ata[i][j] += v;
+                        if j > i {
+                            ata[j][i] += v;
+                        }
                     }
                 }
             }
@@ -443,17 +686,22 @@ pub fn relative_with_options(
             .all(|v| v.is_finite())
         || a.focal <= 0.
         || b.focal <= 0.
-        || pixels
-            .iter()
-            .any(|(a, b)| a.iter().chain(b).any(|v| !v.is_finite()))
     {
         return None;
     }
-    let pairs: Vec<_> = pixels.iter().map(|&(x, y)| (a.ray(x), b.ray(y))).collect();
-    if pairs
-        .iter()
-        .any(|(a, b)| a.iter().chain(b).any(|v| !v.is_finite()))
-    {
+    let mut pairs = Vec::with_capacity(pixels.len());
+    let mut finite = true;
+    for &(x, y) in pixels {
+        let pair = (a.ray(x), b.ray(y));
+        finite &= x
+            .iter()
+            .chain(y.iter())
+            .chain(pair.0.iter())
+            .chain(pair.1.iter())
+            .all(|v| v.is_finite());
+        pairs.push(pair);
+    }
+    if !finite {
         return None;
     }
     let fit = |pairs: &[(V3, V3)]| {
@@ -467,24 +715,35 @@ pub fn relative_with_options(
         mm(constrained, tr(v))
     };
     let threshold = (2.5 / a.focal.min(b.focal)).powi(2);
-    let score = |e| {
-        let mut good = Vec::new();
+    let fa2 = a.focal.powi(2);
+    let fb2 = b.focal.powi(2);
+    // A partial cost can only grow, so a pass that reaches the cutoff can never win.
+    let score = |e: M3, cutoff: f64, good: &mut Vec<usize>| {
+        good.clear();
+        let et = tr(e);
         let mut cost = 0.;
         for (i, &(x, y)) in pairs.iter().enumerate() {
             let error = if options.pixel_sampson {
-                pixel_sampson(e, x, y, a.focal, b.focal) / 6.25
+                pixel_sampson(e, et, x, y, fa2, fb2) / 6.25
             } else {
-                sampson(e, x, y) / threshold
+                sampson(e, et, x, y) / threshold
             };
             if error < 1. {
                 good.push(i);
             }
             cost += error.min(1.);
+            if cost >= cutoff {
+                break;
+            }
         }
-        (good, cost)
+        cost
     };
     let mut rng = Rng::new();
-    let mut best = Vec::new();
+    let mut best: Vec<usize> = Vec::with_capacity(pairs.len());
+    let mut good: Vec<usize> = Vec::with_capacity(pairs.len());
+    let mut scratch: Vec<usize> = Vec::with_capacity(pairs.len());
+    let mut sample: Vec<(V3, V3)> = Vec::with_capacity(8);
+    let mut consensus: Vec<(V3, V3)> = Vec::with_capacity(pairs.len());
     let mut best_cost = f64::INFINITY;
     let mut best_matrix = [[0.; 3]; 3];
     let maximum = if options.adaptive_ransac { 4096 } else { 768 };
@@ -494,11 +753,8 @@ pub fn relative_with_options(
             break;
         }
         report.iterations += 1;
-        let sample: Vec<_> = rng
-            .subset(pairs.len(), 8)
-            .iter()
-            .map(|&i| pairs[i])
-            .collect();
+        sample.clear();
+        sample.extend(rng.subset(pairs.len(), 8).iter().map(|&i| pairs[i]));
         if options.reject_degenerate
             && (!has_2d_extent(sample.iter().map(|p| p.0))
                 || !has_2d_extent(sample.iter().map(|p| p.1)))
@@ -508,7 +764,12 @@ pub fn relative_with_options(
         }
         let mut e = fit(&sample);
         report.hypotheses += 1;
-        let (mut good, mut cost) = score(e);
+        let cutoff = if options.local_optimization {
+            best_cost
+        } else {
+            f64::INFINITY
+        };
+        let mut cost = score(e, cutoff, &mut good);
         if if options.local_optimization {
             cost < best_cost
         } else {
@@ -516,19 +777,20 @@ pub fn relative_with_options(
         } {
             if options.local_optimization && good.len() >= 12 {
                 for _ in 0..3 {
-                    let consensus = good.iter().map(|&i| pairs[i]).collect::<Vec<_>>();
+                    consensus.clear();
+                    consensus.extend(good.iter().map(|&i| pairs[i]));
                     let next_matrix = fit(&consensus);
-                    let (next, next_cost) = score(next_matrix);
+                    let next_cost = score(next_matrix, cost, &mut scratch);
                     report.local_refits += 1;
-                    if next.len() < 12 || next_cost >= cost {
+                    if scratch.len() < 12 || next_cost >= cost {
                         break;
                     }
-                    good = next;
+                    std::mem::swap(&mut good, &mut scratch);
                     cost = next_cost;
                     e = next_matrix;
                 }
             }
-            best = good;
+            std::mem::swap(&mut best, &mut good);
             best_cost = cost;
             best_matrix = e;
             if options.adaptive_ransac {
@@ -571,48 +833,84 @@ pub fn relative_with_options(
     }
     let w = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]];
     let t = [u[0][2], u[1][2], u[2][2]];
+    let a_center = a.center();
     let mut result = None;
     let mut max_good = 0;
+    let mut accepted: Vec<usize> = Vec::with_capacity(best.len());
+    let mut kept: Vec<usize> = Vec::new();
     for w in [w, tr(w)] {
         for sign in [-1., 1.] {
             let mut c = b.clone();
             c.rotation = mm(mm(u, w), tr(v));
             c.translation = scale(t, sign);
-            let accepted: Vec<_> = best
-                .iter()
-                .copied()
-                .filter(|&i| {
-                    let (x, y) = pixels[i];
-                    let Some(p) = triangulate(&[(a, x), (&c, y)]) else {
-                        return false;
-                    };
-                    let ra = unit(sub(p, a.center()));
-                    let rb = unit(sub(p, c.center()));
-                    let parallax = dot(ra, rb).clamp(-1., 1.).acos();
-                    let error = |cam: &Camera, q: [f64; 2]| {
-                        cam.project(p).map_or(f64::INFINITY, |uv| {
-                            (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2)
-                        })
-                    };
-                    parallax > 0.008 && error(a, x) < 2500. && error(&c, y) < 2500.
-                })
-                .collect();
+            let c_center = c.center();
+            accepted.clear();
+            accepted.extend(best.iter().copied().filter(|&i| {
+                let (x, y) = pixels[i];
+                let Some(p) = triangulate(&[(a, x), (&c, y)]) else {
+                    return false;
+                };
+                let ra = unit(sub(p, a_center));
+                let rb = unit(sub(p, c_center));
+                let parallax = dot(ra, rb).clamp(-1., 1.).acos();
+                let error = |cam: &Camera, q: [f64; 2]| {
+                    cam.project(p).map_or(f64::INFINITY, |uv| {
+                        (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2)
+                    })
+                };
+                parallax > 0.008 && error(a, x) < 2500. && error(&c, y) < 2500.
+            }));
             if accepted.len() > max_good {
                 max_good = accepted.len();
-                result = Some((c, accepted));
+                result = Some(c);
+                std::mem::swap(&mut accepted, &mut kept);
             }
         }
     }
-    let (mut c, initial) = result?;
+    let Some(mut c) = result else {
+        return None;
+    };
+    let initial = kept;
+    let mut triangulated: Vec<(V3, [f64; 2])> = Vec::with_capacity(initial.len());
+    let mut previous_points: Vec<(V3, [f64; 2])> = Vec::new();
+    let mut previous_pose = c.clone();
+    let mut have_previous = false;
     for _ in 0..25 {
-        let pairs: Vec<_> = initial
+        triangulated.clear();
+        triangulated.extend(initial.iter().filter_map(|&i| {
+            let (x, y) = pixels[i];
+            triangulate(&[(a, x), (&c, y)]).map(|p| (p, y))
+        }));
+        // refine is a deterministic function of the pose and these points, so a
+        // bitwise repeated state makes every further iteration a no-op.
+        let same_pose = c
+            .rotation
             .iter()
-            .filter_map(|&i| {
-                let (x, y) = pixels[i];
-                triangulate(&[(a, x), (&c, y)]).map(|p| (p, y))
-            })
-            .collect();
-        refine(&mut c, &pairs);
+            .flatten()
+            .chain(c.translation.iter())
+            .map(|v| v.to_bits())
+            .eq(previous_pose
+                .rotation
+                .iter()
+                .flatten()
+                .chain(previous_pose.translation.iter())
+                .map(|v| v.to_bits()));
+        let same_points = triangulated.len() == previous_points.len()
+            && triangulated
+                .iter()
+                .zip(previous_points.iter())
+                .all(|((p, q), (pp, pq))| {
+                    p.map(|v| v.to_bits()) == pp.map(|v| v.to_bits())
+                        && q.map(|v| v.to_bits()) == pq.map(|v| v.to_bits())
+                });
+        if have_previous && same_pose && same_points {
+            break;
+        }
+        previous_pose = c.clone();
+        previous_points.clear();
+        previous_points.extend(triangulated.iter().copied());
+        have_previous = true;
+        refine(&mut c, &triangulated);
         let length = norm(c.translation);
         if length > 1e-8 {
             c.translation = scale(c.translation, 1. / length);
@@ -620,7 +918,12 @@ pub fn relative_with_options(
     }
     if options.epipolar_refinement {
         let consensus = initial.iter().map(|&i| pairs[i]).collect::<Vec<_>>();
-        refine_epipolar(&mut c, a, &consensus);
+        refine_epipolar(&mut c, a, &consensus, options.analytic_epipolar_jacobian);
+        report.local_refits += 1;
+    }
+    if options.joint_refinement {
+        let observed = initial.iter().map(|&i| pixels[i]).collect::<Vec<_>>();
+        refine_joint(a, &mut c, &observed);
         report.local_refits += 1;
     }
     let good: Vec<_> = initial
@@ -707,6 +1010,7 @@ pub fn refine(c: &mut Camera, pairs: &[(V3, [f64; 2])]) {
             .sum::<f64>()
     };
     let mut lambda = 1e-4;
+    let mut value = loss(c);
     for _ in 0..20 {
         let mut a = [[0.; 6]; 6];
         let mut b = [0.; 6];
@@ -731,10 +1035,14 @@ pub fn refine(c: &mut Camera, pairs: &[(V3, [f64; 2])]) {
                 });
                 let err = q[k] - uv[k];
                 let weight = if err.abs() > 3. { 3. / err.abs() } else { 1. };
+                let wj: [f64; 6] = std::array::from_fn(|i| weight * j[i]);
                 for x in 0..6 {
-                    b[x] += weight * j[x] * err;
-                    for y in 0..6 {
-                        a[x][y] += weight * j[x] * j[y];
+                    b[x] += wj[x] * err;
+                    for y in x..6 {
+                        a[x][y] += wj[x] * j[y];
+                        if y > x {
+                            a[y][x] += wj[y] * j[x];
+                        }
                     }
                 }
             }
@@ -749,8 +1057,10 @@ pub fn refine(c: &mut Camera, pairs: &[(V3, [f64; 2])]) {
         let mut candidate = c.clone();
         candidate.rotation = mm(r, c.rotation);
         candidate.translation = add(mv(r, c.translation), [delta[3], delta[4], delta[5]]);
-        if loss(&candidate) < loss(c) {
+        let candidate_loss = loss(&candidate);
+        if candidate_loss < value {
             *c = candidate;
+            value = candidate_loss;
             lambda = (lambda * 0.3).max(1e-9);
         } else {
             lambda *= 10.;
@@ -798,16 +1108,16 @@ pub fn pnp_with_options(
     let mut result = Some(guess);
     let maximum = if options.adaptive_ransac { 384 } else { 192 };
     let mut budget = maximum;
+    let mut sample: Vec<(V3, [f64; 2])> = Vec::with_capacity(6);
+    let mut good: Vec<(V3, [f64; 2])> = Vec::with_capacity(pairs.len());
+    let mut accepted: Vec<(V3, [f64; 2])> = Vec::with_capacity(pairs.len());
     for iteration in 0..maximum {
         if iteration >= budget {
             break;
         }
         report.iterations += 1;
-        let sample: Vec<_> = rng
-            .subset(pairs.len(), 6)
-            .iter()
-            .map(|&i| pairs[i])
-            .collect();
+        sample.clear();
+        sample.extend(rng.subset(pairs.len(), 6).iter().map(|&i| pairs[i]));
         if options.reject_degenerate {
             let mean = scale(
                 sample.iter().fold([0.; 3], |sum, (p, _)| add(sum, *p)),
@@ -833,37 +1143,30 @@ pub fn pnp_with_options(
         };
         report.hypotheses += 1;
         refine(&mut c, &sample);
-        let mut good: Vec<_> = pairs
-            .iter()
-            .copied()
-            .filter(|&(p, q)| {
-                c.project(p)
-                    .is_some_and(|uv| (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2) < 16.)
-            })
-            .collect();
+        good.clear();
+        good.extend(pairs.iter().copied().filter(|&(p, q)| {
+            c.project(p)
+                .is_some_and(|uv| (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2) < 16.)
+        }));
         if good.len() > best.len() {
             if options.local_optimization {
                 for _ in 0..2 {
                     let mut next = c.clone();
                     refine(&mut next, &good);
                     report.local_refits += 1;
-                    let accepted = pairs
-                        .iter()
-                        .copied()
-                        .filter(|&(p, q)| {
-                            next.project(p).is_some_and(|uv| {
-                                (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2) < 16.
-                            })
-                        })
-                        .collect::<Vec<_>>();
+                    accepted.clear();
+                    accepted.extend(pairs.iter().copied().filter(|&(p, q)| {
+                        next.project(p)
+                            .is_some_and(|uv| (uv[0] - q[0]).powi(2) + (uv[1] - q[1]).powi(2) < 16.)
+                    }));
                     if accepted.len() < good.len() {
                         break;
                     }
                     c = next;
-                    good = accepted;
+                    std::mem::swap(&mut good, &mut accepted);
                 }
             }
-            best = good;
+            std::mem::swap(&mut best, &mut good);
             result = Some(c);
             if options.adaptive_ransac {
                 budget = adaptive_budget(best.len(), pairs.len(), 6, maximum).max(24);
@@ -984,10 +1287,24 @@ mod tests {
                 gradient_norm += ((constraint(xx, yy) - constraint(x, y)) / epsilon).powi(2);
             }
         }
-        let measured = pixel_sampson(e, a.ray(x), b.ray(y), a.focal, b.focal);
+        let measured = pixel_sampson(
+            e,
+            tr(e),
+            a.ray(x),
+            b.ray(y),
+            a.focal.powi(2),
+            b.focal.powi(2),
+        );
         let numerical = constraint(x, y).powi(2) / gradient_norm;
         assert!((measured / numerical - 1.).abs() < 1e-6);
-        let reversed = pixel_sampson(tr(e), b.ray(y), a.ray(x), b.focal, a.focal);
+        let reversed = pixel_sampson(
+            tr(e),
+            e,
+            b.ray(y),
+            a.ray(x),
+            b.focal.powi(2),
+            a.focal.powi(2),
+        );
         assert!((measured - reversed).abs() < 1e-10);
     }
     #[test]
@@ -1127,5 +1444,145 @@ mod tests {
             assert!(report.invalid_first_camera);
             assert_eq!(report.iterations, 0);
         }
+    }
+    /// Noisy non-planar synthetic scene with a known relative pose. Uniform
+    /// pixel noise plus a fixed share of scrambled matches, all from the
+    /// deterministic kernel Rng.
+    fn noisy_scene(
+        fa: f64,
+        fb: f64,
+        noise: f64,
+        outliers: usize,
+    ) -> (Camera, Camera, Vec<([f64; 2], [f64; 2])>, Vec<(V3, [f64; 2])>) {
+        let a = Camera::identity(fa, 320., 240.);
+        let mut b = Camera::identity(fb, 320., 240.);
+        b.rotation = rotation([0.05, 0.12, -0.02]);
+        b.translation = [-0.8, 0.05, 0.1];
+        let mut rng = Rng::new();
+        let mut train = Vec::new();
+        for i in 0..240 {
+            let p = [
+                rng.next(1000) as f64 / 250. - 2.,
+                rng.next(1000) as f64 / 300. - 1.6,
+                2.5 + rng.next(1000) as f64 / 250.,
+            ];
+            let mut x = a.project(p).unwrap();
+            let mut y = b.project(p).unwrap();
+            x[0] += (rng.next(2000) as f64 / 1000. - 1.) * noise;
+            x[1] += (rng.next(2000) as f64 / 1000. - 1.) * noise;
+            y[0] += (rng.next(2000) as f64 / 1000. - 1.) * noise;
+            y[1] += (rng.next(2000) as f64 / 1000. - 1.) * noise;
+            if i < outliers {
+                y = [(i * 79 % 640) as f64, (i * 137 % 480) as f64];
+            }
+            train.push((x, y));
+        }
+        let holdout = (0..60)
+            .map(|_| {
+                let p = [
+                    rng.next(1000) as f64 / 250. - 2.,
+                    rng.next(1000) as f64 / 300. - 1.6,
+                    2.5 + rng.next(1000) as f64 / 250.,
+                ];
+                (p, b.project(p).unwrap())
+            })
+            .collect();
+        (a, b, train, holdout)
+    }
+    /// Reprojection RMSE on independent points at the known baseline scale.
+    fn holdout_rmse(pose: &Camera, b: &Camera, holdout: &[(V3, [f64; 2])]) -> f64 {
+        let baseline_scale = 1. / norm(b.translation);
+        (holdout
+            .iter()
+            .map(|(p, y)| {
+                let uv = pose.project(scale(*p, baseline_scale)).unwrap();
+                (uv[0] - y[0]).powi(2) + (uv[1] - y[1]).powi(2)
+            })
+            .sum::<f64>()
+            / holdout.len() as f64)
+            .sqrt()
+    }
+    fn rotation_error_deg(pose: &Camera, b: &Camera) -> f64 {
+        let mut trace = 0.;
+        for i in 0..3 {
+            for j in 0..3 {
+                trace += pose.rotation[i][j] * b.rotation[i][j];
+            }
+        }
+        ((trace - 1.) / 2.).clamp(-1., 1.).acos().to_degrees()
+    }
+    #[test]
+    fn joint_refinement_is_deterministic_and_improves_noisy_pose() {
+        let (a, b, train, holdout) = noisy_scene(800., 800., 0.6, 24);
+        let frozen = relative_with_options(
+            &a,
+            &b,
+            &train,
+            &GeometryOptions::default(),
+            &mut RobustReport::default(),
+        )
+        .expect("default pose");
+        let joint = relative_with_options(
+            &a,
+            &b,
+            &train,
+            &GeometryOptions::JOINT,
+            &mut RobustReport::default(),
+        )
+        .expect("joint pose");
+        let repeated = relative_with_options(
+            &a,
+            &b,
+            &train,
+            &GeometryOptions::JOINT,
+            &mut RobustReport::default(),
+        )
+        .expect("repeated joint pose");
+        for (x, y) in joint
+            .0
+            .rotation
+            .iter()
+            .flatten()
+            .chain(joint.0.translation.iter())
+            .zip(repeated.0.rotation.iter().flatten().chain(repeated.0.translation.iter()))
+        {
+            assert_eq!(x.to_bits(), y.to_bits(), "joint refinement must be deterministic");
+        }
+        let default_rmse = holdout_rmse(&frozen.0, &b, &holdout);
+        let joint_rmse = holdout_rmse(&joint.0, &b, &holdout);
+        assert!(
+            joint_rmse <= default_rmse,
+            "joint {joint_rmse} should not regress against default {default_rmse}"
+        );
+        assert!(joint_rmse < 1.0, "joint holdout RMSE {joint_rmse}");
+        assert!(
+            rotation_error_deg(&joint.0, &b) <= rotation_error_deg(&frozen.0, &b) + 1e-9,
+            "joint rotation error must not exceed the default"
+        );
+    }
+    #[test]
+    fn analytic_epipolar_jacobian_tracks_finite_differences() {
+        let (a, b, train, _) = noisy_scene(600., 600., 0.4, 12);
+        let finite = relative_with_options(
+            &a,
+            &b,
+            &train,
+            &GeometryOptions::ROBUST,
+            &mut RobustReport::default(),
+        )
+        .expect("finite-difference pose");
+        let analytic = GeometryOptions {
+            analytic_epipolar_jacobian: true,
+            ..GeometryOptions::ROBUST
+        };
+        let exact = relative_with_options(&a, &b, &train, &analytic, &mut RobustReport::default())
+            .expect("analytic pose");
+        for i in 0..3 {
+            assert!(
+                norm(sub(exact.0.rotation[i], finite.0.rotation[i])) < 1e-4,
+                "rotation row {i} diverged"
+            );
+        }
+        assert!(norm(sub(exact.0.translation, finite.0.translation)) < 1e-4);
     }
 }

@@ -56,10 +56,12 @@ pub fn rotation(v: V3) -> M3 {
     ]
 }
 /// Jacobi eigensystem of a real symmetric matrix, eigenvectors are columns.
-pub fn eigen(mut a: Vec<f64>, n: usize) -> (Vec<f64>, Vec<f64>) {
-    let mut v = vec![0.; n * n];
+/// Fixed stack storage avoids allocating for the bounded 9/12-dimensional systems.
+pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) {
+    let n = N;
+    let mut v = [[0.; N]; N];
     for i in 0..n {
-        v[i * n + i] = 1.;
+        v[i][i] = 1.;
     }
     for _ in 0..(80 * n * n) {
         let mut p = 0;
@@ -67,62 +69,62 @@ pub fn eigen(mut a: Vec<f64>, n: usize) -> (Vec<f64>, Vec<f64>) {
         let mut largest = 0.;
         for i in 0..n {
             for j in i + 1..n {
-                if a[i * n + j].abs() > largest {
-                    largest = a[i * n + j].abs();
+                if a[i][j].abs() > largest {
+                    largest = a[i][j].abs();
                     p = i;
                     q = j;
                 }
             }
         }
-        let diag = (0..n).map(|i| a[i * n + i].abs()).fold(0., f64::max);
+        let diag = (0..n).map(|i| a[i][i].abs()).fold(0., f64::max);
         if largest < 1e-13 * diag.max(1e-30) {
             break;
         }
-        let theta = 0.5 * (2. * a[p * n + q]).atan2(a[q * n + q] - a[p * n + p]);
+        let theta = 0.5 * (2. * a[p][q]).atan2(a[q][q] - a[p][p]);
         let (c, s) = (theta.cos(), theta.sin());
-        let (app, aqq, apq) = (a[p * n + p], a[q * n + q], a[p * n + q]);
+        let (app, aqq, apq) = (a[p][p], a[q][q], a[p][q]);
         for k in 0..n {
             if k != p && k != q {
-                let (kp, kq) = (a[k * n + p], a[k * n + q]);
-                a[k * n + p] = c * kp - s * kq;
-                a[p * n + k] = a[k * n + p];
-                a[k * n + q] = s * kp + c * kq;
-                a[q * n + k] = a[k * n + q];
+                let (kp, kq) = (a[k][p], a[k][q]);
+                a[k][p] = c * kp - s * kq;
+                a[p][k] = a[k][p];
+                a[k][q] = s * kp + c * kq;
+                a[q][k] = a[k][q];
             }
         }
-        a[p * n + p] = c * c * app - 2. * s * c * apq + s * s * aqq;
-        a[q * n + q] = s * s * app + 2. * s * c * apq + c * c * aqq;
-        a[p * n + q] = 0.;
-        a[q * n + p] = 0.;
+        a[p][p] = c * c * app - 2. * s * c * apq + s * s * aqq;
+        a[q][q] = s * s * app + 2. * s * c * apq + c * c * aqq;
+        a[p][q] = 0.;
+        a[q][p] = 0.;
         for k in 0..n {
-            let (kp, kq) = (v[k * n + p], v[k * n + q]);
-            v[k * n + p] = c * kp - s * kq;
-            v[k * n + q] = s * kp + c * kq;
+            let (kp, kq) = (v[k][p], v[k][q]);
+            v[k][p] = c * kp - s * kq;
+            v[k][q] = s * kp + c * kq;
         }
     }
-    ((0..n).map(|i| a[i * n + i]).collect(), v)
+    (std::array::from_fn(|i| a[i][i]), v)
 }
 /// Accumulate normal equations directly from fixed-width rows. No row matrix is
 /// materialized; the order of products and additions matches the original solver.
 pub fn smallest<const N: usize>(rows: impl IntoIterator<Item = [f64; N]>) -> [f64; N] {
-    let mut a = vec![0.; N * N];
+    let mut a = [[0.; N]; N];
     for r in rows {
         for i in 0..N {
             for j in 0..N {
-                a[i * N + j] += r[i] * r[j];
+                a[i][j] += r[i] * r[j];
             }
         }
     }
-    let (d, v) = eigen(a, N);
+    let (d, v) = eigen(a);
     let k = (0..N).min_by(|&i, &j| d[i].total_cmp(&d[j])).unwrap();
-    std::array::from_fn(|i| v[i * N + k])
+    std::array::from_fn(|i| v[i][k])
 }
 pub fn svd(a: M3) -> (M3, V3, M3) {
     let ata = mm(tr(a), a);
-    let (d, v) = eigen(ata.into_iter().flatten().collect(), 3);
+    let (d, v) = eigen(ata);
     let mut order = [0, 1, 2];
     order.sort_by(|&i, &j| d[j].total_cmp(&d[i]));
-    let cols: [V3; 3] = order.map(|k| std::array::from_fn(|i| v[i * 3 + k]));
+    let cols: [V3; 3] = order.map(|k| std::array::from_fn(|i| v[i][k]));
     let s = order.map(|k| d[k].max(0.).sqrt());
     let u0 = unit(mv(a, cols[0]));
     let x = mv(a, cols[1]);
@@ -164,12 +166,12 @@ mod tests {
     use super::*;
     #[test]
     fn eigen_reconstructs() {
-        let a = vec![3., 1., 0., 1., 2., 1., 0., 1., 4.];
-        let (d, v) = eigen(a.clone(), 3);
+        let a = [[3., 1., 0.], [1., 2., 1.], [0., 1., 4.]];
+        let (d, v) = eigen(a);
         for k in 0..3 {
             for i in 0..3 {
-                let av = (0..3).map(|j| a[i * 3 + j] * v[j * 3 + k]).sum::<f64>();
-                assert!((av - d[k] * v[i * 3 + k]).abs() < 1e-9);
+                let av = (0..3).map(|j| a[i][j] * v[j][k]).sum::<f64>();
+                assert!((av - d[k] * v[i][k]).abs() < 1e-9);
             }
         }
     }

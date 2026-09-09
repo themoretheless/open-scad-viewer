@@ -1,7 +1,7 @@
 //! Experimental endpoint collapses with bounded vertex displacement.
 use super::{Surface, limits::{MAX_SURFACE_VERTICES, MAX_SURFACE_TRIANGLES}};
+use super::volume::FastMap;
 use crate::{math::*, Result};
-use std::collections::{BTreeSet, HashMap};
 
 pub fn simplify(input: &Surface, tolerance: f64, passes: usize) -> Result<Surface> {
     simplify_with_progress(input, tolerance, passes, |_, _, _| true)
@@ -34,7 +34,7 @@ pub fn simplify_with_progress(
     fn root(parent: &mut [usize], mut i: usize) -> usize {
         while parent[i]!=i { parent[i]=parent[parent[i]];i=parent[i]; } i
     }
-    let mut oriented_edges=HashMap::<(u32,u32),(u32,i32)>::new();
+    let mut oriented_edges=FastMap::<(u32,u32),(u32,i32)>::default();
     for (fi,t) in input.triangles.iter().enumerate() {
         if fi%4096==0 {super::cancelled(&mut progress,"simplify-components",fi,input.triangles.len())?;}
         for [a,b] in [[t[0],t[1]],[t[1],t[2]],[t[2],t[0]]] {
@@ -66,8 +66,9 @@ pub fn simplify_with_progress(
         let mut cursor = offsets[..input.positions.len()].to_vec();
         // Input caps bound vertex/face indices and edge incidence counts
         // (at most three per face) below u32::MAX, including malformed topology.
-        let mut edges = HashMap::<(u32, u32), (u32, [u32; 2])>::with_capacity(
+        let mut edges = FastMap::<(u32, u32), (u32, [u32; 2])>::with_capacity_and_hasher(
             edge_capacity_hint,
+            Default::default(),
         );
         for (fi, t) in faces
             .iter()
@@ -111,41 +112,62 @@ pub fn simplify_with_progress(
         let mut candidates: Vec<_> = edges
             .iter()
             .filter(|&(&(a, b), f)| f.0 == 2 && !locked[a as usize] && !locked[b as usize])
-            .map(|(&(a, b), _)| (norm(sub(input.positions[a as usize], input.positions[b as usize])), a as usize, b as usize))
-            .filter(|&(length, _, b)| radius[b] + length <= tolerance)
+            .map(|(&(a, b), f)| (norm(sub(input.positions[a as usize], input.positions[b as usize])), a as usize, b as usize, f.1))
+            .filter(|&(length, _, b, _)| radius[b] + length <= tolerance)
             .collect();
         candidates
             .sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
         let mut changed = false;
         let count = candidates.len();
-        for (ci, (length, a, b)) in candidates.into_iter().enumerate() {
-            if ci % 1024 == 0 { super::cancelled(&mut progress, "simplify-collapse", ci, count)?; }
-            if locked[a] || locked[b] || radius[b] + length > tolerance {
-                continue;
-            }
-            let neighbors = |v: usize| -> BTreeSet<usize> {
+        // Vertex valences stay small: sorted scratch vectors replace per-candidate
+        // tree sets while keeping the same ascending iteration order.
+        let neighbors = |faces: &[Option<[u32; 3]>], v: usize, out: &mut Vec<usize>| {
+            out.clear();
+            out.extend(
                 incidents(v)
                     .iter()
                     .flat_map(|&f| faces[f].unwrap())
                     .map(|i| i as usize)
-                    .filter(|&i| i != v)
-                    .collect()
-            };
-            let na = neighbors(a);
-            let nb = neighbors(b);
-            let common: BTreeSet<_> = na.intersection(&nb).copied().collect();
-            let edge_faces = &edges[&(a as u32, b as u32)].1;
-            let opposite: BTreeSet<_> = edge_faces
-                .iter()
-                .flat_map(|&f| faces[f as usize].unwrap())
-                .map(|i| i as usize)
-                .filter(|&i| i != a && i != b)
-                .collect();
+                    .filter(|&i| i != v),
+            );
+            out.sort_unstable();
+            out.dedup();
+        };
+        let mut na = Vec::new();
+        let mut nb = Vec::new();
+        let mut common = Vec::new();
+        let mut opposite = Vec::new();
+        let mut ring = Vec::new();
+        let mut unique = Vec::new();
+        for (ci, (length, a, b, edge_faces)) in candidates.into_iter().enumerate() {
+            if ci % 1024 == 0 { super::cancelled(&mut progress, "simplify-collapse", ci, count)?; }
+            if locked[a] || locked[b] || radius[b] + length > tolerance {
+                continue;
+            }
+            neighbors(&faces, a, &mut na);
+            neighbors(&faces, b, &mut nb);
+            common.clear();
+            common.extend(na.iter().copied().filter(|i| nb.binary_search(i).is_ok()));
+            opposite.clear();
+            for &f in &edge_faces {
+                opposite.extend(
+                    faces[f as usize]
+                        .unwrap()
+                        .into_iter()
+                        .map(|i| i as usize)
+                        .filter(|&i| i != a && i != b),
+                );
+            }
+            opposite.sort_unstable();
+            opposite.dedup();
             if common != opposite || opposite.len() != 2 {
                 continue;
             }
-            let ring: BTreeSet<_> = incidents(a).iter().chain(incidents(b)).copied().collect();
-            let mut unique = BTreeSet::new();
+            ring.clear();
+            ring.extend(incidents(a).iter().chain(incidents(b)).copied());
+            ring.sort_unstable();
+            ring.dedup();
+            unique.clear();
             let mut valid = true;
             for &fi in &ring {
                 let old = faces[fi].unwrap();
@@ -161,10 +183,11 @@ pub fn simplify_with_progress(
                 let m = normal(new);
                 let mut key = new;
                 key.sort_unstable();
-                if norm(m) <= 1e-15 || dot(n, m) <= 0. || !unique.insert(key) {
+                if norm(m) <= 1e-15 || dot(n, m) <= 0. || unique.contains(&key) {
                     valid = false;
                     break;
                 }
+                unique.push(key);
             }
             if !valid {
                 continue;
@@ -187,7 +210,7 @@ pub fn simplify_with_progress(
                     locked[i as usize] = true;
                 }
             }
-            for fi in ring {
+            for &fi in &ring {
                 let t = faces[fi].unwrap();
                 faces[fi] = if t.contains(&(a as u32)) && t.contains(&(b as u32)) {
                     None

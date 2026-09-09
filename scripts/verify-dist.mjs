@@ -41,7 +41,14 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
 // adds ~26 kB independently. Field traits, record updates and ret functions add
 // ~15 kB over the previous 2928506-byte build. Measured total: 2943117 bytes.
 // Trait methods, defaults and associated types add ~18 kB (2960752 bytes total).
+// Photogrammetry round-2 optimizations grow the kernel (~82 kB raw, +13 kB packed)
+// but the worker no longer embeds the kernel: it loads lazily once per page
+// (2976203 bytes total).
+// Round-3 accuracy modes (joint refinement, outlier filter, depth priors,
+// red-black propagation, fusion merge; opt-in, default path byte-identical)
+// add ~22 kB packed (2998447 bytes total). Phase-3 browser WebGPU sweep adds
+// the shared WGSL text and the worker/parse plumbing (3014297 bytes total).
 // Keep a bounded margin; individual chunk limits remain unchanged.
-const totalBudget = 2_970_000
+const totalBudget = 3_020_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

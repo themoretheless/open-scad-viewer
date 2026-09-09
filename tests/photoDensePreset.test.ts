@@ -1,10 +1,11 @@
 import {describe, expect, it, vi} from 'vitest'
 import {PhotogrammetryKernel, type PhotoDensePreset} from '../src/services/photogrammetryKernel'
+import {compilePhotogrammetryKernel} from '../src/services/photogrammetryModule'
 import {photoReportJson} from '../src/services/photoReport'
 
 function transport() {
   const wasm = {photo_run: vi.fn(() => 7n), photo_dense: vi.fn(() => 9n)}
-  const response = vi.fn(() => ({positions: [], colors: [], triangles: []}))
+  const response = vi.fn(() => ({positions: new Float64Array(), colors: new Uint8Array(), triangles: new Uint32Array()}))
   // Exercise the real public dispatch method with observable ABI calls. The
   // separate test below instantiates the actual generated WASM export.
   const kernel = Object.assign(Object.create(PhotogrammetryKernel.prototype), {wasm, response}) as PhotogrammetryKernel
@@ -31,8 +32,8 @@ describe('bounded dense preset transport', () => {
     expect(wasm.photo_dense).toHaveBeenCalledOnce()
   })
 
-  it('reaches the actual WASM export and validates browser resolution there', () => {
-    const kernel = new PhotogrammetryKernel()
+  it('reaches the actual WASM export and validates browser resolution there', async () => {
+    const kernel = new PhotogrammetryKernel(await compilePhotogrammetryKernel())
     try {
       expect(() => kernel.dense(128, 'slanted-plane')).toThrow('Reconstruct cameras first')
       expect(() => kernel.dense(300, 'slanted-plane')).toThrow('resolution')
@@ -40,11 +41,11 @@ describe('bounded dense preset transport', () => {
     } finally { kernel.clear() }
   })
 
-  it('routes the shared surface preset and enforces its WASM resolution cap', () => {
+  it('routes the shared surface preset and enforces its WASM resolution cap', async () => {
     const {kernel, wasm} = transport()
     kernel.dense(128, 'dual-scale-volume')
     expect(wasm.photo_dense).toHaveBeenCalledWith(128, 2)
-    const actual = new PhotogrammetryKernel()
+    const actual = new PhotogrammetryKernel(await compilePhotogrammetryKernel())
     try {
       expect(() => actual.dense(128, 'dual-scale-volume')).toThrow('Reconstruct cameras first')
       expect(() => actual.dense(192, 'dual-scale-volume')).toThrow('128')

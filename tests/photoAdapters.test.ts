@@ -6,9 +6,9 @@ import {PhotoPreview} from '../src/services/photoPreview'
 import type {PhotoSurface} from '../src/services/photogrammetryKernel'
 
 const tetrahedron: PhotoSurface = {
-  positions: [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]],
-  colors: [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255]],
-  triangles: [[0, 2, 1], [0, 1, 3], [1, 2, 3], [2, 0, 3]],
+  positions: new Float64Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),
+  colors: new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255]),
+  triangles: new Uint32Array([0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3]),
 }
 function objectUrls() {
   let sequence = 0
@@ -104,8 +104,8 @@ describe('photo input resource ownership', () => {
 
 describe('photo export and preview separation', () => {
   it('scales the document copy by the full observed extent and leaves PLY untouched', () => {
-    const surface = {...tetrahedron, positions: [...tetrahedron.positions, [2, 0, 0]],
-      colors: [...tetrahedron.colors, [50, 60, 70]], documentSurface: tetrahedron}
+    const surface = {...tetrahedron, positions: new Float64Array([...tetrahedron.positions, 2, 0, 0]),
+      colors: new Uint8Array([...tetrahedron.colors, 50, 60, 70]), documentSurface: tetrahedron}
     const before = photoPly(surface)
     const source = photoScadSource(surface, 100, 250000)
     const points = JSON.parse(source.match(/polyhedron\(points=(.*), faces=/)![1]!)
@@ -115,7 +115,7 @@ describe('photo export and preview separation', () => {
     expect(before).toContain('element vertex 5')
     expect(() => photoScadSource(surface, Infinity, 250000)).toThrow('positive width')
     expect(() => photoScadSource(surface, 100, 10)).toThrow('document budget')
-    expect(() => photoScadSource({...tetrahedron, triangles: [[0, 1, 2]]}, 100, 250000)).toThrow('valid CAD solid')
+    expect(() => photoScadSource({...tetrahedron, triangles: new Uint32Array([0, 1, 2])}, 100, 250000)).toThrow('valid CAD solid')
   })
 
   it('reuses preview geometry across mode changes and keeps point colors in separate materials', () => {
@@ -128,13 +128,14 @@ describe('photo export and preview separation', () => {
     expect(cloud).toHaveLength(4)
     expect(cloud[0]?.color).toEqual([1, 0, 0, 1])
     expect(cloud.reduce((total, mesh) => total + mesh.indices.length / 3, 0)).toBe(16)
-    expect([...surface[0]!.indices]).toEqual(tetrahedron.triangles.flat())
+    expect([...surface[0]!.indices]).toEqual([...tetrahedron.triangles])
     expect(JSON.stringify(tetrahedron)).toBe(before)
   })
 
   it('bounds displayed points without reducing the exported cloud', () => {
-    const positions = Array.from({length: 12001}, (_, i) => [i, i % 3, i % 7])
-    const surface = {positions, colors: [], triangles: []}
+    const positions = new Float64Array(12001 * 3)
+    for (let i = 0; i < 12001; i++) positions.set([i, i % 3, i % 7], i * 3)
+    const surface: PhotoSurface = {positions, colors: new Uint8Array(), triangles: new Uint32Array()}
     const preview = new PhotoPreview(surface)
     const count = preview.meshes('points').reduce((total, mesh) => total + mesh.vertices.length / 24, 0)
     expect(count).toBeLessThanOrEqual(6000)

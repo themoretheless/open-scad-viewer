@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {PhotogrammetryKernel, type PhotoPixels} from '../src/services/photogrammetryKernel'
+import {compilePhotogrammetryKernel} from '../src/services/photogrammetryModule'
 import {parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationGroup} from '../src/services/photoCalibration'
 
 function pixels(group?: PhotoCalibrationGroup): PhotoPixels {
@@ -8,9 +9,9 @@ function pixels(group?: PhotoCalibrationGroup): PhotoPixels {
 }
 
 describe('actual generated WASM calibration boundary', () => {
-  it('imports mixed calibration groups and returns Rust rectification provenance through MGV1', () => {
+  it('imports mixed calibration groups and returns Rust rectification provenance through MGV1', async () => {
     const groups = parsePhotoCalibration(photoCalibrationExampleJson()).groups
-    const kernel = new PhotogrammetryKernel()
+    const kernel = new PhotogrammetryKernel(await compilePhotogrammetryKernel())
     try {
       expect(kernel.add(pixels(groups[0]))).toBe(1)
       expect(kernel.add(pixels(groups[1]))).toBe(2)
@@ -28,9 +29,9 @@ describe('actual generated WASM calibration boundary', () => {
     expect(kernel.report()).toBeNull()
   })
 
-  it('rejects group conflicts, wrong source dimensions and oversized metadata transactionally', () => {
+  it('rejects group conflicts, wrong source dimensions and oversized metadata transactionally', async () => {
     const group = parsePhotoCalibration(photoCalibrationExampleJson()).groups[0]
-    const kernel = new PhotogrammetryKernel()
+    const kernel = new PhotogrammetryKernel(await compilePhotogrammetryKernel())
     try {
       kernel.add(pixels(group))
       const before = kernel.report()

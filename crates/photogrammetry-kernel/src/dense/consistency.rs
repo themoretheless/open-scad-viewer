@@ -1,5 +1,5 @@
 //! Reciprocal depth/reprojection checks define which observations may enter fusion.
-use super::{cancelled, DenseDiagnostics, DenseOptions, DepthMap};
+use super::{cancelled, world_points, DenseDiagnostics, DenseOptions, DepthMap};
 use crate::{camera::Camera, math::*, Image, Reconstruction, Result};
 
 #[derive(Clone, Debug)]
@@ -19,22 +19,42 @@ pub(super) struct ObservedPatch {
     pub triangles: Vec<[u32; 3]>,
 }
 
-fn normal(map: &DepthMap, camera: &Camera, i: usize, tolerance: f64) -> Option<V3> {
+// Reciprocal depths per pixel, 0 where invalid; 1./z of the same z is the same bit.
+fn inverse_depths(map: &DepthMap) -> Vec<f64> {
+    map.depth
+        .iter()
+        .map(|&z| {
+            if z.is_finite() && z > 0. {
+                1. / z
+            } else {
+                0.
+            }
+        })
+        .collect()
+}
+
+fn normal(
+    map: &DepthMap,
+    points: &[V3],
+    camera: &Camera,
+    i: usize,
+    tolerance: f64,
+) -> Option<V3> {
     let (x, y) = (i % map.width, i / map.width);
     let z = map.depth[i];
     if z <= 0. {
         return None;
     }
-    let p = map.point(camera, i);
+    let p = points[i];
     let continuous = |j: usize| map.depth[j] > 0. && (map.depth[j] - z).abs() < tolerance * z;
     // Prefer central differences; one-sided derivatives keep valid boundary samples.
     let direction = |negative: Option<usize>, positive: Option<usize>| {
         let negative = negative.filter(|&j| continuous(j));
         let positive = positive.filter(|&j| continuous(j));
         match (negative, positive) {
-            (Some(a), Some(b)) => Some(sub(map.point(camera, b), map.point(camera, a))),
-            (None, Some(b)) => Some(sub(map.point(camera, b), p)),
-            (Some(a), None) => Some(sub(p, map.point(camera, a))),
+            (Some(a), Some(b)) => Some(sub(points[b], points[a])),
+            (None, Some(b)) => Some(sub(points[b], p)),
+            (Some(a), None) => Some(sub(p, points[a])),
             _ => None,
         }
     };
@@ -59,19 +79,19 @@ fn normal(map: &DepthMap, camera: &Camera, i: usize, tolerance: f64) -> Option<V
 }
 
 // Both predicates use the same bounds, validity and planar-continuity rules.
-fn planar_edge(map: &DepthMap, a: usize, b: usize, tolerance: f64) -> bool {
-    continuous_edge(map,a,b,tolerance,false)
+fn planar_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64) -> bool {
+    continuous_edge(inv,width,height,a,b,tolerance,false)
 }
-fn curved_edge(map: &DepthMap, a: usize, b: usize, tolerance: f64) -> bool {
-    continuous_edge(map,a,b,tolerance,true)
+fn curved_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64) -> bool {
+    continuous_edge(inv,width,height,a,b,tolerance,true)
 }
-fn continuous_edge(map: &DepthMap, a: usize, b: usize, tolerance: f64, allow_curvature: bool) -> bool {
-    let ax = (a % map.width) as isize; let ay = (a / map.width) as isize;
-    let bx = (b % map.width) as isize; let by = (b / map.width) as isize;
+fn continuous_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64, allow_curvature: bool) -> bool {
+    let ax = (a % width) as isize; let ay = (a / width) as isize;
+    let bx = (b % width) as isize; let by = (b / width) as isize;
     let sample = |x: isize, y: isize| -> Option<f64> {
-        if x < 0 || y < 0 || x >= map.width as isize || y >= map.height as isize { return None; }
-        let z = map.depth[y as usize * map.width + x as usize];
-        (z.is_finite() && z > 0.).then_some(1. / z)
+        if x < 0 || y < 0 || x >= width as isize || y >= height as isize { return None; }
+        let iz = inv[y as usize * width + x as usize];
+        (iz != 0.).then_some(iz)
     };
     let left = sample(2*ax-bx,2*ay-by);
     let right = sample(2*bx-ax,2*by-ay);
@@ -105,9 +125,16 @@ pub(super) fn filter(
 ) -> Result<Vec<ObservedPatch>> {
     // Compute local geometry once; reciprocal checks reuse it for every source.
     let total_rows: usize = maps.iter().map(|map| map.height).sum();
+    let mut points = Vec::with_capacity(maps.len());
+    let mut inverse = Vec::with_capacity(maps.len());
+    for map in maps {
+        let camera = sparse.cameras[map.image].as_ref().unwrap();
+        points.push(world_points(map, camera));
+        inverse.push(inverse_depths(map));
+    }
     let mut normals = Vec::with_capacity(maps.len());
     let mut normal_rows = 0;
-    for map in maps {
+    for (map_index, map) in maps.iter().enumerate() {
         let camera = sparse.cameras[map.image].as_ref().unwrap();
         let mut values = Vec::with_capacity(map.depth.len());
         for y in 0..map.height {
@@ -115,6 +142,7 @@ pub(super) fn filter(
             for x in 0..map.width {
                 values.push(normal(
                     map,
+                    &points[map_index],
                     camera,
                     y * map.width + x,
                     options.relative_depth_tolerance,
@@ -143,15 +171,23 @@ pub(super) fn filter(
                 if z <= 0. {
                     continue;
                 }
-                let p = map.point(camera, i);
+                let p = points[map_index][i];
                 let n = normals[map_index][i];
                 let mut support = 0;
                 for (other_index, other) in maps.iter().enumerate() {
                     if other.image == map.image {
                         continue;
                     }
+                    // Opt-in COLMAP-style check: only the views selected for
+                    // depth estimation may vote; the default polls every map.
+                    if options.selected_sources_consistency
+                        && !map.neighbors.contains(&other.image)
+                    {
+                        continue;
+                    }
                     let nc = sparse.cameras[other.image].as_ref().unwrap();
-                    let Some(uv) = nc.project(p) else {
+                    let cp = nc.camera_point(p);
+                    let Some(uv) = nc.project_camera_point(cp) else {
                         continue;
                     };
                     if uv.iter().any(|x| !x.is_finite()) {
@@ -167,7 +203,7 @@ pub(super) fn filter(
                     }
                     let j = iy as usize * other.width + ix as usize;
                     let dz = other.depth[j];
-                    let expected = add(mv(nc.rotation, p), nc.translation)[2];
+                    let expected = cp[2];
                     if dz <= 0.
                         || (dz - expected).abs() > options.relative_depth_tolerance * expected
                     {
@@ -178,7 +214,7 @@ pub(super) fn filter(
                             continue;
                         }
                     }
-                    let Some(back) = camera.project(other.point(nc, j)) else {
+                    let Some(back) = camera.project(points[other_index][j]) else {
                         continue;
                     };
                     let error = ((back[0] / map.step - x as f64).powi(2)
@@ -223,22 +259,24 @@ pub(super) fn filter(
                         .fold(f64::INFINITY, f64::min);
                     let high = triangle.iter().map(|&i| map.depth[i]).fold(0., f64::max);
                     if high - low > options.relative_depth_tolerance * low
-                        && ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| planar_edge(map,a,b,options.relative_depth_tolerance)) {
+                        && ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| planar_edge(&inverse[map_index],map.width,map.height,a,b,options.relative_depth_tolerance)) {
                         if !options.dual_scale {continue;}
-                        if ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| curved_edge(map,a,b,options.relative_depth_tolerance)) { continue; }
-                        let points=triangle.map(|i|map.point(camera,i));
-                        let center=scale(add(add(points[0],points[1]),points[2]),1./3.);
+                        if ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| curved_edge(&inverse[map_index],map.width,map.height,a,b,options.relative_depth_tolerance)) { continue; }
+                        let world=triangle.map(|i|points[map_index][i]);
+                        let center=scale(add(add(world[0],world[1]),world[2]),1./3.);
                         let mut support=0;
                         for other in maps {
                             if other.image==map.image {continue;}
+                            if options.selected_sources_consistency && !map.neighbors.contains(&other.image) {continue;}
                             let nc=sparse.cameras[other.image].as_ref().unwrap();
-                            let Some(uv)=nc.project(center) else {continue;};
+                            let cp=nc.camera_point(center);
+                            let Some(uv)=nc.project_camera_point(cp) else {continue;};
                             if uv.iter().any(|v|!v.is_finite()) {continue;}
                             let x=(uv[0]/other.step).round() as isize;
                             let y=(uv[1]/other.step).round() as isize;
                             if x<0 || y<0 || x>=other.width as isize || y>=other.height as isize {continue;}
                             let z=other.depth[y as usize*other.width+x as usize];
-                            let expected=add(mv(nc.rotation,center),nc.translation)[2];
+                            let expected=cp[2];
                             if z>0. && (z-expected).abs()<=options.relative_depth_tolerance*expected {support+=1;}
                         }
                         if support<options.min_support_views {continue;}
@@ -273,34 +311,114 @@ mod tests {
         }
     }
     #[test]
+    fn selected_sources_option_limits_support_to_chosen_views() {
+        let first = Camera::identity(100., 6., 6.);
+        let mut second = first.clone();
+        second.translation = [-0.04, 0., 0.];
+        let mut third = first.clone();
+        third.translation = [-0.08, 0., 0.];
+        let maps: Vec<_> = (0..3)
+            .map(|image| DepthMap {
+                image,
+                width: 12,
+                height: 12,
+                step: 1.,
+                depth: vec![4.; 144],
+                confidence: vec![1.; 144],
+                // View 0 selected only view 1 as its depth-estimation source.
+                neighbors: match image {
+                    0 => vec![1],
+                    1 => vec![0, 2],
+                    _ => vec![0, 1],
+                },
+            })
+            .collect();
+        let image = Image {
+            width: 48,
+            height: 48,
+            rgb: vec![128; 48 * 48 * 3],
+            focal: 100.,
+        };
+        let sparse = Reconstruction {
+            cameras: vec![Some(first), Some(second), Some(third)],
+            points: vec![],
+            input_images: 3,
+            reprojection_rmse: 0.,
+        };
+        let options = DenseOptions {
+            min_support_views: 2,
+            max_source_views: 3,
+            ..Default::default()
+        };
+        let run = |options: &DenseOptions| {
+            let mut diagnostics = DenseDiagnostics {
+                photometric_samples: 432,
+                view_reports: vec![Default::default(); 3],
+                ..Default::default()
+            };
+            filter(
+                &[image.clone(), image.clone(), image.clone()],
+                &sparse,
+                &maps,
+                options,
+                &mut diagnostics,
+                &mut |_, _, _| true,
+            )
+            .unwrap()
+        };
+        // Polling every map gives view 0 two supporters; restricting to the
+        // selected sources leaves one, below the required support.
+        let all = run(&options);
+        assert!(!all[0].samples.is_empty());
+        let selected_options = DenseOptions {
+            selected_sources_consistency: true,
+            ..options.clone()
+        };
+        let selected = run(&selected_options);
+        assert!(selected[0].samples.is_empty());
+        assert!(!selected[1].samples.is_empty());
+        let again = run(&selected_options);
+        let weights: Vec<f64> = selected[1].samples.iter().map(|s| s.weight).collect();
+        let weights_again: Vec<f64> = again[1].samples.iter().map(|s| s.weight).collect();
+        assert_eq!(weights, weights_again);
+    }
+
+    #[test]
     fn curved_boundary_requires_measured_support_without_contradiction() {
         let mut depths = map();
+        let (curved, planar) = (|d: &DepthMap, a, b| {
+            curved_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025)
+        }, |d: &DepthMap, a, b| {
+            planar_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025)
+        });
         depths.depth.fill(0.);
         depths.depth[4] = 1. / 0.25;
         depths.depth[5] = 1. / 0.26;
         depths.depth[6] = 1. / 0.27;
-        assert!(curved_edge(&depths, 5, 6, 0.025));
-        assert!(!planar_edge(&depths, 5, 6, 0.025));
+        assert!(curved(&depths, 5, 6));
+        assert!(!planar(&depths, 5, 6));
         depths.depth[7] = 1. / 0.20;
-        assert!(!curved_edge(&depths, 5, 6, 0.025));
+        assert!(!curved(&depths, 5, 6));
         depths.depth[7] = 1. / 0.28;
-        assert!(planar_edge(&depths, 5, 6, 0.025));
+        assert!(planar(&depths, 5, 6));
         depths.depth[4] = 0.;
-        assert!(curved_edge(&depths, 5, 6, 0.025));
+        assert!(curved(&depths, 5, 6));
         depths.depth[7] = 0.;
-        assert!(!curved_edge(&depths, 5, 6, 0.025));
+        assert!(!curved(&depths, 5, 6));
         depths.depth[4..8].copy_from_slice(&[4., 4., 2., 2.]);
-        assert!(!curved_edge(&depths, 5, 6, 0.025));
+        assert!(!curved(&depths, 5, 6));
     }
 
     #[test]
     fn normals_face_camera_and_do_not_bridge_depth_discontinuities() {
         let camera = Camera::identity(100., 2., 2.);
         let mut map = map();
-        assert_eq!(normal(&map, &camera, 5, 0.025).unwrap(), [0., 0., -1.]);
+        let points = world_points(&map, &camera);
+        assert_eq!(normal(&map, &points, &camera, 5, 0.025).unwrap(), [0., 0., -1.]);
         map.depth[4] = 2.;
         map.depth[6] = 2.;
-        assert!(normal(&map, &camera, 5, 0.025).is_none());
+        let points = world_points(&map, &camera);
+        assert!(normal(&map, &points, &camera, 5, 0.025).is_none());
     }
     #[test]
     fn overlapping_registered_depth_maps_become_one_observed_grid() {
@@ -462,9 +580,9 @@ mod tests {
 fn planar_edge_accepts_tilt_and_rejects_depth_step() {
     let mut map = DepthMap { image:0,width:8,height:8,step:1.,depth:vec![0.;64],confidence:vec![1.;64],neighbors:vec![] };
     for y in 0..8 { for x in 0..8 { map.depth[y*8+x]=1./(0.2+0.015*x as f64+0.01*y as f64); } }
-    assert!(planar_edge(&map,27,28,0.03));
-    assert!(planar_edge(&map,27,36,0.03));
+    assert!(planar_edge(&inverse_depths(&map),8,8,27,28,0.03));
+    assert!(planar_edge(&inverse_depths(&map),8,8,27,36,0.03));
     for y in 0..8 { for x in 0..8 { map.depth[y*8+x]=if x<4 {3.} else {4.}; } }
-    assert!(!planar_edge(&map,27,28,0.03));
-    assert!(!planar_edge(&map,0,1,0.03));
+    assert!(!planar_edge(&inverse_depths(&map),8,8,27,28,0.03));
+    assert!(!planar_edge(&inverse_depths(&map),8,8,0,1,0.03));
 }

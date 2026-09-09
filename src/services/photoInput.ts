@@ -108,8 +108,15 @@ export class PhotoCollection {
     this.pending = true
     const incoming: ImportedPhoto[] = []
     try {
-      for (const file of files) {
-        const data = await file.arrayBuffer()
+      // Start every read up front; results still publish in input order.
+      const reads = files.map(file => {
+        const reading = file.arrayBuffer()
+        reading.catch(() => { /* A rejected batch abandons the remaining reads. */ })
+        return reading
+      })
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index]!
+        const data = await reads[index]!
         if (this.disposed) throw new DOMException('Photo import was cancelled', 'AbortError')
         const focal = photoFocalHint(data)
         const hint = focal !== null && validPhotoFocal(focal)
@@ -176,10 +183,13 @@ export async function decodePhoto(
     context.drawImage(bitmap, 0, 0, width, height)
     const rgba = context.getImageData(0, 0, width, height).data
     const rgb = new Uint8Array(width * height * 3)
-    for (let source = 0, target = 0; source < rgba.length; source += 4, target += 3) {
-      rgb[target] = rgba[source]!
-      rgb[target + 1] = rgba[source + 1]!
-      rgb[target + 2] = rgba[source + 2]!
+    // One 32-bit read per pixel (little-endian RGBA); alpha is dropped.
+    const pixels = new Uint32Array(rgba.buffer, rgba.byteOffset, width * height)
+    for (let source = 0, target = 0; source < pixels.length; source++, target += 3) {
+      const pixel = pixels[source]!
+      rgb[target] = pixel & 255
+      rgb[target + 1] = (pixel >>> 8) & 255
+      rgb[target + 2] = pixel >>> 16
     }
     const focal = calibration
       ? Math.sqrt(calibration.fx * width / bitmap.width * calibration.fy * height / bitmap.height)

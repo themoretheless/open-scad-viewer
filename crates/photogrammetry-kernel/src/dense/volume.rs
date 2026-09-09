@@ -4,6 +4,56 @@ use super::{cancelled, consistency::ObservedPatch, DenseOptions, DepthMap, Surfa
 use crate::{math::*, Reconstruction, Result};
 use std::collections::{HashMap, HashSet};
 
+/// Multiply-rotate hasher for small integer keys, in the spirit of FxHash.
+/// Hash iteration order never reaches the output; only lookup cost changes.
+#[derive(Default)]
+pub(crate) struct FastHasher {
+    hash: u64,
+}
+impl FastHasher {
+    #[inline]
+    fn fold(&mut self, word: u64) {
+        self.hash = (self.hash.rotate_left(26) ^ word).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+}
+impl std::hash::Hasher for FastHasher {
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        for chunk in bytes.chunks(8) {
+            let mut word = [0; 8];
+            word[..chunk.len()].copy_from_slice(chunk);
+            self.fold(u64::from_le_bytes(word));
+        }
+    }
+    #[inline]
+    fn write_u32(&mut self, value: u32) {
+        self.fold(value as u64);
+    }
+    #[inline]
+    fn write_i32(&mut self, value: i32) {
+        self.fold(value as u32 as u64);
+    }
+    #[inline]
+    fn write_u64(&mut self, value: u64) {
+        self.fold(value);
+    }
+    #[inline]
+    fn write_i64(&mut self, value: i64) {
+        self.fold(value as u64);
+    }
+    #[inline]
+    fn write_usize(&mut self, value: usize) {
+        self.fold(value as u64);
+    }
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.hash
+    }
+}
+pub(crate) type FastBuild = std::hash::BuildHasherDefault<FastHasher>;
+pub(crate) type FastMap<K, V> = HashMap<K, V, FastBuild>;
+pub(crate) type FastSet<T> = HashSet<T, FastBuild>;
+
 type Key = [i32; 3];
 const MAX_NODES: usize = 600_000;
 use super::limits::{MAX_SURFACE_VERTICES, MAX_SURFACE_TRIANGLES};
@@ -109,7 +159,14 @@ fn reconstruct_at_scale(
     }
     let mut colors: Vec<Vec<[u8; 3]>> = maps.iter().map(|m| vec![[0; 3]; m.depth.len()]).collect();
     let mut triangles: Vec<Vec<u8>> = maps.iter().map(|m| vec![0; m.depth.len()]).collect();
-    let mut keys = HashSet::new();
+    // First-map-wins lookup replaces repeated linear scans over maps.
+    let mut image_to_map = vec![None; maps.iter().map(|m| m.image + 1).max().unwrap_or(0)];
+    for (mi, map) in maps.iter().enumerate() {
+        if image_to_map[map.image].is_none() {
+            image_to_map[map.image] = Some(mi);
+        }
+    }
+    let mut keys = FastSet::default();
     for (pi, patch) in patches.iter().enumerate() {
         let mut used = vec![false; patch.samples.len()];
         for triangle in &patch.triangles {
@@ -117,7 +174,7 @@ fn reconstruct_at_scale(
                 used[i as usize] = true;
             }
             let source = patch.samples[triangle[0] as usize].source;
-            let mi = maps.iter().position(|m| m.image == source).unwrap();
+            let mi = image_to_map.get(source).copied().flatten().unwrap();
             let map = &maps[mi];
             let camera = sparse.cameras[source].as_ref().unwrap();
             let pixels = triangle.map(|i| {
@@ -135,7 +192,7 @@ fn reconstruct_at_scale(
             if si % 256 == 0 {
                 cancelled(progress, "volume", pi, patches.len())?;
             }
-            let Some(mi) = maps.iter().position(|m| m.image == sample.source) else {
+            let Some(mi) = image_to_map.get(sample.source).copied().flatten() else {
                 continue;
             };
             let map = &maps[mi];
@@ -177,7 +234,7 @@ fn reconstruct_at_scale(
     }
     let mut keys: Vec<_> = keys.into_iter().collect();
     keys.sort_unstable();
-    let mut field = HashMap::new();
+    let mut field = FastMap::default();
     for (ki, &key) in keys.iter().enumerate() {
         if ki % 512 == 0 {
             cancelled(progress, "volume-integrate", ki, keys.len())?;
@@ -419,14 +476,14 @@ fn position(key: Key, origin: V3, step: f64) -> V3 {
 
 fn extract(
     keys: &[Key],
-    field: &HashMap<Key, Node>,
+    field: &FastMap<Key, Node>,
     origin: V3,
     step: f64,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<Surface> {
     let mut output = Surface::default();
-    let mut edges = HashMap::<(Key, Key), u32>::new();
-    let mut unique = HashSet::new();
+    let mut edges = FastMap::<(Key, Key), u32>::default();
+    let mut unique = FastSet::default();
     for (ci, &cell) in keys.iter().enumerate() {
         if ci % 512 == 0 {
             cancelled(progress, "volume-surface", ci, keys.len())?;
@@ -614,7 +671,7 @@ mod tests {
     }
     #[test]
     fn plane_is_shared_oriented_and_open_at_unknown_boundary() {
-        let mut field = HashMap::new();
+        let mut field = FastMap::default();
         for z in -2..=2 {
             for y in -2..=2 {
                 for x in -2..=2 {
@@ -648,13 +705,13 @@ mod tests {
     fn unknown_nodes_and_cancellation_produce_no_partial_mesh() {
         let keys = vec![[0, 0, 0]];
         assert!(
-            extract(&keys, &HashMap::new(), [0.; 3], 1., &mut |_, _, _| true)
+            extract(&keys, &FastMap::default(), [0.; 3], 1., &mut |_, _, _| true)
                 .unwrap()
                 .triangles
                 .is_empty()
         );
         assert_eq!(
-            extract(&keys, &HashMap::new(), [0.; 3], 1., &mut |_, _, _| false).unwrap_err(),
+            extract(&keys, &FastMap::default(), [0.; 3], 1., &mut |_, _, _| false).unwrap_err(),
             "Cancelled"
         );
     }

@@ -1,8 +1,8 @@
 //! Worker-owned storage and serialization. Reconstruction algorithms do not depend on Value.
 use super::*;
 use photogrammetry_kernel::{
-    calibration::{rectify, Calibration, RectificationOptions, RectificationReport},
-    dense::{DenseDiagnostics, DenseEstimator, DenseOptions, Surface},
+    calibration::{Calibration, RectificationOptions, RectificationReport, RectifiedImage},
+    dense::{DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, Surface, SWEEP_WGSL},
     diagnostics::ReconstructionReport,
     Image, Reconstruction, ReconstructionOptions,
 };
@@ -13,16 +13,21 @@ struct Session {
     images: Vec<Image>,
     calibrations: Vec<Value>,
     groups: BTreeMap<String, Value>,
+    /// Grid-search focal per (calibration group id, width, height); pixel-independent.
+    rectify_high: BTreeMap<(String, usize, usize), f64>,
     sparse: Option<Reconstruction>,
     dense: Option<Surface>,
     diagnostics: Option<Value>,
+    /// Options and kernel bookkeeping between `dense_prepare` and
+    /// `dense_finish` on the host-GPU (browser WebGPU) path.
+    pending_sweep: Option<(DenseOptions, Vec<Option<PreparedView>>)>,
 }
 
 thread_local! {
     static PHOTO: RefCell<Session> = RefCell::new(Session::default());
 }
 
-pub fn add(width: usize, height: usize, focal: f64, rgb: &[u8]) -> Result<usize> {
+pub fn add(width: usize, height: usize, focal: f64, rgb: Box<[u8]>) -> Result<usize> {
     add_image(width, height, focal, rgb, None)
 }
 
@@ -95,7 +100,7 @@ pub fn add_calibrated(
     width: usize,
     height: usize,
     focal: f64,
-    rgb: &[u8],
+    rgb: Box<[u8]>,
     metadata: &[u8],
 ) -> Result<usize> {
     add_image(
@@ -129,11 +134,216 @@ fn calibration_provenance(
     }
 }
 
+// Session-local rectification mirroring calibration::rectify, so the grid
+// search focal — a function of (calibration, width, height) only, never of the
+// pixels — can be reused across the photos of one calibration group. Every
+// float expression is verbatim from the kernel; the cached-focal test below
+// compares both paths bit for bit and fails if they ever drift apart.
+const GRID: usize = 17;
+const RENDER_ATTEMPTS: usize = 8;
+
+fn source_pixel(
+    calibration: &Calibration,
+    width: usize,
+    height: usize,
+    focal: f64,
+    x: f64,
+    y: f64,
+) -> Option<[f64; 2]> {
+    let p = calibration.project_ray([
+        (x - width as f64 / 2.) / focal,
+        (y - height as f64 / 2.) / focal,
+    ])?;
+    (p[0] >= 0. && p[1] >= 0. && p[0] <= (width - 1) as f64 && p[1] <= (height - 1) as f64)
+        .then_some(p)
+}
+
+fn bilinear(image: &Image, p: [f64; 2], out: &mut [u8]) {
+    let (x, y) = (p[0].floor() as usize, p[1].floor() as usize);
+    let (nx, ny) = ((x + 1).min(image.width - 1), (y + 1).min(image.height - 1));
+    let (a, b) = (p[0] - x as f64, p[1] - y as f64);
+    let (i00, i10) = ((y * image.width + x) * 3, (y * image.width + nx) * 3);
+    let (i01, i11) = ((ny * image.width + x) * 3, (ny * image.width + nx) * 3);
+    let at = |i: usize, channel: usize| image.rgb[i + channel] as f64;
+    let c00 = [at(i00, 0), at(i00, 1), at(i00, 2)];
+    let c10 = [at(i10, 0), at(i10, 1), at(i10, 2)];
+    let c01 = [at(i01, 0), at(i01, 1), at(i01, 2)];
+    let c11 = [at(i11, 0), at(i11, 1), at(i11, 2)];
+    for (channel, value) in out.iter_mut().enumerate() {
+        *value = ((1. - b) * ((1. - a) * c00[channel] + a * c10[channel])
+            + b * ((1. - a) * c01[channel] + a * c11[channel]))
+        .round()
+        .clamp(0., 255.) as u8;
+    }
+}
+
+/// Rectify like the kernel, skipping the grid search when the group cache
+/// already holds its deterministic result. Returns the searched focal so the
+/// caller can cache it; None on the undistorted copy path and on cache hits.
+fn rectify_searched(
+    image: &Image,
+    calibration: &Calibration,
+    source_size: [usize; 2],
+    cached_high: Option<f64>,
+) -> Result<(RectifiedImage, Option<f64>)> {
+    let options = RectificationOptions::default();
+    image.validate()?;
+    if !options.max_zoom.is_finite()
+        || !(1. ..=8.).contains(&options.max_zoom)
+        || image.rgb.len() > options.max_output_bytes
+        || options.max_pixel_evaluations == 0
+    {
+        return Err("Rectification exceeds configured image/work limits".into());
+    }
+    let cal = calibration.resized(image.width, image.height, source_size)?;
+    let base_focal = (cal.fx * cal.fy).sqrt();
+    if !(20. ..=20000.).contains(&base_focal) {
+        return Err("Resized measured focal is outside the kernel's supported range".into());
+    }
+    let mut work = 0usize;
+    let mut checkpoint = |amount: usize| -> Result<()> {
+        work = work
+            .checked_add(amount)
+            .ok_or("Rectification work overflow")?;
+        if work > options.max_pixel_evaluations {
+            return Err("Rectification mapping work limit exceeded".into());
+        }
+        // The kernel's progress callback is always `true` here; the WASM host
+        // cancels by terminating its disposable Worker instead.
+        Ok(())
+    };
+    checkpoint(0)?;
+    let report = |focal: f64, resampled: bool| RectificationReport {
+        input_size: [image.width, image.height],
+        output_size: [image.width, image.height],
+        focal,
+        zoom: focal / base_focal,
+        output_fov_degrees: [image.width, image.height]
+            .map(|side| (side as f64 / (2. * focal)).atan().to_degrees() * 2.),
+        resampled,
+    };
+    if cal.fx == cal.fy
+        && cal.cx == image.width as f64 / 2.
+        && cal.cy == image.height as f64 / 2.
+        && [cal.k1, cal.k2, cal.k3, cal.p1, cal.p2]
+            .iter()
+            .all(|&v| v == 0.)
+    {
+        checkpoint(1)?;
+        let copy = Image {
+            focal: cal.fx,
+            ..image.clone()
+        };
+        checkpoint(0)?;
+        return Ok((
+            RectifiedImage {
+                image: copy,
+                report: report(cal.fx, false),
+            },
+            None,
+        ));
+    }
+    let max_focal = (base_focal * options.max_zoom).min(20000.);
+    let mut searched_high = None;
+    let mut high = match cached_high {
+        Some(high) => high,
+        None => {
+            let mut grid_valid = |focal: f64| -> Result<bool> {
+                checkpoint(GRID * GRID)?;
+                Ok((0..GRID).all(|gy| {
+                    (0..GRID).all(|gx| {
+                        source_pixel(
+                            &cal,
+                            image.width,
+                            image.height,
+                            focal,
+                            (image.width - 1) as f64 * gx as f64 / (GRID - 1) as f64,
+                            (image.height - 1) as f64 * gy as f64 / (GRID - 1) as f64,
+                        )
+                        .is_some()
+                    })
+                }))
+            };
+            let mut low = base_focal;
+            let mut high = base_focal;
+            while !grid_valid(high)? {
+                if high >= max_focal {
+                    return Err(
+                        "Calibration has no fully valid view within the zoom limit".into()
+                    );
+                }
+                low = high;
+                high = (high * 1.2).min(max_focal);
+            }
+            if high > base_focal {
+                for _ in 0..12 {
+                    let middle = (low + high) * 0.5;
+                    if grid_valid(middle)? {
+                        high = middle;
+                    } else {
+                        low = middle;
+                    }
+                }
+                high = (high * 1.00001).min(max_focal);
+            }
+            searched_high = Some(high);
+            high
+        }
+    };
+    // The coarse grid only chooses a candidate. Every actual output pixel is
+    // checked before sampling; hidden folds/invalid intervals cannot be filled.
+    let mut rgb = vec![0; image.rgb.len()];
+    let half_width = image.width as f64 / 2.;
+    let half_height = image.height as f64 / 2.;
+    let max_u = (image.width - 1) as f64;
+    let max_v = (image.height - 1) as f64;
+    for _ in 0..RENDER_ATTEMPTS {
+        let mut valid = true;
+        'rows: for y in 0..image.height {
+            checkpoint(image.width)?;
+            // Row-invariant normalized coordinate; same expression source_pixel
+            // would compute, evaluated once per row instead of per pixel.
+            let v = (y as f64 - half_height) / high;
+            for x in 0..image.width {
+                let Some(p) = cal
+                    .project_ray([(x as f64 - half_width) / high, v])
+                    .filter(|p| p[0] >= 0. && p[1] >= 0. && p[0] <= max_u && p[1] <= max_v)
+                else {
+                    valid = false;
+                    break 'rows;
+                };
+                let i = (y * image.width + x) * 3;
+                bilinear(image, p, &mut rgb[i..i + 3]);
+            }
+        }
+        if valid {
+            checkpoint(0)?;
+            return Ok((
+                RectifiedImage {
+                    image: Image {
+                        width: image.width,
+                        height: image.height,
+                        focal: high,
+                        rgb,
+                    },
+                    report: report(high, true),
+                },
+                searched_high,
+            ));
+        }
+        if high >= max_focal {
+            break;
+        }
+        high = (high * 1.04).min(max_focal);
+    }
+    Err("Calibration contains invalid or folded pixels; no border-filled image was produced".into())
+}
+
 fn add_image(
     width: usize,
     height: usize,
     focal: f64,
-    rgb: &[u8],
+    rgb: Box<[u8]>,
     measured: Option<MeasuredInput>,
 ) -> Result<usize> {
     if width.checked_mul(height).and_then(|n| n.checked_mul(3)) != Some(rgb.len())
@@ -160,19 +370,22 @@ fn add_image(
             width,
             height,
             focal,
-            rgb: rgb.to_vec(),
+            // The WASM host's buffer is adopted instead of copied.
+            rgb: rgb.into_vec(),
         };
         raw.validate().map_err(input)?;
         let (image, provenance) = if let Some(input) = &measured {
             // Rectify exactly once. Both sparse and dense read these same stored pixels.
             // Worker termination owns browser cancellation during synchronous WASM.
-            let rectified = rectify(
-                &raw,
-                &input.calibration,
-                input.source_size,
-                &RectificationOptions::default(),
-                |_, _| true,
-            )?;
+            // The same group id carries identical measurements (checked above), so
+            // its grid-search focal is deterministic and reusable across photos.
+            let key = (input.id.clone(), width, height);
+            let cached_high = s.rectify_high.get(&key).copied();
+            let (rectified, searched_high) =
+                rectify_searched(&raw, &input.calibration, input.source_size, cached_high)?;
+            if let Some(high) = searched_high {
+                s.rectify_high.insert(key, high);
+            }
             let provenance = calibration_provenance(
                 s.images.len(),
                 &rectified.image,
@@ -367,6 +580,160 @@ impl Session {
         self.dense = Some(run.surface);
         response::surface(self.dense.as_ref().unwrap(), Some(&diagnostics))
     }
+
+    /// Stage 1 of the browser WebGPU sweep: validates eligibility, keeps the
+    /// kernel bookkeeping in the session and returns a packed binary payload
+    /// (ptr/len into a freshly allocated buffer the caller must free).
+    fn dense_prepare(&mut self, side: usize, preset: u32) -> Result<Value> {
+        self.pending_sweep = None;
+        let options = browser_dense_options(side, preset)?;
+        if side > 128 {
+            // The scores readback grows quadratically with the map side; keep
+            // the host path at the default resolution for now.
+            return Ok(Value::Null);
+        }
+        let sparse = self
+            .sparse
+            .as_ref()
+            .ok_or_else(|| input("Reconstruct cameras first"))?;
+        let Some((views, prepared)) = photogrammetry_kernel::dense::prepare_host_sweep(
+            &self.images,
+            sparse,
+            &options,
+            &mut |_, _, _| true,
+        )
+        .map_err(input)?
+        else {
+            return Ok(Value::Null);
+        };
+        let blob = pack_sweep_payload(&self.images, &views);
+        let len = blob.len();
+        let ptr = Box::into_raw(blob.into_boxed_slice()) as *mut u8 as usize;
+        self.pending_sweep = Some((options, prepared));
+        Ok(json!({
+            "ptr": ptr as f64,
+            "len": len as f64,
+            "wgsl": SWEEP_WGSL,
+        }))
+    }
+
+    /// Stage 2: consumes the host score buffer (ownership moves like in
+    /// photo_add) and finishes the dense pipeline with the shared CPU logic.
+    fn dense_finish(&mut self, flat: Vec<f32>) -> Result<Vec<u8>> {
+        let (options, prepared) = self
+            .pending_sweep
+            .take()
+            .ok_or_else(|| input("Prepare the dense sweep first"))?;
+        let sparse = self
+            .sparse
+            .as_ref()
+            .ok_or_else(|| input("Reconstruct cameras first"))?;
+        // Split the flat score stream per prepared view, in image order.
+        let mut offset = 0usize;
+        let mut scores: Vec<Option<Vec<f32>>> = Vec::with_capacity(prepared.len());
+        for view in &prepared {
+            if let Some(prep) = view {
+                let count = prep.map_area() * options.depth_hypotheses;
+                if offset + count > flat.len() {
+                    return Err(input("Host sweep scores are truncated"));
+                }
+                scores.push(Some(flat[offset..offset + count].to_vec()));
+                offset += count;
+            } else {
+                scores.push(None);
+            }
+        }
+        if offset != flat.len() {
+            return Err(input("Host sweep scores length does not match the prepared views"));
+        }
+        let run = photogrammetry_kernel::dense::densify_with_host_scores(
+            &self.images,
+            sparse,
+            &options,
+            &prepared,
+            &scores,
+            &mut |_, _, _| true,
+        )
+        .map_err(input)?;
+        let diagnostics = dense_report_value(&run.diagnostics, &options)?;
+        self.dense = Some(run.surface);
+        response::surface(self.dense.as_ref().unwrap(), Some(&diagnostics))
+    }
+}
+
+
+/// Binary payload for the host sweep: all grayscale rasters once, then per-view
+/// shader parameters. All integers little-endian u32, all floats f32/f64 as
+/// marked. The reference gray of each view is repacked first by the host.
+fn pack_sweep_payload(images: &[Image], views: &[Option<HostSweepView>]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let u32s = |out: &mut Vec<u8>, v: u32| out.extend_from_slice(&v.to_le_bytes());
+    let f32s = |out: &mut Vec<u8>, v: f32| out.extend_from_slice(&v.to_le_bytes());
+    u32s(&mut out, 0x3150_5753); // 'SWP1'
+    u32s(&mut out, images.len() as u32);
+    let first = views.iter().flatten().next();
+    let (n_hyp, radius) = first
+        .map(|v| (v.hypotheses.len() as u32, v.patch_radius as u32))
+        .unwrap_or((0, 0));
+    u32s(&mut out, n_hyp);
+    u32s(&mut out, radius);
+    // Gray headers first, then one contiguous gray block in image order, so
+    // the host uploads it with a single zero-copy view.
+    for image in images {
+        u32s(&mut out, image.width as u32);
+        u32s(&mut out, image.height as u32);
+    }
+    for image in images {
+        for v in image.gray() {
+            f32s(&mut out, v);
+        }
+    }
+    u32s(&mut out, views.len() as u32);
+    for view in views {
+        let Some(view) = view else {
+            u32s(&mut out, 0);
+            continue;
+        };
+        u32s(&mut out, 1);
+        u32s(&mut out, view.map_width as u32);
+        u32s(&mut out, view.map_height as u32);
+        u32s(&mut out, view.sources.len() as u32);
+        u32s(&mut out, view.needed as u32);
+        u32s(&mut out, view.ref_image as u32);
+        for v in [view.step, view.ref_focal, view.ref_cx, view.ref_cy] {
+            f32s(&mut out, v as f32);
+        }
+        for &z in &view.hypotheses {
+            f32s(&mut out, z as f32);
+        }
+        for source in &view.sources {
+            for row in source.rotation {
+                for v in row {
+                    f32s(&mut out, v as f32);
+                }
+            }
+            for v in source.translation {
+                f32s(&mut out, v as f32);
+            }
+            for v in [source.focal, source.cx, source.cy, 0.] {
+                f32s(&mut out, v as f32);
+            }
+            u32s(&mut out, source.image as u32);
+            u32s(&mut out, 0);
+            u32s(&mut out, 0);
+            u32s(&mut out, 0);
+        }
+    }
+    out
+}
+
+/// Host-GPU (browser WebGPU) dense entry points; not part of the Value dispatch
+/// because the score stream arrives as a raw buffer.
+pub fn dense_prepare_host(side: usize, preset: u32) -> Result<Value> {
+    PHOTO.with(|session| session.borrow_mut().dense_prepare(side, preset))
+}
+pub fn dense_finish_host(scores: Vec<f32>) -> Result<Vec<u8>> {
+    PHOTO.with(|session| session.borrow_mut().dense_finish(scores))
 }
 
 pub fn dispatch_bytes(value: Value) -> Result<Vec<u8>> {
@@ -480,9 +847,10 @@ mod tests {
     fn mixed_groups_and_legacy_images_keep_pixel_and_provenance_alignment() {
         dispatch(json!({"action": "clear"})).unwrap();
         let rgb: Vec<u8> = (0..64 * 64 * 3).map(|i| (i % 251) as u8).collect();
-        add_calibrated(64, 64, 50., &rgb, &measured("a", 70.)).unwrap();
-        add_calibrated(64, 64, 50., &rgb, &measured("b", 90.)).unwrap();
-        add(64, 64, 55., &rgb).unwrap();
+        let add_rgb = || rgb.clone().into_boxed_slice();
+        add_calibrated(64, 64, 50., add_rgb(), &measured("a", 70.)).unwrap();
+        add_calibrated(64, 64, 50., add_rgb(), &measured("b", 90.)).unwrap();
+        add(64, 64, 55., add_rgb()).unwrap();
         PHOTO.with(|session| {
             let s = session.borrow();
             assert_eq!(
@@ -509,9 +877,10 @@ mod tests {
     fn failed_calibrated_add_does_not_mutate_an_existing_session() {
         dispatch(json!({"action": "clear"})).unwrap();
         let rgb = vec![128; 64 * 64 * 3];
-        add_calibrated(64, 64, 50., &rgb, &measured("lens", 70.)).unwrap();
+        let add_rgb = || rgb.clone().into_boxed_slice();
+        add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 70.)).unwrap();
         let before = dispatch(json!({"action": "report"})).unwrap();
-        assert!(add_calibrated(64, 64, 50., &rgb, &measured("lens", 80.))
+        assert!(add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 80.))
             .unwrap_err()
             .contains("conflicting"));
         let mut wrong_size = value_codec::decode_binary(&measured("other", 70.)).unwrap();
@@ -520,13 +889,70 @@ mod tests {
             64,
             64,
             50.,
-            &rgb,
+            add_rgb(),
             &value_codec::encode_binary(&wrong_size).unwrap()
         )
         .is_err());
-        assert!(add_calibrated(64, 64, 50., &rgb, b"{broken JSON}").is_err());
+        assert!(add_calibrated(64, 64, 50., add_rgb(), b"{broken JSON}").is_err());
         assert_eq!(dispatch(json!({"action": "report"})).unwrap(), before);
         assert_eq!(PHOTO.with(|session| session.borrow().images.len()), 1);
+        dispatch(json!({"action": "clear"})).unwrap();
+    }
+
+    fn distorted(id: &str, focal: f64, k1: f64) -> Vec<u8> {
+        value_codec::encode_binary(&json!({
+            "group": {"id": id, "label": "Synthetic measured group", "source": "Synthetic calibration fixture",
+                "imageWidth": 64, "imageHeight": 64, "fx": focal, "fy": focal, "cx": 32., "cy": 32.,
+                "distortion": {"model": "brown-conrady", "k1": k1, "k2": 0., "k3": 0., "p1": 0., "p2": 0.}},
+            "sourceWidth": 64, "sourceHeight": 64,
+        })).unwrap()
+    }
+
+    #[test]
+    fn a_cached_group_focal_rectifies_the_same_pixels_as_the_kernel() {
+        dispatch(json!({"action": "clear"})).unwrap();
+        let rgb_a: Vec<u8> = (0..64 * 64 * 3).map(|i| (i % 251) as u8).collect();
+        let rgb_b: Vec<u8> = (0..64 * 64 * 3).map(|i| (i * 7 % 256) as u8).collect();
+        // Pincushion distortion makes the base focal grid-invalid, so the search
+        // grows and bisects; the second photo of the group reuses its result.
+        let metadata = distorted("lens", 70., 0.5);
+        add_calibrated(64, 64, 50., rgb_a.clone().into_boxed_slice(), &metadata).unwrap();
+        add_calibrated(64, 64, 50., rgb_b.clone().into_boxed_slice(), &metadata).unwrap();
+        let calibration = Calibration {
+            width: 64,
+            height: 64,
+            fx: 70.,
+            fy: 70.,
+            cx: 32.,
+            cy: 32.,
+            k1: 0.5,
+            k2: 0.,
+            k3: 0.,
+            p1: 0.,
+            p2: 0.,
+        };
+        PHOTO.with(|session| {
+            let s = session.borrow();
+            assert_eq!(s.rectify_high.len(), 1);
+            for (rgb, stored) in [rgb_a, rgb_b].into_iter().zip(s.images.iter()) {
+                let source = Image {
+                    width: 64,
+                    height: 64,
+                    focal: 50.,
+                    rgb,
+                };
+                let expected = photogrammetry_kernel::calibration::rectify(
+                    &source,
+                    &calibration,
+                    [64, 64],
+                    &RectificationOptions::default(),
+                    |_, _| true,
+                )
+                .unwrap();
+                assert_eq!(stored.focal, expected.image.focal);
+                assert_eq!(stored.rgb, expected.image.rgb);
+            }
+        });
         dispatch(json!({"action": "clear"})).unwrap();
     }
     #[test]
