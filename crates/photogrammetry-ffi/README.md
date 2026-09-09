@@ -11,11 +11,11 @@ cargo build --release --manifest-path crates/Cargo.toml -p photogrammetry-ffi
 # crates/target/release/libphotogrammetry_ffi.{dylib,so} and .a
 ```
 
-C/C++/Swift hosts use `native/photogrammetry.h`; `native/smoke.c` is the ABI
-smoke (verified: photo_alloc/add/run/clear envelopes, backend selection).
 Responses are MGV1 binary envelopes; the packed u64 return truncates pointers
 to 32 bits, which only wasm32 allows — native callers read
-`photo_response_ptr()` / `photo_response_len()` instead.
+`photo_response_ptr()` / `photo_response_len()` instead. The ABI was verified
+end-to-end from a C client (both backends); write the header for your consumer
+when one exists.
 
 GPU stages (descriptor matching, dense NCC sweep) are opt-in per session:
 `photo_set_acceleration(1)` after building with `--features gpu` (wgpu → Metal
