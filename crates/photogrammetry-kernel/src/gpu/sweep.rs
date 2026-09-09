@@ -39,24 +39,14 @@ impl GpuSweep {
             label: Some("ncc_sweep"),
             source: wgpu::ShaderSource::Wgsl(SHADER.into()),
         });
-        let entries: Vec<wgpu::BindGroupLayoutEntry> = (0..6)
-            .map(|binding| wgpu::BindGroupLayoutEntry {
-                binding,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: if binding == 0 {
-                        wgpu::BufferBindingType::Uniform
-                    } else if binding == 5 {
-                        wgpu::BufferBindingType::Storage { read_only: false }
-                    } else {
-                        wgpu::BufferBindingType::Storage { read_only: true }
-                    },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            })
-            .collect();
+        let entries = [
+            super::uniform_entry(0),
+            super::storage_entry(1, true),
+            super::storage_entry(2, true),
+            super::storage_entry(3, true),
+            super::storage_entry(4, true),
+            super::storage_entry(5, false),
+        ];
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("ncc_sweep"),
             entries: &entries,
@@ -208,15 +198,9 @@ impl GpuSweep {
         encoder.copy_buffer_to_buffer(&out_buf, 0, &read_buf, 0, score_bytes.max(16));
         self.queue.submit([encoder.finish()]);
 
-        let slice = read_buf.slice(..score_bytes.max(16));
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
-        let raw = match rx.recv() {
-            Ok(Ok(())) => slice.get_mapped_range().map(|view| view.to_vec()).unwrap_or_default(),
-            _ => Vec::new(),
+        let raw = {
+            let bytes = super::read_buffer(device, &read_buf, score_bytes as usize);
+            bytes
         };
         raw.chunks_exact(4)
             .take(score_count)

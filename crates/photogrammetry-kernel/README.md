@@ -14,3 +14,24 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 `DenseOptions` retains 3×3 frontoparallel sweep by default. `DenseEstimator::SlantedPlane` with patch radius 2 is experimental; it improves some sloped scenes and can lose thin geometry. Source-sample counters quantify work separately from hypothesis count.
 
 `evaluation::evaluate_clouds` computes exact bidirectional point-to-point metrics in a pre-established common frame/scale. The `evaluate` example reads ASCII XYZ/PLY and emits JSON; it performs no registration or scale fitting. `evaluation_comparison` checks the spatial index against exhaustive distances. See [comparative validation](../../docs/photogrammetry-improvements.md).
+
+## Native usage and acceleration
+
+The crate is a plain Rust library (`rlib`, std-only) and works unchanged outside
+the browser. The `reconstruct` example doubles as the reference CLI:
+
+```sh
+cargo run --release --manifest-path crates/Cargo.toml -p photogrammetry-kernel \
+  --example reconstruct -- out.ply FOCAL_PIXELS input1.ppm input2.ppm ...
+PHOTO_DENSE=1           # also write out.ply.surface.ply
+PHOTO_ACCURACY=on       # qualified accuracy bundle (more verified points)
+PHOTO_ACCELERATION=gpu  # requires building with --features gpu (wgpu)
+```
+
+The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
+(3.3-18.9x) and the frontoparallel NCC depth sweep (~5x of the dense stage) via
+Metal on macOS and Vulkan on Linux/Windows; `Acceleration::Gpu` is opt-in and
+falls back to the CPU reference without an adapter. CPU defaults stay
+bit-identical with or without the feature. Browser builds keep the feature off;
+there the same WGSL sweep runs through WebGPU from the viewer's worker.
+Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).

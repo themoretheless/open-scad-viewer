@@ -19,15 +19,18 @@ function transferList(result: PhotoSurface): Transferable[] {
 }
 
 /** Compaction is an optional CAD export; its failure must preserve the full surface. */
+function publishSurface(kernel: PhotogrammetryKernel, result: PhotoSurface): void {
+  try {
+    result.documentSurface = kernel.compact()
+  } catch (error) {
+    post({type: 'warning', message: errorMessage(error)})
+  }
+  post({type: 'surface', result}, transferList(result))
+}
+
 function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, preset?: PhotoDensePreset): void {
   try {
-    const result = preset === undefined ? kernel.dense(resolution) : kernel.dense(resolution, preset)
-    try {
-      result.documentSurface = kernel.compact()
-    } catch (error) {
-      post({type: 'warning', message: errorMessage(error)})
-    }
-    post({type: 'surface', result}, transferList(result))
+    publishSurface(kernel, preset === undefined ? kernel.dense(resolution) : kernel.dense(resolution, preset))
   } catch (error) {
     post({type: 'warning', message: errorMessage(error)})
   }
@@ -38,13 +41,7 @@ async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: n
   const prepared = kernel.densePrepare(resolution)
   if (!prepared) return false
   const scores = await runGpuSweep(prepared.payload, prepared.wgsl)
-  const result = kernel.denseFinish(scores)
-  try {
-    result.documentSurface = kernel.compact()
-  } catch (error) {
-    post({type: 'warning', message: errorMessage(error)})
-  }
-  post({type: 'surface', result}, transferList(result))
+  publishSurface(kernel, kernel.denseFinish(scores))
   return true
 }
 

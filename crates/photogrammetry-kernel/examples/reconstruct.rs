@@ -76,6 +76,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         Ok(other) => return Err(format!("Unknown PHOTO_GEOMETRY_PROFILE: {other}").into()),
         Err(_) => options.geometry_options,
     };
+    // PHOTO_ACCURACY=on enables the qualified accuracy bundle: more verified
+    // correspondences, joint two-view refinement and post-BA outlier filtering.
+    if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
+        options.feature_options.second_chance = true;
+        options.seed_options = photogrammetry_kernel::SeedOptions { verify_runners_up: true };
+        options.geometry_options = photogrammetry_kernel::camera::GeometryOptions::JOINT;
+        options.bundle = options.bundle.map(|b| photogrammetry_kernel::bundle::BundleOptions {
+            filter: Some(photogrammetry_kernel::bundle::FilterOptions {
+                max_reprojection_error: 2.0,
+                min_parallax: 0.,
+            }),
+            ..b
+        });
+    }
+    // PHOTO_ACCELERATION=gpu requires building with --features gpu.
+    if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
+        #[cfg(feature = "gpu")]
+        {
+            options.feature_options.acceleration = photogrammetry_kernel::Acceleration::Gpu;
+        }
+        #[cfg(not(feature = "gpu"))]
+        return Err("PHOTO_ACCELERATION=gpu requires --features gpu".into());
+    }
     let outcome = reconstruct_detailed(&images, &options, |stage, n, total| {
         eprintln!("{stage}: {n}/{total}");
         true
@@ -91,6 +114,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var_os("PHOTO_DENSE").is_some() {
         let mut last = String::new();
         let mut dense_options = photogrammetry_kernel::dense::DenseOptions::default();
+        if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
+            #[cfg(feature = "gpu")]
+            {
+                dense_options.acceleration = photogrammetry_kernel::Acceleration::Gpu;
+            }
+        }
+        if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
+            // Qualified on the analytic scenes: frontal-scene F1 0.73 -> 0.96.
+            dense_options.sparse_depth_prior = true;
+        }
         match std::env::var("PHOTO_DENSE_PROFILE").as_deref() {
             Ok("slanted") => {
                 dense_options.estimator =

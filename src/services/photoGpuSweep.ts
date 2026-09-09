@@ -122,8 +122,14 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float
   device.queue.writeBuffer(grayBuffer, 0, payload.gray)
 
   const patchLen = (payload.patchRadius * 2 + 1) ** 2
-  const out: Float32Array[] = []
+  // One encoder for all views: a single submit, then all readbacks map
+  // concurrently instead of serializing the CPU against each view's GPU run.
+  const scratch: GPUBuffer[] = [grayBuffer]
+  const reads: { from: GPUBuffer, read: GPUBuffer, floats: number }[] = []
   try {
+    const encoder = device.createCommandEncoder()
+    const pass = encoder.beginComputePass()
+    pass.setPipeline(pipeline)
     for (const view of payload.views) {
       if (!view) continue
       const scoresFloats = view.mapWidth * view.mapHeight * payload.hypothesesPerView
@@ -148,6 +154,7 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float
           usage: usage | GPUBufferUsage.COPY_DST,
         })
         device.queue.writeBuffer(buffer, 0, data)
+        scratch.push(buffer)
         return buffer
       }
       const paramsBuffer = mk(params, GPUBufferUsage.UNIFORM)
@@ -162,7 +169,8 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float
         size: scoresFloats * 4,
         usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
       })
-      const bind = device.createBindGroup({
+      scratch.push(scoresBuffer, readBuffer)
+      pass.setBindGroup(0, device.createBindGroup({
         layout,
         entries: [
           { binding: 0, resource: { buffer: paramsBuffer } },
@@ -172,33 +180,35 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float
           { binding: 4, resource: { buffer: grayBuffer } },
           { binding: 5, resource: { buffer: scoresBuffer } },
         ],
-      })
-      const encoder = device.createCommandEncoder()
-      const pass = encoder.beginComputePass()
-      pass.setPipeline(pipeline)
-      pass.setBindGroup(0, bind)
+      }))
       pass.dispatchWorkgroups(Math.ceil(view.mapWidth / 16), Math.ceil(view.mapHeight / 16))
-      pass.end()
-      encoder.copyBufferToBuffer(scoresBuffer, 0, readBuffer, 0, scoresFloats * 4)
-      device.queue.submit([encoder.finish()])
-      await readBuffer.mapAsync(GPUMapMode.READ)
-      out.push(new Float32Array(readBuffer.getMappedRange().slice(0)))
-      readBuffer.unmap()
-      paramsBuffer.destroy()
-      hypBuffer.destroy()
-      srcfBuffer.destroy()
-      srcmBuffer.destroy()
-      scoresBuffer.destroy()
-      readBuffer.destroy()
+      // Copies are recorded only after the pass ends; while it is open the
+      // encoder rejects them and the readback would stay zeroed.
+      reads.push({ from: scoresBuffer, read: readBuffer, floats: scoresFloats })
     }
+    pass.end()
+    for (const { from, read, floats } of reads) {
+      encoder.copyBufferToBuffer(from, 0, read, 0, floats * 4)
+    }
+    device.queue.submit([encoder.finish()])
+    await Promise.all(reads.map(({ read }) => read.mapAsync(GPUMapMode.READ)))
+    const out = reads.map(({ read, floats }) => {
+      const values = new Float32Array(read.getMappedRange().slice(0))
+      read.unmap()
+      return values
+    })
+    return flatten(out)
   } finally {
-    grayBuffer.destroy()
+    scratch.forEach(buffer => buffer.destroy())
     device.destroy()
   }
-  const total = out.reduce((sum, scores) => sum + scores.length, 0)
+}
+
+function flatten(parts: Float32Array[]): Float32Array {
+  const total = parts.reduce((sum, scores) => sum + scores.length, 0)
   const flat = new Float32Array(total)
   let offset = 0
-  for (const scores of out) {
+  for (const scores of parts) {
     flat.set(scores, offset)
     offset += scores.length
   }

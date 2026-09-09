@@ -161,38 +161,11 @@ impl GpuMatcher {
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("match_descriptors"),
             entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    ..entry_storage(1)
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    ..entry_storage_rw(3)
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 4,
-                    ..entry_storage_rw(4)
-                },
+                super::uniform_entry(0),
+                super::storage_entry(1, true),
+                super::storage_entry(2, true),
+                super::storage_entry(3, false),
+                super::storage_entry(4, false),
             ],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -314,8 +287,8 @@ impl GpuMatcher {
         encoder.copy_buffer_to_buffer(&out_cols, 0, &read_cols, 0, col_bytes.max(8));
         self.queue.submit([encoder.finish()]);
 
-        let rows_raw = readback(device, &read_rows, row_bytes as usize);
-        let cols_raw = readback(device, &read_cols, col_bytes as usize);
+        let rows_raw = super::read_buffer(device, &read_rows, row_bytes as usize);
+        let cols_raw = super::read_buffer(device, &read_cols, col_bytes as usize);
 
         let rows_out_vec = rows_raw
             .chunks_exact(12)
@@ -342,32 +315,6 @@ impl GpuMatcher {
     }
 }
 
-fn entry_storage(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn entry_storage_rw(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: false },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
 fn pack_descriptors(data: &[[f32; 128]]) -> Vec<u8> {
     let mut out = Vec::with_capacity(data.len() * 512);
     for descriptor in data {
@@ -378,18 +325,6 @@ fn pack_descriptors(data: &[[f32; 128]]) -> Vec<u8> {
     out
 }
 
-fn readback(device: &wgpu::Device, buffer: &wgpu::Buffer, size: usize) -> Vec<u8> {
-    let slice = buffer.slice(..size.max(4) as u64);
-    let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |result| {
-        let _ = tx.send(result);
-    });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    match rx.recv() {
-        Ok(Ok(())) => slice.get_mapped_range().map(|view| view.to_vec()).unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
 
 thread_local! {
     // The device and pipelines are process-lifetime resources; leaking avoids

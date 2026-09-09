@@ -432,6 +432,14 @@ fn view_preamble<'a>(
     Some(ViewPreamble { reference, width, height, step, near, far, neighbors })
 }
 
+/// Rotation/translation carrying a reference-frame point into this source
+/// camera: R_source * R_reference^T and t_source - R * t_reference.
+fn source_transform(reference: &Camera, camera: &Camera) -> (M3, V3) {
+    let rotation = mm(camera.rotation, tr(reference.rotation));
+    let translation = sub(camera.translation, mv(rotation, reference.translation));
+    (rotation, translation)
+}
+
 /// One source view ready to score patches: rotation/translation into the
 /// reference frame and the per-tap ray offsets for this step size.
 fn build_view_sources<'a>(
@@ -448,8 +456,7 @@ fn build_view_sources<'a>(
         .iter()
         .map(|&j| {
             let camera = sparse.cameras[j].as_ref().unwrap();
-            let rotation = mm(camera.rotation, tr(reference.rotation));
-            let translation = sub(camera.translation, mv(rotation, reference.translation));
+            let (rotation, translation) = source_transform(reference, camera);
             Source {
                 image: grayscale[j].as_ref().unwrap(),
                 camera,
@@ -745,8 +752,7 @@ pub fn prepare_host_views(
             .iter()
             .map(|&j| {
                 let camera = sparse.cameras[j].as_ref().unwrap();
-                let rotation = mm(camera.rotation, tr(reference.rotation));
-                let translation = sub(camera.translation, mv(rotation, reference.translation));
+                let (rotation, translation) = source_transform(reference, camera);
                 HostSweepSource {
                     image: j,
                     rotation,
