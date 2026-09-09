@@ -1,0 +1,19 @@
+{
+  "date": "2026-09-09",
+  "note": "Stage-share baseline before the GPU SDF phase; medians, M4 Max, polygon-kernel opt-level=3",
+  "own_cad_skadis": {
+    "warmMedianMs": 240.5,
+    "triangles": [
+      612,
+      168,
+      168
+    ],
+    "bench": "output/bench-own-cad.mts"
+  },
+  "sdf_smooth_union_64cubed": {
+    "medianMs": 142.8,
+    "bench": "output/bench-sdf-probe.mts",
+    "note": "field sampling dominates per code structure"
+  },
+  "conclusion": "SDF tessellation is a dominant standalone stage; proceed with the GPU field sampling phase."
+}

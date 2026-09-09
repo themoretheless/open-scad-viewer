@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [features]
-gpu = ["dep:wgpu"]
+gpu = ["dep:gpu-compute"]
 
 [dependencies]
-wgpu = { version = "30", optional = true, default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }
+gpu-compute = { path = "../gpu-compute", optional = true }

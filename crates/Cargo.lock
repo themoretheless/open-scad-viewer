@@ -219,6 +219,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpu-compute"
+version = "0.1.0"
+dependencies = [
+ "wgpu",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -513,7 +520,7 @@ dependencies = [
 name = "photogrammetry-kernel"
 version = "0.1.0"
 dependencies = [
- "wgpu",
+ "gpu-compute",
 ]
 
 [[package]]
@@ -640,6 +647,7 @@ name = "sdf-kernel"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
+ "gpu-compute",
  "polygon-kernel",
  "value-codec",
 ]

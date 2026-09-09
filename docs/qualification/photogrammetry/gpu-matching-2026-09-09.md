@@ -134,3 +134,28 @@ preset, resolution ≤ 128, adapter present.
   (2,233; the three MCP suites pass in isolation and remain timing-flaky under
   full-suite load — pre-existing), vue-tsc, production build, verify-dist
   (total budget 3,020,000 with a documented note).
+
+## Geometry GPU phase A/B (2026-09-10)
+
+Shared `crates/gpu-compute` (wgpu context, readback, bind helpers) extracted;
+photogrammetry-kernel migrated onto it (115/118 tests green, no behavior change).
+polygon-kernel now builds at opt-level=3: own-cad skadis warm median 310 → 240 ms
+(-22.5%, identical triangles, oracle hash test green) at +68 kB packed; sdf/nurbs/
+bridge at opt-level=3 added size without speed and stayed on the size profile.
+Budgets documented in scripts/verify-dist.mjs.
+
+SDF kernel gained an opt-in GPU grid sampler (feature `gpu`): flat postorder
+field encoding (Translate folded into leaf parameters), a stack-machine WGSL
+interpreter shared as `SDF_WGSL`, mesh-distance nodes (brute-force closest point
+and solid-angle sign in scan order per grid point). Snap-to-zero, boundary
+validation and marching-tetrahedra remain on the CPU.
+
+Qualified (M4 Max, Metal): CSG smooth-union field values agree with CPU to
+<0.01 absolute and extraction keeps the identical 80,818 triangles; signed
+mesh-distance classification matches CPU exactly on a tetrahedron grid.
+Measured: mesh-distance field 16^3 grid 1088 triangles — 405.8 ms CPU → 4.1 ms
+GPU (99x); primitive smooth-union 64^3 — 51.1 → 45.1 ms (marching-tets
+dominates cheap fields; native polygonize 51.7 ms vs 143 ms through the JS
+dispatch path shows the Value transport costs ~90 ms for an 80k-triangle mesh,
+a separate known finding). CPU defaults are bit-identical; GPU tests skip
+without an adapter. Baseline record: output/geometry-stage-baseline.json.

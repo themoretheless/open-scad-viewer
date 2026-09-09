@@ -6,7 +6,8 @@
 //! NOT bit-identical to the CPU path — this mode is opt-in and qualified
 //! separately; CPU remains the deterministic reference.
 
-use wgpu::util::DeviceExt;
+use super::wgpu;
+use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 

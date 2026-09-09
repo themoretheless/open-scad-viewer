@@ -1,0 +1,8 @@
+[package]
+name = "gpu-compute"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }

@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[features]
+gpu = ["dep:gpu-compute"]
+
 [dependencies]
+gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
 polygon-kernel = { path = "../polygon-kernel" }

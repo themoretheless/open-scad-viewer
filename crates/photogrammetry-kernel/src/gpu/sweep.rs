@@ -5,7 +5,8 @@
 //! ranges and all downstream geometry stay on the CPU. Opt-in mode, qualified
 //! separately; callers fall back to the CPU sweep when no adapter exists.
 
-use wgpu::util::DeviceExt;
+use super::wgpu;
+use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 

@@ -22,7 +22,7 @@ for (const required of ['.html', '.css', '.js', '.wasm']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 900_000 : limits.get(file.extension)
+  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 1_000_000 : limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
   if (limit !== undefined && file.bytes > limit) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
@@ -33,9 +33,12 @@ const total = files.reduce((sum, file) => sum + file.bytes, 0)
 // Manifold WASM/JS assets. The complete distribution is smaller (~2.3 MB).
 // Preserve the total release budget and reject any external Manifold artifact.
 if (files.some(file => /manifold/i.test(file.path))) throw new Error('External Manifold artifact in dist')
+// opt-level=3 for polygon-kernel measured 310 -> 240 ms warm on the own-cad
+// benchmark (identical triangles) at +68 kB packed; sdf/nurbs/geometry-bridge
+// at opt-level=3 added size without speed, so they keep the size profile.
 const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path))
-if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
-  throw new Error('Expected one shared geometry kernel chunk within 900000 bytes')
+if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_000_000) {
+  throw new Error('Expected one shared geometry kernel chunk within 1000000 bytes')
 }
 // Integrated distribution: 3D lattice adds ~13 kB; the current photo worker
 // adds ~26 kB independently. Field traits, record updates and ret functions add
@@ -48,7 +51,9 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 900_000) {
 // red-black propagation, fusion merge; opt-in, default path byte-identical)
 // add ~22 kB packed (2998447 bytes total). Phase-3 browser WebGPU sweep adds
 // the shared WGSL text and the worker/parse plumbing (3014297 bytes total).
+// polygon-kernel opt-level=3 (measured -22.5% geometry time) adds ~68 kB
+// packed (3082382 bytes total).
 // Keep a bounded margin; individual chunk limits remain unchanged.
-const totalBudget = 3_020_000
+const totalBudget = 3_090_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)
