@@ -66,6 +66,23 @@ export function compileTextRust<T>(source: string): T {
   return result.value as T
 }
 
+/** Stage-1 OpenSCAD migration binding: parse via the Rust openscad-core frontend (ABI op 10). */
+export interface ScadRustDiagnostic {
+  readonly code: string | null
+  readonly message: string
+  readonly start: number
+  readonly end: number
+  readonly line: number
+  readonly column: number
+}
+export type ScadRustCompileResult =
+  | {readonly ok: true; readonly ast: readonly unknown[]}
+  | {readonly ok: false; readonly diagnostics: readonly ScadRustDiagnostic[]}
+export function scadCompileRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustCompileResult {
+  initialize()
+  return request(10,{source,profile}) as ScadRustCompileResult
+}
+
 export type GraphRustResult<T> = {ok:true;value:T} | {ok:false;error:{code:string;path:string;message:string;details?:unknown};customizer?:unknown}
 export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',value:unknown):GraphRustResult<T> {
   if(kind==='text') {

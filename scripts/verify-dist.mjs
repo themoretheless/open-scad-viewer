@@ -55,6 +55,8 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_000_000) {
 // packed (3082382 bytes total). The browser SDF WebGPU sweep adds the flat
 // field payload ops and the runner (3098760 bytes total).
 // Keep a bounded margin; individual chunk limits remain unchanged.
-const totalBudget = 3_110_000
+// The OpenSCAD language frontend (openscad-core lexer/parser/AST, migration
+// stage 1) adds ~5 kB packed to the shared kernel (3115359 bytes total).
+const totalBudget = 3_130_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

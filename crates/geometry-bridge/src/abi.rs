@@ -141,6 +141,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
             let mesh = cad::export_buffers(id)?;
             encode(Box::into_raw(Box::new(mesh)) as usize)
         })()),
+        10 => openscad::scad_compile(&value),
         _ => geometry(Err(input("Unknown ABI operation"))),
     })
 }

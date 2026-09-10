@@ -3,6 +3,7 @@
 //! geometry representation. Native clients can use the same typed adapters.
 pub mod brep;
 mod cad;
+pub mod openscad;
 pub mod reconstruction;
 pub mod mesh_analysis;
 pub mod mesh_shell;
