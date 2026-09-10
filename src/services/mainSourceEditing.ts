@@ -1,7 +1,8 @@
 import type {MeshData} from '../core/mesh'
 import {compileOpenSCAD} from './openscadCompiler'
-import {directBodiesScad,type DirectDocument} from './directModeling'
-import {sceneBody} from './mainModeling'
+import {directBodiesScad} from './directBodiesScad'
+import type {DirectDocument} from './directModeling'
+import {sceneBody} from './meshFlatten'
 /** Replace only authored top-level calls owning changed bodies; keep declarations/comments intact. */
 export function patchMainSource(source:string,meshes:MeshData[],result:DirectDocument):string {
  const roots=compileOpenSCAD(source).filter(s=>s.type==='call')

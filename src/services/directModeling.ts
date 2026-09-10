@@ -70,13 +70,4 @@ export function transformDirectPoints(points: number[][], delta: number[], angle
     return [center[0] + c * x - s * y + delta[0], center[1] + s * x + c * y + delta[1], center[2] + ((p[2] ?? 0) - center[2]) * scale + (delta[2] ?? 0)].slice(0, p.length)
   })
 }
-export function bodyPoints(body: DirectBody): number[][] {
-  return Array.from({ length: body.mesh.positions.length / 3 }, (_, i) => body.mesh.positions.slice(i * 3, i * 3 + 3))
-}
-export function directBodiesScad(document: DirectDocument): string {
-  return document.bodies.map(b => {
-    // OpenSCAD polyhedron uses clockwise faces, opposite the kernel's outward CCW mesh.
-    const faces = Array.from({ length: b.mesh.indices.length / 3 }, (_, i) => b.mesh.indices.slice(i * 3, i * 3 + 3).reverse())
-    return `polyhedron(points=${JSON.stringify(bodyPoints(b))},faces=${JSON.stringify(faces)},convexity=10);`
-  }).join('\n')
-}
+export { bodyPoints, directBodiesScad } from './directBodiesScad'

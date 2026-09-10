@@ -1,6 +1,6 @@
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from './rendererContracts'
-import {flattenExportMeshes} from './meshExportAdapter'
+import {flattenGroupGeometry, sceneBody} from './meshFlatten'
 import {directBodiesScad, extrudeDirectSketch, type DirectDocument} from './directModeling'
 import {solidTopology, pushPullFace, bevelSolidEdge, shellSolid, splitSolid, transformSelection, facePlane} from './directSolidTools'
 import {localMeshBevel} from './generalMeshTools'
@@ -14,7 +14,7 @@ export function primitiveSource(kind:string,size:number):string {
  if(!Number.isFinite(size)||size<.1||size>10000)throw Error('Size must be 0.1–10000 mm.')
  switch(kind){case 'box':return `cube([${size},${size},${size}]);`;case 'sphere':return `sphere(d=${size}, $fn=48);`;case 'cylinder':return `cylinder(h=${size},d=${size},$fn=48);`;case 'cone':return `cylinder(h=${size},d1=${size},d2=0,$fn=48);`;default:throw Error('Unknown primitive.')}
 }
-export function sceneBody(mesh:MeshData,index:number){const m=flattenExportMeshes([mesh]);return {id:String(index),name:`Body ${index+1}`,mesh:{positions:m.positions,indices:m.indices}}}
+export { sceneBody }
 export function sceneFace(mesh:MeshData,hit:PickHit|null){const body=sceneBody(mesh,0),topology=solidTopology(body.mesh);return {body,topology,face:hit?topology.faces.findIndex(f=>f.triangles.includes(hit.triangleIndex)):-1}}
 export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null,op:MainOperation,p:MainParameters){
  if(!meshes[selected])throw Error('Select a body in the main scene.')
