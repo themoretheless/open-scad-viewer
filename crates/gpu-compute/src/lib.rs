@@ -105,3 +105,22 @@ pub fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer, size: usize) ->
         _ => Vec::new(),
     }
 }
+
+/// Packs values into little-endian bytes for GPU buffers (LE is the WGSL wire
+/// order; on the little-endian target platforms this equals `to_ne_bytes`).
+pub fn pack_f32(values: &[f32]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(values.len() * 4);
+    for value in values {
+        out.extend_from_slice(&value.to_le_bytes());
+    }
+    out
+}
+
+/// Same packing for u32 payloads (indices, aux records).
+pub fn pack_u32(values: &[u32]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(values.len() * 4);
+    for value in values {
+        out.extend_from_slice(&value.to_le_bytes());
+    }
+    out
+}

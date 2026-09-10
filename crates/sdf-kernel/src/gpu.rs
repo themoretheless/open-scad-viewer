@@ -50,33 +50,18 @@ impl GpuSdf {
         let [nx, ny, nz] = grid.cells;
         let total = (nx + 1) * (ny + 1) * (nz + 1);
         let device = &self.device;
-        let mut params = Vec::with_capacity(40);
-        for v in [nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32] {
-            params.extend_from_slice(&v.to_ne_bytes());
-        }
+        let mut params = gpu_compute::pack_u32(&[nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32]);
         for i in 0..3 {
-            params.extend_from_slice(&(grid.min[i] as f32).to_ne_bytes());
+            params.extend_from_slice(&(grid.min[i] as f32).to_le_bytes());
         }
         for i in 0..3 {
             let step = (grid.max[i] - grid.min[i]) / grid.cells[i] as f64;
-            params.extend_from_slice(&(step as f32).to_ne_bytes());
+            params.extend_from_slice(&(step as f32).to_le_bytes());
         }
-        let mut kinds = Vec::with_capacity(flat.kinds.len() * 4);
-        for v in &flat.kinds {
-            kinds.extend_from_slice(&v.to_ne_bytes());
-        }
-        let mut node_params = Vec::with_capacity(flat.params.len() * 4);
-        for v in &flat.params {
-            node_params.extend_from_slice(&v.to_ne_bytes());
-        }
-        let mut aux = Vec::with_capacity(flat.aux.len() * 4);
-        for v in &flat.aux {
-            aux.extend_from_slice(&v.to_ne_bytes());
-        }
-        let mut tris = Vec::with_capacity(flat.triangles.len() * 4);
-        for v in &flat.triangles {
-            tris.extend_from_slice(&v.to_ne_bytes());
-        }
+        let kinds = gpu_compute::pack_u32(&flat.kinds);
+        let node_params = gpu_compute::pack_f32(&flat.params);
+        let aux = gpu_compute::pack_u32(&flat.aux);
+        let tris = gpu_compute::pack_f32(&flat.triangles);
         let mk = |label: &str, bytes: &[u8], usage| {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),

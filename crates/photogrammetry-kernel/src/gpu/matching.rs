@@ -319,13 +319,8 @@ impl GpuMatcher {
 }
 
 fn pack_descriptors(data: &[[f32; 128]]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len() * 512);
-    for descriptor in data {
-        for value in descriptor {
-            out.extend_from_slice(&value.to_ne_bytes());
-        }
-    }
-    out
+    let flat: Vec<f32> = data.iter().flatten().copied().collect();
+    super::pack_f32(&flat)
 }
 
 

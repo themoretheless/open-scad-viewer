@@ -109,13 +109,8 @@ impl GpuSweep {
             0,
         ];
         let params_f: Vec<f32> = vec![step as f32, ref_focal as f32, ref_cx as f32, ref_cy as f32];
-        let mut params_bytes = Vec::with_capacity(64);
-        for v in params {
-            params_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
-        for v in params_f {
-            params_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
+        let mut params_bytes = gpu_compute::pack_u32(&params);
+        params_bytes.extend_from_slice(&gpu_compute::pack_f32(&params_f));
         let mut srcf = Vec::with_capacity(sources.len() * 16 * 4);
         let mut srcm = Vec::with_capacity(sources.len() * 4 * 4);
         for source in sources {
@@ -134,18 +129,10 @@ impl GpuSweep {
                 srcm.extend_from_slice(&v.to_ne_bytes());
             }
         }
-        let mut hyp_bytes = Vec::with_capacity(hypotheses.len() * 4);
-        for v in hypotheses {
-            hyp_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
+        let hyp_bytes = gpu_compute::pack_f32(hypotheses);
         // The reference gray image leads the shared gray buffer at offset 0.
-        let mut gray_bytes = Vec::with_capacity((ref_gray.len() + grays.len()) * 4);
-        for v in ref_gray {
-            gray_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
-        for v in grays {
-            gray_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
+        let mut gray_bytes = gpu_compute::pack_f32(ref_gray);
+        gray_bytes.extend_from_slice(&gpu_compute::pack_f32(grays));
 
         let score_count = width * height * hypotheses.len();
         let score_bytes = (score_count * 4) as u64;

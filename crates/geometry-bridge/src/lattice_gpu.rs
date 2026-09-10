@@ -125,14 +125,8 @@ impl GpuLattice {
                 usage,
             })
         };
-        let mut nodes_bytes = Vec::with_capacity(nodes.len() * 4);
-        for v in nodes {
-            nodes_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
-        let mut tris_bytes = Vec::with_capacity(triangles.len() * 4);
-        for v in triangles {
-            tris_bytes.extend_from_slice(&v.to_ne_bytes());
-        }
+        let nodes_bytes = gpu_compute::pack_f32(nodes);
+        let tris_bytes = gpu_compute::pack_f32(triangles);
         let mut seg_bytes = Vec::with_capacity(segments.len() * 32);
         for (a, d, length2, r) in segments {
             for v in [*a, *d].concat() {
@@ -202,7 +196,7 @@ thread_local! {
 /// Points the shader marks NaN (stack/overflow guards) are recomputed exactly
 /// by the CPU field closure. None without an adapter.
 #[allow(clippy::too_many_arguments)]
-pub fn try_gpu(
+pub(crate) fn try_gpu(
     all: &Node,
     segments: &Segments,
     min: P,
