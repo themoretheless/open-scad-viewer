@@ -7,9 +7,12 @@
 #![forbid(unsafe_code)]
 
 pub mod ast;
+pub mod builtins;
+pub mod eval;
 pub mod lexer;
 pub mod parser;
 pub mod serialize;
+pub mod value;
 
 pub use ast::{ExpressionArgument, ModuleParam, Statement, ViewportModifier};
 pub use lexer::{tokenize, TT};
@@ -215,3 +218,5 @@ pub fn assign_operation_ids(nodes: &mut [Statement], parent: &[String]) {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod eval_tests;

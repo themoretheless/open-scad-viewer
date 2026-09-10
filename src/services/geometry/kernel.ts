@@ -83,6 +83,19 @@ export function scadCompileRust(source: string, profile: 'openscad-viewer-subset
   return request(10,{source,profile}) as ScadRustCompileResult
 }
 
+/** Stage-2 OpenSCAD migration binding: value evaluation via the Rust openscad-core evaluator (ABI op 11). */
+export interface ScadRustShapeDescriptor {
+  readonly name: string
+  readonly dimension: number
+}
+export type ScadRustEvalResult =
+  | {readonly ok: true; readonly shapes: readonly ScadRustShapeDescriptor[]; readonly warnings: readonly string[]; readonly reduced: boolean}
+  | {readonly ok: false; readonly diagnostics?: readonly ScadRustDiagnostic[]; readonly aborted?: boolean}
+export function scadEvalRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustEvalResult {
+  initialize()
+  return request(11,{source,profile}) as ScadRustEvalResult
+}
+
 export type GraphRustResult<T> = {ok:true;value:T} | {ok:false;error:{code:string;path:string;message:string;details?:unknown};customizer?:unknown}
 export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',value:unknown):GraphRustResult<T> {
   if(kind==='text') {
