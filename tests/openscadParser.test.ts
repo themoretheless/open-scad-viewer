@@ -377,16 +377,33 @@ describe('cooperative cancellation (shouldAbort)', () => {
     expect(result.volume).toBeCloseTo(8, 5)
   })
 
-  it('delivers a queued cancel at the forced post-evaluation macrotask before extraction', async () => {
+  it('aborts inside a long for-loop at a mid-iteration yield, not only after the whole statement', async () => {
     let cancelled = false
     let yields = 0
-    const result = parseOpenSCAD('for (i = [0:200]) cube([1, 1, i + 1]);', {
+    let clock = 0
+    const result = parseOpenSCAD('for (i = [0:80]) cube([1, 1, 1]);', {
       shouldAbort: () => cancelled,
+      // Each clock read advances past YIELD_EVERY_MS so yieldIfDue actually sleeps.
+      now: () => { clock += 60; return clock },
       yieldControl: async () => { yields++; cancelled = true },
     })
 
     await expect(result).rejects.toBeInstanceOf(AbortedError)
+    // First mid-loop yield cancels; forced post-eval yield is never reached.
     expect(yields).toBe(1)
+  })
+
+  it('still delivers a forced post-evaluation yield when a for-loop finishes without aborting', async () => {
+    let yields = 0
+    let clock = 0
+    const result = await parseOpenSCAD('for (i = [0:2]) cube([1, 1, 1]);', {
+      shouldAbort: () => false,
+      now: () => { clock += 60; return clock },
+      yieldControl: async () => { yields++ },
+    })
+    expect(result.meshes.length).toBeGreaterThan(0)
+    // Mid-loop checks (range too small to hit every-25) + forced post-eval yield.
+    expect(yields).toBeGreaterThanOrEqual(1)
   })
 })
 

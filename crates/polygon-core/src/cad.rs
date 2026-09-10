@@ -114,6 +114,7 @@ fn planar_rule(a: &Rings, b: &Rings, op: &str, nonzero: bool) -> Result<Rings> {
         match op {
             "intersection" => x && y,
             "difference" => x && !y,
+            "xor" | "exclude" => x != y,
             _ => x || y,
         }
     };
@@ -1155,6 +1156,14 @@ mod tests {
         assert!((r.iter().map(|r| area(r)).sum::<f64>() - 12.).abs() < 1e-8);
         let m = extrude(&r, 2., 1, 0., [1., 1.], false).unwrap();
         assert!((m.inspect().unwrap().signed_volume_mm3 - 24.).abs() < 1e-8);
+    }
+    #[test]
+    fn planar_xor() {
+        let a = vec![vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]]];
+        let b = vec![vec![[2., 2.], [6., 2.], [6., 6.], [2., 6.]]];
+        let r = planar(&a, &b, "xor").unwrap();
+        let s: f64 = r.iter().map(|ring| area(ring).abs()).sum();
+        assert!((s - 24.).abs() < 1e-6, "xor area={s}");
     }
     #[test]
     fn hull_box() {

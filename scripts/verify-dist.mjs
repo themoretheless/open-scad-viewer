@@ -22,7 +22,7 @@ for (const required of ['.html', '.css', '.js', '.wasm']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 1_000_000 : limits.get(file.extension)
+  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 1_200_000 : limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
   if (limit !== undefined && file.bytes > limit) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
@@ -37,8 +37,8 @@ if (files.some(file => /manifold/i.test(file.path))) throw new Error('External M
 // benchmark (identical triangles) at +68 kB packed; sdf/nurbs/geometry-bridge
 // at opt-level=3 added size without speed, so they keep the size profile.
 const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path))
-if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_000_000) {
-  throw new Error('Expected one shared geometry kernel chunk within 1000000 bytes')
+if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_200_000) {
+  throw new Error('Expected one shared geometry kernel chunk within 1200000 bytes')
 }
 // Integrated distribution: 3D lattice adds ~13 kB; the current photo worker
 // adds ~26 kB independently. Field traits, record updates and ret functions add
@@ -57,6 +57,9 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_000_000) {
 // Keep a bounded margin; individual chunk limits remain unchanged.
 // The OpenSCAD language frontend (openscad-core lexer/parser/AST, migration
 // stage 1) adds ~5 kB packed to the shared kernel (3115359 bytes total).
-const totalBudget = 3_130_000
+// The OpenSCAD value evaluator (openscad-core eval/builtins, migration stage
+// 2) adds ~110 kB packed to the shared kernel chunk (1106620 bytes; chunk
+// budget raised to 1200000) and ~110 kB to the total (3225631 bytes measured).
+const totalBudget = 3_300_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

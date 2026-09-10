@@ -1,0 +1,799 @@
+//! First-class cubic Bézier paths for planar modeling.
+//!
+//! Algorithms adapted from the Curvex vector editor (MIT OR Apache-2.0),
+//! reimplemented in binary64 to match the polygon-core CAD contract.
+//! Paths flatten to polylines for planar boolean / offset / extrude.
+use crate::{check, Result};
+
+/// One path segment: straight line or cubic Bézier. Endpoints are absolute mm.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PathSegment {
+    Line { to: [f64; 2] },
+    Cubic { c1: [f64; 2], c2: [f64; 2], to: [f64; 2] },
+}
+
+impl PathSegment {
+    pub const fn end(&self) -> [f64; 2] {
+        match *self {
+            PathSegment::Line { to } | PathSegment::Cubic { to, .. } => to,
+        }
+    }
+}
+
+/// Editable cubic Bézier path. Anchor 0 is `start`; segment `i` runs from
+/// anchor `i` to anchor `i+1`. Closed paths store an explicit closing segment.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BezierPath {
+    pub start: [f64; 2],
+    pub segments: Vec<PathSegment>,
+    pub closed: bool,
+}
+
+/// Default flatten tolerance in mm (chord deviation).
+pub const FLATTEN_TOLERANCE: f64 = 0.25;
+const FLATTEN_MAX_STEPS: usize = 256;
+const ELLIPSE_KAPPA: f64 = 0.552_285;
+const MAX_SEGMENTS: usize = 4096;
+const MAX_FLATTEN_POINTS: usize = 32_768;
+
+fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
+    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+}
+
+fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
+    (a[0] - b[0]).hypot(a[1] - b[1])
+}
+
+fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    [a[0] - b[0], a[1] - b[1]]
+}
+
+fn add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    [a[0] + b[0], a[1] + b[1]]
+}
+
+fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
+    let ab = sub(b, a);
+    let ap = sub(p, a);
+    let len = ab[0].hypot(ab[1]);
+    if len < 1e-15 {
+        return ap[0].hypot(ap[1]);
+    }
+    ((ab[0] * ap[1] - ab[1] * ap[0]) / len).abs()
+}
+
+impl BezierPath {
+    pub fn open(start: [f64; 2], segments: Vec<PathSegment>) -> Result<Self> {
+        validate_segments(&segments)?;
+        Ok(Self {
+            start,
+            segments,
+            closed: false,
+        })
+    }
+
+    pub fn closed(start: [f64; 2], segments: Vec<PathSegment>) -> Result<Self> {
+        validate_segments(&segments)?;
+        check(!segments.is_empty(), "Closed path needs at least one segment")?;
+        Ok(Self {
+            start,
+            segments,
+            closed: true,
+        })
+    }
+
+    pub fn from_polyline(points: &[[f64; 2]], closed: bool) -> Result<Self> {
+        check(points.len() >= 2, "Polyline needs at least two points")?;
+        check(points.len() <= MAX_SEGMENTS + 1, "Polyline exceeds segment budget")?;
+        let start = points[0];
+        let last = if closed { points.len() } else { points.len() - 1 };
+        let mut segments = Vec::with_capacity(last);
+        for i in 1..points.len() {
+            segments.push(PathSegment::Line { to: points[i] });
+        }
+        if closed {
+            segments.push(PathSegment::Line { to: start });
+        }
+        if closed {
+            Self::closed(start, segments)
+        } else {
+            Self::open(start, segments)
+        }
+    }
+
+    pub fn from_rect(min: [f64; 2], max: [f64; 2]) -> Result<Self> {
+        let (x0, y0, x1, y1) = (
+            min[0].min(max[0]),
+            min[1].min(max[1]),
+            min[0].max(max[0]),
+            min[1].max(max[1]),
+        );
+        Self::from_polyline(&[[x0, y0], [x1, y0], [x1, y1], [x0, y1]], true)
+    }
+
+    pub fn from_ellipse(center: [f64; 2], rx: f64, ry: f64) -> Result<Self> {
+        check(rx > 0. && ry > 0. && rx.is_finite() && ry.is_finite(), "Invalid ellipse radii")?;
+        let (cx, cy) = (center[0], center[1]);
+        let kx = rx * ELLIPSE_KAPPA;
+        let ky = ry * ELLIPSE_KAPPA;
+        let right = [cx + rx, cy];
+        let bottom = [cx, cy + ry];
+        let left = [cx - rx, cy];
+        let top = [cx, cy - ry];
+        Self::closed(
+            right,
+            vec![
+                PathSegment::Cubic {
+                    c1: [cx + rx, cy - ky],
+                    c2: [cx + kx, cy - ry],
+                    to: top,
+                },
+                PathSegment::Cubic {
+                    c1: [cx - kx, cy - ry],
+                    c2: [cx - rx, cy - ky],
+                    to: left,
+                },
+                PathSegment::Cubic {
+                    c1: [cx - rx, cy + ky],
+                    c2: [cx - kx, cy + ry],
+                    to: bottom,
+                },
+                PathSegment::Cubic {
+                    c1: [cx + kx, cy + ry],
+                    c2: [cx + rx, cy + ky],
+                    to: right,
+                },
+            ],
+        )
+    }
+
+    pub fn from_circle(center: [f64; 2], radius: f64) -> Result<Self> {
+        Self::from_ellipse(center, radius, radius)
+    }
+
+    pub fn from_polygon(points: &[[f64; 2]], closed: bool) -> Result<Self> {
+        Self::from_polyline(points, closed)
+    }
+
+    pub fn anchor_count(&self) -> usize {
+        if self.closed {
+            self.segments.len()
+        } else {
+            self.segments.len() + 1
+        }
+    }
+
+    pub fn anchors(&self) -> Vec<[f64; 2]> {
+        let n = self.anchor_count();
+        let mut out = Vec::with_capacity(n);
+        out.push(self.start);
+        let limit = if self.closed {
+            self.segments.len().saturating_sub(1)
+        } else {
+            self.segments.len()
+        };
+        for seg in &self.segments[..limit] {
+            out.push(seg.end());
+        }
+        out
+    }
+
+    /// Adaptive cubic flatten (Wang formula) with default tolerance.
+    pub fn flatten(&self) -> Result<Vec<[f64; 2]>> {
+        self.flatten_tol(FLATTEN_TOLERANCE)
+    }
+
+    pub fn flatten_tol(&self, tolerance: f64) -> Result<Vec<[f64; 2]>> {
+        let tol = tolerance.max(1e-9);
+        let mut out = Vec::with_capacity(self.segments.len() * 8 + 1);
+        out.push(self.start);
+        let mut current = self.start;
+        for seg in &self.segments {
+            match *seg {
+                PathSegment::Line { to } => out.push(to),
+                PathSegment::Cubic { c1, c2, to } => {
+                    flatten_cubic(current, c1, c2, to, tol, &mut out)?;
+                }
+            }
+            current = seg.end();
+            check(out.len() <= MAX_FLATTEN_POINTS, "Flatten exceeded point budget")?;
+        }
+        if self.closed && out.len() > 1 {
+            let last = *out.last().unwrap();
+            if dist(last, self.start) > 1e-9 {
+                out.push(self.start);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Closed ring for planar CAD: drop duplicate closing vertex if present.
+    pub fn to_ring(&self, tolerance: f64) -> Result<Vec<[f64; 2]>> {
+        check(self.closed, "to_ring requires a closed path")?;
+        let mut pts = self.flatten_tol(tolerance)?;
+        if pts.len() >= 2 && dist(pts[0], *pts.last().unwrap()) <= 1e-9 {
+            pts.pop();
+        }
+        check(pts.len() >= 3, "Closed path flattened to fewer than 3 points")?;
+        Ok(pts)
+    }
+
+    pub fn reverse(&self) -> Self {
+        if self.segments.is_empty() {
+            return self.clone();
+        }
+        let new_start = self.segments.last().unwrap().end();
+        let n = self.segments.len();
+        let mut new_segments = Vec::with_capacity(n);
+        for k in 0..n {
+            let orig_idx = n - 1 - k;
+            let prev_end = if orig_idx == 0 {
+                self.start
+            } else {
+                self.segments[orig_idx - 1].end()
+            };
+            match self.segments[orig_idx] {
+                PathSegment::Line { .. } => new_segments.push(PathSegment::Line { to: prev_end }),
+                PathSegment::Cubic { c1, c2, .. } => new_segments.push(PathSegment::Cubic {
+                    c1: c2,
+                    c2: c1,
+                    to: prev_end,
+                }),
+            }
+        }
+        Self {
+            start: new_start,
+            segments: new_segments,
+            closed: self.closed,
+        }
+    }
+
+    /// Split segment `idx` at parameter `t` ∈ (0,1) via de Casteljau / lerp.
+    pub fn insert_anchor(&self, idx: usize, t: f64) -> Result<Self> {
+        check(idx < self.segments.len(), "Segment index out of range")?;
+        check(self.segments.len() < MAX_SEGMENTS, "Path exceeds segment budget")?;
+        let t = t.clamp(1e-9, 1.0 - 1e-9);
+        let from = segment_from(self.start, &self.segments, idx);
+        let (before, after) = match self.segments[idx] {
+            PathSegment::Line { to } => {
+                let cut = lerp(from, to, t);
+                (PathSegment::Line { to: cut }, PathSegment::Line { to })
+            }
+            PathSegment::Cubic { c1, c2, to } => {
+                let q0 = lerp(from, c1, t);
+                let q1 = lerp(c1, c2, t);
+                let q2 = lerp(c2, to, t);
+                let r0 = lerp(q0, q1, t);
+                let r1 = lerp(q1, q2, t);
+                let cut = lerp(r0, r1, t);
+                (
+                    PathSegment::Cubic {
+                        c1: q0,
+                        c2: r0,
+                        to: cut,
+                    },
+                    PathSegment::Cubic {
+                        c1: r1,
+                        c2: q2,
+                        to,
+                    },
+                )
+            }
+        };
+        let mut segments = Vec::with_capacity(self.segments.len() + 1);
+        segments.extend_from_slice(&self.segments[..idx]);
+        segments.push(before);
+        segments.push(after);
+        segments.extend_from_slice(&self.segments[idx + 1..]);
+        Ok(Self {
+            start: self.start,
+            segments,
+            closed: self.closed,
+        })
+    }
+
+    /// Delete anchor `node`, bridging neighbours with a straight line.
+    pub fn delete_anchor(&self, node: usize) -> Result<Self> {
+        let n = self.anchor_count();
+        check(node < n, "Anchor index out of range")?;
+        check(n > 2, "Cannot delete: path would have fewer than 2 anchors")?;
+        let anchors = self.anchors();
+        let seg_count = self.segments.len();
+        if !self.closed {
+            if node == 0 {
+                return Ok(Self {
+                    start: anchors[1],
+                    segments: self.segments[1..].to_vec(),
+                    closed: false,
+                });
+            }
+            if node == n - 1 {
+                return Ok(Self {
+                    start: self.start,
+                    segments: self.segments[..seg_count - 1].to_vec(),
+                    closed: false,
+                });
+            }
+            let mut out = Vec::with_capacity(seg_count - 1);
+            out.extend_from_slice(&self.segments[..node - 1]);
+            out.push(PathSegment::Line {
+                to: anchors[node + 1],
+            });
+            out.extend_from_slice(&self.segments[node + 1..]);
+            return Ok(Self {
+                start: self.start,
+                segments: out,
+                closed: false,
+            });
+        }
+        let new_start = if node == 0 { anchors[1] } else { self.start };
+        let mut out = Vec::with_capacity(n - 1);
+        for j in 0..n {
+            let b = (j + 1) % n;
+            if j == node {
+                continue;
+            }
+            if b == node {
+                let dest = (node + 1) % n;
+                out.push(PathSegment::Line { to: anchors[dest] });
+                continue;
+            }
+            out.push(self.segments[j]);
+        }
+        Ok(Self {
+            start: new_start,
+            segments: out,
+            closed: true,
+        })
+    }
+
+    /// Cut at anchor: closed → one open path; open interior → two open paths.
+    pub fn split_at_anchor(&self, node: usize) -> Result<Vec<Self>> {
+        let n = self.anchor_count();
+        check(node < n, "Anchor index out of range")?;
+        if self.closed {
+            let mut edges = self.segments.clone();
+            if edges.len() < n {
+                edges.push(PathSegment::Line { to: self.start });
+            }
+            let new_start = if node == 0 {
+                self.start
+            } else {
+                edges[node - 1].end()
+            };
+            let mut new_segments = Vec::with_capacity(n);
+            for k in 0..n {
+                new_segments.push(edges[(node + k) % n]);
+            }
+            return Ok(vec![Self {
+                start: new_start,
+                segments: new_segments,
+                closed: false,
+            }]);
+        }
+        if node == 0 || node == n - 1 {
+            return Err(crate::Error::new(
+                "Cannot split an open path at an endpoint",
+            ));
+        }
+        let left = Self {
+            start: self.start,
+            segments: self.segments[..node].to_vec(),
+            closed: false,
+        };
+        let right = Self {
+            start: self.segments[node - 1].end(),
+            segments: self.segments[node..].to_vec(),
+            closed: false,
+        };
+        Ok(vec![left, right])
+    }
+
+    pub fn make_anchor_smooth(&self, node: usize) -> Result<Self> {
+        let (prev, anchor, next) = neighbour_anchors(self, node)?;
+        let dir = sub(next, prev);
+        let len = dir[0].hypot(dir[1]);
+        check(len > 1e-9, "Degenerate smooth: neighbours coincide")?;
+        let ux = dir[0] / len;
+        let uy = dir[1] / len;
+        let mut segments = self.segments.clone();
+        if let Some(oi) = outgoing_segment(self, node) {
+            let from = segment_from(self.start, &segments, oi);
+            ensure_cubic(&mut segments, oi, from);
+            let d = dist(anchor, next) / 3.0;
+            if let PathSegment::Cubic { ref mut c1, .. } = segments[oi] {
+                *c1 = [anchor[0] + ux * d, anchor[1] + uy * d];
+            }
+        }
+        if let Some(ii) = incoming_segment(self, node) {
+            let from = segment_from(self.start, &segments, ii);
+            ensure_cubic(&mut segments, ii, from);
+            let d = dist(anchor, prev) / 3.0;
+            if let PathSegment::Cubic { ref mut c2, .. } = segments[ii] {
+                *c2 = [anchor[0] - ux * d, anchor[1] - uy * d];
+            }
+        }
+        Ok(Self {
+            start: self.start,
+            segments,
+            closed: self.closed,
+        })
+    }
+
+    pub fn make_anchor_corner(&self, node: usize) -> Result<Self> {
+        let n = self.anchor_count();
+        check(node < n, "Anchor index out of range")?;
+        let anchor = if node == 0 {
+            self.start
+        } else {
+            self.segments[node - 1].end()
+        };
+        let mut segments = self.segments.clone();
+        if let Some(oi) = outgoing_segment(self, node) {
+            if let PathSegment::Cubic { ref mut c1, .. } = segments[oi] {
+                *c1 = anchor;
+            }
+        }
+        if let Some(ii) = incoming_segment(self, node) {
+            if let PathSegment::Cubic { ref mut c2, .. } = segments[ii] {
+                *c2 = anchor;
+            }
+        }
+        Ok(Self {
+            start: self.start,
+            segments,
+            closed: self.closed,
+        })
+    }
+
+    /// Insert mid-parameter anchors on every segment (densify).
+    pub fn add_anchors(&self) -> Result<Self> {
+        let mut path = self.clone();
+        // Insert from the end so indices stay valid.
+        for i in (0..self.segments.len()).rev() {
+            path = path.insert_anchor(i, 0.5)?;
+        }
+        Ok(path)
+    }
+
+    /// Uniform subdivision: `levels` rounds of midpoint insertion.
+    pub fn subdivide(&self, levels: usize) -> Result<Self> {
+        check(levels <= 6, "Subdivide levels capped at 6")?;
+        let mut path = self.clone();
+        for _ in 0..levels {
+            path = path.add_anchors()?;
+        }
+        Ok(path)
+    }
+
+    /// Simplify by flattening then Ramer–Douglas–Peucker; result is a polyline path.
+    pub fn simplify(&self, tolerance: f64) -> Result<Self> {
+        let pts = self.flatten_tol(tolerance.max(1e-9))?;
+        let kept = rdp_keep(&pts, tolerance.max(0.0));
+        let simplified: Vec<[f64; 2]> = pts
+            .iter()
+            .zip(kept.iter())
+            .filter_map(|(p, keep)| keep.then_some(*p))
+            .collect();
+        // Closed flatten may repeat start at end; drop duplicate for from_polyline.
+        let mut ring = simplified;
+        if self.closed && ring.len() >= 2 && dist(ring[0], *ring.last().unwrap()) <= 1e-9 {
+            ring.pop();
+        }
+        Self::from_polyline(&ring, self.closed)
+    }
+
+    /// Stroke → filled outline via flattened parallel ribbons (butt caps, miter joins).
+    pub fn outline_stroke(&self, width: f64) -> Result<Self> {
+        check(width > 0. && width.is_finite(), "Stroke width must be positive")?;
+        let half = width * 0.5;
+        let pts = self.flatten()?;
+        check(pts.len() >= 2, "Path too short to outline")?;
+        let mut left = Vec::with_capacity(pts.len());
+        let mut right = Vec::with_capacity(pts.len());
+        for i in 0..pts.len() {
+            let (a, b) = if i + 1 < pts.len() {
+                (pts[i], pts[i + 1])
+            } else if self.closed {
+                (pts[i], pts[0])
+            } else {
+                (pts[i - 1], pts[i])
+            };
+            let d = sub(b, a);
+            let len = d[0].hypot(d[1]).max(1e-12);
+            let n = [-d[1] / len * half, d[0] / len * half];
+            left.push(add(pts[i], n));
+            right.push(sub(pts[i], n));
+        }
+        let mut outline = left;
+        if self.closed {
+            outline.extend(right.iter().rev().copied());
+            return Self::from_polyline(&outline, true);
+        }
+        outline.extend(right.iter().rev().copied());
+        Self::from_polyline(&outline, true)
+    }
+}
+
+/// Join two open paths end-to-end, optionally reversing either side.
+pub fn join_paths(
+    head: &BezierPath,
+    reverse_head: bool,
+    tail: &BezierPath,
+    reverse_tail: bool,
+    weld_eps: f64,
+) -> Result<BezierPath> {
+    check(!head.closed && !tail.closed, "join_paths requires open paths")?;
+    let a = if reverse_head {
+        head.reverse()
+    } else {
+        head.clone()
+    };
+    let b = if reverse_tail {
+        tail.reverse()
+    } else {
+        tail.clone()
+    };
+    check(
+        a.segments.len() + b.segments.len() + 1 <= MAX_SEGMENTS,
+        "Joined path exceeds segment budget",
+    )?;
+    let head_end = a.segments.last().map(|s| s.end()).unwrap_or(a.start);
+    let mut segments = a.segments;
+    let coincide = dist(head_end, b.start) <= weld_eps;
+    if !coincide {
+        segments.push(PathSegment::Line { to: b.start });
+    }
+    segments.extend(b.segments);
+    BezierPath::open(a.start, segments)
+}
+
+fn validate_segments(segments: &[PathSegment]) -> Result<()> {
+    check(segments.len() <= MAX_SEGMENTS, "Path exceeds segment budget")?;
+    for seg in segments {
+        match *seg {
+            PathSegment::Line { to } => {
+                check(to[0].is_finite() && to[1].is_finite(), "Non-finite path point")?;
+            }
+            PathSegment::Cubic { c1, c2, to } => {
+                for p in [c1, c2, to] {
+                    check(p[0].is_finite() && p[1].is_finite(), "Non-finite path point")?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn flatten_cubic(
+    p0: [f64; 2],
+    c1: [f64; 2],
+    c2: [f64; 2],
+    p3: [f64; 2],
+    tolerance: f64,
+    out: &mut Vec<[f64; 2]>,
+) -> Result<()> {
+    let d1 = [p0[0] - 2.0 * c1[0] + c2[0], p0[1] - 2.0 * c1[1] + c2[1]];
+    let d2 = [c1[0] - 2.0 * c2[0] + p3[0], c1[1] - 2.0 * c2[1] + p3[1]];
+    let l_sq = (d1[0] * d1[0] + d1[1] * d1[1]).max(d2[0] * d2[0] + d2[1] * d2[1]);
+    let l = l_sq.sqrt();
+    let n_f = (3.0 * l / (4.0 * tolerance)).sqrt();
+    let steps = if n_f.is_finite() {
+        (n_f.ceil() as usize).clamp(1, FLATTEN_MAX_STEPS)
+    } else {
+        FLATTEN_MAX_STEPS
+    };
+    let inv = 1.0 / steps as f64;
+    for i in 1..=steps {
+        let t = i as f64 * inv;
+        let mt = 1.0 - t;
+        let b0 = mt * mt * mt;
+        let b1 = 3.0 * mt * mt * t;
+        let b2 = 3.0 * mt * t * t;
+        let b3 = t * t * t;
+        out.push([
+            b0 * p0[0] + b1 * c1[0] + b2 * c2[0] + b3 * p3[0],
+            b0 * p0[1] + b1 * c1[1] + b2 * c2[1] + b3 * p3[1],
+        ]);
+        check(out.len() <= MAX_FLATTEN_POINTS, "Flatten exceeded point budget")?;
+    }
+    Ok(())
+}
+
+fn segment_from(start: [f64; 2], segments: &[PathSegment], idx: usize) -> [f64; 2] {
+    let mut from = start;
+    for seg in &segments[..idx] {
+        from = seg.end();
+    }
+    from
+}
+
+fn neighbour_anchors(
+    path: &BezierPath,
+    node: usize,
+) -> Result<([f64; 2], [f64; 2], [f64; 2])> {
+    let n = path.anchor_count();
+    check(node < n, "Anchor index out of range")?;
+    let anchors = path.anchors();
+    let prev = if node == 0 {
+        check(path.closed, "Open-path endpoints have no smooth neighbours")?;
+        anchors[n - 1]
+    } else {
+        anchors[node - 1]
+    };
+    let next = if node == n - 1 {
+        check(path.closed, "Open-path endpoints have no smooth neighbours")?;
+        anchors[0]
+    } else {
+        anchors[node + 1]
+    };
+    Ok((prev, anchors[node], next))
+}
+
+fn incoming_segment(path: &BezierPath, node: usize) -> Option<usize> {
+    let n = path.anchor_count();
+    if node == 0 {
+        if path.closed {
+            Some(path.segments.len() - 1)
+        } else {
+            None
+        }
+    } else if node < n {
+        Some(node - 1)
+    } else {
+        None
+    }
+}
+
+fn outgoing_segment(path: &BezierPath, node: usize) -> Option<usize> {
+    let n = path.anchor_count();
+    if node == n - 1 {
+        if path.closed {
+            Some(path.segments.len() - 1)
+        } else {
+            None
+        }
+    } else if node < n {
+        Some(node)
+    } else {
+        None
+    }
+}
+
+fn ensure_cubic(segments: &mut [PathSegment], idx: usize, from: [f64; 2]) {
+    if let PathSegment::Line { to } = segments[idx] {
+        segments[idx] = PathSegment::Cubic {
+            c1: lerp(from, to, 1.0 / 3.0),
+            c2: lerp(from, to, 2.0 / 3.0),
+            to,
+        };
+    }
+}
+
+fn rdp_keep(points: &[[f64; 2]], eps: f64) -> Vec<bool> {
+    let n = points.len();
+    let mut keep = vec![false; n];
+    if n == 0 {
+        return keep;
+    }
+    keep[0] = true;
+    keep[n - 1] = true;
+    if n < 3 {
+        return keep;
+    }
+    let mut stack = vec![(0usize, n - 1)];
+    while let Some((start, end)) = stack.pop() {
+        if end <= start + 1 {
+            continue;
+        }
+        let a = points[start];
+        let b = points[end];
+        let mut far_idx = start;
+        let mut far_dist = -1.0;
+        for (offset, p) in points[start + 1..end].iter().enumerate() {
+            let d = perp_line_distance(*p, a, b);
+            if d > far_dist {
+                far_dist = d;
+                far_idx = start + 1 + offset;
+            }
+        }
+        if far_dist > eps {
+            keep[far_idx] = true;
+            stack.push((start, far_idx));
+            stack.push((far_idx, end));
+        }
+    }
+    keep
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ellipse_flattens_and_closes() {
+        let path = BezierPath::from_circle([0., 0.], 10.).unwrap();
+        assert!(path.closed);
+        assert_eq!(path.segments.len(), 4);
+        let ring = path.to_ring(0.1).unwrap();
+        assert!(ring.len() >= 8);
+        let area: f64 = (0..ring.len())
+            .map(|i| {
+                let a = ring[i];
+                let b = ring[(i + 1) % ring.len()];
+                a[0] * b[1] - a[1] * b[0]
+            })
+            .sum::<f64>()
+            / 2.;
+        assert!((area.abs() - std::f64::consts::PI * 100.).abs() < 5.);
+    }
+
+    #[test]
+    fn de_casteljau_insert_preserves_endpoints() {
+        let path = BezierPath::open(
+            [0., 0.],
+            vec![PathSegment::Cubic {
+                c1: [1., 2.],
+                c2: [2., 2.],
+                to: [3., 0.],
+            }],
+        )
+        .unwrap();
+        let split = path.insert_anchor(0, 0.5).unwrap();
+        assert_eq!(split.segments.len(), 2);
+        assert_eq!(split.start, [0., 0.]);
+        assert_eq!(split.segments[1].end(), [3., 0.]);
+    }
+
+    #[test]
+    fn reverse_roundtrip_endpoints() {
+        let path = BezierPath::from_polyline(&[[0., 0.], [1., 0.], [1., 1.]], false).unwrap();
+        let rev = path.reverse();
+        assert_eq!(rev.start, [1., 1.]);
+        assert_eq!(rev.segments.last().unwrap().end(), [0., 0.]);
+    }
+
+    #[test]
+    fn join_welds_coincident_ends() {
+        let a = BezierPath::from_polyline(&[[0., 0.], [1., 0.]], false).unwrap();
+        let b = BezierPath::from_polyline(&[[1., 0.], [2., 0.]], false).unwrap();
+        let j = join_paths(&a, false, &b, false, 1e-6).unwrap();
+        assert_eq!(j.segments.len(), 2);
+        assert_eq!(j.segments.last().unwrap().end(), [2., 0.]);
+    }
+
+    #[test]
+    fn simplify_reduces_collinear() {
+        let path = BezierPath::from_polyline(
+            &[[0., 0.], [1., 0.], [2., 0.], [3., 0.], [3., 1.]],
+            false,
+        )
+        .unwrap();
+        let s = path.simplify(0.01).unwrap();
+        assert!(s.anchor_count() <= 4);
+    }
+
+    #[test]
+    fn outline_stroke_closed_rect() {
+        let path = BezierPath::from_rect([0., 0.], [10., 10.]).unwrap();
+        let outline = path.outline_stroke(2.).unwrap();
+        assert!(outline.closed);
+        assert!(outline.anchor_count() >= 8);
+    }
+
+    #[test]
+    fn convert_shapes_to_path() {
+        let r = BezierPath::from_rect([0., 0.], [4., 2.]).unwrap();
+        let c = BezierPath::from_circle([1., 1.], 2.).unwrap();
+        let p = BezierPath::from_polygon(&[[0., 0.], [1., 0.], [0.5, 1.]], true).unwrap();
+        assert!(r.closed && c.closed && p.closed);
+    }
+
+    #[test]
+    fn split_closed_opens_at_node() {
+        let path = BezierPath::from_rect([0., 0.], [1., 1.]).unwrap();
+        let pieces = path.split_at_anchor(1).unwrap();
+        assert_eq!(pieces.len(), 1);
+        assert!(!pieces[0].closed);
+    }
+}
