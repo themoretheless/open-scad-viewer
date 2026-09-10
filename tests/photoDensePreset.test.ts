@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from 'vitest'
-import {PhotogrammetryKernel, type PhotoDensePreset} from '../src/services/photogrammetryKernel'
-import {compilePhotogrammetryKernel} from '../src/services/photogrammetryModule'
-import {photoReportJson} from '../src/services/photoReport'
+import {PhotogrammetryKernel, type PhotoDensePreset} from '../src/services/photogrammetry/kernel'
+import {compilePhotogrammetryKernel} from '../src/services/photogrammetry/module'
+import {photoReportJson} from '../src/services/photogrammetry/report'
 
 function transport() {
   const wasm = {photo_run: vi.fn(() => 7n), photo_dense: vi.fn(() => 9n)}

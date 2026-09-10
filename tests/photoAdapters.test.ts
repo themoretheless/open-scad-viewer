@@ -1,9 +1,9 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
-import {decodePhoto, photoFocalHint, PhotoCollection, validPhotoFocal} from '../src/services/photoInput'
-import {photoPly, photoScadSource} from '../src/services/photoExport'
-import {photoRegistrationReason, photoReportJson} from '../src/services/photoReport'
-import {PhotoPreview} from '../src/services/photoPreview'
-import type {PhotoSurface} from '../src/services/photogrammetryKernel'
+import {decodePhoto, photoFocalHint, PhotoCollection, validPhotoFocal} from '../src/services/photogrammetry/input'
+import {photoPly, photoScadSource} from '../src/services/photogrammetry/export'
+import {photoRegistrationReason, photoReportJson} from '../src/services/photogrammetry/report'
+import {PhotoPreview} from '../src/services/photogrammetry/preview'
+import type {PhotoSurface} from '../src/services/photogrammetry/kernel'
 
 const tetrahedron: PhotoSurface = {
   positions: new Float64Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]),

@@ -1,5 +1,5 @@
-import {inspectPolygonMesh} from './polygonKernel'
-import type {PhotoSurface} from './photogrammetryKernel'
+import {inspectPolygonMesh} from '../polygonKernel'
+import type {PhotoSurface} from './kernel'
 
 /** Exports the original reconstructed coordinates, colors and all observed triangles. */
 export function photoPly(surface: PhotoSurface): string {

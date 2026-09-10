@@ -1,30 +1,22 @@
 # photogrammetry-ffi
 
-Import-free host ABI for the photogrammetry kernel, compiled both to
-`wasm32-unknown-unknown` (the browser viewer) and to native dynamic/static
-libraries — the same sources, the same pointer-based ABI.
+Shared host ABI core for the photogrammetry kernel: session state, MGV1
+binary response envelopes, transport budgets, and the pointer-based buffer
+protocol. It is an `rlib` with no `extern "C"` surface of its own — the
+export shells live in:
 
-## Native builds
-
-```sh
-cargo build --release --manifest-path crates/Cargo.toml -p photogrammetry-ffi
-# crates/target/release/libphotogrammetry_ffi.{dylib,so} and .a
-```
+- `photogrammetry-wasm` — import-free `cdylib` for `wasm32-unknown-unknown`
+  (the browser viewer; built by `scripts/build-photogrammetry.mjs`);
+- `photogrammetry-native` — `cdylib`/`staticlib` for native hosts, adding
+  `photo_response_ptr`/`photo_response_len` and the `gpu` feature.
 
 Responses are MGV1 binary envelopes; the packed u64 return truncates pointers
 to 32 bits, which only wasm32 allows — native callers read
-`photo_response_ptr()` / `photo_response_len()` instead. The ABI was verified
-end-to-end from a C client (both backends); write the header for your consumer
-when one exists.
+`photo_response_ptr()` / `photo_response_len()` instead.
 
 GPU stages (descriptor matching, dense NCC sweep) are opt-in per session:
-`photo_set_acceleration(1)` after building with `--features gpu` (wgpu → Metal
-on macOS, Vulkan on Linux/Windows). Without the feature or an adapter the CPU
-reference runs unchanged. Note: `photo_set_acceleration(1)` on blank photos
-exercises empty descriptor sets; these bind 4-byte placeholder buffers.
-
-macOS caveat: with some toolchains the cdylib gets a mis-aligned LINKEDIT
-string pool that ld64 rejects at client link time — build with
-`RUSTFLAGS="-C link-args=-Wl,-no_compact_unwind"` or link the staticlib
-(with frameworks CoreFoundation, CoreGraphics, QuartzCore, Metal, Foundation,
-IOKit, IOSurface when the gpu feature is on).
+`photo_set_acceleration(1)` after building the native shell with
+`--features gpu` (wgpu → Metal on macOS, Vulkan on Linux/Windows). Without
+the feature or an adapter the CPU reference runs unchanged. Note:
+`photo_set_acceleration(1)` on blank photos exercises empty descriptor sets;
+these bind 4-byte placeholder buffers.

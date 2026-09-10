@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest'
-import {PhotogrammetryKernel, type PhotoPixels} from '../src/services/photogrammetryKernel'
-import {compilePhotogrammetryKernel} from '../src/services/photogrammetryModule'
-import {parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationGroup} from '../src/services/photoCalibration'
+import {PhotogrammetryKernel, type PhotoPixels} from '../src/services/photogrammetry/kernel'
+import {compilePhotogrammetryKernel} from '../src/services/photogrammetry/module'
+import {parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationGroup} from '../src/services/photogrammetry/calibration'
 
 function pixels(group?: PhotoCalibrationGroup): PhotoPixels {
   return {width: 320, height: 240, focal: 250, rgb: new Uint8Array(320 * 240 * 3).fill(128),

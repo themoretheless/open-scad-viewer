@@ -4,10 +4,10 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 const root=fileURLToPath(new URL('../',import.meta.url))
-const result=spawnSync('cargo',['build','--locked','--release','--target','wasm32-unknown-unknown','--manifest-path','crates/photogrammetry-ffi/Cargo.toml'],{cwd:root,stdio:'inherit'})
+const result=spawnSync('cargo',['build','--locked','--release','--target','wasm32-unknown-unknown','--manifest-path','crates/photogrammetry-wasm/Cargo.toml'],{cwd:root,stdio:'inherit'})
 if(result.error)throw result.error
 if(result.status!==0)process.exit(result.status??1)
-const bytes=readFileSync(resolve(root,'crates/target/wasm32-unknown-unknown/release/photogrammetry_ffi.wasm'))
+const bytes=readFileSync(resolve(root,'crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm'))
 if(WebAssembly.Module.imports(new WebAssembly.Module(bytes)).length)throw new Error('Photogrammetry WASM must not import external functions')
 const folder=resolve(root,'src/generated/photogrammetry');mkdirSync(folder,{recursive:true})
 const size=Buffer.alloc(4);size.writeUInt32LE(bytes.length)

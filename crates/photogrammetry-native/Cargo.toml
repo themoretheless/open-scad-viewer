@@ -1,0 +1,13 @@
+[package]
+name = "photogrammetry-native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+# Native builds may enable the kernel's GPU stages (wgpu: Metal/Vulkan).
+[features]
+gpu = ["photogrammetry-ffi/gpu"]
+[dependencies]
+photogrammetry-ffi = { path = "../photogrammetry-ffi" }

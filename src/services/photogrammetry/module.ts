@@ -1,4 +1,4 @@
-import {unpackWasm} from './wasmPacking'
+import {unpackWasm} from '../wasmPacking'
 
 let sharedModule: Promise<WebAssembly.Module> | null = null
 
@@ -8,7 +8,7 @@ let sharedModule: Promise<WebAssembly.Module> | null = null
  */
 export function compilePhotogrammetryKernel(): Promise<WebAssembly.Module> {
   if (!sharedModule) {
-    sharedModule = import('../generated/photogrammetry/bytes').then(({default: wasmBase64}) => {
+    sharedModule = import('../../generated/photogrammetry/bytes').then(({default: wasmBase64}) => {
       const compressed = Uint8Array.from(atob(wasmBase64), character => character.charCodeAt(0))
       return WebAssembly.compile(unpackWasm(compressed))
     })

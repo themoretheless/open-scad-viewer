@@ -1,6 +1,6 @@
-import {runGpuSweep} from '../services/photoGpuSweep'
-import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoSurface} from '../services/photogrammetryKernel'
-import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photoWorkerProtocol'
+import {runGpuSweep} from '../services/photogrammetry/gpuSweep'
+import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoSurface} from '../services/photogrammetry/kernel'
+import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
 
 const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void}
 const post = (event: PhotoWorkerEvent, transfer: Transferable[] = []) => scope.postMessage(event, transfer)

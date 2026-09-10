@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import {MAX_CALIBRATION_FILE_BYTES, parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationDocument} from '../services/photoCalibration'
+import {MAX_CALIBRATION_FILE_BYTES, parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationDocument} from '../services/photogrammetry/calibration'
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch} from 'vue'
 import {WebGPURenderer} from '../services/webgpuRenderer'
-import {decodePhoto, PhotoCollection, PhotoInputError, validPhotoFocal, type ImportedPhoto} from '../services/photoInput'
-import {downloadPhoto, photoCanAppend, PhotoExportError, photoPly, photoScadSource} from '../services/photoExport'
-import {PhotoPreview, type PhotoPreviewMode} from '../services/photoPreview'
-import {compilePhotogrammetryKernel} from '../services/photogrammetryModule'
-import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from '../services/photogrammetryKernel'
-import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photoWorkerProtocol'
-import {photoRegistrationReason, photoReportJson, type PhotoReportInput} from '../services/photoReport'
+import {decodePhoto, PhotoCollection, PhotoInputError, validPhotoFocal, type ImportedPhoto} from '../services/photogrammetry/input'
+import {downloadPhoto, photoCanAppend, PhotoExportError, photoPly, photoScadSource} from '../services/photogrammetry/export'
+import {PhotoPreview, type PhotoPreviewMode} from '../services/photogrammetry/preview'
+import {compilePhotogrammetryKernel} from '../services/photogrammetry/module'
+import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from '../services/photogrammetry/kernel'
+import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
+import {photoRegistrationReason, photoReportJson, type PhotoReportInput} from '../services/photogrammetry/report'
 import {MAX_WORKSPACE_SOURCE_LENGTH} from '../services/workspaceDocument'
 
 const props = defineProps<{locale: 'ru' | 'en'; canAppend: boolean; remainingSource: number}>()

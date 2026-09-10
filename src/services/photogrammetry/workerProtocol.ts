@@ -1,4 +1,4 @@
-import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from './photogrammetryKernel'
+import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from './kernel'
 
 export interface PhotoWorkerRequest {
   /** Kernel module compiled once on the main thread; the Worker only instantiates it. */

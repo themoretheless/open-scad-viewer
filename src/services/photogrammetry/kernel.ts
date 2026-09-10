@@ -1,5 +1,5 @@
-import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './photoCalibration'
-import {decodeBinary, encodeBinary, type BinaryTripleHints} from './valueBinaryCodec'
+import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
+import {decodeBinary, encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */
 const SURFACE_TRIPLES: BinaryTripleHints = {positions: 'f64', colors: 'u8', triangles: 'u32'}

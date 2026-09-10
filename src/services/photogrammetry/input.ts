@@ -1,5 +1,5 @@
-import {measuredPhotoInput, type PhotoCalibrationGroup} from './photoCalibration'
-import type {PhotoPixels} from './photogrammetryKernel'
+import {measuredPhotoInput, type PhotoCalibrationGroup} from './calibration'
+import type {PhotoPixels} from './kernel'
 
 /** Optional JPEG EXIF hint, not calibrated intrinsics. Unknown cameras stay explicit. */
 export function photoFocalHint(buffer: ArrayBuffer): number | null {

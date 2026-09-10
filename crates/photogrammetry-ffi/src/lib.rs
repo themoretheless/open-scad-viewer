@@ -1,4 +1,5 @@
-//! Import-free WASM host using the repository's binary Value codec.
+//! Shared photogrammetry host ABI core, consumed by the `photogrammetry-wasm`
+//! and `photogrammetry-native` shells, which add the `extern "C"` export surface.
 mod response;
 mod session;
 use value_codec::{json, Deserialize, Map, Value};
@@ -94,8 +95,8 @@ fn response_bytes(result: Result<Value>) -> Vec<u8> {
             .expect("The constant transport error fits the MGV1 limits"),
     }
 }
-#[no_mangle]
-pub extern "C" fn photo_alloc(len: usize) -> usize {
+
+pub fn photo_alloc(len: usize) -> usize {
     if len == 0 || len > LIMIT {
         return 0;
     }
@@ -112,8 +113,8 @@ pub extern "C" fn photo_alloc(len: usize) -> usize {
 }
 /// # Safety
 /// ptr/len must be a live allocation returned by this module; consumed once.
-#[no_mangle]
-pub unsafe extern "C" fn photo_free(ptr: usize, len: usize) {
+
+pub unsafe fn photo_free(ptr: usize, len: usize) {
     if ptr != 0 {
         drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
             ptr as *mut u8,
@@ -130,12 +131,12 @@ thread_local! {
 }
 /// Native hosts fetch responses through these (the packed u64 return truncates
 /// the pointer to 32 bits, which only wasm32 linear memory can promise).
-#[no_mangle]
-pub extern "C" fn photo_response_ptr() -> usize {
+
+pub fn photo_response_ptr() -> usize {
     LAST_RESPONSE.with(|last| last.get().0)
 }
-#[no_mangle]
-pub extern "C" fn photo_response_len() -> usize {
+
+pub fn photo_response_len() -> usize {
     LAST_RESPONSE.with(|last| last.get().1)
 }
 fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
@@ -150,8 +151,8 @@ fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
 /// ptr/len must reference a live caller-owned allocation returned by photo_alloc.
 /// The buffer is consumed on every path: moved into the session image on success
 /// and freed on failure, so the caller must not photo_free it afterwards.
-#[no_mangle]
-pub unsafe extern "C" fn photo_add(
+
+pub unsafe fn photo_add(
     width: usize,
     height: usize,
     focal: f64,
@@ -171,8 +172,8 @@ pub unsafe extern "C" fn photo_add(
 /// # Safety
 /// ptr/len must reference a live caller-owned photo_alloc buffer and is consumed
 /// like in photo_add; the calibration buffer stays caller-owned and is only read.
-#[no_mangle]
-pub unsafe extern "C" fn photo_add_calibrated(
+
+pub unsafe fn photo_add_calibrated(
     width: usize,
     height: usize,
     focal: f64,
@@ -204,8 +205,8 @@ pub unsafe extern "C" fn photo_add_calibrated(
 }
 
 /// Explicit bounded dense preset; photo_run(2, resolution) remains the legacy default.
-#[no_mangle]
-pub extern "C" fn photo_dense(resolution: usize, preset: u32) -> u64 {
+
+pub fn photo_dense(resolution: usize, preset: u32) -> u64 {
     packed_bytes(session::dispatch_bytes(
         json!({"action": "dense", "resolution": resolution, "preset": preset}),
     ))
@@ -214,16 +215,16 @@ pub extern "C" fn photo_dense(resolution: usize, preset: u32) -> u64 {
 /// Selects the compute backend for subsequent runs: 0 = CPU (default),
 /// 1 = GPU (native builds with the `gpu` feature; otherwise a recorded no-op
 /// that keeps the CPU reference).
-#[no_mangle]
-pub extern "C" fn photo_set_acceleration(value: u32) -> u64 {
+
+pub fn photo_set_acceleration(value: u32) -> u64 {
     packed_bytes(session::set_acceleration_host(value))
 }
 
 /// Stage 1 of the browser WebGPU dense sweep; the response value carries the
 /// payload pointer/length and the WGSL shader text, or null when the request
 /// is ineligible (caller then uses photo_dense).
-#[no_mangle]
-pub extern "C" fn photo_dense_prepare(resolution: usize, preset: u32) -> u64 {
+
+pub fn photo_dense_prepare(resolution: usize, preset: u32) -> u64 {
     packed(session::dense_prepare_host(resolution, preset))
 }
 
@@ -231,8 +232,8 @@ pub extern "C" fn photo_dense_prepare(resolution: usize, preset: u32) -> u64 {
 /// # Safety
 /// ptr/len must reference a live caller-owned photo_alloc buffer, which this
 /// call takes over and frees on any outcome.
-#[no_mangle]
-pub unsafe extern "C" fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
+
+pub unsafe fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
     // The score stream is raw f32, not MGV1; the session validates the exact
     // expected length. 128 MiB caps a 24-view run at the default resolution.
     if ptr == 0 || len == 0 || len % 4 != 0 || len > 128 * 1024 * 1024 {
@@ -247,8 +248,8 @@ pub unsafe extern "C" fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
 }
 
 /// Runs in a disposable Worker, so cancellation releases the whole session.
-#[no_mangle]
-pub extern "C" fn photo_run(action: u32, resolution: usize) -> u64 {
+
+pub fn photo_run(action: u32, resolution: usize) -> u64 {
     let action = match action {
         0 => "clear",
         1 => "sparse",

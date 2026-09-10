@@ -6,7 +6,7 @@
  * in the kernel as usual; this module only dispatches the scoring shader.
  */
 
-import { runGpuCompute } from './webgpuCompute'
+import { runGpuCompute } from '../webgpuCompute'
 
 export interface GpuSweepSource {
   image: number

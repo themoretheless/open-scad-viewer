@@ -1,6 +1,6 @@
-import type {PhotoMeasuredInput} from './photoCalibration'
-import type {PhotoDensePreset, PhotoDenseDiagnostics, PhotoDiagnostics} from './photogrammetryKernel'
-import type {PhotoTimings} from './photoWorkerProtocol'
+import type {PhotoMeasuredInput} from './calibration'
+import type {PhotoDensePreset, PhotoDenseDiagnostics, PhotoDiagnostics} from './kernel'
+import type {PhotoTimings} from './workerProtocol'
 
 export interface PhotoReportInput {
   image: number

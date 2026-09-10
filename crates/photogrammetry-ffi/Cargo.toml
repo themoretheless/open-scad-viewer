@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 [lib]
-crate-type = ["cdylib", "rlib", "staticlib"]
+crate-type = ["rlib"]
 
 # Native builds may enable the kernel's GPU stages; wasm32 stays CPU-only.
 [features]
