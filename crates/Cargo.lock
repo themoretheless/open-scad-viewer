@@ -200,13 +200,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geometry-native"
-version = "0.1.0"
-dependencies = [
- "geometry-bridge",
-]
-
-[[package]]
 name = "geometry-ops"
 version = "0.1.0"
 dependencies = [
@@ -544,13 +537,6 @@ version = "0.1.0"
 dependencies = [
  "photogrammetry-core",
  "value-codec",
-]
-
-[[package]]
-name = "photogrammetry-native"
-version = "0.1.0"
-dependencies = [
- "photogrammetry-ffi",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 //! Shared photogrammetry host ABI core, consumed by the `photogrammetry-wasm`
-//! and `photogrammetry-native` shells, which add the `extern "C"` export surface.
+//! shell, which adds the `extern "C"` export surface.
 mod response;
 mod session;
 use value_codec::{json, Deserialize, Map, Value};

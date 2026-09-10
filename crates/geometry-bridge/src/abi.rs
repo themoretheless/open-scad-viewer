@@ -1,5 +1,5 @@
 //! Linear-memory ABI core. The host owns request buffers and frees every response.
-//! The `geometry-wasm` and `geometry-native` shells add the extern "C" surface.
+//! The `geometry-wasm` shell adds the extern "C" surface.
 use super::*;
 use std::cell::RefCell;
 thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCell::new(Vec::new())};}
