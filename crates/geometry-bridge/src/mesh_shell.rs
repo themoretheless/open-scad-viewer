@@ -1,19 +1,7 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
 use polygon_core::{proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
 pub(crate) type P = [f64; 3];
-fn sub(a: P, b: P) -> P {
-    std::array::from_fn(|i| a[i] - b[i])
-}
-fn dot(a: P, b: P) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
-}
-fn cross(a: P, b: P) -> P {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
+use math_core::{cross, dot, sub};
 #[derive(Clone)]
 pub(crate) struct Triangle {
     pub(crate) p: [P; 3],

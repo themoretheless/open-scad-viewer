@@ -6,10 +6,8 @@ use photogrammetry_core::{
     Image, Point, Reconstruction,
 };
 use std::time::Instant;
-#[path = "../src/math.rs"]
-#[allow(dead_code)]
-mod math;
-use math::*;
+#[allow(unused_imports)]
+use math_core::*;
 #[path = "support/dense_fixture.rs"]
 mod fixture;
 use fixture::*;

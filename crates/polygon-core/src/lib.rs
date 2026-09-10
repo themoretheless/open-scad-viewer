@@ -56,16 +56,7 @@ pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
 pub(crate) fn norm(v: &[f64]) -> f64 {
     v.iter().fold(0_f64, |n, x| n.hypot(*x))
 }
-pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-pub(crate) fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|i| a[i] - b[i])
-}
+pub(crate) use math_core::{cross, sub};
 /// Common owned exchange format: independent buffers, no kernel pointers.
 #[derive(Debug, Clone)]
 pub struct Mesh {

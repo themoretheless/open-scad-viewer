@@ -7,7 +7,7 @@ pub mod diagnostics;
 pub mod evaluation;
 pub mod features;
 mod matching;
-mod math;
+pub(crate) use math_core as math;
 mod model;
 #[cfg(feature = "gpu")]
 pub mod gpu;

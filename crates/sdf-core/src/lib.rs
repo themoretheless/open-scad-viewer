@@ -177,22 +177,7 @@ fn idx_decompose_x(idx: u32, row: u32) -> u32 {
 }
 "##;
 pub type Point = [f64; 3];
-fn sub(a: Point, b: Point) -> Point {
-    std::array::from_fn(|i| a[i] - b[i])
-}
-fn dot(a: Point, b: Point) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
-}
-fn cross(a: Point, b: Point) -> Point {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn length(a: Point) -> f64 {
-    dot(a, a).sqrt()
-}
+use math_core::{cross, dot, norm as length, sub};
 #[derive(Clone, Debug)]
 pub enum Field {
     Extrude {

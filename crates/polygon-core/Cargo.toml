@@ -5,6 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+math-core = { path = "../math-core" }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
 brep-topology = { path = "../brep-topology" }

@@ -8,4 +8,5 @@ publish = false
 gpu = ["dep:gpu-compute"]
 
 [dependencies]
+math-core = { path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }

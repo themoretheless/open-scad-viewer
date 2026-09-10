@@ -189,6 +189,7 @@ version = "0.1.0"
 dependencies = [
  "brep-topology",
  "gpu-compute",
+ "math-core",
  "modelgraph-runtime",
  "modelgraph-text",
  "nurbs-core",
@@ -328,6 +329,10 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+
+[[package]]
+name = "math-core"
+version = "0.1.0"
 
 [[package]]
 name = "modelgraph-runtime"
@@ -529,6 +534,7 @@ name = "photogrammetry-core"
 version = "0.1.0"
 dependencies = [
  "gpu-compute",
+ "math-core",
 ]
 
 [[package]]
@@ -558,6 +564,7 @@ version = "0.1.0"
 dependencies = [
  "brep-topology",
  "geometry-ops",
+ "math-core",
  "value-codec",
 ]
 
@@ -663,6 +670,7 @@ version = "0.1.0"
 dependencies = [
  "geometry-ops",
  "gpu-compute",
+ "math-core",
  "polygon-core",
  "value-codec",
 ]

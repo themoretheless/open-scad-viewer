@@ -3,22 +3,7 @@
 use super::*;
 use polygon_core::proximity::{closest_triangle, valid_source};
 type Point = [f64; 3];
-fn sub(a: Point, b: Point) -> Point {
-    std::array::from_fn(|i| a[i] - b[i])
-}
-fn dot(a: Point, b: Point) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
-}
-fn cross(a: Point, b: Point) -> Point {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn norm(a: Point) -> f64 {
-    dot(a, a).sqrt()
-}
+use math_core::{cross, dot, norm, sub};
 #[derive(Clone, Copy)]
 pub enum Mode {
     Faceted,
