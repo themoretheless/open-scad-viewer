@@ -2,24 +2,34 @@
 pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
 pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+
+/// Leaf helpers on the geometry/photogrammetry hotpath: force inlining so call
+/// overhead and missed branch hints do not dominate tiny f64 kernels.
+#[inline(always)]
 pub fn dot(a: V3, b: V3) -> f64 {
-    a.iter().zip(b).map(|(x, y)| x * y).sum()
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+#[inline(always)]
 pub fn add(a: V3, b: V3) -> V3 {
-    std::array::from_fn(|i| a[i] + b[i])
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 }
+#[inline(always)]
 pub fn sub(a: V3, b: V3) -> V3 {
-    std::array::from_fn(|i| a[i] - b[i])
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
+#[inline(always)]
 pub fn scale(a: V3, s: f64) -> V3 {
-    a.map(|x| x * s)
+    [a[0] * s, a[1] * s, a[2] * s]
 }
+#[inline(always)]
 pub fn norm(a: V3) -> f64 {
     dot(a, a).sqrt()
 }
+#[inline(always)]
 pub fn unit(a: V3) -> V3 {
     scale(a, 1. / norm(a).max(1e-15))
 }
+#[inline(always)]
 pub fn cross(a: V3, b: V3) -> V3 {
     [
         a[1] * b[2] - a[2] * b[1],
@@ -27,19 +37,32 @@ pub fn cross(a: V3, b: V3) -> V3 {
         a[0] * b[1] - a[1] * b[0],
     ]
 }
+#[inline(always)]
 pub fn mv(a: M3, b: V3) -> V3 {
-    a.map(|r| dot(r, b))
+    [dot(a[0], b), dot(a[1], b), dot(a[2], b)]
 }
+#[inline(always)]
 pub fn tr(a: M3) -> M3 {
-    std::array::from_fn(|i| std::array::from_fn(|j| a[j][i]))
+    [
+        [a[0][0], a[1][0], a[2][0]],
+        [a[0][1], a[1][1], a[2][1]],
+        [a[0][2], a[1][2], a[2][2]],
+    ]
 }
+#[inline(always)]
 pub fn mm(a: M3, b: M3) -> M3 {
     let bt = tr(b);
-    std::array::from_fn(|i| std::array::from_fn(|j| dot(a[i], bt[j])))
+    [
+        [dot(a[0], bt[0]), dot(a[0], bt[1]), dot(a[0], bt[2])],
+        [dot(a[1], bt[0]), dot(a[1], bt[1]), dot(a[1], bt[2])],
+        [dot(a[2], bt[0]), dot(a[2], bt[1]), dot(a[2], bt[2])],
+    ]
 }
+#[inline(always)]
 pub fn det(a: M3) -> f64 {
     dot(a[0], cross(a[1], a[2]))
 }
+#[inline(always)]
 pub fn rotation(v: V3) -> M3 {
     let angle = norm(v);
     if angle < 1e-14 {
@@ -186,5 +209,34 @@ mod tests {
                 assert!((a[i][j] - b[i][j]).abs() < 1e-6);
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod hotpath_bench {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn leaf_math_throughput() {
+        let mut acc = 0.0f64;
+        let a = [1.1, -2.2, 3.3];
+        let b = [0.4, 0.5, -0.6];
+        let m = [[1.0, 0.2, 0.0], [0.1, 1.0, 0.3], [0.0, 0.1, 1.0]];
+        // warmup
+        for _ in 0..50_000 {
+            let c = cross(a, b);
+            acc += dot(unit(add(c, scale(b, 0.1))), mv(m, a)) + det(mm(m, rotation(a)));
+        }
+        let start = Instant::now();
+        const N: u32 = 2_000_000;
+        for _ in 0..N {
+            let c = cross(a, b);
+            acc += dot(unit(add(c, scale(b, 0.1))), mv(m, a)) + det(mm(m, rotation(a)));
+        }
+        let ms = start.elapsed().as_secs_f64() * 1000.0;
+        eprintln!("math-core hotpath: {ms:.3} ms for {N} iters, acc={acc}");
+        assert!(acc.is_finite());
     }
 }

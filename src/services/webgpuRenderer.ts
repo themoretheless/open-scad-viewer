@@ -281,6 +281,7 @@ export class WebGPURenderer {
   private sceneUB: GPUBuffer | null = null
   private sceneBG!: GPUBindGroup
   private depth: GPUTexture | null = null
+  private depthView: GPUTextureView | null = null
 
   private meshes: GMesh[] = []
   private geometryFade: { started: number; progress: number } | null = null
@@ -1530,6 +1531,7 @@ export class WebGPURenderer {
       this.drawable = false
       this.depth?.destroy()
       this.depth = null
+      this.depthView = null
       return changed
     }
 
@@ -1550,6 +1552,7 @@ export class WebGPURenderer {
         format: 'depth24plus',
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       })
+      this.depthView = this.depth.createView()
     }
     this.drawable = true
     return changed
@@ -1592,8 +1595,8 @@ export class WebGPURenderer {
 
   private render() {
     this.updateSize()
-    const canvas = this.canvas, dev = this.dev, ctx = this.ctx, depth = this.depth, sceneUB = this.sceneUB
-    if (!canvas || !dev || !ctx || !depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
+    const canvas = this.canvas, dev = this.dev, ctx = this.ctx, sceneUB = this.sceneUB
+    if (!canvas || !dev || !ctx || !this.depth || !this.depthView || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
     const { eye, viewProjection } = this.cameraState()
     const sd = this.sceneUniformScratch
@@ -1609,6 +1612,8 @@ export class WebGPURenderer {
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
+    const depthView = this.depthView
+    if (!depthView) return
     const pass = enc.beginRenderPass({
       colorAttachments: [{
         view: ctx.getCurrentTexture().createView(),
@@ -1621,7 +1626,7 @@ export class WebGPURenderer {
         loadOp: 'clear', storeOp: 'store',
       }],
       depthStencilAttachment: {
-        view: depth.createView(),
+        view: depthView,
         depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
       },
     })
@@ -1767,7 +1772,11 @@ export class WebGPURenderer {
         active = true
         ghost.meshes.forEach((mesh, i) => {
           mesh.alpha = ghost.alphas[i] * (1 - t*t*(3-2*t))
-          this.dev?.queue.writeBuffer(mesh.ub, 144, new Float32Array([mesh.alpha, 0, 0, 0]))
+          this.styleScratch[0] = mesh.alpha
+          this.styleScratch[1] = 0
+          this.styleScratch[2] = 0
+          this.styleScratch[3] = 0
+          this.dev?.queue.writeBuffer(mesh.ub, 144, this.styleScratch)
         })
       }
     }
@@ -1779,10 +1788,10 @@ export class WebGPURenderer {
       const eased = t * t * (3 - 2 * t)
       if (morph.matrix) {
         morph.currentMatrix = morph.matrix(eased)
-        const uniform = new Float32Array(32), inverse = invert(morph.currentMatrix)
+        const uniform = this.objectUniformScratch
         for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) uniform[column*4+row] = morph.currentMatrix[row*4+column]
-        uniform.set(inverse, 16)
-        this.dev?.queue.writeBuffer(mesh.ub, 0, uniform)
+        invert(morph.currentMatrix, uniform.subarray(16, 32))
+        this.dev?.queue.writeBuffer(mesh.ub, 0, uniform.subarray(0, 32))
       }
       if (t === 1) {
         this.dev?.queue.writeBuffer(mesh.vb, 0, mesh.vertices)
@@ -2593,6 +2602,7 @@ export class WebGPURenderer {
     this.clearSourceHighlightOverlayBuffers()
     this.depth?.destroy()
     this.depth = null
+    this.depthView = null
     this.sceneUB?.destroy()
     this.sceneUB = null
     try { this.ctx?.unconfigure() } catch { /* Context may already be lost. */ }

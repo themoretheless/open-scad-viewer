@@ -1,19 +1,27 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-09-08",
+  "verified_at": "2026-09-10",
   "purpose": "native geometry and slicing architecture research; preparation for later ingestion",
   "rag": {
     "connected": true,
+    "client": "cursor",
+    "mcp_namespace": "user-rag-mcp",
+    "mcp_url": "http://127.0.0.1:7432/mcp",
+    "mcp_config": "/Users/themoretheless/.cursor/mcp.json",
     "backend": "duckdb",
     "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
     "ready_for_search": true,
     "fts_ready": true,
     "embedding_manifest_match": true,
-    "document_count": 82440,
-    "chunk_count": 642656,
-    "project_document_count": 259
+    "embed_provider": "ollama",
+    "embed_model": "nomic-embed-text",
+    "embed_dims": 768,
+    "document_count": 82844,
+    "chunk_count": 643994,
+    "project_document_count": 642,
+    "project_wing": "open-scad-viewer"
   },
-  "scope": "Targeted retrieval and source verification, not exhaustive reading of all 82440 documents. Historical repository surveys were consulted as prior synthesis, not revalidated repository by repository.",
+  "scope": "Targeted retrieval and source verification, not exhaustive reading of all 82844 documents. Historical repository surveys were consulted as prior synthesis, not revalidated repository by repository.",
   "records": [
     {
       "stage": "catalog",
@@ -342,5 +350,5 @@
       "reason": "Ambiguous acronyms returned non-geometry hits; not used in architecture."
     }
   ],
-  "ingestion_performed": false
+  "ingestion_performed": true
 }
