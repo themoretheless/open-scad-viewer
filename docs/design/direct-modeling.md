@@ -189,3 +189,13 @@ Verification: four patterns, repeatable/different seeds, all channel axes, compl
 The volumetric modes support **Область сетки → Только стенки**. Wall depth restricts the lattice to a signed-distance band at all source surfaces, including floor and roof. The interior is optionally hollow (default) or a solid core. Outer skin remains independent: set it to zero to expose lattice openings. Existing thin-walled solids can also use whole-volume mode to lattice their existing material. This is a clipped spatial graph, not a surface-conforming remesher; disconnected results are rejected. Wall depth must span at least two sampling steps. FDM fitting respects this additional sampling bound.
 
 Geometry tests cover hollow walls versus full-volume lattice, optional solid core, closed output and rejected undersampled wall depth. Nineteen related tests, type checking, geometry build and distribution checks passed.
+
+### Strength-oriented structures
+
+Three additional structures target high stiffness-to-weight rather than only volume reduction:
+
+- **Октет-ферма / Octet truss** — stretch-dominated 3D graph with cube corners plus face centres, face-to-corner struts and octahedron edges between face centres. Prefer this for skeletal walls (`Только стенки`) and volumetric lightening when isotropic stiffness matters. Selecting it defaults the lattice region toward a wall band.
+- **Изогрид / Isogrid** — extruded equilateral triangular openings (NASA-style isogrid). Best channel-mode choice for planar walls and panels; use Z channels for FDM when possible.
+- **ОЦК / BCC** — body-centred cubic struts from each cell centre to its eight corners. Strong under compression with a simpler, lighter graph than octet.
+
+The panel shows a short qualitative hint for every structure (stretch / mixed / bending / organic). Hints and rankings are geometric guidance only — not FEA, fatigue or print certification. Node/edge budgets remain 125 / 400; octet and BCC need larger cells on big bodies.
