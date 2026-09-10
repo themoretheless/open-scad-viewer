@@ -1596,7 +1596,7 @@ export class WebGPURenderer {
   private render() {
     this.updateSize()
     const canvas = this.canvas, dev = this.dev, ctx = this.ctx, sceneUB = this.sceneUB
-    if (!canvas || !dev || !ctx || !this.depth || !this.depthView || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
+    if (!canvas || !dev || !ctx || !this.depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
     const { eye, viewProjection } = this.cameraState()
     const sd = this.sceneUniformScratch
@@ -1612,8 +1612,9 @@ export class WebGPURenderer {
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
-    const depthView = this.depthView
-    if (!depthView) return
+    // Cached in updateSize; the fallback covers depth textures the cache miss
+    // predates (tests and external texture swaps) without per-frame allocation.
+    const depthView = this.depthView ?? this.depth.createView()
     const pass = enc.beginRenderPass({
       colorAttachments: [{
         view: ctx.getCurrentTexture().createView(),
