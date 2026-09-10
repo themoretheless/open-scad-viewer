@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { sha256Hex } from '../src/core/sha256';
+import { sha256Hex } from '../../src/core/sha256';
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/);
 const number = z.number().finite().min(-1e6).max(1e6);
 const scalar = z.union([number, z.object({ param: id }).strict()]);

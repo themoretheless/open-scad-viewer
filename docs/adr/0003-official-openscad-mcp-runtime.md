@@ -51,7 +51,7 @@ command
 downloads the checksum-pinned OFL Basic Regular font and its license text; all
 three installed files are bound into the verified manifest. Exact identities
 and redistribution obligations are recorded in
-[OFFICIAL_RUNTIME_NOTICES.md](../../OFFICIAL_RUNTIME_NOTICES.md).
+[OFFICIAL_RUNTIME_NOTICES.md](../OFFICIAL_RUNTIME_NOTICES.md).
 
 Each request executes in a fresh Node subprocess with:
 

@@ -3,7 +3,7 @@
 This document describes the architecture that exists in the repository after
 the Manifold rewrite, the [seven-role review](docs/review-of-main-rewrite.md),
 and the build/scene foundation pass. It is not a feature wishlist. Prioritized
-debt and acceptance criteria live in [recommendation.md](recommendation.md).
+debt and acceptance criteria live in [recommendation.md](docs/recommendation.md).
 
 ## Product boundary
 

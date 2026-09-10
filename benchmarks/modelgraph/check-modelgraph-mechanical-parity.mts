@@ -1,10 +1,10 @@
 /** Run after building a native mechanical-check harness; compares coordinates, topology and reports. */
 import {spawnSync} from 'node:child_process'
 import {writeFileSync} from 'node:fs'
-import {buildModelGraphGear} from '../src/services/modelGraphGears'
-import {buildModelGraphThread} from '../src/services/modelGraphThreads'
-import {buildModelGraphPlanetary} from '../src/services/modelGraphPlanetary'
-import {GEAR_DEFAULTS,THREAD_DEFAULTS,PLANETARY_DEFAULTS} from '../src/services/mechanicalGeneratorContract'
+import {buildModelGraphGear} from '../../src/services/modelGraphGears'
+import {buildModelGraphThread} from '../../src/services/modelGraphThreads'
+import {buildModelGraphPlanetary} from '../../src/services/modelGraphPlanetary'
+import {GEAR_DEFAULTS,THREAD_DEFAULTS,PLANETARY_DEFAULTS} from '../../src/services/mechanicalGeneratorContract'
 const functions:any={gear:buildModelGraphGear,thread:buildModelGraphThread,planetary:buildModelGraphPlanetary}
 const cases:any[]=[]; const add=(kind:string,base:any,variants:any[])=>variants.forEach((v,i)=>cases.push({name:kind+'_'+i,kind,options:{...base,...v}}))
 add('gear',GEAR_DEFAULTS,[{}, {teeth:18}, {teeth:64}, {teeth:128}, {module:0.2,bore:0,clearance:0.02,backlash:0.01}, {module:7}, {bore:0}, {flank_segments:3}, {flank_segments:12}, {pressure_angle:14.5,teeth:40}, {pressure_angle:30}, {internal:true,bore:0,teeth:72}, {internal:true,bore:0,teeth:128}, {teeth:8}, {teeth:129}, {teeth:24.5}, {flank_segments:2}, {module:0}, {pressure_angle:45}, {thickness:0}, {backlash:2}, {clearance:4}, {bore:1000}, {internal:true}, {internal:true,bore:0,teeth:72,rim_width:0}])

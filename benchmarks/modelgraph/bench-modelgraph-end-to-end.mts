@@ -1,6 +1,6 @@
 /** Fair warm SKADIS comparison: only the compiler changes; identical generated source
  * is parsed and built by the same uncached full-quality parseOpenSCAD call per sample.
- * Run: node --expose-gc --import tsx output/bench-modelgraph-end-to-end.mts
+ * Run: node --expose-gc --import tsx benchmarks/modelgraph/bench-modelgraph-end-to-end.mts
  */
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
@@ -8,15 +8,15 @@ import {cpus,totalmem,release} from 'node:os'
 import {performance} from 'node:perf_hooks'
 import {isDeepStrictEqual} from 'node:util'
 import {execFileSync} from 'node:child_process'
-import {compileModelGraphText as rust} from '../src/services/modelGraphText'
+import {compileModelGraphText as rust} from '../../src/services/modelGraphText'
 import {compileModelGraphText as typescript} from './modelgraph-text-typescript-reference'
-import {parseOpenSCAD,type ParseResult} from '../src/services/openscadParser'
+import {parseOpenSCAD,type ParseResult} from '../../src/services/openscadParser'
 
 const output=process.argv.find(value=>value.startsWith('--output='))?.slice('--output='.length) ?? 'output/modelgraph-end-to-end-benchmark.json'
 const input='examples/skadis-box/skadis-dovetail.modelgraph.scad'
 const source=readFileSync(input,'utf8')
 const sha=(data:Uint8Array|string)=>createHash('sha256').update(data).digest('hex')
-const files=[input,'output/modelgraph-text-typescript-reference.ts','output/modelGraph-runtime-reference.ts','output/modelGraphTextNurbs-runtime-reference.ts','output/modelGraphNurbs-runtime-reference.ts','src/services/modelGraphText.ts','src/services/modelGraph.ts','src/services/openscadParser.ts','src/generated/geometry-kernels/kernel_bg.wasm','output/bench-modelgraph-end-to-end.mts']
+const files=[input,'benchmarks/modelgraph/modelgraph-text-typescript-reference.ts','benchmarks/modelgraph/modelGraph-runtime-reference.ts','benchmarks/modelgraph/modelGraphTextNurbs-runtime-reference.ts','benchmarks/modelgraph/modelGraphNurbs-runtime-reference.ts','src/services/modelGraphText.ts','src/services/modelGraph.ts','src/services/openscadParser.ts','src/generated/geometry-kernels/kernel_bg.wasm','benchmarks/modelgraph/bench-modelgraph-end-to-end.mts']
 const hashes=Object.fromEntries(files.map(path=>[path,sha(readFileSync(path))]))
 const reference=typescript(source),actual=rust(source)
 if(reference.source!==actual.source)throw new Error('Generated sources must be byte-identical for this comparison')

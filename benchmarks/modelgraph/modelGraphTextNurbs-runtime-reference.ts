@@ -1,7 +1,7 @@
-import { checkModelGraphNumericType, type ModelGraphNumericType } from '../src/services/modelGraphNumericType'
+import { checkModelGraphNumericType, type ModelGraphNumericType } from '../../src/services/modelGraphNumericType'
 /** Lower compact expressions to a numeric NURBS document; source remains editable. */
 import { compileModelGraphNurbs } from './modelGraphNurbs-runtime-reference'
-import { createUnitArithmetic, LENGTH, SCALAR, ANGLE, type NumericValue, type Dimension, type Unit } from '../src/services/modelGraphUnits'
+import { createUnitArithmetic, LENGTH, SCALAR, ANGLE, type NumericValue, type Dimension, type Unit } from '../../src/services/modelGraphUnits'
 export function compileTextNurbs(nodes: Record<string, unknown>[], parameters: Record<string, unknown>[], root: string) {
   const fail = (_code: string, path: string, message: string): never => { throw new Error(`ModelGraph Text ${path}: ${message}`) }
   const math = createUnitArithmetic(fail)

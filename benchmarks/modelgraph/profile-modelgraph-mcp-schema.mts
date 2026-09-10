@@ -1,10 +1,10 @@
-/** Run with: node --import tsx output/profile-modelgraph-mcp-schema.mts */
+/** Run with: node --import tsx benchmarks/modelgraph/profile-modelgraph-mcp-schema.mts */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { performance } from 'node:perf_hooks'
 import { cpus } from 'node:os'
 import { isDeepStrictEqual } from 'node:util'
 import { modelGraphSchema as before } from './modelGraph-runtime-reference'
-import { modelGraphSchema as after } from '../src/services/modelGraph'
+import { modelGraphSchema as after } from '../../src/services/modelGraph'
 const document = JSON.parse(readFileSync('output/modelgraph-schema-profile-skadis.json', 'utf8'))
 if (!isDeepStrictEqual(before.parse(document), after.parse(document))) throw new Error('Normalized document differs')
 const runs = [['recursive_union', before], ['discriminant_dispatch', after]] as const

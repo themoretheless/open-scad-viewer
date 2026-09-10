@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {compileModelGraphText as rust} from '../src/services/modelGraphText'
+import {compileModelGraphText as rust} from '../../src/services/modelGraphText'
 import {compileModelGraphText as ts} from './modelgraph-text-typescript-reference'
 const samples=['examples/skadis-box/skadis-dovetail.modelgraph.scad','examples/modelgraph-text/generic-functions.scad','examples/modelgraph-text/range-pattern.scad'];
 const results=[]

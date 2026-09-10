@@ -42,6 +42,6 @@ for(const [name,input]of [
  ['too_many_nodes',{...base({id:'shape',op:'sphere',radius:1}),nodes:Array.from({length:129},()=>({id:'shape',op:'sphere',radius:1}))}],
  ['long_message',{...base({id:'shape',op:'sphere',radius:1}),assertions:[{condition:1,message:'😀'.repeat(129)}]}]
 ]as any[])add(name,input)
-const report={description:'Canonical schema parity corpus captured from TypeScript Zod schema before Rust runtime migration; validates schema/default equivalence, not graph semantics.',source_sha256:createHash('sha256').update(readFileSync('output/modelGraph-runtime-reference.ts')).digest('hex'),cases}
+const report={description:'Canonical schema parity corpus captured from TypeScript Zod schema before Rust runtime migration; validates schema/default equivalence, not graph semantics.',source_sha256:createHash('sha256').update(readFileSync('benchmarks/modelgraph/modelGraph-runtime-reference.ts')).digest('hex'),cases}
 writeFileSync('crates/modelgraph-runtime/tests/fixtures/schema-parity.json',JSON.stringify(report)+'\n')
 console.log({cases:cases.length,valid:cases.filter(x=>!x.error).length,invalid:cases.filter(x=>x.error).length,bytes:JSON.stringify(report).length})

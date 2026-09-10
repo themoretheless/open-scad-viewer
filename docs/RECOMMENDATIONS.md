@@ -3,8 +3,8 @@
 Actionable plan derived from a 10-perspective architecture audit (Frontend, Performance, Parser, GPU, UX, A11y, i18n, DevOps, Test, Security).
 
 This is the **execution plan**. It is kept in sync with:
-- [README.md](./README.md) — what the app does (user-facing)
-- [architecture.md](./architecture.md) — how it's built + the target structure (the 4 phases below mirror its "Planned Refactor")
+- [README.md](../README.md) — what the app does (user-facing)
+- [architecture.md](../architecture.md) — how it's built + the target structure (the 4 phases below mirror its "Planned Refactor")
 - [ISSUES.md](./ISSUES.md) — the 500-item defect catalog these phases resolve (domain→phase mapping at its end)
 - [TOP-50-ISSUES.md](./TOP-50-ISSUES.md) — severity-ranked shortlist with a concrete fix-sequencing order (now on **audit Pass 2** — the numbered items referenced throughout this file are Pass 2's list, not the original)
 

@@ -153,7 +153,7 @@ verifies both
 SHA-256 digests, and records them in the runtime manifest so `text()` has a
 deterministic default font. The GPL runtime, font, and license are not fetched
 by `npm install` or committed or bundled into the web app; exact identities and
-redistribution notes are in [OFFICIAL_RUNTIME_NOTICES.md](OFFICIAL_RUNTIME_NOTICES.md).
+redistribution notes are in [OFFICIAL_RUNTIME_NOTICES.md](docs/OFFICIAL_RUNTIME_NOTICES.md).
 MCP refuses official execution if the manifest, runtime, font, license, patch,
 or Node permission-model precondition cannot be verified.
 
@@ -504,7 +504,7 @@ prerequisites. The MCP sidecar has its own
 
 - [ModelGraph/1 model prompt](docs/languages/modelgraph-1-prompt.md) — the MCP functional modeling language: pure functions, lexical closures, immutable lists and geometry values, bounded evaluation, and examples. Read `openscad://language/modelgraph-1` from MCP for the same guide and JSON Schema. Regenerate artifacts with `node --import tsx scripts/export-modelgraph-language.mjs`.
 - [architecture.md](architecture.md) — the current module map, worker/kernel design, and active technical debt.
-- [recommendation.md](recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
+- [recommendation.md](docs/recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
 - [docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md) — the 7-role panel review of this rewrite: what was fixed immediately, what remains, and the convergence plan with the feature branch (`claude/top-issues-architecture-sync-00p2q9`).
 - [docs/research/mcp-ten-agent-review.md](docs/research/mcp-ten-agent-review.md) — ten MCP reviews, implemented decisions, rejected scope, and the ranked next stage.
 

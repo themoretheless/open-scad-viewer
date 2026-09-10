@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {compileModelGraphText} from '../../src/services/modelGraphText'
+import {parseOpenSCAD} from '../../src/services/openscadParser'
 const source=readFileSync('examples/skadis-box/skadis-dovetail.modelgraph.scad','utf8')
 const samples=[]
 let result

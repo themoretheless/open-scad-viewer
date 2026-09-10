@@ -1,6 +1,6 @@
 import { compileTextNurbs } from './modelGraphTextNurbs-runtime-reference'
 import { compileModelGraph, ModelGraphError, type Expression } from './modelGraph-runtime-reference'
-import type { CustomizerParameter } from '../src/services/scadCustomizer'
+import type { CustomizerParameter } from '../../src/services/scadCustomizer'
 
 type TypeRef = { name: string; args: TypeRef[] }
 type Field = { name: string; type: TypeRef }

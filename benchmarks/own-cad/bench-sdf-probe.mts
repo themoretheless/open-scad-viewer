@@ -1,4 +1,4 @@
-import {callGeometryRust} from '../src/services/geometryRustKernel'
+import {callGeometryRust} from '../../src/services/geometryRustKernel'
 // SDF-heavy probe: smooth-union of sphere+box tessellated at increasing grids.
 const field={kind:'smooth_union',a:{kind:'sphere',center:[0,0,0],radius:10},b:{kind:'box',center:[8,0,0],half_size:[6,6,6]},radius:3}
 const samples=[]

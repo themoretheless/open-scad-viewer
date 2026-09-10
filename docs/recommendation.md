@@ -3,9 +3,9 @@
 This is the living, prioritized debt register for OpenSCAD Viewer. It replaces
 the historical hundreds-of-items wishlist, which mixed completed work, product
 ideas and obsolete prototype findings. Architecture and invariants live in
-[architecture.md](architecture.md). Evidence also comes from the
-[seven-role rewrite review](docs/review-of-main-rewrite.md) and the research
-under [`docs/research`](docs/research).
+[architecture.md](../architecture.md). Evidence also comes from the
+[seven-role rewrite review](review-of-main-rewrite.md) and the research
+under [`docs/research`](research).
 
 ## Status vocabulary
 
@@ -23,19 +23,19 @@ Reopen these only for a demonstrated regression.
 
 | Status | Capability | Evidence |
 | --- | --- | --- |
-| Done | Real CSG and geometry metrics | Manifold-backed evaluator and geometry tests in [`openscadParser.ts`](src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
+| Done | Real CSG and geometry metrics | Manifold-backed evaluator and geometry tests in [`openscadParser.ts`](../src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
 | Done | Panel-review geometry correctness fixes | Polyhedron winding/merge, EvenOdd polygon fill, positive/positioned extrusion and positioned revolution failures have regressions. |
 | Done | Input/resource hardening | Source/AST/depth/shape/triangle limits plus evaluation-step, evaluated-value, `concat`/`str`, extrusion-slice and pre-decode share-hash caps. |
 | Done | Customizer and STL boundary fixes | Structural literal offsets prevent source corruption; binary STL headers truncate encoded UTF-8 to 80 bytes. |
 | Done | Statement assertion foundation | `assert(condition, message)` uses OpenSCAD truthiness, strict argument binding, transparent child evaluation and positioned fail-fast diagnostics across the Worker boundary; expression-form assert remains unsupported. |
-| Done | Protocol-v3-only geometry builds | Runtime-validated messages and transfer payloads, required preview-reduction metadata, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](src/services/buildCoordinator.ts). |
-| Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](src/services/workspaceDocument.ts) and revision/job envelopes. |
+| Done | Protocol-v3-only geometry builds | Runtime-validated messages and transfer payloads, required preview-reduction metadata, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](../src/services/buildCoordinator.ts). |
+| Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](../src/services/workspaceDocument.ts) and revision/job envelopes. |
 | Done | Stable operation/evaluated-entity identity | Structural `SourceOperationId`, dynamic `SceneEntityId`, exact spans and ambiguity-safe replacement matching. |
-| Done | Neutral mesh/build contract seam | [`src/core/mesh.ts`](src/core/mesh.ts) and [`src/core/build.ts`](src/core/build.ts) own contracts and deduplicated transfer discovery; a test keeps parser value imports Worker-only. |
-| Done | Tested replacement-scene continuity | [`scenePublication.ts`](src/services/scenePublication.ts) fail-closes ambiguity and preserves visibility/selection/isolation only when identity is safe. |
+| Done | Neutral mesh/build contract seam | [`src/core/mesh.ts`](../src/core/mesh.ts) and [`src/core/build.ts`](../src/core/build.ts) own contracts and deduplicated transfer discovery; a test keeps parser value imports Worker-only. |
+| Done | Tested replacement-scene continuity | [`scenePublication.ts`](../src/services/scenePublication.ts) fail-closes ambiguity and preserves visibility/selection/isolation only when identity is safe. |
 | Done | Two-level accelerated picking | Scene AABB hierarchy plus lazy exact traversal of per-mesh triangle BVHs. |
 | Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry, coalesced device loss with one follow-up, false-ready prevention, and App-driven scene/camera/history rehydration with focused tests. |
-| Done | One declarative command inventory | [`commandRegistry.ts`](src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
+| Done | One declarative command inventory | [`commandRegistry.ts`](../src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
 | Done | Repeatable quality gate | Typecheck, Vitest and production build run through `npm run check` in CI. |
 | Done | One-build preview promotion | Auto builds run preview first and request full only when the versioned reduction policy reports a real quality change; a pure policy and byte-level equivalence corpus cover promotion and stale targets. A process-local monotonic build generation prevents restored documents from aliasing persistence revisions. |
 | Done | Versioned independent language decision | `openscad-viewer-subset@1`, compatibility/contributor policy and third-party notices explicitly exclude bundled official OpenSCAD runtime code. The project VFS is host/network-isolated, Unicode-canonical, traversal-safe and globally budgeted; `include`/`use` remain coded unsupported features until a future contract version defines semantics. |
@@ -64,11 +64,11 @@ Reopen these only for a demonstrated regression.
 - **Priority/status:** P0 / In progress
 - **Evidence:** lexer/parser, scope evaluation, direct Manifold calls,
   tessellation, provenance, topology and BVH construction previously shared
-  one module. The pure [`openscadCompiler.ts`](src/services/openscadCompiler.ts)
+  one module. The pure [`openscadCompiler.ts`](../src/services/openscadCompiler.ts)
   now owns tokenization, parsing and stable operation identity and returns a
   deeply frozen, structured-clone-safe operation IR without importing
-  Manifold. [`geometryKernel.ts`](src/services/geometryKernel.ts) defines the
-  lifecycle port, while [`manifoldGeometryKernel.ts`](src/services/manifoldGeometryKernel.ts)
+  Manifold. [`geometryKernel.ts`](../src/services/geometryKernel.ts) defines the
+  lifecycle port, while [`manifoldGeometryKernel.ts`](../src/services/manifoldGeometryKernel.ts)
   exclusively owns WASM bootstrap, retry and GC-session disposal. The public
   facade and serialized lifetime remain compatible and parity-covered.
 - **Risk:** language, kernel and inspection changes invalidate the entire
@@ -87,7 +87,7 @@ Reopen these only for a demonstrated regression.
 - **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
   isolation, visibility, projection and camera-related state. The canonical
   CPU-side meshes/visibility/selection/isolation snapshot now lives in
-  [`sceneController.ts`](src/services/sceneController.ts); Vue exposes computed
+  [`sceneController.ts`](../src/services/sceneController.ts); Vue exposes computed
   projections and renderer callbacks are typed intents into that owner.
   Replacement-scene publication commits atomically through the controller,
   hidden selections fail closed, and camera face presets now apply orientation
@@ -106,7 +106,7 @@ Reopen these only for a demonstrated regression.
 - **Priority/status:** P1 / In progress
 - **Evidence:** stable entity IDs exist, but `MeshData` eagerly combines render
   vertices, topology, provenance, semantic edges and BVH. A versioned neutral
-  [`GeometryScene`](src/core/scene.ts) contract now separates content-addressed
+  [`GeometryScene`](../src/core/scene.ts) contract now separates content-addressed
   vertex/index assets from entity identity, transform, material and explicitly
   staged inspection artifacts. Zero-copy legacy adapters preserve current wire
   behavior, shared tessellation transfers once, and validators reject duplicate
@@ -140,17 +140,17 @@ Reopen these only for a demonstrated regression.
 ### R7 — Decompose the renderer without changing interaction behavior
 
 - **Priority/status:** P1 / In progress
-- **Evidence:** [`cameraHistory.ts`](src/services/cameraHistory.ts) and
-  [`rendererRecoveryGate.ts`](src/services/rendererRecoveryGate.ts) now provide
+- **Evidence:** [`cameraHistory.ts`](../src/services/cameraHistory.ts) and
+  [`rendererRecoveryGate.ts`](../src/services/rendererRecoveryGate.ts) now provide
   adapter-free tested contracts for navigation history and bounded recovery.
   Neutral public types now live in
-  [`rendererContracts.ts`](src/services/rendererContracts.ts), canonical view
-  orientation/projection in [`viewportModel.ts`](src/services/viewportModel.ts),
+  [`rendererContracts.ts`](../src/services/rendererContracts.ts), canonical view
+  orientation/projection in [`viewportModel.ts`](../src/services/viewportModel.ts),
   and orbit/pan/pinch/wheel math in
-  [`cameraGestures.ts`](src/services/cameraGestures.ts). App and ViewCube no
+  [`cameraGestures.ts`](../src/services/cameraGestures.ts). App and ViewCube no
   longer depend on the WebGPU monolith for model/types, while compatibility
   re-exports preserve callers. The main lifecycle workflow remains in App, while
-  [`webgpuRenderer.ts`](src/services/webgpuRenderer.ts) still owns device
+  [`webgpuRenderer.ts`](../src/services/webgpuRenderer.ts) still owns device
   lifecycle, pipelines/resources, camera/input, picking, visibility, selection,
   measurements, sections and overlays.
 - **Risk:** recovery, interaction and draw changes share broad mutable state and
@@ -248,7 +248,7 @@ Reopen these only for a demonstrated regression.
   exporters/import, examples, PWA/offline and tests, but was built around a
   competing large-component architecture. The review identifies this rewrite
   as the structural base.
-- **Current evidence:** [`docs/feature-parity.json`](docs/feature-parity.json)
+- **Current evidence:** [`docs/feature-parity.json`](feature-parity.json)
   pins the donor ref and records an explicit port/partial/defer decision with
   current-file evidence for every reviewed capability; CI rejects duplicate or
   evidence-free entries. Audit found the donor does not actually contain a

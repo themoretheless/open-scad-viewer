@@ -41,9 +41,9 @@ and [COPYING](https://raw.githubusercontent.com/openscad/openscad/master/COPYING
 plus [OFFICIAL_RUNTIME_NOTICES.md](OFFICIAL_RUNTIME_NOTICES.md) for all pinned identities.
 
 Language behavior, limits and unsupported features are defined by
-[`src/core/languageContract.ts`](src/core/languageContract.ts) for the
+[`src/core/languageContract.ts`](../src/core/languageContract.ts) for the
 independent subset and
-[`src/core/openScad2021Contract.ts`](src/core/openScad2021Contract.ts) for the
+[`src/core/openScad2021Contract.ts`](../src/core/openScad2021Contract.ts) for the
 stable profile. Observable semantic changes require contract version/revision
 review and conformance fixtures. The immutable
 `openscad://language/openscad-2021.01` MCP resource publishes that canonical
@@ -81,4 +81,4 @@ development/non-authoritative/incomplete until the independent qualification
 gate is actually complete.
 
 The security and routing decision is recorded in
-[`docs/adr/0003-official-openscad-mcp-runtime.md`](docs/adr/0003-official-openscad-mcp-runtime.md).
+[`docs/adr/0003-official-openscad-mcp-runtime.md`](adr/0003-official-openscad-mcp-runtime.md).

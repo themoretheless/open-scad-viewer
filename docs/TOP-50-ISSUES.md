@@ -2,7 +2,7 @@
 
 A severity-ranked shortlist curated from the full [ISSUES.md](./ISSUES.md) (500 items) plus a second, independent audit pass. These are the ones to fix first — highest blast radius for correctness, security, data loss, performance, and architecture.
 
-Synced with: [README.md](./README.md) · [architecture.md](./architecture.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [ISSUES.md](./ISSUES.md)
+Synced with: [README.md](../README.md) · [architecture.md](../architecture.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [ISSUES.md](./ISSUES.md)
 
 Each row: rank · `file:line` · problem · **why it matters** · → Recommendations phase.
 
