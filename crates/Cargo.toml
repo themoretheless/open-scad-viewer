@@ -1,5 +1,5 @@
 [workspace]
-members = ["value-codec", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "subdivision-kernel", "sdf-kernel", "photogrammetry-kernel", "photogrammetry-ffi", "photogrammetry-wasm", "photogrammetry-native"]
+members = ["value-codec", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "geometry-wasm", "geometry-native", "subdivision-kernel", "sdf-kernel", "photogrammetry-kernel", "photogrammetry-ffi", "photogrammetry-wasm", "photogrammetry-native"]
 resolver = "2"
 
 [profile.release]

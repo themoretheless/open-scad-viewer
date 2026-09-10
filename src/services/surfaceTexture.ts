@@ -1,5 +1,5 @@
 import type {DirectBody} from './directModeling'
-import {inspectPolygonMesh} from './polygonKernel'
+import {inspectPolygonMesh} from './geometry/polygon'
 import {cross3,dot3,unit3,type Vec3} from './directSketchGeometry'
 export type SurfacePattern='ribs'|'grooves'|'knurl'|'fuzzy'|'dimples'|'waves'
 export interface SurfaceTextureOptions {pattern:SurfacePattern;pitch:number;height:number;angle:number;seed:number;detail:number;invert:boolean;triangles?:number[];origin:Vec3;u:Vec3;v:Vec3}

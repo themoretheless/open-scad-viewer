@@ -1,7 +1,7 @@
 /** Surface construction is implemented by the own Rust kernel. */
 import { type NurbsCurve } from './nurbsCurve'
 import { type NurbsSurface } from './nurbsSurface'
-import { callNurbsRust } from './nurbsRustKernel'
+import { callNurbsRust } from './geometry/nurbs'
 export function loftNurbsCurves(curves: NurbsCurve[]): NurbsSurface { return callNurbsRust('loft', { curves }) }
 export function extrudeNurbsCurve(curve: NurbsCurve, vector: number[]): NurbsSurface { return callNurbsRust('extrude', { curve, vector }) }
 export function revolveNurbsCurve(curve: NurbsCurve, origin: number[], axis: number[], angle: number): NurbsSurface { return callNurbsRust('revolve', { curve, origin, axis, angle }) }

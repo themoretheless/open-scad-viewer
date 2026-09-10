@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, extrudeDirectSketch, parseDirectDocument, transformDirectPoints } from '../src/services/directModeling'
-import { inspectPolygonMesh } from '../src/services/polygonKernel'
+import { inspectPolygonMesh } from '../src/services/geometry/polygon'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 const sketch = () => ({ id: 's', name: 'L', closed: true, points: [[0,0],[20,0],[20,10],[10,10],[10,20],[0,20]] as [number,number][] })
 describe('direct modeling', () => {

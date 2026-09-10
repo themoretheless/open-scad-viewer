@@ -1,4 +1,4 @@
-import type { ManifoldToplevel } from '../src/services/ownGeometryModule'
+import type { ManifoldToplevel } from '../src/services/geometry/module'
 import { describe, expect, it, vi } from 'vitest'
 import { ManifoldGeometryKernel } from '../src/services/manifoldGeometryKernel'
 import { getWasm, parseOpenSCAD } from '../src/services/openscadParser'

@@ -1,5 +1,5 @@
 import { sampleCurve, worldPoint, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
-import { extrudePolygonProfile, type PolygonMesh } from './polygonKernel'
+import { extrudePolygonProfile, type PolygonMesh } from './geometry/polygon'
 
 export type Point2 = [number, number]
 export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }

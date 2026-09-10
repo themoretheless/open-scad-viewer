@@ -1,7 +1,7 @@
 import {bodyPoints,type DirectBody,type Point2} from './directModeling'
 import {solidTopology} from './directSolidTools'
-import {callGeometryRust} from './geometryRustKernel'
-import {booleanPolygonMeshes,extrudePolygonProfile,loftPolygonSections,inspectPolygonMesh,type PolygonBuild} from './polygonKernel'
+import {callGeometryRust} from './geometry/kernel'
+import {booleanPolygonMeshes,extrudePolygonProfile,loftPolygonSections,inspectPolygonMesh,type PolygonBuild} from './geometry/polygon'
 import {cross3,dot3,unit3,worldPoint,type Vec3} from './directSketchGeometry'
 import {directCornerTool} from './directProfileTools'
 /** Sampled shell. step is the requested maximum grid spacing, never an exact B-rep tolerance. */

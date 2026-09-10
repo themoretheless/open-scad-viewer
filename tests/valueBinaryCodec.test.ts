@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest'
 import {deflateRawSync,constants} from 'node:zlib'
 import {encodeBinary,decodeBinary} from '../src/services/valueBinaryCodec'
 import {unpackWasm} from '../src/services/wasmPacking'
-import {callGeometryRust,prepareGraphRust,createRustSurfaceEvaluator} from '../src/services/geometryRustKernel'
+import {callGeometryRust,prepareGraphRust,createRustSurfaceEvaluator} from '../src/services/geometry/kernel'
 
 describe('dependency-free WASM boundary',()=>{
  it('round-trips Unicode, numbers, arrays and own prototype-like keys',()=>{

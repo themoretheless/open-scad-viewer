@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest'
 import {compileModelGraph,hashModelGraphDocument,ModelGraphError,setModelGraphParameters} from '../src/services/modelGraph'
 import {compileModelGraphNurbs,hashNurbsDocument} from '../src/services/modelGraphNurbs'
 import {modelGraphTextControls} from '../src/services/modelGraphText'
-import {prepareGraphRust} from '../src/services/geometryRustKernel'
+import {prepareGraphRust} from '../src/services/geometry/kernel'
 
 const sphere=()=>({language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'Shape',op:'sphere',radius:1}],root:'Shape'})
 

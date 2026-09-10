@@ -1,4 +1,4 @@
-import type {PolygonMesh} from './polygonKernel'
+import type {PolygonMesh} from './geometry/polygon'
 import {cross3,dot3} from './directSketchGeometry'
 type Edge={a:number;b:number;cost:number;va:number;vb:number}
 /** Topology-preserving short-edge collapse. Cluster displacement is explicitly bounded. */

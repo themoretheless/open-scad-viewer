@@ -3,7 +3,7 @@ import {it,expect,vi,afterEach} from 'vitest'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}

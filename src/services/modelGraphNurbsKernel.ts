@@ -1,17 +1,17 @@
 import {createNativeGeometryArtifact} from '../core/nativeGeometry';
-import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from './polygonKernel';
-import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsPatches,type NurbsPatchSet} from './meshReconstruction';
-import type {SubdivisionCage} from './subdivisionKernel';
-import {tessellateSubdivision} from './subdivisionKernel';
-import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './sdfKernel';
-import {createBrepBox,tessellateNurbsBrep,type NurbsBrep} from './brepKernel';
-import { inspectPolygonMesh,booleanPolygonMeshes } from './polygonKernel';
+import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from './geometry/polygon';
+import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsPatches,type NurbsPatchSet} from './geometry/reconstruction';
+import type {SubdivisionCage} from './geometry/subdivision';
+import {tessellateSubdivision} from './geometry/subdivision';
+import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './geometry/sdf';
+import {createBrepBox,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
+import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileModelGraphNurbs } from './modelGraphNurbs';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from './nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from './nurbsSurface';
 import { loftAlignedNurbsCurves,sweepNurbsCurve,loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve } from './nurbsConstructors';
-import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './nurbsTessellation';
+import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './geometry/tessellation';
 type Mesh = ReturnType<typeof tessellateNurbsSurface>;
 type Value = {kind:'profile';data:PolygonProfile} | {kind:'patches';data:NurbsPatchSet} | {kind:'subdivision';data:SubdivisionCage} | {kind:'sdf';data:SdfField} | {kind:'brep';data:NurbsBrep} | {
     kind: 'curve';
@@ -36,14 +36,14 @@ export type OwnNurbsRequest = {
 };
 /** An sdf_tessellate job whose input subtree is pure SDF (no mesh inputs). */
 export interface SdfTessellationJob {
-    field: import('./sdfKernel').SdfField
+    field: import('./geometry/sdf').SdfField
     grid: { min: number[]; max: number[]; cells: number[] }
 }
 
 /** Collects sdf_tessellate jobs resolvable without mesh evaluation, so the
  * caller can run their grid sampling on the GPU before the synchronous build. */
 export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
-    type SdfField = import('./sdfKernel').SdfField
+    type SdfField = import('./geometry/sdf').SdfField
     const compiled = compileModelGraphNurbs(document)
     const nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n] as const))
     const memo = new Map<string, SdfField | null>()

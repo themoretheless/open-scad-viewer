@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest'
 import {cadOperation,bounds,type CadOptions} from '../src/services/cadWorkbench'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {inspectCadPairs} from '../src/services/cadInspection'
 import {cadDrawing} from '../src/services/cadDrawing'
 const box=(id='0',x=0)=>extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[x,0],[x+10,0],[x+10,10],[x,10]]},10,id)

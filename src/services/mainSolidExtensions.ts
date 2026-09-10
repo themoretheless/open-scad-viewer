@@ -1,7 +1,7 @@
 import {sampledShell,localMeshBevel} from './generalMeshTools'
 import {bodyPoints,type DirectBody,type Point2} from './directModeling'
 import {solidTopology,facePlane,shellSolid,bevelSolidEdge} from './directSolidTools'
-import {polygonBoundaryLoops,extrudePolygonProfile,booleanPolygonMeshes,inspectPolygonMesh} from './polygonKernel'
+import {polygonBoundaryLoops,extrudePolygonProfile,booleanPolygonMeshes,inspectPolygonMesh} from './geometry/polygon'
 import {dot3,unit3,worldPoint,offsetSketch,type Vec3} from './directSketchGeometry'
 import {directCornerTool} from './directProfileTools'
 /** Recognize an actual straight prism before using a 2D offset/corner construction. */

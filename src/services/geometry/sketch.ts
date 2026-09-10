@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometryRustKernel'
+import {callGeometryRust} from './kernel'
 export type SketchConstraint =
  | {kind:'fix';point:number;at:number[]}
  | {kind:'horizontal'|'vertical'|'coincident';a:number;b:number}

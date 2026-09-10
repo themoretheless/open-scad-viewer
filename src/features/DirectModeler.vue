@@ -5,7 +5,7 @@ import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../serv
 import { sampleCurve, transformSketch, bakeSketch, offsetSketch, trimSketch, extendSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, shellSolid, splitSolid, transformSelection } from '../services/directSolidTools'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/polygonKernel'
+import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string }>()
 const emit = defineEmits<{ close: []; append: [source: string] }>()

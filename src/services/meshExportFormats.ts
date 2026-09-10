@@ -1,4 +1,4 @@
-import { exportNurbsStl, inspectNurbsMesh, type NurbsMesh } from './nurbsTessellation';
+import { exportNurbsStl, inspectNurbsMesh, type NurbsMesh } from './geometry/tessellation';
 export const MESH_EXPORT_FORMATS = ['stl', 'stl_binary', '3mf', 'obj', 'ply', 'off', 'amf'] as const;
 export type MeshExportFormat = typeof MESH_EXPORT_FORMATS[number];
 const utf8 = (s: string) => new TextEncoder().encode(s);

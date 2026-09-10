@@ -1,10 +1,11 @@
-//! Private linear-memory ABI. The host owns request buffers and frees every response.
+//! Linear-memory ABI core. The host owns request buffers and frees every response.
+//! The `geometry-wasm` and `geometry-native` shells add the extern "C" surface.
 use super::*;
 use std::cell::RefCell;
 thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCell::new(Vec::new())};}
 const LIMIT: usize = 32 * 1024 * 1024;
-#[no_mangle]
-pub extern "C" fn abi_alloc(len: usize) -> usize {
+
+pub fn abi_alloc(len: usize) -> usize {
     if len > LIMIT {
         return 0;
     }
@@ -13,8 +14,8 @@ pub extern "C" fn abi_alloc(len: usize) -> usize {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-#[no_mangle]
-pub unsafe extern "C" fn abi_free(ptr: usize, len: usize) {
+
+pub unsafe fn abi_free(ptr: usize, len: usize) {
     if ptr != 0 {
         drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
             ptr as *mut u8,
@@ -22,10 +23,20 @@ pub unsafe extern "C" fn abi_free(ptr: usize, len: usize) {
         )))
     }
 }
+thread_local! {static LAST_RESPONSE: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
+/// Native hosts fetch responses through these (the packed u64 return truncates
+/// the pointer to 32 bits, which only wasm32 linear memory can promise).
+pub fn abi_response_ptr() -> usize {
+    LAST_RESPONSE.with(|last| last.get().0)
+}
+pub fn abi_response_len() -> usize {
+    LAST_RESPONSE.with(|last| last.get().1)
+}
 fn packed(v: Value) -> u64 {
     let bytes=value_codec::encode_binary(&v).unwrap_or_else(|_|value_codec::encode_binary(&json!({"ok":false,"error":{"code":"GEOMETRY_RESOURCE_LIMIT","message":"Response exceeds transport limit"}})).unwrap());
     let len = bytes.len();
     let ptr = Box::into_raw(bytes.into_boxed_slice()) as *mut u8 as usize;
+    LAST_RESPONSE.with(|last| last.set((ptr, len)));
     ((len as u64) << 32) | ptr as u64
 }
 fn geometry(result: Result<Value>) -> Value {
@@ -37,8 +48,8 @@ fn geometry(result: Result<Value>) -> Value {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-#[no_mangle]
-pub unsafe extern "C" fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
+
+pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
     if len > LIMIT {
         return packed(geometry(Err(input("Request exceeds transport limit"))));
     }
@@ -136,8 +147,8 @@ pub unsafe extern "C" fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-#[no_mangle]
-pub unsafe extern "C" fn abi_mesh_field(ptr: usize, field: u32) -> usize {
+
+pub unsafe fn abi_mesh_field(ptr: usize, field: u32) -> usize {
     let m = &*(ptr as *const CadMeshBuffer);
     match field {
         0 => m.positions_ptr(),
@@ -152,8 +163,8 @@ pub unsafe extern "C" fn abi_mesh_field(ptr: usize, field: u32) -> usize {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-#[no_mangle]
-pub unsafe extern "C" fn abi_mesh_free(ptr: usize) {
+
+pub unsafe fn abi_mesh_free(ptr: usize) {
     if ptr != 0 {
         drop(Box::from_raw(ptr as *mut CadMeshBuffer))
     }
@@ -161,8 +172,8 @@ pub unsafe extern "C" fn abi_mesh_free(ptr: usize) {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-#[no_mangle]
-pub unsafe extern "C" fn abi_import_mesh(
+
+pub unsafe fn abi_import_mesh(
     stride: usize,
     vp: usize,
     vl: usize,

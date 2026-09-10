@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl, inspectNurbsMesh, type NurbsMesh, type NurbsTrim } from '../src/services/nurbsTessellation'
+import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl, inspectNurbsMesh, type NurbsMesh, type NurbsTrim } from '../src/services/geometry/tessellation'
 import type { NurbsSurface } from '../src/services/nurbsSurface'
 import { revolveNurbsCurve } from '../src/services/nurbsConstructors'
 

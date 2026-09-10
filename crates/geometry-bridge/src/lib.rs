@@ -557,5 +557,5 @@ pub fn import_cad_mesh(stride: usize, vertices: &[f32], indices: &[u32]) -> Resu
     cad::import_buffers(stride, vertices, indices)
 }
 
-#[cfg(target_arch = "wasm32")]
-mod abi;
+/// Linear-memory ABI core shared by the geometry-wasm / geometry-native shells.
+pub mod abi;

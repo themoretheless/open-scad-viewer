@@ -1,5 +1,5 @@
 import {bodyPoints,type DirectBody} from './directModeling'
-import {booleanPolygonMeshes} from './polygonKernel'
+import {booleanPolygonMeshes} from './geometry/polygon'
 const sub=(a:number[],b:number[])=>a.map((v,k)=>v-b[k]),dot=(a:number[],b:number[])=>a.reduce((s,v,k)=>s+v*b[k],0)
 const norm=(v:number[])=>Math.sqrt(dot(v,v))
 function pointTriangle(p:number[],a:number[],b:number[],c:number[]){

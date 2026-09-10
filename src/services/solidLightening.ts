@@ -1,7 +1,7 @@
 import {decimateLattice} from './latticeDecimation'
-import {callGeometryRust} from './geometryRustKernel'
+import {callGeometryRust} from './geometry/kernel'
 import type {DirectBody} from './directModeling'
-import {booleanPolygonMeshes,extrudePolygonProfile,inspectPolygonMesh} from './polygonKernel'
+import {booleanPolygonMeshes,extrudePolygonProfile,inspectPolygonMesh} from './geometry/polygon'
 export type LighteningPattern='bone'|'spatial'|'grid'|'triangles'|'honeycomb'|'web'
 export interface LighteningOptions {pattern:LighteningPattern;axis:'x'|'y'|'z';cell:number;rib:number;rim:number;bottom:number;top:number;seed:number;jitter:number;lineWidth:number;perimeters:number;skin?:number;step?:number;openTop?:boolean;diagonals?:boolean;wallDepth?:number;keepCore?:boolean}
 type P=[number,number]
@@ -56,7 +56,7 @@ export function spatialGraph(body:DirectBody,o:LighteningOptions){
  return {nodes,edges}
 }
 function spatialLattice(body:DirectBody,o:LighteningOptions):DirectBody{
- const graph=spatialGraph(body,o),skin=o.skin??0,step=o.step??Math.min(o.rib/3,skin>0?skin/2:Infinity),mesh=callGeometryRust<import('./polygonKernel').PolygonBuild>('mesh_spatial_lattice',{mesh:body.mesh,...graph,radius:o.rib/2,skin,step,organic:o.pattern==='bone',openTop:o.openTop??false,wallDepth:o.wallDepth??0,keepCore:o.keepCore??false})
+ const graph=spatialGraph(body,o),skin=o.skin??0,step=o.step??Math.min(o.rib/3,skin>0?skin/2:Infinity),mesh=callGeometryRust<import('./geometry/polygon').PolygonBuild>('mesh_spatial_lattice',{mesh:body.mesh,...graph,radius:o.rib/2,skin,step,organic:o.pattern==='bone',openTop:o.openTop??false,wallDepth:o.wallDepth??0,keepCore:o.keepCore??false})
  const reduced=decimateLattice(mesh,step*1.5),check=inspectPolygonMesh(reduced);if(!check.closed||check.degenerateTriangles||check.signedVolumeMm3<=0||check.signedVolumeMm3>=inspectPolygonMesh(body.mesh).signedVolumeMm3)throw Error('Lattice simplification failed topology checks. Increase grid resolution.');const result={...body,mesh:reduced};if(latticeComponents(result,true)>latticeComponents(body,true))throw Error('Clipping the spatial graph creates disconnected pieces. Increase strut thickness or add a skin.')
  return result
 }

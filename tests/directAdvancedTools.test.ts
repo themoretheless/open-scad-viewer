@@ -3,7 +3,7 @@ import {extrudeDirectSketch,parseDirectDocument,emptyDirectDocument,DirectHistor
 import {solidTopology,pushPullFace,bevelSolidEdge,shellSolid,splitSolid,facePlane,transformSelection} from '../src/services/directSolidTools'
 import {sampleCurve,offsetSketch,trimSketch,extendSketch,transformSketch,worldPoint} from '../src/services/directSketchGeometry'
 import {directExtrusionTool} from '../src/services/directModelingTools'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 const s:DirectSketch={id:'s',name:'s',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}
 const box=()=>extrudeDirectSketch(s,10,'b')
 const volume=(b:ReturnType<typeof box>)=>{const r=inspectPolygonMesh(b.mesh);expect(r.closed).toBe(true);expect(r.degenerateTriangles).toBe(0);return r.signedVolumeMm3}

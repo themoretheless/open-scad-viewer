@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {lightenSolid,spatialGraph,type LighteningOptions} from '../src/services/solidLightening'
 import {extrudeDirectSketch,directBodiesScad} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 const box=()=>extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[16,0],[16,12],[0,12]]},10,'0')
 const o:LighteningOptions={pattern:'spatial',axis:'z',cell:10,rib:3.2,rim:0,bottom:0,top:0,seed:42,jitter:.5,lineWidth:.45,perimeters:3,skin:0,step:1.2,diagonals:true}
 it('has edges in all three dimensions and repeatable randomized nodes',()=>{const a=spatialGraph(box(),o),b=spatialGraph(box(),o);expect(a).toEqual(b);expect(a.nodes).not.toEqual(spatialGraph(box(),{...o,seed:43}).nodes);for(let k=0;k<3;k++)expect(a.edges.some(([i,j])=>a.nodes[i][k]!==a.nodes[j][k])).toBe(true)})

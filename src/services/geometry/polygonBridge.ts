@@ -1,8 +1,8 @@
 /** Explicit interchange between the two Rust libraries; no inferred smooth fit. */
-import type { NurbsCurve } from './nurbsCurve'
-import type { NurbsSurface } from './nurbsSurface'
-import type { PolygonBuild, PolygonMesh } from './polygonKernel'
-import { callGeometryRust } from './geometryRustKernel'
+import type { NurbsCurve } from '../nurbsCurve'
+import type { NurbsSurface } from '../nurbsSurface'
+import type { PolygonBuild, PolygonMesh } from './polygon'
+import { callGeometryRust } from './kernel'
 export interface SurfaceMeshingOptions {
   segmentsU: number
   segmentsV: number

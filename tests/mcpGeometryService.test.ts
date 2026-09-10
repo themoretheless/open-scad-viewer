@@ -1,4 +1,4 @@
-import { GeometryKernelError } from '../src/services/geometryRustKernel'
+import { GeometryKernelError } from '../src/services/geometry/kernel'
 import { describe, expect, it, vi } from 'vitest'
 import {
   ArtifactSizeError,

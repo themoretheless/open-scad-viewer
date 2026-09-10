@@ -1,6 +1,6 @@
 import type { MeshData } from '../core/mesh';
 import { flattenGroupGeometry } from './meshFlatten';
-import { inspectNurbsMesh, type NurbsMesh } from './nurbsTessellation';
+import { inspectNurbsMesh, type NurbsMesh } from './geometry/tessellation';
 function flattenGroup(meshes: readonly MeshData[]): NurbsMesh {
     const { positions, indices } = flattenGroupGeometry(meshes);
     const report = inspectNurbsMesh(positions, indices);

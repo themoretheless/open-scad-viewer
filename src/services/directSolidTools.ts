@@ -1,4 +1,4 @@
-import { booleanPolygonMeshes, extrudePolygonProfile, inspectPolygonMesh, type PolygonMesh } from './polygonKernel'
+import { booleanPolygonMeshes, extrudePolygonProfile, inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { bodyPoints, type DirectBody } from './directModeling'
 import { cross3, dot3, unit3, worldPoint, type Vec3, type SketchPlane } from './directSketchGeometry'
 export interface SolidFace { triangles:number[]; normal:Vec3; offset:number; vertices:number[]; center:Vec3 }

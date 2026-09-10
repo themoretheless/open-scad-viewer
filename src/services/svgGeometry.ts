@@ -1,4 +1,4 @@
-import Module, { type ManifoldToplevel, type CrossSection, type Vec2 } from './ownGeometryModule'
+import Module, { type ManifoldToplevel, type CrossSection, type Vec2 } from './geometry/module'
 import { parseOpenScadSvg } from './openScadImport'
 import type { MeshData } from '../core/mesh'
 import { transformPoint } from './math3d'

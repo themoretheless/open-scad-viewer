@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {fitLatticeToPrint,printBridgeWarning} from '../services/latticePrintSettings'
-import {inspectPolygonMesh} from '../services/polygonKernel'
+import {inspectPolygonMesh} from '../services/geometry/polygon'
 import {MAX_WORKSPACE_SOURCE_LENGTH} from '../services/workspaceDocument'
 import {solidTopology,facePlane} from '../services/directSolidTools'
 import {resolveSketchSupport} from '../services/mainSketchAssociation'

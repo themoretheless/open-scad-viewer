@@ -2,7 +2,7 @@ import {it,expect} from 'vitest'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 import {sampledShell,localMeshBevel} from '../src/services/generalMeshTools'
 import {solidTopology} from '../src/services/directSolidTools'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 const tapered=()=>{
  const b=extrudeDirectSketch({id:'l',name:'Tapered L',closed:true,points:[[0,0],[20,0],[20,10],[10,10],[10,20],[0,20]]},10,'l')
  for(let i=0;i<b.mesh.positions.length;i+=3){const scale=1-b.mesh.positions[i+2]/50;b.mesh.positions[i]*=scale;b.mesh.positions[i+1]*=scale}

@@ -1,5 +1,5 @@
 /** Public polygon API. No spline representation or Manifold dependency. */
-import { callGeometryRust } from './geometryRustKernel'
+import { callGeometryRust } from './kernel'
 export interface PolygonMesh {
   positions: number[]
   indices: number[]
@@ -54,7 +54,7 @@ export const revolvePolygonProfile=(profile:number[][],angle=360,segments=32,cap
 export const loftPolygonSections=(sections:number[][][],caps=true):PolygonBuild=>callGeometryRust('polygon_loft',{sections,caps})
 export const sweepPolygonProfile=(profile:number[][],path:number[][],up=[1,0,0],caps=true):PolygonBuild=>callGeometryRust('polygon_sweep',{profile,path,up,caps})
 
-import type {GeometryDeformation,GeometryBrush} from './geometryEditing'
+import type {GeometryDeformation,GeometryBrush} from '../geometryEditing'
 export const deformPolygonMesh=(mesh:PolygonMesh,deformation:GeometryDeformation):PolygonBuild=>callGeometryRust('polygon_deform',{mesh,deformation})
 export const brushPolygonMesh=(mesh:PolygonMesh,brush:GeometryBrush):PolygonBuild=>callGeometryRust('polygon_brush',{mesh,brush})
 export const extrudePolygonFaces=(mesh:PolygonMesh,triangles:number[],vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude_faces',{mesh,triangles,vector})

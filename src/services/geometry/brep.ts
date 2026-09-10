@@ -1,7 +1,7 @@
-import {callGeometryRust} from './geometryRustKernel'
-import type {NurbsCurve} from './nurbsCurve'
-import type {NurbsSurface} from './nurbsSurface'
-import type {PolygonMesh,PolygonBuild} from './polygonKernel'
+import {callGeometryRust} from './kernel'
+import type {NurbsCurve} from '../nurbsCurve'
+import type {NurbsSurface} from '../nurbsSurface'
+import type {PolygonMesh,PolygonBuild} from './polygon'
 export interface BrepModel<C,S,P> {
  vertices:{point:[number,number,number]}[]
  edges:{vertices:[number,number];curve:C}[]

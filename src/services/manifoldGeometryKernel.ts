@@ -1,4 +1,4 @@
-import Module, { type Manifold, type ManifoldToplevel } from './ownGeometryModule'
+import Module, { type Manifold, type ManifoldToplevel } from './geometry/module'
 import type { GeometryKernel, GeometryKernelSession } from './geometryKernel'
 
 export interface ManifoldKernelDependencies {

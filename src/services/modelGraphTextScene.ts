@@ -1,6 +1,6 @@
 /** Publish an own-kernel mesh directly to the viewer, without a SCAD/Manifold pass. */
 import { buildOwnNurbs, collectSdfJobs } from './modelGraphNurbsKernel'
-import { prepareSdfGpu, primeSdfGpu } from './sdfKernel'
+import { prepareSdfGpu, primeSdfGpu } from './geometry/sdf'
 import { runSdfSweep } from './sdfGpu'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'

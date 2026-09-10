@@ -1,5 +1,5 @@
 import { cross3, xyPlane, transformSketch } from './directSketchGeometry'
-import { booleanPolygonMeshes, type PolygonMesh } from './polygonKernel'
+import { booleanPolygonMeshes, type PolygonMesh } from './geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
 
 export interface OrbitCamera { yaw: number; pitch: number }

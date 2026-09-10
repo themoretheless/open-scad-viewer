@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {lightenSolid,lighteningCells,type LighteningOptions} from '../src/services/solidLightening'
 import {extrudeDirectSketch} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 const box=()=>extrudeDirectSketch({id:'s',name:'plate',closed:true,points:[[0,0],[20,0],[20,16],[0,16]]},4,'0')
 const o:LighteningOptions={pattern:'web',axis:'z',cell:8,rib:1.35,rim:2,bottom:.6,top:0,seed:42,jitter:.7,lineWidth:.45,perimeters:3}
 it.each(['grid','triangles','honeycomb','web'] as const)('cuts connected %s structure and preserves the source',(pattern)=>{const b=box(),before=structuredClone(b),r=lightenSolid(b,{...o,pattern}),report=inspectPolygonMesh(r.mesh);expect(report.closed).toBe(true);expect(report.signedVolumeMm3).toBeGreaterThan(0);expect(report.signedVolumeMm3).toBeLessThan(1280);expect(b).toEqual(before)},20000)

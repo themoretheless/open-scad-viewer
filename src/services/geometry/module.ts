@@ -1,5 +1,5 @@
 /** Legacy-call adapter to our handle-based Rust CAD kernel. No foreign CAD runtime. */
-import { callGeometryRust, withCadMesh, importCadMesh } from './geometryRustKernel';
+import { callGeometryRust, withCadMesh, importCadMesh } from './kernel';
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Mat3 = [number, number, number, number, number, number, number, number, number];

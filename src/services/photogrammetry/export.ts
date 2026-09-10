@@ -1,4 +1,4 @@
-import {inspectPolygonMesh} from '../polygonKernel'
+import {inspectPolygonMesh} from '../geometry/polygon'
 import type {PhotoSurface} from './kernel'
 
 /** Exports the original reconstructed coordinates, colors and all observed triangles. */

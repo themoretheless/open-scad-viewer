@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {textureSurface,type SurfaceTextureOptions} from '../src/services/surfaceTexture'
 import {extrudeDirectSketch} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {solidTopology,facePlane} from '../src/services/directSolidTools'
 const body=()=>extrudeDirectSketch({id:'p',name:'Box',closed:true,points:[[0,0],[8,0],[8,8],[0,8]]},8,'0')
 const options:SurfaceTextureOptions={pattern:'ribs',pitch:4,height:.2,angle:20,seed:42,detail:3,invert:false,origin:[0,0,0],u:[1,0,0],v:[0,1,0]}

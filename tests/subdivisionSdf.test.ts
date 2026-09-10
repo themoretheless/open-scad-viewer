@@ -1,8 +1,8 @@
-import {booleanPolygonMeshes} from '../src/services/polygonKernel'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/brepKernel'
+import {booleanPolygonMeshes} from '../src/services/geometry/polygon'
+import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {expect,it} from 'vitest'
-import {tessellateSubdivision} from '../src/services/subdivisionKernel'
-import {evaluateSdf,tessellateSdf,type SdfField} from '../src/services/sdfKernel'
+import {tessellateSubdivision} from '../src/services/geometry/subdivision'
+import {evaluateSdf,tessellateSdf,type SdfField} from '../src/services/geometry/sdf'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 const cage={vertices:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],faces:[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]}
 it('refines a closed cube and retains six authored patches',()=>{

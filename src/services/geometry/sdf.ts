@@ -1,6 +1,6 @@
-import {callGeometryRust} from './geometryRustKernel'
-import type {GeometryDeformation} from './geometryEditing'
-import type {PolygonBuild,PolygonMesh} from './polygonKernel'
+import {callGeometryRust} from './kernel'
+import type {GeometryDeformation} from '../geometryEditing'
+import type {PolygonBuild,PolygonMesh} from './polygon'
 export interface SdfProfile {outer:number[][];holes:number[][][]}
 export type SdfField =
  | {kind:'extrude';profile:SdfProfile;half_height:number}
@@ -34,10 +34,10 @@ export interface SdfGpuJob {field:SdfField;grid:SdfGrid}
 const gpuPending=new Map<string,{id:number,values:Float32Array}>()
 const sdfKey=(field:SdfField,grid:SdfGrid)=>JSON.stringify([field,grid])
 /** Prepares a GPU sweep for an eligible field; null when the kernel declines. */
-export function prepareSdfGpu(field:SdfField,grid:SdfGrid):{id:number,payload:import('./sdfGpu').SdfGpuPayload}|null{
+export function prepareSdfGpu(field:SdfField,grid:SdfGrid):{id:number,payload:import('../sdfGpu').SdfGpuPayload}|null{
  const value=callGeometryRust<Record<string,unknown>|null>('sdf_prepare',{field,grid})
  if(value===null)return null
- return{id:value.id as number,payload:value as unknown as import('./sdfGpu').SdfGpuPayload}
+ return{id:value.id as number,payload:value as unknown as import('../sdfGpu').SdfGpuPayload}
 }
 /** Registers host-computed scores for the later synchronous tessellation. */
 export function primeSdfGpu(job:SdfGpuJob,id:number,values:Float32Array):void{

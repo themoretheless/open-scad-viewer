@@ -18,7 +18,7 @@ import type {
   Polygons,
   Vec2,
   Vec3,
-} from './ownGeometryModule'
+} from './geometry/module'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import type {

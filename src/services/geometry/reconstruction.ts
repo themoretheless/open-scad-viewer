@@ -1,10 +1,10 @@
 /** Explicit reconstruction: source meshes remain available to callers. */
-import {callGeometryRust} from './geometryRustKernel'
-import type {PolygonMesh,PolygonBuild} from './polygonKernel'
-import type {SubdivisionCage} from './subdivisionKernel'
-import type {SdfField} from './sdfKernel'
-import type {NurbsBrep} from './brepKernel'
-import type {NurbsSurface} from './nurbsSurface'
+import {callGeometryRust} from './kernel'
+import type {PolygonMesh,PolygonBuild} from './polygon'
+import type {SubdivisionCage} from './subdivision'
+import type {SdfField} from './sdf'
+import type {NurbsBrep} from './brep'
+import type {NurbsSurface} from '../nurbsSurface'
 export interface SampledDeviation {sampledMaxMm:number;sampledRmsMm:number;sampleCount:number;errorBoundCertified:false}
 export interface SubdivisionReconstruction {
  cage:SubdivisionCage;iterations:number;vertexResidualBeforeMm:number;vertexResidualAfterMm:number;

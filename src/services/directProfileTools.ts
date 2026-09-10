@@ -1,5 +1,5 @@
 import { bakeSketch, worldPoint } from './directSketchGeometry'
-import { revolvePolygonProfile, booleanPolygonMeshes } from './polygonKernel'
+import { revolvePolygonProfile, booleanPolygonMeshes } from './geometry/polygon'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
 
 const cross = (a: Point2, b: Point2, c: Point2) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])

@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest'
-import {callGeometryRust,importCadMesh,withCadMesh,GeometryKernelError} from '../src/services/geometryRustKernel'
-import Module from '../src/services/ownGeometryModule'
+import {callGeometryRust,importCadMesh,withCadMesh,GeometryKernelError} from '../src/services/geometry/kernel'
+import Module from '../src/services/geometry/module'
 const cube=()=>callGeometryRust<number>('cad',{action:'cube',size:[2,3,4],center:false})
 const remove=(ids:number[])=>callGeometryRust('cad',{action:'delete',ids})
 describe('binary CAD transport',()=>{

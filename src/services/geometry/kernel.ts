@@ -1,7 +1,7 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
-import {encodeBinary,decodeBinary} from './valueBinaryCodec'
-import {unpackWasm} from './wasmPacking'
-import wasmBase64 from '../generated/geometry-kernels/bytes'
+import {encodeBinary,decodeBinary} from '../valueBinaryCodec'
+import {unpackWasm} from '../wasmPacking'
+import wasmBase64 from '../../generated/geometry-kernels/bytes'
 
 export class GeometryKernelError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = 'GeometryKernelError' }

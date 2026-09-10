@@ -1,6 +1,6 @@
 /** Surface types and Rust/WASM adapters. */
 import { type NurbsCurve } from './nurbsCurve'
-import { callNurbsRust, createRustSurfaceEvaluator, decodeNurbsResult } from './nurbsRustKernel'
+import { callNurbsRust, createRustSurfaceEvaluator, decodeNurbsResult } from './geometry/nurbs'
 
 export type NurbsSurface = {
   degreeU: number

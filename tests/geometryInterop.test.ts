@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { nurbsToPolygonMesh, polygonBoundaryNurbsCurves } from '../src/services/nurbsPolygonBridge'
-import { booleanPolygonMeshes, polygonBoundaryLoops, thickenPolygonMesh, transformPolygonMesh, inspectPolygonMesh, exportPolygonStl } from '../src/services/polygonKernel'
+import { nurbsToPolygonMesh, polygonBoundaryNurbsCurves } from '../src/services/geometry/polygonBridge'
+import { booleanPolygonMeshes, polygonBoundaryLoops, thickenPolygonMesh, transformPolygonMesh, inspectPolygonMesh, exportPolygonStl } from '../src/services/geometry/polygon'
 import { evaluateNurbsCurve } from '../src/services/nurbsCurve'
 import { extrudeNurbsCurve } from '../src/services/nurbsConstructors'
 import type { NurbsSurface } from '../src/services/nurbsSurface'

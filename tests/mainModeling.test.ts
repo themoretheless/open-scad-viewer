@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest'
 import {mainOperation,mainSource,primitiveSource,previewMeshes,sceneFace,type MainParameters} from '../src/services/mainModeling'
 import {extrudeDirectSketch} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/polygonKernel'
+import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import type {PickHit} from '../src/services/rendererContracts'
 const box=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0')
 const meshes=()=>previewMeshes({version:1,sketches:[],bodies:[box]})
@@ -44,7 +44,7 @@ it('shells nonconvex prisms through either or both end caps',()=>{
  for(const openings of [[top],[top,bottom]]){const d=mainOperation(m,0,picked,'shell',{...p,amount:1,openings});const r=inspectPolygonMesh(d.bodies[0].mesh);expect(r.closed).toBe(true);expect(r.signedVolumeMm3).toBeGreaterThan(0);expect(r.signedVolumeMm3).toBeLessThan(3000)}
 })
 it('shells a tessellated spherical surface with a selected opening',async()=>{
- const {revolvePolygonProfile}=await import('../src/services/polygonKernel')
+ const {revolvePolygonProfile}=await import('../src/services/geometry/polygon')
  const profile=Array.from({length:13},(_,i)=>i===0?[0,-10]:i===12?[0,10]:[10*Math.sin(i*Math.PI/12),-10*Math.cos(i*Math.PI/12)])
  const mesh=revolvePolygonProfile(profile,360,24,true),m=previewMeshes({version:1,sketches:[],bodies:[{id:'sphere',name:'sphere',mesh}]})
  const d=mainOperation(m,0,hit,'shell',{...p,amount:1});expect(inspectPolygonMesh(d.bodies[0].mesh).closed).toBe(true)

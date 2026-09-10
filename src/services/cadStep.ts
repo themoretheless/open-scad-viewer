@@ -1,5 +1,5 @@
 import {bodyPoints,type DirectBody} from './directModeling'
-import {inspectPolygonMesh} from './polygonKernel'
+import {inspectPolygonMesh} from './geometry/polygon'
 import {cross3,unit3,dot3} from './directSketchGeometry'
 /** ISO 10303-21/AP214 faceted BREP in millimetres. No analytic surface reconstruction. */
 export function exportFacetedStep(bodies:DirectBody[]):string{

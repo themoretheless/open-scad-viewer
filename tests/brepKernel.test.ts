@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createBrepBox,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/brepKernel'
+import {createBrepBox,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{

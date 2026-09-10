@@ -1,4 +1,4 @@
-import { prepareGraphRust } from './geometryRustKernel'
+import { prepareGraphRust } from './geometry/kernel'
 import { z } from 'zod/v4';
 import { sha256Hex } from '../core/sha256';
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/);

@@ -1,7 +1,7 @@
 /** Compatibility API over the independent Rust polygon library and NURBS adapter. */
-import type { NurbsSurface } from './nurbsSurface'
-import { callGeometryRust } from './geometryRustKernel'
-import { inspectPolygonMesh, thickenPolygonMesh, exportPolygonStl } from './polygonKernel'
+import type { NurbsSurface } from '../nurbsSurface'
+import { callGeometryRust } from './kernel'
+import { inspectPolygonMesh, thickenPolygonMesh, exportPolygonStl } from './polygon'
 
 export type NurbsUV = number[]
 export type NurbsTrim = { outer: NurbsUV[]; holes?: NurbsUV[][] }
@@ -10,7 +10,7 @@ export type NurbsMesh = {
   indices: number[]
   uv?: number[]
   faceIds?: number[]
-  report: import('./polygonKernel').PolygonReport
+  report: import('./polygon').PolygonReport
 }
 export type NurbsTessellationOptions = { segmentsU: number; segmentsV: number; trim?: NurbsTrim; maxTriangles?: number }
 

@@ -200,10 +200,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "geometry-native"
+version = "0.1.0"
+dependencies = [
+ "geometry-bridge",
+]
+
+[[package]]
 name = "geometry-ops"
 version = "0.1.0"
 dependencies = [
  "value-codec",
+]
+
+[[package]]
+name = "geometry-wasm"
+version = "0.1.0"
+dependencies = [
+ "geometry-bridge",
 ]
 
 [[package]]

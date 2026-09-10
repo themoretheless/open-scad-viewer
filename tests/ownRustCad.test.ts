@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import Module from '../src/services/ownGeometryModule';
+import Module from '../src/services/geometry/module';
 import { compileModelGraphText } from '../src/services/modelGraphText';
 import { parseOpenSCAD } from '../src/services/openscadParser';
 describe('own Rust CAD qualification v1', () => {

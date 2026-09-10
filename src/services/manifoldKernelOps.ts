@@ -8,7 +8,7 @@ import Module, {
   type Polygons,
   type Vec2,
   type Vec3,
-} from './ownGeometryModule'
+} from './geometry/module'
 
 const MANIFOLD_KERNEL_HANDLE = Symbol('ManifoldKernelHandle')
 
