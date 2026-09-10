@@ -4,6 +4,7 @@ import {
  ashbyExponent,
  estimateRelativeDensity,
  analyzeLatticeStrength,
+ findLatticeWeakSpots,
  formatLatticeStrengthReport,
 } from '../src/services/latticeStrengthAnalysis'
 import {type LighteningOptions} from '../src/services/solidLightening'
@@ -77,7 +78,47 @@ describe('lattice strength analysis', () => {
   expect(ru).toContain('Сопромат')
   expect(en).toContain('Strength estimate')
   expect(en).toContain('Ashby')
+  expect(ru).toMatch(/Слабые места|Weak spots/)
+  expect(en).toMatch(/Weak spots/)
+  expect(report.weakSpots.length).toBeGreaterThan(0)
+  expect(report.weakSpots[0].at).toHaveLength(3)
   expect(() => analyzeLatticeStrength(box(), base, pla, {case: 'compression', forceN: 0, safety: 2})).toThrow(/force/i)
   expect(() => analyzeLatticeStrength(box(), base, pla, {case: 'compression', forceN: 10, safety: 0.5})).toThrow(/safety|factor/i)
+ })
+
+ it('flags slender struts and body-corner nodes on a coarse octet lattice', () => {
+  const spots = findLatticeWeakSpots(
+   box(),
+   {...base, cell: 16, rib: 1.2},
+   pla,
+   {case: 'compression', forceN: 4000, safety: 1.5},
+  )
+  expect(spots.some(s => s.kind === 'slender_strut' || s.kind === 'long_span' || s.kind === 'bridge')).toBe(true)
+  expect(spots.some(s => s.kind === 'body_corner' || s.kind === 'underconnected' || s.kind === 'hinge_node')).toBe(true)
+  expect(spots[0].score).toBeGreaterThanOrEqual(spots.at(-1)!.score)
+  expect(['critical', 'high', 'medium', 'low']).toContain(spots[0].severity)
+ })
+
+ it('flags frame corners and wide openings on channel grids', () => {
+  const spots = findLatticeWeakSpots(
+   box(),
+   {...base, pattern: 'grid', cell: 10, rib: 1.2, rim: 1.5, bottom: 0.6, top: 0.6, axis: 'z'},
+   pla,
+   {case: 'bending', forceN: 80, safety: 2},
+  )
+  expect(spots.some(s => s.kind === 'body_corner')).toBe(true)
+  expect(spots.some(s => s.kind === 'long_span' || s.kind === 'bridge')).toBe(true)
+ })
+
+ it('flags acute corners on irregular web cells', () => {
+  const spots = findLatticeWeakSpots(
+   box(),
+   {...base, pattern: 'web', cell: 7, rib: 1.1, rim: 1, bottom: 0.4, top: 0, jitter: 0.9, seed: 7},
+   pla,
+   {case: 'tension', forceN: 60, safety: 2},
+  )
+  // Web jitter creates irregular polygons; acute corners or frame corners should appear.
+  expect(spots.length).toBeGreaterThan(0)
+  expect(spots.some(s => s.kind === 'sharp_corner' || s.kind === 'body_corner')).toBe(true)
  })
 })

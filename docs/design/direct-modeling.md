@@ -207,6 +207,7 @@ The panel shows a short qualitative hint for every structure (stretch / mixed / 
 - relative density from measured before/after volume (or a geometric estimate beforehand);
 - Gibson–Ashby scaling \(E^\*/E \sim C\rho^n\) with pattern-dependent stretch/bending exponents;
 - mean spatial-graph connectivity (Maxwell / Deshpande stretch vs bending);
-- strut axial stress and Euler buckling ratio for spatial lattices.
+- strut axial stress and Euler buckling ratio for spatial lattices;
+- ranked **weak spots** with approximate XYZ: free ends, hinge nodes (Z=2), under-connected nodes, body/frame corners, acute cell corners, slender/buckling struts, long load-aligned spans, horizontal bridges and overly thin skeletal walls.
 
-Materials are isotropic reference values (PLA/PETG/ABS/Nylon/Al 6061/steel). FDM anisotropy, contacts, residual stress, fatigue and local print defects are out of scope. The UI states explicitly that this is not FEA or certification.
+Materials are isotropic reference values (PLA/PETG/ABS/Nylon/Al 6061/steel). FDM anisotropy, contacts, residual stress, fatigue and local print defects are out of scope. Weak-spot screening is a strength-of-materials heuristic with coordinates for inspection, not an FEA hotspot map. The UI states explicitly that this is not FEA or certification.
