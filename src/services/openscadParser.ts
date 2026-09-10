@@ -147,10 +147,12 @@ export interface ParseOptions {
   /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
   animationTime?: number
   /**
-   * Cooperative cancellation probe. The top-level statement loop yields to the
-   * event loop periodically and consults this callback; when it returns true
-   * the evaluation rejects with {@link AbortedError}. Granularity is
-   * per-top-level-statement — a single giant statement will not yield.
+   * Cooperative cancellation probe. The evaluator yields to the event loop
+   * periodically (top-level statements and long `for` / `intersection_for`
+   * iteration) and consults this callback; when it returns true the evaluation
+   * rejects with {@link AbortedError}. A single enormous boolean/Manifold call
+   * still will not yield mid-call — BuildCoordinator's worker-replacement grace
+   * remains that hard boundary.
    */
   shouldAbort?: () => boolean
   /**
@@ -222,6 +224,11 @@ interface EvalContext {
   viewportRootLocked?: boolean
   /** The selected call ignores its own presentation modifiers. */
   viewportRootOwner?: CallNode
+  /**
+   * Optional cooperative cancel/yield handle. Spread onto child contexts so
+   * nested loops can poll; top-level `for` also awaits mid-iteration yields.
+   */
+  control?: CooperativeCheckpoint
 }
 
 interface PassedCallChildren {
@@ -1415,10 +1422,9 @@ class CooperativeCheckpoint {
  * (setTimeout, not a resolved-promise microtask): worker message events are
  * only delivered between macrotasks.
  *
- * Granularity is per-top-level-statement — a single giant statement (one huge
- * for-loop, one enormous boolean) will not yield mid-statement. The hosting
- * BuildCoordinator's worker-replacement grace timer remains the hard boundary
- * for such statements.
+ * Top-level `for` / `intersection_for` also yield between iterations. A single
+ * enormous boolean/Manifold call still will not yield mid-call; the hosting
+ * BuildCoordinator's worker-replacement grace timer remains that hard boundary.
  */
 async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, control: CooperativeCheckpoint): Promise<Shape[]> {
   control.poll()
@@ -1441,7 +1447,11 @@ async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, contr
         continue
       }
       if (node.type === 'module' || node.type === 'function') continue
-      output.push(...evalPreparedCall(node, ctx))
+      if (node.type === 'call' && (node.name === 'for' || node.name === 'intersection_for')) {
+        output.push(...await evalPreparedLoopCall(node, ctx, control))
+      } else {
+        output.push(...evalPreparedCall(node, ctx))
+      }
       if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
     }
   } catch (error) {
@@ -1449,6 +1459,35 @@ async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, contr
     throw error
   }
   return output
+}
+
+/** Top-level for/intersection_for with mid-iteration cooperative yields. */
+async function evalPreparedLoopCall(
+  node: CallNode,
+  ctx: EvalContext,
+  control: CooperativeCheckpoint,
+): Promise<Shape[]> {
+  const background = isStableProfile(ctx)
+    && ctx.viewportRootOwner !== node
+    && hasOpenScadViewportModifier(node, 'background')
+  let shapes: Shape[]
+  if (node.name === 'intersection_for') {
+    requireStableProfile(ctx, node)
+    shapes = booleanShapes(
+      await evalForAsync(node, ctx, control, 'intersection_for'),
+      'intersection',
+      ctx,
+      node.p,
+      'intersection_for',
+    )
+  } else {
+    shapes = await evalForAsync(node, ctx, control, 'for')
+  }
+  if (!background) return shapes
+  if (ctx.quality === 'preview' && shapes.length > 0) {
+    warn(ctx, 'Viewport background (%) geometry is omitted in preview because the mesh result contract has no background-layer metadata')
+  }
+  return []
 }
 
 function viewportRootActivates(node: CallNode, shapes: readonly Shape[]): boolean {
@@ -3558,6 +3597,7 @@ function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' | 'inte
         return
       }
       for (const value of values) {
+        ctx.control?.poll()
         if (++ctx.budget.ops > MAX_EVAL_OPS) {
           evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
         }
@@ -3578,6 +3618,8 @@ function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' | 'inte
   const output: Shape[] = []
   const occurrences = new Map<string, number>()
   for (const value of values) {
+    // Nested/sync path: poll only (no macrotask). Top-level loops use evalForAsync.
+    ctx.control?.poll()
     // Count each iteration even when the body produces no statements/shapes —
     // nested empty-bodied loops are otherwise invisible to every other limit.
     if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
@@ -3588,6 +3630,101 @@ function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' | 'inte
     occurrences.set(valueKey, occurrence + 1)
     output.push(...evalNodes(node.children, {
       ...ctx,
+      env,
+      instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
+    }, false))
+    if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+  }
+  return output
+}
+
+/**
+ * Cooperative for/intersection_for used from the top-level statement loop.
+ * Yields every {@link YIELD_EVERY_STATEMENTS} iterations (when the time budget
+ * is spent) so a Worker can deliver cancel between cubes of a giant loop.
+ */
+async function evalForAsync(
+  node: CallNode,
+  ctx: EvalContext,
+  control: CooperativeCheckpoint,
+  diagnosticName: 'for' | 'intersection_for',
+): Promise<Shape[]> {
+  const loopCtx: EvalContext = { ...ctx, control }
+  if (isStableProfile(loopCtx)) {
+    const bindings = callExpressionArguments(node)
+    const output: Shape[] = []
+    const occurrences = new Map<string, number>()
+    let iterationsSinceYield = 0
+    const visit = async (
+      bindingIndex: number,
+      iterationContext: EvalContext,
+      path: readonly string[],
+    ): Promise<void> => {
+      if (bindingIndex >= bindings.length) {
+        const valueKey = path.join(',')
+        const occurrence = occurrences.get(valueKey) ?? 0
+        occurrences.set(valueKey, occurrence + 1)
+        if (iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
+          iterationsSinceYield = 0
+          await control.yieldIfDue()
+        }
+        iterationsSinceYield++
+        control.poll()
+        output.push(...evalNodes(node.children, {
+          ...iterationContext,
+          instancePath: `${ctx.instancePath}>loop:${valueKey}#${occurrence}`,
+        }, false))
+        if (output.length > MAX_SHAPES) {
+          evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+        }
+        return
+      }
+      const binding = bindings[bindingIndex]
+      const values = stableIterable(
+        evalExpression(binding.value, iterationContext),
+        iterationContext,
+        binding.p,
+      )
+      if (binding.name === undefined) {
+        warn(ctx, `Ignoring ${diagnosticName}() iterator without variable name`)
+        return
+      }
+      for (const value of values) {
+        if (++ctx.budget.ops > MAX_EVAL_OPS) {
+          evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+        }
+        const env = new Map(iterationContext.env)
+        env.set(binding.name, value)
+        const segment = `${encodeURIComponent(binding.name)}=${encodeURIComponent(identityValue(value))}`
+        await visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [...path, segment])
+      }
+    }
+    await visit(0, loopCtx, [])
+    return output
+  }
+  const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
+  if (entries.length !== 1) evaluationError(ctx, node.p, `${diagnosticName}() currently requires one named iterator`)
+  const [name, expression] = entries[0]
+  const values = evalExpression(expression, loopCtx)
+  if (!Array.isArray(values)) evaluationError(ctx, node.p, `${diagnosticName}() iterator must be a vector or range`)
+  const output: Shape[] = []
+  const occurrences = new Map<string, number>()
+  let iterationsSinceYield = 0
+  for (const value of values) {
+    if (iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
+      iterationsSinceYield = 0
+      await control.yieldIfDue()
+    }
+    iterationsSinceYield++
+    control.poll()
+    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+    const env = new Map(loopCtx.env)
+    env.set(name, value)
+    const valueKey = encodeURIComponent(identityValue(value))
+    const occurrence = occurrences.get(valueKey) ?? 0
+    occurrences.set(valueKey, occurrence + 1)
+    output.push(...evalNodes(node.children, {
+      ...loopCtx,
       env,
       instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
     }, false))
@@ -3771,6 +3908,7 @@ async function parseInternal(
   if (isStableProfile(ctx)) ctx = enterStableStatementScope(ast, ctx)
   const initializedAt = now()
   const control = new CooperativeCheckpoint(options.shouldAbort, options.onYield, now, options.yieldControl)
+  ctx = { ...ctx, control }
 
   try {
     let shapes = await evalTopLevel(ast, ctx, control)

@@ -8,6 +8,8 @@ pub mod cad;
 pub mod edges;
 pub mod edit;
 pub mod modeling;
+pub mod path;
+pub mod pathfinder;
 pub mod proximity;
 pub mod section;
 pub mod tessellation;

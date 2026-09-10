@@ -47,17 +47,21 @@ Reopen these only for a demonstrated regression.
 - **Priority/status:** P0 / In progress
 - **Evidence:** `BuildCoordinator` keeps same-revision preview/full work on a
   warm Worker, coalesces identical active requests and bounds pending work by
-  revision/quality. The evaluator yields between top-level statements, forces
-  a macrotask checkpoint before extraction, polls cancellation through chunked
-  publication work, and reports required parse/initialize/evaluate/analyze
-  timings. A tokenized watchdog prevents stale timers from cancelling newer
-  work. Synchronous Manifold, BVH and topology calls still cannot observe
-  messages, so Worker replacement remains the final cancellation boundary.
+  revision/quality. The evaluator yields between top-level statements, yields
+  mid-iteration inside top-level `for` / `intersection_for` (macrotask +
+  `shouldAbort` poll), forces a macrotask checkpoint before extraction, polls
+  cancellation through chunked publication work, and reports required
+  parse/initialize/evaluate/analyze timings. Nested sync loops poll
+  `shouldAbort` each iteration when a control handle is present. A tokenized
+  watchdog prevents stale timers from cancelling newer work. Synchronous
+  Manifold, BVH and topology calls still cannot observe messages, so Worker
+  replacement remains the final cancellation boundary for those phases.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.
-- **Acceptance remaining:** deeper checkpoints inside guarded blocks and loops;
-  cooperative/async kernel, BVH and topology phases; real-browser tests for
-  App↔Worker supersession, watchdog recovery, crash and disposal.
+- **Acceptance remaining:** cooperative yields inside nested module-body loops /
+  guarded blocks beyond top-level `for`; cooperative/async kernel, BVH and
+  topology phases; real-browser tests for App↔Worker supersession, watchdog
+  recovery, crash and disposal.
 
 ### R3 — Split compiler and kernel phases
 
