@@ -1,6 +1,7 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
-import {encodeBinary,decodeBinary} from '../valueBinaryCodec'
-import {unpackWasm} from '../wasmPacking'
+import {encodeBinary} from '../valueBinaryCodec'
+import {decodePacked, writeLinear} from '../wasmHost'
+import {unpackWasmBase64} from '../wasmPacking'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
 
 export class GeometryKernelError extends Error {
@@ -28,20 +29,18 @@ let readingCadMesh = false
 function initialize(): void {
   if (readingCadMesh) throw new Error('WASM calls are not allowed while reading a borrowed CAD mesh')
   if (initialized) return
-  const binary = atob(wasmBase64)
-  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackWasm(Uint8Array.from(binary, character => character.charCodeAt(0))))).exports as KernelExports
+  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackWasmBase64(wasmBase64))).exports as KernelExports
   wasmMemory=wasm.memory
   initialized = true
 }
 function takeResponse(packed:bigint):unknown {
- const ptr=Number(packed&0xffffffffn),length=Number(packed>>32n)
- try{return decodeBinary(new Uint8Array(wasmMemory.buffer,ptr,length))}finally{wasm.abi_free(ptr,length)}
+ return decodePacked(wasmMemory,(pointer,size)=>wasm.abi_free(pointer,size),packed)
 }
 function request(op:number,value:unknown):unknown{
  initialize()
- const bytes=encodeBinary(value),ptr=wasm.abi_alloc(bytes.length)
+ const bytes=encodeBinary(value),ptr=writeLinear(wasmMemory,len=>wasm.abi_alloc(len),bytes)
  if(!ptr)throw new Error('WASM request allocation failed')
- try{new Uint8Array(wasmMemory.buffer,ptr,bytes.length).set(bytes);return takeResponse(wasm.abi_request(op,ptr,bytes.length))}
+ try{return takeResponse(wasm.abi_request(op,ptr,bytes.length))}
  finally{wasm.abi_free(ptr,bytes.length)}
 }
 export function decodeNurbsResult<T>(result:unknown):T{

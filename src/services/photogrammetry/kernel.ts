@@ -1,5 +1,6 @@
 import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
-import {decodeBinary, encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
+import {encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
+import {decodePacked, writeLinear} from '../wasmHost'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */
 const SURFACE_TRIPLES: BinaryTripleHints = {positions: 'f64', colors: 'u8', triangles: 'u32'}
@@ -137,16 +138,14 @@ export class PhotogrammetryKernel {
   }
 
   private response<T>(packed: bigint): T {
-    const pointer = Number(packed & 0xffffffffn)
-    const size = Number(packed >> 32n)
-    try {
-      const bytes = new Uint8Array(this.wasm.memory.buffer, pointer, size)
-      const result = decodeBinary(bytes, SURFACE_TRIPLES) as Response<T>
-      if (!result.ok) throw new Error(result.message)
-      return result.value
-    } finally {
-      this.wasm.photo_free(pointer, size)
-    }
+    const result = decodePacked<Response<T>>(
+      this.wasm.memory,
+      (pointer, size) => this.wasm.photo_free(pointer, size),
+      packed,
+      SURFACE_TRIPLES,
+    )
+    if (!result.ok) throw new Error(result.message)
+    return result.value
   }
 
   add(image: PhotoPixels): number {
@@ -207,34 +206,27 @@ export class PhotogrammetryKernel {
    * text, or null when the request is ineligible for the GPU path.
    */
   densePrepare(resolution: number): {payload: Uint8Array, wgsl: string} | null {
-    const packed = this.wasm.photo_dense_prepare(resolution, 0)
-    const pointer = Number(packed & 0xffffffffn)
-    const size = Number(packed >> 32n)
-    let result: {payload: Uint8Array, wgsl: string} | null = null
-    try {
-      const bytes = new Uint8Array(this.wasm.memory.buffer, pointer, size)
-      const decoded = decodeBinary(bytes) as Response<{ptr: number, len: number, wgsl: string} | null>
-      if (!decoded.ok) throw new Error(decoded.message)
-      if (decoded.value === null) return null
-      const payloadPointer = decoded.value.ptr
-      const payloadSize = decoded.value.len
-      // Copy out before releasing the kernel buffer.
-      const payload = new Uint8Array(payloadSize)
-      payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
-      result = {payload, wgsl: decoded.value.wgsl}
-      this.wasm.photo_free(payloadPointer, payloadSize)
-      return result
-    } finally {
-      this.wasm.photo_free(pointer, size)
-    }
+    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string} | null>>(
+      this.wasm.memory,
+      (pointer, size) => this.wasm.photo_free(pointer, size),
+      this.wasm.photo_dense_prepare(resolution, 0),
+    )
+    if (!decoded.ok) throw new Error(decoded.message)
+    if (decoded.value === null) return null
+    const payloadPointer = decoded.value.ptr
+    const payloadSize = decoded.value.len
+    // Copy out before releasing the kernel buffer.
+    const payload = new Uint8Array(payloadSize)
+    payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
+    this.wasm.photo_free(payloadPointer, payloadSize)
+    return {payload, wgsl: decoded.value.wgsl}
   }
 
   /** Stage 2: uploads host-computed scores (ownership moves to the kernel). */
   denseFinish(scores: Float32Array): PhotoSurface {
     const bytes = new Uint8Array(scores.buffer, scores.byteOffset, scores.byteLength)
-    const pointer = this.wasm.photo_alloc(bytes.length)
+    const pointer = writeLinear(this.wasm.memory, len => this.wasm.photo_alloc(len), bytes)
     if (!pointer) throw new Error('Score allocation failed')
-    new Uint8Array(this.wasm.memory.buffer, pointer, bytes.length).set(bytes)
     // photo_dense_finish consumes the buffer on any outcome; never freed here.
     return this.response<PhotoSurface>(this.wasm.photo_dense_finish(pointer, bytes.length))
   }
