@@ -11,6 +11,24 @@ import {
 import type {DirectBody} from './directModeling'
 import {importedStlToMeshData} from './stlImport'
 import type {MeshData, SceneEntityId} from '../core/mesh'
+import {
+ DEFAULT_PRINT_SERVICE,
+ defaultCompressionScenario,
+ defaultStrutSection,
+ effectiveMaterialScalars,
+ resolveActiveCase,
+ sectionProperties,
+ type LatticeStrengthScenario,
+} from './latticeStrengthScenario'
+import {
+ compareLatticeVariants,
+ latticeDesignAdvice,
+ panelBucklingStressMPa,
+ solveLatticeTruss,
+ utilizationColor,
+} from './latticeTrussFea'
+
+export {compareLatticeVariants, utilizationColor}
 
 export type LatticeMaterialId = 'pla' | 'petg' | 'abs' | 'nylon' | 'al6061' | 'steel'
 export type LatticeLoadCase = 'compression' | 'tension' | 'bending'
@@ -33,6 +51,17 @@ export interface LatticeMaterial {
  layer: number
  /** Ductility 0..1 — lowers sharp-corner criticality when high. */
  ductility: number
+ /** Optional FDM orthotropy: E along roads / across layers, MPa. */
+ EParallel?: number
+ EPerp?: number
+ /** Inter-layer allowable, MPa. */
+ sigmaInterlayer?: number
+ /** Yield proxy for plasticity screening, MPa. */
+ sigmaYield?: number
+ /** Fatigue endurance ratio (σ_endurance / σ_allow), ~0.3..0.5. */
+ fatigueRatio?: number
+ /** Stress concentration multiplier at sharp corners. */
+ Kt?: number
 }
 
 export interface LatticeLoadInput {
@@ -63,6 +92,34 @@ export interface LatticeStrengthReport {
  disclaimer: {ru: string; en: string}
  /** Ranked weak spots (corners, slender struts, hinges, bridges). */
  weakSpots: LatticeWeakSpot[]
+ /** Active scenario id when advanced loads/supports were used. */
+ scenarioId?: string
+ /** Effective orthotropic / service-adjusted scalars. */
+ materialEffective?: {
+  E: number
+  EParallel: number
+  EPerp: number
+  sigmaAllow: number
+  sigmaInterlayer: number
+  sigmaYield: number
+  envFactor: number
+ }
+ /** Section used for strut checks. */
+ sectionLabel?: string
+ /** Combined compression+bending utilization (eccentricity). */
+ combinedUtilization?: number | null
+ /** Local panel/wall buckling stress estimate, MPa. */
+ panelBucklingMPa?: number | null
+ /** Max nodal deflection from truss FEA, mm. */
+ maxDeflectionMm?: number | null
+ /** Homogenized continuum proxies from FEA/Ashby. */
+ homogenized?: {EStar: number; sigmaStar: number; relativeDensity: number} | null
+ /** Truss FEA member field (top offenders). */
+ feaMembers?: {mid: [number, number, number]; utilization: number; bucklingRatio: number; color: [number, number, number, number]}[]
+ /** Design recommendations with expected Δ. */
+ advice?: {ru: string; en: string; deltaStiffnessPct: number; deltaMassPct: number}[]
+ /** Support / action summary for the report. */
+ boundarySummary?: {ru: string; en: string}
 }
 
 export type LatticeWeakKind =
@@ -95,12 +152,12 @@ export interface LatticeWeakSpot {
 }
 
 export const LATTICE_MATERIALS: LatticeMaterial[] = [
- {id: 'pla', ru: 'PLA (FDM)', en: 'PLA (FDM)', E: 3500, sigmaAllow: 35, density: 1.24, process: 'fdm', notch: 1.35, layer: 0.95, ductility: 0.25},
- {id: 'petg', ru: 'PETG (FDM)', en: 'PETG (FDM)', E: 2100, sigmaAllow: 30, density: 1.27, process: 'fdm', notch: 1.1, layer: 0.85, ductility: 0.45},
- {id: 'abs', ru: 'ABS (FDM)', en: 'ABS (FDM)', E: 2000, sigmaAllow: 25, density: 1.04, process: 'fdm', notch: 1.2, layer: 0.9, ductility: 0.4},
- {id: 'nylon', ru: 'Nylon (FDM)', en: 'Nylon (FDM)', E: 1700, sigmaAllow: 40, density: 1.14, process: 'fdm', notch: 0.85, layer: 0.75, ductility: 0.8},
- {id: 'al6061', ru: 'Алюминий 6061', en: 'Aluminium 6061', E: 68900, sigmaAllow: 110, density: 2.7, process: 'metal', notch: 0.95, layer: 0.05, ductility: 0.7},
- {id: 'steel', ru: 'Сталь конструкционная', en: 'Mild steel', E: 200000, sigmaAllow: 160, density: 7.85, process: 'metal', notch: 0.85, layer: 0.02, ductility: 0.75},
+ {id: 'pla', ru: 'PLA (FDM)', en: 'PLA (FDM)', E: 3500, sigmaAllow: 35, density: 1.24, process: 'fdm', notch: 1.35, layer: 0.95, ductility: 0.25, EParallel: 3500, EPerp: 1800, sigmaInterlayer: 16, sigmaYield: 40, fatigueRatio: 0.35, Kt: 2.2},
+ {id: 'petg', ru: 'PETG (FDM)', en: 'PETG (FDM)', E: 2100, sigmaAllow: 30, density: 1.27, process: 'fdm', notch: 1.1, layer: 0.85, ductility: 0.45, EParallel: 2100, EPerp: 1200, sigmaInterlayer: 14, sigmaYield: 35, fatigueRatio: 0.4, Kt: 1.9},
+ {id: 'abs', ru: 'ABS (FDM)', en: 'ABS (FDM)', E: 2000, sigmaAllow: 25, density: 1.04, process: 'fdm', notch: 1.2, layer: 0.9, ductility: 0.4, EParallel: 2000, EPerp: 1100, sigmaInterlayer: 12, sigmaYield: 30, fatigueRatio: 0.38, Kt: 2.0},
+ {id: 'nylon', ru: 'Nylon (FDM)', en: 'Nylon (FDM)', E: 1700, sigmaAllow: 40, density: 1.14, process: 'fdm', notch: 0.85, layer: 0.75, ductility: 0.8, EParallel: 1700, EPerp: 900, sigmaInterlayer: 18, sigmaYield: 48, fatigueRatio: 0.45, Kt: 1.6},
+ {id: 'al6061', ru: 'Алюминий 6061', en: 'Aluminium 6061', E: 68900, sigmaAllow: 110, density: 2.7, process: 'metal', notch: 0.95, layer: 0.05, ductility: 0.7, EParallel: 68900, EPerp: 68900, sigmaInterlayer: 110, sigmaYield: 240, fatigueRatio: 0.4, Kt: 2.5},
+ {id: 'steel', ru: 'Сталь конструкционная', en: 'Mild steel', E: 200000, sigmaAllow: 160, density: 7.85, process: 'metal', notch: 0.85, layer: 0.02, ductility: 0.75, EParallel: 200000, EPerp: 200000, sigmaInterlayer: 160, sigmaYield: 250, fatigueRatio: 0.4, Kt: 2.3},
 ]
 
 const round = (v: number, digits = 3) => Math.round(v * 10 ** digits) / 10 ** digits
@@ -275,6 +332,21 @@ export function weakSpotHighlightMeshes(
   return {...mesh, entityId: `entity:weak-spot/${spot.kind}/${i}` as SceneEntityId}
  })
 }
+
+/** Utilization-coloured markers for top truss-FEA members (σ and P/Pcr field). */
+export function feaMemberHighlightMeshes(
+ members: NonNullable<LatticeStrengthReport['feaMembers']>,
+ markerMm = 1.2,
+): MeshData[] {
+ const size = Math.max(0.35, markerMm)
+ return members.map((m, i) => {
+  const scale = size * (0.7 + 0.55 * Math.min(1.5, m.utilization) / 1.5)
+  const positions = octahedronPositions(m.mid, scale)
+  const mesh = importedStlToMeshData({triangleCount: positions.length / 9, positions}, m.color)
+  return {...mesh, entityId: `entity:fea-member/${i}` as SceneEntityId}
+ })
+}
+
 
 
 function polygonAngles(poly: [number, number][]) {
@@ -529,10 +601,29 @@ export function analyzeLatticeStrength(
  material: LatticeMaterial,
  load: LatticeLoadInput,
  volumes?: {beforeMm3: number; afterMm3: number},
+ scenario?: LatticeStrengthScenario,
 ): LatticeStrengthReport {
  if (!(load.forceN > 0) || !(load.safety >= 1) || !Number.isFinite(load.forceN) || !Number.isFinite(load.safety)) {
   throw Error('Check force (>0 N) and safety factor (>=1).')
  }
+ const scenarioResolved: LatticeStrengthScenario = scenario ?? (() => {
+  const s = defaultCompressionScenario(load.forceN, load.safety)
+  s.activeId = load.case === 'tension' ? 'tension' : load.case === 'bending' ? 'bending' : 'compression'
+  s.section = defaultStrutSection(o.rib)
+  s.service = {...DEFAULT_PRINT_SERVICE, printAxis: o.axis}
+  return s
+ })()
+ const active = resolveActiveCase(scenarioResolved)
+ const service = scenarioResolved.service ?? DEFAULT_PRINT_SERVICE
+ const section = {...(scenarioResolved.section ?? defaultStrutSection(o.rib)), a: scenarioResolved.section?.a ?? o.rib}
+ const sec = sectionProperties(section)
+ const ecc = Math.max(0, section.eccentricity ?? 0)
+ const eff = effectiveMaterialScalars(material, service, {
+  EParallel: material.EParallel,
+  EPerp: material.EPerp,
+  sigmaInterlayer: material.sigmaInterlayer,
+  sigmaYield: material.sigmaYield,
+ })
  const hint = latticeStructureHint(o.pattern)
  const relativeDensity = volumes && volumes.beforeMm3 > 0
   ? round(Math.max(1e-4, volumes.afterMm3 / volumes.beforeMm3), 4)
@@ -552,19 +643,36 @@ export function analyzeLatticeStrength(
  let eulerBucklingN: number | null = null
  let bucklingRatio: number | null = null
  let utilization: number | null = null
+ let combinedUtilization: number | null = null
+ let panelBucklingMPa: number | null = null
+ let maxDeflectionMm: number | null = null
+ let feaMembers: LatticeStrengthReport['feaMembers'] = undefined
+ let homogenized: LatticeStrengthReport['homogenized'] = null
+ let advice: LatticeStrengthReport['advice'] = []
+
+ const fatigueCap = material.sigmaAllow * (material.fatigueRatio ?? 1)
+ const sigmaAllowEff = Math.min(eff.sigmaAllow, fatigueCap)
+ const allowWithSafety = Math.max(1e-6, sigmaAllowEff / load.safety)
+ const Euse = Math.max(1, eff.E)
+ const Kt = material.Kt ?? 1
 
  if (isSpatialPattern(o.pattern)) {
-  const r = o.rib / 2
-  strutAreaMm2 = round(Math.PI * r * r, 4)
-  const I = (Math.PI * r ** 4) / 4
+  strutAreaMm2 = round(sec.area, 4)
   const L = Math.max(metrics.meanLength ?? o.cell, o.rib)
   const paths = parallelPaths(o, size, metrics.edgeCount)
   const forcePerStrut = load.forceN / paths
-  strutStressMPa = round(forcePerStrut / strutAreaMm2, 4)
-  // Euler pin-ended strut; E in MPa = N/mm^2, I in mm^4, L in mm -> N
-  eulerBucklingN = round((Math.PI ** 2 * material.E * I) / (L * L), 4)
-  bucklingRatio = round(forcePerStrut / Math.max(eulerBucklingN, 1e-9), 3)
-  utilization = round(strutStressMPa / (material.sigmaAllow / load.safety), 3)
+  const sigmaAxial = forcePerStrut / sec.area
+  const sigmaBend = ecc > 0 && sec.W > 0 ? Math.abs(forcePerStrut) * ecc / sec.W : 0
+  strutStressMPa = round(Kt * (Math.abs(sigmaAxial) + sigmaBend), 4)
+  eulerBucklingN = round((Math.PI ** 2 * Euse * sec.I) / (L * L), 4)
+  bucklingRatio = round(Math.abs(forcePerStrut) / Math.max(eulerBucklingN, 1e-9), 3)
+  utilization = round(strutStressMPa / allowWithSafety, 3)
+  combinedUtilization = utilization
+  panelBucklingMPa = round(panelBucklingStressMPa({
+   E: Euse,
+   cellSize: o.cell,
+   wallThickness: Math.max(o.rib * 0.35, o.wallDepth ? o.wallDepth * 0.25 : 0.4),
+  }), 4)
   if (metrics.connectivity != null && metrics.connectivity < 6 && o.pattern !== 'bone') {
    warnings.push({
     ru: `Средняя связность узла Z≈${metrics.connectivity} < 6 — каркас ближе к изгибному (Maxwell/Deshpande).`,
@@ -579,14 +687,50 @@ export function analyzeLatticeStrength(
   }
   if (utilization > 1) {
    warnings.push({
-    ru: `Расчётные напряжения в стержне выше допуска с запасом (η≈${utilization}).`,
-    en: `Estimated strut stress exceeds allowable with safety factor (η≈${utilization}).`,
+    ru: `Расчётные напряжения (сжатие+изгиб, Kt=${Kt}) выше допуска с запасом (η≈${utilization}).`,
+    en: `Combined compression+bending (Kt=${Kt}) exceeds allowable with safety (η≈${utilization}).`,
    })
   }
   if ((o.wallDepth ?? 0) > 0 && !o.keepCore) {
    warnings.push({
     ru: 'Пустая сердцевина: оценка — для мембранной/оболочечной работы стенки, не для объёмного сжатия целиком.',
     en: 'Hollow core: estimate targets wall membrane/shell action, not bulk solid compression.',
+   })
+  }
+  try {
+   const g = spatialGraph(body, o)
+   const fea = solveLatticeTruss({
+    graph: {nodes: g.nodes, edges: g.edges},
+    E: Euse,
+    section,
+    sigmaAllow: sigmaAllowEff,
+    safety: load.safety,
+    supports: active.supports,
+    actions: active.actions,
+    relativeDensity,
+   })
+   maxDeflectionMm = round(fea.maxDeflectionMm, 4)
+   combinedUtilization = round(Math.max(utilization ?? 0, fea.maxUtilization), 3)
+   utilization = combinedUtilization
+   const topStress = Math.max(0, ...fea.members.map(m => Math.abs(m.stressMPa) + (ecc > 0 && sec.W > 0 ? Math.abs(m.axialN) * ecc / sec.W : 0)))
+   if (topStress > 0) strutStressMPa = round(Math.max(strutStressMPa ?? 0, Kt * topStress), 4)
+   if (fea.maxBucklingRatio > 0) bucklingRatio = round(Math.max(bucklingRatio ?? 0, fea.maxBucklingRatio), 3)
+   feaMembers = fea.members.slice(0, 12).map(m => ({
+    mid: m.mid,
+    utilization: round(m.combinedUtil, 3),
+    bucklingRatio: round(m.bucklingRatio, 3),
+    color: utilizationColor(m.combinedUtil),
+   }))
+   homogenized = {
+    EStar: round(Math.max(fea.homogenized.EStar, Euse * relativeStiffness), 2),
+    sigmaStar: round(Math.max(fea.homogenized.sigmaStar, sigmaAllowEff * relativeStrength), 2),
+    relativeDensity,
+   }
+   if (fea.warnings.length) warnings.push(...fea.warnings)
+  } catch (e) {
+   warnings.push({
+    ru: `Упрощённый FEA фермы не сошёлся: ${e instanceof Error ? e.message : String(e)}`,
+    en: `Simplified truss FEA failed: ${e instanceof Error ? e.message : String(e)}`,
    })
   }
  } else {
@@ -606,14 +750,29 @@ export function analyzeLatticeStrength(
   const axisIndex = o.axis === 'x' ? 0 : o.axis === 'y' ? 1 : 2
   strutAreaMm2 = round(o.rib * Math.max(size[axisIndex] - o.bottom - o.top, o.rib), 3)
   strutStressMPa = round(load.forceN / (paths * Math.max(o.rib * o.rib, 1e-6)), 4)
-  utilization = round(strutStressMPa / (material.sigmaAllow / load.safety), 3)
-  if (utilization > 1) {
-   warnings.push({
-    ru: `Оценка напряжения в перемычках выше допуска (η≈${utilization}).`,
-    en: `Estimated rib stress exceeds allowable (η≈${utilization}).`,
-   })
+  utilization = round(strutStressMPa / allowWithSafety, 3)
+  combinedUtilization = utilization
+ }
+
+ if (!homogenized) {
+  homogenized = {
+   EStar: round(Euse * relativeStiffness, 2),
+   sigmaStar: round(sigmaAllowEff * relativeStrength, 2),
+   relativeDensity,
   }
  }
+
+ advice = latticeDesignAdvice({
+  utilization: combinedUtilization ?? utilization ?? 0,
+  bucklingRatio: bucklingRatio ?? 0,
+  pattern: o.pattern,
+  cell: o.cell,
+  rib: o.rib,
+  hasDiagonals: !!o.diagonals || o.pattern === 'octet' || o.pattern === 'isogrid',
+  maxBridgeMm: service.maxBridgeMm,
+  minWallMm: service.minWallMm,
+  wallDepth: o.wallDepth,
+ })
 
  if (load.case === 'bending' && relativeDensity < 0.25) {
   warnings.push({
@@ -623,14 +782,37 @@ export function analyzeLatticeStrength(
  }
  if (material.process === 'fdm') {
   warnings.push({
-   ru: `FDM (${material.ru}): слои усиливают риск мостов/тонких стенок; углы взвешены notch=${material.notch}, ductility=${material.ductility}.`,
-   en: `FDM (${material.en}): layers raise bridge/thin-wall risk; corners weighted notch=${material.notch}, ductility=${material.ductility}.`,
+   ru: `FDM ортотропия: E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} MPa, σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
+   en: `FDM orthotropy: E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} MPa, σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
   })
+  if (material.id === 'nylon' && service.humidityPct >= 40) {
+   warnings.push({
+    ru: 'Nylon: высокая влажность заметно снижает E и прочность — сушите филамент и учитывайте кондиционирование детали.',
+    en: 'Nylon: high humidity notably lowers E and strength — dry filament and account for part conditioning.',
+   })
+  }
  } else {
   warnings.push({
    ru: `Металл (${material.ru}): подсветка смещена к потере устойчивости и концентраторам; слоистая анизотропия почти не учитывается.`,
    en: `Metal (${material.en}): highlights bias toward buckling and concentrators; layer anisotropy is nearly ignored.`,
   })
+ }
+ if (eff.sigmaYield > 0 && strutStressMPa != null && strutStressMPa > eff.sigmaYield / load.safety) {
+  warnings.push({
+   ru: `Экран пластичности: σ≈${strutStressMPa} MPa выше σy/n (${round(eff.sigmaYield / load.safety, 1)} MPa).`,
+   en: `Plasticity screen: σ≈${strutStressMPa} MPa above σy/n (${round(eff.sigmaYield / load.safety, 1)} MPa).`,
+  })
+ }
+ if (panelBucklingMPa != null && strutStressMPa != null && strutStressMPa > panelBucklingMPa) {
+  warnings.push({
+   ru: `Локальная потеря устойчивости панели/стенки: σ > σ_panel≈${panelBucklingMPa} MPa.`,
+   en: `Local panel/wall buckling: σ > σ_panel≈${panelBucklingMPa} MPa.`,
+  })
+ }
+
+ const boundarySummary: LatticeStrengthReport['boundarySummary'] = {
+  ru: `Кейс ${scenarioResolved.activeId}: опоры [${active.supports.map(s => s.ru).join('; ')}]; нагрузки [${active.actions.map(a => `${a.ru} ${a.magnitude}`).join('; ')}]`,
+  en: `Case ${scenarioResolved.activeId}: supports [${active.supports.map(s => s.en).join('; ')}]; actions [${active.actions.map(a => `${a.en} ${a.magnitude}`).join('; ')}]`,
  }
 
  const weakSpots = findLatticeWeakSpots(body, o, material, load)
@@ -664,9 +846,27 @@ export function analyzeLatticeStrength(
   connectivity: metrics.connectivity,
   warnings,
   weakSpots,
+  scenarioId: scenarioResolved.activeId,
+  materialEffective: {
+   E: round(eff.E, 1),
+   EParallel: round(eff.EParallel, 1),
+   EPerp: round(eff.EPerp, 1),
+   sigmaAllow: round(eff.sigmaAllow, 2),
+   sigmaInterlayer: round(eff.sigmaInterlayer, 2),
+   sigmaYield: round(eff.sigmaYield, 2),
+   envFactor: round(eff.envFactor, 3),
+  },
+  sectionLabel: sec.label,
+  combinedUtilization,
+  panelBucklingMPa,
+  maxDeflectionMm,
+  homogenized,
+  feaMembers,
+  advice,
+  boundarySummary,
   disclaimer: {
-   ru: 'Аналитическая оценка сопромата (Ashby/Эйлер) и эвристика слабых мест, не МКЭ и не сертификат. Не заменяет испытания и FEA.',
-   en: 'Analytical strength-of-materials estimate (Ashby/Euler) plus weak-spot heuristics, not FEA or certification. Does not replace tests or FEA.',
+   ru: 'Сопромат+упрощённый FEA фермы (опоры/нагрузки/ортотропия FDM). Не сертификат и не полный solid FEA.',
+   en: 'SoM + simplified truss FEA (supports/loads/FDM orthotropy). Not certification or full solid FEA.',
   },
  }
 }
@@ -683,8 +883,8 @@ export function formatLatticeStrengthReport(
   : load.case
  const lines = [
   L
-   ? `Сопромат (оценка): ${material.ru}, ${caseLabel} ${load.forceN} N, n=${load.safety}`
-   : `Strength estimate: ${material.en}, ${caseLabel} ${load.forceN} N, n=${load.safety}`,
+   ? `Сопромат (оценка): ${material.ru}, ${caseLabel} ${load.forceN} N, n=${load.safety}${r.scenarioId ? ` · кейс ${r.scenarioId}` : ''}`
+   : `Strength estimate: ${material.en}, ${caseLabel} ${load.forceN} N, n=${load.safety}${r.scenarioId ? ` · case ${r.scenarioId}` : ''}`,
   L
    ? `Плотность ρ*/ρ ≈ ${r.relativeDensity} (−${r.volumeReductionPct}% объёма), класс: ${r.loadClass}, показатель Ashby n=${r.ashbyExponent}`
    : `Relative density ρ*/ρ ≈ ${r.relativeDensity} (−${r.volumeReductionPct}% volume), class: ${r.loadClass}, Ashby n=${r.ashbyExponent}`,
@@ -692,17 +892,38 @@ export function formatLatticeStrengthReport(
    ? `E*/E ≈ ${r.relativeStiffness}, σ*/σ ≈ ${r.relativeStrength}, удельная жёсткость (E*/E)/(ρ*/ρ) ≈ ${r.specificStiffness}`
    : `E*/E ≈ ${r.relativeStiffness}, σ*/σ ≈ ${r.relativeStrength}, specific stiffness (E*/E)/(ρ*/ρ) ≈ ${r.specificStiffness}`,
  ]
+ if (r.boundarySummary) lines.push(L ? r.boundarySummary.ru : r.boundarySummary.en)
+ if (r.materialEffective) {
+  lines.push(L
+   ? `Материал эфф.: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}`
+   : `Effective material: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}`)
+ }
+ if (r.sectionLabel) {
+  lines.push(L ? `Сечение стержня: ${r.sectionLabel}` : `Strut section: ${r.sectionLabel}`)
+ }
+ if (r.homogenized) {
+  lines.push(L
+   ? `Гомогенизация ячейки: E*≈${r.homogenized.EStar} MPa, σ*≈${r.homogenized.sigmaStar} MPa`
+   : `Cell homogenization: E*≈${r.homogenized.EStar} MPa, σ*≈${r.homogenized.sigmaStar} MPa`)
+ }
  if (r.connectivity != null) {
   lines.push(L
    ? `Связность Z≈${r.connectivity}, длина стержня ≈ ${r.meanStrutLengthMm} mm`
    : `Connectivity Z≈${r.connectivity}, strut length ≈ ${r.meanStrutLengthMm} mm`)
  }
  if (r.strutStressMPa != null) {
+  const eta = r.combinedUtilization ?? r.utilization
   lines.push(L
-   ? `σ_стержня ≈ ${r.strutStressMPa} MPa, η ≈ ${r.utilization}${r.bucklingRatio != null ? `, P/Pcr ≈ ${r.bucklingRatio}` : ''}`
-   : `σ_strut ≈ ${r.strutStressMPa} MPa, η ≈ ${r.utilization}${r.bucklingRatio != null ? `, P/Pcr ≈ ${r.bucklingRatio}` : ''}`)
+   ? `σ ≈ ${r.strutStressMPa} MPa, η ≈ ${eta}${r.bucklingRatio != null ? `, P/Pcr ≈ ${r.bucklingRatio}` : ''}${r.panelBucklingMPa != null ? `, σ_panel≈${r.panelBucklingMPa}` : ''}${r.maxDeflectionMm != null ? `, δ_max≈${r.maxDeflectionMm} mm` : ''}`
+   : `σ ≈ ${r.strutStressMPa} MPa, η ≈ ${eta}${r.bucklingRatio != null ? `, P/Pcr ≈ ${r.bucklingRatio}` : ''}${r.panelBucklingMPa != null ? `, σ_panel≈${r.panelBucklingMPa}` : ''}${r.maxDeflectionMm != null ? `, δ_max≈${r.maxDeflectionMm} mm` : ''}`)
  }
  for (const w of r.warnings) lines.push('⚠ ' + (L ? w.ru : w.en))
+ if (r.advice?.length) {
+  lines.push(L ? 'Рекомендации (ожидаемый Δη):' : 'Recommendations (expected Δη):')
+  for (const tip of r.advice.slice(0, 5)) {
+   lines.push(`• ${L ? tip.ru : tip.en} (ΔE*≈${tip.deltaStiffnessPct > 0 ? '+' : ''}${tip.deltaStiffnessPct}%, Δm≈${tip.deltaMassPct > 0 ? '+' : ''}${tip.deltaMassPct}%)`)
+  }
+ }
  if (r.weakSpots.length) {
   lines.push(L
    ? `Слабые места для ${material.ru} (эвристика, подсветка в превью):`

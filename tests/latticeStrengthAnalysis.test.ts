@@ -7,7 +7,15 @@ import {
  findLatticeWeakSpots,
  formatLatticeStrengthReport,
  weakSpotHighlightMeshes,
+ feaMemberHighlightMeshes,
+ compareLatticeVariants,
 } from '../src/services/latticeStrengthAnalysis'
+import {
+ DEFAULT_PRINT_SERVICE,
+ defaultCompressionScenario,
+ defaultStrutSection,
+ effectiveMaterialScalars,
+} from '../src/services/latticeStrengthScenario'
 import {type LighteningOptions} from '../src/services/solidLightening'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 
@@ -165,3 +173,63 @@ describe('lattice strength analysis', () => {
   expect(steelReport.warnings.some(w => /Metal|buckling/i.test(w.en))).toBe(true)
  })
 
+ it('applies FDM orthotropy and humidity knock-down for nylon', () => {
+  const nylon = LATTICE_MATERIALS.find(m => m.id === 'nylon')!
+  const dry = effectiveMaterialScalars(nylon, {...DEFAULT_PRINT_SERVICE, humidityPct: 20, temperatureC: 23, infill: 1})
+  const wet = effectiveMaterialScalars(nylon, {...DEFAULT_PRINT_SERVICE, humidityPct: 80, temperatureC: 50, infill: 0.4, perimeters: 2})
+  expect(dry.EParallel).toBeGreaterThan(dry.EPerp)
+  expect(wet.E).toBeLessThan(dry.E)
+  expect(wet.envFactor).toBeLessThan(dry.envFactor)
+ })
+
+ it('runs truss FEA with supports/loads, deflection, advice and fea markers', () => {
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const load = {case: 'compression' as const, forceN: 300, safety: 2}
+  const scenario = defaultCompressionScenario(load.forceN, load.safety)
+  scenario.section = {...defaultStrutSection(2.5), eccentricity: 0.3}
+  scenario.service = {...DEFAULT_PRINT_SERVICE, printAxis: 'z', humidityPct: 40}
+  const report = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.5, wallDepth: 3.6, keepCore: false}, pla, load, {beforeMm3: 2400, afterMm3: 900}, scenario)
+  expect(report.scenarioId).toBe('compression')
+  expect(report.maxDeflectionMm).toBeGreaterThan(0)
+  expect(report.feaMembers?.length).toBeGreaterThan(0)
+  expect(report.homogenized?.EStar).toBeGreaterThan(0)
+  expect(report.advice?.length).toBeGreaterThan(0)
+  expect(report.boundarySummary?.en).toMatch(/support|Fixed|force/i)
+  const text = formatLatticeStrengthReport(report, pla, load, 'en')
+  expect(text).toMatch(/FEA|deflection|δ_max|η/i)
+  expect(text).toMatch(/Recommend|Increase|Reduce|diagonal|strut|cell|Advice|tip/i)
+  const feaMeshes = feaMemberHighlightMeshes(report.feaMembers ?? [])
+  expect(feaMeshes.length).toBe(report.feaMembers!.length)
+  expect(feaMeshes[0].indices.length).toBeGreaterThan(0)
+ })
+
+ it('supports ULS combinations and A/B lattice comparison', () => {
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const load = {case: 'compression' as const, forceN: 200, safety: 2}
+  const scenario = defaultCompressionScenario(load.forceN, load.safety)
+  scenario.activeId = 'uls'
+  const uls = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.8, wallDepth: 3.6, keepCore: false}, pla, load, undefined, scenario)
+  expect(uls.scenarioId).toBe('uls')
+  expect(uls.maxDeflectionMm ?? 0).toBeGreaterThan(0)
+  const octet = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.8}, pla, load, {beforeMm3: 2400, afterMm3: 1000})
+  const bcc = analyzeLatticeStrength(box(), {...base, pattern: 'bcc', cell: 12, rib: 2.8}, pla, load, {beforeMm3: 2400, afterMm3: 1000})
+  const cmp = compareLatticeVariants(
+   {label: 'octet', massProxy: octet.relativeDensity, stiffnessProxy: octet.relativeStiffness, utilization: octet.utilization ?? 1, bucklingRatio: octet.bucklingRatio ?? 0.01},
+   {label: 'bcc', massProxy: bcc.relativeDensity, stiffnessProxy: bcc.relativeStiffness, utilization: bcc.utilization ?? 1, bucklingRatio: bcc.bucklingRatio ?? 0.01},
+  )
+  expect(cmp.rows.length).toBeGreaterThanOrEqual(3)
+  expect(['a', 'b', 'tie']).toContain(cmp.winner)
+  expect(cmp.summary.en.length).toBeGreaterThan(0)
+ })
+
+ it('raises utilization when strut eccentricity adds bending', () => {
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const load = {case: 'compression' as const, forceN: 250, safety: 2}
+  const concentric = defaultCompressionScenario(load.forceN, load.safety)
+  concentric.section = {...defaultStrutSection(2.4), eccentricity: 0}
+  const eccentric = defaultCompressionScenario(load.forceN, load.safety)
+  eccentric.section = {...defaultStrutSection(2.4), eccentricity: 0.8}
+  const a = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.4}, pla, load, undefined, concentric)
+  const b = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.4}, pla, load, undefined, eccentric)
+  expect((b.combinedUtilization ?? b.utilization ?? 0)).toBeGreaterThanOrEqual((a.combinedUtilization ?? a.utilization ?? 0))
+ })
