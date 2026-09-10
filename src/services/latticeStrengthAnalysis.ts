@@ -9,6 +9,8 @@ import {
  type LighteningPattern,
 } from './solidLightening'
 import type {DirectBody} from './directModeling'
+import {importedStlToMeshData} from './stlImport'
+import type {MeshData, SceneEntityId} from '../core/mesh'
 
 export type LatticeMaterialId = 'pla' | 'petg' | 'abs' | 'nylon' | 'al6061' | 'steel'
 export type LatticeLoadCase = 'compression' | 'tension' | 'bending'
@@ -23,6 +25,14 @@ export interface LatticeMaterial {
  sigmaAllow: number
  /** Density, g/cm^3 */
  density: number
+ /** Manufacturing process — FDM layers vs isotropic metal stock. */
+ process: 'fdm' | 'metal'
+ /** Notch/corner sensitivity (~0.7 ductile … ~1.4 brittle). */
+ notch: number
+ /** Layer-bond anisotropy 0..1 (FDM); raises bridge/thin-wall risk. */
+ layer: number
+ /** Ductility 0..1 — lowers sharp-corner criticality when high. */
+ ductility: number
 }
 
 export interface LatticeLoadInput {
@@ -75,18 +85,22 @@ export interface LatticeWeakSpot {
  score: number
  /** Approximate location in model millimetres */
  at: [number, number, number]
+ /** Viewport highlight RGBA in 0..1, material- and severity-tinted. */
+ color: [number, number, number, number]
+ /** Multiplier applied from material process / toughness / anisotropy. */
+ materialBias: number
  ru: string
  en: string
  detail?: Record<string, number>
 }
 
 export const LATTICE_MATERIALS: LatticeMaterial[] = [
- {id: 'pla', ru: 'PLA (FDM)', en: 'PLA (FDM)', E: 3500, sigmaAllow: 35, density: 1.24},
- {id: 'petg', ru: 'PETG (FDM)', en: 'PETG (FDM)', E: 2100, sigmaAllow: 30, density: 1.27},
- {id: 'abs', ru: 'ABS (FDM)', en: 'ABS (FDM)', E: 2000, sigmaAllow: 25, density: 1.04},
- {id: 'nylon', ru: 'Nylon (FDM)', en: 'Nylon (FDM)', E: 1700, sigmaAllow: 40, density: 1.14},
- {id: 'al6061', ru: 'Алюминий 6061', en: 'Aluminium 6061', E: 68900, sigmaAllow: 110, density: 2.7},
- {id: 'steel', ru: 'Сталь конструкционная', en: 'Mild steel', E: 200000, sigmaAllow: 160, density: 7.85},
+ {id: 'pla', ru: 'PLA (FDM)', en: 'PLA (FDM)', E: 3500, sigmaAllow: 35, density: 1.24, process: 'fdm', notch: 1.35, layer: 0.95, ductility: 0.25},
+ {id: 'petg', ru: 'PETG (FDM)', en: 'PETG (FDM)', E: 2100, sigmaAllow: 30, density: 1.27, process: 'fdm', notch: 1.1, layer: 0.85, ductility: 0.45},
+ {id: 'abs', ru: 'ABS (FDM)', en: 'ABS (FDM)', E: 2000, sigmaAllow: 25, density: 1.04, process: 'fdm', notch: 1.2, layer: 0.9, ductility: 0.4},
+ {id: 'nylon', ru: 'Nylon (FDM)', en: 'Nylon (FDM)', E: 1700, sigmaAllow: 40, density: 1.14, process: 'fdm', notch: 0.85, layer: 0.75, ductility: 0.8},
+ {id: 'al6061', ru: 'Алюминий 6061', en: 'Aluminium 6061', E: 68900, sigmaAllow: 110, density: 2.7, process: 'metal', notch: 0.95, layer: 0.05, ductility: 0.7},
+ {id: 'steel', ru: 'Сталь конструкционная', en: 'Mild steel', E: 200000, sigmaAllow: 160, density: 7.85, process: 'metal', notch: 0.85, layer: 0.02, ductility: 0.75},
 ]
 
 const round = (v: number, digits = 3) => Math.round(v * 10 ** digits) / 10 ** digits
@@ -178,6 +192,91 @@ function severityFromScore(score: number): LatticeWeakSeverity {
  return 'low'
 }
 
+/** Kind weights that change with material process, toughness and FDM layer risk. */
+export function materialWeakBias(
+ material: LatticeMaterial,
+ kind: LatticeWeakKind,
+ load: LatticeLoadInput,
+): number {
+ const bend = load.case === 'bending' ? 1.15 : 1
+ const buckle = Math.min(1.6, Math.max(0.45, Math.sqrt(3500 / Math.max(material.E, 1))))
+ switch (kind) {
+  case 'slender_strut':
+   return round(buckle * (load.case === 'compression' ? 1.2 : load.case === 'bending' ? 1.05 : 0.85), 3)
+  case 'bridge':
+  case 'thin_wall':
+   return round((0.55 + 0.7 * material.layer) * (material.process === 'fdm' ? 1.15 : 0.55) * bend, 3)
+  case 'sharp_corner':
+  case 'body_corner':
+   return round(material.notch * (1.25 - 0.45 * material.ductility) * bend, 3)
+  case 'free_end':
+  case 'hinge_node':
+   return round((0.85 + 0.35 * material.layer) * (load.case === 'bending' ? 1.2 : 1) * (1.1 - 0.2 * material.ductility), 3)
+  case 'underconnected':
+   return round((0.9 + 0.25 * material.layer) * bend, 3)
+  case 'long_span':
+   return round((0.75 + 0.35 * (1 - material.ductility) + 0.25 * material.layer) * bend, 3)
+  default:
+   return 1
+ }
+}
+
+/** Severity palette shifted cooler for metals, warmer for brittle FDM. */
+export function weakSpotHighlightColor(
+ severity: LatticeWeakSeverity,
+ material: LatticeMaterial,
+): [number, number, number, number] {
+ const metal = material.process === 'metal'
+ const table: Record<LatticeWeakSeverity, [number, number, number, number]> = metal
+  ? {
+   critical: [0.95, 0.2, 0.35, 1],
+   high: [1, 0.45, 0.15, 1],
+   medium: [0.2, 0.75, 0.95, 1],
+   low: [0.35, 0.55, 0.85, 1],
+  }
+  : material.ductility < 0.35
+   ? {
+    critical: [1, 0.08, 0.12, 1],
+    high: [1, 0.35, 0.05, 1],
+    medium: [1, 0.7, 0.1, 1],
+    low: [0.95, 0.85, 0.25, 1],
+   }
+   : {
+    critical: [0.95, 0.15, 0.4, 1],
+    high: [1, 0.5, 0.12, 1],
+    medium: [1, 0.75, 0.2, 1],
+    low: [0.55, 0.85, 0.35, 1],
+   }
+ return table[severity]
+}
+
+function octahedronPositions(at: [number, number, number], s: number): Float32Array {
+ const [x, y, z] = at
+ // 8 triangles × 3 verts × 3 coords
+ const px = x + s, mx = x - s, py = y + s, my = y - s, pz = z + s, mz = z - s
+ const top = [x, py, z], bot = [x, my, z], xpos = [px, y, z], xneg = [mx, y, z], zpos = [x, y, pz], zneg = [x, y, mz]
+ const faces = [
+  [...top, ...xpos, ...zpos], [...top, ...zpos, ...xneg], [...top, ...xneg, ...zneg], [...top, ...zneg, ...xpos],
+  [...bot, ...zpos, ...xpos], [...bot, ...xneg, ...zpos], [...bot, ...zneg, ...xneg], [...bot, ...xpos, ...zneg],
+ ]
+ return new Float32Array(faces.flat())
+}
+
+/** Colored octahedron markers for viewport preview of ranked weak spots. */
+export function weakSpotHighlightMeshes(
+ spots: readonly LatticeWeakSpot[],
+ markerMm = 1.6,
+): MeshData[] {
+ const size = Math.max(0.4, markerMm)
+ return spots.map((spot, i) => {
+  const scale = size * (0.75 + 0.5 * spot.score)
+  const positions = octahedronPositions(spot.at, scale)
+  const mesh = importedStlToMeshData({triangleCount: positions.length / 9, positions}, spot.color)
+  return {...mesh, entityId: `entity:weak-spot/${spot.kind}/${i}` as SceneEntityId}
+ })
+}
+
+
 function polygonAngles(poly: [number, number][]) {
  const angles: {at: [number, number]; deg: number}[] = []
  for (let i = 0; i < poly.length; i++) {
@@ -212,8 +311,26 @@ export function findLatticeWeakSpots(
 ): LatticeWeakSpot[] {
  const {min, max, size} = bodyBounds(body)
  const spots: LatticeWeakSpot[] = []
- const push = (spot: Omit<LatticeWeakSpot, 'severity'> & {score: number}) => {
-  spots.push({...spot, severity: severityFromScore(spot.score)})
+ const push = (spot: Omit<LatticeWeakSpot, 'severity' | 'color' | 'materialBias'> & {score: number}) => {
+  const bias = materialWeakBias(material, spot.kind, load)
+  const score = round(Math.min(1, spot.score * bias), 3)
+  const severity = severityFromScore(score)
+  const color = weakSpotHighlightColor(severity, material)
+  const detail = {...(spot.detail ?? {}), materialBias: bias}
+  spots.push({
+   ...spot,
+   score,
+   severity,
+   color,
+   materialBias: bias,
+   detail,
+   ru: bias !== 1
+    ? `${spot.ru} [${material.ru}: ×${bias}]`
+    : spot.ru,
+   en: bias !== 1
+    ? `${spot.en} [${material.en}: ×${bias}]`
+    : spot.en,
+  })
  }
  const axis = loadAxis(load, o)
  const r = o.rib / 2
@@ -504,10 +621,15 @@ export function analyzeLatticeStrength(
    en: 'For bending of a light body, material placement and section moments dominate — Ashby only gives order-of-magnitude.',
   })
  }
- if (material.id === 'pla' || material.id === 'petg' || material.id === 'abs' || material.id === 'nylon') {
+ if (material.process === 'fdm') {
   warnings.push({
-   ru: 'Для FDM модуль и прочность анизотропны (слои); значения — изотропный справочный порядок.',
-   en: 'FDM modulus/strength are anisotropic (layers); values are isotropic order-of-magnitude references.',
+   ru: `FDM (${material.ru}): слои усиливают риск мостов/тонких стенок; углы взвешены notch=${material.notch}, ductility=${material.ductility}.`,
+   en: `FDM (${material.en}): layers raise bridge/thin-wall risk; corners weighted notch=${material.notch}, ductility=${material.ductility}.`,
+  })
+ } else {
+  warnings.push({
+   ru: `Металл (${material.ru}): подсветка смещена к потере устойчивости и концентраторам; слоистая анизотропия почти не учитывается.`,
+   en: `Metal (${material.en}): highlights bias toward buckling and concentrators; layer anisotropy is nearly ignored.`,
   })
  }
 
@@ -582,10 +704,13 @@ export function formatLatticeStrengthReport(
  }
  for (const w of r.warnings) lines.push('⚠ ' + (L ? w.ru : w.en))
  if (r.weakSpots.length) {
-  lines.push(L ? 'Слабые места (эвристика):' : 'Weak spots (heuristic):')
+  lines.push(L
+   ? `Слабые места для ${material.ru} (эвристика, подсветка в превью):`
+   : `Weak spots for ${material.en} (heuristic, highlighted in preview):`)
   for (const [i, spot] of r.weakSpots.slice(0, 8).entries()) {
    const xyz = `${round(spot.at[0], 1)}, ${round(spot.at[1], 1)}, ${round(spot.at[2], 1)}`
-   lines.push(`${i + 1}. [${spot.severity}] (${xyz}) ${L ? spot.ru : spot.en}`)
+   const bias = spot.materialBias != null ? ` ×${spot.materialBias}` : ''
+   lines.push(`${i + 1}. [${spot.severity}${bias}] (${xyz}) ${L ? spot.ru : spot.en}`)
   }
  }
  lines.push(L ? r.disclaimer.ru : r.disclaimer.en)

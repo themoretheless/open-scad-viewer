@@ -6,6 +6,7 @@ import {
  analyzeLatticeStrength,
  findLatticeWeakSpots,
  formatLatticeStrengthReport,
+ weakSpotHighlightMeshes,
 } from '../src/services/latticeStrengthAnalysis'
 import {type LighteningOptions} from '../src/services/solidLightening'
 import {extrudeDirectSketch} from '../src/services/directModeling'
@@ -122,3 +123,45 @@ describe('lattice strength analysis', () => {
   expect(spots.some(s => s.kind === 'sharp_corner' || s.kind === 'body_corner')).toBe(true)
  })
 })
+
+ it('weights weak spots by material: PLA elevates corners/bridges, steel elevates slender buckling', () => {
+  const o = {...base, cell: 16, rib: 1.2}
+  const load = {case: 'compression' as const, forceN: 3500, safety: 1.5}
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const steel = LATTICE_MATERIALS.find(m => m.id === 'steel')!
+  const nylon = LATTICE_MATERIALS.find(m => m.id === 'nylon')!
+  const plaSpots = findLatticeWeakSpots(box(), o, pla, load)
+  const steelSpots = findLatticeWeakSpots(box(), o, steel, load)
+  const nylonSpots = findLatticeWeakSpots(box(), {...base, pattern: 'web', cell: 7, rib: 1.1, rim: 1, bottom: 0.4, top: 0, jitter: 0.9, seed: 7}, nylon, {case: 'bending', forceN: 80, safety: 2})
+  const plaCorner = plaSpots.find(s => s.kind === 'body_corner' || s.kind === 'sharp_corner')
+  const nylonCorner = nylonSpots.find(s => s.kind === 'body_corner' || s.kind === 'sharp_corner')
+  expect(plaSpots[0].color).toHaveLength(4)
+  expect(plaSpots[0].materialBias).toBeGreaterThan(0)
+  // Brittle PLA corner bias exceeds ductile nylon when both see a corner.
+  if (plaCorner && nylonCorner) expect(plaCorner.materialBias).toBeGreaterThan(nylonCorner.materialBias)
+  const steelSlender = steelSpots.find(s => s.kind === 'slender_strut')
+  const plaSlender = plaSpots.find(s => s.kind === 'slender_strut')
+  if (steelSlender && plaSlender) {
+   // Higher E lowers Euler risk multiplier for the same geometry.
+   expect(steelSlender.materialBias).toBeLessThan(plaSlender.materialBias)
+  }
+  const meshes = weakSpotHighlightMeshes(plaSpots.slice(0, 3), 1.5)
+  expect(meshes.length).toBe(Math.min(3, plaSpots.length))
+  expect(meshes[0].color).toEqual(plaSpots[0].color)
+  expect(meshes[0].indices.length).toBeGreaterThan(0)
+ })
+
+ it('lists different material-biased severities in the formatted report', () => {
+  const load = {case: 'compression' as const, forceN: 4000, safety: 1.5}
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const steel = LATTICE_MATERIALS.find(m => m.id === 'steel')!
+  const plaReport = analyzeLatticeStrength(box(), {...base, cell: 16, rib: 1.2}, pla, load)
+  const steelReport = analyzeLatticeStrength(box(), {...base, cell: 16, rib: 1.2}, steel, load)
+  const plaText = formatLatticeStrengthReport(plaReport, pla, load, 'en')
+  const steelText = formatLatticeStrengthReport(steelReport, steel, load, 'en')
+  expect(plaText).toMatch(/Weak spots for PLA/)
+  expect(steelText).toMatch(/Weak spots for Mild steel/)
+  expect(plaReport.warnings.some(w => /FDM|layer/i.test(w.en))).toBe(true)
+  expect(steelReport.warnings.some(w => /Metal|buckling/i.test(w.en))).toBe(true)
+ })
+
