@@ -199,3 +199,14 @@ Three additional structures target high stiffness-to-weight rather than only vol
 - **ОЦК / BCC** — body-centred cubic struts from each cell centre to its eight corners. Strong under compression with a simpler, lighter graph than octet.
 
 The panel shows a short qualitative hint for every structure (stretch / mixed / bending / organic). Hints and rankings are geometric guidance only — not FEA, fatigue or print certification. Node/edge budgets remain 125 / 400; octet and BCC need larger cells on big bodies.
+
+### Strength-of-materials estimate
+
+**Облегчение** includes an analytical strength-of-materials block (material, load case, force, safety factor). After preview it appends a report based on:
+
+- relative density from measured before/after volume (or a geometric estimate beforehand);
+- Gibson–Ashby scaling \(E^\*/E \sim C\rho^n\) with pattern-dependent stretch/bending exponents;
+- mean spatial-graph connectivity (Maxwell / Deshpande stretch vs bending);
+- strut axial stress and Euler buckling ratio for spatial lattices.
+
+Materials are isotropic reference values (PLA/PETG/ABS/Nylon/Al 6061/steel). FDM anisotropy, contacts, residual stress, fatigue and local print defects are out of scope. The UI states explicitly that this is not FEA or certification.
