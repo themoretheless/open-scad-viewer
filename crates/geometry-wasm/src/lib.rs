@@ -53,3 +53,64 @@ pub unsafe extern "C" fn abi_import_mesh(
 ) -> u64 {
     geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il)
 }
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers allocated by this
+/// module; they are only read.
+#[no_mangle]
+pub unsafe extern "C" fn abi_bvh_build(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    geometry_bridge::abi::abi_bvh_build(stride, leaf, vp, vl, ip, il)
+}
+
+/// # Safety
+/// All buffer pointers must reference live caller-owned buffers allocated by
+/// this module; they are only read.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn abi_semantic_edges(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mfp: usize,
+    mfl: usize,
+    mtp: usize,
+    mtl: usize,
+    weld: u32,
+    crease_dot_threshold: f64,
+) -> u64 {
+    geometry_bridge::abi::abi_semantic_edges(
+        vp,
+        vl,
+        ip,
+        il,
+        mfp,
+        mfl,
+        mtp,
+        mtl,
+        weld,
+        crease_dot_threshold,
+    )
+}
+
+/// # Safety
+/// The handle must reference a live result from `abi_bvh_build` or
+/// `abi_semantic_edges`.
+#[no_mangle]
+pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
+    geometry_bridge::abi::abi_array_field(handle, slot)
+}
+
+/// # Safety
+/// The handle must reference a live analysis result; consumed once.
+#[no_mangle]
+pub unsafe extern "C" fn abi_array_free(handle: usize) {
+    geometry_bridge::abi::abi_array_free(handle)
+}

@@ -21,6 +21,10 @@ interface KernelExports extends WebAssembly.Exports {
  abi_mesh_field(ptr:number,field:number):number
  abi_mesh_free(ptr:number):void
  abi_import_mesh(stride:number,vp:number,vl:number,ip:number,il:number):bigint
+ abi_bvh_build(stride:number,leaf:number,vp:number,vl:number,ip:number,il:number):bigint
+ abi_semantic_edges(vp:number,vl:number,ip:number,il:number,mfp:number,mfl:number,mtp:number,mtl:number,weld:number,creaseDotThreshold:number):bigint
+ abi_array_field(handle:number,slot:number):number
+ abi_array_free(handle:number):void
 }
 let wasm:KernelExports
 let initialized = false
@@ -151,4 +155,10 @@ export function importCadMesh(stride:number,vertices:Float32Array,indices:Uint32
   new Uint8Array(wasmMemory.buffer,ip,indices.byteLength).set(new Uint8Array(indices.buffer,indices.byteOffset,indices.byteLength))
   return decodeNurbsResult<number>(takeResponse(wasm.abi_import_mesh(stride,vp,vertices.length,ip,indices.length)))
  }finally{if(ip)wasm.abi_free(ip,indices.byteLength);if(vp)wasm.abi_free(vp,vertices.byteLength)}
+}
+
+/** Low-level access for raw-buffer analysis bindings (services/geometry/meshAnalysis). */
+export function kernelRuntime():{exports:KernelExports,memory:WebAssembly.Memory,takeResponse:(packed:bigint)=>unknown}{
+ initialize()
+ return {exports:wasm,memory:wasmMemory,takeResponse}
 }

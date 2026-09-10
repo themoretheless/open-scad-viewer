@@ -1,6 +1,13 @@
 /**
  * A compact, transferable triangle BVH for CPU picking.
  *
+ * Construction runs in the Rust geometry kernel (crates/polygon-core/src/bvh.rs)
+ * through the raw-buffer binding in services/geometry/meshAnalysis.ts; this
+ * module keeps option clamping, the empty-mesh fast path and the numeric
+ * contract (f64 arithmetic over Float32 inputs). Raycasting deliberately
+ * stays here: it is an interactive bridge interaction over the TS-resident
+ * BVH that is transferred between workers and stored on scene objects.
+ *
  * Nodes are stored in two typed arrays. `bounds` contains six floats per node
  * (`minX, minY, minZ, maxX, maxY, maxZ`) and `nodes` contains two uints:
  *
@@ -12,6 +19,7 @@
  */
 
 import type { MeshBvh } from '../core/mesh'
+import { buildBvhInKernel } from './geometry/meshAnalysis'
 
 export type { MeshBvh } from '../core/mesh'
 
@@ -85,16 +93,12 @@ function finiteInteger(value: number | undefined, fallback: number, min: number,
   return Math.min(max, Math.max(min, Math.trunc(value!)))
 }
 
-function nextPowerOfTwo(value: number): number {
-  if (value <= 1) return 1
-  return 2 ** Math.ceil(Math.log2(value))
-}
-
 /**
  * Build a deterministic, balanced median-split BVH.
  *
- * Construction is O(n log n), uses bounded recursion (about 18 levels for the
- * application's 750k-triangle limit), and does not mutate its inputs.
+ * The computation runs in the Rust kernel; TypeScript retains option
+ * clamping and the empty-mesh fast path. Construction is O(n log n) and does
+ * not mutate its inputs.
  */
 export function buildMeshBvh(
   vertices: Float32Array,
@@ -107,191 +111,16 @@ export function buildMeshBvh(
   const vertexCount = Math.floor(vertices.length / vertexStride)
   if (triangleCount === 0 || vertexCount === 0) return emptyBvh(vertexStride, leafSize)
 
-  // These arrays are construction-only. Records are compacted at the front so
-  // malformed triangles do not consume space in the final BVH.
-  const sourceTriangles = new Uint32Array(triangleCount)
-  const triangleBounds = new Float32Array(triangleCount * 6)
-  const centroids = new Float32Array(triangleCount * 3)
-  let validCount = 0
-
-  for (let triangle = 0; triangle < triangleCount; triangle++) {
-    const indexOffset = triangle * 3
-    const ia = indices[indexOffset]
-    const ib = indices[indexOffset + 1]
-    const ic = indices[indexOffset + 2]
-    if (ia >= vertexCount || ib >= vertexCount || ic >= vertexCount) continue
-
-    const a = ia * vertexStride
-    const b = ib * vertexStride
-    const c = ic * vertexStride
-    const ax = vertices[a], ay = vertices[a + 1], az = vertices[a + 2]
-    const bx = vertices[b], by = vertices[b + 1], bz = vertices[b + 2]
-    const cx = vertices[c], cy = vertices[c + 1], cz = vertices[c + 2]
-    if (!Number.isFinite(ax) || !Number.isFinite(ay) || !Number.isFinite(az) ||
-        !Number.isFinite(bx) || !Number.isFinite(by) || !Number.isFinite(bz) ||
-        !Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) continue
-
-    const e1x = bx - ax, e1y = by - ay, e1z = bz - az
-    const e2x = cx - ax, e2y = cy - ay, e2z = cz - az
-    const nx = e1y * e2z - e1z * e2y
-    const ny = e1z * e2x - e1x * e2z
-    const nz = e1x * e2y - e1y * e2x
-    const areaSquared = nx * nx + ny * ny + nz * nz
-    if (!(areaSquared > 0) || !Number.isFinite(areaSquared)) continue
-
-    const boundsOffset = validCount * 6
-    const minX = Math.min(ax, bx, cx), minY = Math.min(ay, by, cy), minZ = Math.min(az, bz, cz)
-    const maxX = Math.max(ax, bx, cx), maxY = Math.max(ay, by, cy), maxZ = Math.max(az, bz, cz)
-    triangleBounds[boundsOffset] = minX
-    triangleBounds[boundsOffset + 1] = minY
-    triangleBounds[boundsOffset + 2] = minZ
-    triangleBounds[boundsOffset + 3] = maxX
-    triangleBounds[boundsOffset + 4] = maxY
-    triangleBounds[boundsOffset + 5] = maxZ
-    const centroidOffset = validCount * 3
-    // min + half-extent avoids overflowing where (min + max) / 2 would.
-    centroids[centroidOffset] = minX + (maxX - minX) * 0.5
-    centroids[centroidOffset + 1] = minY + (maxY - minY) * 0.5
-    centroids[centroidOffset + 2] = minZ + (maxZ - minZ) * 0.5
-    sourceTriangles[validCount] = triangle
-    validCount++
-  }
-
-  if (validCount === 0) return emptyBvh(vertexStride, leafSize)
-
-  // Balanced median splits produce no more than the next power-of-two number
-  // of leaves. This is < 4 * ceil(validCount / leafSize) nodes and prevents a
-  // wasteful 2*n allocation for large meshes.
-  const maximumLeaves = nextPowerOfTwo(Math.ceil(validCount / leafSize))
-  const maximumNodes = maximumLeaves * 2 - 1
-  const temporaryBounds = new Float32Array(maximumNodes * 6)
-  const temporaryNodes = new Uint32Array(maximumNodes * 2)
-  const order = new Uint32Array(validCount)
-  for (let i = 0; i < validCount; i++) order[i] = i
-
-  let nodeCount = 0
-
-  const compareRecords = (left: number, right: number, axis: number): number => {
-    const difference = centroids[left * 3 + axis] - centroids[right * 3 + axis]
-    if (difference !== 0) return difference
-    // Original triangle number is a stable, deterministic tiebreaker.
-    return sourceTriangles[left] - sourceTriangles[right]
-  }
-
-  const swap = (a: number, b: number) => {
-    const value = order[a]
-    order[a] = order[b]
-    order[b] = value
-  }
-
-  /** In-place deterministic quickselect with a three-way partition. */
-  const selectNth = (start: number, end: number, nth: number, axis: number) => {
-    let low = start
-    let high = end
-    while (high - low > 1) {
-      const middle = low + ((high - low) >>> 1)
-      const lowRecord = order[low]
-      const middleRecord = order[middle]
-      const highRecord = order[high - 1]
-      // Allocation-free median-of-three pivot selection.
-      let pivot = lowRecord
-      if (compareRecords(lowRecord, middleRecord, axis) < 0) {
-        pivot = compareRecords(middleRecord, highRecord, axis) < 0
-          ? middleRecord
-          : (compareRecords(lowRecord, highRecord, axis) < 0 ? highRecord : lowRecord)
-      } else {
-        pivot = compareRecords(lowRecord, highRecord, axis) < 0
-          ? lowRecord
-          : (compareRecords(middleRecord, highRecord, axis) < 0 ? highRecord : middleRecord)
-      }
-
-      let before = low
-      let cursor = low
-      let after = high
-      while (cursor < after) {
-        const comparison = compareRecords(order[cursor], pivot, axis)
-        if (comparison < 0) {
-          swap(before++, cursor++)
-        } else if (comparison > 0) {
-          swap(cursor, --after)
-        } else {
-          cursor++
-        }
-      }
-      if (nth < before) high = before
-      else if (nth >= after) low = after
-      else return
-    }
-  }
-
-  const buildNode = (start: number, end: number): number => {
-    const node = nodeCount++
-    const nodeBoundsOffset = node * 6
-    let minX = Infinity, minY = Infinity, minZ = Infinity
-    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
-    let centroidMinX = Infinity, centroidMinY = Infinity, centroidMinZ = Infinity
-    let centroidMaxX = -Infinity, centroidMaxY = -Infinity, centroidMaxZ = -Infinity
-
-    for (let slot = start; slot < end; slot++) {
-      const record = order[slot]
-      const boundsOffset = record * 6
-      minX = Math.min(minX, triangleBounds[boundsOffset])
-      minY = Math.min(minY, triangleBounds[boundsOffset + 1])
-      minZ = Math.min(minZ, triangleBounds[boundsOffset + 2])
-      maxX = Math.max(maxX, triangleBounds[boundsOffset + 3])
-      maxY = Math.max(maxY, triangleBounds[boundsOffset + 4])
-      maxZ = Math.max(maxZ, triangleBounds[boundsOffset + 5])
-      const centroidOffset = record * 3
-      const x = centroids[centroidOffset], y = centroids[centroidOffset + 1], z = centroids[centroidOffset + 2]
-      centroidMinX = Math.min(centroidMinX, x); centroidMaxX = Math.max(centroidMaxX, x)
-      centroidMinY = Math.min(centroidMinY, y); centroidMaxY = Math.max(centroidMaxY, y)
-      centroidMinZ = Math.min(centroidMinZ, z); centroidMaxZ = Math.max(centroidMaxZ, z)
-    }
-
-    temporaryBounds[nodeBoundsOffset] = minX
-    temporaryBounds[nodeBoundsOffset + 1] = minY
-    temporaryBounds[nodeBoundsOffset + 2] = minZ
-    temporaryBounds[nodeBoundsOffset + 3] = maxX
-    temporaryBounds[nodeBoundsOffset + 4] = maxY
-    temporaryBounds[nodeBoundsOffset + 5] = maxZ
-
-    const count = end - start
-    const dataOffset = node * 2
-    if (count <= leafSize) {
-      temporaryNodes[dataOffset] = start
-      temporaryNodes[dataOffset + 1] = (LEAF_BIT | count) >>> 0
-      return node
-    }
-
-    const extentX = centroidMaxX - centroidMinX
-    const extentY = centroidMaxY - centroidMinY
-    const extentZ = centroidMaxZ - centroidMinZ
-    // Stable tie order is X, then Y, then Z.
-    let axis = 0
-    if (extentY > extentX) axis = 1
-    if (extentZ > (axis === 0 ? extentX : extentY)) axis = 2
-    const middle = start + (count >>> 1)
-    selectNth(start, end, middle, axis)
-    const left = buildNode(start, middle)
-    const right = buildNode(middle, end)
-    temporaryNodes[dataOffset] = left
-    temporaryNodes[dataOffset + 1] = right
-    return node
-  }
-
-  buildNode(0, validCount)
-
-  const triangles = new Uint32Array(validCount)
-  for (let slot = 0; slot < validCount; slot++) triangles[slot] = sourceTriangles[order[slot]]
-
+  const built = buildBvhInKernel(vertices, indices, vertexStride, leafSize)
+  if (built.nodeCount === 0) return emptyBvh(vertexStride, leafSize)
   return {
     version: 1,
     vertexStride,
     leafSize,
-    nodeCount,
-    bounds: temporaryBounds.slice(0, nodeCount * 6),
-    nodes: temporaryNodes.slice(0, nodeCount * 2),
-    triangles,
+    nodeCount: built.nodeCount,
+    bounds: built.bounds,
+    nodes: built.nodes,
+    triangles: built.triangles,
   }
 }
 

@@ -3,7 +3,9 @@
 //! Coordinates in this host contract are millimeters; algorithms use binary64.
 pub mod boolean;
 pub mod brep;
+pub mod bvh;
 pub mod cad;
+pub mod edges;
 pub mod edit;
 pub mod modeling;
 pub mod proximity;

@@ -194,3 +194,104 @@ pub unsafe fn abi_import_mesh(
         import_cad_mesh(stride, &vertices, &indices).and_then(encode),
     ))
 }
+
+unsafe fn read_f32(ptr: usize, len: usize) -> Vec<f32> {
+    (0..len)
+        .map(|i| std::ptr::read_unaligned((ptr as *const f32).add(i)))
+        .collect()
+}
+
+unsafe fn read_u32(ptr: usize, len: usize) -> Vec<u32> {
+    (0..len)
+        .map(|i| std::ptr::read_unaligned((ptr as *const u32).add(i)))
+        .collect()
+}
+
+/// Build the median-split BVH and return a result handle for `abi_array_field`.
+/// # Safety
+/// vp/vl (f32 vertices) and ip/il (u32 indices) must reference live caller-owned
+/// buffers; they are only read. stride/leaf are pre-clamped by the host.
+pub unsafe fn abi_bvh_build(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    if !(3..=256).contains(&stride) || !(1..=64).contains(&leaf) {
+        return packed(geometry(Err(input("Invalid BVH build parameters"))));
+    }
+    if vl > LIMIT / 4 || il > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let vertices = read_f32(vp, vl);
+    let indices = read_u32(ip, il);
+    let bvh = polygon_core::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
+    let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Bvh {
+        bounds: bvh.bounds,
+        nodes: bvh.nodes,
+        triangles: bvh.triangles,
+    });
+    packed(geometry(encode(handle)))
+}
+
+/// Extract semantic edges and return a result handle for `abi_array_field`.
+/// # Safety
+/// All buffer pointers must reference live caller-owned buffers; they are only
+/// read. Merge arrays are pre-validated by the host and may be empty.
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn abi_semantic_edges(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mfp: usize,
+    mfl: usize,
+    mtp: usize,
+    mtl: usize,
+    weld: u32,
+    crease_dot_threshold: f64,
+) -> u64 {
+    if vl > LIMIT / 4 || il > LIMIT / 4 || mfl > LIMIT / 4 || mtl > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let vertices = read_f32(vp, vl);
+    let indices = read_u32(ip, il);
+    let merge_from = read_u32(mfp, mfl);
+    let merge_to = read_u32(mtp, mtl);
+    let edges = polygon_core::edges::extract_semantic_edges(
+        &vertices,
+        &indices,
+        &merge_from,
+        &merge_to,
+        weld != 0,
+        crease_dot_threshold,
+    );
+    let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Edges {
+        indices: edges.indices,
+        diagnostics: [
+            edges.diagnostics.boundary,
+            edges.diagnostics.crease,
+            edges.diagnostics.non_manifold,
+            edges.diagnostics.degenerate,
+        ],
+    });
+    packed(geometry(encode(handle)))
+}
+
+/// Read one pointer/length/diagnostic slot of a stored analysis result.
+/// # Safety
+/// The handle must reference a live result from `abi_bvh_build` or
+/// `abi_semantic_edges`.
+pub unsafe fn abi_array_field(handle: usize, slot: u32) -> usize {
+    mesh_analysis::field(handle, slot)
+}
+
+/// Release a stored analysis result exactly once.
+/// # Safety
+/// The handle must reference a live result from `abi_bvh_build` or
+/// `abi_semantic_edges`; it is consumed by this call.
+pub unsafe fn abi_array_free(handle: usize) {
+    mesh_analysis::free(handle)
+}

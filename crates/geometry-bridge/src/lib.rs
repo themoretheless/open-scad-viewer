@@ -4,6 +4,7 @@
 pub mod brep;
 mod cad;
 pub mod reconstruction;
+pub mod mesh_analysis;
 pub mod mesh_shell;
 mod sdf_gpu;
 #[cfg(feature = "gpu")]
