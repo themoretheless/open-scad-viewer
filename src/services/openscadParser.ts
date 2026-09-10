@@ -136,6 +136,7 @@ import {
 } from './openScadText'
 import { defaultGeometryKernel } from './manifoldGeometryKernel'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
+import { CSS_COLORS, clamp01, nextColor, resetPalette, type RGBA } from './openscadColors'
 
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
@@ -237,7 +238,6 @@ interface StableFunctionValue extends FunctionValue {
 interface Shape2D { dimension: 2; geometry: CrossSectionGeometry; color: RGBA; entityId: SceneEntityId }
 interface Shape3D { dimension: 3; geometry: ManifoldGeometry; color: RGBA; entityId: SceneEntityId }
 type Shape = Shape2D | Shape3D
-type RGBA = [number, number, number, number]
 
 class StableViewportRootSelection {
   constructor(readonly shapes: Shape[]) {}
@@ -276,24 +276,6 @@ function trackedSolid(geometry: ManifoldGeometry, color: RGBA, node: CallNode, c
   return { dimension: 3, geometry: trackedGeometry, color, entityId: currentEntityId(ctx) }
 }
 
-const PALETTE: RGBA[] = [
-  [0.26, 0.52, 0.96, 1], [0.96, 0.52, 0.26, 1],
-  [0.26, 0.86, 0.56, 1], [0.86, 0.26, 0.66, 1],
-  [0.96, 0.86, 0.26, 1], [0.46, 0.76, 0.86, 1],
-  [0.76, 0.56, 0.96, 1], [0.56, 0.86, 0.36, 1],
-]
-let paletteIndex = 0
-
-const CSS_COLORS: Record<string, RGBA> = {
-  red: [1, 0, 0, 1], green: [0, 0.5, 0, 1], blue: [0, 0, 1, 1],
-  yellow: [1, 1, 0, 1], cyan: [0, 1, 1, 1], magenta: [1, 0, 1, 1],
-  white: [1, 1, 1, 1], black: [0, 0, 0, 1], orange: [1, 0.65, 0, 1],
-  gray: [0.5, 0.5, 0.5, 1], grey: [0.5, 0.5, 0.5, 1],
-  pink: [1, 0.75, 0.8, 1], purple: [0.5, 0, 0.5, 1], brown: [0.65, 0.16, 0.16, 1],
-  lime: [0, 1, 0, 1], navy: [0, 0, 0.5, 1], teal: [0, 0.5, 0.5, 1],
-}
-
-function nextColor(): RGBA { return [...PALETTE[paletteIndex++ % PALETTE.length]] as RGBA }
 function warn(ctx: EvalContext, message: string) { if (!ctx.warnings.includes(message)) ctx.warnings.push(message) }
 function evaluationError(ctx: EvalContext, p: number, message: string): never { throw new OpenSCADParseError(ctx.source, p, message) }
 
@@ -3707,7 +3689,6 @@ function parseLegacyColor(value: Value, ctx: EvalContext, p: number): RGBA {
   }
   evaluationError(ctx, p, `Unknown color ${value}`)
 }
-function clamp01(value: number) { return Math.max(0, Math.min(1, value)) }
 
 /**
  * Lazily load the Manifold WASM module, cached per JS realm. Exported so a
@@ -3733,7 +3714,7 @@ async function parseInternal(
   if (project === undefined && source.length > MAX_SOURCE_LENGTH) {
     throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
   }
-  paletteIndex = 0
+  resetPalette()
   const ast = compileAst()
   const forcedImportAssets = project === undefined
     ? []

@@ -1104,6 +1104,35 @@ fn pick_depth(
     Some((1. / ((1. - f) / near + f / far), scores[best] as f32))
 }
 
+/// Packs one source view for the GPU sweep: appends its gray raster to the
+/// shared block and records the shader payload. Used by both the in-kernel GPU
+/// sweep and the host-split (browser WebGPU) packing.
+#[cfg(feature = "gpu")]
+fn source_payload(
+    rotation: [[f64; 3]; 3],
+    translation: [f64; 3],
+    focal: f64,
+    cx: f64,
+    cy: f64,
+    image: &GrayImage,
+    ref_len: usize,
+    grays: &mut Vec<f32>,
+) -> crate::gpu::sweep::SourcePayload {
+    // Offset 0 of the shared gray buffer is the reference image.
+    let gray_offset = (ref_len + grays.len()) as u32;
+    grays.extend_from_slice(&image.values);
+    crate::gpu::sweep::SourcePayload {
+        rotation: rotation.map(|row| row.map(|v| v as f32)),
+        translation: translation.map(|v| v as f32),
+        focal: focal as f32,
+        cx: cx as f32,
+        cy: cy as f32,
+        gray_offset,
+        gray_width: image.width as u32,
+        gray_height: image.height as u32,
+    }
+}
+
 /// Packs the prepared CPU-side view for the GPU sweep and returns the per-pixel
 /// hypothesis scores; None without a GPU adapter (the caller falls back).
 #[cfg(feature = "gpu")]
@@ -1123,19 +1152,16 @@ fn gpu_sweep_scores(
     let mut payloads = Vec::with_capacity(sources.len());
     let ref_len = gray.values.len();
     for source in sources {
-        // Offset 0 of the shared gray buffer is the reference image.
-        let gray_offset = (ref_len + grays.len()) as u32;
-        grays.extend_from_slice(&source.image.values);
-        payloads.push(crate::gpu::sweep::SourcePayload {
-            rotation: source.rotation.map(|row| row.map(|v| v as f32)),
-            translation: source.translation.map(|v| v as f32),
-            focal: source.camera.focal as f32,
-            cx: source.camera.cx as f32,
-            cy: source.camera.cy as f32,
-            gray_offset,
-            gray_width: source.image.width as u32,
-            gray_height: source.image.height as u32,
-        });
+        payloads.push(source_payload(
+            source.rotation,
+            source.translation,
+            source.camera.focal,
+            source.camera.cx,
+            source.camera.cy,
+            &source.image,
+            ref_len,
+            &mut grays,
+        ));
     }
     let hypotheses32: Vec<f32> = hypotheses.iter().map(|&z| z as f32).collect();
     crate::gpu::sweep::sweep_view(
@@ -1431,18 +1457,16 @@ mod tests {
             let mut flat: Vec<f32> = Vec::new();
             let mut payloads = Vec::new();
             for s in &view.sources {
-                let gray_offset = (gray[view.ref_image].as_ref().unwrap().values.len() + flat.len()) as u32;
-                flat.extend_from_slice(&gray[s.image].as_ref().unwrap().values);
-                payloads.push(crate::gpu::sweep::SourcePayload {
-                    rotation: s.rotation.map(|row| row.map(|x| x as f32)),
-                    translation: s.translation.map(|x| x as f32),
-                    focal: s.focal as f32,
-                    cx: s.cx as f32,
-                    cy: s.cy as f32,
-                    gray_offset,
-                    gray_width: 80,
-                    gray_height: 80,
-                });
+                payloads.push(source_payload(
+                    s.rotation,
+                    s.translation,
+                    s.focal,
+                    s.cx,
+                    s.cy,
+                    gray[s.image].as_ref().unwrap(),
+                    gray[view.ref_image].as_ref().unwrap().values.len(),
+                    &mut flat,
+                ));
             }
             let hyps: Vec<f32> = view.hypotheses.iter().map(|&z| z as f32).collect();
             crate::gpu::sweep::sweep_view(
