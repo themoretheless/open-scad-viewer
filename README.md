@@ -13,8 +13,8 @@ OpenSCAD runtime is available only as a differential oracle.
 
 Two independent domain libraries live in the Cargo workspace under `crates/`:
 
-- `nurbs-kernel`: rational curves and surfaces, analytic derivatives, knot/degree edits, iso-curves, extrusion, revolution and lofts.
-- `polygon-kernel`: owned triangle meshes, polygonal UV meshing, boundary loops, topology inspection, affine transforms, fixed-vector thickening and STL output. It accepts plain imported meshes and arbitrary parametric samplers, without depending on NURBS.
+- `nurbs-core`: rational curves and surfaces, analytic derivatives, knot/degree edits, iso-curves, extrusion, revolution and lofts.
+- `polygon-core`: owned triangle meshes, polygonal UV meshing, boundary loops, topology inspection, affine transforms, fixed-vector thickening and STL output. It accepts plain imported meshes and arbitrary parametric samplers, without depending on NURBS.
 
 `geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in ModelGraph. A full NURBS B-rep modeler is not implemented. Both ModelGraph and the legacy OpenSCAD route now use the repository-owned Rust CAD kernel; no external CAD runtime or fallback is loaded.
 

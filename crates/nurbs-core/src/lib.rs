@@ -1,5 +1,5 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
-//! No polygon-kernel, WASM, browser or application dependency.
+//! No polygon-core, WASM, browser or application dependency.
 pub mod brep;
 pub mod curve;
 pub mod edit;

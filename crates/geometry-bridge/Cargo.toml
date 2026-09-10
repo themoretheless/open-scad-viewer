@@ -15,9 +15,9 @@ gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 modelgraph-runtime = { path = "../modelgraph-runtime" }
 modelgraph-text = { path = "../modelgraph-text" }
-sketch-kernel = { path = "../sketch-kernel" }
+sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
-subdivision-kernel = { path = "../subdivision-kernel" }
-sdf-kernel = { path = "../sdf-kernel" }
-nurbs-kernel = { path = "../nurbs-kernel" }
-polygon-kernel = { path = "../polygon-kernel" }
+subdivision-core = { path = "../subdivision-core" }
+sdf-core = { path = "../sdf-core" }
+nurbs-core = { path = "../nurbs-core" }
+polygon-core = { path = "../polygon-core" }

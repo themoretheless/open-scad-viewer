@@ -1,5 +1,5 @@
 //! Exact spatial-index metrics versus exhaustive distances on identical samples.
-use photogrammetry_kernel::evaluation::{evaluate_clouds, EvaluationOptions};
+use photogrammetry_core::evaluation::{evaluate_clouds, EvaluationOptions};
 use std::time::Instant;
 
 fn exhaustive(a: &[[f64; 3]], b: &[[f64; 3]], threshold: f64) -> (f64, f64) {

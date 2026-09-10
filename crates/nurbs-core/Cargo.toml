@@ -1,5 +1,5 @@
 [package]
-name = "polygon-kernel"
+name = "nurbs-core"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -7,4 +7,5 @@ publish = false
 [dependencies]
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
+
 brep-topology = { path = "../brep-topology" }

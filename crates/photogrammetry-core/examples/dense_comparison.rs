@@ -1,6 +1,6 @@
 //! Deterministic analytic scenes: identical images, calibrated cameras and sparse
 //! range anchors for both dense estimators. Emits machine-readable JSON to stdout.
-use photogrammetry_kernel::{
+use photogrammetry_core::{
     camera::Camera,
     dense::{densify_with_options, DenseEstimator, DenseOptions},
     Image, Point, Reconstruction,

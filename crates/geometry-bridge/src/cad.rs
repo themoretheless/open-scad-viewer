@@ -1,6 +1,6 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
-use polygon_kernel::{cad, Mesh};
+use polygon_core::{cad, Mesh};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{json, Value};
 #[derive(Clone)]
@@ -59,13 +59,13 @@ fn boolean(a: &Mesh, b: &Mesh, op: &str) -> Result<Mesh> {
     if let Some(m) = cad::prism_boolean(a, b, op)? {
         return Ok(m);
     }
-    Ok(polygon_kernel::boolean::boolean(
+    Ok(polygon_core::boolean::boolean(
         a,
         b,
         match op {
-            "difference" => polygon_kernel::boolean::Operation::Difference,
-            "intersection" => polygon_kernel::boolean::Operation::Intersection,
-            _ => polygon_kernel::boolean::Operation::Union,
+            "difference" => polygon_core::boolean::Operation::Difference,
+            "intersection" => polygon_core::boolean::Operation::Intersection,
+            _ => polygon_core::boolean::Operation::Union,
         },
         &Default::default(),
     )?
@@ -286,7 +286,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 if cad::area(&ring) < 0. {
                     ring.reverse()
                 }
-                let part = polygon_kernel::modeling::revolve(
+                let part = polygon_core::modeling::revolve(
                     &ring,
                     field(&v, "angle")?,
                     field(&v, "segments")?,

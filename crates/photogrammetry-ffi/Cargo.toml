@@ -8,7 +8,7 @@ crate-type = ["rlib"]
 
 # Native builds may enable the kernel's GPU stages; wasm32 stays CPU-only.
 [features]
-gpu = ["photogrammetry-kernel/gpu"]
+gpu = ["photogrammetry-core/gpu"]
 [dependencies]
-photogrammetry-kernel = { path = "../photogrammetry-kernel" }
+photogrammetry-core = { path = "../photogrammetry-core" }
 value-codec = { path = "../value-codec" }

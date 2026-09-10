@@ -1,4 +1,4 @@
-use photogrammetry_kernel::{features, Image};
+use photogrammetry_core::{features, Image};
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let mut all = Vec::new();

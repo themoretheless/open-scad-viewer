@@ -3,7 +3,7 @@
 ## Own Rust geometry kernel
 
 The application uses the repository's Rust CAD implementation in
-`crates/polygon-kernel` through `crates/geometry-bridge`. It contains no Manifold,
+`crates/polygon-core` through `crates/geometry-bridge`. It contains no Manifold,
 OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
 The Rust workspace has no external Cargo dependencies. Document values, binary
 transport, direct WASM bindings and runtime DEFLATE decoding are repository-owned.

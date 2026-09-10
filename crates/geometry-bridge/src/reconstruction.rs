@@ -1,7 +1,7 @@
 //! Explicit mesh-to-NURBS conversion. PN patches approximate a chosen smoothing;
 //! they do not recover unknown original CAD surfaces or prove global continuity.
 use super::*;
-use polygon_kernel::proximity::{closest_triangle, valid_source};
+use polygon_core::proximity::{closest_triangle, valid_source};
 type Point = [f64; 3];
 fn sub(a: Point, b: Point) -> Point {
     std::array::from_fn(|i| a[i] - b[i])
@@ -334,9 +334,9 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
 
 /// Exact planar, trimmed NURBS B-rep of the source triangle boundary. Topology
 /// budgets (notably 256 faces) apply. No smooth-face recognition is implied.
-pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_kernel::brep::Model> {
+pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_core::brep::Model> {
     let source = valid_source(mesh, 256)?;
-    let polygon = polygon_kernel::brep::from_mesh(&source, None)?;
+    let polygon = polygon_core::brep::from_mesh(&source, None)?;
     let mut faces = Vec::new();
     let mut loops = polygon
         .loops
@@ -413,7 +413,7 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_kernel::brep::Model> {
             ),
         })
         .collect();
-    let model = nurbs_kernel::brep::Model(brep_topology::Model {
+    let model = nurbs_core::brep::Model(brep_topology::Model {
         vertices: polygon.vertices,
         edges,
         loops,
@@ -430,7 +430,7 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_kernel::brep::Model> {
 mod tests {
     use super::*;
     fn cube() -> Mesh {
-        let m = nurbs_kernel::brep::cuboid([-1.; 3], [1.; 3]).unwrap();
+        let m = nurbs_core::brep::cuboid([-1.; 3], [1.; 3]).unwrap();
         brep::nurbs(&m, 1).unwrap().built.mesh
     }
     #[test]
@@ -442,7 +442,7 @@ mod tests {
         assert!(output.built.report.closed);
         assert!((output.built.report.signed_volume_mm3 - 8.).abs() < 1e-9);
         assert!(
-            polygon_kernel::proximity::sample_deviation(&mesh, &output.built.mesh)
+            polygon_core::proximity::sample_deviation(&mesh, &output.built.mesh)
                 .unwrap()
                 .sampled_max_mm
                 < 1e-9
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn mesh_sdf_sign_and_hollow_orientation() {
         let m = cube();
-        let field = sdf_kernel::Field::from_mesh(&m, true).unwrap();
+        let field = sdf_core::Field::from_mesh(&m, true).unwrap();
         assert!((field.evaluate([0.; 3]).unwrap() + 1.).abs() < 1e-12);
         assert!((field.evaluate([2., 0., 0.]).unwrap() - 1.).abs() < 1e-12);
         assert_eq!(field.evaluate([1., 0., 0.]).unwrap(), 0.);
@@ -474,7 +474,7 @@ mod tests {
                 .indices
                 .extend([offset + t[0], offset + t[2], offset + t[1]]);
         }
-        let f = sdf_kernel::Field::from_mesh(&hollow, true).unwrap();
+        let f = sdf_core::Field::from_mesh(&hollow, true).unwrap();
         assert!((f.evaluate([0.; 3]).unwrap() - 0.5).abs() < 1e-12);
         assert!(f.evaluate([0.75, 0., 0.]).unwrap() < 0.);
         let open = Mesh {
@@ -482,9 +482,9 @@ mod tests {
             indices: vec![0, 1, 2],
             uv: None,
         };
-        assert!(sdf_kernel::Field::from_mesh(&open, true).is_err());
+        assert!(sdf_core::Field::from_mesh(&open, true).is_err());
         assert_eq!(
-            sdf_kernel::Field::from_mesh(&open, false)
+            sdf_core::Field::from_mesh(&open, false)
                 .unwrap()
                 .evaluate([0., 0., 2.])
                 .unwrap(),
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn subdivision_fit_reduces_interpolation_residual() {
         let m = cube();
-        let r = subdivision_kernel::reconstruct(&m, 16).unwrap();
+        let r = subdivision_core::reconstruct(&m, 16).unwrap();
         assert!(r.vertex_residual_after_mm < r.vertex_residual_before_mm * 0.05);
         assert_eq!(r.cage.faces.len(), m.indices.len() / 3);
         assert!(r.deviation.sampled_max_mm.is_finite());

@@ -82,7 +82,7 @@ fn finish(mesh: Mesh, face_ids: Vec<usize>, tolerance: f64, closed: bool) -> Res
         face_ids,
     })
 }
-pub fn nurbs(model: &nurbs_kernel::brep::Model, segments: usize) -> Result<Tessellation> {
+pub fn nurbs(model: &nurbs_core::brep::Model, segments: usize) -> Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));
@@ -102,7 +102,7 @@ pub fn nurbs(model: &nurbs_kernel::brep::Model, segments: usize) -> Result<Tesse
                     .holes
                     .iter()
                     .map(|l| model.loop_uv(*l, segments))
-                    .collect::<nurbs_kernel::Result<_>>()?,
+                    .collect::<nurbs_core::Result<_>>()?,
             };
             let built = tessellate_nurbs(
                 &f.surface,
@@ -136,8 +136,8 @@ pub fn nurbs(model: &nurbs_kernel::brep::Model, segments: usize) -> Result<Tesse
         model.shells.iter().all(|s| s.closed),
     )
 }
-pub fn polygons(model: &polygon_kernel::brep::Model) -> Result<Tessellation> {
-    let t = polygon_kernel::brep::tessellate(model)?;
+pub fn polygons(model: &polygon_core::brep::Model) -> Result<Tessellation> {
+    let t = polygon_core::brep::tessellate(model)?;
     finish(
         t.mesh,
         t.face_ids,

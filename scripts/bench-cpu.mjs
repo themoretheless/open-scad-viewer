@@ -72,7 +72,7 @@ async function sourceSnapshot() {
   }
   paths.push('crates/Cargo.lock')
   await visit('crates/geometry-bridge/src')
-  await visit('crates/polygon-kernel/src')
+  await visit('crates/polygon-core/src')
   const files = await Promise.all(paths.sort().map(async name => ({ path: name, sha256: sha256(await readFile(path.join(root, name))) })))
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim()
   return {

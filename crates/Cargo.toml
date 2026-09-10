@@ -1,5 +1,5 @@
 [workspace]
-members = ["value-codec", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-kernel", "geometry-ops", "brep-topology", "nurbs-kernel", "polygon-kernel", "geometry-bridge", "geometry-wasm", "geometry-native", "subdivision-kernel", "sdf-kernel", "photogrammetry-kernel", "photogrammetry-ffi", "photogrammetry-wasm", "photogrammetry-native"]
+members = ["value-codec", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "brep-topology", "nurbs-core", "polygon-core", "geometry-bridge", "geometry-wasm", "geometry-native", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm", "photogrammetry-native"]
 resolver = "2"
 
 [profile.release]
@@ -8,15 +8,15 @@ lto = true
 
 # Photogrammetry hot loops: measured against the size profile on native and WASM.
 # Other geometry kernels retain the workspace size profile.
-[profile.release.package.photogrammetry-kernel]
+[profile.release.package.photogrammetry-core]
 opt-level = 3
 
 [profile.release.package.photogrammetry-ffi]
 opt-level = 3
 
 # Hot geometry kernels: measured against the workspace size profile (same
-# precedent as photogrammetry-kernel above).
-[profile.release.package.polygon-kernel]
+# precedent as photogrammetry-core above).
+[profile.release.package.polygon-core]
 opt-level = 3
 
 

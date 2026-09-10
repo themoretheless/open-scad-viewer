@@ -209,7 +209,7 @@ pub(crate) fn try_gpu(
     keep_core: bool,
     blend: f64,
     field: &impl Fn(P) -> f64,
-) -> Result<Option<polygon_kernel::Mesh>, polygon_kernel::Error> {
+) -> Result<Option<polygon_core::Mesh>, polygon_core::Error> {
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuLattice)> = cell;
         shared
@@ -234,13 +234,13 @@ pub(crate) fn try_gpu(
                     }
                 }
                 let cursor = std::cell::Cell::new(0usize);
-                sdf_kernel::polygonize_with(
+                sdf_core::polygonize_with(
                     |_| {
                         let i = cursor.get();
                         cursor.set(i + 1);
                         values[i] as f64
                     },
-                    &sdf_kernel::Grid { min, max, cells },
+                    &sdf_core::Grid { min, max, cells },
                 )
                 .map(Some)
             })

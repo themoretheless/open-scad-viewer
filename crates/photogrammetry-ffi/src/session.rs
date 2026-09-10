@@ -1,6 +1,6 @@
 //! Worker-owned storage and serialization. Reconstruction algorithms do not depend on Value.
 use super::*;
-use photogrammetry_kernel::{
+use photogrammetry_core::{
     calibration::{Calibration, RectificationOptions, RectificationReport, RectifiedImage},
     dense::{DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, Surface, SWEEP_WGSL},
     diagnostics::ReconstructionReport,
@@ -19,7 +19,7 @@ struct Session {
     dense: Option<Surface>,
     /// Opt-in GPU stages (native builds with the `gpu` feature); wasm32 and
     /// unsupported platforms fall back to the CPU reference.
-    acceleration: photogrammetry_kernel::Acceleration,
+    acceleration: photogrammetry_core::Acceleration,
     diagnostics: Option<Value>,
     /// Options and kernel bookkeeping between `dense_prepare` and
     /// `dense_finish` on the host-GPU (browser WebGPU) path.
@@ -552,7 +552,7 @@ impl Session {
         self.dense = None;
         let mut options = ReconstructionOptions::default();
         options.feature_options.acceleration = self.acceleration;
-        let outcome = photogrammetry_kernel::reconstruct_detailed(
+        let outcome = photogrammetry_core::reconstruct_detailed(
             &self.images,
             &options,
             |_, _, _| true,
@@ -575,7 +575,7 @@ impl Session {
             .sparse
             .as_ref()
             .ok_or_else(|| input("Reconstruct cameras first"))?;
-        let run = photogrammetry_kernel::dense::densify_with_options(
+        let run = photogrammetry_core::dense::densify_with_options(
             &self.images,
             sparse,
             &options,
@@ -602,7 +602,7 @@ impl Session {
             .sparse
             .as_ref()
             .ok_or_else(|| input("Reconstruct cameras first"))?;
-        let Some((views, prepared)) = photogrammetry_kernel::dense::prepare_host_sweep(
+        let Some((views, prepared)) = photogrammetry_core::dense::prepare_host_sweep(
             &self.images,
             sparse,
             &options,
@@ -652,7 +652,7 @@ impl Session {
         if offset != flat.len() {
             return Err(input("Host sweep scores length does not match the prepared views"));
         }
-        let run = photogrammetry_kernel::dense::densify_with_host_scores(
+        let run = photogrammetry_core::dense::densify_with_host_scores(
             &self.images,
             sparse,
             &options,
@@ -740,8 +740,8 @@ fn pack_sweep_payload(images: &[Image], views: &[Option<HostSweepView>]) -> Vec<
 /// adapter or no `gpu` feature). Errors reset nothing.
 pub fn set_acceleration_host(value: u32) -> Result<Vec<u8>> {
     let acceleration = match value {
-        0 => photogrammetry_kernel::Acceleration::Cpu,
-        1 => photogrammetry_kernel::Acceleration::Gpu,
+        0 => photogrammetry_core::Acceleration::Cpu,
+        1 => photogrammetry_core::Acceleration::Gpu,
         _ => return Err(input("Unknown acceleration mode")),
     };
     PHOTO.with(|session| session.borrow_mut().acceleration = acceleration);
@@ -792,7 +792,7 @@ pub fn dispatch_bytes(value: Value) -> Result<Vec<u8>> {
                     .as_ref()
                     .ok_or_else(|| input("Build a surface first"))?;
                 response::surface(
-                    &photogrammetry_kernel::dense::compact(mesh, 24).map_err(input)?,
+                    &photogrammetry_core::dense::compact(mesh, 24).map_err(input)?,
                     None,
                 )
             }
@@ -804,7 +804,7 @@ pub fn dispatch_bytes(value: Value) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photogrammetry_kernel::diagnostics::SeedTrialReport;
+    use photogrammetry_core::diagnostics::SeedTrialReport;
 
     fn dispatch(value: Value) -> Result<Value> {
         let bytes = dispatch_bytes(value)?;
@@ -960,7 +960,7 @@ mod tests {
                     focal: 50.,
                     rgb,
                 };
-                let expected = photogrammetry_kernel::calibration::rectify(
+                let expected = photogrammetry_core::calibration::rectify(
                     &source,
                     &calibration,
                     [64, 64],

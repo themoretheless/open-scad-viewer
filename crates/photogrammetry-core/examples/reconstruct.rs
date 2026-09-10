@@ -1,4 +1,4 @@
-use photogrammetry_kernel::{reconstruct_detailed, Image, ReconstructionOptions};
+use photogrammetry_core::{reconstruct_detailed, Image, ReconstructionOptions};
 use std::{fs, io::Write};
 fn main() {
     if let Err(e) = run() {
@@ -56,23 +56,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let started = std::time::Instant::now();
     let mut options = ReconstructionOptions::default();
     options.feature_options = match std::env::var("PHOTO_FEATURE_PROFILE").as_deref() {
-        Ok("baseline") => photogrammetry_kernel::features::FeatureOptions::BASELINE,
-        Ok("subpixel") => photogrammetry_kernel::features::FeatureOptions {
+        Ok("baseline") => photogrammetry_core::features::FeatureOptions::BASELINE,
+        Ok("subpixel") => photogrammetry_core::features::FeatureOptions {
             subpixel: true,
-            ..photogrammetry_kernel::features::FeatureOptions::BASELINE
+            ..photogrammetry_core::features::FeatureOptions::BASELINE
         },
-        Ok("refined") => photogrammetry_kernel::features::FeatureOptions::REFINED,
-        Ok("root") => photogrammetry_kernel::features::FeatureOptions::ROOT,
+        Ok("refined") => photogrammetry_core::features::FeatureOptions::REFINED,
+        Ok("root") => photogrammetry_core::features::FeatureOptions::ROOT,
         Ok(other) => return Err(format!("Unknown PHOTO_FEATURE_PROFILE: {other}").into()),
         Err(_) => options.feature_options,
     };
     options.geometry_options = match std::env::var("PHOTO_GEOMETRY_PROFILE").as_deref() {
-        Ok("baseline") => photogrammetry_kernel::camera::GeometryOptions::BASELINE,
-        Ok("robust") => photogrammetry_kernel::camera::GeometryOptions::ROBUST,
-        Ok("safe") => photogrammetry_kernel::camera::GeometryOptions::SAFE,
-        Ok("adaptive") => photogrammetry_kernel::camera::GeometryOptions::ADAPTIVE,
-        Ok("consensus") => photogrammetry_kernel::camera::GeometryOptions::CONSENSUS,
-        Ok("physical") => photogrammetry_kernel::camera::GeometryOptions::PHYSICAL,
+        Ok("baseline") => photogrammetry_core::camera::GeometryOptions::BASELINE,
+        Ok("robust") => photogrammetry_core::camera::GeometryOptions::ROBUST,
+        Ok("safe") => photogrammetry_core::camera::GeometryOptions::SAFE,
+        Ok("adaptive") => photogrammetry_core::camera::GeometryOptions::ADAPTIVE,
+        Ok("consensus") => photogrammetry_core::camera::GeometryOptions::CONSENSUS,
+        Ok("physical") => photogrammetry_core::camera::GeometryOptions::PHYSICAL,
         Ok(other) => return Err(format!("Unknown PHOTO_GEOMETRY_PROFILE: {other}").into()),
         Err(_) => options.geometry_options,
     };
@@ -80,10 +80,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // correspondences, joint two-view refinement and post-BA outlier filtering.
     if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
         options.feature_options.second_chance = true;
-        options.seed_options = photogrammetry_kernel::SeedOptions { verify_runners_up: true };
-        options.geometry_options = photogrammetry_kernel::camera::GeometryOptions::JOINT;
-        options.bundle = options.bundle.map(|b| photogrammetry_kernel::bundle::BundleOptions {
-            filter: Some(photogrammetry_kernel::bundle::FilterOptions {
+        options.seed_options = photogrammetry_core::SeedOptions { verify_runners_up: true };
+        options.geometry_options = photogrammetry_core::camera::GeometryOptions::JOINT;
+        options.bundle = options.bundle.map(|b| photogrammetry_core::bundle::BundleOptions {
+            filter: Some(photogrammetry_core::bundle::FilterOptions {
                 max_reprojection_error: 2.0,
                 min_parallax: 0.,
             }),
@@ -94,7 +94,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
         #[cfg(feature = "gpu")]
         {
-            options.feature_options.acceleration = photogrammetry_kernel::Acceleration::Gpu;
+            options.feature_options.acceleration = photogrammetry_core::Acceleration::Gpu;
         }
         #[cfg(not(feature = "gpu"))]
         return Err("PHOTO_ACCELERATION=gpu requires --features gpu".into());
@@ -113,11 +113,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     if std::env::var_os("PHOTO_DENSE").is_some() {
         let mut last = String::new();
-        let mut dense_options = photogrammetry_kernel::dense::DenseOptions::default();
+        let mut dense_options = photogrammetry_core::dense::DenseOptions::default();
         if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
             #[cfg(feature = "gpu")]
             {
-                dense_options.acceleration = photogrammetry_kernel::Acceleration::Gpu;
+                dense_options.acceleration = photogrammetry_core::Acceleration::Gpu;
             }
         }
         if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
@@ -127,13 +127,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         match std::env::var("PHOTO_DENSE_PROFILE").as_deref() {
             Ok("slanted") => {
                 dense_options.estimator =
-                    photogrammetry_kernel::dense::DenseEstimator::SlantedPlane;
+                    photogrammetry_core::dense::DenseEstimator::SlantedPlane;
                 dense_options.patch_radius = 2;
             }
             Ok("baseline") | Err(_) => (),
             Ok(other) => return Err(format!("Unknown PHOTO_DENSE_PROFILE: {other}").into()),
         }
-        let dense = photogrammetry_kernel::dense::densify_with_options(
+        let dense = photogrammetry_core::dense::densify_with_options(
             &images,
             &result,
             &dense_options,

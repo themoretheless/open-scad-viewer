@@ -191,11 +191,11 @@ dependencies = [
  "gpu-compute",
  "modelgraph-runtime",
  "modelgraph-text",
- "nurbs-kernel",
- "polygon-kernel",
- "sdf-kernel",
- "sketch-kernel",
- "subdivision-kernel",
+ "nurbs-core",
+ "polygon-core",
+ "sdf-core",
+ "sketch-core",
+ "subdivision-core",
  "value-codec",
 ]
 
@@ -399,7 +399,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nurbs-kernel"
+name = "nurbs-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
@@ -532,18 +532,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "photogrammetry-ffi"
-version = "0.1.0"
-dependencies = [
- "photogrammetry-kernel",
- "value-codec",
-]
-
-[[package]]
-name = "photogrammetry-kernel"
+name = "photogrammetry-core"
 version = "0.1.0"
 dependencies = [
  "gpu-compute",
+]
+
+[[package]]
+name = "photogrammetry-ffi"
+version = "0.1.0"
+dependencies = [
+ "photogrammetry-core",
+ "value-codec",
 ]
 
 [[package]]
@@ -567,7 +567,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
-name = "polygon-kernel"
+name = "polygon-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
@@ -672,17 +672,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
-name = "sdf-kernel"
+name = "sdf-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
  "gpu-compute",
- "polygon-kernel",
+ "polygon-core",
  "value-codec",
 ]
 
 [[package]]
-name = "sketch-kernel"
+name = "sketch-core"
 version = "0.1.0"
 dependencies = [
  "value-codec",
@@ -716,11 +716,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "subdivision-kernel"
+name = "subdivision-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "polygon-kernel",
+ "polygon-core",
  "value-codec",
 ]
 

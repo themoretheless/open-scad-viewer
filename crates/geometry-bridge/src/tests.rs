@@ -58,7 +58,7 @@ fn mesh_boundary_can_construct_a_new_nurbs_surface() {
     )
     .unwrap();
     let curves = boundary_curves(&mesh.mesh).unwrap();
-    let walls = nurbs_kernel::surface::extrude(&curves[0], [0., 0., 3.]).unwrap();
+    let walls = nurbs_core::surface::extrude(&curves[0], [0., 0., 3.]).unwrap();
     let result = tessellate_nurbs(
         &walls,
         &Options {
@@ -90,7 +90,7 @@ fn invalid_surface_is_rejected_before_polygons_are_created() {
 
 #[test]
 fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
-    let model = nurbs_kernel::brep::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let model = nurbs_core::brep::cuboid([0.; 3], [2., 3., 4.]).unwrap();
     for segments in [1, 2, 4] {
         let mesh = crate::brep::nurbs(&model, segments).unwrap();
         assert!(mesh.built.report.closed);
@@ -104,7 +104,7 @@ fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
             6
         );
         let polygon =
-            polygon_kernel::brep::from_mesh(&mesh.built.mesh, Some(&mesh.face_ids)).unwrap();
+            polygon_core::brep::from_mesh(&mesh.built.mesh, Some(&mesh.face_ids)).unwrap();
         assert_eq!(polygon.faces.len(), 6);
         assert_eq!(polygon.bodies.len(), 1);
         let back = crate::brep::polygons(&polygon).unwrap();

@@ -2,15 +2,15 @@
 
 | Library | Owns | Does not depend on |
 | --- | --- | --- |
-| `nurbs-kernel` | Rational control data, curve/surface evaluation and editing, surface constructors | polygon-kernel, WASM, Manifold, the application |
-| `polygon-kernel` | Vertex/index buffers, UV polygon clipping and meshing, mesh topology, transforms, boundary loops, thickening, STL | nurbs-kernel, WASM, Manifold, the application |
+| `nurbs-core` | Rational control data, curve/surface evaluation and editing, surface constructors | polygon-core, WASM, Manifold, the application |
+| `polygon-core` | Vertex/index buffers, UV polygon clipping and meshing, mesh topology, transforms, boundary loops, thickening, STL | nurbs-core, WASM, Manifold, the application |
 
 `geometry-bridge` is integration/transport code. It implements the polygon library's `ParametricSurface` trait for a validated NURBS snapshot and transfers boundary vertices into the NURBS polyline constructor. Both domain libraries can be used directly as normal native Rust dependencies; the application links both through one generated WASM module. Its compressed bytes are shared by the UI and Worker chunks and expanded synchronously with the repository-owned bounded DEFLATE decoder. The two libraries do not call each other or maintain shared mutable state.
 
 ```mermaid
 flowchart LR
     N[NURBS control data] -->|validated sampler| A[geometry-bridge]
-    A -->|tessellation| P[polygon-kernel Mesh]
+    A -->|tessellation| P[polygon-core Mesh]
     P -->|ordered boundary vertices| A
     A -->|degree-one control data| N
 ```
@@ -29,10 +29,10 @@ flowchart LR
 
 ```rust
 use geometry_bridge::{tessellate_nurbs, boundary_curves};
-use polygon_kernel::tessellation::Options;
+use polygon_core::tessellation::Options;
 
-// surface: nurbs_kernel::surface::Surface
-# fn example(surface: &nurbs_kernel::surface::Surface) -> geometry_bridge::Result<()> {
+// surface: nurbs_core::surface::Surface
+# fn example(surface: &nurbs_core::surface::Surface) -> geometry_bridge::Result<()> {
 let sampled = tessellate_nurbs(surface, &Options {
     segments_u: 8, segments_v: 8, trim: None, max_triangles: None,
 })?;
@@ -60,7 +60,7 @@ Hard limits: 10000 combined input triangles, 20000 output triangles, 100000 crea
 
 ### Shared B-rep topology
 
-`brep-topology` is an independent support library using repository-owned value-codec used by **both** kernels. It checks incidence, orientation, loop and shell connectivity, vertex fans and body boundary references. `nurbs-kernel::brep` binds 3D curves, 2D face-local pcurves and rational surfaces; validates endpoint and sampled interior agreement; and constructs a six-face exact box. `polygon-kernel::brep` binds triangle patches to the same topology. Explicit per-triangle face groups preserve a face containing many triangles and hole loops. Without groups, each triangle becomes a face (256-face limit). Multiple disconnected shells are not automatically classified as cavities.
+`brep-topology` is an independent support library using repository-owned value-codec used by **both** kernels. It checks incidence, orientation, loop and shell connectivity, vertex fans and body boundary references. `nurbs-core::brep` binds 3D curves, 2D face-local pcurves and rational surfaces; validates endpoint and sampled interior agreement; and constructs a six-face exact box. `polygon-core::brep` binds triangle patches to the same topology. Explicit per-triangle face groups preserve a face containing many triangles and hole loops. Without groups, each triangle becomes a face (256-face limit). Multiple disconnected shells are not automatically classified as cavities.
 
 `geometry-bridge::brep` tessellates both kinds, returns one face ID per triangle and converts sampled NURBS B-rep into polygon B-rep with the same face groups. Faces are sampled individually and seams welded within tolerance; incompatible sampling returns an error if a closed model produces open/non-manifold edges. This is not general certified sewing. Models preserve topology and geometry definitions; tessellation is derived. B-rep geometric booleans, containment certification, arbitrary periodic seam construction and smooth mesh-to-NURBS reconstruction remain outside this implementation.
 
@@ -68,4 +68,4 @@ Host API: `src/services/brepKernel.ts`. The compact form `brep_box([0,0,0],[20mm
 
 ## Subdivision and implicit fields
 
-`subdivision-kernel` owns Catmull–Clark cages/refinement; `sdf-kernel` owns implicit field trees and extraction. Both use only repository-owned crates for values and mesh exchange. geometry-bridge exposes native/WASM operations; the compact language examples are in examples/modelgraph-text/subdivision.scad and sdf.scad. See each crate README for numerical and feature limits.
+`subdivision-core` owns Catmull–Clark cages/refinement; `sdf-core` owns implicit field trees and extraction. Both use only repository-owned crates for values and mesh exchange. geometry-bridge exposes native/WASM operations; the compact language examples are in examples/modelgraph-text/subdivision.scad and sdf.scad. See each crate README for numerical and feature limits.

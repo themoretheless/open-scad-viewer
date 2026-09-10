@@ -1,4 +1,4 @@
-/** Public curve types and Rust/WASM adapters. All spline mathematics lives in crates/nurbs-kernel. */
+/** Public curve types and Rust/WASM adapters. All spline mathematics lives in crates/nurbs-core. */
 import { callNurbsRust } from './geometry/nurbs'
 export { NurbsCurveError } from './geometry/nurbs'
 

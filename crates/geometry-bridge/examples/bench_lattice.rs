@@ -1,6 +1,6 @@
 //! Temporary lattice benchmark (may be removed after qualification).
 use geometry_bridge::mesh_shell;
-use polygon_kernel::cad::cube;
+use polygon_core::cad::cube;
 use std::time::Instant;
 
 fn main() {
@@ -35,7 +35,7 @@ fn main() {
             let gpu = i % 2 == 1;
             let start = Instant::now();
             let out = mesh_shell::lattice_accelerated(&mesh, nodes.clone(), edges.clone(), 3.5, 3.5, 1.5, organic, false, 0., false,
-                if gpu { sdf_kernel::Acceleration::Gpu } else { sdf_kernel::Acceleration::Cpu }).unwrap();
+                if gpu { sdf_core::Acceleration::Gpu } else { sdf_core::Acceleration::Cpu }).unwrap();
             let ms = start.elapsed().as_secs_f64() * 1000.;
             (if gpu { &mut gpu_times } else { &mut cpu_times }).push(ms);
             if gpu { gpu_tris = out.mesh.indices.len() / 3 } else { cpu_tris = out.mesh.indices.len() / 3 }

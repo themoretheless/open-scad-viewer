@@ -3,7 +3,7 @@
 //! samples the grid on the GPU; extraction finishes here on the CPU reference
 //! path. Ineligible fields return null and the caller uses `sdf_tessellate`.
 use crate::{encode, field, input};
-use sdf_kernel::{Field, Grid, SDF_WGSL};
+use sdf_core::{Field, Grid, SDF_WGSL};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use value_codec::{json, Value};
@@ -16,7 +16,7 @@ thread_local! {
 pub fn prepare(v: &Value) -> crate::Result<Value> {
     let sdf: Field = field(v, "field")?;
     let grid: Grid = field(v, "grid")?;
-    sdf_kernel::check_grid_budget(&sdf, &grid)?;
+    sdf_core::check_grid_budget(&sdf, &grid)?;
     let Some(flat) = sdf.to_flat() else {
         return encode(Value::Null);
     };
@@ -47,9 +47,9 @@ pub fn finish(v: &Value) -> crate::Result<Value> {
     let (field, grid) = PENDING
         .with(|pending| pending.borrow_mut().1.remove(&id))
         .ok_or_else(|| input("Unknown SDF sweep handle"))?;
-    let mesh = sdf_kernel::polygonize_with_values(&field, &grid, &values)?;
+    let mesh = sdf_core::polygonize_with_values(&field, &grid, &values)?;
     let report = mesh.inspect()?;
-    encode(polygon_kernel::BuiltMesh { mesh, report })
+    encode(polygon_core::BuiltMesh { mesh, report })
 }
 
 #[cfg(test)]
@@ -67,7 +67,7 @@ mod tests {
         assert!(prepared["wgsl"].as_str().unwrap().contains("@compute"));
         // Host substitute: sample the field on the CPU, rounding through f32
         // exactly like the shader output.
-        let reference = sdf_kernel::polygonize(
+        let reference = sdf_core::polygonize(
             &value_codec::from_value::<Field>(field).unwrap(),
             &value_codec::from_value::<Grid>(grid).unwrap(),
         )
@@ -84,7 +84,7 @@ mod tests {
             }
         }
         let mesh_value = finish(&json!({"id": id, "values": values})).unwrap();
-        let mesh: polygon_kernel::BuiltMesh = value_codec::from_value(mesh_value).unwrap();
+        let mesh: polygon_core::BuiltMesh = value_codec::from_value(mesh_value).unwrap();
         assert_eq!(mesh.mesh.indices, reference.indices);
         // Second use of the same handle must fail.
         assert!(finish(&json!({"id": id, "values": []})).is_err());

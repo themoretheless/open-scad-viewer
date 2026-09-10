@@ -6,7 +6,7 @@
 use super::{
     input, ResponseBudget, Result, Value, DEPTH_LIMIT, ITEM_LIMIT, LIMIT, TRANSPORT_ERROR,
 };
-use photogrammetry_kernel::{dense::Surface, Point, Reconstruction};
+use photogrammetry_core::{dense::Surface, Point, Reconstruction};
 use value_codec::json;
 
 enum Field<'a> {

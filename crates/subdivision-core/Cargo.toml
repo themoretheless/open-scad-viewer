@@ -1,7 +1,10 @@
 [package]
-name = "sketch-kernel"
+name = "subdivision-core"
 version = "0.1.0"
 edition = "2021"
 publish = false
+
 [dependencies]
 value-codec = { path = "../value-codec" }
+geometry-ops = { path = "../geometry-ops" }
+polygon-core = { path = "../polygon-core" }

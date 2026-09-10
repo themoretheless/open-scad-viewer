@@ -1,4 +1,4 @@
-use polygon_kernel::{
+use polygon_core::{
     cad,
     section::{MeshSection, MeshSectionIndex},
     Mesh,

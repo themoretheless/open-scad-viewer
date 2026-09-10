@@ -1,5 +1,5 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
-use polygon_kernel::{proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
+use polygon_core::{proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
 pub(crate) type P = [f64; 3];
 fn sub(a: P, b: P) -> P {
     std::array::from_fn(|i| a[i] - b[i])
@@ -213,8 +213,8 @@ pub fn shell_options(mesh: &Mesh, openings: &[usize], thickness: f64, step: f64,
         ));
     }
     let field = |p| all.signed_distance(p).max(retained.distance(p) - thickness);
-    let grid = sdf_kernel::Grid { min, max, cells };
-    let output = if adaptive { adaptive_tiles(field, &grid)? } else { sdf_kernel::polygonize_with(field, &grid)? };
+    let grid = sdf_core::Grid { min, max, cells };
+    let output = if adaptive { adaptive_tiles(field, &grid)? } else { sdf_core::polygonize_with(field, &grid)? };
     let report = output.inspect()?;
     if !report.closed || output.indices.is_empty() || report.signed_volume_mm3 <= 0. {
         return Err(Error::new(
@@ -228,7 +228,7 @@ pub fn shell_options(mesh: &Mesh, openings: &[usize], thickness: f64, step: f64,
 }
 /// Sparse subdivision skips blocks whose Lipschitz distance bound excludes the zero set.
 /// All active leaf tiles share one requested spacing, avoiding coarse/fine cracks.
-fn adaptive_tiles(field: impl Fn(P)->f64, grid: &sdf_kernel::Grid) -> Result<Mesh> {
+fn adaptive_tiles(field: impl Fn(P)->f64, grid: &sdf_core::Grid) -> Result<Mesh> {
     use std::collections::BTreeMap;
     let delta:P=std::array::from_fn(|k|(grid.max[k]-grid.min[k])/grid.cells[k] as f64);
     let coord=|i:[usize;3]|std::array::from_fn(|k|grid.min[k]+delta[k]*i[k] as f64);
@@ -247,7 +247,7 @@ fn adaptive_tiles(field: impl Fn(P)->f64, grid: &sdf_kernel::Grid) -> Result<Mes
         if cells[axis]>16 {let mid=(lo[axis]+hi[axis])/2;let mut a=hi;a[axis]=mid;let mut b=lo;b[axis]=mid;pending.push((lo,a));pending.push((b,hi));continue}
         samples+=cells.iter().map(|n|n+1).product::<usize>();
         if samples>4_000_000 {return Err(Error::new("Adaptive Shell exceeds four million samples; increase grid step"))}
-        let tile=sdf_kernel::polygonize_tile(&field,&sdf_kernel::Grid{min,max,cells},false)?;
+        let tile=sdf_core::polygonize_tile(&field,&sdf_core::Grid{min,max,cells},false)?;
         let ids:Vec<usize>=tile.positions.chunks_exact(3).map(|p|{let key=std::array::from_fn(|k|((p[k]-grid.min[k])/quantum).round() as i64);*welded.entry(key).or_insert_with(||{let id=output.positions.len()/3;output.positions.extend_from_slice(p);id})}).collect();
         for t in tile.indices.chunks_exact(3){let tri=t.iter().map(|&i|ids[i]).collect::<Vec<_>>();if tri[0]!=tri[1]&&tri[1]!=tri[2]&&tri[0]!=tri[2]{output.indices.extend(tri)}}
         if output.indices.len()>300_000 {return Err(Error::new("Adaptive Shell exceeds 100000 triangles; increase grid step"))}
@@ -270,11 +270,11 @@ mod tests {
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_lattice_matches_cpu_reference() {
-        let mesh = polygon_kernel::cad::cube([30.; 3], false).unwrap();
+        let mesh = polygon_core::cad::cube([30.; 3], false).unwrap();
         let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
         let edges = vec![[0, 1], [0, 2], [0, 3]];
         let reference = lattice(&mesh, nodes.clone(), edges.clone(), 2., 0., 1., false, false, 0., false).unwrap();
-        let accelerated = lattice_accelerated(&mesh, nodes, edges, 2., 0., 1., false, false, 0., false, sdf_kernel::Acceleration::Gpu).unwrap();
+        let accelerated = lattice_accelerated(&mesh, nodes, edges, 2., 0., 1., false, false, 0., false, sdf_core::Acceleration::Gpu).unwrap();
         if crate::lattice_gpu::try_gpu_available() {
             let dt = (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
             assert!(dt <= 0.01 * reference.mesh.indices.len() as f64,
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn bvh_distance_and_sign_agree_with_reference() {
-        let mesh = polygon_kernel::cad::cube([10.; 3], false).unwrap();
+        let mesh = polygon_core::cad::cube([10.; 3], false).unwrap();
         let triangles = mesh
             .indices
             .chunks_exact(3)
@@ -311,7 +311,7 @@ mod tests {
                 ((i * 17) % 191) as f64 / 10. - 5.,
             ];
             let actual = bvh.signed_distance(p);
-            let expected = polygon_kernel::proximity::signed_distance(&mesh, p);
+            let expected = polygon_core::proximity::signed_distance(&mesh, p);
             assert!(
                 (actual - expected).abs() < 1e-7,
                 "{p:?}: {actual} != {expected}"
@@ -591,14 +591,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 "##;
 /// A bounded spatial graph of rounded struts, optionally blended into a skin.
 pub fn lattice(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:f64, step:f64, organic:bool, open_top:bool, wall_depth:f64, keep_core:bool)->Result<BuiltMesh>{
-    lattice_accelerated(mesh, nodes, edges, radius, skin, step, organic, open_top, wall_depth, keep_core, sdf_kernel::Acceleration::Cpu)
+    lattice_accelerated(mesh, nodes, edges, radius, skin, step, organic, open_top, wall_depth, keep_core, sdf_core::Acceleration::Cpu)
 }
 
 /// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
 /// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
 /// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
 /// Anything ineligible or unavailable falls back to the CPU reference.
-pub fn lattice_accelerated(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:f64, step:f64, organic:bool, open_top:bool, wall_depth:f64, keep_core:bool, acceleration: sdf_kernel::Acceleration)->Result<BuiltMesh>{
+pub fn lattice_accelerated(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radius:f64, skin:f64, step:f64, organic:bool, open_top:bool, wall_depth:f64, keep_core:bool, acceleration: sdf_core::Acceleration)->Result<BuiltMesh>{
     let report=mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3<=0. || mesh.indices.len()/3>30000 {return Err(Error::new("Spatial lattice requires a closed outward solid with at most 30000 source triangles"))}
     if nodes.is_empty()||nodes.len()>125||edges.is_empty()||edges.len()>400||nodes.iter().flatten().any(|v|!v.is_finite())||edges.iter().any(|e|e[0]>=nodes.len()||e[1]>=nodes.len()||e[0]==e[1]) {return Err(Error::new("Spatial lattice graph exceeds limits or has invalid nodes"))}
@@ -626,18 +626,18 @@ pub fn lattice_accelerated(mesh:&Mesh, nodes:Vec<P>, edges:Vec<[usize;2]>, radiu
     };
     let output={
         #[cfg(feature = "gpu")]
-        if acceleration==sdf_kernel::Acceleration::Gpu {
+        if acceleration==sdf_core::Acceleration::Gpu {
             match crate::lattice_gpu::try_gpu(&all,&segments,min,max,cells,skin,organic,open_top,wall_depth,keep_core,blend,&field)? {
                 Some(mesh) => mesh,
-                None => sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?,
+                None => sdf_core::polygonize_with(&field,&sdf_core::Grid{min,max,cells})?,
             }
         } else {
-            sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?
+            sdf_core::polygonize_with(&field,&sdf_core::Grid{min,max,cells})?
         }
         #[cfg(not(feature = "gpu"))]
         {
             let _ = acceleration;
-            sdf_kernel::polygonize_with(&field,&sdf_kernel::Grid{min,max,cells})?
+            sdf_core::polygonize_with(&field,&sdf_core::Grid{min,max,cells})?
         }
     };
     let result=output.inspect()?;

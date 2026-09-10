@@ -1,9 +1,9 @@
 //! Temporary GPU vs CPU sampling benchmark (may be removed after qualification).
-use sdf_kernel::{polygonize, polygonize_accelerated, Acceleration, Field, Grid};
+use sdf_core::{polygonize, polygonize_accelerated, Acceleration, Field, Grid};
 use std::time::Instant;
 
 /// Outward UV-sphere mesh with a controlled triangle count.
-fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> polygon_kernel::Mesh {
+fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> polygon_core::Mesh {
     let mut positions = Vec::new();
     for r in 0..=rings {
         let phi = std::f64::consts::PI * r as f64 / rings as f64;
@@ -29,7 +29,7 @@ fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> pol
             }
         }
     }
-    polygon_kernel::Mesh { positions, indices, uv: None }
+    polygon_core::Mesh { positions, indices, uv: None }
 }
 
 fn main() {

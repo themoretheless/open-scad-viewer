@@ -1,6 +1,6 @@
 use super::*;
 use crate::{response_bytes, response_value};
-use photogrammetry_kernel::{camera::Camera, Point};
+use photogrammetry_core::{camera::Camera, Point};
 
 fn generic_surface(mesh: &Surface, diagnostics: Option<&Value>) -> Vec<u8> {
     let value = if let Some(diagnostics) = diagnostics {

@@ -1,6 +1,6 @@
 //! Negative-inside implicit fields and bounded marching-tetrahedra extraction.
 //! CSG fields preserve the zero set but are not generally exact signed distances.
-use polygon_kernel::{Error, Mesh, Result};
+use polygon_core::{Error, Mesh, Result};
 use std::collections::BTreeMap;
 pub mod flat;
 #[cfg(feature = "gpu")]
@@ -74,7 +74,7 @@ fn closest_triangle(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> vec3f {
 }
 
 // Flat postorder field tree: leaves push, CSG/offset ops combine with a value
-// stack. Node kinds match sdf-kernel/src/flat.rs.
+// stack. Node kinds match sdf-core/src/flat.rs.
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let row = params.nx + 1u;
@@ -719,9 +719,9 @@ impl Field {
             },
             Self::MeshDistance { mesh, signed } => {
                 if *signed {
-                    polygon_kernel::proximity::signed_distance(mesh, p)
+                    polygon_core::proximity::signed_distance(mesh, p)
                 } else {
-                    polygon_kernel::proximity::closest_point(mesh, p).1
+                    polygon_core::proximity::closest_point(mesh, p).1
                 }
             }
             Self::Sphere { center, radius } => length(sub(p, *center)) - radius,
@@ -752,7 +752,7 @@ impl Field {
     }
     pub fn from_mesh(mesh: &Mesh, signed: bool) -> Result<Self> {
         let field = Self::MeshDistance {
-            mesh: polygon_kernel::proximity::valid_source(mesh, 4096)?,
+            mesh: polygon_core::proximity::valid_source(mesh, 4096)?,
             signed,
         };
         field.validate()?;
@@ -1145,7 +1145,7 @@ mod tests {
     #[test]
     fn gpu_mesh_distance_matches_cpu_signed_and_unsigned() {
         // Closed outward tetrahedron around the origin-ish region.
-        let mesh = polygon_kernel::Mesh {
+        let mesh = polygon_core::Mesh {
             positions: vec![
                 10., 10., 10., //
                 30., 10., 10., 10., 30., 10., 10., 10., 30.,

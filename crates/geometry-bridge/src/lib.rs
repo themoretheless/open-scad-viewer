@@ -8,11 +8,11 @@ pub mod mesh_shell;
 mod sdf_gpu;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
-use nurbs_kernel::{
+use nurbs_core::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
 };
-use polygon_kernel::{
+use polygon_core::{
     tessellation::{self, Boundary, Options, ParametricSurface},
     BuiltMesh, Mesh, Seams,
 };
@@ -36,16 +36,16 @@ impl value_codec::Serialize for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
-impl From<nurbs_kernel::Error> for Error {
-    fn from(e: nurbs_kernel::Error) -> Self {
+impl From<nurbs_core::Error> for Error {
+    fn from(e: nurbs_core::Error) -> Self {
         Self {
             code: e.code,
             message: e.message,
         }
     }
 }
-impl From<polygon_kernel::Error> for Error {
-    fn from(e: polygon_kernel::Error) -> Self {
+impl From<polygon_core::Error> for Error {
+    fn from(e: polygon_core::Error) -> Self {
         Self {
             code: e.code,
             message: e.message,
@@ -92,11 +92,11 @@ impl ParametricSurface for NurbsSurfaceAdapter {
             s.knots_v[s.control_points[0].len()],
         ]
     }
-    fn point(&self, u: f64, v: f64) -> polygon_kernel::Result<[f64; 3]> {
+    fn point(&self, u: f64, v: f64) -> polygon_core::Result<[f64; 3]> {
         self.sampler
             .evaluate(u, v)
             .map(|e| e.point)
-            .map_err(|e| polygon_kernel::Error {
+            .map_err(|e| polygon_core::Error {
                 code: e.code,
                 message: e.message,
             })
@@ -159,7 +159,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
             let points = l
                 .iter()
                 .map(|i| mesh.point(*i).map(|p| p.to_vec()))
-                .collect::<polygon_kernel::Result<Vec<_>>>()?;
+                .collect::<polygon_core::Result<Vec<_>>>()?;
             Ok(Curve::from_polyline(points)?)
         })
         .collect()
@@ -167,80 +167,80 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 pub fn dispatch(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "cad" => cad::dispatch(v),
-        "subdivision_extrude" => encode(subdivision_kernel::Cage::extrude(
+        "subdivision_extrude" => encode(subdivision_core::Cage::extrude(
             &field::<Vec<[f64; 3]>>(&v, "profile")?,
             field(&v, "vector")?,
         )?),
-        "subdivision_loft" => encode(subdivision_kernel::Cage::loft(
+        "subdivision_loft" => encode(subdivision_core::Cage::loft(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
             field(&v, "caps")?,
         )?),
-        "subdivision_sweep" => encode(subdivision_kernel::Cage::sweep(
+        "subdivision_sweep" => encode(subdivision_core::Cage::sweep(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             &field::<Vec<[f64; 3]>>(&v, "path")?,
             field(&v, "up")?,
             field(&v, "caps")?,
         )?),
-        "subdivision_revolve" => encode(subdivision_kernel::Cage::revolve(
+        "subdivision_revolve" => encode(subdivision_core::Cage::revolve(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "segments")?,
         )?),
         "sketch_solve" => encode(
-            sketch_kernel::solve(&field(&v, "sketch")?, field(&v, "tolerance")?).map_err(input)?,
+            sketch_core::solve(&field(&v, "sketch")?, field(&v, "tolerance")?).map_err(input)?,
         ),
-        "polygon_deform" => encode(polygon_kernel::edit::deform(
+        "polygon_deform" => encode(polygon_core::edit::deform(
             &field(&v, "mesh")?,
             &field(&v, "deformation")?,
         )?),
-        "polygon_brush" => encode(polygon_kernel::edit::brush(
+        "polygon_brush" => encode(polygon_core::edit::brush(
             &field(&v, "mesh")?,
             &field(&v, "brush")?,
         )?),
-        "polygon_extrude_faces" => encode(polygon_kernel::edit::extrude_faces(
+        "polygon_extrude_faces" => encode(polygon_core::edit::extrude_faces(
             &field(&v, "mesh")?,
             &field::<Vec<usize>>(&v, "triangles")?,
             field(&v, "vector")?,
         )?),
         "subdivision_deform" => encode(
-            field::<subdivision_kernel::Cage>(&v, "cage")?.deform(&field(&v, "deformation")?)?,
+            field::<subdivision_core::Cage>(&v, "cage")?.deform(&field(&v, "deformation")?)?,
         ),
         "subdivision_brush" => {
-            encode(field::<subdivision_kernel::Cage>(&v, "cage")?.brush(&field(&v, "brush")?)?)
+            encode(field::<subdivision_core::Cage>(&v, "cage")?.brush(&field(&v, "brush")?)?)
         }
         "sdf_deform" => {
-            encode(field::<sdf_kernel::Field>(&v, "field")?.deform(field(&v, "deformation")?)?)
+            encode(field::<sdf_core::Field>(&v, "field")?.deform(field(&v, "deformation")?)?)
         }
-        "sdf_sculpt_sphere" => encode(field::<sdf_kernel::Field>(&v, "field")?.sculpt_sphere(
+        "sdf_sculpt_sphere" => encode(field::<sdf_core::Field>(&v, "field")?.sculpt_sphere(
             field(&v, "center")?,
             field(&v, "radius")?,
             field(&v, "remove")?,
         )?),
-        "polygon_extrude" => encode(polygon_kernel::modeling::extrude(
+        "polygon_extrude" => encode(polygon_core::modeling::extrude(
             &field(&v, "profile")?,
             field(&v, "vector")?,
         )?),
-        "polygon_revolve" => encode(polygon_kernel::modeling::revolve(
+        "polygon_revolve" => encode(polygon_core::modeling::revolve(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "angle")?,
             field(&v, "segments")?,
             field(&v, "caps")?,
         )?),
-        "polygon_loft" => encode(polygon_kernel::modeling::loft(
+        "polygon_loft" => encode(polygon_core::modeling::loft(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
             field(&v, "caps")?,
         )?),
-        "polygon_sweep" => encode(polygon_kernel::modeling::sweep(
+        "polygon_sweep" => encode(polygon_core::modeling::sweep(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             &field::<Vec<[f64; 3]>>(&v, "path")?,
             field(&v, "up")?,
             field(&v, "caps")?,
         )?),
         "mesh_to_nurbs_brep" => encode(reconstruction::nurbs_brep_from_mesh(&field(&v, "mesh")?)?),
-        "mesh_to_sdf" => encode(sdf_kernel::Field::from_mesh(
+        "mesh_to_sdf" => encode(sdf_core::Field::from_mesh(
             &field(&v, "mesh")?,
             field(&v, "signed")?,
         )?),
-        "mesh_to_subdivision" => encode(subdivision_kernel::reconstruct(
+        "mesh_to_subdivision" => encode(subdivision_core::reconstruct(
             &field(&v, "mesh")?,
             field(&v, "iterations")?,
         )?),
@@ -254,11 +254,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "segments")?,
         )?),
         "subdivision_refine" => {
-            encode(field::<subdivision_kernel::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?)
+            encode(field::<subdivision_core::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?)
         }
         "subdivision_tessellate" => {
             let refined =
-                field::<subdivision_kernel::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?;
+                field::<subdivision_core::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?;
             let (mesh, face_ids) = refined.triangulate()?;
             let report = mesh.inspect()?;
             let mut value = encode(BuiltMesh { mesh, report })?;
@@ -266,13 +266,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             Ok(value)
         }
         "sdf_evaluate" => {
-            encode(field::<sdf_kernel::Field>(&v, "field")?.evaluate(field(&v, "point")?)?)
+            encode(field::<sdf_core::Field>(&v, "field")?.evaluate(field(&v, "point")?)?)
         }
         "mesh_spatial_lattice" => encode(mesh_shell::lattice(&field(&v,"mesh")?,field(&v,"nodes")?,field(&v,"edges")?,field(&v,"radius")?,field(&v,"skin")?,field(&v,"step")?,field(&v,"organic")?,field(&v,"openTop")?,v.get("wallDepth").and_then(|x|x.as_f64()).unwrap_or(0.),v.get("keepCore").and_then(|x|x.as_bool()).unwrap_or(false))?),
         "mesh_shell_adaptive" => encode(mesh_shell::shell_options(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?, true)?),
         "mesh_shell_sampled" => encode(mesh_shell::shell(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?)?),
         "sdf_tessellate" => {
-            let mesh = sdf_kernel::polygonize(&field(&v, "field")?, &field(&v, "grid")?)?;
+            let mesh = sdf_core::polygonize(&field(&v, "field")?, &field(&v, "grid")?)?;
             let report = mesh.inspect()?;
             encode(BuiltMesh { mesh, report })
         }
@@ -282,7 +282,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             &field(&v, "options")?,
         )?),
-        "mesh_boolean" => encode(polygon_kernel::boolean::boolean(
+        "mesh_boolean" => encode(polygon_core::boolean::boolean(
             &field::<Mesh>(&v, "a")?,
             &field::<Mesh>(&v, "b")?,
             field(&v, "operation")?,
@@ -290,22 +290,22 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 Some(options) => {
                     value_codec::from_value(options.clone()).map_err(|e| input(e.to_string()))?
                 }
-                None => polygon_kernel::boolean::Options::default(),
+                None => polygon_core::boolean::Options::default(),
             },
         )?),
-        "brep_nurbs_box" => encode(nurbs_kernel::brep::cuboid(
+        "brep_nurbs_box" => encode(nurbs_core::brep::cuboid(
             field(&v, "min")?,
             field(&v, "max")?,
         )?),
         "brep_nurbs_inspect" => {
-            encode(field::<nurbs_kernel::brep::Model>(&v, "model")?.validate()?)
+            encode(field::<nurbs_core::brep::Model>(&v, "model")?.validate()?)
         }
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }
         "brep_nurbs_to_polygon" => {
             let t = brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;
-            encode(polygon_kernel::brep::from_mesh(
+            encode(polygon_core::brep::from_mesh(
                 &t.built.mesh,
                 Some(&t.face_ids),
             )?)
@@ -313,13 +313,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "brep_polygon_from_mesh" => {
             let ids: Option<Vec<usize>> =
                 v.get("faceIds").map(|_| field(&v, "faceIds")).transpose()?;
-            encode(polygon_kernel::brep::from_mesh(
+            encode(polygon_core::brep::from_mesh(
                 &field(&v, "mesh")?,
                 ids.as_deref(),
             )?)
         }
         "brep_polygon_inspect" => {
-            polygon_kernel::brep::validate(&field(&v, "model")?)?;
+            polygon_core::brep::validate(&field(&v, "model")?)?;
             encode(json!({"topologyValid":true,"solidGeometryStatus":"not_certified"}))
         }
         "brep_polygon_tessellate" => encode(brep::polygons(&field(&v, "model")?)?),
@@ -333,7 +333,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "mesh_boundary_loops" => encode(field::<Mesh>(&v, "mesh")?.boundary_loops()?),
         "mesh_boundary_curves" => encode(boundary_curves(&field(&v, "mesh")?)?),
         "mesh_export_stl" => encode(field::<Mesh>(&v, "mesh")?.export_stl()?),
-        _ => Ok(nurbs_kernel::dispatch(v)?),
+        _ => Ok(nurbs_core::dispatch(v)?),
     }
 }
 pub fn execute(input_text: &str) -> String {

@@ -1,5 +1,5 @@
 //! Compare ASCII XYZ or ASCII PLY vertices in an already established common frame.
-use photogrammetry_kernel::evaluation::{evaluate_clouds, DistanceSummary, EvaluationOptions};
+use photogrammetry_core::evaluation::{evaluate_clouds, DistanceSummary, EvaluationOptions};
 use std::{
     fs,
     io::{BufRead, BufReader, Read},
