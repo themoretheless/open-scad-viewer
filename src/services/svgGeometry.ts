@@ -1,13 +1,9 @@
-import Module, { type ManifoldToplevel, type CrossSection, type Vec2 } from './geometry/module'
 import { parseOpenScadSvg } from './openScadImport'
 import type { MeshData } from '../core/mesh'
+import { defaultGeometryKernel } from './manifoldGeometryKernel'
 import { transformPoint } from './math3d'
 
-let runtime: Promise<ManifoldToplevel> | undefined
-async function kernel() {
-  return runtime ??= Module().then(module => { module.setup(); return module })
-}
-export type SvgContours = Vec2[][]
+export type SvgContours = [number, number][][]
 export const SVG_MAX_BYTES = 262144
 function bounded(contours: SvgContours) {
   if (contours.reduce((n, ring) => n + ring.length, 0) > 20000) throw new Error('SVG exceeds 20000 contour points.')
@@ -18,12 +14,23 @@ export async function svgContours(svg: string): Promise<SvgContours> {
   const byteLength = new TextEncoder().encode(svg).length
   if (byteLength > SVG_MAX_BYTES) throw new Error('SVG exceeds 256 KiB.')
   const parsed = parseOpenScadSvg({ kind: 'source', path: 'profile.svg', source: svg, byteLength, sha256: '' })
-  const wasm = await kernel(), owned: CrossSection[] = []
+  const session = await defaultGeometryKernel.openEvalSession()
   try {
-    for (const region of parsed.regions) owned.push(new wasm.CrossSection(region.contours.map(r => r.map(p => [p[0], p[1]] as Vec2)), region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero'))
-    const merged = wasm.CrossSection.union(owned); owned.push(merged)
-    return bounded(merged.toPolygons())
-  } finally { owned.reverse().forEach(section => section.delete()) }
+    const sections = parsed.regions.map(region => {
+      const rings = region.contours.map(ring => ring.map(point => [point[0], point[1]] as [number, number]))
+      if (!rings.length || !rings[0]?.length) return session.kernel.empty2()
+      return session.kernel.polygon(
+        rings,
+        region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
+      )
+    })
+    const merged = sections.length === 0
+      ? session.kernel.empty2()
+      : sections.length === 1 ? sections[0] : session.kernel.boolean2('union', sections)
+    return bounded(session.kernel.polygons(merged))
+  } finally {
+    session.dispose()
+  }
 }
 export function contoursSvg(contours: SvgContours): string {
   bounded(contours)
@@ -38,14 +45,14 @@ export function contoursSvg(contours: SvgContours): string {
 export function contoursExtrusion(contours: SvgContours, height: number): string {
   bounded(contours)
   if (!Number.isFinite(height) || height <= 0 || height > 100000) throw new Error('Extrusion height must be between 0 and 100000 mm.')
-  const points: Vec2[] = [], paths: number[][] = []
+  const points: [number, number][] = [], paths: number[][] = []
   for (const ring of contours) paths.push(ring.map(p => { points.push(p); return points.length-1 }))
   return `linear_extrude(height=${height}) polygon(points=${JSON.stringify(points)},paths=${JSON.stringify(paths)});`
 }
 /** Silhouette, or one planar kernel face flattened into its own orthonormal plane. */
 export async function meshSvgContours(meshes: readonly MeshData[], options: { axis?: 'x'|'y'|'z'; face?: { meshIndex: number; triangleIndex: number } } = {}): Promise<SvgContours> {
   if (meshes.reduce((n,m) => n+m.indices.length/3,0) > 20000) throw new Error('SVG projection is limited to 20000 triangles.')
-  const triangles: Vec2[][] = []
+  const triangles: [number, number][][] = []
   let origin: number[] = [0,0,0], u: number[] = options.axis === 'x' ? [0,1,0] : [1,0,0], v: number[] = options.axis === 'z' || !options.axis ? [0,1,0] : [0,0,1]
   let normal: number[] | undefined, faceId: number | undefined
   const point = (m: MeshData, index: number) => { const i=m.indices[index]*6; return transformPoint(m.transform,[m.vertices[i],m.vertices[i+1],m.vertices[i+2]]) }
@@ -66,12 +73,17 @@ export async function meshSvgContours(meshes: readonly MeshData[], options: { ax
       const ring=[0,1,2].map(j=>{
         const p=point(m,i+j).map((x,k)=>x-origin[k])
         if(normal && Math.abs(p.reduce((s,x,k)=>s+x*normal![k],0))>1e-5) throw new Error('The selected surface is not planar; use a projection.')
-        return [p.reduce((s,x,k)=>s+x*u[k],0),p.reduce((s,x,k)=>s+x*v[k],0)] as Vec2
+        return [p.reduce((s,x,k)=>s+x*u[k],0),p.reduce((s,x,k)=>s+x*v[k],0)] as [number, number]
       })
       const area=(ring[1][0]-ring[0][0])*(ring[2][1]-ring[0][1])-(ring[1][1]-ring[0][1])*(ring[2][0]-ring[0][0])
       if(Math.abs(area)>1e-12) triangles.push(area>0?ring:ring.reverse())
     }
   })
-  const wasm=await kernel(), section=new wasm.CrossSection(triangles,'NonZero')
-  try { return bounded(section.toPolygons()) } finally { section.delete() }
+  if (!triangles.length) return bounded([])
+  const session = await defaultGeometryKernel.openEvalSession()
+  try {
+    return bounded(session.kernel.polygons(session.kernel.polygon(triangles, 'NonZero')))
+  } finally {
+    session.dispose()
+  }
 }

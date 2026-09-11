@@ -66,6 +66,8 @@ describe('OpenSCAD bind phase', () => {
       '../src/services/openscadCompiler.ts',
       '../src/services/openscadBinder.ts',
       '../src/services/geometryKernel.ts',
+      '../src/services/openscadParser.ts',
+      '../src/services/svgGeometry.ts',
     ]
     for (const file of files) {
       const source = readFileSync(fileURLToPath(new URL(file, import.meta.url)), 'utf8')

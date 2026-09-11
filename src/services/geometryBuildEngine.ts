@@ -13,7 +13,7 @@ import {
   GeometryLanguageContractError,
   planGeometrySourceExecution,
 } from '../core/geometryExecution'
-import { getWasm, parseOpenSCAD } from './openscadParser'
+import { parseOpenSCAD, warmGeometryKernel } from './openscadParser'
 import { sha256Hex } from '../core/sha256'
 
 const EXECUTION_BY_ERROR = new WeakMap<object, GeometryExecutionDescriptor>()
@@ -94,7 +94,7 @@ class ManifoldBackendProvider implements GeometryBackendProvider {
   readonly capabilityManifestVersion = MANIFOLD_MANIFEST.capabilityManifestVersion
 
   async warm(): Promise<void> {
-    await getWasm()
+    await warmGeometryKernel()
   }
 
   build(

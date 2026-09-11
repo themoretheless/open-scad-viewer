@@ -1,7 +1,8 @@
 import type { ManifoldToplevel } from '../src/services/geometry/module'
 import { describe, expect, it, vi } from 'vitest'
 import { ManifoldGeometryKernel } from '../src/services/manifoldGeometryKernel'
-import { getWasm, parseOpenSCAD } from '../src/services/openscadParser'
+import { defaultGeometryKernel } from '../src/services/manifoldGeometryKernel'
+import { parseOpenSCAD } from '../src/services/openscadParser'
 
 function deleted(value: object): boolean {
   return (value as { isDeleted(): boolean }).isDeleted()
@@ -121,7 +122,7 @@ describe('ManifoldGeometryKernel lifecycle', () => {
   })
 
   it.each(['success', 'failure', 'cancel'] as const)('releases actual parser member results after %s', async outcome => {
-    const wasm = await getWasm()
+    const wasm = await defaultGeometryKernel.warm()
     const probe = wasm.Manifold.cube(1)
     const prototype = Object.getPrototypeOf(probe) as typeof probe
     probe.delete()

@@ -28,8 +28,9 @@ let module
 let parseOpenSCAD
 try {
   const parser = await import('../src/services/openscadParser.ts')
+  const kernel = await import('../src/services/manifoldGeometryKernel.ts')
   parseOpenSCAD = parser.parseOpenSCAD
-  module = await parser.getWasm()
+  module = await kernel.defaultGeometryKernel.warm()
 } finally { WebAssembly.instantiate = instantiate }
 assert.ok(wasmMemories.length, 'Must capture the actual instantiated WASM memory')
 

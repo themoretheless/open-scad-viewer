@@ -62,7 +62,15 @@ export interface ManifoldKernelOps {
   ): ManifoldKernelHandle
   rectangle(size: readonly [number, number], center: boolean): ManifoldKernelHandle
   circle(radius: number, radialSegments: number): ManifoldKernelHandle
-  polygon(rings: readonly (readonly (readonly [number, number])[])[]): ManifoldKernelHandle
+  polygon(
+    rings: readonly (readonly (readonly [number, number])[])[],
+    fillRule?: 'EvenOdd' | 'NonZero',
+  ): ManifoldKernelHandle
+  ofMesh(vertProperties: Float32Array, triVerts: Uint32Array): ManifoldKernelHandle
+  translate(input: ManifoldKernelHandle, offset: readonly number[]): ManifoldKernelHandle
+  scale(input: ManifoldKernelHandle, factors: readonly number[]): ManifoldKernelHandle
+  rotate(input: ManifoldKernelHandle, angles: number | readonly number[]): ManifoldKernelHandle
+  mirror(input: ManifoldKernelHandle, normal: readonly number[]): ManifoldKernelHandle
   transform2(input: ManifoldKernelHandle, matrix: readonly number[]): ManifoldKernelHandle
   transform3(input: ManifoldKernelHandle, matrix: readonly number[]): ManifoldKernelHandle
   boolean2(
@@ -89,7 +97,17 @@ export interface ManifoldKernelOps {
     angleDegrees: number,
   ): ManifoldKernelHandle
   projection(input: ManifoldKernelHandle, cut: boolean): ManifoldKernelHandle
-  offset(input: ManifoldKernelHandle, distance: number): ManifoldKernelHandle
+  offset(
+    input: ManifoldKernelHandle,
+    distance: number,
+    join?: 'Square' | 'Round' | 'Miter',
+    miterLimit?: number,
+    circularSegments?: number,
+  ): ManifoldKernelHandle
+  minkowskiSum3(left: ManifoldKernelHandle, right: ManifoldKernelHandle): ManifoldKernelHandle
+  polygons(input: ManifoldKernelHandle): Array<Array<[number, number]>>
+  bounds(input: ManifoldKernelHandle): { min: number[]; max: number[] }
+  firstVertex3(input: ManifoldKernelHandle): [number, number, number] | null
   mirrorZ(input: ManifoldKernelHandle): ManifoldKernelHandle
   translateZ(input: ManifoldKernelHandle, distance: number): ManifoldKernelHandle
   isEmpty(input: ManifoldKernelHandle): boolean
@@ -248,9 +266,75 @@ export function createManifoldKernelOps(
     circle(radius, radialSegments) {
       return handle(2, wasm.CrossSection.circle(radius, radialSegments))
     },
-    polygon(rings) {
+    polygon(rings, fillRule = 'EvenOdd') {
       const polygons = rings.map(ring => ring.map(point => vec2(point))) as Polygons
-      return handle(2, wasm.CrossSection.ofPolygons(polygons, 'EvenOdd'))
+      return handle(2, wasm.CrossSection.ofPolygons(polygons, fillRule))
+    },
+    ofMesh(vertProperties, triVerts) {
+      const mesh = new wasm.Mesh({
+        numProp: 3,
+        vertProperties,
+        triVerts,
+      })
+      mesh.merge()
+      let geometry: Manifold | undefined
+      try {
+        geometry = new rawManifoldConstructor(mesh)
+        const status = geometry.status()
+        if (status !== 'NoError') {
+          const failure = manifoldStatusError(wasm, status)
+          const invalid = geometry
+          geometry = undefined
+          try {
+            invalid.delete()
+          } catch (cleanupError) {
+            throw new AggregateError([failure, cleanupError], 'Invalid Manifold cleanup failed')
+          }
+          throw failure
+        }
+        const result = handle(3, geometry)
+        geometry = undefined
+        return result
+      } catch (error) {
+        if (geometry !== undefined) {
+          try {
+            geometry.delete()
+          } catch (cleanupError) {
+            throw new AggregateError([error, cleanupError], 'Manifold construction and cleanup failed')
+          }
+        }
+        throw error
+      }
+    },
+    translate(input, offset) {
+      if (input.dimension === 2) {
+        return handle(2, geometry2(input).translate([offset[0] ?? 0, offset[1] ?? 0]))
+      }
+      return handle(3, geometry3(input).translate([offset[0] ?? 0, offset[1] ?? 0, offset[2] ?? 0]))
+    },
+    scale(input, factors) {
+      if (input.dimension === 2) {
+        return handle(2, geometry2(input).scale([factors[0] ?? 1, factors[1] ?? factors[0] ?? 1]))
+      }
+      return handle(3, geometry3(input).scale([
+        factors[0] ?? 1,
+        factors[1] ?? factors[0] ?? 1,
+        factors[2] ?? factors[0] ?? 1,
+      ]))
+    },
+    rotate(input, angles) {
+      if (input.dimension === 2) {
+        const degrees = typeof angles === 'number' ? angles : angles[2] ?? 0
+        return handle(2, geometry2(input).rotate(degrees))
+      }
+      const vector = typeof angles === 'number' ? [0, 0, angles] : angles
+      return handle(3, geometry3(input).rotate([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]))
+    },
+    mirror(input, normal) {
+      if (input.dimension === 2) {
+        return handle(2, geometry2(input).mirror([normal[0] ?? 0, normal[1] ?? 0]))
+      }
+      return handle(3, geometry3(input).mirror([normal[0] ?? 0, normal[1] ?? 0, normal[2] ?? 0]))
     },
     transform2(input, matrix) {
       return handle(2, geometry2(input).transform(matrix3(matrix)))
@@ -290,8 +374,29 @@ export function createManifoldKernelOps(
       const solid = geometry3(input)
       return handle(2, cut ? solid.slice(0) : solid.project())
     },
-    offset(input, distance) {
-      return handle(2, geometry2(input).offset(distance))
+    offset(input, distance, join, miterLimit, circularSegments) {
+      if (join === undefined) return handle(2, geometry2(input).offset(distance))
+      return handle(2, geometry2(input).offset(distance, join, miterLimit, circularSegments))
+    },
+    minkowskiSum3(left, right) {
+      return handle(3, geometry3(left).minkowskiSum(geometry3(right)))
+    },
+    polygons(input) {
+      return geometry2(input).toPolygons().map(ring => ring.map(point => [point[0], point[1]] as [number, number]))
+    },
+    bounds(input) {
+      if (input.dimension === 2) {
+        const box = geometry2(input).bounds()
+        return { min: [...box.min], max: [...box.max] }
+      }
+      const box = geometry3(input).boundingBox()
+      return { min: [...box.min], max: [...box.max] }
+    },
+    firstVertex3(input) {
+      const mesh = geometry3(input).getMesh()
+      if (mesh.numVert === 0) return null
+      const vertex = mesh.position(0)
+      return [vertex[0], vertex[1], vertex[2]]
     },
     mirrorZ(input) {
       return handle(3, geometry3(input).mirror([0, 0, 1]))

@@ -23,7 +23,7 @@ Reopen these only for a demonstrated regression.
 
 | Status | Capability | Evidence |
 | --- | --- | --- |
-| Done | Real CSG and geometry metrics | Manifold-backed evaluator and geometry tests in [`openscadParser.ts`](../src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
+| Done | Real CSG and geometry metrics | Handle-only kernel evaluator and geometry tests in [`openscadParser.ts`](../src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
 | Done | Panel-review geometry correctness fixes | Polyhedron winding/merge, EvenOdd polygon fill, positive/positioned extrusion and positioned revolution failures have regressions. |
 | Done | Input/resource hardening | Source/AST/depth/shape/triangle limits plus evaluation-step, evaluated-value, `concat`/`str`, extrusion-slice and pre-decode share-hash caps. |
 | Done | Customizer and STL boundary fixes | Structural literal offsets prevent source corruption; binary STL headers truncate encoded UTF-8 to 80 bytes. |
@@ -65,27 +65,28 @@ Reopen these only for a demonstrated regression.
 ### R3 — Split compiler and kernel phases
 
 - **Priority/status:** P0 / In progress
-- **Evidence:** lexer/parser, scope evaluation, direct Manifold calls,
-  tessellation, provenance, topology and BVH construction previously shared
-  one module. The pure [`openscadCompiler.ts`](../src/services/openscadCompiler.ts)
+- **Evidence:** lexer/parser, scope evaluation, tessellation, provenance,
+  topology and BVH construction previously shared one module and called
+  WASM types directly. The pure [`openscadCompiler.ts`](../src/services/openscadCompiler.ts)
   now owns tokenization, parsing and stable operation identity and returns a
   deeply frozen, structured-clone-safe operation IR without importing
-  Manifold. [`openscadBinder.ts`](../src/services/openscadBinder.ts) binds that
+  the official kernel. [`openscadBinder.ts`](../src/services/openscadBinder.ts) binds that
   IR to builtin/user modules and functions, records positioned unresolved-name
   diagnostics and content-addresses compile+bind by source digest plus
   language profile. [`geometryKernel.ts`](../src/services/geometryKernel.ts)
   defines the lifecycle port and opaque solid/section handles;
   [`manifoldGeometryKernel.ts`](../src/services/manifoldGeometryKernel.ts)
   exclusively owns WASM bootstrap, retry, handle-table and GC-session
-  disposal. Tessellation looks up solids through those handles; boolean/hull
+  disposal. [`openscadParser.ts`](../src/services/openscadParser.ts) and
+  [`svgGeometry.ts`](../src/services/svgGeometry.ts) evaluate through opaque
+  handle-only kernel ops; tessellation uses `analyzeSolid`. Boolean/hull
   and primitive constructors normalize kernel failures to source positions.
   The public facade and serialized lifetime remain compatible and parity-covered.
 - **Risk:** language, kernel and inspection changes invalidate the entire
   pipeline and main-thread modules depend on a Worker implementation detail.
-- **Acceptance remaining:** move evaluation off the facade onto handle-only
-  kernel ops; yield and position every deferred kernel error; Worker protocol
-  phase timings still fold bind into `parseMs`; subtree-level IR cache beyond
-  the whole-source compile/bind digest.
+- **Acceptance remaining:** yield and position every deferred kernel error;
+  Worker protocol phase timings still fold bind into `parseMs`; subtree-level
+  IR cache beyond the whole-source compile/bind digest.
 
 ### R4 — Establish one owner for scene and viewport state
 

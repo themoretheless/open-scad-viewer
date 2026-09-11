@@ -1,5 +1,6 @@
 import Module, { type Manifold, type ManifoldToplevel } from './geometry/module'
 import { KernelHandleTable, type GeometryKernel, type GeometryKernelSession } from './geometryKernel'
+import { createManifoldKernelOps, type ManifoldKernelOps } from './manifoldKernelOps'
 
 export interface ManifoldKernelDependencies {
   load(): Promise<ManifoldToplevel>
@@ -35,6 +36,8 @@ const CROSS_SECTION_METHODS = [
   'add', 'subtract', 'intersect', 'rectClip', 'decompose', 'transform', 'translate',
   'rotate', 'scale', 'mirror', 'simplify', 'offset', 'hull', 'warp', 'extrude', 'revolve',
 ]
+
+let instrumentedRawManifold: typeof Manifold | undefined
 
 /**
  * setup() exposes factory constructors whose .prototype is a child of the
@@ -78,6 +81,7 @@ function ownModuleGeometry(module: ManifoldToplevel): () => void {
   wrapMethods(module.CrossSection, CROSS_SECTION_FACTORIES)
   // ofMesh/ofPolygons call the public constructor; a Set deduplicates results
   // also observed by their surrounding factory/member wrappers.
+  instrumentedRawManifold = RawManifold
   const constructManifold = (args: unknown[]): Manifold => {
     // The upstream convenience constructor throws on a failed status after
     // creating a native handle. Capture that handle before checking its status.
@@ -115,6 +119,11 @@ function ownModuleGeometry(module: ManifoldToplevel): () => void {
     }
     if (errors.length) throw new AggregateError(errors, 'Manifold geometry cleanup failed')
   }
+}
+
+export interface GeometryEvalSession {
+  readonly kernel: ManifoldKernelOps
+  dispose(): void
 }
 
 function defaultDependencies(): ManifoldKernelDependencies {
@@ -167,6 +176,15 @@ export class ManifoldGeometryKernel implements GeometryKernel<ManifoldToplevel> 
         handles.clear()
         this.dependencies.cleanup()
       },
+    }
+  }
+
+  async openEvalSession(): Promise<GeometryEvalSession> {
+    const session = await this.openSession()
+    const raw = instrumentedRawManifold ?? session.module.Manifold
+    return {
+      kernel: createManifoldKernelOps(session.module, raw),
+      dispose: () => session.dispose(),
     }
   }
 }

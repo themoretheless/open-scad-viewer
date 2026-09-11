@@ -11,11 +11,11 @@ import { sha256Hex } from '../src/core/sha256'
 const parseOpenSCADMock = vi.hoisted(() => vi.fn())
 // The selected Manifold provider warms through this loader. A B-rep or refused
 // source must leave it untouched.
-const getWasmMock = vi.hoisted(() => vi.fn(() => Promise.resolve({})))
+const warmGeometryKernelMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
 vi.mock('../src/services/openscadParser', async importOriginal => {
   const original = await importOriginal<typeof import('../src/services/openscadParser')>()
-  return { ...original, parseOpenSCAD: parseOpenSCADMock, getWasm: getWasmMock }
+  return { ...original, parseOpenSCAD: parseOpenSCADMock, warmGeometryKernel: warmGeometryKernelMock }
 })
 
 class FakeWorkerScope {
@@ -123,7 +123,7 @@ function identityResult(options: {
 
 afterEach(() => {
   parseOpenSCADMock.mockReset()
-  getWasmMock.mockClear()
+  warmGeometryKernelMock.mockClear()
   vi.unstubAllGlobals()
   vi.resetModules()
 })
@@ -334,7 +334,7 @@ describe('geometry Worker lifecycle', () => {
       error: { code: 'ENGINE_UNAVAILABLE' },
     }))
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
-    expect(getWasmMock).not.toHaveBeenCalled()
+    expect(warmGeometryKernelMock).not.toHaveBeenCalled()
   })
 
   it('reports a malformed header before stale queue state without warming Manifold', async () => {
@@ -362,7 +362,7 @@ describe('geometry Worker lifecycle', () => {
       error: { code: 'LANGUAGE_CONTRACT_UNSUPPORTED' },
     }))
     expect(scope.events.some(event => event.jobId === 3 && event.status === 'stale')).toBe(false)
-    expect(getWasmMock).not.toHaveBeenCalled()
+    expect(warmGeometryKernelMock).not.toHaveBeenCalled()
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
   })
 

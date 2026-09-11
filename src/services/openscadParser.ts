@@ -1,7 +1,7 @@
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
 /**
- * Strict, intentionally documented OpenSCAD subset backed by Manifold WASM.
+ * Strict, intentionally documented OpenSCAD subset backed by the official geometry kernel.
  *
  * Supported language features: variables, arithmetic/boolean expressions,
  * ranges, for/if/let, statement assertions, user modules and children(). Supported geometry:
@@ -9,16 +9,7 @@ import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGrap
  * union/difference/intersection/hull, linear/rotate extrusion, projection and
  * 2D offset. Unsupported syntax fails loudly instead of rendering a wrong model.
  */
-import type {
-  CrossSection as CrossSectionGeometry,
-  Manifold as ManifoldGeometry,
-  ManifoldToplevel,
-  Mat3 as ManifoldMatrix2d,
-  Mat4 as ManifoldMatrix,
-  Polygons,
-  Vec2,
-  Vec3,
-} from './geometry/module'
+import type { ManifoldKernelHandle, ManifoldKernelOps } from './manifoldKernelOps'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import type {
@@ -151,7 +142,7 @@ export interface ParseOptions {
    * Cooperative cancellation probe. The evaluator yields to the event loop
    * periodically (top-level statements and long `for` / `intersection_for`
    * iteration) and consults this callback; when it returns true the evaluation
-   * rejects with {@link AbortedError}. A single enormous boolean/Manifold call
+   * rejects with {@link AbortedError}. A single enormous boolean/kernel call
    * still will not yield mid-call — BuildCoordinator's worker-replacement grace
    * remains that hard boundary.
    */
@@ -189,12 +180,15 @@ const MAX_EVAL_OPS = 1_000_000
 /** Cap on evaluated vector/string length — `a = concat(a, a);` repeated
  * ~40 times otherwise materializes 2^40 elements and OOMs the worker. */
 const MAX_VALUE_ELEMENTS = 1_000_000
-/** Cap on linear_extrude slices — passed straight into the Manifold kernel,
+/** Cap on linear_extrude slices — passed straight into the geometry kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 const MAX_EXTRUDE_SLICES = 512
 
+type Vec2 = [number, number]
+type Vec3 = [number, number, number]
+
 interface EvalContext {
-  wasm: ManifoldToplevel
+  kernel: ManifoldKernelOps
   source: string
   project?: OpenScadProject
   importAssets?: PreparedOpenScadImportAssets
@@ -243,8 +237,8 @@ interface StableFunctionValue extends FunctionValue {
   readonly lexicalScope: OpenScadStableScope
 }
 
-interface Shape2D { dimension: 2; geometry: CrossSectionGeometry; color: RGBA; entityId: SceneEntityId }
-interface Shape3D { dimension: 3; geometry: ManifoldGeometry; color: RGBA; entityId: SceneEntityId }
+interface Shape2D { dimension: 2; geometry: ManifoldKernelHandle; color: RGBA; entityId: SceneEntityId }
+interface Shape3D { dimension: 3; geometry: ManifoldKernelHandle; color: RGBA; entityId: SceneEntityId }
 type Shape = Shape2D | Shape3D
 
 class StableViewportRootSelection {
@@ -259,9 +253,9 @@ function staticOperationId(node: CallNode): SourceOperationId {
   return node.operationId ?? `op:legacy-offset-${node.p}`
 }
 
-function trackSource(geometry: ManifoldGeometry, node: CallNode, ctx: EvalContext) {
-  const originalId = geometry.originalID()
-  if (originalId < 0 || ctx.sourceReferences.has(originalId)) return
+function trackSource(geometry: ManifoldKernelHandle, node: CallNode, ctx: EvalContext) {
+  const originalId = ctx.kernel.originalId(geometry)
+  if (originalId === null || originalId < 0 || ctx.sourceReferences.has(originalId)) return
   ctx.sourceReferences.set(originalId, {
     id: node.p,
     operationId: staticOperationId(node),
@@ -273,13 +267,11 @@ function trackSource(geometry: ManifoldGeometry, node: CallNode, ctx: EvalContex
   })
 }
 
-function trackedSolid(geometry: ManifoldGeometry, color: RGBA, node: CallNode, ctx: EvalContext): Shape3D {
-  // Eager geometry-generating operations such as hull() return a product
-  // manifold (originalID() === -1). Promote those results to an original so
-  // subsequent transforms/booleans retain a source ID for the operation that
-  // actually generated the surface. Primitive constructors are already
-  // originals, so this is a no-op for them.
-  const trackedGeometry = geometry.originalID() < 0 ? geometry.asOriginal() : geometry
+function trackedSolid(geometry: ManifoldKernelHandle, color: RGBA, node: CallNode, ctx: EvalContext): Shape3D {
+  // Eager products (hull/boolean) start without a source id. Promote those
+  // results so later transforms keep provenance for the generating call.
+  const id = ctx.kernel.originalId(geometry)
+  const trackedGeometry = id === null || id < 0 ? ctx.kernel.asOriginal(geometry) : geometry
   trackSource(trackedGeometry, node, ctx)
   return { dimension: 3, geometry: trackedGeometry, color, entityId: currentEntityId(ctx) }
 }
@@ -1431,7 +1423,7 @@ class CooperativeCheckpoint {
 /**
  * Top-level evaluation with cooperative cancellation. Nested `for` / `if` /
  * module bodies share the same checkpoint, so a Worker can receive cancel
- * mid-loop. A single enormous Manifold/BVH call still cannot yield mid-WASM;
+ * mid-loop. A single enormous kernel/BVH call still cannot yield mid-WASM;
  * the coordinator grace timer remains that hard boundary.
  */
 async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, control: CooperativeCheckpoint): Promise<Shape[]> {
@@ -1563,7 +1555,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'cube size') : [finiteNumber(raw, ctx, node.p, 'cube size')]
       const dimensions: Vec3 = [size[0] ?? 1, size[1] ?? size[0] ?? 1, size[2] ?? size[0] ?? 1]
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Cube dimensions must be positive')
-      const geometry = kernelCall(ctx, node.p, () => ctx.wasm.Manifold.cube(dimensions, arg(node, 'center', 1, false, ctx) === true))
+      const geometry = kernelCall(ctx, node.p, () => ctx.kernel.box(dimensions, arg(node, 'center', 1, false, ctx) === true))
       return [trackedSolid(geometry, nextColor(), node, ctx)]
     }
     case 'sphere': {
@@ -1573,7 +1565,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
       const r = finiteNumber(radius, ctx, node.p, 'sphere radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Sphere radius must be positive')
-      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.wasm.Manifold.sphere(r, segments(node, ctx, 32, 4, r))), nextColor(), node, ctx)]
+      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.sphere(r, segments(node, ctx, 32, 4, r))), nextColor(), node, ctx)]
     }
     case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
     case 'polyhedron': return isStableProfile(ctx) ? makeStablePolyhedron(node, ctx) : makePolyhedron(node, ctx)
@@ -1609,7 +1601,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Square dimensions must be positive')
       return [{
         dimension: 2,
-        geometry: ctx.wasm.CrossSection.square(dimensions, arg(node, 'center', 1, false, ctx) === true),
+        geometry: ctx.kernel.rectangle(dimensions, arg(node, 'center', 1, false, ctx) === true),
         color: nextColor(),
         entityId: currentEntityId(ctx),
       }]
@@ -1623,7 +1615,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       if (r <= 0) evaluationError(ctx, node.p, 'Circle radius must be positive')
       return [{
         dimension: 2,
-        geometry: ctx.wasm.CrossSection.circle(r, segments(node, ctx, 48, 3, r)),
+        geometry: ctx.kernel.circle(r, segments(node, ctx, 48, 3, r)),
         color: nextColor(),
         entityId: currentEntityId(ctx),
       }]
@@ -1632,9 +1624,15 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     case 'translate': {
       if (isStableProfile(ctx)) return await transformStableChildren(node, ctx)
       const vector = vectorValue(arg(node, 'v', 0, [0, 0, 0], ctx), ctx, node.p, 'translate vector')
-      return (await childShapes()).map(shape => shape.dimension === 3
-        ? { ...shape, geometry: shape.geometry.translate([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
-        : { ...shape, geometry: shape.geometry.translate([vector[0] ?? 0, vector[1] ?? 0]) })
+      return (await childShapes()).map(shape => ({
+        ...shape,
+        geometry: ctx.kernel.translate(
+          shape.geometry,
+          shape.dimension === 3
+            ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]
+            : [vector[0] ?? 0, vector[1] ?? 0],
+        ),
+      }))
     }
     case 'rotate': return isStableProfile(ctx) ? await transformStableChildren(node, ctx) : rotateShapes(await childShapes(), node, ctx)
     case 'scale': {
@@ -1643,9 +1641,13 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const values = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'scale vector') : [finiteNumber(raw, ctx, node.p, 'scale')]
       const sx = values[0] ?? 1, sy = values[1] ?? sx, sz = values[2] ?? sx
       if ([sx, sy, sz].some(value => value === 0)) evaluationError(ctx, node.p, 'Scale values cannot be zero')
-      return (await childShapes()).map(shape => shape.dimension === 3
-        ? { ...shape, geometry: shape.geometry.scale([sx, sy, sz]) }
-        : { ...shape, geometry: shape.geometry.scale([sx, sy]) })
+      return (await childShapes()).map(shape => ({
+        ...shape,
+        geometry: ctx.kernel.scale(
+          shape.geometry,
+          shape.dimension === 3 ? [sx, sy, sz] : [sx, sy],
+        ),
+      }))
     }
     case 'resize': {
       requireStableProfile(ctx, node)
@@ -1654,9 +1656,15 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     case 'mirror': {
       if (isStableProfile(ctx)) return await transformStableChildren(node, ctx)
       const vector = vectorValue(arg(node, 'v', 0, [1, 0, 0], ctx), ctx, node.p, 'mirror normal')
-      return (await childShapes()).map(shape => shape.dimension === 3
-        ? { ...shape, geometry: shape.geometry.mirror([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
-        : { ...shape, geometry: shape.geometry.mirror([vector[0] ?? 0, vector[1] ?? 0]) })
+      return (await childShapes()).map(shape => ({
+        ...shape,
+        geometry: ctx.kernel.mirror(
+          shape.geometry,
+          shape.dimension === 3
+            ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]
+            : [vector[0] ?? 0, vector[1] ?? 0],
+        ),
+      }))
     }
     case 'multmatrix': return isStableProfile(ctx)
       ? await transformStableChildren(node, ctx)
@@ -1707,8 +1715,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         if (solids.length === 0) return []
         const color = solids[0].color
         const geometry = cut
-          ? ctx.wasm.Manifold.union(solids.map(shape => shape.geometry)).slice(0)
-          : ctx.wasm.CrossSection.union(solids.map(shape => shape.geometry.project()))
+          ? ctx.kernel.projection(ctx.kernel.boolean3('union', solids.map(shape => shape.geometry)), true)
+          : ctx.kernel.boolean2('union', solids.map(shape => ctx.kernel.projection(shape.geometry, false)))
         return [{ dimension: 2, geometry, color, entityId: currentEntityId(ctx) }]
       }
       const cut = arg(node, 'cut', 0, false, ctx) === true
@@ -1716,7 +1724,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         if (shape.dimension !== 3) evaluationError(ctx, node.p, 'projection() requires 3D children')
         return {
           dimension: 2,
-          geometry: cut ? shape.geometry.slice(0) : shape.geometry.project(),
+          geometry: ctx.kernel.projection(shape.geometry, cut),
           color: shape.color,
           entityId: currentEntityId(ctx),
         }
@@ -1739,7 +1747,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
           if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
           return {
             ...shape,
-            geometry: shape.geometry.offset(
+            geometry: ctx.kernel.offset(
+              shape.geometry,
               resolved.distance,
               resolved.joinType,
               resolved.joinType === 'Miter' ? 1_000_000_000 : 2,
@@ -1752,7 +1761,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
       return (await childShapes()).map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
-        return { ...shape, geometry: shape.geometry.offset(distance), entityId: currentEntityId(ctx) }
+        return { ...shape, geometry: ctx.kernel.offset(shape.geometry, distance), entityId: currentEntityId(ctx) }
       })
     }
     case 'group': {
@@ -1952,14 +1961,14 @@ function stableEmptyShape(dimension: 2 | 3, color: RGBA, ctx: EvalContext): Shap
   if (dimension === 3) {
     return {
       dimension: 3,
-      geometry: ctx.wasm.Manifold.cube([0, 0, 0]),
+      geometry: ctx.kernel.empty3(),
       color,
       entityId: currentEntityId(ctx),
     }
   }
   return {
     dimension: 2,
-    geometry: ctx.wasm.CrossSection.square([0, 0]),
+    geometry: ctx.kernel.empty2(),
     color,
     entityId: currentEntityId(ctx),
   }
@@ -1980,7 +1989,7 @@ function makeStableCube(node: CallNode, ctx: EvalContext): Shape[] {
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
   return [trackedSolid(
-    ctx.wasm.Manifold.cube([...plan.dimensions] as Vec3, plan.center),
+    ctx.kernel.box([...plan.dimensions] as Vec3, plan.center),
     color,
     node,
     ctx,
@@ -1999,7 +2008,7 @@ function makeStableSquare(node: CallNode, ctx: EvalContext): Shape[] {
   if (plan.empty) return [stableEmptyShape(2, color, ctx)]
   return [{
     dimension: 2,
-    geometry: ctx.wasm.CrossSection.square([...plan.dimensions] as Vec2, plan.center),
+    geometry: ctx.kernel.rectangle([...plan.dimensions] as Vec2, plan.center),
     color,
     entityId: currentEntityId(ctx),
   }]
@@ -2021,7 +2030,7 @@ function makeStableSphere(node: CallNode, ctx: EvalContext): Shape[] {
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
-  return [trackedSolid(ctx.wasm.Manifold.sphere(plan.radius, fragments), color, node, ctx)]
+  return [trackedSolid(ctx.kernel.sphere(plan.radius, fragments), color, node, ctx)]
 }
 
 function makeStableCircle(node: CallNode, ctx: EvalContext): Shape[] {
@@ -2042,7 +2051,7 @@ function makeStableCircle(node: CallNode, ctx: EvalContext): Shape[] {
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
   return [{
     dimension: 2,
-    geometry: ctx.wasm.CrossSection.circle(plan.radius, fragments),
+    geometry: ctx.kernel.circle(plan.radius, fragments),
     color,
     entityId: currentEntityId(ctx),
   }]
@@ -2070,9 +2079,9 @@ function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
-  let geometry: ManifoldGeometry
+  let geometry: ManifoldKernelHandle
   if (plan.radius1 > 0) {
-    geometry = ctx.wasm.Manifold.cylinder(
+    geometry = ctx.kernel.cylinder(
       plan.height,
       plan.radius1,
       plan.radius2,
@@ -2080,10 +2089,10 @@ function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
       plan.center,
     )
   } else {
-    geometry = ctx.wasm.Manifold
-      .cylinder(plan.height, plan.radius2, 0, fragments, plan.center)
-      .mirror([0, 0, 1])
-    if (!plan.center) geometry = geometry.translate([0, 0, plan.height])
+    geometry = ctx.kernel.mirrorZ(
+      ctx.kernel.cylinder(plan.height, plan.radius2, 0, fragments, plan.center),
+    )
+    if (!plan.center) geometry = ctx.kernel.translateZ(geometry, plan.height)
   }
   return [trackedSolid(geometry, color, node, ctx)]
 }
@@ -2112,7 +2121,7 @@ function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
     if (polygon.length < 3) continue
     const base = vertices.length / 3
     for (const point of polygon) vertices.push(point[0], point[1], point[2])
-    // OpenSCAD's authored exterior winding is opposite Manifold's mesh input.
+    // OpenSCAD's authored exterior winding is opposite the kernel mesh input.
     for (let index = 1; index < polygon.length - 1; index++) {
       indices.push(base, base + index + 1, base + index)
     }
@@ -2123,14 +2132,8 @@ function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   try {
-    const mesh = new ctx.wasm.Mesh({
-      numProp: 3,
-      vertProperties: new Float32Array(vertices),
-      triVerts: new Uint32Array(indices),
-    })
-    mesh.merge()
-    const geometry = ctx.wasm.Manifold.ofMesh(mesh)
-    if (geometry.status() !== 'NoError' || geometry.isEmpty()) {
+    const geometry = ctx.kernel.ofMesh(new Float32Array(vertices), new Uint32Array(indices))
+    if (ctx.kernel.isEmpty(geometry)) {
       warn(ctx, 'polyhedron() topology did not produce a manifold solid')
       return [stableEmptyShape(3, color, ctx)]
     }
@@ -2163,10 +2166,10 @@ function makeStablePolygon(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   try {
-    const polygons: Polygons = plan.outlines.map(outline =>
+    const polygons = plan.outlines.map(outline =>
       outline.map(point => [point[0], point[1]] as Vec2))
-    const geometry = ctx.wasm.CrossSection.ofPolygons(polygons, 'EvenOdd')
-    if (geometry.isEmpty()) warn(ctx, 'polygon() outlines produced an empty cross-section')
+    const geometry = ctx.kernel.polygon(polygons, 'EvenOdd')
+    if (ctx.kernel.isEmpty(geometry)) warn(ctx, 'polygon() outlines produced an empty cross-section')
     return [{
       dimension: 2,
       geometry,
@@ -2233,11 +2236,11 @@ function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   if (r1 < 0 || r2 < 0 || (r1 === 0 && r2 === 0)) evaluationError(ctx, node.p, 'Cylinder radii must be non-negative and not both zero')
   const center = arg(node, 'center', 3, false, ctx) === true
   const fn = segments(node, ctx, 32, 3, Math.max(r1, r2))
-  let geometry: ManifoldGeometry
-  if (r1 > 0) geometry = ctx.wasm.Manifold.cylinder(height, r1, r2, fn, center)
+  let geometry: ManifoldKernelHandle
+  if (r1 > 0) geometry = ctx.kernel.cylinder(height, r1, r2, fn, center)
   else {
-    geometry = ctx.wasm.Manifold.cylinder(height, r2, 0, fn, center).mirror([0, 0, 1])
-    if (!center) geometry = geometry.translate([0, 0, height])
+    geometry = ctx.kernel.mirrorZ(ctx.kernel.cylinder(height, r2, 0, fn, center))
+    if (!center) geometry = ctx.kernel.translateZ(geometry, height)
   }
   return [trackedSolid(geometry, nextColor(), node, ctx)]
 }
@@ -2257,17 +2260,15 @@ function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
     const polygon = vectorValue(face, ctx, node.p, 'polyhedron face').map(Math.trunc)
     if (polygon.length < 3) evaluationError(ctx, node.p, 'Each polyhedron face needs at least three vertices')
     for (const index of polygon) if (index < 0 || index >= points.length) evaluationError(ctx, node.p, 'Polyhedron face index is out of bounds')
-    // OpenSCAD faces are wound clockwise viewed from outside; Manifold
+    // OpenSCAD faces are wound clockwise viewed from outside; the kernel
     // requires counter-clockwise — reverse the fan so spec-correct
     // polyhedra build outward-facing instead of inside-out.
     for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0], polygon[i + 1], polygon[i])
   }
   try {
-    const mesh = new ctx.wasm.Mesh({ numProp: 3, vertProperties: new Float32Array(vertices), triVerts: new Uint32Array(indices) })
     // Weld duplicated coordinates first: OpenSCAD accepts point lists with
-    // repeated positions, but Manifold's halfedge pairing rejects them.
-    mesh.merge()
-    return [trackedSolid(ctx.wasm.Manifold.ofMesh(mesh), nextColor(), node, ctx)]
+    // repeated positions, but kernel halfedge pairing rejects them.
+    return [trackedSolid(ctx.kernel.ofMesh(new Float32Array(vertices), new Uint32Array(indices)), nextColor(), node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `Invalid manifold polyhedron: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -2429,20 +2430,20 @@ function makeText(node: CallNode, ctx: EvalContext): Shape[] {
       parameters,
       authored.sourcePath,
     )
-    const sections: CrossSectionGeometry[] = []
+    const sections: ManifoldKernelHandle[] = []
     for (const glyph of layout.glyphs) {
       if (glyph.contours.length === 0) continue
-      const section = ctx.wasm.CrossSection.ofPolygons(
+      const section = ctx.kernel.polygon(
         glyph.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
         'EvenOdd',
       )
-      if (!section.isEmpty()) sections.push(section)
+      if (!ctx.kernel.isEmpty(section)) sections.push(section)
     }
     if (sections.length === 0) return []
     const geometry = sections.length === 1
       ? sections[0]
-      : ctx.wasm.CrossSection.union(sections)
-    if (geometry.isEmpty()) return []
+      : ctx.kernel.boolean2('union', sections)
+    if (ctx.kernel.isEmpty(geometry)) return []
     return [{
       dimension: 2,
       geometry,
@@ -2681,14 +2682,14 @@ function makeImport(
     assetPath = resolveOpenScadProjectPath(importer, fileValue)
 
     if (loaded.dimension === 2) {
-      const sections = loaded.regions.map(region => ctx.wasm.CrossSection.ofPolygons(
+      const sections = loaded.regions.map(region => ctx.kernel.polygon(
         region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
         region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
       ))
       const geometry = sections.length === 1
         ? sections[0]
-        : ctx.wasm.CrossSection.union(sections)
-      if (geometry.isEmpty()) {
+        : ctx.kernel.boolean2('union', sections)
+      if (ctx.kernel.isEmpty(geometry)) {
         return importCallError(
           node,
           ctx,
@@ -2705,22 +2706,13 @@ function makeImport(
       }]
     }
 
-    const mesh = new ctx.wasm.Mesh({
-      numProp: 3,
-      vertProperties: loaded.vertices,
-      triVerts: loaded.triangles,
-    })
-    mesh.merge()
-    const geometry = ctx.wasm.Manifold.ofMesh(mesh)
-    const status = geometry.status()
-    if (status !== 'NoError' || geometry.isEmpty()) {
+    const geometry = ctx.kernel.ofMesh(loaded.vertices, loaded.triangles)
+    if (ctx.kernel.isEmpty(geometry)) {
       return importCallError(
         node,
         ctx,
-        status === 'NoError' ? 'E_IMPORT_EMPTY' : 'E_IMPORT_NON_MANIFOLD',
-        status === 'NoError'
-          ? `${displayName}() produced empty 3D geometry.`
-          : `${displayName}() produced invalid manifold geometry (${status}).`,
+        'E_IMPORT_EMPTY',
+        `${displayName}() produced empty 3D geometry.`,
         { specifier: fileValue, assetPath, format: loaded.format },
       )
     }
@@ -2803,23 +2795,7 @@ function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
     )
     assetPath = loaded.path
     const surface = triangulateOpenScadSurface(loaded.map, center)
-    const mesh = new ctx.wasm.Mesh({
-      numProp: 3,
-      vertProperties: surface.vertices,
-      triVerts: surface.triangles,
-    })
-    mesh.merge()
-    const geometry = ctx.wasm.Manifold.ofMesh(mesh)
-    const status = geometry.status()
-    if (status !== 'NoError') {
-      return surfaceError(
-        node,
-        ctx,
-        'E_SURFACE_NON_MANIFOLD',
-        `surface() generated invalid manifold geometry (${status}).`,
-        { specifier: fileValue, assetPath },
-      )
-    }
+    const geometry = ctx.kernel.ofMesh(surface.vertices, surface.triangles)
     return [trackedSolid(geometry, nextColor(), node, ctx)]
   } catch (error) {
     if (error instanceof OpenScadSurfaceError) throw error
@@ -2872,7 +2848,7 @@ function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
     return [vector[0], vector[1]] as Vec2
   })
   const pathsValue = arg(node, 'paths', 1, undefined, ctx)
-  let polygons: Polygons = points
+  let polygons: Vec2[][] = [points]
   if (pathsValue !== undefined) {
     if (!Array.isArray(pathsValue)) evaluationError(ctx, node.p, 'polygon paths must be a vector')
     polygons = pathsValue.map(path => vectorValue(path, ctx, node.p, 'polygon path').map(index => {
@@ -2885,7 +2861,7 @@ function makePolygon(node: CallNode, ctx: EvalContext): Shape[] {
   // for clockwise-wound point lists, which are perfectly valid in OpenSCAD.
   return [{
     dimension: 2,
-    geometry: ctx.wasm.CrossSection.ofPolygons(polygons, 'EvenOdd'),
+    geometry: ctx.kernel.polygon(polygons, 'EvenOdd'),
     color: nextColor(),
     entityId: currentEntityId(ctx),
   }]
@@ -2942,13 +2918,13 @@ async function transformStableChildren(node: CallNode, ctx: EvalContext): Promis
     if (shape.dimension === 3) {
       return [{
         ...shape,
-        geometry: shape.geometry.transform([...plan.matrix] as ManifoldMatrix),
+        geometry: ctx.kernel.transform3(shape.geometry, [...plan.matrix]),
         entityId: currentEntityId(ctx),
       }]
     }
     return [{
       ...shape,
-      geometry: shape.geometry.transform([...plan.matrix2d] as ManifoldMatrix2d),
+      geometry: ctx.kernel.transform2(shape.geometry, [...plan.matrix2d]),
       entityId: currentEntityId(ctx),
     }]
   } catch {
@@ -2963,25 +2939,25 @@ function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[
   return shapes.map(shape => {
     if (shape.dimension === 2) {
       const degrees = Array.isArray(angle) ? vectorValue(angle, ctx, node.p, 'rotation')[2] ?? 0 : finiteNumber(angle, ctx, node.p, 'rotation')
-      return { ...shape, geometry: shape.geometry.rotate(degrees) }
+      return { ...shape, geometry: ctx.kernel.rotate(shape.geometry, degrees) }
     }
     if (Array.isArray(angle)) {
       const vector = vectorValue(angle, ctx, node.p, 'rotation')
-      return { ...shape, geometry: shape.geometry.rotate([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
+      return { ...shape, geometry: ctx.kernel.rotate(shape.geometry, [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
     }
     const degrees = finiteNumber(angle, ctx, node.p, 'rotation')
-    if (axis === undefined) return { ...shape, geometry: shape.geometry.rotate([0, 0, degrees]) }
+    if (axis === undefined) return { ...shape, geometry: ctx.kernel.rotate(shape.geometry, [0, 0, degrees]) }
     const vector = vectorValue(axis, ctx, node.p, 'rotation axis')
-    return { ...shape, geometry: shape.geometry.transform(axisAngleMatrix(vector, degrees, ctx, node.p)) }
+    return { ...shape, geometry: ctx.kernel.transform3(shape.geometry, axisAngleMatrix(vector, degrees, ctx, node.p)) }
   })
 }
 
-function axisAngleMatrix(axis: number[], degrees: number, ctx: EvalContext, p: number): ManifoldMatrix {
+function axisAngleMatrix(axis: number[], degrees: number, ctx: EvalContext, p: number): number[] {
   const length = Math.hypot(axis[0] ?? 0, axis[1] ?? 0, axis[2] ?? 0)
   if (length === 0) evaluationError(ctx, p, 'Rotation axis cannot be zero')
   const x = (axis[0] ?? 0) / length, y = (axis[1] ?? 0) / length, z = (axis[2] ?? 0) / length
   const angle = degrees * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle), t = 1 - c
-  // Manifold matrices are column-major.
+  // Kernel matrices are column-major.
   return [
     t*x*x+c, t*x*y+s*z, t*x*z-s*y, 0,
     t*x*y-s*z, t*y*y+c, t*y*z+s*x, 0,
@@ -2993,31 +2969,31 @@ function axisAngleMatrix(axis: number[], degrees: number, ctx: EvalContext, p: n
 function transformByMatrix(shapes: Shape[], value: Value, node: CallNode, ctx: EvalContext): Shape[] {
   const has2d = shapes.some(shape => shape.dimension === 2)
   const has3d = shapes.some(shape => shape.dimension === 3)
-  let matrix2d: ManifoldMatrix2d | null = null
+  let matrix2d: number[] | null = null
   if (has2d && isStableProfile(ctx)) {
     const resolved = resolveOpenScad2dMultmatrix(value)
     if (resolved === null) {
       warn(ctx, 'Invalid multmatrix() value leaves 2D children unchanged')
     } else {
-      matrix2d = [...resolved] as ManifoldMatrix2d
+      matrix2d = [...resolved]
     }
   }
 
-  let matrix3d: ManifoldMatrix | null = null
+  let matrix3d: number[] | null = null
   if (has3d || (has2d && !isStableProfile(ctx))) {
     if (!Array.isArray(value) || value.length < 3) evaluationError(ctx, node.p, 'multmatrix requires a 4x4 matrix')
     const rows = value.map(row => vectorValue(row, ctx, node.p, 'matrix row'))
     if (rows.some(row => row.length < 4)) evaluationError(ctx, node.p, 'multmatrix requires a 4x4 matrix')
     const matrix: number[] = []
     for (let column = 0; column < 4; column++) for (let row = 0; row < 4; row++) matrix.push(rows[row]?.[column] ?? (row === column ? 1 : 0))
-    matrix3d = matrix as ManifoldMatrix
+    matrix3d = matrix
   }
   return shapes.map(shape => {
     if (shape.dimension === 2) {
       if (matrix2d === null) return shape
-      return { ...shape, geometry: shape.geometry.transform(matrix2d) }
+      return { ...shape, geometry: ctx.kernel.transform2(shape.geometry, matrix2d) }
     }
-    return { ...shape, geometry: shape.geometry.transform(matrix3d!) }
+    return { ...shape, geometry: ctx.kernel.transform3(shape.geometry, matrix3d!) }
   })
 }
 
@@ -3043,11 +3019,11 @@ function booleanShapes(
   ctx.control?.poll()
   if (dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
-    const geometry = kernelCall(ctx, p, () => operation === 'union' ? ctx.wasm.Manifold.union(solids) : ctx.wasm.Manifold.intersection(solids))
+    const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean3(operation, solids))
     return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
-  const geometry = kernelCall(ctx, p, () => operation === 'union' ? ctx.wasm.CrossSection.union(sections) : ctx.wasm.CrossSection.intersection(sections))
+  const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean2(operation, sections))
   return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
 }
 
@@ -3084,14 +3060,14 @@ async function differenceChildren(node: CallNode, ctx: EvalContext): Promise<Sha
   if (base[0].dimension === 3) {
     return [{
       dimension: 3,
-      geometry: base[0].geometry.subtract((cutters[0] as Shape3D).geometry),
+      geometry: ctx.kernel.boolean3('difference', [base[0].geometry, (cutters[0] as Shape3D).geometry]),
       color: base[0].color,
       entityId: currentEntityId(ctx),
     }]
   }
   return [{
     dimension: 2,
-    geometry: base[0].geometry.subtract((cutters[0] as Shape2D).geometry),
+    geometry: ctx.kernel.boolean2('difference', [base[0].geometry, (cutters[0] as Shape2D).geometry]),
     color: base[0].color,
     entityId: currentEntityId(ctx),
   }]
@@ -3107,12 +3083,12 @@ function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] 
   }
   ctx.control?.poll()
   if (dimension === 3) {
-    const geometry = kernelCall(ctx, node.p, () => ctx.wasm.Manifold.hull(shapes.map(shape => (shape as Shape3D).geometry)))
+    const geometry = kernelCall(ctx, node.p, () => ctx.kernel.hull3(shapes.map(shape => (shape as Shape3D).geometry)))
     return [trackedSolid(geometry, shapes[0].color, node, ctx)]
   }
   return [{
     dimension: 2,
-    geometry: kernelCall(ctx, node.p, () => ctx.wasm.CrossSection.hull(shapes.map(shape => (shape as Shape2D).geometry))),
+    geometry: kernelCall(ctx, node.p, () => ctx.kernel.hull2(shapes.map(shape => (shape as Shape2D).geometry))),
     color: shapes[0].color,
     entityId: currentEntityId(ctx),
   }]
@@ -3140,9 +3116,9 @@ async function resizeChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]
   const max = Array.from({ length: axes }, () => -Infinity)
   let hasGeometry = false
   for (const shape of shapes) {
-    if (shape.geometry.isEmpty()) continue
+    if (ctx.kernel.isEmpty(shape.geometry)) continue
     hasGeometry = true
-    const bounds = shape.dimension === 3 ? shape.geometry.boundingBox() : shape.geometry.bounds()
+    const bounds = ctx.kernel.bounds(shape.geometry)
     for (let axis = 0; axis < axes; axis++) {
       min[axis] = Math.min(min[axis], bounds.min[axis] ?? Infinity)
       max[axis] = Math.max(max[axis], bounds.max[axis] ?? -Infinity)
@@ -3160,9 +3136,15 @@ async function resizeChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]
   }, stableGeometrySemanticsContext(ctx))
   if (!resolved.valid || !resolved.applied) return shapes
 
-  return shapes.map(shape => shape.dimension === 3
-    ? { ...shape, geometry: shape.geometry.scale([resolved.scales[0], resolved.scales[1], resolved.scales[2]]) }
-    : { ...shape, geometry: shape.geometry.scale([resolved.scales[0], resolved.scales[1]]) })
+  return shapes.map(shape => ({
+    ...shape,
+    geometry: ctx.kernel.scale(
+      shape.geometry,
+      shape.dimension === 3
+        ? [resolved.scales[0], resolved.scales[1], resolved.scales[2]]
+        : [resolved.scales[0], resolved.scales[1]],
+    ),
+  }))
 }
 
 function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
@@ -3179,18 +3161,18 @@ function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Sha
         shapes.map(shape => (shape as Shape2D).geometry),
         {
           anchor: section => {
-            // Manifold exposes Minkowski as an anchored dilation. Anchor at an
+            // The kernel exposes Minkowski as an anchored dilation. Anchor at an
             // actual contour vertex (not a bounding-box corner, which may lie
             // outside a circle) so the normalized structuring set contains 0.
-            const point = section.toPolygons()[0]?.[0]
+            const point = ctx.kernel.polygons(section)[0]?.[0]
             return point === undefined ? [0, 0] : [point[0], point[1]]
           },
-          translate: (section, offset) => section.translate(offset),
-          extrudeUnitPrism: section => ctx.wasm.Manifold.extrude(
+          translate: (section, offset) => ctx.kernel.translate(section, offset),
+          extrudeUnitPrism: section => ctx.kernel.linearExtrude(
             section, 1, 0, 0, [1, 1], false,
           ),
-          minkowskiSum: (left, right) => left.minkowskiSum(right),
-          projectTo2d: solid => solid.project(),
+          minkowskiSum: (left, right) => ctx.kernel.minkowskiSum3(left, right),
+          projectTo2d: solid => ctx.kernel.projection(solid, false),
         },
       )
       if (geometry === undefined) return []
@@ -3202,21 +3184,24 @@ function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Sha
       }]
     }
     let geometry = (shapes[0] as Shape3D).geometry
-    if (geometry.isEmpty()) return []
+    if (ctx.kernel.isEmpty(geometry)) return []
     for (let index = 1; index < shapes.length; index++) {
       const right = (shapes[index] as Shape3D).geometry
-      if (right.isEmpty()) return []
-      // Manifold exposes the right operand as an anchored dilation. Normalize
+      if (ctx.kernel.isEmpty(right)) return []
+      // The kernel exposes the right operand as an anchored dilation. Normalize
       // it around a point that is genuinely in the solid (a real mesh vertex),
       // then restore that translation after the ordered sum. Bounding-box
       // corners are insufficient because they need not belong to curved solids.
-      const mesh = right.getMesh()
-      if (mesh.numVert === 0) return []
-      const vertex = mesh.position(0)
+      const vertex = ctx.kernel.firstVertex3(right)
+      if (vertex === null) return []
       const anchor: Vec3 = [vertex[0], vertex[1], vertex[2]]
-      geometry = geometry
-        .minkowskiSum(right.translate([-anchor[0], -anchor[1], -anchor[2]]))
-        .translate(anchor)
+      geometry = ctx.kernel.translate(
+        ctx.kernel.minkowskiSum3(
+          geometry,
+          ctx.kernel.translate(right, [-anchor[0], -anchor[1], -anchor[2]]),
+        ),
+        anchor,
+      )
     }
     return [trackedSolid(geometry, shapes[0].color, node, ctx)]
   } catch (error) {
@@ -3278,15 +3263,15 @@ function compatibilityDxfProfile(
         { specifier: fileValue, assetPath, format: 'dxf' },
       )
     }
-    const sections = loaded.regions.map(region => ctx.wasm.CrossSection.ofPolygons(
+    const sections = loaded.regions.map(region => ctx.kernel.polygon(
       region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
       region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
     ))
     if (sections.length === 0) return []
     const geometry = sections.length === 1
       ? sections[0]
-      : ctx.wasm.CrossSection.union(sections)
-    if (geometry.isEmpty()) return []
+      : ctx.kernel.boolean2('union', sections)
+    if (ctx.kernel.isEmpty(geometry)) return []
     return [{
       dimension: 2,
       geometry,
@@ -3322,7 +3307,7 @@ function stableLinearExtrudeSections(
 ): Shape[] {
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
-  const profilePoints = sections[0].geometry.toPolygons().flatMap(polygon => (
+  const profilePoints = ctx.kernel.polygons(sections[0].geometry).flatMap(polygon => (
     polygon.map(point => [point[0], point[1]] as const)
   ))
   const fragmentInput = stableFragmentInputFromEvaluated(evaluated, ctx, 0)
@@ -3341,7 +3326,7 @@ function stableLinearExtrudeSections(
   if (resolved.reduced) ctx.reduced.value = true
   if (resolved.empty) return []
   try {
-    const geometry = ctx.wasm.Manifold.extrude(
+    const geometry = ctx.kernel.linearExtrude(
       sections[0].geometry,
       resolved.height,
       resolved.manifoldNDivisions,
@@ -3376,14 +3361,14 @@ async function linearExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]>
   const height = finiteNumber(arg(node, 'height', 0, 1, ctx), ctx, node.p, 'extrusion height')
   if (height <= 0) evaluationError(ctx, node.p, 'linear_extrude() height must be positive')
   const twist = finiteNumber(arg(node, 'twist', -1, 0, ctx), ctx, node.p, 'extrusion twist')
-  // Cap slices: the value goes straight into the Manifold kernel, which
+  // Cap slices: the value goes straight into the geometry kernel, which
   // allocates per-slice cross-sections long before MAX_TRIANGLES can fire.
   const slices = Math.min(MAX_EXTRUDE_SLICES, Math.max(0, Math.trunc(finiteNumber(arg(node, 'slices', -1, 0, ctx), ctx, node.p, 'extrusion slices'))))
   const rawScale = arg(node, 'scale', -1, [1, 1], ctx)
   const scaleValues = Array.isArray(rawScale) ? vectorValue(rawScale, ctx, node.p, 'extrusion scale') : [finiteNumber(rawScale, ctx, node.p, 'extrusion scale')]
   const scale: Vec2 = [scaleValues[0] ?? 1, scaleValues[1] ?? scaleValues[0] ?? 1]
   try {
-    const geometry = ctx.wasm.Manifold.extrude(sections[0].geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
+    const geometry = ctx.kernel.linearExtrude(sections[0].geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
     return [trackedSolid(geometry, sections[0].color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `linear_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -3432,8 +3417,8 @@ function stableRotateExtrudeSections(
 ): Shape[] {
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
-  const bounds = sections[0].geometry.bounds()
-  const radius = Math.max(Math.abs(bounds.min[0]), Math.abs(bounds.max[0]))
+  const bounds = ctx.kernel.bounds(sections[0].geometry)
+  const radius = Math.max(Math.abs(bounds.min[0] ?? 0), Math.abs(bounds.max[0] ?? 0))
   const fragmentInput = stableFragmentInputFromEvaluated(evaluated, ctx, radius)
   const resolved = resolveOpenScadRotateExtrude({
     angle: evaluated.get('angle'),
@@ -3450,20 +3435,20 @@ function stableRotateExtrudeSections(
   if (resolved.reduced) ctx.reduced.value = true
   if (resolved.empty) return []
   const profile = resolved.reflectProfileX
-    ? sections[0].geometry.transform([
+    ? ctx.kernel.transform2(sections[0].geometry, [
         -1, 0, 0,
         0, 1, 0,
         0, 0, 1,
       ])
     : sections[0].geometry
   try {
-    let geometry = ctx.wasm.Manifold.revolve(
+    let geometry = ctx.kernel.rotateExtrude(
       profile,
       resolved.circularSegments,
       resolved.angle,
     )
     if (resolved.postRotateDegrees !== 0) {
-      geometry = geometry.rotate([0, 0, resolved.postRotateDegrees])
+      geometry = ctx.kernel.rotate(geometry, [0, 0, resolved.postRotateDegrees])
     }
     return [trackedSolid(geometry, sections[0].color, node, ctx)]
   } catch (error) {
@@ -3508,12 +3493,12 @@ async function rotateExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]>
 
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
-  const bounds = sections[0].geometry.bounds()
-  const radius = Math.max(Math.abs(bounds.min[0]), Math.abs(bounds.max[0]))
+  const bounds = ctx.kernel.bounds(sections[0].geometry)
+  const radius = Math.max(Math.abs(bounds.min[0] ?? 0), Math.abs(bounds.max[0] ?? 0))
   const angle = finiteNumber(arg(node, 'angle', -1, 360, ctx), ctx, node.p, 'revolve angle')
   const circularSegments = segments(node, ctx, 48, 3, radius)
   try {
-    const geometry = ctx.wasm.Manifold.revolve(sections[0].geometry, circularSegments, angle)
+    const geometry = ctx.kernel.rotateExtrude(sections[0].geometry, circularSegments, angle)
     return [trackedSolid(geometry, sections[0].color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `rotate_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -3700,14 +3685,14 @@ function parseLegacyColor(value: Value, ctx: EvalContext, p: number): RGBA {
 }
 
 /**
- * Lazily load the Manifold WASM module, cached per JS realm. Exported so a
- * hosting worker can eagerly warm it at startup instead of paying the
+ * Warm the official geometry kernel, cached per JS realm. Exported so a
+ * hosting worker can eagerly compile it at startup instead of paying the
  * download+compile cost on the first request. A rejected load is NOT cached:
  * one transient network failure must not brick every future parse, so the
  * cached promise is cleared on rejection and the next call retries.
  */
-export function getWasm(): Promise<ManifoldToplevel> {
-  return defaultGeometryKernel.warm()
+export function warmGeometryKernel(): Promise<void> {
+  return defaultGeometryKernel.warm().then(() => undefined)
 }
 
 async function parseInternal(
@@ -3746,8 +3731,7 @@ async function parseInternal(
         prepareOpenScadTextAssets(project),
       ])
   const parsedAt = now()
-  const kernelSession = await defaultGeometryKernel.openSession()
-  const wasm = kernelSession.module
+  const kernelSession = await defaultGeometryKernel.openEvalSession()
   const warnings: string[] = []
   const modules = new Map(bound.modules)
   const functions = new Map(bound.functions)
@@ -3761,7 +3745,7 @@ async function parseInternal(
   const sourceReferences = new Map<number, MeshSourceReference>()
   const reduced = { value: false }
   let ctx: EvalContext = {
-    wasm,
+    kernel: kernelSession.kernel,
     source,
     project,
     importAssets,
@@ -3801,20 +3785,17 @@ async function parseInternal(
     if (options.shouldAbort?.()) throw new AbortedError()
     const sections = shapes.filter(shape => shape.dimension === 2)
     if (sections.length) warn(ctx, `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`)
-    for (const section of sections) kernelSession.handles.adoptSection(section.geometry)
-    const solids = shapes.filter((shape): shape is Shape3D => shape.dimension === 3 && !shape.geometry.isEmpty())
+    const solids = shapes.filter((shape): shape is Shape3D => shape.dimension === 3 && !ctx.kernel.isEmpty(shape.geometry))
     const meshes: MeshData[] = []
     let volume = 0
     let surfaceArea = 0
     let triangleCount = 0
     for (const shape of solids) {
       if (options.shouldAbort?.()) throw new AbortedError()
-      const handle = kernelSession.handles.adoptSolid(shape.geometry)
-      const geometry = kernelSession.handles.requireSolid(handle) as ManifoldGeometry
-      volume += geometry.volume()
-      surfaceArea += geometry.surfaceArea()
-      const withNormals = geometry.calculateNormals(0, 52.5)
-      const mesh = withNormals.getMesh()
+      const analysis = ctx.kernel.analyzeSolid(shape.geometry)
+      volume += analysis.volume
+      surfaceArea += analysis.surfaceArea
+      const mesh = analysis.mesh
       await control.yieldIfDue()
       triangleCount += mesh.numTri
       if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
