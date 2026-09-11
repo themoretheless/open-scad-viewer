@@ -1658,10 +1658,10 @@ Within the plan dependency closure only the qualified lowerer may import
 source/compiler facilities. A source-facing v5 orchestrator may transport the
 request and invoke the lowerer, but it must not consult another evaluator or
 pass source across the plan seam. Core and executor import neither compiler nor
-Manifold.
+the geometry module.
 `ManifoldPlanBackend` imports only semantic ABI types and a narrow opaque
-kernel port. Exactly one runtime adapter may import `manifold-3d`, and no
-Manifold type crosses that adapter's public boundary. `LegacyV5Assembler` may
+kernel port. No runtime adapter may import `manifold-3d`. Kernel types do not
+cross that adapter's public boundary. `LegacyV5Assembler` may
 consume the trusted core, SPE1 provenance, request policy and an owning
 execution result while its result lease is live; it may not receive source or
 import compiler/parser. It performs mesh extraction, normals, metrics,

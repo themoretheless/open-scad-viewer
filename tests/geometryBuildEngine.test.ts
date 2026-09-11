@@ -175,7 +175,7 @@ describe('GeometryBuildEngine', () => {
     }
   })
 
-  it('defaults legacy source to Manifold and records the source-selected route', () => {
+  it('defaults legacy source to the mesh engine class and records the source-selected route', () => {
     const execution = new GeometryBuildEngine().planSource('cube(1);', request)
 
     expect(execution).toMatchObject({
@@ -237,7 +237,7 @@ describe('GeometryBuildEngine', () => {
     expect(warm).toHaveBeenCalledTimes(1)
   })
 
-  it('never calls Manifold when a B-rep source selects an unavailable runtime', async () => {
+  it('never warms the mesh kernel when a B-rep source selects an unavailable runtime', async () => {
     const build = vi.fn()
     const provider: GeometryBackendProvider = {
       engineClass: 'manifold',

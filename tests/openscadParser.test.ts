@@ -19,7 +19,7 @@ function bounds(meshes: MeshData[]) {
   return { min, max }
 }
 
-describe('OpenSCAD parser and Manifold evaluator', () => {
+describe('OpenSCAD parser and geometry evaluator', () => {
   it('reports bind as its own nonnegative phase', async () => {
     const result = await parseOpenSCAD('cube(1);')
     expect(Object.keys(result.timings)).toEqual([
@@ -452,7 +452,7 @@ describe('preview reduction flag', () => {
     })
 
     expect(preview.reduced).toBe(false)
-    // Manifold run IDs are process-global allocation handles and intentionally
+    // Kernel run IDs are process-global allocation handles and intentionally
     // differ across independent builds; stable source/evaluated identities and
     // every authoritative output byte must still match.
     expect(normalizeEphemeralKernelIds(preview)).toEqual(normalizeEphemeralKernelIds(full))

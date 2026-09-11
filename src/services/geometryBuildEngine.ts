@@ -70,7 +70,7 @@ export interface GeometryBuildResult {
 }
 
 /**
- * Compatibility provider for the existing direct-source Manifold evaluator.
+ * Compatibility provider for the existing direct-source mesh evaluator.
  * A Rust B-rep provider must not implement this mesh-only seam; it requires
  * the future shared SemanticProgram contract advertised by the registry.
  */

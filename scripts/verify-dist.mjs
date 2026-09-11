@@ -29,10 +29,9 @@ for (const file of files) {
   }
 }
 const total = files.reduce((sum, file) => sum + file.bytes, 0)
-// Own CAD adds ~96 kB to the shared Rust payload but removes the separate
-// Manifold WASM/JS assets. The complete distribution is smaller (~2.3 MB).
-// Preserve the total release budget and reject any external Manifold artifact.
-if (files.some(file => /manifold/i.test(file.path))) throw new Error('External Manifold artifact in dist')
+// Own CAD adds ~96 kB to the shared Rust payload and must not ship a separate
+// foreign CSG package. The complete distribution is smaller (~2.3 MB).
+if (files.some(file => /manifold-3d/i.test(file.path))) throw new Error('Foreign manifold-3d artifact in dist')
 // opt-level=3 for polygon-core measured 310 -> 240 ms warm on the own-cad
 // benchmark (identical triangles) at +68 kB packed; sdf/nurbs/geometry-bridge
 // at opt-level=3 added size without speed, so they keep the size profile.

@@ -178,7 +178,7 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
   })
 })
 
-describe('viewport modifiers in direct Manifold evaluation', () => {
+describe('viewport modifiers in direct kernel evaluation', () => {
   it('keeps disabled subtrees entirely unevaluated', async () => {
     const result = await parseOpenSCAD(
       '*echo(assert(false), missing) cube(9); cube(2);',

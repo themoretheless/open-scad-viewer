@@ -270,6 +270,8 @@ ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadMani
 
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
   'own-rust-node-v1': deepFreeze(ownRustCadManifest),
+  // Retired npm-kernel snapshots. They keep the historical packageName for
+  // digest stability; production current is own-rust-node-v1.
   'manifold-node-v1': deepFreeze({
     engineClass: 'manifold',
     displayName: 'Manifold mesh kernel',

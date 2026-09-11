@@ -394,9 +394,8 @@ diagnostic. Если admitted language когда-либо сможет ветв
 Внутри plan dependency closure compiler/source разрешены только qualified
 lowerer. Source-facing orchestrator может транспортировать request и вызвать
 lowerer, но не передаёт source через plan seam и не консультируется с другим
-evaluator. Semantic core/executor не импортируют Manifold. Только narrow kernel
-adapter импортирует
-`manifold-3d` и не экспортирует его types. Compatibility assembler может читать
+evaluator. Semantic core/executor не импортируют types geometry-module. Только узкий kernel
+adapter владеет workspace CAD session и не экспортирует эти types. Compatibility assembler может читать
 trusted core, SPE1 provenance и owning execution result, но не source/compiler/
 parser. Он, пока result lease жив, извлекает mesh/normals/metrics/BVH/semantic
 edges и воспроизводит старые colors, ordering, metrics, exports и scene packet.

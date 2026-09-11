@@ -50,11 +50,11 @@ Reopen these only for a demonstrated regression.
   revision/quality. The evaluator yields between top-level statements, yields
   mid-iteration inside `for` / `intersection_for` at any nesting (module /
   `if` / `let` bodies), yields between nested statements, polls immediately
-  before Manifold boolean/hull/difference, forces a macrotask checkpoint
+  before kernel boolean/hull/difference, forces a macrotask checkpoint
   before extraction, polls cancellation through chunked publication work, and
   reports required parse/bind/initialize/evaluate/analyze timings. A tokenized
   watchdog prevents stale timers from cancelling newer work. Synchronous
-  Manifold, BVH and topology WASM calls still cannot observe messages, so
+  kernel, BVH and topology WASM calls still cannot observe messages, so
   Worker replacement remains the final cancellation boundary for those phases.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.

@@ -4,7 +4,7 @@
 
 Дата: 2026-07-31
 
-Область: отдельная Rust-библиотека точной геометрии с предлагаемой permissive лицензией и её интеграция как постоянного peer backend рядом с `manifold-3d` в `open-scad-viewer`.
+Область: отдельная Rust-библиотека точной геометрии с предлагаемой permissive лицензией и её интеграция как постоянного peer backend рядом с own-Rust CAD mesh kernel в `open-scad-viewer`.
 
 > Этот документ описывает целевую архитектуру и проверяемые этапы. Он не утверждает, что general NURBS Boolean уже реализован или что новый backend совместим со всем OpenSCAD.
 
@@ -1231,7 +1231,7 @@ Provenance gate risk-tiered: source может быть publication либо д�
 
 Native ядро затем развивается последовательными walking slices `box → cylinder/cone → sphere/torus → NURBS patch`, каждый со своим owner, независимым reviewer, falsifiable certificate и stop-loss. После shadow WASM, scene migration и отдельных trim/extrude/revolve gates можно квалифицировать analytic intersections и Boolean. General NURBS SS начинается только с R1 go/no-go spike; no-go оставляет полезное analytic B-rep ядро production-capable.
 
-`manifold-3d` навсегда остается стабильным whole-job backend для `legacy/current`, а Rust B-rep/NURBS развивается как второй постоянный peer-класс для `openscad-viewer/brep-1`. Ни один из них не используется для скрытого «спасения» неуспешной операции другого. Fillet, shelling, loft/sweep и STEP не входят в раннее обещание и получают независимые capabilities после G8.
+Own-Rust CAD остается стабильным whole-job mesh backend для `legacy/current`, а Rust B-rep/NURBS развивается как второй постоянный peer-класс для `openscad-viewer/brep-1`. Ни один из них не используется для скрытого «спасения» неуспешной операции другого. Fillet, shelling, loft/sweep и STEP не входят в раннее обещание и получают независимые capabilities после G8.
 
 ## 25. Review record
 

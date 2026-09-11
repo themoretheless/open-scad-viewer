@@ -314,7 +314,7 @@ No wall-clock pass/fail thresholds. Invalid or changed outputs fail the run.`)
     schemaVersion: 1, kind: 'cpu-benchmark', startedAt, invocation: [process.execPath, ...process.argv.slice(1)], options, source,
     environment: { node: process.version, versions: process.versions, platform: process.platform, architecture: process.arch, osRelease: os.release(), cpuModels: [...new Set(os.cpus().map(cpu => cpu.model))], logicalCpus: os.cpus().length, availableParallelism: os.availableParallelism(), totalMemoryBytes: os.totalmem(), loadAverageAtStart: os.loadavg(), execArgv: process.execArgv, gc: 'explicit major collection outside timing batches only' },
     boundaries: [
-      'Node/V8 main process and browser subset Manifold WASM, full quality; not official OpenSCAD or browser end-to-end latency.',
+      'Node/V8 main process and browser subset own-Rust CAD kernel, full quality; not official OpenSCAD or browser end-to-end latency.',
       'Fresh process per fixture. Cold build includes first kernel initialization, excludes Node startup and module import (reported separately).',
       'Sequential uninstrumented stage wall time and process CPU usage. Forced GC only outside timing batches; natural GC remains included.',
       'Process CPU includes V8 background threads and can exceed wall time. Node CPU/heap profile frame coordinates follow tsx-generated code; use function names and source maps when inspecting them.',

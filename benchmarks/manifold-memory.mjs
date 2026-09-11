@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const startedAt = new Date().toISOString()
 const out = process.argv[2] ?? path.join(root, 'tmp', 'performance', `manifold-memory-${startedAt.replace(/[:.]/g, '-')}.json`)
 const fixture = cpuFixtures.find(item => item.id === 'dense-sphere')
-const fingerprintPaths = ['benchmarks/manifold-memory.mjs', 'benchmarks/cpu-fixtures.mjs', 'src/services/manifoldGeometryKernel.ts', 'src/services/openscadParser.ts', 'src/services/meshTopology.ts', 'node_modules/manifold-3d/manifold.js', 'node_modules/manifold-3d/manifold.wasm', 'node_modules/manifold-3d/lib/garbage-collector.js', 'package-lock.json']
+const fingerprintPaths = ['benchmarks/manifold-memory.mjs', 'benchmarks/cpu-fixtures.mjs', 'src/services/manifoldGeometryKernel.ts', 'src/services/openscadParser.ts', 'src/services/meshTopology.ts', 'package-lock.json']
 const fingerprint = () => Promise.all(fingerprintPaths.map(async relative => ({ path: relative, sha256: createHash('sha256').update(await readFile(path.join(root, relative))).digest('hex') })))
 const source = await fingerprint()
 const wasmMemories = []

@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes the architecture that exists in the repository after
-the Manifold rewrite, the [seven-role review](docs/review-of-main-rewrite.md),
+the own-Rust geometry kernel, the [seven-role review](docs/review-of-main-rewrite.md),
 and the build/scene foundation pass. It is not a feature wishlist. Prioritized
 debt and acceptance criteria live in [recommendation.md](docs/recommendation.md).
 
@@ -17,8 +17,8 @@ runtime dependency of the browser app.
 The browser and original MCP geometry lane implement a **strict, independent
 OpenSCAD subset**, while a versioned repository-owned full-profile lane is being
 qualified against `openscad/stable-2021.01`. Neither embeds or delegates to the
-official compiler. Supported constructs produce real geometry through the Apache-2.0
-[`manifold-3d`](https://github.com/elalish/manifold) package; unsupported syntax
+official compiler. Supported constructs produce real geometry through the
+workspace `geometry-bridge` / own-Rust CAD kernel; unsupported syntax
 must fail with a source diagnostic rather than produce an approximate result.
 The MCP sidecar also has a separate, opt-in official-runtime lane used only as
 a differential oracle and reference exporter. Its GPL runtime is explicitly
@@ -30,7 +30,7 @@ This boundary is intentional:
 - official OpenSCAD execution is served by an explicit oracle MCP boundary,
   subject to its GPL-2.0+ requirements, and is not the product engine;
 - subset additions must not silently diverge from documented semantics;
-- official execution must never be mislabeled as an independent Manifold/B-rep
+- official execution must never be mislabeled as an independent mesh/B-rep
   build or used as an implicit fallback;
 - WebGPU is currently the only renderer backend;
 - the current workspace contains one `.scad` document and persists locally.
@@ -58,7 +58,7 @@ BuildCoordinator ───── protocol-v6 ordering, cancellation and Worker l
 geometry.worker.ts
         │
         ├─ lexer + recursive-descent parser + evaluator
-        ├─ Manifold WASM primitives, booleans and tessellation
+        ├─ own-Rust CAD primitives, booleans and tessellation
         ├─ stable operation/entity identity + triangle provenance
         ├─ semantic-edge/topology analysis
         └─ per-mesh triangle BVH
@@ -91,7 +91,7 @@ createOpenScadMcpServer
     │     │
     │     └─ DirectGeometrySupervisor ── bounded FIFO + deadline/cancel watchdog
     │              │ one disposable Node Worker per job
-    │              └─ directGeometry.worker.ts ── parser + Manifold provider
+    │              └─ directGeometry.worker.ts ── parser + own-Rust provider
     ├─ OfficialOpenScadRuntimeSupervisor ── differential oracle / reference exports
     │     │ one permission-model subprocess per job
     │     └─ officialOpenScadRuntimeRunner.mjs
@@ -118,7 +118,7 @@ createOpenScadMcpServer
 | [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, monotonic job, exact source digest, quality, phase, bounded sorted provenance, progress and terminal state. |
 | [`src/services/commandRegistry.ts`](src/services/commandRegistry.ts) | One typed inventory for palette metadata and deterministic, scope-aware keyboard routing. |
 | [`src/workers/geometry.worker.ts`](src/workers/geometry.worker.ts) | Isolates compilation, validates routing before queue state, rejects replay/stale work, warms only the selected provider, reports checkpoints and transfers geometry buffers. |
-| [`src/services/openscadParser.ts`](src/services/openscadParser.ts) | Strict lexer/parser/evaluator, identity assignment, Manifold calls, mesh conversion, provenance and resource budgets. |
+| [`src/services/openscadParser.ts`](src/services/openscadParser.ts) | Strict lexer/parser/evaluator, identity assignment, handle-only kernel ops, mesh conversion, provenance and resource budgets. |
 | [`src/services/meshBvh.ts`](src/services/meshBvh.ts) | Compact transferable per-mesh triangle BVH and exact ray intersection. |
 | [`src/services/sceneAabbIndex.ts`](src/services/sceneAabbIndex.ts) | Deterministic scene-level AABB hierarchy that rejects whole bodies before triangle traversal. |
 | [`src/services/meshTopology.ts`](src/services/meshTopology.ts) | Boundary/crease/non-manifold edge extraction and topology diagnostics. |
@@ -177,7 +177,7 @@ Only the latest job of each quality tier for the current revision is
 publishable. A preview may publish while a full build for the same revision is
 pending, but it can never downgrade a published full result. Preview→full for
 one revision shares the warm Worker. Worker import itself does not warm
-Manifold; warm/build happens only after the source-selected provider passes
+the geometry kernel; warm/build happens only after the source-selected provider passes
 admission. When a newer revision supersedes running
 synchronous work, the coordinator requests cancellation and replaces the
 Worker after a configurable grace period if no real checkpoint is reached.
@@ -224,7 +224,7 @@ must not retain transferred buffers.
 ## Geometry pipeline and safety
 
 The handwritten parser stores token-derived source spans and evaluates the
-document into Manifold solids/cross-sections. `union`, `difference`,
+document into kernel solids/cross-sections. `union`, `difference`,
 `intersection` and `hull` are real kernel operations. Successful inspection
 metrics and full-quality exports are derived from the same geometry.
 
@@ -241,7 +241,7 @@ replacement retained as the watchdog boundary.
 
 The post-rewrite review fixed several important compatibility and safety bugs:
 
-- OpenSCAD polyhedron winding is converted to Manifold convention and duplicate
+- OpenSCAD polyhedron winding is converted to the kernel mesh convention and duplicate
   coordinates are merged before `ofMesh`;
 - polygons use the EvenOdd fill rule, so valid clockwise outlines do not vanish;
 - extrusion/revolution failures become positioned diagnostics and non-positive
@@ -255,7 +255,7 @@ depth, evaluated-value allocation, range expansion, object/triangle count,
 The share URL is size-checked before decoding. A limit violation is a diagnostic,
 not partial geometry.
 
-Manifold initialization and compilation are asynchronous from the main thread,
+Kernel initialization and compilation are asynchronous from the main thread,
 but the kernel section is synchronous within its Worker. Cancellation can be
 observed at Worker checkpoints; an already-running kernel call still requires
 hard Worker replacement.
@@ -361,7 +361,7 @@ commands flowing inward and renderer intents/events flowing outward.
    preview never downgrades full output for the same revision.
 2. **No approximate language fallback.** Unsupported input fails explicitly.
 3. **Real geometry.** Booleans, metrics and authoritative exports use the same
-   Manifold result.
+   kernel result.
 4. **Identity before order.** UI continuity uses entity/operation identity;
    array position is only a render index.
 5. **Bounded work.** User-controlled parsing, evaluation, geometry, overlays,
@@ -378,7 +378,7 @@ commands flowing inward and renderer intents/events flowing outward.
     not user-supplied DuckDB SQL; external access and extension loading remain
     disabled.
 11. **No profile laundering.** Official execution and artifacts are never
-    labeled as independent Manifold/B-rep results, persisted under their engine
+    labeled as independent mesh/B-rep results, persisted under their engine
     attestations, or used as an automatic fallback.
 12. **Official files are virtual.** Official MCP requests can resolve only the
     bounded project bundle mounted in MEMFS, never ambient host paths.
@@ -413,9 +413,9 @@ commands flowing inward and renderer intents/events flowing outward.
   `import` and `text` remain release blockers. Bounded DAT/PNG `surface()` is
   implemented through the project VFS. The upstream oracle
   can diagnose differences but is never a product fallback.
-- Parser, scope/evaluation logic, direct Manifold calls, tessellation and
-  artifact construction remain concentrated in one full-rebuild module; there
-  is no `GeometryKernel` interface or content-addressed subtree cache.
+- Parser, bind and evaluation still share one full-rebuild facade; tessellation
+  goes through handle-only kernel ops, but there is no content-addressed
+  subtree cache.
 - Superseding a running synchronous kernel call discards the Worker and warm
   WASM state. Each edit still schedules preview and unconditional full builds.
 - `MeshData` no longer makes the parser a type hub, but still eagerly bundles
@@ -431,7 +431,7 @@ commands flowing inward and renderer intents/events flowing outward.
   localStorage recovery journal, but remains single-document and independent
   from the optional MCP/DuckDB catalog.
 - MCP production compilation now runs behind a disposable Worker watchdog, so
-  a synchronous Manifold call cannot block stdio and deadline/cancel can hard
+  a synchronous kernel call cannot block stdio and deadline/cancel can hard
   terminate its realm. Worker threads still share the host process and the
   current contract has no OS-enforced memory ceiling for WASM/native
   allocation; subprocess/cgroup/job-object containment remains residual risk.
