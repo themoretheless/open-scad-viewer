@@ -1,26 +1,26 @@
 use polygon_core::{
-    print::{
-        deposited_volume_mm3, emit_gcode, parse_gcode_preview, plan_layer, schedule_layers,
-        PrintRole, PrintSettings,
-    },
     solid::{
-        cad,
+        primitives as cad,
         section::{MeshSection, MeshSectionIndex, SectionContour},
+    },
+    toolpath::{
+        deposited_volume_mm3, emit_gcode, parse_gcode_preview, plan_layer, schedule_layers,
+        PathRole, ToolpathSettings,
     },
 };
 
-fn settings() -> PrintSettings {
-    PrintSettings {
+fn settings() -> ToolpathSettings {
+    ToolpathSettings {
         layer_height_mm: 0.2,
         line_width_mm: 0.4,
         wall_count: 2,
         infill_spacing_mm: 2.0,
-        ..PrintSettings::default()
+        ..ToolpathSettings::default()
     }
 }
 
 #[test]
-fn box_section_has_walls_and_infill() {
+fn box_section_has_outline_and_hatch() {
     let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     let section = index.section(0.1).unwrap();
@@ -29,19 +29,19 @@ fn box_section_has_walls_and_infill() {
     assert!(layer
         .paths
         .iter()
-        .any(|path| path.role == PrintRole::OuterWall && path.closed));
+        .any(|path| path.role == PathRole::Outline && path.closed));
     assert!(layer
         .paths
         .iter()
-        .any(|path| path.role == PrintRole::InnerWall && path.closed));
+        .any(|path| path.role == PathRole::Inset && path.closed));
     assert!(layer
         .paths
         .iter()
-        .any(|path| path.role == PrintRole::SparseInfill && path.points.len() == 2));
+        .any(|path| path.role == PathRole::Hatch && path.points.len() == 2));
 }
 
 #[test]
-fn annulus_keeps_a_hole_out_of_infill() {
+fn annulus_keeps_a_hole_out_of_hatch() {
     let outer = vec![[0.0, 0.0], [20.0, 0.0], [20.0, 20.0], [0.0, 20.0]];
     let hole = vec![[8.0, 8.0], [8.0, 12.0], [12.0, 12.0], [12.0, 8.0]];
     let section = MeshSection {
@@ -59,20 +59,20 @@ fn annulus_keeps_a_hole_out_of_infill() {
         candidate_triangles: 2,
     };
     let layer = plan_layer(&section, &settings()).unwrap();
-    for path in layer.paths.iter().filter(|path| path.role == PrintRole::SparseInfill) {
+    for path in layer.paths.iter().filter(|path| path.role == PathRole::Hatch) {
         let mid = [
             (path.points[0][0] + path.points[1][0]) * 0.5,
             (path.points[0][1] + path.points[1][1]) * 0.5,
         ];
         assert!(
             mid[0] < 8.0 || mid[0] > 12.0 || mid[1] < 8.0 || mid[1] > 12.0,
-            "infill crossed the hole at {mid:?}"
+            "hatch crossed the hole at {mid:?}"
         );
     }
 }
 
 #[test]
-fn gcode_preview_round_trips_volume() {
+fn gcode_is_one_encoding_of_the_plan() {
     let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     let settings = settings();

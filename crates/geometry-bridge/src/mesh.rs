@@ -1,7 +1,7 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
 use polygon_core::planar::rings::{self as planar, Rings};
-use polygon_core::solid::{boolean, cad as solid, modeling};
+use polygon_core::solid::{boolean, modeling, primitives as solid};
 use polygon_core::Mesh;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{json, Value};

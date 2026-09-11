@@ -1,4 +1,4 @@
-//! Mesh primitives and helpers (`cube` / extrude / project / hull).
+//! Mesh primitives: cube / cylinder / sphere, join, hull, extrude, slice.
 //! Closed-ring boolean lives in `crate::planar::rings`.
 use crate::planar::rings::{area, cross2, inside, planar, sub2, Rings};
 use crate::{check, cross, norm, sub, Mesh, Result};

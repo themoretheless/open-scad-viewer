@@ -1,4 +1,4 @@
-//! Indexed horizontal mesh sections for the printing pipeline.
+//! Indexed horizontal mesh sections for toolpath planning.
 //!
 //! Coordinates are millimeters. The half-open rule is `min_z <= z < max_z`:
 //! vertices on the plane belong to the lower side and horizontal triangles do

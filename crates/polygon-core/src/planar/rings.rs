@@ -317,7 +317,7 @@ mod tests {
         let b = vec![vec![[1., 1.], [3., 1.], [3., 3.], [1., 3.]]];
         let r = planar(&a, &b, "difference").unwrap();
         assert!((r.iter().map(|r| area(r)).sum::<f64>() - 12.).abs() < 1e-8);
-        let m = crate::solid::cad::extrude(&r, 2., 1, 0., [1., 1.], false).unwrap();
+        let m = crate::solid::primitives::extrude(&r, 2., 1, 0., [1., 1.], false).unwrap();
         assert!((m.inspect().unwrap().signed_volume_mm3 - 24.).abs() < 1e-8);
     }
 

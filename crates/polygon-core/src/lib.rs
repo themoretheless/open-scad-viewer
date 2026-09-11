@@ -6,11 +6,11 @@
 //! - [`planar`] — 2D paths, rings, Pathfinder, edit
 //! - [`solid`] — triangle meshes
 //! - [`appearance`] — paint / style (not shape)
-//! - [`print`] — slice planning / G-code (not shape)
+//! - [`toolpath`] — layered toolpaths; G-code is one encoding
 pub mod appearance;
 pub mod planar;
-pub mod print;
 pub mod solid;
+pub mod toolpath;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 

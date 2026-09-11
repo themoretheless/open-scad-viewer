@@ -1,5 +1,5 @@
-//! Completed print-plan serialization. Does not depend on mesh, NURBS,
-//! Manifold, C/C++, WASM or the application. Does not launch a printer.
+//! G-code encoding of a planned toolpath. Not a print process and not the
+//! only possible machine dialect. No mesh/NURBS/WASM dependency.
 //! Coordinates are millimeters; feedrate is mm/s internally and F is mm/min.
 
 pub const DIALECT: &str = "open-scad-viewer/print-preview 1";

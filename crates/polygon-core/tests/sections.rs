@@ -1,7 +1,7 @@
 use polygon_core::{
     planar::rings as cad,
     solid::{
-        cad as mesh,
+        primitives as mesh,
         section::{MeshSection, MeshSectionIndex},
     },
     Mesh,

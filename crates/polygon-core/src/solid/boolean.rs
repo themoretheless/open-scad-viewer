@@ -974,9 +974,9 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
                 .fold(f64::INFINITY, f64::min);
     let mut result = if separated {
         match operation {
-            Operation::Union => crate::solid::cad::join(&[a, b])?,
+            Operation::Union => crate::solid::primitives::join(&[a, b])?,
             Operation::Difference => a,
-            Operation::Intersection => crate::solid::cad::empty(),
+            Operation::Intersection => crate::solid::primitives::empty(),
         }
     } else if contains(&a, &b)? {
         match operation {
@@ -985,14 +985,14 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             Operation::Difference => {
                 let mut cavity = b;
                 cavity.reverse_winding();
-                crate::solid::cad::join(&[a, cavity])?
+                crate::solid::primitives::join(&[a, cavity])?
             }
         }
     } else if contains(&b, &a)? {
         match operation {
             Operation::Union => b,
             Operation::Intersection => a,
-            Operation::Difference => crate::solid::cad::empty(),
+            Operation::Difference => crate::solid::primitives::empty(),
         }
     } else if a.positions == b.positions && a.indices == b.indices {
         match operation {
@@ -1071,7 +1071,7 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         // Coplanar retriangulation is an optimization; difficult multi-hole caps
         // may fail its polygon bridge heuristic. Keep the stitched triangles in
         // that case and run the same topology/intersection/orientation audits.
-        if let Ok(simplified) = crate::solid::cad::simplify(&result) {
+        if let Ok(simplified) = crate::solid::primitives::simplify(&result) {
             result = simplified;
         }
     }
