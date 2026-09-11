@@ -1,13 +1,16 @@
 [package]
 name = "geometry-bridge"
 version = "0.1.0"
-edition = "2021"
-publish = false
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 
 [lib]
 crate-type = ["rlib"]
 
 [features]
+default = ["languages"]
+languages = ["dep:openscad-core", "dep:modelgraph-runtime", "dep:modelgraph-text"]
 gpu = ["dep:gpu-compute"]
 
 [dependencies]
@@ -15,14 +18,14 @@ math-core = { path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
-modelgraph-runtime = { path = "../modelgraph-runtime" }
-modelgraph-text = { path = "../modelgraph-text" }
+modelgraph-runtime = { path = "../modelgraph-runtime", optional = true }
+modelgraph-text = { path = "../modelgraph-text", optional = true }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
-brep-kernel = { path = "../brep-kernel" }
+brep-core = { path = "../brep-core" }
 planar-geometry = { path = "../planar-geometry" }
 subdivision-core = { path = "../subdivision-core" }
 sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }
 polygon-core = { path = "../polygon-core" }
-openscad-core = { path = "../openscad-core" }
+openscad-core = { path = "../openscad-core", optional = true }

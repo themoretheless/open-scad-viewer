@@ -87,6 +87,7 @@ describe('OpenSCAD bind phase', () => {
     for (const file of files) {
       const source = readFileSync(fileURLToPath(new URL(file, import.meta.url)), 'utf8')
       expect(source).not.toContain('manifold-3d')
+      expect(source).not.toContain('tools/manifold-bench')
       expect(source).not.toContain('geometry/module')
     }
   })

@@ -2,6 +2,15 @@
 //! The `geometry-wasm` shell adds the extern "C" surface.
 use super::*;
 use std::cell::RefCell;
+
+#[cfg(feature = "languages")]
+fn language_abi(op: u32, value: Value) -> Value {
+    crate::languages::abi_language(op, value)
+}
+#[cfg(not(feature = "languages"))]
+fn language_abi(_op: u32, _value: Value) -> Value {
+    json!({"ok":false,"error":{"code":"GEOMETRY_FEATURE","message":"Language frontends require the languages feature"}})
+}
 thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCell::new(Vec::new())};}
 const LIMIT: usize = 32 * 1024 * 1024;
 
@@ -17,10 +26,12 @@ pub fn abi_alloc(len: usize) -> usize {
 
 pub unsafe fn abi_free(ptr: usize, len: usize) {
     if ptr != 0 {
-        drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
-            ptr as *mut u8,
-            len,
-        )))
+        unsafe {
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                ptr as *mut u8,
+                len,
+            )))
+        }
     }
 }
 thread_local! {static LAST_RESPONSE: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
@@ -53,52 +64,14 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
     if len > LIMIT {
         return packed(geometry(Err(input("Request exceeds transport limit"))));
     }
-    let bytes = std::slice::from_raw_parts(ptr as *const u8, len);
+    let bytes = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
     let value = match value_codec::decode_binary(bytes) {
         Ok(v) => v,
         Err(e) => return packed(geometry(Err(input(e.to_string())))),
     };
     packed(match op {
         0 => geometry(dispatch(value)),
-        1 => match value.as_str() {
-            Some(s) => match modelgraph_text::compile(s) {
-                Ok(value) => json!({"ok":true,"value":value}),
-                Err(message) => json!({"ok":false,"message":message}),
-            },
-            None => json!({"ok":false,"message":"Expected source string"}),
-        },
-        2 => runtime_value(modelgraph_runtime::compile(value), None),
-        3 => runtime_value(modelgraph_runtime::nurbs::compile(value), None),
-        4 => match value.as_str() {
-            Some(s) => execute_text_value(s),
-            None => runtime_value(
-                Err(modelgraph_runtime::Error::new(
-                    "text_error",
-                    "",
-                    "Expected source string",
-                )),
-                None,
-            ),
-        },
-        5 => runtime_value(
-            (|| {
-                let nodes = value["nodes"].as_array().ok_or_else(|| {
-                    modelgraph_runtime::Error::new("invalid_document", "/nodes", "Expected nodes")
-                })?;
-                let parameters = value["parameters"].as_array().ok_or_else(|| {
-                    modelgraph_runtime::Error::new(
-                        "invalid_document",
-                        "/parameters",
-                        "Expected parameters",
-                    )
-                })?;
-                let root = value["root"].as_str().ok_or_else(|| {
-                    modelgraph_runtime::Error::new("invalid_document", "/root", "Expected root")
-                })?;
-                modelgraph_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())
-            })(),
-            None,
-        ),
+        1 | 2 | 3 | 4 | 5 | 10 | 11 => language_abi(op, value),
         6 => geometry((|| {
             let surface: Surface =
                 value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
@@ -141,8 +114,6 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
             let mesh = mesh::export_buffers(id)?;
             encode(Box::into_raw(Box::new(mesh)) as usize)
         })()),
-        10 => openscad::scad_compile(&value),
-        11 => openscad::scad_eval(&value),
         _ => geometry(Err(input("Unknown ABI operation"))),
     })
 }
@@ -151,7 +122,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
 
 pub unsafe fn abi_mesh_field(ptr: usize, field: u32) -> usize {
-    let m = &*(ptr as *const CadMeshBuffer);
+    let m = unsafe { &*(ptr as *const CadMeshBuffer) };
     match field {
         0 => m.positions_ptr(),
         1 => m.positions_len(),
@@ -168,7 +139,7 @@ pub unsafe fn abi_mesh_field(ptr: usize, field: u32) -> usize {
 
 pub unsafe fn abi_mesh_free(ptr: usize) {
     if ptr != 0 {
-        drop(Box::from_raw(ptr as *mut CadMeshBuffer))
+        unsafe { drop(Box::from_raw(ptr as *mut CadMeshBuffer)) }
     }
 }
 /// # Safety
@@ -181,10 +152,10 @@ pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il
     }
     // Request buffers are byte-aligned; read unaligned values rather than assuming allocator alignment.
     let vertices = (0..vl)
-        .map(|i| std::ptr::read_unaligned((vp as *const f32).add(i)))
+        .map(|i| unsafe { std::ptr::read_unaligned((vp as *const f32).add(i)) })
         .collect::<Vec<_>>();
     let indices = (0..il)
-        .map(|i| std::ptr::read_unaligned((ip as *const u32).add(i)))
+        .map(|i| unsafe { std::ptr::read_unaligned((ip as *const u32).add(i)) })
         .collect::<Vec<_>>();
     packed(geometry(
         import_cad_mesh(stride, &vertices, &indices).and_then(encode),
@@ -193,13 +164,13 @@ pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il
 
 unsafe fn read_f32(ptr: usize, len: usize) -> Vec<f32> {
     (0..len)
-        .map(|i| std::ptr::read_unaligned((ptr as *const f32).add(i)))
+        .map(|i| unsafe { std::ptr::read_unaligned((ptr as *const f32).add(i)) })
         .collect()
 }
 
 unsafe fn read_u32(ptr: usize, len: usize) -> Vec<u32> {
     (0..len)
-        .map(|i| std::ptr::read_unaligned((ptr as *const u32).add(i)))
+        .map(|i| unsafe { std::ptr::read_unaligned((ptr as *const u32).add(i)) })
         .collect()
 }
 
@@ -221,8 +192,8 @@ pub unsafe fn abi_bvh_build(
     if vl > LIMIT / 4 || il > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
     }
-    let vertices = read_f32(vp, vl);
-    let indices = read_u32(ip, il);
+    let vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
     let bvh = polygon_core::solid::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
     let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Bvh {
         bounds: bvh.bounds,
@@ -252,10 +223,10 @@ pub unsafe fn abi_semantic_edges(
     if vl > LIMIT / 4 || il > LIMIT / 4 || mfl > LIMIT / 4 || mtl > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
     }
-    let vertices = read_f32(vp, vl);
-    let indices = read_u32(ip, il);
-    let merge_from = read_u32(mfp, mfl);
-    let merge_to = read_u32(mtp, mtl);
+    let vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
+    let merge_from = unsafe { read_u32(mfp, mfl) };
+    let merge_to = unsafe { read_u32(mtp, mtl) };
     let edges = polygon_core::solid::edges::extract_semantic_edges(
         &vertices,
         &indices,

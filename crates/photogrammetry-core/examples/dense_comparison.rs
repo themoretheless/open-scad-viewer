@@ -1,13 +1,13 @@
 //! Deterministic analytic scenes: identical images, calibrated cameras and sparse
 //! range anchors for both dense estimators. Emits machine-readable JSON to stdout.
-use photogrammetry_core::{
-    camera::Camera,
-    dense::{densify_with_options, DenseEstimator, DenseOptions},
-    Image, Point, Reconstruction,
-};
-use std::time::Instant;
 #[allow(unused_imports)]
 use math_core::*;
+use photogrammetry_core::{
+    Image, Point, Reconstruction,
+    camera::Camera,
+    dense::{DenseEstimator, DenseOptions, densify_with_options},
+};
+use std::time::Instant;
 #[path = "support/dense_fixture.rs"]
 mod fixture;
 use fixture::*;
@@ -33,7 +33,10 @@ fn main() {
     if let Some(path) = &export {
         std::fs::create_dir_all(path).unwrap();
     }
-    println!("{{\"schema\":1,\"scene_units\":\"arbitrary; rear plane center z=4\",\"tolerance\":0.04,\"depth_hypotheses\":64,\"patch_radius\":{radius},\"patch_samples\":{},\"image_side\":{SIDE},\"repeats\":{repeats},\"order\":\"alternating per repetition, one warmup each\",\"measurements\":[",(radius*2+1).pow(2));
+    println!(
+        "{{\"schema\":1,\"scene_units\":\"arbitrary; rear plane center z=4\",\"tolerance\":0.04,\"depth_hypotheses\":64,\"patch_radius\":{radius},\"patch_samples\":{},\"image_side\":{SIDE},\"repeats\":{repeats},\"order\":\"alternating per repetition, one warmup each\",\"measurements\":[",
+        (radius * 2 + 1).pow(2)
+    );
     let mut first = true;
     for scene in [
         Scene {
@@ -139,7 +142,28 @@ fn main() {
                 println!(",");
             }
             first = false;
-            print!("{{\"angle_deg\":{},\"occlusion_thin\":{},\"estimator\":\"{:?}\",\"runtime_median_ms\":{:.3},\"hypotheses\":{},\"source_patches\":{},\"sampled_source_pixels\":{},\"vertices\":{},\"photometric_samples\":{},\"consistent_samples\":{},\"mean_surface_error\":{:.6},\"median_surface_error\":{:.6},\"p90_surface_error\":{:.6},\"precision\":{:.6},\"completeness\":{:.6},\"f1\":{:.6},\"foreground_completeness\":{:.6},\"ribbon_completeness\":{:.6},\"occluder_completeness\":{:.6}}}",scene.angle,scene.thin,modes[m],times[m][repeats/2],result.diagnostics.evaluated_hypotheses,result.diagnostics.evaluated_source_patches,result.diagnostics.sampled_source_pixels,points.len(),result.diagnostics.photometric_samples,result.diagnostics.consistent_samples,errors.iter().sum::<f64>()/errors.len() as f64,errors[errors.len()/2],errors[errors.len()*9/10],precision,recall,2.*precision*recall/(precision+recall).max(1e-12),completeness(Some(usize::MAX)),completeness(Some(1)),completeness(Some(2)));
+            print!(
+                "{{\"angle_deg\":{},\"occlusion_thin\":{},\"estimator\":\"{:?}\",\"runtime_median_ms\":{:.3},\"hypotheses\":{},\"source_patches\":{},\"sampled_source_pixels\":{},\"vertices\":{},\"photometric_samples\":{},\"consistent_samples\":{},\"mean_surface_error\":{:.6},\"median_surface_error\":{:.6},\"p90_surface_error\":{:.6},\"precision\":{:.6},\"completeness\":{:.6},\"f1\":{:.6},\"foreground_completeness\":{:.6},\"ribbon_completeness\":{:.6},\"occluder_completeness\":{:.6}}}",
+                scene.angle,
+                scene.thin,
+                modes[m],
+                times[m][repeats / 2],
+                result.diagnostics.evaluated_hypotheses,
+                result.diagnostics.evaluated_source_patches,
+                result.diagnostics.sampled_source_pixels,
+                points.len(),
+                result.diagnostics.photometric_samples,
+                result.diagnostics.consistent_samples,
+                errors.iter().sum::<f64>() / errors.len() as f64,
+                errors[errors.len() / 2],
+                errors[errors.len() * 9 / 10],
+                precision,
+                recall,
+                2. * precision * recall / (precision + recall).max(1e-12),
+                completeness(Some(usize::MAX)),
+                completeness(Some(1)),
+                completeness(Some(2))
+            );
         }
     }
     println!("\n]}}");

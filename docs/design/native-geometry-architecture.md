@@ -70,14 +70,14 @@ flowchart TD
 | --- | --- | --- |
 | `geometry-core` (предлагается) | Point/Vector/Transform, единицы, численные policies, budget/cancel, structured errors, evidence | Представлений, UI, serde JSON на горячем пути |
 | `geometry-ops` (существует) | Общая математика деформаций, frames, brush falloff | Polygon/NURBS/SubD/SDF |
-| `planar-geometry` (предлагается) | Paths/regions, 2D arrangements, классификация, offsets, triangulation с lineage | 3D mesh, принтера, документа |
+| `planar-geometry` (существует) | Paths/regions, 2D arrangements, классификация, offsets, triangulation с lineage | 3D mesh, принтера, документа |
 | `brep-topology` (существует) | Vertices/edges/coedges/wires/faces/shells/bodies и incidence | Реализаций поверхностей |
-| `nurbs-kernel` (существует) | Rational curve/surface, jets, knots, analytic specializations, intersection primitives | Mesh и слайсера |
-| `brep-kernel` (предлагается из нынешнего nurbs::brep) | Geometry + topology validation, solid features, trims, sewing, Boolean | Viewer, G-code, implicit fallback |
-| `polygon-kernel` (существует) | Mesh storage/topology, native modeling, mesh intersections/Boolean | NURBS, SDF, SubD |
-| `subdivision-kernel` (существует) | Cage, creases, refinement, limit evaluation, native cage edits | Polygon algorithms для внутренних операций |
-| `sdf-kernel` (существует) | Field DAG, sign/distance evidence, bounds, interval queries, samples | Polygon-specific errors и mesh storage |
-| `sketch-kernel` (существует) | Constraint graph, solve status, rank/residual diagnostics | Выходных solid representations |
+| `nurbs-core` (существует) | Rational curve/surface, jets, knots, analytic specializations, intersection primitives | Mesh и слайсера |
+| `brep-core` (существует) | Geometry + topology validation, solid features, trims, sewing, Boolean | Viewer, G-code, implicit fallback |
+| `polygon-core` (существует) | Mesh storage/topology, native modeling, mesh intersections/Boolean | NURBS, SDF, SubD |
+| `subdivision-core` (существует) | Cage, creases, refinement, limit evaluation, native cage edits | Polygon algorithms для внутренних операций |
+| `sdf-core` (существует) | Field DAG, sign/distance evidence, bounds, interval queries, samples | Polygon-specific errors и mesh storage |
+| `sketch-core` (существует) | Constraint graph, solve status, rank/residual diagnostics | Выходных solid representations |
 | `geometry-bridge` (существует) | Явные cross-representation conversions и mapping reports | UI и machine profiles |
 | `modeling-runtime` (предлагается) | Feature evaluation, snapshots, capability routing, cache | Vue/WebGPU, знаний RAG |
 | `slicing` (предлагается) | Layer schedule, section orchestration, материализация областей | GPU и файла G-code |
@@ -86,7 +86,7 @@ flowchart TD
 
 Первые исправления зависимостей: вынести `sweep_sections` из polygon в общую frames-математику; вынести Error/Result из polygon; SDF mesh-distance сделать адаптером `geometry-bridge` с owned bounded distance sampler/BVH, а не зависимостью всего SDF от polygon. SubD tessellation должен выдавать нейтральный `TriangleBuffer`/sink; mesh operations над ним начинаются только в polygon-адаптере. Нейтральный triangle buffer — транспорт, не новая авторитетная mesh-модель.
 
-`Region2` из geometry-ops — пока простые кольца для sampling. Его нельзя объявлять готовым arrangement/offset kernel. UV pcurves могут использовать общую математику 2D, но UV безразмерен; допуск в миллиметрах переводится через геометрию поверхности и локальную обусловленность, не копируется как UV epsilon.
+Профиль для SDF extrude/revolve — `planar_geometry::rings::Rings`. Это не arrangement/offset kernel. UV pcurves могут использовать общую математику 2D, но UV безразмерен; допуск в миллиметрах переводится через геометрию поверхности и локальную обусловленность, не копируется как UV epsilon.
 
 ## 5. Типы и source of truth
 
@@ -162,7 +162,7 @@ Evidence {
 
 ## 8. B-rep, пересечения и Boolean
 
-`brep-topology` хранит incidence. `brep-kernel` связывает грани с аналитическими/NURBS поверхностями, edge с 3D curve, coedge с UV pcurve; одна edge может иметь разные параметризации на соседних гранях. Seam, периодичность, полюса и вырожденные edge представлены явно. Point/edge tolerances не могут самопроизвольно расти для успешного sewing.
+`brep-topology` хранит incidence. `brep-core` связывает грани с аналитическими/NURBS поверхностями, edge с 3D curve, coedge с UV pcurve; одна edge может иметь разные параметризации на соседних гранях. Seam, периодичность, полюса и вырожденные edge представлены явно. Point/edge tolerances не могут самопроизвольно расти для успешного sewing.
 
 Общая основа Boolean и slicing — intersection service, но результат секции не обязан быть замкнутым solid. Последовательность CAD Boolean: broadphase → intersections/contact/overlap → UV arrangements → classification → boundary selection → согласованное sewing → validation → atomic publish. Политики union/intersection/difference задаются над областями, отдельно от нахождения пересечений. Для mesh полезна та же декомпозиция; направление подтверждает [Lévy, mesh CSG](https://arxiv.org/abs/2405.12949).
 

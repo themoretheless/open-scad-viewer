@@ -102,7 +102,10 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               },
               "holes": {
@@ -160,7 +163,10 @@
                           }
                         ]
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
                   }
                 }
               }
@@ -356,7 +362,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -455,7 +464,10 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "up": {
@@ -527,7 +539,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -627,7 +642,10 @@
                           }
                         ]
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 }
               }
@@ -661,7 +679,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               }
             },
             "required": [
@@ -783,7 +804,10 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "triangles": {
@@ -808,7 +832,10 @@
                       "minimum": 0,
                       "maximum": 9007199254740991
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               }
             },
@@ -1109,7 +1136,10 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "faces": {
@@ -1223,7 +1253,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "radius": {
                 "anyOf": [
@@ -1336,7 +1369,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "half_size": {
                 "type": "array",
@@ -1407,7 +1443,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -1498,7 +1537,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "major_radius": {
                 "anyOf": [
@@ -1576,7 +1618,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               }
             },
             "required": [
@@ -1608,7 +1653,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               }
             },
             "required": [
@@ -1640,7 +1688,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               }
             },
             "required": [
@@ -1672,7 +1723,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               },
               "radius": {
                 "anyOf": [
@@ -1835,7 +1889,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -1930,7 +1987,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "max": {
                 "type": "array",
@@ -2001,7 +2061,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "cells": {
                 "type": "array",
@@ -2021,7 +2084,10 @@
                     "minimum": 1,
                     "maximum": 64
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -2114,7 +2180,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "max": {
                 "type": "array",
@@ -2185,7 +2254,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -2322,7 +2394,10 @@
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
                     },
                     {
                       "type": "array",
@@ -2393,7 +2468,10 @@
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 3,
+                      "maxItems": 3
                     }
                   ]
                 }
@@ -2593,7 +2671,10 @@
                           }
                         ]
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 }
               },
@@ -2760,7 +2841,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               },
               "reverse": {
                 "type": "boolean"
@@ -2971,7 +3055,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 4,
+                "maxItems": 4
               },
               "reverse_u": {
                 "type": "boolean"
@@ -3153,7 +3240,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -3248,7 +3338,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "axis": {
                 "type": "array",
@@ -3319,7 +3412,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "angle": {
                 "anyOf": [
@@ -3520,7 +3616,10 @@
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
                     }
                   },
                   "holes": {
@@ -3578,7 +3677,10 @@
                               }
                             ]
                           }
-                        ]
+                        ],
+                        "items": false,
+                        "minItems": 2,
+                        "maxItems": 2
                       }
                     }
                   }
@@ -3622,7 +3724,10 @@
                     "type": "string",
                     "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               },
               "operation": {
                 "type": "string",
@@ -3730,7 +3835,10 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [

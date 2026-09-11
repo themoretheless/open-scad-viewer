@@ -362,7 +362,9 @@ mod tests {
             sample.weight = 3.;
         }
         let mut diagnostics = DenseDiagnostics::default();
-        let surface = fuse_consolidating(&[a, b], true, false, &mut diagnostics, &mut |_, _, _| true).unwrap();
+        let surface =
+            fuse_consolidating(&[a, b], true, false, &mut diagnostics, &mut |_, _, _| true)
+                .unwrap();
         assert_eq!(surface.positions.len(), 3);
         assert_eq!(surface.triangles.len(), 1);
         assert_eq!(diagnostics.fused_samples, 3);
@@ -409,28 +411,53 @@ mod tests {
             })
         };
         let mut diagnostics = DenseDiagnostics::default();
-        let before = fuse_consolidating(&patches(), true, false, &mut diagnostics, &mut |_, _, _| true)
+        let before =
+            fuse_consolidating(&patches(), true, false, &mut diagnostics, &mut |_, _, _| {
+                true
+            })
             .unwrap();
         assert_eq!(before.positions.len(), 6);
         assert_eq!(before.triangles.len(), 2);
         assert_eq!(diagnostics.fused_samples, 3);
         let mut diagnostics = DenseDiagnostics::default();
-        let after = fuse_consolidating(&patches(), true, true, &mut diagnostics, &mut |_, _, _| true)
-            .unwrap();
+        let after = fuse_consolidating(&patches(), true, true, &mut diagnostics, &mut |_, _, _| {
+            true
+        })
+        .unwrap();
         assert_eq!(after.positions.len(), 3);
         assert_eq!(after.triangles.len(), 1);
         assert_eq!(diagnostics.fused_samples, 6);
         assert!(after.positions.iter().all(|p| p[0] == 0.5));
         // The pass is deterministic and disabled fusion keeps it inert.
-        let repeat = fuse_consolidating(&patches(), true, true, &mut DenseDiagnostics::default(), &mut |_, _, _| true)
-            .unwrap();
+        let repeat = fuse_consolidating(
+            &patches(),
+            true,
+            true,
+            &mut DenseDiagnostics::default(),
+            &mut |_, _, _| true,
+        )
+        .unwrap();
         assert_eq!(
-            after.positions.iter().map(|p| p.map(f64::to_bits)).collect::<Vec<_>>(),
-            repeat.positions.iter().map(|p| p.map(f64::to_bits)).collect::<Vec<_>>()
+            after
+                .positions
+                .iter()
+                .map(|p| p.map(f64::to_bits))
+                .collect::<Vec<_>>(),
+            repeat
+                .positions
+                .iter()
+                .map(|p| p.map(f64::to_bits))
+                .collect::<Vec<_>>()
         );
         assert_eq!(after.triangles, repeat.triangles);
-        let disabled = fuse_consolidating(&patches(), false, true, &mut DenseDiagnostics::default(), &mut |_, _, _| true)
-            .unwrap();
+        let disabled = fuse_consolidating(
+            &patches(),
+            false,
+            true,
+            &mut DenseDiagnostics::default(),
+            &mut |_, _, _| true,
+        )
+        .unwrap();
         assert_eq!(disabled.positions.len(), 9);
     }
     #[test]

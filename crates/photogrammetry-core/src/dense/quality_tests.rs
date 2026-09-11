@@ -162,12 +162,36 @@ fn invalid_patch_radius_is_rejected() {
 
 #[test]
 fn dual_scale_requires_large_patch_and_cancels_secondary_pass() {
-    assert!(DenseOptions {dual_scale:true,..Default::default()}.validate().is_err());
-    let (images,sparse,_)=fixture(Scene {angle:0.,thin:false});
-    let mut saw_secondary=false;
-    let result=densify_with_options(&images,&sparse,&DenseOptions {
-        dual_scale:true,patch_radius:2,max_side:64,depth_hypotheses:16,..Default::default()
-    },|stage,_,_| {if stage=="depth-secondary" {saw_secondary=true;false}else{true}});
+    assert!(DenseOptions {
+        dual_scale: true,
+        ..Default::default()
+    }
+    .validate()
+    .is_err());
+    let (images, sparse, _) = fixture(Scene {
+        angle: 0.,
+        thin: false,
+    });
+    let mut saw_secondary = false;
+    let result = densify_with_options(
+        &images,
+        &sparse,
+        &DenseOptions {
+            dual_scale: true,
+            patch_radius: 2,
+            max_side: 64,
+            depth_hypotheses: 16,
+            ..Default::default()
+        },
+        |stage, _, _| {
+            if stage == "depth-secondary" {
+                saw_secondary = true;
+                false
+            } else {
+                true
+            }
+        },
+    );
     assert!(saw_secondary);
     assert!(result.is_err());
 }

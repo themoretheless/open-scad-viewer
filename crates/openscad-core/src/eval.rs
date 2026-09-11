@@ -8,8 +8,8 @@
 use crate::ast::*;
 use crate::builtins::{self, BuiltinContext, BuiltinError};
 use crate::lexer::TT;
-use crate::value::*;
 use crate::value::index as index_value;
+use crate::value::*;
 use crate::{LanguageProfile, ParseError};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -98,7 +98,10 @@ struct Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     fn with_env(&self, env: HashMap<String, Value<'a>>) -> Self {
-        Self { env: env_of(env), ..self.clone() }
+        Self {
+            env: env_of(env),
+            ..self.clone()
+        }
     }
     fn push_function(&self, name: &str) -> Rc<Vec<String>> {
         let mut stack = (*self.function_stack).clone();
@@ -206,7 +209,10 @@ impl<'a> Evaluator<'a> {
         if ops > MAX_EVAL_OPS {
             return Err(self.error(
                 p,
-                format!("Model exceeds the {} evaluation step limit", locale(MAX_EVAL_OPS as usize)),
+                format!(
+                    "Model exceeds the {} evaluation step limit",
+                    locale(MAX_EVAL_OPS as usize)
+                ),
             ));
         }
         Ok(())
@@ -239,7 +245,12 @@ impl<'a> Evaluator<'a> {
 
     /// `registerArrayValue`: per-value weight/depth accounting against the
     /// 500,000-unit allocation budget.
-    fn register_vector(&self, value: Rc<Vec<Value<'a>>>, p: usize, label: &str) -> EvalResult<Rc<Vec<Value<'a>>>> {
+    fn register_vector(
+        &self,
+        value: Rc<Vec<Value<'a>>>,
+        p: usize,
+        label: &str,
+    ) -> EvalResult<Rc<Vec<Value<'a>>>> {
         let mut weight = 1u64;
         let mut depth = 1u32;
         for item in value.iter() {
@@ -248,7 +259,10 @@ impl<'a> Evaluator<'a> {
             if weight > MAX_EVALUATED_VALUE_UNITS {
                 return Err(self.error(
                     p,
-                    format!("{label} exceeds {} units", locale(MAX_EVALUATED_VALUE_UNITS as usize)),
+                    format!(
+                        "{label} exceeds {} units",
+                        locale(MAX_EVALUATED_VALUE_UNITS as usize)
+                    ),
                 ));
             }
         }
@@ -269,7 +283,9 @@ impl<'a> Evaluator<'a> {
                 ),
             ));
         }
-        self.value_meta.borrow_mut().insert(Rc::as_ptr(&value), (weight, depth));
+        self.value_meta
+            .borrow_mut()
+            .insert(Rc::as_ptr(&value), (weight, depth));
         Ok(value)
     }
 
@@ -293,8 +309,10 @@ impl<'a> Evaluator<'a> {
             max_range_items: MAX_RANGE_ITEMS,
             warn: Box::new(move |message| self.warn(message)),
             register_array: Box::new(move |values, label| {
-                Ok(Rc::try_unwrap(self.register_vector(Rc::new(values), p, label)?)
-                    .unwrap_or_else(|_| unreachable!("fresh Rc")))
+                Ok(
+                    Rc::try_unwrap(self.register_vector(Rc::new(values), p, label)?)
+                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                )
             }),
         }
     }
@@ -303,10 +321,17 @@ impl<'a> Evaluator<'a> {
     // Scope handling (stable profile) and overlays
     // ------------------------------------------------------------------
 
-    fn resolve_stable_variable(&self, name: &str, ctx: &Ctx<'a>) -> EvalResult<VariableResolution<'a>> {
+    fn resolve_stable_variable(
+        &self,
+        name: &str,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<VariableResolution<'a>> {
         if name.starts_with('$') {
             if let Some(value) = ctx.env.borrow().get(name) {
-                return Ok(VariableResolution { found: true, value: value.clone() });
+                return Ok(VariableResolution {
+                    found: true,
+                    value: value.clone(),
+                });
             }
         }
         let mut scope = ctx.stable_scope.clone();
@@ -333,7 +358,10 @@ impl<'a> Evaluator<'a> {
             if let Some(root) = &ctx.stable_scope {
                 if Rc::ptr_eq(&current, root) {
                     if let Some(value) = ctx.env.borrow().get(name) {
-                        return Ok(VariableResolution { found: true, value: value.clone() });
+                        return Ok(VariableResolution {
+                            found: true,
+                            value: value.clone(),
+                        });
                     }
                 }
             }
@@ -341,9 +369,15 @@ impl<'a> Evaluator<'a> {
             visible_before = usize::MAX;
         }
         if let Some(value) = ctx.env.borrow().get(name) {
-            return Ok(VariableResolution { found: true, value: value.clone() });
+            return Ok(VariableResolution {
+                found: true,
+                value: value.clone(),
+            });
         }
-        Ok(VariableResolution { found: false, value: Value::Undef })
+        Ok(VariableResolution {
+            found: false,
+            value: Value::Undef,
+        })
     }
 
     fn stable_overlay_context(&self, ctx: &Ctx<'a>, env: HashMap<String, Value<'a>>) -> Ctx<'a> {
@@ -359,7 +393,11 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn enter_stable_statement_scope(&self, statements: &'a [Statement], parent: &Ctx<'a>) -> EvalResult<Ctx<'a>> {
+    fn enter_stable_statement_scope(
+        &self,
+        statements: &'a [Statement],
+        parent: &Ctx<'a>,
+    ) -> EvalResult<Ctx<'a>> {
         let scope = Rc::new(StableScope::new(
             statements,
             parent.stable_scope.clone(),
@@ -397,7 +435,12 @@ impl<'a> Evaluator<'a> {
     // Expressions
     // ------------------------------------------------------------------
 
-    fn eval_expression(&self, expr: &'a Expr, ctx: &Ctx<'a>, depth: usize) -> EvalResult<Value<'a>> {
+    fn eval_expression(
+        &self,
+        expr: &'a Expr,
+        ctx: &Ctx<'a>,
+        depth: usize,
+    ) -> EvalResult<Value<'a>> {
         self.bump_ops(expr_p(expr))?;
         if depth >= MAX_EXPRESSION_DEPTH {
             return Err(self.error(
@@ -420,8 +463,14 @@ impl<'a> Evaluator<'a> {
                     self.resolve_stable_variable(name, ctx)?
                 } else {
                     match ctx.env.borrow().get(name) {
-                        Some(value) => VariableResolution { found: true, value: value.clone() },
-                        None => VariableResolution { found: false, value: Value::Undef },
+                        Some(value) => VariableResolution {
+                            found: true,
+                            value: value.clone(),
+                        },
+                        None => VariableResolution {
+                            found: false,
+                            value: Value::Undef,
+                        },
                     }
                 };
                 if !resolved.found {
@@ -439,9 +488,14 @@ impl<'a> Evaluator<'a> {
                     for item in items {
                         values.push(self.eval_expression(item, ctx, depth + 1)?);
                     }
-                    return Ok(Value::vector(Rc::try_unwrap(
-                        self.register_vector(Rc::new(values), *p, "Evaluated value")?,
-                    ).unwrap_or_else(|_| unreachable!("fresh Rc"))));
+                    return Ok(Value::vector(
+                        Rc::try_unwrap(self.register_vector(
+                            Rc::new(values),
+                            *p,
+                            "Evaluated value",
+                        )?)
+                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                    ));
                 }
                 let mut values: Vec<Value<'a>> = Vec::new();
                 for item in items {
@@ -454,11 +508,17 @@ impl<'a> Evaluator<'a> {
                     }
                     values.push(value);
                 }
-                Ok(Value::vector(Rc::try_unwrap(
-                    self.register_vector(Rc::new(values), *p, "Evaluated value")?,
-                ).unwrap_or_else(|_| unreachable!("fresh Rc"))))
+                Ok(Value::vector(
+                    Rc::try_unwrap(self.register_vector(Rc::new(values), *p, "Evaluated value")?)
+                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                ))
             }
-            Expr::Range { start, step, end, p } => {
+            Expr::Range {
+                start,
+                step,
+                end,
+                p,
+            } => {
                 if self.is_stable() {
                     let start = self.eval_expression(start, ctx, depth + 1)?;
                     let end = self.eval_expression(end, ctx, depth + 1)?;
@@ -466,7 +526,9 @@ impl<'a> Evaluator<'a> {
                         None => Value::Number(1.0),
                         Some(step) => self.eval_expression(step, ctx, depth + 1)?,
                     };
-                    let (Value::Number(start), Value::Number(step), Value::Number(end)) = (&start, &step, &end) else {
+                    let (Value::Number(start), Value::Number(step), Value::Number(end)) =
+                        (&start, &step, &end)
+                    else {
                         self.warn("Invalid range bounds produce undef");
                         return Ok(Value::Undef);
                     };
@@ -479,13 +541,29 @@ impl<'a> Evaluator<'a> {
                     } else if *step < 0.0 && start < end {
                         self.warn("begin is smaller than the end, but step is negative");
                     }
-                    return Ok(Value::Range { start: *start, step: *step, end: *end });
+                    return Ok(Value::Range {
+                        start: *start,
+                        step: *step,
+                        end: *end,
+                    });
                 }
-                let start = self.finite_number(&self.eval_expression(start, ctx, depth + 1)?, *p, "range start")?;
-                let end = self.finite_number(&self.eval_expression(end, ctx, depth + 1)?, *p, "range end")?;
+                let start = self.finite_number(
+                    &self.eval_expression(start, ctx, depth + 1)?,
+                    *p,
+                    "range start",
+                )?;
+                let end = self.finite_number(
+                    &self.eval_expression(end, ctx, depth + 1)?,
+                    *p,
+                    "range end",
+                )?;
                 let step = match step {
                     None => 1.0,
-                    Some(step) => self.finite_number(&self.eval_expression(step, ctx, depth + 1)?, *p, "range step")?,
+                    Some(step) => self.finite_number(
+                        &self.eval_expression(step, ctx, depth + 1)?,
+                        *p,
+                        "range step",
+                    )?,
                 };
                 if step == 0.0 {
                     return Err(self.error(*p, "Range step cannot be zero"));
@@ -493,16 +571,24 @@ impl<'a> Evaluator<'a> {
                 let mut values = Vec::new();
                 let forward = step > 0.0;
                 let mut value = start;
-                while if forward { value <= end + 1e-10 } else { value >= end - 1e-10 } {
+                while if forward {
+                    value <= end + 1e-10
+                } else {
+                    value >= end - 1e-10
+                } {
                     values.push(Value::Number(value));
                     if values.len() > MAX_RANGE_ITEMS {
-                        return Err(self.error(*p, format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS))));
+                        return Err(self.error(
+                            *p,
+                            format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS)),
+                        ));
                     }
                     value += step;
                 }
-                Ok(Value::vector(Rc::try_unwrap(
-                    self.register_vector(Rc::new(values), *p, "Evaluated value")?,
-                ).unwrap_or_else(|_| unreachable!("fresh Rc"))))
+                Ok(Value::vector(
+                    Rc::try_unwrap(self.register_vector(Rc::new(values), *p, "Evaluated value")?)
+                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                ))
             }
             Expr::Unary { op, value, p } => {
                 let value = self.eval_expression(value, ctx, depth + 1)?;
@@ -513,7 +599,11 @@ impl<'a> Evaluator<'a> {
                     return Ok(Value::Bool(!truthy(&value)));
                 }
                 let number = self.finite_number(&value, *p, "unary operand")?;
-                Ok(Value::Number(if *op == TT::Minus { -number } else { number }))
+                Ok(Value::Number(if *op == TT::Minus {
+                    -number
+                } else {
+                    number
+                }))
             }
             Expr::Binary { op, left, right, p } => {
                 if self.is_stable() {
@@ -590,7 +680,8 @@ impl<'a> Evaluator<'a> {
                     let index = self.eval_expression(index, ctx, depth + 1)?;
                     return index_value(&value, &index, &mut self.semantics(*p));
                 }
-                let raw = self.finite_number(&self.eval_expression(index, ctx, depth + 1)?, *p, "index")?;
+                let raw =
+                    self.finite_number(&self.eval_expression(index, ctx, depth + 1)?, *p, "index")?;
                 let index = raw.trunc();
                 match &value {
                     Value::Vector(items) => {
@@ -636,7 +727,11 @@ impl<'a> Evaluator<'a> {
                     params,
                     body,
                     closure: Rc::new(ctx.env.borrow().clone()),
-                    lexical_scope: if self.is_stable() { ctx.stable_scope.clone() } else { None },
+                    lexical_scope: if self.is_stable() {
+                        ctx.stable_scope.clone()
+                    } else {
+                        None
+                    },
                 };
                 Ok(Value::Function(Rc::new(value)))
             }
@@ -667,15 +762,17 @@ impl<'a> Evaluator<'a> {
             | Expr::LcLet { .. }
             | Expr::LcEach { .. } => {
                 if !self.is_stable() {
-                    return Err(self.error(
-                        expr_p(expr),
-                        "list comprehension is not supported",
-                    ));
+                    return Err(self.error(expr_p(expr), "list comprehension is not supported"));
                 }
                 let values = self.eval_list_comprehension(expr, ctx, depth)?;
-                Ok(Value::vector(Rc::try_unwrap(
-                    self.register_vector(Rc::new(values), expr_p(expr), "list comprehension")?,
-                ).unwrap_or_else(|_| unreachable!("fresh Rc"))))
+                Ok(Value::vector(
+                    Rc::try_unwrap(self.register_vector(
+                        Rc::new(values),
+                        expr_p(expr),
+                        "list comprehension",
+                    )?)
+                    .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                ))
             }
         }
     }
@@ -692,7 +789,10 @@ impl<'a> Evaluator<'a> {
             return Err(self.error(p, format!("{label} must be a vector")));
         };
         let items = items.clone();
-        items.iter().map(|item| self.finite_number(item, p, label)).collect()
+        items
+            .iter()
+            .map(|item| self.finite_number(item, p, label))
+            .collect()
     }
 
     fn evaluate_sequential_bindings(
@@ -707,11 +807,17 @@ impl<'a> Evaluator<'a> {
             let overlay = self.stable_overlay_context(ctx, env.clone());
             let value = self.eval_expression(&argument.value, &overlay, depth + 1)?;
             let Some(name) = &argument.name else {
-                self.warn(format!("Ignoring assignment without variable name {}", format_value(&value)));
+                self.warn(format!(
+                    "Ignoring assignment without variable name {}",
+                    format_value(&value)
+                ));
                 continue;
             };
             if assigned.contains(name) {
-                self.warn(format!("Ignoring duplicate variable assignment {name} = {}", format_value(&value)));
+                self.warn(format!(
+                    "Ignoring duplicate variable assignment {name} = {}",
+                    format_value(&value)
+                ));
                 continue;
             }
             assigned.insert(name.clone());
@@ -720,16 +826,26 @@ impl<'a> Evaluator<'a> {
         Ok(env)
     }
 
-    fn stable_iterable(&self, value: &Value<'a>, _ctx: &Ctx<'a>, position: usize) -> EvalResult<Vec<Value<'a>>> {
+    fn stable_iterable(
+        &self,
+        value: &Value<'a>,
+        _ctx: &Ctx<'a>,
+        position: usize,
+    ) -> EvalResult<Vec<Value<'a>>> {
         match value {
             Value::Range { start, step, end } => {
                 materialize_range(*start, *step, *end, &mut self.semantics(position))
             }
             Value::Vector(items) => Ok(items.as_ref().clone()),
             Value::Str(s) => {
-                let items: Vec<Value<'a>> = s.chars().map(|c| Value::string(c.to_string())).collect();
-                Ok(Rc::try_unwrap(self.register_vector(Rc::new(items), position, "string iteration")?)
-                    .unwrap_or_else(|_| unreachable!("fresh Rc")))
+                let items: Vec<Value<'a>> =
+                    s.chars().map(|c| Value::string(c.to_string())).collect();
+                Ok(Rc::try_unwrap(self.register_vector(
+                    Rc::new(items),
+                    position,
+                    "string iteration",
+                )?)
+                .unwrap_or_else(|_| unreachable!("fresh Rc")))
             }
             Value::Undef => Ok(Vec::new()),
             other => Ok(vec![other.clone()]),
@@ -745,7 +861,10 @@ impl<'a> Evaluator<'a> {
         if output.len() + values.len() > MAX_VALUE_ELEMENTS {
             return Err(self.error(
                 expr_p(expr),
-                format!("List comprehension exceeds {} elements", locale(MAX_VALUE_ELEMENTS)),
+                format!(
+                    "List comprehension exceeds {} elements",
+                    locale(MAX_VALUE_ELEMENTS)
+                ),
             ));
         }
         output.extend(values.iter().cloned());
@@ -778,9 +897,15 @@ impl<'a> Evaluator<'a> {
                 let value = self.eval_expression(value, ctx, depth + 1)?;
                 self.stable_iterable(&value, ctx, *p)
             }
-            Expr::LcIf { condition, yes, no, .. } => {
+            Expr::LcIf {
+                condition, yes, no, ..
+            } => {
                 let condition = self.eval_expression(condition, ctx, depth + 1)?;
-                let selected = if truthy(&condition) { Some(yes) } else { no.as_ref() };
+                let selected = if truthy(&condition) {
+                    Some(yes)
+                } else {
+                    no.as_ref()
+                };
                 match selected {
                     None => Ok(Vec::new()),
                     Some(selected) => self.eval_comprehension_element(selected, ctx, depth + 1),
@@ -793,26 +918,42 @@ impl<'a> Evaluator<'a> {
             }
             Expr::LcFor { args, body, p } => {
                 let mut output: Vec<Value<'a>> = Vec::new();
-                self.lc_for_visit(args, 0, ctx, &mut |iteration_ctx| {
-                    let values = self.eval_comprehension_element(body, iteration_ctx, depth + 1)?;
-                    self.append_comprehension_values(&mut output, &values, expr)?;
-                    Ok(())
-                }, *p)?;
+                self.lc_for_visit(
+                    args,
+                    0,
+                    ctx,
+                    &mut |iteration_ctx| {
+                        let values =
+                            self.eval_comprehension_element(body, iteration_ctx, depth + 1)?;
+                        self.append_comprehension_values(&mut output, &values, expr)?;
+                        Ok(())
+                    },
+                    *p,
+                )?;
                 Ok(output)
             }
-            Expr::LcForC { init, condition, update, body, p } => {
+            Expr::LcForC {
+                init,
+                condition,
+                update,
+                body,
+                p,
+            } => {
                 let mut output: Vec<Value<'a>> = Vec::new();
                 let env = self.evaluate_sequential_bindings(init, ctx, depth + 1)?;
                 let mut iteration_ctx = self.stable_overlay_context(ctx, env);
                 loop {
-                    let condition_value = self.eval_expression(condition, &iteration_ctx, depth + 1)?;
+                    let condition_value =
+                        self.eval_expression(condition, &iteration_ctx, depth + 1)?;
                     if !truthy(&condition_value) {
                         break;
                     }
                     self.bump_ops(*p)?;
-                    let values = self.eval_comprehension_element(body, &iteration_ctx, depth + 1)?;
+                    let values =
+                        self.eval_comprehension_element(body, &iteration_ctx, depth + 1)?;
                     self.append_comprehension_values(&mut output, &values, expr)?;
-                    let env = self.evaluate_sequential_bindings(update, &iteration_ctx, depth + 1)?;
+                    let env =
+                        self.evaluate_sequential_bindings(update, &iteration_ctx, depth + 1)?;
                     iteration_ctx = self.stable_overlay_context(&iteration_ctx, env);
                 }
                 Ok(output)
@@ -859,7 +1000,8 @@ impl<'a> Evaluator<'a> {
         ctx: &Ctx<'a>,
         depth: usize,
     ) -> EvalResult<Value<'a>> {
-        let resolved = self.resolve_stable_expression_arguments(args, &["condition", "message"], ctx);
+        let resolved =
+            self.resolve_stable_expression_arguments(args, &["condition", "message"], ctx);
         let condition_argument = resolved.get("condition");
         let message_argument = resolved.get("message");
         let condition = match condition_argument {
@@ -872,11 +1014,16 @@ impl<'a> Evaluator<'a> {
         };
         if !truthy(&condition) {
             let condition_text = match condition_argument {
-                Some(argument) => compact_diagnostic_text(&self.slice_units(argument.p, argument.end), 240),
+                Some(argument) => {
+                    compact_diagnostic_text(&self.slice_units(argument.p, argument.end), 240)
+                }
                 None => "undef".to_string(),
             };
             let detail = if message_argument.is_some() {
-                format!(": {}", compact_diagnostic_text(&format_value(&message), 240))
+                format!(
+                    ": {}",
+                    compact_diagnostic_text(&format_value(&message), 240)
+                )
             } else {
                 String::new()
             };
@@ -905,7 +1052,11 @@ impl<'a> Evaluator<'a> {
         }
         self.warnings.borrow_mut().push(format!(
             "ECHO:{}",
-            if values.is_empty() { String::new() } else { format!(" {}", values.join(", ")) }
+            if values.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", values.join(", "))
+            }
         ));
         match body {
             None => Ok(Value::Undef),
@@ -949,17 +1100,33 @@ impl<'a> Evaluator<'a> {
         resolved
     }
 
-    fn eval_function_call(&self, expr: &'a Expr, ctx: &Ctx<'a>, depth: usize) -> EvalResult<Value<'a>> {
-        let Expr::Call { name, callee, args, p } = expr else {
+    fn eval_function_call(
+        &self,
+        expr: &'a Expr,
+        ctx: &Ctx<'a>,
+        depth: usize,
+    ) -> EvalResult<Value<'a>> {
+        let Expr::Call {
+            name,
+            callee,
+            args,
+            p,
+        } = expr
+        else {
             unreachable!()
         };
         if let Some(name) = name {
             let declaration = if self.is_stable() {
-                ctx.stable_scope.as_ref().and_then(|scope| scope.function_declaration(name))
+                ctx.stable_scope
+                    .as_ref()
+                    .and_then(|scope| scope.function_declaration(name))
             } else {
                 None
             };
-            let definition = declaration.as_ref().map(|(node, _)| *node).or_else(|| self.functions.get(name).copied());
+            let definition = declaration
+                .as_ref()
+                .map(|(node, _)| *node)
+                .or_else(|| self.functions.get(name).copied());
             if let Some(definition) = definition {
                 if !self.is_stable() || declaration.is_some() {
                     let closure = match &declaration {
@@ -972,7 +1139,10 @@ impl<'a> Evaluator<'a> {
                         body: &definition.body,
                         closure: Rc::new(closure),
                         lexical_scope: if self.is_stable() {
-                            declaration.as_ref().map(|(_, scope)| scope.clone()).or_else(|| ctx.stable_scope.clone())
+                            declaration
+                                .as_ref()
+                                .map(|(_, scope)| scope.clone())
+                                .or_else(|| ctx.stable_scope.clone())
                         } else {
                             None
                         },
@@ -984,8 +1154,14 @@ impl<'a> Evaluator<'a> {
                 self.resolve_stable_variable(name, ctx)?
             } else {
                 match ctx.env.borrow().get(name) {
-                    Some(value) => VariableResolution { found: true, value: value.clone() },
-                    None => VariableResolution { found: false, value: Value::Undef },
+                    Some(value) => VariableResolution {
+                        found: true,
+                        value: value.clone(),
+                    },
+                    None => VariableResolution {
+                        found: false,
+                        value: Value::Undef,
+                    },
                 }
             };
             if resolved.found {
@@ -1028,7 +1204,8 @@ impl<'a> Evaluator<'a> {
                     "Stable function is missing its lexical scope",
                 ));
             };
-            let parameter_names: Vec<&str> = function.params.iter().map(|p| p.name.as_str()).collect();
+            let parameter_names: Vec<&str> =
+                function.params.iter().map(|p| p.name.as_str()).collect();
             let resolved = self.resolve_stable_expression_arguments(args, &parameter_names, ctx);
             let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
             for argument in args {
@@ -1063,26 +1240,36 @@ impl<'a> Evaluator<'a> {
                 env.insert(parameter.name.clone(), value);
             }
             let body_ctx = Ctx {
-                function_stack: ctx.push_function(function.name.as_deref().unwrap_or("<anonymous>")),
+                function_stack: ctx
+                    .push_function(function.name.as_deref().unwrap_or("<anonymous>")),
                 ..self.stable_overlay_context(&definition_ctx, env)
             };
             return self.eval_expression(function.body, &body_ctx, depth + 1);
         }
         // Subset profile: positional + named with strict validation.
-        let positional: Vec<&ExpressionArgument> = args.iter().filter(|a| a.name.is_none()).collect();
+        let positional: Vec<&ExpressionArgument> =
+            args.iter().filter(|a| a.name.is_none()).collect();
         let mut named: HashMap<&str, &ExpressionArgument> = HashMap::new();
         for argument in args.iter().filter(|a| a.name.is_some()) {
             named.insert(argument.name.as_deref().unwrap(), argument);
         }
-        let parameter_names: HashSet<&str> = function.params.iter().map(|p| p.name.as_str()).collect();
+        let parameter_names: HashSet<&str> =
+            function.params.iter().map(|p| p.name.as_str()).collect();
         for name in named.keys() {
             if !parameter_names.contains(name) {
-                let p = args.iter().find(|a| a.name.as_deref() == Some(name)).map(|a| a.p).unwrap_or(expr_p(function.body));
+                let p = args
+                    .iter()
+                    .find(|a| a.name.as_deref() == Some(name))
+                    .map(|a| a.p)
+                    .unwrap_or(expr_p(function.body));
                 return Err(self.error(p, format!("Unknown argument {name}")));
             }
         }
         if positional.len() > function.params.len() {
-            let p = positional.get(function.params.len()).map(|a| a.p).unwrap_or(expr_p(function.body));
+            let p = positional
+                .get(function.params.len())
+                .map(|a| a.p)
+                .unwrap_or(expr_p(function.body));
             return Err(self.error(p, "Too many function arguments"));
         }
         let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
@@ -1137,7 +1324,9 @@ impl<'a> Evaluator<'a> {
         depth: usize,
     ) -> EvalResult<Value<'a>> {
         let supported: HashSet<&str> = if name == "dxf_dim" {
-            ["file", "layer", "origin", "scale", "name"].into_iter().collect()
+            ["file", "layer", "origin", "scale", "name"]
+                .into_iter()
+                .collect()
         } else {
             ["file", "layer", "origin", "scale"].into_iter().collect()
         };
@@ -1167,7 +1356,10 @@ impl<'a> Evaluator<'a> {
         depth: usize,
     ) -> EvalResult<Value<'a>> {
         if name == "assert" {
-            return Err(self.error(p, "Expression-form assert() is not supported; use statement assert()"));
+            return Err(self.error(
+                p,
+                "Expression-form assert() is not supported; use statement assert()",
+            ));
         }
         if self.is_stable() && (name == "dxf_dim" || name == "dxf_cross") {
             return self.eval_dxf_query_builtin(name, args, ctx, depth);
@@ -1189,22 +1381,35 @@ impl<'a> Evaluator<'a> {
                         return Ok(Value::Number(std::f64::consts::PI));
                     }
                     let resolved = self.resolve_stable_variable(name, ctx)?;
-                    return Ok(if resolved.found { resolved.value } else { Value::Undef });
+                    return Ok(if resolved.found {
+                        resolved.value
+                    } else {
+                        Value::Undef
+                    });
                 }
             }
             Ok(self.eval_expression(&argument.value, ctx, depth + 1)?)
         };
         let mut warn = |message: String| self.warn(message);
-        let mut register_array = |items: Vec<Value<'a>>, label: &str| -> EvalResult<Vec<Value<'a>>> {
-            if items.len() > MAX_VALUE_ELEMENTS {
-                return Err(self.error(p, format!("{label} exceeds {} elements", locale(MAX_VALUE_ELEMENTS))));
-            }
-            Ok(Rc::try_unwrap(self.register_vector(Rc::new(items), p, label)?)
-                .unwrap_or_else(|_| unreachable!("fresh Rc")))
-        };
+        let mut register_array =
+            |items: Vec<Value<'a>>, label: &str| -> EvalResult<Vec<Value<'a>>> {
+                if items.len() > MAX_VALUE_ELEMENTS {
+                    return Err(self.error(
+                        p,
+                        format!("{label} exceeds {} elements", locale(MAX_VALUE_ELEMENTS)),
+                    ));
+                }
+                Ok(
+                    Rc::try_unwrap(self.register_vector(Rc::new(items), p, label)?)
+                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
+                )
+            };
         let mut register_string = |value: String, label: &str| -> EvalResult<String> {
             if value.encode_utf16().count() > MAX_VALUE_ELEMENTS {
-                return Err(self.error(p, format!("{label} exceeds {} characters", locale(MAX_VALUE_ELEMENTS))));
+                return Err(self.error(
+                    p,
+                    format!("{label} exceeds {} characters", locale(MAX_VALUE_ELEMENTS)),
+                ));
             }
             self.register_string(value, p, label)
         };
@@ -1220,7 +1425,10 @@ impl<'a> Evaluator<'a> {
         };
         let parent_module = |depth: usize| -> Option<String> {
             let stack = &ctx.module_stack;
-            stack.len().checked_sub(1 + depth).map(|index| stack[index].clone())
+            stack
+                .len()
+                .checked_sub(1 + depth)
+                .map(|index| stack[index].clone())
         };
         let mut builtin_ctx = BuiltinContext {
             warn: &mut warn,
@@ -1229,7 +1437,9 @@ impl<'a> Evaluator<'a> {
             random: &mut random,
             parent_module: &parent_module,
         };
-        let Some(result) = builtins::evaluate_builtin(name, args.len(), &mut access, &mut builtin_ctx) else {
+        let Some(result) =
+            builtins::evaluate_builtin(name, args.len(), &mut access, &mut builtin_ctx)
+        else {
             return Err(self.error(p, format!("Unsupported function {name}()")));
         };
         match result {
@@ -1266,7 +1476,11 @@ impl<'a> Evaluator<'a> {
         self.eval_prepared_nodes(nodes, &ctx)
     }
 
-    fn eval_prepared_call(&self, node: &'a CallNode, ctx: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn eval_prepared_call(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         let background = self.is_stable()
             && ctx.viewport_root_owner != Some(node as *const CallNode)
             && has_modifier(node, "background");
@@ -1322,7 +1536,11 @@ impl<'a> Evaluator<'a> {
 
     /// Top-level statement loop (synchronous; cancellation polled per
     /// statement like the TS cooperative checkpoint).
-    fn eval_top_level(&self, nodes: &'a [Statement], ctx: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn eval_top_level(
+        &self,
+        nodes: &'a [Statement],
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         self.poll()?;
         let mut output = Vec::new();
         for node in nodes {
@@ -1370,7 +1588,14 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn arg(&self, node: &'a CallNode, name: &str, position: i64, fallback: Value<'a>, ctx: &Ctx<'a>) -> EvalResult<Value<'a>> {
+    fn arg(
+        &self,
+        node: &'a CallNode,
+        name: &str,
+        position: i64,
+        fallback: Value<'a>,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Value<'a>> {
         let expression = call_args(node)
             .iter()
             .find(|(key, _)| key == name)
@@ -1378,7 +1603,9 @@ impl<'a> Evaluator<'a> {
                 if position < 0 {
                     None
                 } else {
-                    call_args(node).iter().find(|(key, _)| key == &format!("_{position}"))
+                    call_args(node)
+                        .iter()
+                        .find(|(key, _)| key == &format!("_{position}"))
                 }
             });
         match expression {
@@ -1401,9 +1628,15 @@ impl<'a> Evaluator<'a> {
             return Ok(shapes);
         }
         if parent.depth >= MAX_EVAL_DEPTH {
-            return Err(self.error(node.p, format!("Evaluation exceeds {MAX_EVAL_DEPTH} nested calls")));
+            return Err(self.error(
+                node.p,
+                format!("Evaluation exceeds {MAX_EVAL_DEPTH} nested calls"),
+            ));
         }
-        let ctx = Ctx { depth: parent.depth + 1, ..parent.clone() };
+        let ctx = Ctx {
+            depth: parent.depth + 1,
+            ..parent.clone()
+        };
 
         match node.name.as_str() {
             "assign" => {
@@ -1436,8 +1669,14 @@ impl<'a> Evaluator<'a> {
                 };
                 let dimensions = [
                     size.first().copied().unwrap_or(1.0),
-                    size.get(1).copied().or(size.first().copied()).unwrap_or(1.0),
-                    size.get(2).copied().or(size.first().copied()).unwrap_or(1.0),
+                    size.get(1)
+                        .copied()
+                        .or(size.first().copied())
+                        .unwrap_or(1.0),
+                    size.get(2)
+                        .copied()
+                        .or(size.first().copied())
+                        .unwrap_or(1.0),
                 ];
                 if dimensions.iter().any(|v| *v <= 0.0) {
                     return Err(self.error(node.p, "Cube dimensions must be positive"));
@@ -1456,7 +1695,9 @@ impl<'a> Evaluator<'a> {
                 if radius.is_undef() {
                     radius = match &diameter {
                         Value::Undef => Value::Number(1.0),
-                        other => Value::Number(self.finite_number(other, node.p, "sphere diameter")? / 2.0),
+                        other => Value::Number(
+                            self.finite_number(other, node.p, "sphere diameter")? / 2.0,
+                        ),
                     };
                 }
                 let r = self.finite_number(&radius, node.p, "sphere radius")?;
@@ -1469,13 +1710,19 @@ impl<'a> Evaluator<'a> {
             "cylinder" => {
                 if self.is_stable() {
                     self.bind_stable_module(
-                        node, &ctx, &["h", "r1", "r2", "center"],
+                        node,
+                        &ctx,
+                        &["h", "r1", "r2", "center"],
                         &["r", "d", "d1", "d2", "$fn", "$fa", "$fs"],
                     )?;
                     self.warn_ignored_primitive_children(node);
                     return Ok(vec![descriptor("cylinder", 3)]);
                 }
-                let height = self.finite_number(&self.arg(node, "h", 0, Value::Number(1.0), &ctx)?, node.p, "cylinder height")?;
+                let height = self.finite_number(
+                    &self.arg(node, "h", 0, Value::Number(1.0), &ctx)?,
+                    node.p,
+                    "cylinder height",
+                )?;
                 if height <= 0.0 {
                     return Err(self.error(node.p, "Cylinder height must be positive"));
                 }
@@ -1511,7 +1758,10 @@ impl<'a> Evaluator<'a> {
                 let r1 = self.finite_number(&low, node.p, "r1")?;
                 let r2 = self.finite_number(&high, node.p, "r2")?;
                 if r1 < 0.0 || r2 < 0.0 || (r1 == 0.0 && r2 == 0.0) {
-                    return Err(self.error(node.p, "Cylinder radii must be non-negative and not both zero"));
+                    return Err(self.error(
+                        node.p,
+                        "Cylinder radii must be non-negative and not both zero",
+                    ));
                 }
                 self.arg(node, "center", 3, Value::Bool(false), &ctx)?;
                 self.segments(node, &ctx, 32.0, 3.0, r1.max(r2))?;
@@ -1519,13 +1769,19 @@ impl<'a> Evaluator<'a> {
             }
             "polyhedron" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["points", "faces", "convexity"], &["triangles"])?;
+                    self.bind_stable_module(
+                        node,
+                        &ctx,
+                        &["points", "faces", "convexity"],
+                        &["triangles"],
+                    )?;
                     self.warn_ignored_primitive_children(node);
                     return Ok(vec![descriptor("polyhedron", 3)]);
                 }
                 let points = self.arg(node, "points", 0, Value::vector(Vec::new()), &ctx)?;
                 let faces = {
-                    let fallback = self.arg(node, "triangles", 1, Value::vector(Vec::new()), &ctx)?;
+                    let fallback =
+                        self.arg(node, "triangles", 1, Value::vector(Vec::new()), &ctx)?;
                     self.arg(node, "faces", 1, fallback, &ctx)?
                 };
                 if points.as_vector().is_none() || faces.as_vector().is_none() {
@@ -1534,19 +1790,24 @@ impl<'a> Evaluator<'a> {
                 for point in points.as_vector().unwrap().clone().iter() {
                     let vector = self.vector_value(point, node.p, "polyhedron point")?;
                     if vector.len() < 3 {
-                        return Err(self.error(node.p, "Each polyhedron point needs three coordinates"));
+                        return Err(
+                            self.error(node.p, "Each polyhedron point needs three coordinates")
+                        );
                     }
                 }
                 let points_len = points.as_vector().unwrap().len();
                 for face in faces.as_vector().unwrap().clone().iter() {
                     let polygon = self.vector_value(face, node.p, "polyhedron face")?;
                     if polygon.len() < 3 {
-                        return Err(self.error(node.p, "Each polyhedron face needs at least three vertices"));
+                        return Err(self
+                            .error(node.p, "Each polyhedron face needs at least three vertices"));
                     }
                     for index in &polygon {
                         let index = index.trunc();
                         if index < 0.0 || index >= points_len as f64 {
-                            return Err(self.error(node.p, "Polyhedron face index is out of bounds"));
+                            return Err(
+                                self.error(node.p, "Polyhedron face index is out of bounds")
+                            );
                         }
                     }
                 }
@@ -1590,7 +1851,10 @@ impl<'a> Evaluator<'a> {
                 };
                 let dimensions = [
                     size.first().copied().unwrap_or(1.0),
-                    size.get(1).copied().or(size.first().copied()).unwrap_or(1.0),
+                    size.get(1)
+                        .copied()
+                        .or(size.first().copied())
+                        .unwrap_or(1.0),
                 ];
                 if dimensions.iter().any(|v| *v <= 0.0) {
                     return Err(self.error(node.p, "Square dimensions must be positive"));
@@ -1609,7 +1873,9 @@ impl<'a> Evaluator<'a> {
                 if radius.is_undef() {
                     radius = match &diameter {
                         Value::Undef => Value::Number(1.0),
-                        other => Value::Number(self.finite_number(other, node.p, "circle diameter")? / 2.0),
+                        other => Value::Number(
+                            self.finite_number(other, node.p, "circle diameter")? / 2.0,
+                        ),
                     };
                 }
                 let r = self.finite_number(&radius, node.p, "circle radius")?;
@@ -1645,7 +1911,9 @@ impl<'a> Evaluator<'a> {
                         for index in indices {
                             let point = points.get(index.trunc() as usize);
                             if point.is_none() || index.trunc() < 0.0 {
-                                return Err(self.error(node.p, "Polygon path index is out of bounds"));
+                                return Err(
+                                    self.error(node.p, "Polygon path index is out of bounds")
+                                );
                             }
                         }
                     }
@@ -1657,9 +1925,17 @@ impl<'a> Evaluator<'a> {
                     self.bind_stable_module(node, &ctx, &["v"], &[])?;
                     return self.transform_stable_children(node, &ctx);
                 }
-                let raw = self.arg(node, "v", 0, Value::vector(vec![
-                    Value::Number(0.0), Value::Number(0.0), Value::Number(0.0),
-                ]), &ctx)?;
+                let raw = self.arg(
+                    node,
+                    "v",
+                    0,
+                    Value::vector(vec![
+                        Value::Number(0.0),
+                        Value::Number(0.0),
+                        Value::Number(0.0),
+                    ]),
+                    &ctx,
+                )?;
                 self.vector_value(&raw, node.p, "translate vector")?;
                 self.eval_nodes(&node.children, &ctx, true)
             }
@@ -1690,13 +1966,19 @@ impl<'a> Evaluator<'a> {
                             _ => {
                                 self.finite_number(&angle, node.p, "rotation")?;
                                 if !axis.is_undef() {
-                                    let vector = self.vector_value(&axis, node.p, "rotation axis")?;
+                                    let vector =
+                                        self.vector_value(&axis, node.p, "rotation axis")?;
                                     let length = f64::hypot(
-                                        f64::hypot(vector.first().copied().unwrap_or(0.0), vector.get(1).copied().unwrap_or(0.0)),
+                                        f64::hypot(
+                                            vector.first().copied().unwrap_or(0.0),
+                                            vector.get(1).copied().unwrap_or(0.0),
+                                        ),
                                         vector.get(2).copied().unwrap_or(0.0),
                                     );
                                     if length == 0.0 {
-                                        return Err(self.error(node.p, "Rotation axis cannot be zero"));
+                                        return Err(
+                                            self.error(node.p, "Rotation axis cannot be zero")
+                                        );
                                     }
                                 }
                             }
@@ -1710,9 +1992,17 @@ impl<'a> Evaluator<'a> {
                     self.bind_stable_module(node, &ctx, &["v"], &[])?;
                     return self.transform_stable_children(node, &ctx);
                 }
-                let raw = self.arg(node, "v", 0, Value::vector(vec![
-                    Value::Number(1.0), Value::Number(1.0), Value::Number(1.0),
-                ]), &ctx)?;
+                let raw = self.arg(
+                    node,
+                    "v",
+                    0,
+                    Value::vector(vec![
+                        Value::Number(1.0),
+                        Value::Number(1.0),
+                        Value::Number(1.0),
+                    ]),
+                    &ctx,
+                )?;
                 let values = match &raw {
                     Value::Vector(_) => self.vector_value(&raw, node.p, "scale vector")?,
                     _ => vec![self.finite_number(&raw, node.p, "scale")?],
@@ -1743,9 +2033,17 @@ impl<'a> Evaluator<'a> {
                     self.bind_stable_module(node, &ctx, &["v"], &[])?;
                     return self.transform_stable_children(node, &ctx);
                 }
-                let raw = self.arg(node, "v", 0, Value::vector(vec![
-                    Value::Number(1.0), Value::Number(0.0), Value::Number(0.0),
-                ]), &ctx)?;
+                let raw = self.arg(
+                    node,
+                    "v",
+                    0,
+                    Value::vector(vec![
+                        Value::Number(1.0),
+                        Value::Number(0.0),
+                        Value::Number(0.0),
+                    ]),
+                    &ctx,
+                )?;
                 self.vector_value(&raw, node.p, "mirror normal")?;
                 self.eval_nodes(&node.children, &ctx, true)
             }
@@ -1783,7 +2081,9 @@ impl<'a> Evaluator<'a> {
                         Value::Undef
                     } else {
                         Value::vector(vec![
-                            Value::Number(0.5), Value::Number(0.5), Value::Number(0.5),
+                            Value::Number(0.5),
+                            Value::Number(0.5),
+                            Value::Number(0.5),
                         ])
                     },
                     &ctx,
@@ -1840,7 +2140,9 @@ impl<'a> Evaluator<'a> {
             "linear_extrude" => {
                 let evaluated = if self.is_stable() {
                     Some(self.bind_stable_module(
-                        node, &ctx, &["height", "center", "convexity", "twist", "slices", "scale"],
+                        node,
+                        &ctx,
+                        &["height", "center", "convexity", "twist", "slices", "scale"],
                         &["$fn", "$fa", "$fs"],
                     )?)
                 } else {
@@ -1863,8 +2165,16 @@ impl<'a> Evaluator<'a> {
                     if height <= 0.0 {
                         return Err(self.error(node.p, "linear_extrude() height must be positive"));
                     }
-                    self.finite_number(&self.arg(node, "twist", -1, Value::Number(0.0), &ctx)?, node.p, "extrusion twist")?;
-                    let slices = self.finite_number(&self.arg(node, "slices", -1, Value::Number(0.0), &ctx)?, node.p, "extrusion slices")?;
+                    self.finite_number(
+                        &self.arg(node, "twist", -1, Value::Number(0.0), &ctx)?,
+                        node.p,
+                        "extrusion twist",
+                    )?;
+                    let slices = self.finite_number(
+                        &self.arg(node, "slices", -1, Value::Number(0.0), &ctx)?,
+                        node.p,
+                        "extrusion slices",
+                    )?;
                     let _ = slices.trunc().clamp(0.0, 512.0);
                     let raw_scale = self.arg(
                         node,
@@ -1887,7 +2197,12 @@ impl<'a> Evaluator<'a> {
             }
             "rotate_extrude" => {
                 let evaluated = if self.is_stable() {
-                    Some(self.bind_stable_module(node, &ctx, &["angle", "convexity"], &["$fn", "$fa", "$fs"])?)
+                    Some(self.bind_stable_module(
+                        node,
+                        &ctx,
+                        &["angle", "convexity"],
+                        &["$fn", "$fa", "$fs"],
+                    )?)
                 } else {
                     None
                 };
@@ -1912,7 +2227,11 @@ impl<'a> Evaluator<'a> {
                 self.require_stable(node)?;
                 self.compatibility_deprecation(node, "linear_extrude()");
                 let values = self.bind_stable_module(
-                    node, &ctx, &["file", "layer", "height", "origin", "scale", "center", "twist", "slices"],
+                    node,
+                    &ctx,
+                    &[
+                        "file", "layer", "height", "origin", "scale", "center", "twist", "slices",
+                    ],
                     &["convexity", "$fn", "$fa", "$fs"],
                 )?;
                 let file = values.get("file").cloned().unwrap_or(Value::Undef);
@@ -1922,7 +2241,8 @@ impl<'a> Evaluator<'a> {
                     }
                 }
                 let sections = self.eval_nodes(&node.children, &ctx, true)?;
-                let sections = self.boolean_shapes(sections, "union", node.p, "dxf_linear_extrude")?;
+                let sections =
+                    self.boolean_shapes(sections, "union", node.p, "dxf_linear_extrude")?;
                 if sections.is_empty() {
                     return Ok(Vec::new());
                 }
@@ -1935,7 +2255,9 @@ impl<'a> Evaluator<'a> {
                 self.require_stable(node)?;
                 self.compatibility_deprecation(node, "rotate_extrude()");
                 let values = self.bind_stable_module(
-                    node, &ctx, &["file", "layer", "origin", "scale"],
+                    node,
+                    &ctx,
+                    &["file", "layer", "origin", "scale"],
                     &["convexity", "angle", "$fn", "$fa", "$fs"],
                 )?;
                 let file = values.get("file").cloned().unwrap_or(Value::Undef);
@@ -1944,7 +2266,8 @@ impl<'a> Evaluator<'a> {
                     return Err(self.import_project_required(node, "dxf_rotate_extrude"));
                 }
                 let sections = self.eval_nodes(&node.children, &ctx, true)?;
-                let sections = self.boolean_shapes(sections, "union", node.p, "dxf_rotate_extrude")?;
+                let sections =
+                    self.boolean_shapes(sections, "union", node.p, "dxf_rotate_extrude")?;
                 if sections.is_empty() {
                     return Ok(Vec::new());
                 }
@@ -1988,8 +2311,14 @@ impl<'a> Evaluator<'a> {
                         .or_else(|| call_args(node).iter().find(|(key, _)| key == "_0"));
                     for expression in [
                         r_expression.map(|(_, expression)| expression),
-                        call_args(node).iter().find(|(key, _)| key == "delta").map(|(_, expression)| expression),
-                        call_args(node).iter().find(|(key, _)| key == "chamfer").map(|(_, expression)| expression),
+                        call_args(node)
+                            .iter()
+                            .find(|(key, _)| key == "delta")
+                            .map(|(_, expression)| expression),
+                        call_args(node)
+                            .iter()
+                            .find(|(key, _)| key == "chamfer")
+                            .map(|(_, expression)| expression),
                     ]
                     .into_iter()
                     .flatten()
@@ -2039,7 +2368,11 @@ impl<'a> Evaluator<'a> {
             }
             "if" => {
                 let condition = self.arg(node, "_0", 0, Value::Bool(false), &ctx)?;
-                let branch = if truthy(&condition) { &node.children } else { &node.alternative };
+                let branch = if truthy(&condition) {
+                    &node.children
+                } else {
+                    &node.alternative
+                };
                 self.eval_nodes(branch, &ctx, true)
             }
             "let" => {
@@ -2081,7 +2414,11 @@ impl<'a> Evaluator<'a> {
                 }
                 self.warnings.borrow_mut().push(format!(
                     "ECHO:{}",
-                    if values.is_empty() { String::new() } else { format!(" {}", values.join(", ")) }
+                    if values.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", values.join(", "))
+                    }
                 ));
                 self.eval_nodes(&node.children, &ctx, true)
             }
@@ -2102,7 +2439,11 @@ impl<'a> Evaluator<'a> {
                             let mut output = Vec::new();
                             for index in indices {
                                 if let Some(statement) = all.get(index) {
-                                    output.extend(self.eval_nodes(std::slice::from_ref(statement), &child_context, true)?);
+                                    output.extend(self.eval_nodes(
+                                        std::slice::from_ref(statement),
+                                        &child_context,
+                                        true,
+                                    )?);
                                 }
                             }
                             Ok(output)
@@ -2113,13 +2454,17 @@ impl<'a> Evaluator<'a> {
                     if index.is_undef() {
                         return self.eval_nodes(all, &child_context, true);
                     }
-                    let index = self.finite_number(&index, node.p, "children index")?.trunc();
+                    let index = self
+                        .finite_number(&index, node.p, "children index")?
+                        .trunc();
                     if index < 0.0 {
                         return Ok(Vec::new());
                     }
                     match all.get(index as usize) {
                         None => Ok(Vec::new()),
-                        Some(statement) => self.eval_nodes(std::slice::from_ref(statement), &child_context, true),
+                        Some(statement) => {
+                            self.eval_nodes(std::slice::from_ref(statement), &child_context, true)
+                        }
                     }
                 }
             }
@@ -2136,7 +2481,10 @@ impl<'a> Evaluator<'a> {
                 };
                 let index = if index == 0.0 { 0.0 } else { index };
                 if index < 0.0 {
-                    self.warn(format!("Negative child index ({}) is not allowed", js_number_to_string(index)));
+                    self.warn(format!(
+                        "Negative child index ({}) is not allowed",
+                        js_number_to_string(index)
+                    ));
                     return Ok(Vec::new());
                 }
                 let (all, child_context) = self.passed_call_children(&ctx);
@@ -2164,14 +2512,20 @@ impl<'a> Evaluator<'a> {
                 } else if let Some(module) = self.modules.get(&node.name).copied() {
                     return self.eval_user_module(node, module, &ctx, None);
                 }
-                Err(self.error(node.p, format!("Unsupported geometry operation {}()", node.name)))
+                Err(self.error(
+                    node.p,
+                    format!("Unsupported geometry operation {}()", node.name),
+                ))
             }
         }
     }
 
     fn require_stable(&self, node: &CallNode) -> EvalResult<()> {
         if !self.is_stable() {
-            return Err(self.error(node.p, format!("Unsupported geometry operation {}()", node.name)));
+            return Err(self.error(
+                node.p,
+                format!("Unsupported geometry operation {}()", node.name),
+            ));
         }
         Ok(())
     }
@@ -2217,7 +2571,11 @@ impl<'a> Evaluator<'a> {
         positional_names: &[&str],
         named_only_names: &[&str],
     ) -> EvalResult<HashMap<String, Value<'a>>> {
-        let allowed: HashSet<&str> = positional_names.iter().chain(named_only_names).copied().collect();
+        let allowed: HashSet<&str> = positional_names
+            .iter()
+            .chain(named_only_names)
+            .copied()
+            .collect();
         let mut resolved: HashMap<String, usize> = HashMap::new();
         for (index, argument) in node.call_arguments.iter().enumerate() {
             let name = match &argument.name {
@@ -2228,15 +2586,24 @@ impl<'a> Evaluator<'a> {
                     .map(|s| s.to_string()),
             };
             let Some(name) = name else {
-                self.warn(format!("Ignoring excess positional argument to {}()", node.name));
+                self.warn(format!(
+                    "Ignoring excess positional argument to {}()",
+                    node.name
+                ));
                 continue;
             };
             if !allowed.contains(name.as_str()) {
-                self.warn(format!("Ignoring unknown argument {name} to {}()", node.name));
+                self.warn(format!(
+                    "Ignoring unknown argument {name} to {}()",
+                    node.name
+                ));
                 continue;
             }
             if resolved.contains_key(&name) {
-                self.warn(format!("Argument {name} was specified more than once for {}()", node.name));
+                self.warn(format!(
+                    "Argument {name} was specified more than once for {}()",
+                    node.name
+                ));
             }
             resolved.insert(name, index);
         }
@@ -2244,30 +2611,56 @@ impl<'a> Evaluator<'a> {
         for argument in &node.call_arguments {
             evaluated.push(self.eval_expression(&argument.value, ctx, 0)?);
         }
-        Ok(resolved.into_iter().map(|(name, index)| (name, evaluated[index].clone())).collect())
+        Ok(resolved
+            .into_iter()
+            .map(|(name, index)| (name, evaluated[index].clone()))
+            .collect())
     }
 
-    fn segments(&self, node: &'a CallNode, ctx: &Ctx<'a>, fallback: f64, minimum: f64, _radius: f64) -> EvalResult<f64> {
+    fn segments(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+        fallback: f64,
+        minimum: f64,
+        _radius: f64,
+    ) -> EvalResult<f64> {
         if self.is_stable() {
             return Ok(0.0); // fragment resolution belongs to the geometry stage
         }
         let local = self.arg(node, "$fn", -1, Value::Undef, ctx)?;
         let global = ctx.env.borrow().get("$fn").cloned().unwrap_or(Value::Undef);
-        let raw = if local.is_undef() || local.as_number() == Some(0.0) { global } else { local };
+        let raw = if local.is_undef() || local.as_number() == Some(0.0) {
+            global
+        } else {
+            local
+        };
         let requested = if raw.is_undef() || raw.as_number() == Some(0.0) {
             None
         } else {
             Some(self.finite_number(&raw, node.p, "$fn")?.round())
         };
-        let max_segments = if self.quality == Quality::Preview { 48.0 } else { MAX_FN };
-        let preview_fallback = if self.quality == Quality::Preview { fallback.min(24.0) } else { fallback };
+        let max_segments = if self.quality == Quality::Preview {
+            48.0
+        } else {
+            MAX_FN
+        };
+        let preview_fallback = if self.quality == Quality::Preview {
+            fallback.min(24.0)
+        } else {
+            fallback
+        };
         let mut value = requested.unwrap_or(preview_fallback);
         if value > max_segments {
             self.warn(format!(
                 "$fn={} was clamped to {} for {} rendering",
                 js_number_to_string(value),
                 js_number_to_string(max_segments),
-                if self.quality == Quality::Preview { "preview" } else { "full" }
+                if self.quality == Quality::Preview {
+                    "preview"
+                } else {
+                    "full"
+                }
             ));
             value = max_segments;
         }
@@ -2301,7 +2694,11 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn transform_stable_children(&self, node: &'a CallNode, ctx: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn transform_stable_children(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         let shapes = self.eval_nodes(&node.children, ctx, true)?;
         self.boolean_shapes(shapes, "union", node.p, &node.name)
     }
@@ -2319,9 +2716,14 @@ impl<'a> Evaluator<'a> {
         let dimension = shapes[0].dimension;
         if shapes.iter().any(|s| s.dimension != dimension) {
             if !self.is_stable() {
-                return Err(self.error(p, format!("{diagnostic_name}() cannot mix 2D and 3D children")));
+                return Err(self.error(
+                    p,
+                    format!("{diagnostic_name}() cannot mix 2D and 3D children"),
+                ));
             }
-            self.warn(format!("{diagnostic_name}() ignored child geometry with a different dimension"));
+            self.warn(format!(
+                "{diagnostic_name}() ignored child geometry with a different dimension"
+            ));
             if operation == "intersection" {
                 return Ok(Vec::new());
             }
@@ -2333,7 +2735,11 @@ impl<'a> Evaluator<'a> {
         Ok(vec![descriptor(operation, dimension)])
     }
 
-    fn difference_children(&self, node: &'a CallNode, ctx: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn difference_children(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         if node.children.is_empty() {
             return Ok(Vec::new());
         }
@@ -2381,21 +2787,33 @@ impl<'a> Evaluator<'a> {
         Ok(vec![descriptor("difference", base[0].dimension)])
     }
 
-    fn eval_for(&self, node: &'a CallNode, ctx: &Ctx<'a>, diagnostic_name: &str) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn eval_for(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+        diagnostic_name: &str,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         if self.is_stable() {
             let bindings = &node.call_arguments;
             let mut output = Vec::new();
-            self.for_visit_stable(node, bindings, 0, ctx, &mut |iteration_ctx| {
-                let shapes = self.eval_nodes(&node.children, iteration_ctx, false)?;
-                output.extend(shapes);
-                if output.len() > MAX_SHAPES {
-                    return Err(self.error(
-                        node.p,
-                        format!("Model exceeds the {} object limit", locale(MAX_SHAPES)),
-                    ));
-                }
-                Ok(())
-            }, diagnostic_name)?;
+            self.for_visit_stable(
+                node,
+                bindings,
+                0,
+                ctx,
+                &mut |iteration_ctx| {
+                    let shapes = self.eval_nodes(&node.children, iteration_ctx, false)?;
+                    output.extend(shapes);
+                    if output.len() > MAX_SHAPES {
+                        return Err(self.error(
+                            node.p,
+                            format!("Model exceeds the {} object limit", locale(MAX_SHAPES)),
+                        ));
+                    }
+                    Ok(())
+                },
+                diagnostic_name,
+            )?;
             return Ok(output);
         }
         let entries: Vec<&(String, Expr)> = call_args(node)
@@ -2403,12 +2821,18 @@ impl<'a> Evaluator<'a> {
             .filter(|(name, _)| !name.starts_with('_'))
             .collect();
         if entries.len() != 1 {
-            return Err(self.error(node.p, format!("{diagnostic_name}() currently requires one named iterator")));
+            return Err(self.error(
+                node.p,
+                format!("{diagnostic_name}() currently requires one named iterator"),
+            ));
         }
         let (name, expression) = entries[0];
         let values = self.eval_expression(expression, ctx, 0)?;
         let Value::Vector(values) = values else {
-            return Err(self.error(node.p, format!("{diagnostic_name}() iterator must be a vector or range")));
+            return Err(self.error(
+                node.p,
+                format!("{diagnostic_name}() iterator must be a vector or range"),
+            ));
         };
         let mut output = Vec::new();
         for value in values.iter() {
@@ -2444,7 +2868,9 @@ impl<'a> Evaluator<'a> {
         let value = self.eval_expression(&binding.value, ctx, 0)?;
         let values = self.stable_iterable(&value, ctx, binding.p)?;
         let Some(name) = &binding.name else {
-            self.warn(format!("Ignoring {diagnostic_name}() iterator without variable name"));
+            self.warn(format!(
+                "Ignoring {diagnostic_name}() iterator without variable name"
+            ));
             return Ok(());
         };
         for value in values {
@@ -2453,12 +2879,23 @@ impl<'a> Evaluator<'a> {
             let mut env = ctx.env.borrow().clone();
             env.insert(name.clone(), value);
             let overlay = self.stable_overlay_context(ctx, env);
-            self.for_visit_stable(node, bindings, binding_index + 1, &overlay, visit, diagnostic_name)?;
+            self.for_visit_stable(
+                node,
+                bindings,
+                binding_index + 1,
+                &overlay,
+                visit,
+                diagnostic_name,
+            )?;
         }
         Ok(())
     }
 
-    fn eval_assert_statement(&self, node: &'a CallNode, ctx: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+    fn eval_assert_statement(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
         if self.is_stable() {
             let resolved = self.resolve_stable_expression_arguments(
                 &node.call_arguments,
@@ -2477,15 +2914,23 @@ impl<'a> Evaluator<'a> {
             };
             if !truthy(&condition) {
                 let condition_text = match condition_argument {
-                    Some(argument) => compact_diagnostic_text(&self.slice_units(argument.p, argument.end), 240),
+                    Some(argument) => {
+                        compact_diagnostic_text(&self.slice_units(argument.p, argument.end), 240)
+                    }
                     None => "undef".to_string(),
                 };
                 let detail = if message_argument.is_some() {
-                    format!(": {}", compact_diagnostic_text(&format_value(&message), 240))
+                    format!(
+                        ": {}",
+                        compact_diagnostic_text(&format_value(&message), 240)
+                    )
                 } else {
                     String::new()
                 };
-                return Err(self.error(node.p, format!("Assertion '{condition_text}' failed{detail}")));
+                return Err(self.error(
+                    node.p,
+                    format!("Assertion '{condition_text}' failed{detail}"),
+                ));
             }
             return self.eval_nodes(&node.children, ctx, true);
         }
@@ -2499,11 +2944,17 @@ impl<'a> Evaluator<'a> {
         };
         if !truthy(&condition) {
             let detail = if bound.message.is_some() {
-                format!(": {}", compact_diagnostic_text(&value_to_string(&message), 240))
+                format!(
+                    ": {}",
+                    compact_diagnostic_text(&value_to_string(&message), 240)
+                )
             } else {
                 String::new()
             };
-            return Err(self.error(node.p, format!("Assertion '{}' failed{detail}", bound.condition_text)));
+            return Err(self.error(
+                node.p,
+                format!("Assertion '{}' failed{detail}", bound.condition_text),
+            ));
         }
         self.eval_nodes(&node.children, ctx, true)
     }
@@ -2512,7 +2963,8 @@ impl<'a> Evaluator<'a> {
         let args = call_args(node);
         let kinds = call_arg_kinds(node);
         let unknown = args.iter().find(|(key, _)| {
-            let named = kinds.iter().find(|(k, _)| k == key).map(|(_, kind)| *kind) == Some("named");
+            let named =
+                kinds.iter().find(|(k, _)| k == key).map(|(_, kind)| *kind) == Some("named");
             if named {
                 key != "condition" && key != "message"
             } else {
@@ -2520,7 +2972,10 @@ impl<'a> Evaluator<'a> {
             }
         });
         if let Some((unknown, _)) = unknown {
-            return Err(self.error(node.p, format!("assert() does not accept argument {unknown}")));
+            return Err(self.error(
+                node.p,
+                format!("assert() does not accept argument {unknown}"),
+            ));
         }
         let has = |key: &str| args.iter().any(|(k, _)| k == key);
         if has("_0") && has("condition") {
@@ -2570,13 +3025,25 @@ impl<'a> Evaluator<'a> {
     ) -> EvalResult<Vec<ShapeDescriptor>> {
         if self.is_stable() {
             let Some(definition_scope) = definition_scope else {
-                return Err(self.error(call.p, format!("Stable module {}() is missing its lexical scope", module.name)));
+                return Err(self.error(
+                    call.p,
+                    format!(
+                        "Stable module {}() is missing its lexical scope",
+                        module.name
+                    ),
+                ));
             };
             let module_stack = ctx.push_module(&module.name);
             let mut definition_env = definition_scope.env.borrow().clone();
             overlay_dynamic_variables(&mut definition_env, &ctx.env.borrow());
-            definition_env.insert("$children".to_string(), Value::Number(call.children.len() as f64));
-            definition_env.insert("$parent_modules".to_string(), Value::Number(module_stack.len() as f64));
+            definition_env.insert(
+                "$children".to_string(),
+                Value::Number(call.children.len() as f64),
+            );
+            definition_env.insert(
+                "$parent_modules".to_string(),
+                Value::Number(module_stack.len() as f64),
+            );
             let definition_ctx = Ctx {
                 env: env_of(definition_env.clone()),
                 stable_scope: Some(definition_scope.clone()),
@@ -2585,7 +3052,8 @@ impl<'a> Evaluator<'a> {
                 ..ctx.clone()
             };
             let args = &call.call_arguments;
-            let parameter_names: Vec<&str> = module.params.iter().map(|p| p.name.as_str()).collect();
+            let parameter_names: Vec<&str> =
+                module.params.iter().map(|p| p.name.as_str()).collect();
             let resolved = self.resolve_stable_expression_arguments(args, &parameter_names, ctx);
             let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
             for argument in args {
@@ -2655,7 +3123,11 @@ impl<'a> Evaluator<'a> {
     }
 
     /// `resolveOpenScadChildrenSelection` from the stable geometry semantics.
-    fn resolve_children_selection(&self, value: Option<&Value<'a>>, child_count: usize) -> EvalResult<Vec<usize>> {
+    fn resolve_children_selection(
+        &self,
+        value: Option<&Value<'a>>,
+        child_count: usize,
+    ) -> EvalResult<Vec<usize>> {
         let Some(value) = value else {
             return Ok((0..child_count).collect());
         };
@@ -2671,7 +3143,11 @@ impl<'a> Evaluator<'a> {
                 let epsilon = 1.0_f64.max(start.abs()).max(end.abs()) * 1e-12;
                 let mut output = Vec::new();
                 let mut item = *start;
-                while if forward { item <= end + epsilon } else { item >= end - epsilon } {
+                while if forward {
+                    item <= end + epsilon
+                } else {
+                    item >= end - epsilon
+                } {
                     if output.len() >= MAX_RANGE_ITEMS {
                         self.warn(format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS)));
                         return Ok(Vec::new());
@@ -2726,13 +3202,26 @@ impl<'a> Evaluator<'a> {
             env.insert("$fa".to_string(), Value::Number(12.0));
             env.insert("$fs".to_string(), Value::Number(2.0));
             env.insert("$t".to_string(), Value::Number(animation_time));
-            env.insert("$preview".to_string(), Value::Bool(self.quality == Quality::Preview));
-            env.insert("$vpt".to_string(), Value::vector(vec![
-                Value::Number(0.0), Value::Number(0.0), Value::Number(0.0),
-            ]));
-            env.insert("$vpr".to_string(), Value::vector(vec![
-                Value::Number(55.0), Value::Number(0.0), Value::Number(25.0),
-            ]));
+            env.insert(
+                "$preview".to_string(),
+                Value::Bool(self.quality == Quality::Preview),
+            );
+            env.insert(
+                "$vpt".to_string(),
+                Value::vector(vec![
+                    Value::Number(0.0),
+                    Value::Number(0.0),
+                    Value::Number(0.0),
+                ]),
+            );
+            env.insert(
+                "$vpr".to_string(),
+                Value::vector(vec![
+                    Value::Number(55.0),
+                    Value::Number(0.0),
+                    Value::Number(25.0),
+                ]),
+            );
             env.insert("$vpd".to_string(), Value::Number(140.0));
             env.insert("$vpf".to_string(), Value::Number(22.5));
             env
@@ -2787,7 +3276,10 @@ struct BoundAssert<'a> {
 }
 
 fn descriptor(name: &str, dimension: u8) -> ShapeDescriptor {
-    ShapeDescriptor { name: name.to_string(), dimension }
+    ShapeDescriptor {
+        name: name.to_string(),
+        dimension,
+    }
 }
 
 fn viewport_root_activates(node: &CallNode, shapes: &[ShapeDescriptor]) -> bool {
@@ -2841,7 +3333,10 @@ fn node_p(node: &Statement) -> usize {
     }
 }
 
-fn overlay_dynamic_variables<'a>(target: &mut HashMap<String, Value<'a>>, source: &HashMap<String, Value<'a>>) {
+fn overlay_dynamic_variables<'a>(
+    target: &mut HashMap<String, Value<'a>>,
+    source: &HashMap<String, Value<'a>>,
+) {
     for (name, value) in source {
         if name.starts_with('$') {
             target.insert(name.clone(), value.clone());
@@ -2853,7 +3348,11 @@ fn value_to_string(value: &Value) -> String {
     match value {
         Value::Vector(items) => format!(
             "[{}]",
-            items.iter().map(value_to_string).collect::<Vec<_>>().join(", ")
+            items
+                .iter()
+                .map(value_to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
         ),
         Value::Function(_) => "function(...)".to_string(),
         Value::Undef => "undef".to_string(),
@@ -2879,7 +3378,10 @@ fn collect_modules<'a>(nodes: &'a [Statement], modules: &mut HashMap<String, &'a
     }
 }
 
-fn collect_functions<'a>(nodes: &'a [Statement], functions: &mut HashMap<String, &'a FunctionNode>) {
+fn collect_functions<'a>(
+    nodes: &'a [Statement],
+    functions: &mut HashMap<String, &'a FunctionNode>,
+) {
     for node in nodes {
         match node {
             Statement::Function(function) => {

@@ -202,7 +202,11 @@ impl GpuMatcher {
     /// Nearest/second-nearest per row and nearest per column over the full
     /// descriptor grid. Mirrors the CPU scan's tie-breaking; float contraction
     /// may shift borderline distances, so GPU results are not bit-identical.
-    pub fn match_descriptors(&self, da: &[[f32; 128]], db: &[[f32; 128]]) -> (Vec<RowBest>, Vec<ColBest>) {
+    pub fn match_descriptors(
+        &self,
+        da: &[[f32; 128]],
+        db: &[[f32; 128]],
+    ) -> (Vec<RowBest>, Vec<ColBest>) {
         let rows = da.len() as u32;
         let cols = db.len() as u32;
         let device = &self.device;
@@ -218,12 +222,20 @@ impl GpuMatcher {
         // zero-size storage buffers.
         let buf_a = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("da"),
-            contents: if packed_a.is_empty() { &[0u8; 4] } else { &packed_a },
+            contents: if packed_a.is_empty() {
+                &[0u8; 4]
+            } else {
+                &packed_a
+            },
             usage: wgpu::BufferUsages::STORAGE,
         });
         let buf_b = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("db"),
-            contents: if packed_b.is_empty() { &[0u8; 4] } else { &packed_b },
+            contents: if packed_b.is_empty() {
+                &[0u8; 4]
+            } else {
+                &packed_b
+            },
             usage: wgpu::BufferUsages::STORAGE,
         });
         let row_bytes = (rows as u64) * 12;
@@ -257,15 +269,32 @@ impl GpuMatcher {
             label: Some("match_descriptors"),
             layout: &self.layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: params.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: buf_a.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: buf_b.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: out_rows.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: out_cols.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: buf_a.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: buf_b.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_rows.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: out_cols.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("match") });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("match"),
+        });
         if rows > 0 && cols > 0 {
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -323,7 +352,6 @@ fn pack_descriptors(data: &[[f32; 128]]) -> Vec<u8> {
     super::pack_f32(&flat)
 }
 
-
 thread_local! {
     // The device and pipelines are process-lifetime resources; leaking avoids
     // dropping wgpu objects inside a thread-local destructor.
@@ -353,7 +381,9 @@ mod tests {
             .map(|_| {
                 let mut d = [0f32; 128];
                 for v in &mut d {
-                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                    state = state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
                     *v = ((state >> 33) as f32 / 2147483648.0).fract();
                 }
                 d
@@ -361,7 +391,10 @@ mod tests {
             .collect()
     }
 
-    fn cpu_reference(da: &[[f32; 128]], db: &[[f32; 128]]) -> (Vec<(usize, f32, f32)>, Vec<(usize, f32)>) {
+    fn cpu_reference(
+        da: &[[f32; 128]],
+        db: &[[f32; 128]],
+    ) -> (Vec<(usize, f32, f32)>, Vec<(usize, f32)>) {
         let mut best_a = vec![(usize::MAX, f32::INFINITY, f32::INFINITY); da.len()];
         let mut best_b = vec![(usize::MAX, f32::INFINITY); db.len()];
         for (i, x) in da.iter().enumerate() {
@@ -388,9 +421,9 @@ mod tests {
 
     #[test]
     fn gpu_matching_agrees_with_cpu_on_synthetic_descriptors() {
-        let Some((da, db)) = match_pair(&descriptors(7, 300), &descriptors(11, 280)).map(|_| {
-            (descriptors(7, 300), descriptors(11, 280))
-        }) else {
+        let Some((da, db)) = match_pair(&descriptors(7, 300), &descriptors(11, 280))
+            .map(|_| (descriptors(7, 300), descriptors(11, 280)))
+        else {
             eprintln!("no GPU adapter; skipping");
             return;
         };
@@ -399,7 +432,10 @@ mod tests {
         let mut row_exact = 0;
         let mut row_close = 0;
         for (gpu, cpu) in rows.iter().zip(&ref_a) {
-            if gpu.j == cpu.0 && gpu.d1.to_bits() == cpu.1.to_bits() && gpu.d2.to_bits() == cpu.2.to_bits() {
+            if gpu.j == cpu.0
+                && gpu.d1.to_bits() == cpu.1.to_bits()
+                && gpu.d2.to_bits() == cpu.2.to_bits()
+            {
                 row_exact += 1;
             }
             // GPU float contraction may shift borderline distances; the selected
@@ -414,7 +450,11 @@ mod tests {
             .filter(|(gpu, cpu)| gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
             .count();
         assert_eq!(row_close, ref_a.len(), "row selections must agree with CPU");
-        assert_eq!(col_exact, ref_b.len(), "column selections must agree with CPU");
+        assert_eq!(
+            col_exact,
+            ref_b.len(),
+            "column selections must agree with CPU"
+        );
         eprintln!("bit-exact rows: {row_exact}/{}", ref_a.len());
     }
 }

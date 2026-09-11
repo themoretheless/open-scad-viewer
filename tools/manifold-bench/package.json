@@ -1,0 +1,17 @@
+{
+  "name": "open-scad-viewer-manifold-bench",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Sidecar Manifold comparison benches. Not part of the product runtime.",
+  "scripts": {
+    "bench:cpu": "node bench-cpu.mjs",
+    "bench:memory": "node --expose-gc bench-memory.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "manifold-3d": "3.5.1"
+  }
+}

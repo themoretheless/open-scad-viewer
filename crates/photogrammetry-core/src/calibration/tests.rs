@@ -267,7 +267,14 @@ fn measured_mixed_cameras_reduce_known_3d_error_in_rendered_images() {
     }
     let before_rmse = (before_squared / points.len() as f64).sqrt();
     let after_rmse = (after_squared / points.len() as f64).sqrt();
-    println!("CALIBRATION_MEASUREMENT {{\"scene\":\"brown_rgb_known_extrinsics\",\"views\":2,\"landmarks\":{},\"before_3d_rmse\":{},\"after_3d_rmse\":{},\"units\":\"synthetic scene units\",\"output_focals\":[{},{}],\"blind_sfm\":false}}", points.len(), before_rmse, after_rmse, after[0].focal, after[1].focal);
+    println!(
+        "CALIBRATION_MEASUREMENT {{\"scene\":\"brown_rgb_known_extrinsics\",\"views\":2,\"landmarks\":{},\"before_3d_rmse\":{},\"after_3d_rmse\":{},\"units\":\"synthetic scene units\",\"output_focals\":[{},{}],\"blind_sfm\":false}}",
+        points.len(),
+        before_rmse,
+        after_rmse,
+        after[0].focal,
+        after[1].focal
+    );
     assert!(
         after_rmse < before_rmse * 0.1,
         "before={before_rmse}, after={after_rmse}"

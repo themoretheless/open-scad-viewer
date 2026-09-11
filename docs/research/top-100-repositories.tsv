@@ -39,7 +39,6 @@ BelfrySCAD/BOSL2	2266	https://github.com/BelfrySCAD/BOSL2	false	false	2026-06-29
 kennetek/gridfinity-rebuilt-openscad	2200	https://github.com/kennetek/gridfinity-rebuilt-openscad	false	false	2025-08-31T23:35:30Z	NOASSERTION	A ground-up rebuild of the stock gridfinity bins in OpenSCAD
 mkeeter/antimony	2186	https://github.com/mkeeter/antimony	false	false	2025-10-12T13:01:34Z		CAD from a parallel universe
 webgpu/webgpu-samples	2146	https://github.com/webgpu/webgpu-samples	false	false	2026-07-07T02:30:08Z	BSD-3-Clause	WebGPU Samples
-elalish/manifold	2131	https://github.com/elalish/manifold	false	false	2026-07-11T11:16:37Z	Apache-2.0	Geometry library for topological robustness
 CesiumGS/gltf-pipeline	2121	https://github.com/CesiumGS/gltf-pipeline	false	false	2026-06-23T13:27:31Z	Apache-2.0	Content pipeline tools for optimizing glTF assets. :globe_with_meridians:
 fougue/mayo	2094	https://github.com/fougue/mayo	false	false	2026-07-03T13:02:56Z	BSD-2-Clause	3D CAD viewer and converter based on Qt + OpenCascade
 microsoft/maker.js	2012	https://github.com/microsoft/maker.js	false	false	2026-06-27T21:35:50Z	Apache-2.0	📐⚙ 2D vector line drawing and shape modeling for CNC and laser cutters.

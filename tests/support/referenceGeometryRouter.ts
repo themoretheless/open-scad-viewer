@@ -8,7 +8,7 @@
 export type ReferenceRouteOutcome = {
   kind: 'route'
   languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
-  engineClass: 'manifold' | 'brep'
+  engineClass: 'mesh' | 'brep'
   requiredCapabilities: string[]
 } | {
   kind: 'error'
@@ -194,7 +194,7 @@ export function referenceGeometryRoute(source: string): ReferenceRouteOutcome {
   return {
     kind: 'route',
     languageContract,
-    engineClass: languageContract === 'legacy/current' ? 'manifold' : 'brep',
+    engineClass: languageContract === 'legacy/current' ? 'mesh' : 'brep',
     requiredCapabilities: [...capabilities].sort(),
   }
 }

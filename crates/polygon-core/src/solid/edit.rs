@@ -1,5 +1,5 @@
 //! Mesh-native edits; topology checks do not certify absence of self-intersections.
-use crate::{BuiltMesh, Error, Mesh, Result};
+use crate::{BuiltMesh, Mesh, Result, error};
 use std::collections::{BTreeMap, BTreeSet};
 fn finish(mesh: Mesh) -> Result<BuiltMesh> {
     let report = mesh.inspect()?;
@@ -7,18 +7,18 @@ fn finish(mesh: Mesh) -> Result<BuiltMesh> {
         || report.non_manifold_edges > 0
         || report.orientation_conflicts > 0
     {
-        return Err(Error::new("Edit creates invalid triangle topology"));
+        return Err(error("Edit creates invalid triangle topology"));
     }
     Ok(BuiltMesh { mesh, report })
 }
 pub fn deform(mesh: &Mesh, operation: &geometry_ops::Deformation) -> Result<BuiltMesh> {
     mesh.validate()?;
-    operation.validate().map_err(Error::new)?;
+    operation.validate()?;
     let mut result = mesh.clone();
     result.positions = mesh
         .positions
         .chunks_exact(3)
-        .map(|p| operation.apply([p[0], p[1], p[2]]).map_err(Error::new))
+        .map(|p| operation.apply([p[0], p[1], p[2]]))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
         .flatten()
@@ -27,12 +27,12 @@ pub fn deform(mesh: &Mesh, operation: &geometry_ops::Deformation) -> Result<Buil
 }
 pub fn brush(mesh: &Mesh, brush: &geometry_ops::Brush) -> Result<BuiltMesh> {
     mesh.validate()?;
-    brush.validate().map_err(Error::new)?;
+    brush.validate()?;
     let mut result = mesh.clone();
     result.positions = mesh
         .positions
         .chunks_exact(3)
-        .map(|p| brush.apply([p[0], p[1], p[2]]).map_err(Error::new))
+        .map(|p| brush.apply([p[0], p[1], p[2]]))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
         .flatten()
@@ -45,16 +45,14 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
     let mesh = crate::solid::proximity::valid_source(mesh, 10_000)?;
     let source = mesh.inspect()?;
     if source.non_manifold_edges > 0 || source.orientation_conflicts > 0 {
-        return Err(Error::new(
-            "Face extrusion requires manifold oriented input",
-        ));
+        return Err(error("Face extrusion requires manifold oriented input"));
     }
     if triangles.is_empty()
         || triangles.iter().any(|&i| i >= mesh.indices.len() / 3)
         || vector.iter().any(|v| !v.is_finite())
         || vector.iter().map(|v| v * v).sum::<f64>() <= 1e-24
     {
-        return Err(Error::new("Invalid face extrusion selection/vector"));
+        return Err(error("Invalid face extrusion selection/vector"));
     }
     let selected: BTreeSet<_> = triangles.iter().copied().collect();
     let mut edges: BTreeMap<(usize, usize), Vec<(usize, usize)>> = BTreeMap::new();
@@ -74,10 +72,10 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
         .map(|u| u[0])
         .collect();
     if boundary.is_empty() {
-        return Err(Error::new("Face selection has no extrusion boundary"));
+        return Err(error("Face selection has no extrusion boundary"));
     }
     if mesh.indices.len() / 3 + boundary.len() * 2 > 20_000 {
-        return Err(Error::new("Extrusion triangle budget exceeded"));
+        return Err(error("Extrusion triangle budget exceeded"));
     }
     let mut positions = mesh.positions.clone();
     let mut remap = BTreeMap::new();
@@ -104,9 +102,7 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
         uv: None,
     })?)?;
     if source.closed && !result.report.closed {
-        return Err(Error::new(
-            "Face extrusion did not preserve closed topology",
-        ));
+        return Err(error("Face extrusion did not preserve closed topology"));
     }
     Ok(result)
 }

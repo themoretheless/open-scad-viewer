@@ -264,7 +264,7 @@ function isExecutionDescriptor(
     ])
     || (value.languageContract !== 'legacy/current'
       && value.languageContract !== 'openscad-viewer/brep-1')
-    || (value.engineClass !== 'manifold' && value.engineClass !== 'brep')
+    || (value.engineClass !== 'mesh' && value.engineClass !== 'brep')
     || value.engineClass !== geometryEngineClassForLanguageContract(value.languageContract)
     || typeof value.engineKey !== 'string' || !value.engineKey
     || typeof value.kernelFingerprint !== 'string' || !value.kernelFingerprint
@@ -274,7 +274,7 @@ function isExecutionDescriptor(
     || value.purpose !== quality
     || value.quality !== quality
     || (value.representation !== 'mesh' && value.representation !== 'brep')
-    || (value.engineClass === 'manifold' && value.representation !== 'mesh')
+    || (value.engineClass === 'mesh' && value.representation !== 'mesh')
     || (allowedEvidence === 'runtime'
       ? value.evidence !== 'runtime'
       : value.evidence !== 'runtime' && value.evidence !== 'planned')

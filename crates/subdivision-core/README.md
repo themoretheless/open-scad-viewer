@@ -1,10 +1,10 @@
-# subdivision-kernel
+# subdivision-core
 
 Own Rust Catmull–Clark implementation, without C/C++ or OpenSubdiv runtime.
 `Cage { vertices, faces }` stores an indexed, consistently oriented polygon control
 mesh. `subdivide(levels)` returns a new cage and original polygon IDs.
-`Refined::triangulate()` returns the shared `polygon_kernel::Mesh` and one original
-face ID per triangle. The source cage remains the editable representation.
+`Refined::triangulate()` returns a neutral `geometry_ops::Triangles` buffer and one
+original face ID per triangle. The source cage remains the editable representation.
 
 Boundary vertices use `(6P + previous + next)/8`; boundary edge points are midpoints.
 Interior face, edge and vertex points follow Catmull–Clark rules. Disconnected

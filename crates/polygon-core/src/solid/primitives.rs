@@ -1,7 +1,7 @@
 //! Mesh primitives: cube / cylinder / sphere, join, hull, clean.
 //! Closed-ring boolean lives in `planar_geometry::rings`.
-use crate::{check, cross, norm, sub, Mesh, Result};
-use planar_geometry::rings::{area, cross2, inside, planar, sub2, Rings};
+use crate::{Mesh, Result, check, cross, norm, sub};
+use planar_geometry::rings::{Rings, area, cross2, inside, planar, sub2};
 use std::collections::{BTreeSet, HashMap};
 
 pub fn empty() -> Mesh {
@@ -441,7 +441,7 @@ pub fn triangulate(profile: &crate::solid::modeling::Profile) -> Result<Mesh> {
                 }
                 true
             })
-            .ok_or_else(|| crate::Error::new("No visible bridge for profile hole"))?;
+            .ok_or_else(|| crate::error("No visible bridge for profile hole"))?;
         let mut ids = Vec::new();
         for p in h {
             ids.push(m.positions.len() / 3);
@@ -485,7 +485,7 @@ pub fn triangulate(profile: &crate::solid::modeling::Profile) -> Result<Mesh> {
             m.indices.extend(t);
             remaining.remove(i);
         } else {
-            return Err(crate::Error::new(
+            return Err(crate::error(
                 "Profile cannot be triangulated without crossing its boundary",
             ));
         }

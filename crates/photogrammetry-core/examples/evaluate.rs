@@ -1,5 +1,5 @@
 //! Compare ASCII XYZ or ASCII PLY vertices in an already established common frame.
-use photogrammetry_core::evaluation::{evaluate_clouds, DistanceSummary, EvaluationOptions};
+use photogrammetry_core::evaluation::{DistanceSummary, EvaluationOptions, evaluate_clouds};
 use std::{
     fs,
     io::{BufRead, BufReader, Read},
@@ -86,7 +86,7 @@ fn read_points(path: &str) -> Result<Vec<[f64; 3]>, Box<dyn std::error::Error>> 
                     in_vertices = false;
                 }
                 ["property", "list", ..] if in_vertices => {
-                    return Err("List vertex properties are unsupported".into())
+                    return Err("List vertex properties are unsupported".into());
                 }
                 ["property", _, name] if in_vertices => {
                     if properties.len() >= 64 {
@@ -141,8 +141,10 @@ fn read_points(path: &str) -> Result<Vec<[f64; 3]>, Box<dyn std::error::Error>> 
 }
 
 fn summary(s: &DistanceSummary) -> String {
-    format!("{{\"samples\":{},\"mean\":{},\"median\":{},\"p95\":{},\"maximum\":{},\"within_tolerance\":{}}}",
-        s.samples, s.mean, s.median, s.p95, s.maximum, s.within_tolerance)
+    format!(
+        "{{\"samples\":{},\"mean\":{},\"median\":{},\"p95\":{},\"maximum\":{},\"within_tolerance\":{}}}",
+        s.samples, s.mean, s.median, s.p95, s.maximum, s.within_tolerance
+    )
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -158,10 +160,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;
-    println!("{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"evaluation_ms\":{}}}",
-        options.tolerance, options.voxel_size.map(|v| v.to_string()).unwrap_or("null".into()),
-        r.input_reconstructed, r.input_reference, summary(&r.reconstructed_to_reference), summary(&r.reference_to_reconstructed),
-        r.precision, r.recall, r.f1, r.symmetric_mean, started.elapsed().as_secs_f64() * 1000.);
+    println!(
+        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"evaluation_ms\":{}}}",
+        options.tolerance,
+        options
+            .voxel_size
+            .map(|v| v.to_string())
+            .unwrap_or("null".into()),
+        r.input_reconstructed,
+        r.input_reference,
+        summary(&r.reconstructed_to_reference),
+        summary(&r.reference_to_reconstructed),
+        r.precision,
+        r.recall,
+        r.f1,
+        r.symmetric_mean,
+        started.elapsed().as_secs_f64() * 1000.
+    );
     Ok(())
 }
 
@@ -201,16 +216,20 @@ mod tests {
     #[test]
     fn nonvertex_data_cannot_be_misread_as_coordinates() {
         let text = "ply\nformat ascii 1.0\nelement face 1\nproperty list uchar int vertex_indices\nelement vertex 1\nproperty float x\nproperty float y\nproperty float z\nend_header\n3 0 1 2\n1 2 3\n";
-        assert!(parse_fixture(text)
-            .unwrap_err()
-            .to_string()
-            .contains("vertices must precede"));
+        assert!(
+            parse_fixture(text)
+                .unwrap_err()
+                .to_string()
+                .contains("vertices must precede")
+        );
     }
     #[test]
     fn an_oversized_line_is_rejected_before_collecting_fields() {
-        assert!(parse_fixture(&"1 ".repeat(20_000))
-            .unwrap_err()
-            .to_string()
-            .contains("16 KiB"));
+        assert!(
+            parse_fixture(&"1 ".repeat(20_000))
+                .unwrap_err()
+                .to_string()
+                .contains("16 KiB")
+        );
     }
 }

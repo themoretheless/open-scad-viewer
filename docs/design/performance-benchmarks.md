@@ -15,7 +15,7 @@ npm run bench:cpu -- --profiles build,stl --out tmp/performance/cpu-profiles
 npm run bench:gpu -- --out tmp/performance/gpu-baseline
 npm run bench:gpu -- --heap-sampling --out tmp/performance/gpu-profiles
 npm run bench:gpu -- --fps --fps-diagnostics --frames 100 --warmup 20 --out tmp/performance/fps
-npm run bench:memory -- tmp/performance/manifold-memory.json
+npm run bench:memory -- tmp/performance/cad-memory.json
 ```
 
 Each output directory must be new. CPU defaults to four fixtures, two warmups
@@ -133,3 +133,7 @@ invalidation; persistent scratch storage needs bounded ownership.
 
 The upstream official OpenSCAD runtime and experimental geometry-compute pilot
 are separate execution paths and are outside these benchmark results.
+
+Foreign `manifold-3d` comparison timings are also outside the product. Install
+and run them only from [`tools/manifold-bench`](../../tools/manifold-bench/README.md);
+do not add that package to the application lockfile.

@@ -1,10 +1,10 @@
 use planar_geometry::rings as cad;
 use polygon_core::{
+    Mesh,
     solid::{
         modeling, primitives as mesh,
         section::{MeshSection, MeshSectionIndex},
     },
-    Mesh,
 };
 
 fn area(section: &MeshSection) -> f64 {
@@ -55,10 +55,12 @@ fn box_uses_documented_half_open_rule_at_horizontal_faces() {
         assert_eq!(section.candidate_triangles, 8);
         for contour in &section.contours {
             assert_eq!(contour.points.len(), contour.source_triangles.len());
-            assert!(contour
-                .source_triangles
-                .iter()
-                .all(|&t| t < mesh.indices.len() / 3));
+            assert!(
+                contour
+                    .source_triangles
+                    .iter()
+                    .all(|&t| t < mesh.indices.len() / 3)
+            );
         }
     }
     for z in [-1., -1e-12, 4., 5.] {

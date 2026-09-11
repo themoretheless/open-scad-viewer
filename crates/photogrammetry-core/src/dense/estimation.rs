@@ -347,8 +347,8 @@ pub(super) fn estimate(
     options: &DenseOptions,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<(Vec<DepthMap>, DenseDiagnostics)> {
-    let grayscale = prepare_grayscale(images,sparse,options,progress)?;
-    estimate_prepared(images,sparse,options,&grayscale,progress)
+    let grayscale = prepare_grayscale(images, sparse, options, progress)?;
+    estimate_prepared(images, sparse, options, &grayscale, progress)
 }
 
 pub(super) fn prepare_grayscale(
@@ -380,7 +380,6 @@ pub(super) fn prepare_grayscale(
     }
     Ok(grayscale)
 }
-
 
 /// Shared per-view preamble: map geometry, source selection and the sparse
 /// depth range. None marks the historical skip cases (small map, too few
@@ -429,7 +428,15 @@ fn view_preamble<'a>(
     if !far.is_finite() || far <= near {
         return None;
     }
-    Some(ViewPreamble { reference, width, height, step, near, far, neighbors })
+    Some(ViewPreamble {
+        reference,
+        width,
+        height,
+        step,
+        near,
+        far,
+        neighbors,
+    })
 }
 
 /// Rotation/translation carrying a reference-frame point into this source
@@ -466,11 +473,9 @@ fn build_view_sources<'a>(
                     mv(
                         rotation,
                         [
-                            ((i % patch_side) as f64 - patch_radius as f64)
-                                * source_step
+                            ((i % patch_side) as f64 - patch_radius as f64) * source_step
                                 / reference.focal,
-                            ((i / patch_side) as f64 - patch_radius as f64)
-                                * source_step
+                            ((i / patch_side) as f64 - patch_radius as f64) * source_step
                                 / reference.focal,
                             0.,
                         ],
@@ -524,11 +529,23 @@ pub(super) fn estimate_prepared(
             continue;
         };
         let gray = grayscale[index].as_ref().unwrap();
-        let (width, height, step, near, far) =
-            (preamble.width, preamble.height, preamble.step, preamble.near, preamble.far);
+        let (width, height, step, near, far) = (
+            preamble.width,
+            preamble.height,
+            preamble.step,
+            preamble.near,
+            preamble.far,
+        );
         let neighbors = &preamble.neighbors;
-        let build_sources =
-            |source_step: f64| build_view_sources(sparse, grayscale, &preamble, options.patch_radius, source_step);
+        let build_sources = |source_step: f64| {
+            build_view_sources(
+                sparse,
+                grayscale,
+                &preamble,
+                options.patch_radius,
+                source_step,
+            )
+        };
         let mut sources = build_sources(step);
         if options.estimator == DenseEstimator::SlantedPlane {
             let (depth, confidence) = super::plane::estimate(
@@ -727,12 +744,21 @@ pub fn prepare_host_views(
     let mut views: Vec<Option<HostSweepView>> = (0..images.len()).map(|_| None).collect();
     let mut prepared: Vec<Option<PreparedView>> = (0..images.len()).map(|_| None).collect();
     for (view_number, &(index, reference)) in active.iter().enumerate() {
-        cancelled(progress, "depth", view_number * options.max_side, active.len() * options.max_side)?;
+        cancelled(
+            progress,
+            "depth",
+            view_number * options.max_side,
+            active.len() * options.max_side,
+        )?;
         let Some(preamble) = view_preamble(images, sparse, options, index, reference) else {
             continue;
         };
         let hypotheses = hypothesis_grid(preamble.near, preamble.far, options.depth_hypotheses);
-        let needed = preamble.neighbors.len().min(2).max(options.min_support_views);
+        let needed = preamble
+            .neighbors
+            .len()
+            .min(2)
+            .max(options.min_support_views);
         let ranges = if options.sparse_depth_prior {
             sparse_intervals(
                 sparse,
@@ -814,7 +840,12 @@ pub fn finish_host_views(
     let mut diagnostics = DenseDiagnostics::default();
     let patch_side = options.patch_radius * 2 + 1;
     for (view_number, &(index, reference)) in active.iter().enumerate() {
-        cancelled(progress, "depth", view_number * options.max_side, active.len() * options.max_side)?;
+        cancelled(
+            progress,
+            "depth",
+            view_number * options.max_side,
+            active.len() * options.max_side,
+        )?;
         let (Some(prep), Some(view_scores)) = (&prepared[index], &scores[index]) else {
             continue;
         };
@@ -825,15 +856,21 @@ pub fn finish_host_views(
                 view_scores.len()
             ));
         }
-        let sources = build_view_sources(sparse, grayscale, &ViewPreamble {
-            reference,
-            width: prep.width,
-            height: prep.height,
-            step: prep.step,
-            near: prep.near,
-            far: prep.far,
-            neighbors: prep.neighbors.clone(),
-        }, options.patch_radius, prep.step);
+        let sources = build_view_sources(
+            sparse,
+            grayscale,
+            &ViewPreamble {
+                reference,
+                width: prep.width,
+                height: prep.height,
+                step: prep.step,
+                near: prep.near,
+                far: prep.far,
+                neighbors: prep.neighbors.clone(),
+            },
+            options.patch_radius,
+            prep.step,
+        );
         // The host evaluated every hypothesis/source/tap without early exits;
         // counters report that full work, as in the native GPU mode.
         let pixels = (prep.width - 6) * (prep.height - 6);
@@ -903,7 +940,10 @@ fn sparse_intervals(
         if !point.observations.iter().any(|&(view, _)| view == image) {
             continue;
         }
-        let z = add(mv(reference.rotation, point.position), reference.translation)[2];
+        let z = add(
+            mv(reference.rotation, point.position),
+            reference.translation,
+        )[2];
         if !z.is_finite() || z <= 0. {
             continue;
         }
@@ -983,7 +1023,6 @@ fn coarse_intervals(
     }
     (lo, hi)
 }
-
 
 /// Per-pixel selection over a host/GPU-computed score map (f32 widened to f64,
 /// exact widening), shared by the native GPU sweep and the browser host path.
@@ -1069,7 +1108,9 @@ fn pick_depth(
     // in-range peak is implausible, the range was wrong for this pixel:
     // fall back to the historical full-range selection.
     let ranged = bin_lo > 0 || bin_hi < last;
-    let best_ranged = (bin_lo..=bin_hi).max_by(|&a, &b| scores[a].total_cmp(&scores[b])).unwrap();
+    let best_ranged = (bin_lo..=bin_hi)
+        .max_by(|&a, &b| scores[a].total_cmp(&scores[b]))
+        .unwrap();
     let (best, alternative) = if ranged && scores[best_ranged] >= options.min_correlation {
         let alternative = (0..options.depth_hypotheses)
             .filter(|&d| d + 3 < bin_lo || d > bin_hi + 3)
@@ -1270,9 +1311,11 @@ fn sweep_depth(
                         break;
                     }
                     diagnostics.evaluated_source_patches += 1;
-                    if let Some(ncc) =
-                        source.score(&patch, hypotheses[d], &mut diagnostics.sampled_source_pixels)
-                    {
+                    if let Some(ncc) = source.score(
+                        &patch,
+                        hypotheses[d],
+                        &mut diagnostics.sampled_source_pixels,
+                    ) {
                         if ncc > 0.4 {
                             sum += ncc;
                             count += 1;
@@ -1312,7 +1355,9 @@ mod tests {
         let mut rng = 0xABCDEFu64;
         let mut tex = vec![0f32; 80 * 80];
         for v in &mut tex {
-            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *v = (rng >> 33) as f32 / 2147483648.0;
         }
         let mut src_values = vec![0f32; 80 * 80];
@@ -1321,7 +1366,12 @@ mod tests {
                 src_values[y * 80 + x] = tex[y * 80 + x + 10];
             }
         }
-        let ref_image = Image { width: 80, height: 80, rgb: vec![], focal: 80. };
+        let ref_image = Image {
+            width: 80,
+            height: 80,
+            rgb: vec![],
+            focal: 80.,
+        };
         let _ = &ref_image;
         let reference = Camera::identity(80., 40., 40.);
         let source_camera = Camera {
@@ -1331,8 +1381,16 @@ mod tests {
             cx: 40.,
             cy: 40.,
         };
-        let ref_gray = GrayImage { width: 80, height: 80, values: tex };
-        let src_gray = GrayImage { width: 80, height: 80, values: src_values };
+        let ref_gray = GrayImage {
+            width: 80,
+            height: 80,
+            values: tex,
+        };
+        let src_gray = GrayImage {
+            width: 80,
+            height: 80,
+            values: src_values,
+        };
         let build = |step: f64| {
             vec![Source {
                 image: &src_gray,
@@ -1393,9 +1451,15 @@ mod tests {
                 }
             }
         }
-        eprintln!("valid={valid} agree={agree} cpu[820]={} gpu[820]={}", cpu[820], gpu[820]);
+        eprintln!(
+            "valid={valid} agree={agree} cpu[820]={} gpu[820]={}",
+            cpu[820], gpu[820]
+        );
         assert!(valid > 400, "plane should be mostly valid: {valid}");
-        assert!(agree as f64 >= 0.95 * valid as f64, "GPU depth rows disagree: {agree}/{valid}");
+        assert!(
+            agree as f64 >= 0.95 * valid as f64,
+            "GPU depth rows disagree: {agree}/{valid}"
+        );
     }
 
     #[cfg(feature = "gpu")]
@@ -1407,7 +1471,9 @@ mod tests {
         let mut rng = 0xABCDEFu64;
         let mut tex = vec![0f32; 80 * 80];
         for v in &mut tex {
-            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *v = (rng >> 33) as f32 / 2147483648.0;
         }
         let mut src_values = vec![0f32; 80 * 80];
@@ -1417,10 +1483,24 @@ mod tests {
             }
         }
         let reference = Camera::identity(80., 40., 40.);
-        let source_camera = Camera { rotation: ID, translation: [-0.5, 0., 0.], focal: 80., cx: 40., cy: 40. };
+        let source_camera = Camera {
+            rotation: ID,
+            translation: [-0.5, 0., 0.],
+            focal: 80.,
+            cx: 40.,
+            cy: 40.,
+        };
         let gray = [
-            Some(GrayImage { width: 80, height: 80, values: tex }),
-            Some(GrayImage { width: 80, height: 80, values: src_values }),
+            Some(GrayImage {
+                width: 80,
+                height: 80,
+                values: tex,
+            }),
+            Some(GrayImage {
+                width: 80,
+                height: 80,
+                values: src_values,
+            }),
         ];
         let point = |x, y, z| crate::Point {
             position: [x, y, z],
@@ -1440,8 +1520,18 @@ mod tests {
             reprojection_rmse: 0.,
         };
         let images = [
-            Image { width: 80, height: 80, rgb: vec![], focal: 80. },
-            Image { width: 80, height: 80, rgb: vec![], focal: 80. },
+            Image {
+                width: 80,
+                height: 80,
+                rgb: vec![],
+                focal: 80.,
+            },
+            Image {
+                width: 80,
+                height: 80,
+                rgb: vec![],
+                focal: 80.,
+            },
         ];
         let options = DenseOptions {
             depth_hypotheses: 16,
@@ -1490,7 +1580,10 @@ mod tests {
             eprintln!("no GPU adapter; skipping");
             return;
         };
-        let scores: Vec<Option<Vec<f32>>> = views.iter().map(|v| v.as_ref().and_then(run_scores)).collect();
+        let scores: Vec<Option<Vec<f32>>> = views
+            .iter()
+            .map(|v| v.as_ref().and_then(run_scores))
+            .collect();
         let (maps, _) = finish_host_views(
             &images,
             &sparse,
@@ -1508,7 +1601,11 @@ mod tests {
             rotation: ID,
             translation: [-0.5, 0., 0.],
             offsets: std::array::from_fn(|i| {
-                [((i % 3) as f64 - 1.) * 1.25 / 80., ((i / 3) as f64 - 1.) * 1.25 / 80., 0.]
+                [
+                    ((i % 3) as f64 - 1.) * 1.25 / 80.,
+                    ((i / 3) as f64 - 1.) * 1.25 / 80.,
+                    0.,
+                ]
             }),
             rays: [[0.; 3]; 25],
         }];
@@ -1540,7 +1637,10 @@ mod tests {
             }
         }
         assert!(valid > 400, "plane should be mostly valid: {valid}");
-        assert!(agree as f64 >= 0.95 * valid as f64, "host split disagrees: {agree}/{valid}");
+        assert!(
+            agree as f64 >= 0.95 * valid as f64,
+            "host split disagrees: {agree}/{valid}"
+        );
     }
 
     #[test]

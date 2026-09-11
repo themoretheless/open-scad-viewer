@@ -1,4 +1,4 @@
-/** Bounded inputs for the browser's Manifold-backed OpenSCAD subset. */
+/** Bounded inputs for the browser's own-Rust OpenSCAD subset. */
 export const cpuFixtures = [
   {
     id: 'small-bracket',

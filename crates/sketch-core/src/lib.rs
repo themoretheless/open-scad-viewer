@@ -1,5 +1,8 @@
 //! Shared bounded 2D sketch solver. Independent of polygon and NURBS geometry.
-pub type Result<T> = std::result::Result<T, String>;
+pub use math_core::{Error, Result};
+fn error(message: impl Into<String>) -> Error {
+    Error::new("SKETCH_INVALID_INPUT", message)
+}
 #[derive(Clone, Debug)]
 pub struct Circle {
     pub center: usize,
@@ -597,7 +600,7 @@ impl Sketch {
                     || c.radius > 1e6
             })
         {
-            return Err("Sketch input or budget invalid".into());
+            return Err(error("Sketch input or budget invalid"));
         }
         let point = |i: usize| i < self.points.len();
         let circle = |i: usize| i < self.circles.len();
@@ -625,7 +628,7 @@ impl Sketch {
                 Constraint::TangentCircles { a, b, .. } => circle(a) && circle(b) && a != b,
             };
             if !valid {
-                return Err("Invalid sketch constraint reference/value".into());
+                return Err(error("Invalid sketch constraint reference/value"));
             }
         }
         Ok(())
@@ -747,7 +750,7 @@ fn rank(mut a: Vec<Vec<f64>>, n: usize) -> usize {
 pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
     sketch.validate()?;
     if !tolerance.is_finite() || !(1e-8..=0.01).contains(&tolerance) {
-        return Err("Invalid solver tolerance".into());
+        return Err(error("Invalid solver tolerance"));
     }
     let mut x: Vec<_> = sketch
         .points

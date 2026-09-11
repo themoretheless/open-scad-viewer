@@ -20,10 +20,9 @@ Two independent domain libraries live in the Cargo workspace under `crates/`:
 
 The ModelGraph Text frontend and canonical graph compiler also run in Rust.
 The legacy OpenSCAD evaluator and host/renderer adapters remain TypeScript.
-`src/services/ownGeometryModule.ts` implements the legacy handle API; its
-`Manifold` class name is compatibility terminology, not an imported package.
-The persisted routing class `manifold` is retained for historical records, while
-new results identify `own-rust-cad-v1` and an exact WASM SHA-256 fingerprint.
+The mesh engine is the workspace CAD kernel (`own-rust-cad-v1`) with an exact
+WASM SHA-256 fingerprint. A foreign Manifold comparison bench, if needed, lives
+only in `tools/manifold-bench` and is not a product dependency.
 
 The CAD implementation includes planar arrangements, offsets, ear-clipped caps,
 extrusion/revolution, hulls, bounded BSP booleans, slicing/projection and convex
@@ -45,7 +44,7 @@ npm run build:geometry
 npm run test:geometry
 ```
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. The Cargo workspace uses only repository-owned crates; the WASM boundary uses the MGV1 binary protocol and direct exports. `build:nurbs` and `test:nurbs` remain compatibility aliases. See [the library contract](crates/README.md) for native and host APIs.
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. The Cargo workspace uses only repository-owned crates; the WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust is pinned in `rust-toolchain.toml` (1.98.1).
 
 ## Highlights
 

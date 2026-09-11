@@ -1,8 +1,9 @@
 [package]
 name = "sdf-core"
 version = "0.1.0"
-edition = "2021"
-publish = false
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 
 [features]
 gpu = ["dep:gpu-compute"]
@@ -12,3 +13,4 @@ math-core = { path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
+planar-geometry = { path = "../planar-geometry" }

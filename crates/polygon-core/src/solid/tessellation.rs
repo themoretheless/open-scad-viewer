@@ -1,6 +1,6 @@
 //! Parametric surface meshing and polygonal UV clipping. The sampler contract
 //! supports any surface implementation; this module knows nothing about NURBS.
-use crate::{check, norm, sub, BuiltMesh, Construction, Error, Mesh, Result, Seams, MAX_TRIANGLES};
+use crate::{BuiltMesh, Construction, MAX_TRIANGLES, Mesh, Result, Seams, check, error, norm, sub};
 use std::collections::BTreeMap;
 pub type UV = [f64; 2];
 #[derive(Clone, Debug)]
@@ -359,7 +359,10 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
                 if !clipped.is_empty() {
                     cells.push(clipped);
                 }
-                check(cells.len()*3<=budget,"Trim tessellation exceeds the triangle budget; reduce segment counts or trim complexity.")?;
+                check(
+                    cells.len() * 3 <= budget,
+                    "Trim tessellation exceeds the triangle budget; reduce segment counts or trim complexity.",
+                )?;
             }
         }
     }
@@ -422,7 +425,10 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
                 vertex(a, &mut uv, &mut map),
                 vertex(b, &mut uv, &mut map),
             ]);
-            check(indices.len()/3<=budget,"Trim tessellation exceeds the triangle budget; reduce segment counts or trim complexity.")?;
+            check(
+                indices.len() / 3 <= budget,
+                "Trim tessellation exceeds the triangle budget; reduce segment counts or trim complexity.",
+            )?;
         }
     }
     let mut positions = Vec::new();
@@ -488,7 +494,7 @@ fn weld(mesh: &mut Mesh, boundary: &Boundary) -> Result<()> {
     let uv = mesh
         .uv
         .as_ref()
-        .ok_or_else(|| Error::new("Welding requires UV coordinates."))?;
+        .ok_or_else(|| error("Welding requires UV coordinates."))?;
     let tolerance =
         mesh.positions.iter().map(|v| v.abs()).fold(1_f64, f64::max) * f64::EPSILON * 128.;
     let mut positions = Vec::new();

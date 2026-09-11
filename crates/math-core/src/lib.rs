@@ -3,6 +3,28 @@ pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
 pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
+/// Shared geometry error. Codes stay crate-specific; the type is one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Error {
+    pub code: &'static str,
+    pub message: String,
+}
+impl Error {
+    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+impl std::error::Error for Error {}
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// Leaf helpers on the geometry/photogrammetry hotpath: force inlining so call
 /// overhead and missed branch hints do not dominate tiny f64 kernels.
 #[inline(always)]
@@ -211,7 +233,6 @@ mod tests {
         }
     }
 }
-
 
 #[cfg(test)]
 mod hotpath_bench {

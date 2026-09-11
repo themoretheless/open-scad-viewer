@@ -1,6 +1,6 @@
 //! Polyline stroke expansion: caps, joins, optional dash → filled outline paths.
 use crate::path::BezierPath;
-use crate::{check, Result};
+use crate::{Result, check};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LineCap {

@@ -164,7 +164,11 @@ impl Expr {
     pub fn is_list_comprehension(&self) -> bool {
         matches!(
             self,
-            Self::LcFor { .. } | Self::LcForC { .. } | Self::LcIf { .. } | Self::LcLet { .. } | Self::LcEach { .. }
+            Self::LcFor { .. }
+                | Self::LcForC { .. }
+                | Self::LcIf { .. }
+                | Self::LcLet { .. }
+                | Self::LcEach { .. }
         )
     }
 }

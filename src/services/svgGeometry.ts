@@ -1,6 +1,6 @@
 import { parseOpenScadSvg } from './openScadImport'
 import type { MeshData } from '../core/mesh'
-import { defaultGeometryKernel } from './manifoldGeometryKernel'
+import { defaultGeometryKernel } from './cadGeometryKernel'
 import { transformPoint } from './math3d'
 
 export type SvgContours = [number, number][][]

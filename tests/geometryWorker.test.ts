@@ -599,7 +599,7 @@ describe('geometry Worker lifecycle', () => {
       phase: 'compiling',
       execution: {
         languageContract: 'legacy/current',
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         evidence: 'runtime',
       },
       error: {
@@ -639,7 +639,7 @@ describe('geometry Worker lifecycle', () => {
     await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
       status: 'failed',
       execution: {
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         evidence: 'runtime',
         quality: 'full',
       },

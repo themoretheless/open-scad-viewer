@@ -1,7 +1,7 @@
 # Native modeling operations
 
 Operations belong to the kernel that owns their geometry. `geometry-ops` shares
-coordinate transforms, brush falloff and planar region math. `sketch-kernel`
+coordinate transforms, brush falloff and planar region math. `sketch-core`
 solves bounded 2D constraints independently of any surface representation.
 The bridge serializes calls; it does not silently convert native operations to meshes.
 

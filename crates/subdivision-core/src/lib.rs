@@ -2,26 +2,10 @@
 //! Tessellation is a neutral triangle buffer; mesh inspect/fit lives in the bridge.
 use std::collections::{BTreeMap, BTreeSet};
 type Point = [f64; 3];
-pub type Result<T> = std::result::Result<T, Error>;
-#[derive(Debug, Clone)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
+pub use math_core::{Error, Result};
+fn error(message: impl Into<String>) -> Error {
+    Error::new("SUBDIVISION_INVALID_INPUT", message)
 }
-impl Error {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            code: "SUBDIVISION_INVALID_INPUT",
-            message: message.into(),
-        }
-    }
-}
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-impl std::error::Error for Error {}
 #[derive(Clone, Debug)]
 pub struct Cage {
     pub vertices: Vec<Point>,
@@ -101,10 +85,10 @@ impl Cage {
                 .flatten()
                 .any(|x| !x.is_finite() || x.abs() > 1e6)
         {
-            return Err(Error::new("Invalid control cage or budget exceeded"));
+            return Err(error("Invalid control cage or budget exceeded"));
         }
         if self.faces.iter().map(Vec::len).sum::<usize>() > 100_000 {
-            return Err(Error::new("Control corner budget exceeded"));
+            return Err(error("Control corner budget exceeded"));
         }
         let mut edges: Edges = BTreeMap::new();
         let mut incidence = vec![BTreeSet::new(); self.vertices.len()];
@@ -114,7 +98,7 @@ impl Cage {
                 || f.iter().any(|&i| i >= self.vertices.len())
                 || f.iter().collect::<BTreeSet<_>>().len() != f.len()
             {
-                return Err(Error::new("Invalid control face"));
+                return Err(error("Invalid control face"));
             }
             for i in 0..f.len() {
                 let a = f[i];
@@ -127,23 +111,23 @@ impl Cage {
             .values()
             .any(|uses| uses.len() > 2 || uses.len() == 2 && uses[0].1 == uses[1].1)
         {
-            return Err(Error::new(
+            return Err(error(
                 "Cage must be consistently oriented and edge manifold",
             ));
         }
         let mut adjacency = vec![Vec::new(); self.vertices.len()];
         for entry in &edges {
-            adjacency[entry.0 .0].push(entry);
-            adjacency[entry.0 .1].push(entry);
+            adjacency[entry.0.0].push(entry);
+            adjacency[entry.0.1].push(entry);
         }
         for (v, faces) in incidence.iter().enumerate() {
             if faces.is_empty() || faces.len() > 256 {
-                return Err(Error::new("Unused control vertex"));
+                return Err(error("Unused control vertex"));
             }
             let local = &adjacency[v];
             let boundary = local.iter().filter(|(_, u)| u.len() == 1).count();
             if boundary != 0 && boundary != 2 {
-                return Err(Error::new("Nonmanifold vertex boundary"));
+                return Err(error("Nonmanifold vertex boundary"));
             }
             let mut visited = BTreeSet::from([*faces.first().unwrap()]);
             loop {
@@ -158,7 +142,7 @@ impl Cage {
                 }
             }
             if visited.len() != faces.len() {
-                return Err(Error::new("Disconnected vertex fan"));
+                return Err(error("Disconnected vertex fan"));
             }
         }
         Ok(edges)
@@ -168,7 +152,7 @@ impl Cage {
     }
     pub fn subdivide(&self, levels: usize) -> Result<Refined> {
         if levels > 5 {
-            return Err(Error::new("Subdivision levels must be 0..5"));
+            return Err(error("Subdivision levels must be 0..5"));
         }
         self.validate()?;
         let mut c = self.clone();
@@ -176,7 +160,7 @@ impl Cage {
         for _ in 0..levels {
             let count: usize = c.faces.iter().map(Vec::len).sum();
             if count > 25_000 {
-                return Err(Error::new("Subdivision face budget exceeded"));
+                return Err(error("Subdivision face budget exceeded"));
             }
             let edges = c.topology()?;
             let fp: Vec<_> = c
@@ -187,8 +171,8 @@ impl Cage {
             let mut vertices = Vec::with_capacity(c.vertices.len() + edges.len() + fp.len());
             let mut adjacency = vec![Vec::new(); c.vertices.len()];
             for entry in &edges {
-                adjacency[entry.0 .0].push(entry);
-                adjacency[entry.0 .1].push(entry);
+                adjacency[entry.0.0].push(entry);
+                adjacency[entry.0.1].push(entry);
             }
             for (v, &p) in c.vertices.iter().enumerate() {
                 let adjacent = &adjacency[v];
@@ -256,7 +240,7 @@ impl Refined {
         let mut indices = Vec::new();
         let mut ids = Vec::new();
         if self.face_ids.len() != self.cage.faces.len() {
-            return Err(Error::new("Invalid face identity count"));
+            return Err(error("Invalid face identity count"));
         }
         for (fi, f) in self.cage.faces.iter().enumerate() {
             for i in 1..f.len() - 1 {
@@ -331,7 +315,7 @@ pub struct Fit {
 /// vertices more closely. Not a unique inverse limit surface.
 pub fn fit(cage: &Cage, iterations: usize) -> Result<Fit> {
     if iterations > 32 {
-        return Err(Error::new("Subdivision fitting requires 0..32 iterations"));
+        return Err(error("Subdivision fitting requires 0..32 iterations"));
     }
     cage.validate()?;
     let mut cage = cage.clone();
@@ -388,24 +372,24 @@ pub fn fit(cage: &Cage, iterations: usize) -> Result<Fit> {
 impl Cage {
     pub fn deform(&self, operation: &geometry_ops::Deformation) -> Result<Self> {
         self.validate()?;
-        operation.validate().map_err(Error::new)?;
+        operation.validate()?;
         let mut cage = self.clone();
         cage.vertices = self
             .vertices
             .iter()
-            .map(|&p| operation.apply(p).map_err(Error::new))
+            .map(|&p| operation.apply(p))
             .collect::<Result<_>>()?;
         cage.validate()?;
         Ok(cage)
     }
     pub fn brush(&self, brush: &geometry_ops::Brush) -> Result<Self> {
         self.validate()?;
-        brush.validate().map_err(Error::new)?;
+        brush.validate()?;
         let mut cage = self.clone();
         cage.vertices = self
             .vertices
             .iter()
-            .map(|&p| brush.apply(p).map_err(Error::new))
+            .map(|&p| brush.apply(p))
             .collect::<Result<_>>()?;
         cage.validate()?;
         Ok(cage)
@@ -419,7 +403,7 @@ impl Cage {
             || !(3..=64).contains(&sections[0].len())
             || sections.iter().any(|s| s.len() != sections[0].len())
         {
-            return Err(Error::new("Invalid subdivision loft sections"));
+            return Err(error("Invalid subdivision loft sections"));
         }
         let n = sections[0].len();
         let vertices = sections.iter().flatten().copied().collect();
@@ -446,7 +430,7 @@ impl Cage {
         if vector.iter().any(|v| !v.is_finite())
             || vector.iter().map(|v| v * v).sum::<f64>() <= 1e-24
         {
-            return Err(Error::new("Invalid subdivision extrusion vector"));
+            return Err(error("Invalid subdivision extrusion vector"));
         }
         Self::loft(
             &[
@@ -460,10 +444,7 @@ impl Cage {
         )
     }
     pub fn sweep(profile: &[[f64; 2]], path: &[Point], up: Point, caps: bool) -> Result<Self> {
-        Self::loft(
-            &geometry_ops::sweep_sections(profile, path, up).map_err(Error::new)?,
-            caps,
-        )
+        Self::loft(&geometry_ops::sweep_sections(profile, path, up)?, caps)
     }
     pub fn revolve(profile: &[[f64; 2]], segments: usize) -> Result<Self> {
         if !(3..=64).contains(&segments)
@@ -472,7 +453,7 @@ impl Cage {
                 .iter()
                 .any(|p| !p[0].is_finite() || !p[1].is_finite() || p[0] <= 0.)
         {
-            return Err(Error::new(
+            return Err(error(
                 "Subdivision revolve requires 3..64 segments and positive-radius profile",
             ));
         }

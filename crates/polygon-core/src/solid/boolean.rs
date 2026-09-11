@@ -2,7 +2,7 @@
 //! Implemented here in Rust; no external geometry engine. Binary64 predicates
 //! use a common normalized frame. Results are stitched and topology-checked;
 //! this is not an exact-arithmetic or globally certified geometry algorithm.
-use crate::{cross, norm, sub, BuiltMesh, Construction, Error, Mesh, Result, MAX_TRIANGLES};
+use crate::{BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, norm, sub};
 use std::collections::{BTreeMap, BTreeSet};
 mod validation;
 type Point = [f64; 3];

@@ -86,11 +86,7 @@ fn union(parent: &mut [u32], first: usize, second: usize) {
 }
 
 fn canonical_float_bits(value: u32) -> u32 {
-    if value & 0x7fff_ffff == 0 {
-        0
-    } else {
-        value
-    }
+    if value & 0x7fff_ffff == 0 { 0 } else { value }
 }
 
 fn same_finite_position(vertices: &[f32], first: usize, second: usize) -> bool {

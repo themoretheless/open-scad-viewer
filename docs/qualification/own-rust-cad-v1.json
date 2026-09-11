@@ -10,7 +10,7 @@
     "tests/ownRustCad.test.ts",
     "tests/openscadParser.test.ts",
     "tests/manifoldPlanBackend.test.ts",
-    "tests/manifoldGeometryKernel.test.ts",
+    "tests/cadGeometryKernel.test.ts",
     "tests/languageConformance.test.ts",
     "tests/geometryWorkerRealBoundary.test.ts",
     "tests/mcpDirectGeometrySupervisor.test.ts",

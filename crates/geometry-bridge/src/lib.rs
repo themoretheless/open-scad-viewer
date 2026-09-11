@@ -1,13 +1,24 @@
 //! Application adapter between two independent Rust geometry libraries.
 //! Owns the NURBS-to-polygon sampler and the WASM/JSON transport, not a third
 //! geometry representation. Native clients can use the same typed adapters.
+//!
+//! Default feature `languages` pulls OpenSCAD and ModelGraph. Kernel-only
+//! builds: `--no-default-features`.
 pub mod brep;
+#[cfg(feature = "languages")]
+mod languages;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 mod mesh;
 pub mod mesh_analysis;
 pub mod mesh_shell;
+#[cfg(feature = "languages")]
 pub mod openscad;
+#[cfg(feature = "languages")]
+pub use languages::{
+    compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text,
+    compile_modelgraph_text_nurbs, execute_modelgraph_text,
+};
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;
@@ -39,40 +50,8 @@ impl value_codec::Serialize for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
-impl From<nurbs_core::Error> for Error {
-    fn from(e: nurbs_core::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
-}
-impl From<polygon_core::Error> for Error {
-    fn from(e: polygon_core::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
-}
-impl From<planar_geometry::Error> for Error {
-    fn from(e: planar_geometry::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
-}
-impl From<sdf_core::Error> for Error {
-    fn from(e: sdf_core::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
-}
-impl From<subdivision_core::Error> for Error {
-    fn from(e: subdivision_core::Error) -> Self {
+impl From<math_core::Error> for Error {
+    fn from(e: math_core::Error) -> Self {
         Self {
             code: e.code,
             message: e.message,
@@ -226,9 +205,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "segments")?,
         )?),
-        "sketch_solve" => encode(
-            sketch_core::solve(&field(&v, "sketch")?, field(&v, "tolerance")?).map_err(input)?,
-        ),
+        "sketch_solve" => encode(sketch_core::solve(
+            &field(&v, "sketch")?,
+            field(&v, "tolerance")?,
+        )?),
         "polygon_deform" => encode(polygon_core::solid::edit::deform(
             &field(&v, "mesh")?,
             &field(&v, "deformation")?,
@@ -363,8 +343,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 None => polygon_core::solid::boolean::Options::default(),
             },
         )?),
-        "brep_nurbs_box" => encode(brep_kernel::cuboid(field(&v, "min")?, field(&v, "max")?)?),
-        "brep_nurbs_inspect" => encode(field::<brep_kernel::Model>(&v, "model")?.validate()?),
+        "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }
@@ -413,164 +393,6 @@ pub fn execute(input_text: &str) -> String {
 }
 #[cfg(test)]
 mod tests;
-
-/// Source-to-graph frontend shared by browser workers and native callers.
-pub fn compile_modelgraph_text(source: &str) -> String {
-    match modelgraph_text::compile(source) {
-        Ok(value) => json!({"ok":true,"value":value}).to_string(),
-        Err(message) => json!({"ok":false,"message":message}).to_string(),
-    }
-}
-
-/// Canonical graph preparation; errors retain the public ModelGraph code/path/details.
-pub fn compile_modelgraph(input: &str) -> String {
-    runtime_response(
-        parse_graph_input(input).and_then(modelgraph_runtime::compile),
-        None,
-    )
-}
-pub fn compile_modelgraph_nurbs(input: &str) -> String {
-    runtime_response(
-        parse_graph_input(input).and_then(modelgraph_runtime::nurbs::compile),
-        None,
-    )
-}
-fn parse_graph_input(input: &str) -> modelgraph_runtime::Result<Value> {
-    if input.len() > 2 * 1024 * 1024 {
-        return Err(modelgraph_runtime::Error::new(
-            "input_limit",
-            "/",
-            "Document exceeds transport limit.",
-        ));
-    }
-    value_codec::from_str(input)
-        .map_err(|e| modelgraph_runtime::Error::new("invalid_document", "/", e.to_string()))
-}
-fn runtime_response(
-    result: modelgraph_runtime::Result<Value>,
-    customizer: Option<Value>,
-) -> String {
-    runtime_value(result, customizer).to_string()
-}
-fn runtime_value(result: modelgraph_runtime::Result<Value>, customizer: Option<Value>) -> Value {
-    match result {
-        Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error,"customizer":customizer}),
-    }
-}
-/// Fused source -> authoring graph -> evaluated graph, with no intermediate JS graph.
-pub fn execute_modelgraph_text(source: &str) -> String {
-    execute_text_value(source).to_string()
-}
-fn execute_text_value(source: &str) -> Value {
-    let mut graph = match modelgraph_text::compile(source) {
-        Ok(graph) => graph,
-        Err(message) => {
-            return runtime_value(
-                Err(modelgraph_runtime::Error::new("text_error", "", message)),
-                None,
-            )
-        }
-    };
-    let controls = graph["customizer"].take();
-    let result = (|| {
-        let nodes = graph["nodes"].take();
-        let own = nodes.as_array().unwrap().iter().any(|n| {
-            [
-                "polygon_profile",
-                "polygon_loft",
-                "triangle_mesh",
-                "subdivision",
-                "sdf_sphere",
-                "sdf_box",
-                "sdf_torus",
-                "brep_box",
-                "nurbs_surface",
-                "nurbs_curve",
-                "mesh_boolean",
-            ]
-            .contains(&n["op"].as_str().unwrap_or(""))
-        });
-        let mut compiled = if own {
-            if !graph["constraints"].as_array().unwrap().is_empty()
-                || !graph["checks"].as_array().unwrap().is_empty()
-            {
-                return Err(modelgraph_runtime::Error::new(
-                    "text_error",
-                    "",
-                    "NURBS text checks are not supported; use the build topology report",
-                ));
-            }
-            if graph.get("segments").is_some() {
-                return Err(modelgraph_runtime::Error::new("text_error", "", "segments applies only to legacy geometry; use explicit tessellation arguments for own geometry"));
-            }
-            let Value::Array(nodes) = nodes else {
-                unreachable!()
-            };
-            let mut compiled = modelgraph_runtime::nurbs::compile_text(
-                nodes,
-                graph["parameters"].as_array().unwrap(),
-                graph["root"].as_str().unwrap().into(),
-            )?;
-            compiled["source"] = json!("");
-            for key in [
-                "source_map",
-                "geometry_assertions",
-                "constraint_report",
-                "sketch_solutions",
-                "assembly_components",
-                "mechanical_reports",
-                "mechanical_parts",
-            ] {
-                compiled[key] = json!([]);
-            }
-            compiled
-        } else {
-            let mut document = value_codec::Map::new();
-            document.insert("language".into(), json!("modelgraph/1"));
-            document.insert("units".into(), json!("mm"));
-            document.insert("nodes".into(), nodes);
-            for key in ["parameters", "root"] {
-                document.insert(key.into(), graph[key].take());
-            }
-            if let Some(segments) = graph.get_mut("segments") {
-                document.insert("segments".into(), segments.take());
-            }
-            for (source, target) in [
-                ("constraints", "constraints"),
-                ("checks", "geometry_assertions"),
-            ] {
-                if !graph[source].as_array().unwrap().is_empty() {
-                    document.insert(target.into(), graph[source].take());
-                }
-            }
-            modelgraph_runtime::compile(Value::Object(document))?
-        };
-        compiled["customizer"] = controls.clone();
-        Ok(compiled)
-    })();
-    runtime_value(result, Some(controls))
-}
-
-pub fn compile_modelgraph_text_nurbs(input: &str) -> String {
-    let result = parse_graph_input(input).and_then(|v| {
-        let nodes = v["nodes"].as_array().ok_or_else(|| {
-            modelgraph_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.")
-        })?;
-        let parameters = v["parameters"].as_array().ok_or_else(|| {
-            modelgraph_runtime::Error::new(
-                "invalid_document",
-                "/parameters",
-                "Expected parameters.",
-            )
-        })?;
-        let root = v["root"].as_str().ok_or_else(|| {
-            modelgraph_runtime::Error::new("invalid_document", "/root", "Expected root.")
-        })?;
-        modelgraph_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())
-    });
-    runtime_response(result, None)
-}
 
 /// Owned binary transport snapshot. Pointers are borrowed until `free()`;
 /// clients must reacquire the WASM memory buffer after allocating this object.

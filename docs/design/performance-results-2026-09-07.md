@@ -133,14 +133,13 @@ npm run bench:gpu -- --out tmp/performance/gpu-new-run --executable '/Users/them
 - [CPU: сравнение](../../tmp/performance/cpu-comparison.json),
   [после](../../tmp/performance/cpu-after/report.json),
   [повтор](../../tmp/performance/cpu-after-repeat/report.json),
-  [до](../../output/benchmarks/cpu-baseline2-2026-09-07/report.json).
+  [до](../../tools/manifold-bench/historical/cpu-2026-09-07/cpu-baseline2-2026-09-07/report.json).
 - [GPU: сравнение и история прогонов](../../tmp/performance/gpu-comparison.json),
   [до](../../tmp/performance/gpu-before-final/results.json),
   [повтор до](../../tmp/performance/gpu-before-repeat/results.json),
   [после](../../tmp/performance/gpu-after-shared-validation/results.json),
   [повтор после](../../tmp/performance/gpu-after-shared-validation-repeat/results.json).
-- [Память до](../../tmp/performance/manifold-memory-before-2026-09-07.json),
-  [память после](../../tmp/performance/manifold-memory-after-2026-09-07.json).
+- Память до/после: локальные прогоны `tools/manifold-bench` (не продукт).
 
 Комплект результатов содержит исходники fixture, хеши входов/выходов и снимок версии
 исходников с незакоммиченными файлами. GPU дополнительно сохраняет исполняемый

@@ -33,7 +33,7 @@ type MatrixInput =
 type MatrixExpected = {
   kind: 'route'
   languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
-  engineClass: 'manifold' | 'brep'
+  engineClass: 'mesh' | 'brep'
   requiredCapabilities?: string[]
   requiredCapabilityCount?: number
 } | {
@@ -85,7 +85,7 @@ interface RoutingMatrix {
 const matrixUrl = new URL('../docs/qualification/geometry-routing-contract-v1.json', import.meta.url)
 const matrixBytes = readFileSync(matrixUrl)
 const matrix = JSON.parse(matrixBytes.toString('utf8')) as RoutingMatrix
-const MATRIX_SHA256 = '3bb84d80ad89d9efdcde2ff0d678ab5357bc91312e852fced087427528c1d1c7'
+const MATRIX_SHA256 = 'ee7eaf15cc77b25f503b2f8dc518738512bbf57258fea8253c0814e19b7820ca'
 const request = { quality: 'full', purpose: 'analysis' } as const
 
 function materialize(input: MatrixInput): string {
@@ -151,7 +151,7 @@ function manifoldProvider(options: {
   const warm = options.warm ?? vi.fn().mockResolvedValue(undefined)
   const build = options.build ?? vi.fn()
   const provider: GeometryBackendProvider = {
-    engineClass: 'manifold',
+    engineClass: 'mesh',
     engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
     kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
     capabilityManifestVersion: 'own-rust-node-v1',

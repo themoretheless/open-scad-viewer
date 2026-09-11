@@ -21,7 +21,7 @@ The crate is a plain Rust library (`rlib`, std-only) and works unchanged outside
 the browser. The `reconstruct` example doubles as the reference CLI:
 
 ```sh
-cargo run --release --manifest-path crates/Cargo.toml -p photogrammetry-kernel \
+cargo run --release --manifest-path crates/Cargo.toml -p photogrammetry-core \
   --example reconstruct -- out.ply FOCAL_PIXELS input1.ppm input2.ppm ...
 PHOTO_DENSE=1           # also write out.ply.surface.ply
 PHOTO_ACCURACY=on       # qualified accuracy bundle (more verified points)

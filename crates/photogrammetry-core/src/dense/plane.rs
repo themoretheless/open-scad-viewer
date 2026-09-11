@@ -163,25 +163,55 @@ impl PixelCost<'_, '_> {
 // q·ray can cross an endpoint by roundoff. Scale the guard by its arithmetic
 // terms, not by scene units or a user-selected geometric tolerance.
 fn in_depth_range(inv: f64, q: V3, ray: V3, low: f64, high: f64) -> bool {
-    if !inv.is_finite() || inv <= 0. { return false; }
-    if (low..=high).contains(&inv) { return true; }
-    let magnitude = (q[0]*ray[0]).abs() + (q[1]*ray[1]).abs()
-        + (q[2]*ray[2]).abs() + low.abs().max(high.abs());
+    if !inv.is_finite() || inv <= 0. {
+        return false;
+    }
+    if (low..=high).contains(&inv) {
+        return true;
+    }
+    let magnitude = (q[0] * ray[0]).abs()
+        + (q[1] * ray[1]).abs()
+        + (q[2] * ray[2]).abs()
+        + low.abs().max(high.abs());
     let roundoff = 16. * f64::EPSILON * magnitude;
-    roundoff.is_finite() && inv >= low-roundoff && inv <= high+roundoff
+    roundoff.is_finite() && inv >= low - roundoff && inv <= high + roundoff
 }
 
 #[cfg(test)]
 #[test]
 fn depth_range_accepts_roundoff_but_rejects_real_excursions() {
-    let low=0.215727407728201120_f64;
-    let below=f64::from_bits(low.to_bits()-1);
-    assert!(in_depth_range(below,[0.,0.,below],[0.,0.,1.],low,0.32));
-    assert!(in_depth_range(f64::from_bits(0.32_f64.to_bits()+1),[0.,0.,0.32],[0.,0.,1.],low,0.32));
-    assert!(!in_depth_range(low-1e-8,[0.,0.,low-1e-8],[0.,0.,1.],low,0.32));
-    assert!(!in_depth_range(0.32+1e-8,[0.,0.,0.32+1e-8],[0.,0.,1.],low,0.32));
-    for inv in [f64::NAN,f64::INFINITY,f64::NEG_INFINITY,0.,-1.] {
-        assert!(!in_depth_range(inv,[0.,0.,inv],[0.,0.,1.],low,0.32));
+    let low = 0.215727407728201120_f64;
+    let below = f64::from_bits(low.to_bits() - 1);
+    assert!(in_depth_range(
+        below,
+        [0., 0., below],
+        [0., 0., 1.],
+        low,
+        0.32
+    ));
+    assert!(in_depth_range(
+        f64::from_bits(0.32_f64.to_bits() + 1),
+        [0., 0., 0.32],
+        [0., 0., 1.],
+        low,
+        0.32
+    ));
+    assert!(!in_depth_range(
+        low - 1e-8,
+        [0., 0., low - 1e-8],
+        [0., 0., 1.],
+        low,
+        0.32
+    ));
+    assert!(!in_depth_range(
+        0.32 + 1e-8,
+        [0., 0., 0.32 + 1e-8],
+        [0., 0., 1.],
+        low,
+        0.32
+    ));
+    for inv in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 0., -1.] {
+        assert!(!in_depth_range(inv, [0., 0., inv], [0., 0., 1.], low, 0.32));
     }
 }
 
@@ -295,11 +325,7 @@ fn refine_pixel(
         let (axis, sign) = ((k - 6) % 6 / 2, if k % 2 == 0 { 1. } else { -1. });
         let mut q = best.plane;
         if axis == 2 {
-            q = at_depth_with_slope(
-                q,
-                ray,
-                current_inv + sign * interval * 0.5 * shrink,
-            );
+            q = at_depth_with_slope(q, ray, current_inv + sign * interval * 0.5 * shrink);
         } else {
             q[axis] += sign * current_inv * 0.7 * shrink;
             q = at_depth_with_slope(q, ray, current_inv);
@@ -425,9 +451,25 @@ pub(super) fn estimate(
                             continue;
                         }
                         pass_improved |= refine_pixel(
-                            gray, reference, sources, &mut planes, &coarse, width, x, y, step,
-                            ray_step, low, high, interval, pass, budget, reverse, adaptive,
-                            options, diagnostics,
+                            gray,
+                            reference,
+                            sources,
+                            &mut planes,
+                            &coarse,
+                            width,
+                            x,
+                            y,
+                            step,
+                            ray_step,
+                            low,
+                            high,
+                            interval,
+                            pass,
+                            budget,
+                            reverse,
+                            adaptive,
+                            options,
+                            diagnostics,
                         );
                     }
                 }
@@ -440,9 +482,25 @@ pub(super) fn estimate(
                 for column in 3..width - 3 {
                     let x = if reverse { width - 1 - column } else { column };
                     pass_improved |= refine_pixel(
-                        gray, reference, sources, &mut planes, &coarse, width, x, y, step,
-                        ray_step, low, high, interval, pass, budget, reverse, adaptive,
-                        options, diagnostics,
+                        gray,
+                        reference,
+                        sources,
+                        &mut planes,
+                        &coarse,
+                        width,
+                        x,
+                        y,
+                        step,
+                        ray_step,
+                        low,
+                        high,
+                        interval,
+                        pass,
+                        budget,
+                        reverse,
+                        adaptive,
+                        options,
+                        diagnostics,
                     );
                 }
             }

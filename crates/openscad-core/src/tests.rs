@@ -2,7 +2,7 @@
 //! corpus (`tests/fixtures/language-conformance-v1.json`) plus grammar, limit
 //! and diagnostic-position cases cross-checked against the TypeScript parser.
 use crate::ast::Statement;
-use crate::{compile, Diagnostic, LanguageProfile};
+use crate::{Diagnostic, LanguageProfile, compile};
 
 const SUBSET: LanguageProfile = LanguageProfile::ViewerSubset;
 const STABLE: LanguageProfile = LanguageProfile::Stable2021;
@@ -54,7 +54,10 @@ fn corpus_compile_cases() {
 
 #[test]
 fn corpus_reject_codes() {
-    assert_eq!(err("include <part.scad>", SUBSET).code, Some("E_FEATURE_INCLUDE"));
+    assert_eq!(
+        err("include <part.scad>", SUBSET).code,
+        Some("E_FEATURE_INCLUDE")
+    );
     assert_eq!(err("use <part.scad>", SUBSET).code, Some("E_FEATURE_USE"));
     assert_eq!(
         err("function f(x) = x; cube(f(1));", SUBSET).code,
@@ -71,7 +74,10 @@ fn corpus_reject_positions() {
     // Cross-checked against the TS parser (UTF-16 offsets, 1-based line/column).
     let d = err("include <part.scad>", SUBSET);
     assert_eq!((d.start, d.end, d.line, d.column), (0, 7, 1, 1));
-    assert_eq!(d.message, "include is not supported by openscad-viewer-subset@1");
+    assert_eq!(
+        d.message,
+        "include is not supported by openscad-viewer-subset@1"
+    );
     let d = err("#cube(1);", SUBSET);
     assert_eq!((d.start, d.end, d.line, d.column), (0, 1, 1, 1));
     assert_eq!(
@@ -122,26 +128,41 @@ fn parser_diagnostics_match_ts_wording() {
     assert_eq!(err("x = 1", SUBSET).message, "Expected ; after assignment");
     assert_eq!(err("cube(1 2);", SUBSET).message, "Expected , or )");
     assert_eq!(err("if (true) { cube(1);", SUBSET).message, "Expected }");
-    assert_eq!(err("cube(a=1, a=2);", SUBSET).message, "Duplicate argument a");
+    assert_eq!(
+        err("cube(a=1, a=2);", SUBSET).message,
+        "Duplicate argument a"
+    );
     assert_eq!(
         err("x = f(a=1, 2);", SUBSET).message,
         "Positional arguments must precede named arguments"
     );
     assert_eq!(err("x = ;", SUBSET).message, "Expected expression, got ;");
     assert_eq!(err("x =", SUBSET).message, "Expected expression, got Eof");
-    assert_eq!(err("}", SUBSET).message, "Expected a variable, module, or geometry call");
-    assert_eq!(err("{ cube(1); }", SUBSET).message, "Expected a variable, module, or geometry call");
+    assert_eq!(
+        err("}", SUBSET).message,
+        "Expected a variable, module, or geometry call"
+    );
+    assert_eq!(
+        err("{ cube(1); }", SUBSET).message,
+        "Expected a variable, module, or geometry call"
+    );
     // 2021.01-only forms.
     assert_eq!(
         err("function f(x, x) = x;", STABLE).message,
         "Duplicate parameter x"
     );
-    assert_eq!(err("cube;", STABLE).message, "Expected ( after module name cube");
+    assert_eq!(
+        err("cube;", STABLE).message,
+        "Expected ( after module name cube"
+    );
     assert_eq!(
         err("x = 1 + let(a = 1) a;", STABLE).message,
         "let expression must start an expression"
     );
-    assert_eq!(err("x = 1 + for;", STABLE).message, "Expected expression, got for");
+    assert_eq!(
+        err("x = 1 + for;", STABLE).message,
+        "Expected expression, got for"
+    );
     assert_eq!(
         err("x = [for (i = [0:2]) i : 3];", STABLE).message,
         "A list comprehension cannot start a range"
@@ -154,7 +175,10 @@ fn grammar_accepts_both_profiles() {
         ok("x = 1 + 2 * 3 ^ 2 - -4;", profile);
         ok("y = a ? b : c;", profile);
         ok("z = [0:2:10]; w = [1, 2, 3][0]; v = a.x;", profile);
-        ok("for (i = [0:2]) if (i > 0) cube(i); else sphere(1);", profile);
+        ok(
+            "for (i = [0:2]) if (i > 0) cube(i); else sphere(1);",
+            profile,
+        );
         ok("module m(a, b = 2) { children(); } m(1);", profile);
         ok("r = !true == false || 1 < 2 && 3 >= 4;", profile);
     }
@@ -164,7 +188,10 @@ fn grammar_accepts_both_profiles() {
     ok("f = function(v) v * 2;", STABLE);
     ok("xs = [for (i = [0:4]) if (i % 2 == 0) i];", STABLE);
     ok("ys = [for (i = 0; i < 4; i = i + 1) i];", STABLE);
-    ok("zs = [each [1, 2], let(q = 3) (for (k = [0:q]) k)];", STABLE);
+    ok(
+        "zs = [each [1, 2], let(q = 3) (for (k = [0:q]) k)];",
+        STABLE,
+    );
     ok("%cube(1); #sphere(1); !cylinder(1); *square(1);", STABLE);
     ok("{ cube(1); { sphere(1); } }", STABLE);
 }
@@ -175,10 +202,14 @@ fn subset_power_binds_tighter_than_unary() {
     // rule; subset parses unary first: (-2)^2. Both parse; only the AST
     // shape differs. Verify the subset keeps legacy shape (unary outermost).
     let statements = ok("x = -2^2;", SUBSET);
-    let Statement::Assign(assign) = &statements[0] else { panic!("assign") };
+    let Statement::Assign(assign) = &statements[0] else {
+        panic!("assign")
+    };
     assert_eq!(assign.value.kind_name(), "binary");
     let stable = ok("x = -2^2;", STABLE);
-    let Statement::Assign(assign) = &stable[0] else { panic!("assign") };
+    let Statement::Assign(assign) = &stable[0] else {
+        panic!("assign")
+    };
     assert_eq!(assign.value.kind_name(), "unary");
 }
 
@@ -237,17 +268,23 @@ fn statement_depth_limit() {
 #[test]
 fn operation_ids_are_stable() {
     let statements = ok("cube(1); translate([1,0,0]) cube(2);", SUBSET);
-    let Statement::Call(first) = &statements[0] else { panic!("call") };
+    let Statement::Call(first) = &statements[0] else {
+        panic!("call")
+    };
     assert_eq!(
         first.operation_id.as_deref(),
         Some("op:root/call%3Acube%230")
     );
-    let Statement::Call(second) = &statements[1] else { panic!("call") };
+    let Statement::Call(second) = &statements[1] else {
+        panic!("call")
+    };
     assert_eq!(
         second.operation_id.as_deref(),
         Some("op:root/call%3Atranslate%230")
     );
-    let Statement::Call(child) = &second.children[0] else { panic!("call") };
+    let Statement::Call(child) = &second.children[0] else {
+        panic!("call")
+    };
     assert_eq!(
         child.operation_id.as_deref(),
         Some("op:root/call%3Atranslate%230/children/call%3Acube%230")

@@ -1,5 +1,5 @@
 use gcode_core::{
-    deposited_volume_mm3, emit, parse, MachineProfile, PlannedLayer, PlannedPath, DIALECT,
+    DIALECT, MachineProfile, PlannedLayer, PlannedPath, deposited_volume_mm3, emit, parse,
 };
 
 fn machine() -> MachineProfile {

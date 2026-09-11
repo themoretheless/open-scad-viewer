@@ -2,8 +2,10 @@
 //! `src/services/openscadCompiler.ts` for both language profiles, including
 //! node-count/depth limits and exact diagnostic messages and positions.
 use crate::ast::*;
-use crate::lexer::{Token, TT};
-use crate::{LanguageProfile, ParseError, MAX_AST_NODES, MAX_EXPRESSION_DEPTH, MAX_STATEMENT_DEPTH};
+use crate::lexer::{TT, Token};
+use crate::{
+    LanguageProfile, MAX_AST_NODES, MAX_EXPRESSION_DEPTH, MAX_STATEMENT_DEPTH, ParseError,
+};
 
 type PResult<T> = Result<T, ParseError>;
 
@@ -99,7 +101,11 @@ impl<'a> Parser<'a> {
         self.count_node()?;
         Ok(node)
     }
-    fn descend_expression<T>(&mut self, position: usize, parse: impl FnOnce(&mut Self) -> PResult<T>) -> PResult<T> {
+    fn descend_expression<T>(
+        &mut self,
+        position: usize,
+        parse: impl FnOnce(&mut Self) -> PResult<T>,
+    ) -> PResult<T> {
         if self.expression_depth >= MAX_EXPRESSION_DEPTH {
             return Err(ParseError::new(
                 position,
@@ -114,7 +120,9 @@ impl<'a> Parser<'a> {
 
     fn statement(&mut self) -> PResult<Vec<Statement>> {
         if self.statement_depth >= MAX_STATEMENT_DEPTH {
-            return Err(self.fail(format!("Model exceeds {MAX_STATEMENT_DEPTH} nested statements")));
+            return Err(self.fail(format!(
+                "Model exceeds {MAX_STATEMENT_DEPTH} nested statements"
+            )));
         }
         self.statement_depth += 1;
         let result = self.parse_statement();
@@ -188,8 +196,16 @@ impl<'a> Parser<'a> {
             node = Statement::Function(self.function_definition()?);
         } else if self.peek().v == "include" || self.peek().v == "use" {
             if self.profile.is_subset() {
-                let feature = if self.peek().v == "include" { "include" } else { "use" };
-                let code = if feature == "include" { "E_FEATURE_INCLUDE" } else { "E_FEATURE_USE" };
+                let feature = if self.peek().v == "include" {
+                    "include"
+                } else {
+                    "use"
+                };
+                let code = if feature == "include" {
+                    "E_FEATURE_INCLUDE"
+                } else {
+                    "E_FEATURE_USE"
+                };
                 return Err(self.fail_coded(
                     format!("{feature} is not supported by openscad-viewer-subset@1"),
                     code,
@@ -205,7 +221,9 @@ impl<'a> Parser<'a> {
             let first_span = (viewport_modifiers[0].start, viewport_modifiers[0].end);
             match &mut node {
                 Statement::Call(call) => call.viewport_modifiers = viewport_modifiers,
-                Statement::Directive(directive) => directive.viewport_modifiers = viewport_modifiers,
+                Statement::Directive(directive) => {
+                    directive.viewport_modifiers = viewport_modifiers
+                }
                 _ => {
                     return Err(ParseError::new(
                         first_span.0,
@@ -270,7 +288,11 @@ impl<'a> Parser<'a> {
         let path_span = (path.p + 1, path.end - 1);
         self.matches(TT::Semi);
         Ok(DirectiveNode {
-            directive: if keyword_v == "include" { "include" } else { "use" },
+            directive: if keyword_v == "include" {
+                "include"
+            } else {
+                "use"
+            },
             path: path.v.clone(),
             path_span,
             p: keyword_p,
@@ -492,7 +514,8 @@ impl<'a> Parser<'a> {
     fn wrapper_expression(&mut self, keyword: &str) -> PResult<Expr> {
         let start = self.expect(TT::Ident, None)?.p;
         self.expect(TT::LParen, Some(format!("Expected ( after {keyword}")))?;
-        let args = self.expression_arguments(format!("Expected ) after {keyword} arguments"), TT::RParen)?;
+        let args =
+            self.expression_arguments(format!("Expected ) after {keyword} arguments"), TT::RParen)?;
         if keyword == "let" {
             let body = self.expression()?;
             return self.expression_node(Expr::Let {
@@ -507,9 +530,17 @@ impl<'a> Parser<'a> {
             None
         };
         if keyword == "assert" {
-            self.expression_node(Expr::Assert { args, body, p: start })
+            self.expression_node(Expr::Assert {
+                args,
+                body,
+                p: start,
+            })
         } else {
-            self.expression_node(Expr::Echo { args, body, p: start })
+            self.expression_node(Expr::Echo {
+                args,
+                body,
+                p: start,
+            })
         }
     }
 
@@ -524,9 +555,7 @@ impl<'a> Parser<'a> {
         if token.t != TT::Ident {
             return false;
         }
-        if self.profile.is_stable()
-            && matches!(token.v.as_str(), "else" | "for" | "if" | "each")
-        {
+        if self.profile.is_stable() && matches!(token.v.as_str(), "else" | "for" | "if" | "each") {
             return false;
         }
         true
@@ -538,7 +567,10 @@ impl<'a> Parser<'a> {
             return Ok(test);
         }
         let yes = self.expression()?;
-        self.expect(TT::Colon, Some("Expected : in conditional expression".to_string()))?;
+        self.expect(
+            TT::Colon,
+            Some("Expected : in conditional expression".to_string()),
+        )?;
         let no = self.expression()?;
         let p = expr_position(&test);
         self.expression_node(Expr::Ternary {
@@ -679,7 +711,8 @@ impl<'a> Parser<'a> {
                 continue;
             }
             if self.matches(TT::Dot) {
-                let member = self.expect(TT::Ident, Some("Expected member name after .".to_string()))?;
+                let member =
+                    self.expect(TT::Ident, Some("Expected member name after .".to_string()))?;
                 let member_v = member.v.clone();
                 let p = expr_position(&value);
                 value = self.expression_node(Expr::Member {
@@ -712,7 +745,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse OpenSCAD's ordered arguments_call production after `(`.
-    fn expression_arguments(&mut self, closing_message: String, terminator: TT) -> PResult<Vec<ExpressionArgument>> {
+    fn expression_arguments(
+        &mut self,
+        closing_message: String,
+        terminator: TT,
+    ) -> PResult<Vec<ExpressionArgument>> {
         let mut args = Vec::new();
         let mut named = std::collections::HashSet::new();
         let mut saw_named = false;
@@ -815,11 +852,9 @@ impl<'a> Parser<'a> {
                             None,
                         ))
                     }
-                    "for" | "if" | "else" | "each" if self.profile.is_stable() => Err(self.fail_at(
-                        token,
-                        format!("Expected expression, got {}", token.v),
-                        None,
-                    )),
+                    "for" | "if" | "else" | "each" if self.profile.is_stable() => Err(
+                        self.fail_at(token, format!("Expected expression, got {}", token.v), None)
+                    ),
                     _ => self.expression_node(Expr::Identifier {
                         name: token.v.clone(),
                         p: token.p,
@@ -836,7 +871,10 @@ impl<'a> Parser<'a> {
 
     fn vector_or_range(&mut self, p: usize) -> PResult<Expr> {
         if self.matches(TT::RBracket) {
-            return self.expression_node(Expr::Vector { items: Vec::new(), p });
+            return self.expression_node(Expr::Vector {
+                items: Vec::new(),
+                p,
+            });
         }
         let first = if self.profile.is_stable() && self.is_list_comprehension_start(self.pos, 0) {
             self.list_comprehension()?
@@ -883,7 +921,9 @@ impl<'a> Parser<'a> {
         if recursion > MAX_EXPRESSION_DEPTH {
             return false;
         }
-        let Some(token) = self.tokens.get(index) else { return false };
+        let Some(token) = self.tokens.get(index) else {
+            return false;
+        };
         if token.t != TT::Ident {
             return false;
         }
@@ -898,7 +938,9 @@ impl<'a> Parser<'a> {
         if token.v != "let" || self.tokens.get(index + 1).map(|t| t.t) != Some(TT::LParen) {
             return false;
         }
-        let Some(close) = self.matching_right_paren(index + 1) else { return false };
+        let Some(close) = self.matching_right_paren(index + 1) else {
+            return false;
+        };
         self.is_list_comprehension_parenthesized_start(close + 1, recursion + 1)
     }
 
@@ -946,7 +988,10 @@ impl<'a> Parser<'a> {
                     TT::Semi,
                 )?;
                 let condition = self.expression()?;
-                self.expect(TT::Semi, Some("Expected ; after C-style for condition".to_string()))?;
+                self.expect(
+                    TT::Semi,
+                    Some("Expected ; after C-style for condition".to_string()),
+                )?;
                 let update = self.expression_arguments(
                     "Expected ) after C-style for update".to_string(),
                     TT::RParen,
@@ -960,7 +1005,8 @@ impl<'a> Parser<'a> {
                     p: keyword_p,
                 });
             }
-            let args = self.expression_arguments("Expected ) after for bindings".to_string(), TT::RParen)?;
+            let args =
+                self.expression_arguments("Expected ) after for bindings".to_string(), TT::RParen)?;
             let body = self.list_comprehension_or_expression()?;
             return self.expression_node(Expr::LcFor {
                 args,
@@ -1024,7 +1070,10 @@ impl<'a> Parser<'a> {
             return self.list_comprehension();
         }
         let value = self.list_comprehension()?;
-        self.expect(TT::RParen, Some("Expected ) after list comprehension".to_string()))?;
+        self.expect(
+            TT::RParen,
+            Some("Expected ) after list comprehension".to_string()),
+        )?;
         Ok(value)
     }
 

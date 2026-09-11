@@ -27,7 +27,10 @@ pub(super) fn browser_dense_options(side: usize, preset: u32) -> Result<DenseOpt
     Ok(options)
 }
 
-pub(super) fn dense_report_value(report: &DenseDiagnostics, options: &DenseOptions) -> Result<Value> {
+pub(super) fn dense_report_value(
+    report: &DenseDiagnostics,
+    options: &DenseOptions,
+) -> Result<Value> {
     // MGV1 preserves u64, but the browser decoder intentionally rejects integers
     // beyond Number.MAX_SAFE_INTEGER. Check before constructing a JS-bound value.
     if [
@@ -44,10 +47,12 @@ pub(super) fn dense_report_value(report: &DenseDiagnostics, options: &DenseOptio
     }
     let preset = if options.shared_volume && options.dual_scale {
         "dual-scale-volume"
-    } else { match options.estimator {
-        DenseEstimator::FrontoparallelSweep => "baseline",
-        DenseEstimator::SlantedPlane => "slanted-plane",
-    }};
+    } else {
+        match options.estimator {
+            DenseEstimator::FrontoparallelSweep => "baseline",
+            DenseEstimator::SlantedPlane => "slanted-plane",
+        }
+    };
     let views = report
         .view_reports
         .iter()
@@ -85,11 +90,8 @@ impl Session {
         self.dense = None;
         let mut options = ReconstructionOptions::default();
         options.feature_options.acceleration = self.acceleration;
-        let outcome = photogrammetry_core::reconstruct_detailed(
-            &self.images,
-            &options,
-            |_, _, _| true,
-        );
+        let outcome =
+            photogrammetry_core::reconstruct_detailed(&self.images, &options, |_, _, _| true);
         let mut diagnostics = report_value(&outcome.report);
         diagnostics["calibrations"] = Value::Array(self.calibrations.clone());
         self.diagnostics = Some(diagnostics);
@@ -183,7 +185,9 @@ impl Session {
             }
         }
         if offset != flat.len() {
-            return Err(input("Host sweep scores length does not match the prepared views"));
+            return Err(input(
+                "Host sweep scores length does not match the prepared views",
+            ));
         }
         let run = photogrammetry_core::dense::densify_with_host_scores(
             &self.images,
@@ -199,7 +203,6 @@ impl Session {
         response::surface(self.dense.as_ref().unwrap(), Some(&diagnostics))
     }
 }
-
 
 /// Binary payload for the host sweep: all grayscale rasters once, then per-view
 /// shader parameters. All integers little-endian u32, all floats f32/f64 as
@@ -287,4 +290,3 @@ pub fn dense_prepare_host(side: usize, preset: u32) -> Result<Value> {
 pub fn dense_finish_host(scores: Vec<f32>) -> Result<Vec<u8>> {
     PHOTO.with(|session| session.borrow_mut().dense_finish(scores))
 }
-

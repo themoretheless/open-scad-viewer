@@ -49,9 +49,11 @@ fn rejects_invalid_layout_and_bounded_resource_abuse() {
     ] {
         assert!(compile(source).unwrap_err().contains(error));
     }
-    assert!(compile(&" ".repeat(262145))
-        .unwrap_err()
-        .contains("256 KiB"));
+    assert!(
+        compile(&" ".repeat(262145))
+            .unwrap_err()
+            .contains("256 KiB")
+    );
     let deep = format!("show sphere({}1{})", "(".repeat(70), ")".repeat(70));
     assert!(compile(&deep).unwrap_err().contains("nesting exceeds 64"));
 }

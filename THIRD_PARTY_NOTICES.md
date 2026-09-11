@@ -5,11 +5,24 @@
 The application uses the repository's Rust CAD implementation in
 `crates/polygon-core` through `crates/geometry-bridge`. It contains no Manifold,
 OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
-The Rust workspace has no external Cargo dependencies. Document values, binary
-transport, direct WASM bindings and runtime DEFLATE decoding are repository-owned.
-The UI, MCP integration and build tooling still use the packages listed below.
+The only crates.io dependency is optional `wgpu` in `crates/gpu-compute` for
+native Metal/Vulkan compute (feature `gpu`). WASM builds leave that feature
+off. Document values, binary transport, direct WASM bindings and runtime
+DEFLATE decoding are repository-owned. The UI, MCP integration and build
+tooling still use the packages listed below.
 Historical Manifold qualification fixtures and manifests describe old releases;
 they are not dependencies or attestations of the current runtime.
+
+## wgpu
+
+- Crate: `wgpu`
+- Version: `30`
+- Source: <https://github.com/gfx-rs/wgpu>
+- License: MIT OR Apache-2.0
+
+Used only by `crates/gpu-compute` when the optional `gpu` feature is enabled
+on native hosts (Metal on macOS, Vulkan on Linux/Windows). Browser WebGPU
+does not link this crate.
 
 ## Model Context Protocol TypeScript SDK
 

@@ -2,14 +2,16 @@
 //! TypeScript AST shape from `src/services/openscadCompiler.ts` (object keys
 //! match the TS field names; `undefined` optionals are omitted, `undef`
 //! literals become null, non-finite numbers become `{"$number": ...}`).
-use crate::ast::*;
 use crate::Diagnostic;
-use value_codec::{json, Number, Value};
+use crate::ast::*;
+use value_codec::{Number, Value, json};
 
 fn number(v: f64) -> Value {
     match Number::from_f64(v) {
         Some(n) => Value::Number(n),
-        None => json!({"$number": if v.is_nan() { "NaN" } else if v > 0.0 { "Infinity" } else { "-Infinity" }}),
+        None => {
+            json!({"$number": if v.is_nan() { "NaN" } else if v > 0.0 { "Infinity" } else { "-Infinity" }})
+        }
     }
 }
 
@@ -102,9 +104,7 @@ pub fn statement(node: &Statement) -> Value {
                 Value::Object(
                     call.arg_spans
                         .iter()
-                        .map(|(k, (start, end))| {
-                            (k.clone(), json!({"start": *start, "end": *end}))
-                        })
+                        .map(|(k, (start, end))| (k.clone(), json!({"start": *start, "end": *end})))
                         .collect(),
                 ),
             );
@@ -113,7 +113,10 @@ pub fn statement(node: &Statement) -> Value {
             object.insert("p".into(), json!(call.p));
             object.insert("end".into(), json!(call.end));
             if !call.viewport_modifiers.is_empty() {
-                object.insert("viewportModifiers".into(), modifiers(&call.viewport_modifiers));
+                object.insert(
+                    "viewportModifiers".into(),
+                    modifiers(&call.viewport_modifiers),
+                );
             }
             if let Some(id) = &call.operation_id {
                 object.insert("operationId".into(), Value::String(id.clone()));
@@ -178,10 +181,18 @@ pub fn expr(node: &Expr) -> Value {
             object.insert("p".into(), json!(*p));
         }
         Expr::Vector { items, p } => {
-            object.insert("items".into(), Value::Array(items.iter().map(expr).collect()));
+            object.insert(
+                "items".into(),
+                Value::Array(items.iter().map(expr).collect()),
+            );
             object.insert("p".into(), json!(*p));
         }
-        Expr::Range { start, step, end, p } => {
+        Expr::Range {
+            start,
+            step,
+            end,
+            p,
+        } => {
             object.insert("start".into(), expr(start));
             if let Some(step) = step {
                 object.insert("step".into(), expr(step));
@@ -206,12 +217,21 @@ pub fn expr(node: &Expr) -> Value {
             object.insert("no".into(), expr(no));
             object.insert("p".into(), json!(*p));
         }
-        Expr::Function { params: ps, body, p } => {
+        Expr::Function {
+            params: ps,
+            body,
+            p,
+        } => {
             object.insert("params".into(), params(ps));
             object.insert("body".into(), expr(body));
             object.insert("p".into(), json!(*p));
         }
-        Expr::Call { name, callee, args, p } => {
+        Expr::Call {
+            name,
+            callee,
+            args,
+            p,
+        } => {
             match name {
                 Some(name) => object.insert("name".into(), Value::String(name.clone())),
                 None => object.insert("name".into(), Value::Null),

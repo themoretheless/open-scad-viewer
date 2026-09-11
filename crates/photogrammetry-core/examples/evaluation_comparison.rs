@@ -1,5 +1,5 @@
 //! Exact spatial-index metrics versus exhaustive distances on identical samples.
-use photogrammetry_core::evaluation::{evaluate_clouds, EvaluationOptions};
+use photogrammetry_core::evaluation::{EvaluationOptions, evaluate_clouds};
 use std::time::Instant;
 
 fn exhaustive(a: &[[f64; 3]], b: &[[f64; 3]], threshold: f64) -> (f64, f64) {
@@ -58,8 +58,19 @@ fn main() {
         assert!((r.reference_to_reconstructed.mean - b.0).abs() < 1e-12);
         assert_eq!(r.precision, a.1);
         assert_eq!(r.recall, b.1);
-        println!("{{\"run\":{},\"warmup\":{},\"model_samples\":{},\"reference_samples\":{},\"indexed_ms\":{},\"exhaustive_ms\":{},\"accuracy_mean\":{},\"completeness_mean\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"matches_exhaustive\":true}}",
-            run, run == 0, model.len(), reference.len(), fast_ms, slow_ms,
-            a.0, b.0, r.precision, r.recall, r.f1);
+        println!(
+            "{{\"run\":{},\"warmup\":{},\"model_samples\":{},\"reference_samples\":{},\"indexed_ms\":{},\"exhaustive_ms\":{},\"accuracy_mean\":{},\"completeness_mean\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"matches_exhaustive\":true}}",
+            run,
+            run == 0,
+            model.len(),
+            reference.len(),
+            fast_ms,
+            slow_ms,
+            a.0,
+            b.0,
+            r.precision,
+            r.recall,
+            r.f1
+        );
     }
 }

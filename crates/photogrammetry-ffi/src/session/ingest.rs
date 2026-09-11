@@ -145,8 +145,8 @@ fn bilinear(image: &Image, p: [f64; 2], out: &mut [u8]) {
     for (channel, value) in out.iter_mut().enumerate() {
         *value = ((1. - b) * ((1. - a) * c00[channel] + a * c10[channel])
             + b * ((1. - a) * c01[channel] + a * c11[channel]))
-        .round()
-        .clamp(0., 255.) as u8;
+            .round()
+            .clamp(0., 255.) as u8;
     }
 }
 
@@ -241,9 +241,7 @@ fn rectify_searched(
             let mut high = base_focal;
             while !grid_valid(high)? {
                 if high >= max_focal {
-                    return Err(
-                        "Calibration has no fully valid view within the zoom limit".into()
-                    );
+                    return Err("Calibration has no fully valid view within the zoom limit".into());
                 }
                 low = high;
                 high = (high * 1.2).min(max_focal);
@@ -381,4 +379,3 @@ fn add_image(
         Ok(s.images.len())
     })
 }
-

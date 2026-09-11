@@ -146,7 +146,7 @@ interface GeometryBackend {
 ```ts
 interface EngineRoutingContract {
   readonly languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
-  readonly engineClass: 'manifold' | 'brep'
+  readonly engineClass: 'mesh' | 'brep'
   readonly requiredCapabilities: readonly string[]
   readonly fallback: 'never'
 }

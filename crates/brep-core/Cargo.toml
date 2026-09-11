@@ -1,0 +1,11 @@
+[package]
+name = "brep-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+value-codec = { path = "../value-codec" }
+nurbs-core = { path = "../nurbs-core" }
+brep-topology = { path = "../brep-topology" }

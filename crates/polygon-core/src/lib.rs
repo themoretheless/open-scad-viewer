@@ -15,50 +15,15 @@ use std::fmt::Write;
 pub const MAX_TRIANGLES: usize = 20_000;
 pub const MAX_MESH_TRIANGLES: usize = 100_000;
 pub const MAX_VERTICES: usize = 300_000;
-#[derive(Debug, Clone)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
+pub use math_core::{Error, Result};
+pub(crate) fn error(message: impl Into<String>) -> Error {
+    Error::new("POLYGON_INVALID_INPUT", message)
 }
-impl value_codec::Serialize for Error {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
-        object.insert(
-            "message".into(),
-            value_codec::Serialize::to_value(&self.message),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl Error {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            code: "POLYGON_INVALID_INPUT",
-            message: message.into(),
-        }
-    }
-}
-impl From<planar_geometry::Error> for Error {
-    fn from(e: planar_geometry::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
-}
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-impl std::error::Error for Error {}
-pub type Result<T> = std::result::Result<T, Error>;
 pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(Error::new(message))
+        Err(error(message))
     }
 }
 pub(crate) fn norm(v: &[f64]) -> f64 {
@@ -558,7 +523,7 @@ impl Mesh {
             loop {
                 let target = next
                     .remove(&current)
-                    .ok_or_else(|| Error::new("Boundary chain does not close."))?;
+                    .ok_or_else(|| error("Boundary chain does not close."))?;
                 path.push(target);
                 if target == start {
                     break;
@@ -647,7 +612,10 @@ impl Mesh {
             mesh.reverse_winding();
             report = mesh.inspect()?;
         }
-        check(report.closed && report.signed_volume_mm3>0.,"Thickening produced degenerate or open topology; the vector may be tangent to the surface.")?;
+        check(
+            report.closed && report.signed_volume_mm3 > 0.,
+            "Thickening produced degenerate or open topology; the vector may be tangent to the surface.",
+        )?;
         report.construction = Construction::FixedVectorThickening;
         Ok(BuiltMesh { mesh, report })
     }

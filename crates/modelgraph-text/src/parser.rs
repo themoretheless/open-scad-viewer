@@ -272,25 +272,37 @@ impl Parser<'_> {
             self.inner();
             while self.peek() != close {
                 let name = self.id()?;
-                if names.contains(&name) { return self.err("Duplicate generic parameter"); }
+                if names.contains(&name) {
+                    return self.err("Duplicate generic parameter");
+                }
                 names.push(name.clone());
-                if names.len() > 16 { return self.err("At most 16 generic parameters"); }
+                if names.len() > 16 {
+                    return self.err("At most 16 generic parameters");
+                }
                 let mut required = Vec::new();
                 if self.peek() == ":" {
                     self.pop()?;
                     loop {
                         self.inner();
                         let bound = self.id()?;
-                        if required.contains(&bound) { return self.err("Duplicate trait constraint"); }
+                        if required.contains(&bound) {
+                            return self.err("Duplicate trait constraint");
+                        }
                         required.push(bound);
-                        if required.len() > 16 { return self.err("At most 16 trait constraints"); }
-                        if self.peek() != "+" { break; }
+                        if required.len() > 16 {
+                            return self.err("At most 16 trait constraints");
+                        }
+                        if self.peek() != "+" {
+                            break;
+                        }
                         self.pop()?;
                     }
                 }
                 bounds.insert(name, json!(required));
                 self.inner();
-                if self.peek() != "," { break; }
+                if self.peek() != "," {
+                    break;
+                }
                 self.pop()?;
                 self.inner();
             }
@@ -309,40 +321,69 @@ impl Parser<'_> {
         while self.peek() != "}" {
             let base = self.indent();
             let kind = self.peek().to_owned();
-            if kind == "fn" || kind == "type" { self.pop()?; }
+            if kind == "fn" || kind == "type" {
+                self.pop()?;
+            }
             let name = self.id()?;
-            if names.contains(&name) { return self.err(format!("Duplicate trait member {name}")); }
+            if names.contains(&name) {
+                return self.err(format!("Duplicate trait member {name}"));
+            }
             names.push(name.clone());
-            if names.len() > 64 { return self.err("At most 64 trait members"); }
+            if names.len() > 64 {
+                return self.err("At most 64 trait members");
+            }
             match kind.as_str() {
                 "type" => {
                     let mut entry = json!({"name":name});
-                    if implementation { self.take("=")?; entry["type"] = self.ty(0)?; }
+                    if implementation {
+                        self.take("=")?;
+                        entry["type"] = self.ty(0)?;
+                    }
                     associated.push(entry);
                 }
                 "fn" => {
                     let start = self.p;
-                    let inputs = if self.next() == ":" { self.layout_fields(&base,true)? } else { Vec::new() };
-                    let outputs = if self.peek() == "->" { self.pop()?; vec![json!({"name":"value","type":self.ty(0)?})] } else { Vec::new() };
+                    let inputs = if self.next() == ":" {
+                        self.layout_fields(&base, true)?
+                    } else {
+                        Vec::new()
+                    };
+                    let outputs = if self.peek() == "->" {
+                        self.pop()?;
+                        vec![json!({"name":"value","type":self.ty(0)?})]
+                    } else {
+                        Vec::new()
+                    };
                     let end = self.p;
                     self.inner();
-                    let body = ["ret","=>"].contains(&self.peek()) || (self.p != end && self.indent().len() > base.len());
+                    let body = ["ret", "=>"].contains(&self.peek())
+                        || (self.p != end && self.indent().len() > base.len());
                     self.p = if body { start } else { end };
-                    let mut method = if body { self.layout(&base)? } else {
+                    let mut method = if body {
+                        self.layout(&base)?
+                    } else {
                         json!({"kind":"function","generics":[],"inputs":inputs,"outputs":outputs,"singleResult":true,"required":true})
                     };
-                    if !implementation && method["outputs"].as_array().is_none_or(Vec::is_empty) { return self.err("Trait methods require an explicit result type"); }
-                    if implementation && !body { return self.err("impl methods require a body"); }
+                    if !implementation && method["outputs"].as_array().is_none_or(Vec::is_empty) {
+                        return self.err("Trait methods require an explicit result type");
+                    }
+                    if implementation && !body {
+                        return self.err("impl methods require a body");
+                    }
                     method["name"] = json!(name);
                     methods.push(method);
                 }
                 _ => {
-                    if implementation { return self.err("impl accepts only type and fn members"); }
+                    if implementation {
+                        return self.err("impl accepts only type and fn members");
+                    }
                     self.take(":")?;
                     fields.push(json!({"name":name,"type":self.ty(0)?}));
                 }
             }
-            if self.peek() != "}" && !["\n",",",";"].contains(&self.peek()) { return self.err("Expected trait member separator"); }
+            if self.peek() != "}" && !["\n", ",", ";"].contains(&self.peek()) {
+                return self.err("Expected trait member separator");
+            }
             self.commas();
         }
         self.take("}")?;
@@ -351,7 +392,11 @@ impl Parser<'_> {
     fn fields(&mut self, end: &str, alt: &str, defaults: bool) -> R<Vec<J>> {
         let mut xs = Vec::new();
         self.commas();
-        while self.peek() != end && self.peek() != alt && self.peek() != "ret" && !(defaults && self.peek() == "{") {
+        while self.peek() != end
+            && self.peek() != alt
+            && self.peek() != "ret"
+            && !(defaults && self.peek() == "{")
+        {
             let name = self.id()?;
             self.take(":")?;
             let mut field = json!({"name":&name,"type":self.ty(0)?});
@@ -363,7 +408,11 @@ impl Parser<'_> {
             if xs.len() > 32 {
                 return self.err("At most 32 fields or parameters");
             }
-            if self.peek() != end && self.peek() != alt && self.peek() != "ret" && !(defaults && self.peek() == "{") && !["\n", ",", ";"].contains(&self.peek())
+            if self.peek() != end
+                && self.peek() != alt
+                && self.peek() != "ret"
+                && !(defaults && self.peek() == "{")
+                && !["\n", ",", ";"].contains(&self.peek())
             {
                 return self.err(format!("Expected a field separator or {end}"));
             }
@@ -436,9 +485,14 @@ impl Parser<'_> {
         }
     }
     fn destructuring_ahead(&self) -> bool {
-        if !["[", "{"].contains(&self.peek()) { return false; }
+        if !["[", "{"].contains(&self.peek()) {
+            return false;
+        }
         let close = if self.peek() == "[" { "]" } else { "}" };
-        self.tokens[self.p..].windows(2).take(100).find(|tokens| tokens[0].text == close)
+        self.tokens[self.p..]
+            .windows(2)
+            .take(100)
+            .find(|tokens| tokens[0].text == close)
             .is_some_and(|tokens| tokens[1].text == "=")
     }
     fn check_statement(&mut self) -> R<J> {
@@ -450,9 +504,14 @@ impl Parser<'_> {
         self.inner();
         let inputs = self.fields("->", "=>", true)?;
         let inferred = self.peek() != "->";
-        if !inferred { self.take("->")?; self.inner(); }
+        if !inferred {
+            self.take("->")?;
+            self.inner();
+        }
         let single = inferred || self.next() != ":";
-        let outputs = if inferred { Vec::new() } else if single {
+        let outputs = if inferred {
+            Vec::new()
+        } else if single {
             vec![json!({"name":"value","type":self.ty(0)?})]
         } else {
             self.fields("{", "=>", false)?
@@ -554,13 +613,19 @@ impl Parser<'_> {
         };
         let signature_end = self.p;
         self.inner();
-        if self.peek() == "=>" || (self.peek() == "ret" && !["\n", "EOF"].contains(&self.next())) || (self.peek() == "ret" && self.p == signature_end) {
-            if self.peek() == "ret" && self.p != signature_end && self.indent().len() <= base.len() {
+        if self.peek() == "=>"
+            || (self.peek() == "ret" && !["\n", "EOF"].contains(&self.next()))
+            || (self.peek() == "ret" && self.p == signature_end)
+        {
+            if self.peek() == "ret" && self.p != signature_end && self.indent().len() <= base.len()
+            {
                 return self.err("Expected indented function body");
             }
             self.pop()?;
             self.continuation(base, "Expected indented return expression")?;
-            return Ok(json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":[],"singleResult":true,"inferResult":true,"items":[],"left":self.expr(0)?}));
+            return Ok(
+                json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":[],"singleResult":true,"inferResult":true,"items":[],"left":self.expr(0)?}),
+            );
         }
         let void = self.peek() != "->";
         if void {
@@ -580,7 +645,9 @@ impl Parser<'_> {
         if !void && ["=>", "ret"].contains(&self.peek()) {
             self.pop()?;
             self.inner();
-            return Ok(json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"items":[],"left":self.expr(0)?}));
+            return Ok(
+                json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"items":[],"left":self.expr(0)?}),
+            );
         }
         if self.peek() != "\n" {
             return self.err("Expected newline after function signature");
@@ -766,9 +833,7 @@ impl Parser<'_> {
             } else {
                 let pattern = self.binding()?;
                 self.take("=")?;
-                clauses.push(
-                    json!({"kind":"let","pattern":pattern,"left":self.expr(2)?}),
-                );
+                clauses.push(json!({"kind":"let","pattern":pattern,"left":self.expr(2)?}));
             }
         }
         let body;
@@ -809,9 +874,7 @@ impl Parser<'_> {
                 } else {
                     let pattern = self.binding()?;
                     self.take("=")?;
-                    clauses.push(
-                        json!({"kind":"let","pattern":pattern,"left":self.expr(0)?}),
-                    );
+                    clauses.push(json!({"kind":"let","pattern":pattern,"left":self.expr(0)?}));
                 }
                 if clauses.len() > 64 {
                     return self.err("At most 64 foreach clauses");
@@ -968,7 +1031,10 @@ impl Parser<'_> {
                 }
             }
         };
-        while self.peek() == "." || self.peek() == "[" || (self.peek() == "\n" && self.next() == ".") {
+        while self.peek() == "."
+            || self.peek() == "["
+            || (self.peek() == "\n" && self.next() == ".")
+        {
             if self.peek() == "[" {
                 self.pop()?;
                 self.inner();
@@ -1146,7 +1212,11 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
             "struct" => {
                 let kind = p.pop()?;
                 let name = p.id()?;
-                let gs = if kind == "struct" { p.generics("<", ">")? } else { Vec::new() };
+                let gs = if kind == "struct" {
+                    p.generics("<", ">")?
+                } else {
+                    Vec::new()
+                };
                 p.inner();
                 p.take("{")?;
                 let fields = p.fields("}", "", false)?;

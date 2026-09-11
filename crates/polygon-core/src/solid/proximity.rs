@@ -1,5 +1,5 @@
 //! Mesh reconstruction helpers. Exact-coordinate welding never guesses a tolerance.
-use crate::{cross, norm, sub, Error, Mesh, Result};
+use crate::{Mesh, Result, cross, error, norm, sub};
 use std::collections::BTreeMap;
 pub type Point = [f64; 3];
 fn dot(a: Point, b: Point) -> f64 {
@@ -31,12 +31,12 @@ pub fn weld_exact(mesh: &Mesh) -> Result<Mesh> {
 pub fn valid_source(mesh: &Mesh, max_triangles: usize) -> Result<Mesh> {
     let m = weld_exact(mesh)?;
     if m.indices.is_empty() || m.indices.len() / 3 > max_triangles {
-        return Err(Error::new(
+        return Err(error(
             "Reconstruction source triangle budget exceeded or empty mesh",
         ));
     }
     if m.inspect()?.degenerate_triangles != 0 {
-        return Err(Error::new("Reconstruction rejects degenerate triangles"));
+        return Err(error("Reconstruction rejects degenerate triangles"));
     }
     Ok(m)
 }
@@ -176,7 +176,7 @@ pub fn sample_deviation(a: &Mesh, b: &Mesh) -> Result<Deviation> {
     let work =
         count(a).saturating_mul(b.indices.len() / 3) + count(b).saturating_mul(a.indices.len() / 3);
     if a.indices.is_empty() || b.indices.is_empty() || work > 8_000_000 {
-        return Err(Error::new(
+        return Err(error(
             "Deviation sampling exceeds 8000000 triangle tests or empty input",
         ));
     }

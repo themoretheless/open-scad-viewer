@@ -3,9 +3,9 @@
 //! `src/services/openscadParser.ts` (truthiness, deep equality, comparison,
 //! unary/binary/index/member operators, ranges, and the OpenSCAD/JS number
 //! formatting used by echo/assert/str).
+use crate::ParseError;
 use crate::ast::{Expr, FunctionNode, ModuleNode, ModuleParam, Statement};
 use crate::lexer::TT;
-use crate::ParseError;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -167,8 +167,16 @@ pub fn deep_equal(left: &Value, right: &Value) -> bool {
         }
         (Value::Vector(_), _) | (_, Value::Vector(_)) => false,
         (
-            Value::Range { start: s1, step: st1, end: e1 },
-            Value::Range { start: s2, step: st2, end: e2 },
+            Value::Range {
+                start: s1,
+                step: st1,
+                end: e1,
+            },
+            Value::Range {
+                start: s2,
+                step: st2,
+                end: e2,
+            },
         ) => {
             let left_count = range_item_count(*s1, *st1, *e1);
             let right_count = range_item_count(*s2, *st2, *e2);
@@ -191,9 +199,13 @@ pub fn deep_equal(left: &Value, right: &Value) -> bool {
 pub fn compare_values(left: &Value, right: &Value) -> Option<f64> {
     match (left, right) {
         (Value::Number(a), Value::Number(b)) => Some(a - b),
-        (Value::Str(a), Value::Str(b)) => {
-            Some(if a < b { -1.0 } else if a > b { 1.0 } else { 0.0 })
-        }
+        (Value::Str(a), Value::Str(b)) => Some(if a < b {
+            -1.0
+        } else if a > b {
+            1.0
+        } else {
+            0.0
+        }),
         (Value::Bool(a), Value::Bool(b)) => Some(*a as u8 as f64 - *b as u8 as f64),
         (Value::Vector(a), Value::Vector(b)) => {
             let length = a.len().min(b.len());
@@ -206,8 +218,16 @@ pub fn compare_values(left: &Value, right: &Value) -> Option<f64> {
             Some(a.len() as f64 - b.len() as f64)
         }
         (
-            Value::Range { start: s1, step: st1, end: e1 },
-            Value::Range { start: s2, step: st2, end: e2 },
+            Value::Range {
+                start: s1,
+                step: st1,
+                end: e1,
+            },
+            Value::Range {
+                start: s2,
+                step: st2,
+                end: e2,
+            },
         ) => {
             let left_count = range_item_count(*s1, *st1, *e1);
             let right_count = range_item_count(*s2, *st2, *e2);
@@ -257,15 +277,19 @@ fn token(operator: TT) -> &'static str {
 pub struct SemanticsContext<'h, 'a> {
     pub max_range_items: usize,
     pub warn: Box<dyn FnMut(String) + 'h>,
-    pub register_array:
-        Box<dyn FnMut(Vec<Value<'a>>, &str) -> EvalResult<Vec<Value<'a>>> + 'h>,
+    pub register_array: Box<dyn FnMut(Vec<Value<'a>>, &str) -> EvalResult<Vec<Value<'a>>> + 'h>,
 }
 
 impl<'h, 'a> SemanticsContext<'h, 'a> {
     fn register(&mut self, values: Vec<Value<'a>>, label: &str) -> EvalResult<Vec<Value<'a>>> {
         (self.register_array)(values, label)
     }
-    fn undefined_operation(&mut self, operator: TT, left: &Value<'a>, right: &Value<'a>) -> Value<'a> {
+    fn undefined_operation(
+        &mut self,
+        operator: TT,
+        left: &Value<'a>,
+        right: &Value<'a>,
+    ) -> Value<'a> {
         (self.warn)(format!(
             "Undefined operation ({} {} {})",
             type_name(left),
@@ -293,9 +317,16 @@ pub fn materialize_range<'a>(
     let epsilon = 1.0_f64.max(start.abs()).max(end.abs()) * 1e-12;
     let mut output = output;
     let mut value = start;
-    while if forward { value <= end + epsilon } else { value >= end - epsilon } {
+    while if forward {
+        value <= end + epsilon
+    } else {
+        value >= end - epsilon
+    } {
         if output.len() >= ctx.max_range_items {
-            (ctx.warn)(format!("Range exceeds {} items", locale(ctx.max_range_items)));
+            (ctx.warn)(format!(
+                "Range exceeds {} items",
+                locale(ctx.max_range_items)
+            ));
             return Ok(Vec::new());
         }
         output.push(Value::Number(value));
@@ -323,7 +354,11 @@ pub fn unary<'a>(
             Ok(Value::vector(ctx.register(mapped, "unary vector")?))
         }
         other => {
-            (ctx.warn)(format!("Undefined unary operation ({}{})", token(operator), type_name(other)));
+            (ctx.warn)(format!(
+                "Undefined unary operation ({}{})",
+                token(operator),
+                type_name(other)
+            ));
             Ok(Value::Undef)
         }
     }
@@ -338,7 +373,9 @@ fn numeric_vector<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>
 
 fn numeric_matrix<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>> {
     match value {
-        Value::Vector(rows) if !rows.is_empty() && rows.iter().all(|r| numeric_vector(r).is_some()) => {
+        Value::Vector(rows)
+            if !rows.is_empty() && rows.iter().all(|r| numeric_vector(r).is_some()) =>
+        {
             Some(rows)
         }
         _ => None,
@@ -378,7 +415,15 @@ fn dot(left: &[Value], right: &[Value]) -> Option<f64> {
 fn matrix_columns_rows<'a>(matrix: &[Value<'a>]) -> Vec<Vec<f64>> {
     matrix
         .iter()
-        .map(|row| row.as_vector().map(|r| r.iter().map(|v| v.as_number().unwrap_or(f64::NAN)).collect()).unwrap_or_default())
+        .map(|row| {
+            row.as_vector()
+                .map(|r| {
+                    r.iter()
+                        .map(|v| v.as_number().unwrap_or(f64::NAN))
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
         .collect()
 }
 
@@ -418,7 +463,9 @@ fn multiply<'a>(
     }
     if let (Some(l), Some(r)) = (numeric_matrix(left), numeric_vector(right)) {
         let (l, r) = (l.clone(), r.clone());
-        if l.iter().any(|row| row.as_vector().map_or(0, |v| v.len()) != r.len()) {
+        if l.iter()
+            .any(|row| row.as_vector().map_or(0, |v| v.len()) != r.len())
+        {
             (ctx.warn)("matrix*vector requires matching dimensions".to_string());
             return Ok(Value::Undef);
         }
@@ -454,7 +501,9 @@ fn multiply<'a>(
         let shared = left_rows[0].len();
         if left_rows.iter().any(|row| row.len() != shared)
             || right_rows.len() != shared
-            || right_rows.iter().any(|row| row.len() != right_rows[0].len())
+            || right_rows
+                .iter()
+                .any(|row| row.len() != right_rows[0].len())
         {
             (ctx.warn)("matrix*matrix requires matching rectangular dimensions".to_string());
             return Ok(Value::Undef);
@@ -470,7 +519,9 @@ fn multiply<'a>(
                 }
                 product_row.push(Value::Number(value));
             }
-            out.push(Value::vector(ctx.register(product_row, "matrix product row")?));
+            out.push(Value::vector(
+                ctx.register(product_row, "matrix product row")?,
+            ));
         }
         return Ok(Value::vector(ctx.register(out, "matrix product")?));
     }
@@ -511,7 +562,11 @@ pub fn binary<'a>(
     match operator {
         TT::Plus | TT::Minus => {
             if let (Value::Number(a), Value::Number(b)) = (left, right) {
-                return Ok(Value::Number(if operator == TT::Plus { a + b } else { a - b }));
+                return Ok(Value::Number(if operator == TT::Plus {
+                    a + b
+                } else {
+                    a - b
+                }));
             }
             if let (Value::Vector(l), Value::Vector(r)) = (left, right) {
                 let (l, r) = (l.clone(), r.clone());
@@ -549,7 +604,11 @@ pub fn binary<'a>(
         }
         TT::Percent | TT::Caret => {
             if let (Value::Number(a), Value::Number(b)) = (left, right) {
-                return Ok(Value::Number(if operator == TT::Percent { a % b } else { a.powf(*b) }));
+                return Ok(Value::Number(if operator == TT::Percent {
+                    a % b
+                } else {
+                    a.powf(*b)
+                }));
             }
             Ok(ctx.undefined_operation(operator, left, right))
         }
@@ -676,11 +735,7 @@ pub fn js_number_to_string(value: f64) -> String {
         out.push_str(&(n - 1).abs().to_string());
         out
     };
-    if negative {
-        format!("-{body}")
-    } else {
-        body
-    }
+    if negative { format!("-{body}") } else { body }
 }
 
 /// ECMAScript `Number.prototype.toPrecision(p)` for finite nonzero numbers.
@@ -728,11 +783,7 @@ pub fn js_to_precision(value: f64, precision: usize) -> String {
         out.push_str(&digits);
         out
     };
-    if negative {
-        format!("-{body}")
-    } else {
-        body
-    }
+    if negative { format!("-{body}") } else { body }
 }
 
 /// ECMAScript `Number.prototype.toExponential(fractionDigits)`.
@@ -755,11 +806,7 @@ pub fn js_to_exponential(value: f64, fraction_digits: usize) -> String {
         if exponent >= 0 { '+' } else { '-' },
         exponent.abs()
     );
-    if negative {
-        format!("-{body}")
-    } else {
-        body
-    }
+    if negative { format!("-{body}") } else { body }
 }
 
 fn js_round_to_precision(value: f64, precision: usize) -> f64 {
@@ -852,7 +899,11 @@ pub fn format_value(value: &Value) -> String {
         }
         Value::Vector(items) => format!(
             "[{}]",
-            items.iter().map(format_value).collect::<Vec<_>>().join(", ")
+            items
+                .iter()
+                .map(format_value)
+                .collect::<Vec<_>>()
+                .join(", ")
         ),
         Value::Range { start, step, end } => format!(
             "[{} : {} : {}]",
@@ -934,17 +985,15 @@ impl<'a> StableScope<'a> {
         let mut modules = HashMap::new();
         for (statement_index, statement) in statements.iter().enumerate() {
             match statement {
-                Statement::Assign(assign) => {
-                    match variable_index.get(&assign.name) {
-                        Some(&existing) => {
-                            variables[existing].2 = &assign.value;
-                        }
-                        None => {
-                            variable_index.insert(assign.name.clone(), variables.len());
-                            variables.push((assign.name.clone(), statement_index, &assign.value));
-                        }
+                Statement::Assign(assign) => match variable_index.get(&assign.name) {
+                    Some(&existing) => {
+                        variables[existing].2 = &assign.value;
                     }
-                }
+                    None => {
+                        variable_index.insert(assign.name.clone(), variables.len());
+                        variables.push((assign.name.clone(), statement_index, &assign.value));
+                    }
+                },
                 Statement::Function(function) => {
                     functions.insert(function.name.clone(), function);
                 }
@@ -982,18 +1031,30 @@ impl<'a> StableScope<'a> {
         warn: &mut dyn FnMut(String),
     ) -> EvalResult<VariableResolution<'a>> {
         let Some(&binding_index) = self.variable_index.get(name) else {
-            return Ok(VariableResolution { found: false, value: Value::Undef });
+            return Ok(VariableResolution {
+                found: false,
+                value: Value::Undef,
+            });
         };
         let (_, first_statement, binding_value) = &self.variables[binding_index];
         if *first_statement >= visible_before {
-            return Ok(VariableResolution { found: false, value: Value::Undef });
+            return Ok(VariableResolution {
+                found: false,
+                value: Value::Undef,
+            });
         }
         if let Some(value) = self.values.borrow().get(name) {
-            return Ok(VariableResolution { found: true, value: value.clone() });
+            return Ok(VariableResolution {
+                found: true,
+                value: value.clone(),
+            });
         }
         if !self.resolving.borrow_mut().insert(name.to_string()) {
             warn(format!("Ignoring cyclic variable reference '{name}'"));
-            return Ok(VariableResolution { found: true, value: Value::Undef });
+            return Ok(VariableResolution {
+                found: true,
+                value: Value::Undef,
+            });
         }
         let site = ScopeEvaluationSite {
             scope: self.clone(),
@@ -1003,7 +1064,9 @@ impl<'a> StableScope<'a> {
         let result = evaluate(binding_value, site);
         self.resolving.borrow_mut().remove(name);
         let value = result?;
-        self.values.borrow_mut().insert(name.to_string(), value.clone());
+        self.values
+            .borrow_mut()
+            .insert(name.to_string(), value.clone());
         Ok(VariableResolution { found: true, value })
     }
 
@@ -1030,6 +1093,8 @@ impl<'a> StableScope<'a> {
 
 impl std::fmt::Debug for FunctionValue<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FunctionValue").field("name", &self.name).finish()
+        f.debug_struct("FunctionValue")
+            .field("name", &self.name)
+            .finish()
     }
 }

@@ -15,7 +15,7 @@ pub mod serialize;
 pub mod value;
 
 pub use ast::{ExpressionArgument, ModuleParam, Statement, ViewportModifier};
-pub use lexer::{tokenize, TT};
+pub use lexer::{TT, tokenize};
 pub use parser::Parser;
 
 /// Mirrors `MAX_SOURCE_LENGTH` in `src/services/openscadParser.ts`.
@@ -99,7 +99,10 @@ impl ParseError {
         let safe = self.position.min(units.len());
         let before = &units[..safe];
         let line = before.iter().filter(|&&u| u == b'\n' as u16).count() + 1;
-        let line_start = before.iter().rposition(|&u| u == b'\n' as u16).map_or(0, |i| i + 1);
+        let line_start = before
+            .iter()
+            .rposition(|&u| u == b'\n' as u16)
+            .map_or(0, |i| i + 1);
         let column = safe - line_start + 1;
         let end = self
             .end_position
@@ -126,7 +129,10 @@ pub fn compile(source: &str, profile: LanguageProfile) -> Result<Vec<Statement>,
 
 /// Same as [`compile`] but over pre-decoded UTF-16 units (positions stay in
 /// UTF-16 code units to match the TypeScript parser).
-pub fn compile_units(units: &[u16], profile: LanguageProfile) -> Result<Vec<Statement>, Diagnostic> {
+pub fn compile_units(
+    units: &[u16],
+    profile: LanguageProfile,
+) -> Result<Vec<Statement>, Diagnostic> {
     let tokens = tokenize(units).map_err(|e| e.resolve(units))?;
     let mut statements = Parser::new(&tokens, profile)
         .parse_all()
@@ -169,7 +175,8 @@ fn find_directive(nodes: &[Statement]) -> Option<&ast::DirectiveNode> {
 /// Port of `encodeURIComponent` for the identifier-shaped path segments used
 /// by operation ids (names may contain `$` and `_`).
 fn encode_uri_component(segment: &str) -> String {
-    const UNRESERVED: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()";
+    const UNRESERVED: &[u8] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()";
     let mut out = String::new();
     for byte in segment.as_bytes() {
         if UNRESERVED.contains(byte) {
@@ -217,6 +224,6 @@ pub fn assign_operation_ids(nodes: &mut [Statement], parent: &[String]) {
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod eval_tests;
+#[cfg(test)]
+mod tests;

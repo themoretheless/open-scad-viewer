@@ -15,14 +15,12 @@
     "test:scale": "vitest run tests/scaleTargets.test.ts",
     "bench:cpu": "node scripts/bench-cpu.mjs",
     "bench:gpu": "node scripts/bench-gpu.mjs",
-    "bench:memory": "node --expose-gc --import tsx benchmarks/manifold-memory.mjs",
+    "bench:memory": "node --expose-gc --import tsx benchmarks/cad-memory.mjs",
     "setup:openscad": "node --import tsx scripts/official-openscad-runtime.mjs install",
     "verify:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs verify",
     "status:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs status",
     "verify:dist": "node scripts/verify-dist.mjs",
     "check": "npm run typecheck && npm run test && npm run build",
-    "build:nurbs": "node scripts/build-nurbs-kernel.mjs",
-    "test:nurbs": "npm run test:geometry",
     "predev": "npm run build:geometry",
     "prebuild": "npm run build:geometry",
     "pretest": "npm run build:geometry",
@@ -36,21 +34,21 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
-    "@duckdb/node-api": "^1.5.5-r.2",
+    "@duckdb/node-api": "^1.5.5-r.4",
     "@modelcontextprotocol/server": "2.0.0",
     "harfbuzzjs": "0.10.3",
-    "tsx": "^4.23.1",
-    "vue": "^3.5.31",
-    "zod": "^4.4.3"
+    "tsx": "^4.23.13",
+    "vue": "^3.5.42",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@types/node": "^20.19.9",
-    "@vitejs/plugin-vue": "^6.0.7",
-    "@webgpu/types": "^0.1.60",
+    "@types/node": "^20.19.43",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@webgpu/types": "^0.1.72",
     "fake-indexeddb": "^6.2.5",
-    "typescript": "^6.0.2",
-    "vite": "^8.1.4",
-    "vitest": "^4.1.10",
-    "vue-tsc": "^3.2.6"
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11"
   }
 }

@@ -157,32 +157,40 @@ mod allocation {
     }
     unsafe impl GlobalAlloc for Tracked {
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-            let ptr = System.alloc(layout);
-            if !ptr.is_null() && ENABLED.load(Relaxed) {
-                added(layout.size());
+            unsafe {
+                let ptr = System.alloc(layout);
+                if !ptr.is_null() && ENABLED.load(Relaxed) {
+                    added(layout.size());
+                }
+                ptr
             }
-            ptr
         }
         unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-            let ptr = System.alloc_zeroed(layout);
-            if !ptr.is_null() && ENABLED.load(Relaxed) {
-                added(layout.size());
+            unsafe {
+                let ptr = System.alloc_zeroed(layout);
+                if !ptr.is_null() && ENABLED.load(Relaxed) {
+                    added(layout.size());
+                }
+                ptr
             }
-            ptr
         }
         unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-            if ENABLED.load(Relaxed) {
-                LIVE.fetch_sub(layout.size(), Relaxed);
+            unsafe {
+                if ENABLED.load(Relaxed) {
+                    LIVE.fetch_sub(layout.size(), Relaxed);
+                }
+                System.dealloc(ptr, layout);
             }
-            System.dealloc(ptr, layout);
         }
         unsafe fn realloc(&self, ptr: *mut u8, old: Layout, size: usize) -> *mut u8 {
-            let next = System.realloc(ptr, old, size);
-            if !next.is_null() && ENABLED.load(Relaxed) {
-                LIVE.fetch_sub(old.size(), Relaxed);
-                added(size);
+            unsafe {
+                let next = System.realloc(ptr, old, size);
+                if !next.is_null() && ENABLED.load(Relaxed) {
+                    LIVE.fetch_sub(old.size(), Relaxed);
+                    added(size);
+                }
+                next
             }
-            next
         }
     }
     pub fn start() {
@@ -283,7 +291,12 @@ fn benchmark_surface_transport() {
             value_codec::decode_binary(&direct).unwrap(),
             value_codec::decode_binary(&baseline).unwrap()
         );
-        println!("{{\"mode\":\"verify\",\"vertices\":{},\"faces\":{},\"bytes\":{},\"exactBytes\":true,\"exactDecoded\":true}}", mesh.positions.len(), mesh.triangles.len(), direct.len());
+        println!(
+            "{{\"mode\":\"verify\",\"vertices\":{},\"faces\":{},\"bytes\":{},\"exactBytes\":true,\"exactDecoded\":true}}",
+            mesh.positions.len(),
+            mesh.triangles.len(),
+            direct.len()
+        );
         return;
     }
     assert!(mode == "direct" || mode == "baseline");
@@ -304,7 +317,19 @@ fn benchmark_surface_transport() {
         };
         let elapsed = start.elapsed().as_secs_f64() * 1000.;
         let [allocations, allocated, peak] = if tracked { allocation::stop() } else { [0; 3] };
-        println!("{{\"mode\":\"{}\",\"allocationTracking\":{},\"iteration\":{},\"vertices\":{},\"faces\":{},\"bytes\":{},\"elapsedMs\":{:.6},\"allocations\":{},\"allocatedBytes\":{},\"peakLiveBytes\":{}}}", mode, tracked, iteration, mesh.positions.len(), mesh.triangles.len(), bytes.len(), elapsed, allocations, allocated, peak);
+        println!(
+            "{{\"mode\":\"{}\",\"allocationTracking\":{},\"iteration\":{},\"vertices\":{},\"faces\":{},\"bytes\":{},\"elapsedMs\":{:.6},\"allocations\":{},\"allocatedBytes\":{},\"peakLiveBytes\":{}}}",
+            mode,
+            tracked,
+            iteration,
+            mesh.positions.len(),
+            mesh.triangles.len(),
+            bytes.len(),
+            elapsed,
+            allocations,
+            allocated,
+            peak
+        );
         if iteration + 1 == iterations {
             if let Ok(path) = std::env::var("PHOTO_TRANSPORT_OUTPUT") {
                 std::fs::write(path, &bytes).unwrap();

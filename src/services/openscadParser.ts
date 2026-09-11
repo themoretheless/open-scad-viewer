@@ -9,7 +9,7 @@ import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGrap
  * union/difference/intersection/hull, linear/rotate extrusion, projection and
  * 2D offset. Unsupported syntax fails loudly instead of rendering a wrong model.
  */
-import type { ManifoldKernelHandle, ManifoldKernelOps } from './manifoldKernelOps'
+import type { CadKernelHandle, CadKernelOps } from './cadKernelOps'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import type {
@@ -126,7 +126,7 @@ import {
   type OpenScadTextParameters,
   type PreparedOpenScadTextAssets,
 } from './openScadText'
-import { defaultGeometryKernel } from './manifoldGeometryKernel'
+import { defaultGeometryKernel } from './cadGeometryKernel'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
 import { CSS_COLORS, clamp01, nextColor, resetPalette, type RGBA } from './openscadColors'
 
@@ -188,7 +188,7 @@ type Vec2 = [number, number]
 type Vec3 = [number, number, number]
 
 interface EvalContext {
-  kernel: ManifoldKernelOps
+  kernel: CadKernelOps
   source: string
   project?: OpenScadProject
   importAssets?: PreparedOpenScadImportAssets
@@ -237,8 +237,8 @@ interface StableFunctionValue extends FunctionValue {
   readonly lexicalScope: OpenScadStableScope
 }
 
-interface Shape2D { dimension: 2; geometry: ManifoldKernelHandle; color: RGBA; entityId: SceneEntityId }
-interface Shape3D { dimension: 3; geometry: ManifoldKernelHandle; color: RGBA; entityId: SceneEntityId }
+interface Shape2D { dimension: 2; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
+interface Shape3D { dimension: 3; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
 type Shape = Shape2D | Shape3D
 
 class StableViewportRootSelection {
@@ -253,7 +253,7 @@ function staticOperationId(node: CallNode): SourceOperationId {
   return node.operationId ?? `op:legacy-offset-${node.p}`
 }
 
-function trackSource(geometry: ManifoldKernelHandle, node: CallNode, ctx: EvalContext) {
+function trackSource(geometry: CadKernelHandle, node: CallNode, ctx: EvalContext) {
   const originalId = ctx.kernel.originalId(geometry)
   if (originalId === null || originalId < 0 || ctx.sourceReferences.has(originalId)) return
   ctx.sourceReferences.set(originalId, {
@@ -267,7 +267,7 @@ function trackSource(geometry: ManifoldKernelHandle, node: CallNode, ctx: EvalCo
   })
 }
 
-function trackedSolid(geometry: ManifoldKernelHandle, color: RGBA, node: CallNode, ctx: EvalContext): Shape3D {
+function trackedSolid(geometry: CadKernelHandle, color: RGBA, node: CallNode, ctx: EvalContext): Shape3D {
   // Eager products (hull/boolean) start without a source id. Promote those
   // results so later transforms keep provenance for the generating call.
   const id = ctx.kernel.originalId(geometry)
@@ -2079,7 +2079,7 @@ function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
-  let geometry: ManifoldKernelHandle
+  let geometry: CadKernelHandle
   if (plan.radius1 > 0) {
     geometry = ctx.kernel.cylinder(
       plan.height,
@@ -2236,7 +2236,7 @@ function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   if (r1 < 0 || r2 < 0 || (r1 === 0 && r2 === 0)) evaluationError(ctx, node.p, 'Cylinder radii must be non-negative and not both zero')
   const center = arg(node, 'center', 3, false, ctx) === true
   const fn = segments(node, ctx, 32, 3, Math.max(r1, r2))
-  let geometry: ManifoldKernelHandle
+  let geometry: CadKernelHandle
   if (r1 > 0) geometry = ctx.kernel.cylinder(height, r1, r2, fn, center)
   else {
     geometry = ctx.kernel.mirrorZ(ctx.kernel.cylinder(height, r2, 0, fn, center))
@@ -2430,7 +2430,7 @@ function makeText(node: CallNode, ctx: EvalContext): Shape[] {
       parameters,
       authored.sourcePath,
     )
-    const sections: ManifoldKernelHandle[] = []
+    const sections: CadKernelHandle[] = []
     for (const glyph of layout.glyphs) {
       if (glyph.contours.length === 0) continue
       const section = ctx.kernel.polygon(

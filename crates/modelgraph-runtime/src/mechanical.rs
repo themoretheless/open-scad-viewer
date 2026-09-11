@@ -4,7 +4,7 @@ use crate::{Error, Result};
 use std::collections::HashMap;
 use std::f64::consts::{PI, TAU};
 use std::fmt::Write;
-use value_codec::{json, Value};
+use value_codec::{Value, json};
 type Point = [f64; 2];
 pub struct Generated {
     pub source: String,
@@ -121,7 +121,9 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
         return Err(e("Gear thickness must be from 0.1 to 1000 mm."));
     }
     if backlash < 0. || backlash > module / 2. {
-        return Err(e("Gear backlash must be from zero to half the module; it reduces each gear tooth thickness."));
+        return Err(e(
+            "Gear backlash must be from zero to half the module; it reduces each gear tooth thickness.",
+        ));
     }
     if clearance < 0. || clearance > module {
         return Err(e("Gear clearance must be from zero to one module."));
@@ -134,7 +136,13 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
     let alpha = pressure * PI / 180.;
     let minimum = (2. / alpha.sin().powi(2) - 1e-12).ceil();
     if !internal && teeth < minimum {
-        return Err(err(path,format!("Gear requires at least {} teeth at this pressure angle; undercut and profile shift are not implemented.",super::emit::number(minimum))));
+        return Err(err(
+            path,
+            format!(
+                "Gear requires at least {} teeth at this pressure angle; undercut and profile shift are not implemented.",
+                super::emit::number(minimum)
+            ),
+        ));
     }
     let pitch = module * teeth / 2.;
     let base = pitch * alpha.cos();
@@ -152,7 +160,9 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
         ));
     }
     if internal && tip <= base + 1e-9 {
-        return Err(e("Internal gear tip must remain outside the base circle; increase teeth or pressure_angle."));
+        return Err(e(
+            "Internal gear tip must remain outside the base circle; increase teeth or pressure_angle.",
+        ));
     }
     if internal && bore != 0. {
         return Err(e(
@@ -187,7 +197,9 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
     let high_half = half(high);
     let tooth_step = TAU / teeth;
     if high_half <= 1e-6 || low_half >= tooth_step / 2. - 1e-6 {
-        return Err(e("Gear tooth profile collapses or overlaps; reduce backlash/clearance or change teeth/pressure_angle."));
+        return Err(e(
+            "Gear tooth profile collapses or overlaps; reduce backlash/clearance or change teeth/pressure_angle.",
+        ));
     }
     let t0 = ((start / base).powi(2) - 1.).max(0.).sqrt();
     let t1 = ((high / base).powi(2) - 1.).max(0.).sqrt();
@@ -339,7 +351,9 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
     }
     let ring_teeth = sun_teeth + 2. * planet_teeth;
     if (sun_teeth + ring_teeth) % count != 0. {
-        return Err(e("Equally spaced planets require (sun_teeth + ring_teeth) / planet_count to be an integer."));
+        return Err(e(
+            "Equally spaced planets require (sun_teeth + ring_teeth) / planet_count to be an integer.",
+        ));
     }
     let mut common = json!({});
     for k in [
@@ -371,7 +385,9 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
     let orbit = module * (sun_teeth + planet_teeth) / 2.;
     let adjacent = 2. * orbit * (PI / count).sin() - 2. * n(&planet_report, "tip_radius_mm");
     if adjacent <= module * 1e-8 {
-        return Err(e("Adjacent planet addendum circles overlap or touch; reduce planet_count or increase sun_teeth."));
+        return Err(e(
+            "Adjacent planet addendum circles overlap or touch; reduce planet_count or increase sun_teeth.",
+        ));
     }
     let margin = (n(&ring_report, "tip_radius_mm").powi(2)
         - n(&ring_report, "base_radius_mm").powi(2))
@@ -379,7 +395,9 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
     .sqrt()
         - orbit * (pressure * PI / 180.).sin();
     if margin <= module * 1e-8 {
-        return Err(e("Internal involute interference: ring tooth tips reach below the planet base circle; increase planet_teeth."));
+        return Err(e(
+            "Internal involute interference: ring tooth tips reach below the planet base circle; increase planet_teeth.",
+        ));
     }
     let sun_angle = (1. + ring_teeth / sun_teeth) * carrier;
     let ring_angle = (planet_teeth % 2.) * 180. / ring_teeth;
@@ -439,7 +457,9 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
     }
     let source = sources.join("\n");
     if source.len() > 240000 {
-        return Err(e("Planetary generated source exceeds the geometry budget; reduce tooth counts, planet_count or flank_segments."));
+        return Err(e(
+            "Planetary generated source exceeds the geometry budget; reduce tooth counts, planet_count or flank_segments.",
+        ));
     }
     let report = json!({"generator":"planetary_gears","construction":"unshifted_involute_spur_gearset","sun_teeth":sun_teeth,"planet_teeth":planet_teeth,"ring_teeth":ring_teeth,"planet_count":count,"module_mm":module,"pressure_angle_deg":pressure,"thickness_mm":thickness,"orbit_radius_mm":orbit,"adjacent_planet_tip_gap_mm":adjacent,"internal_involute_contact_margin_mm":margin,"equal_spacing_assembly_index":(sun_teeth+ring_teeth)/count,"fixed_member":"ring","input_member":"sun","output_member":"carrier","sun_to_carrier_ratio":1.+ring_teeth/sun_teeth,"carrier_angle_deg":carrier,"sun_angle_deg":sun_angle,"ring_angle_deg":ring_angle,"planet_angles_deg":planet_angles,"backlash_per_gear_mm":o["backlash"],"pair_circumferential_backlash_mm":2.*n(o,"backlash"),"generated_parts":report_parts,"omitted_components":["carrier_plate","axles","bearings","housing","fasteners"],"load_capacity":"not_evaluated","manufacturing_tolerance_class":"not_assigned","profile_note":"Sampled involute flanks with radial root transitions; no cutter-generated trochoid or root fillet."});
     Ok(Generated {
@@ -545,7 +565,10 @@ impl ThreadMesh<'_> {
         }
         self.faces.push(if reverse { [a, c, b] } else { [a, b, c] });
         if self.faces.len() > 3500 {
-            return Err(err(self.path,"Thread mesh exceeds 3500 triangles; shorten length, increase pitch, or reduce segments_per_turn."));
+            return Err(err(
+                self.path,
+                "Thread mesh exceeds 3500 triangles; shorten length, increase pitch, or reduce segments_per_turn.",
+            ));
         }
         Ok(())
     }
@@ -583,7 +606,9 @@ pub fn thread(o: &Value, path: &str) -> Result<Generated> {
         return Err(e("Thread starts must be an integer from 1 to 4."));
     }
     if segments.fract() != 0. || !(16.0..=96.).contains(&segments) || segments < 8. * starts {
-        return Err(e("Thread segments_per_turn must be an integer from 16 to 96, and at least eight times starts."));
+        return Err(e(
+            "Thread segments_per_turn must be an integer from 16 to 96, and at least eight times starts.",
+        ));
     }
     let turns = length / pitch;
     let slope = (if flag(o, "left_handed") { -1. } else { 1. }) * starts;
@@ -707,7 +732,9 @@ pub fn thread(o: &Value, path: &str) -> Result<Generated> {
     }
     source.push_str("],convexity=10);");
     if source.len() > 200000 {
-        return Err(e("Thread generated source exceeds 200000 characters; reduce segments_per_turn or length."));
+        return Err(e(
+            "Thread generated source exceeds 200000 characters; reduce segments_per_turn or length.",
+        ));
     }
     let depth = 5. * 3f64.sqrt() * pitch / 16.;
     let offset = (if internal { 1. } else { -1. }) * clearance / 2.;

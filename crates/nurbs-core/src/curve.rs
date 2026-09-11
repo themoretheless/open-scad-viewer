@@ -1,4 +1,4 @@
-use crate::{check, numeric, Error, Result};
+use crate::{Result, check, numeric, numeric_err, resource};
 
 #[derive(Clone, Debug)]
 pub struct Curve {
@@ -152,7 +152,7 @@ impl value_codec::Serialize for Evaluation {
 }
 fn budget(count: usize) -> Result<()> {
     if count > 256 {
-        return Err(Error::resource("The result exceeds 256 control points"));
+        return Err(resource("The result exceeds 256 control points"));
     }
     Ok(())
 }
@@ -268,8 +268,11 @@ impl Curve {
                 "A periodic curve needs at least degree+1 unwrapped control points",
             )?;
             for i in 0..self.degree {
-                check(self.weights[i] == self.weights[period_controls+i] && self.control_points[i] == self.control_points[period_controls+i],
-                    "Periodic curves must explicitly repeat the first degree control points and weights at the end")?;
+                check(
+                    self.weights[i] == self.weights[period_controls + i]
+                        && self.control_points[i] == self.control_points[period_controls + i],
+                    "Periodic curves must explicitly repeat the first degree control points and weights at the end",
+                )?;
             }
             let period = domain[1] - domain[0];
             let scale = self.knots.iter().map(|k| k.abs()).fold(0., f64::max);
@@ -307,7 +310,7 @@ impl Curve {
             .basis
             .iter()
             .position(|v| *v > 0.)
-            .ok_or_else(|| Error::numeric("Empty basis support"))?;
+            .ok_or_else(|| numeric_err("Empty basis support"))?;
         let origin = &self.control_points[index];
         let (mut weight, mut w1, mut w2) = (0., 0., 0.);
         for i in 0..self.control_points.len() {

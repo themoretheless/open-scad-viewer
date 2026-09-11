@@ -14,8 +14,8 @@
 //! arrangement or printable regions. Intersections, shell containment and
 //! material classification still require a subsequent validation stage.
 
-use crate::{check, cross, sub, Error, Mesh, Result};
-use planar_geometry::rings::{area, planar, Rings};
+use crate::{Error, Mesh, Result, check, cross, sub};
+use planar_geometry::rings::{Rings, area, planar};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 #[derive(Debug, Clone)]

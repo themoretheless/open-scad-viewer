@@ -55,7 +55,7 @@ import { archivedGeometryManifest } from './engineManifest'
 type Row = Record<string, JS>
 
 const MAX_LIST_LIMIT = 500
-const LATEST_SCHEMA_VERSION = 5
+const LATEST_SCHEMA_VERSION = 6
 export const MAX_STORED_ARTIFACT_COUNT = 100
 export const MAX_STORED_ARTIFACT_TOTAL_BYTES = 64 * 1024 * 1024
 export const MAX_STORED_BUILD_COUNT = 500
@@ -207,7 +207,7 @@ function validateBuildDiagnostic(value: unknown, label: string): asserts value i
   if (diagnostic.code === 'engine_unavailable') {
     if (!details
       || typeof details.language_contract !== 'string'
-      || (details.engine_class !== 'manifold' && details.engine_class !== 'brep')
+      || (details.engine_class !== 'mesh' && details.engine_class !== 'brep')
       || typeof details.engine_key !== 'string'
       || !details.engine_key
       || details.automatic_fallback !== false) {
@@ -216,7 +216,7 @@ function validateBuildDiagnostic(value: unknown, label: string): asserts value i
   } else if (diagnostic.code === 'capability_unavailable') {
     if (!details
       || typeof details.language_contract !== 'string'
-      || (details.engine_class !== 'manifold' && details.engine_class !== 'brep')
+      || (details.engine_class !== 'mesh' && details.engine_class !== 'brep')
       || typeof details.missing_capabilities !== 'string'
       || !details.missing_capabilities
       || details.automatic_fallback !== false) {
@@ -404,7 +404,7 @@ function validateExecutionDescriptor(
     || !(descriptor[field] as string).length || (descriptor[field] as string).length > 256)) {
     throw new TypeError('Build execution provenance has an invalid required string field')
   }
-  if (descriptor.engineClass !== 'manifold' && descriptor.engineClass !== 'brep') {
+  if (descriptor.engineClass !== 'mesh' && descriptor.engineClass !== 'brep') {
     throw new TypeError('Build execution provenance has an unsupported engine class')
   }
   if (descriptor.languageContract !== 'legacy/current'
@@ -434,8 +434,8 @@ function validateExecutionDescriptor(
   if (descriptor.representation !== 'mesh' && descriptor.representation !== 'brep') {
     throw new TypeError('Build execution provenance has an unsupported representation')
   }
-  if (descriptor.engineClass === 'manifold' && descriptor.representation !== 'mesh') {
-    throw new TypeError('Manifold execution provenance must use the mesh representation')
+  if (descriptor.engineClass === 'mesh' && descriptor.representation !== 'mesh') {
+    throw new TypeError('Mesh execution provenance must use the mesh representation')
   }
   if (descriptor.evidence !== 'planned'
     && descriptor.evidence !== 'runtime'
@@ -469,7 +469,9 @@ function validateExecutionDescriptor(
   if (descriptor.automaticFallback !== false) {
     throw new TypeError('Build execution provenance must disable automatic fallback')
   }
-  validateManifestAttestation(descriptor)
+  if (descriptor.evidence !== 'legacy-backfill') {
+    validateManifestAttestation(descriptor)
+  }
   return value as unknown as GeometryExecutionDescriptor
 }
 
@@ -1213,6 +1215,7 @@ export class DuckDbModelStore implements ModelStore {
         else if (version === 3) await this.applyMigration3()
         else if (version === 4) await this.applyMigration4()
         else if (version === 5) await this.applyMigration5()
+        else if (version === 6) await this.applyMigration6()
         await this.connection.run(`
           INSERT INTO mcp_schema_migrations (version) VALUES ($version)
         `, { version })
@@ -1536,6 +1539,27 @@ export class DuckDbModelStore implements ModelStore {
     // cannot strengthen this column in place when artifact FKs/indexes depend
     // on mcp_builds, so upgraded catalogs rely on the same strict read-side
     // invariant until a future table-rebuild migration.
+  }
+
+  private async applyMigration6(): Promise<void> {
+    if (!await this.columnExists('mcp_builds', 'execution_json')) return
+    await this.connection.run(`
+      UPDATE mcp_builds
+      SET execution_json = json_merge_patch(
+        execution_json,
+        '{"engineClass":"mesh"}'
+      )
+      WHERE json_extract_string(execution_json, '$.engineClass') = 'manifold'
+    `)
+    await this.connection.run(`
+      UPDATE mcp_builds
+      SET execution_json = json_merge_patch(
+        execution_json,
+        '{"manifestDigest":"cc358238cabeb1d12e57458a8a94ddcdf53dadb3fd695bdbd360876e82cb9926"}'
+      )
+      WHERE json_extract_string(execution_json, '$.manifestDigest')
+        = 'd58685b0fb5de314fbcc154d7d5d40128b1d9e71259a0f2a51452ca3986b5b74'
+    `)
   }
 
   private async createLatestTables(): Promise<void> {

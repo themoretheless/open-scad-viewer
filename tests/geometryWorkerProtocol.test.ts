@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GEOMETRY_MANIFEST_ARCHIVE,
   LEGACY_MANIFOLD_EXECUTION,
+  planGeometrySourceExecution,
 } from '../src/core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -114,11 +115,8 @@ function succeeded(): GeometryWorkerEvent {
     status: 'succeeded',
     phase: 'complete',
     execution: {
-      ...LEGACY_MANIFOLD_EXECUTION,
-      purpose: 'preview',
-      quality: 'preview',
+      ...planGeometrySourceExecution('cube(1);', { quality: 'preview', purpose: 'preview' }),
       evidence: 'runtime',
-      effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
     },
     meshes: [validMesh()],
     warnings: [],
@@ -204,7 +202,7 @@ describe('geometry worker protocol validation', () => {
       execution: {
         ...LEGACY_MANIFOLD_EXECUTION,
         languageContract: 'openscad-viewer/brep-1',
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         quality: 'preview',
         evidence: 'runtime',
         effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
@@ -428,11 +426,8 @@ describe('geometry worker protocol validation', () => {
       phase: 'complete',
       ...result,
       execution: {
-        ...LEGACY_MANIFOLD_EXECUTION,
-        purpose: 'preview',
-        quality: 'preview',
+        ...planGeometrySourceExecution('cube(1);', { quality: 'preview', purpose: 'preview' }),
         evidence: 'runtime',
-        effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
       },
       durationMs: 1,
     })).toBe(true)

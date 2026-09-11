@@ -6,12 +6,12 @@
 //! Argument access is call-by-name like the reference runtime: the host passes
 //! an accessor closure and each handler reads argument positions exactly when
 //! the TS getter-based deferred arguments would be read.
+use crate::ParseError;
 use crate::ast::{Expr, ExpressionArgument, ModuleParam};
 use crate::lexer::TT;
 use crate::value::{
-    compare_values, deep_equal, format_number, js_number_to_string, range_item_count, Value,
+    Value, compare_values, deep_equal, format_number, js_number_to_string, range_item_count,
 };
-use crate::ParseError;
 
 /// Failure channel of a built-in call. `Fail` is an OpenSCAD value-level
 /// diagnostic (`name() message`) which the stable profile degrades to a
@@ -38,7 +38,8 @@ fn fail<T>(name: &str, message: impl Into<String>) -> BResult<T> {
 /// Host effects available to the built-ins (TS `OpenScadBuiltinFunctionContext`).
 pub struct BuiltinContext<'h, 'a> {
     pub warn: &'h mut dyn FnMut(String),
-    pub register_array: &'h mut dyn FnMut(Vec<Value<'a>>, &str) -> crate::value::EvalResult<Vec<Value<'a>>>,
+    pub register_array:
+        &'h mut dyn FnMut(Vec<Value<'a>>, &str) -> crate::value::EvalResult<Vec<Value<'a>>>,
     pub register_string: &'h mut dyn FnMut(String, &str) -> crate::value::EvalResult<String>,
     pub random: &'h mut dyn FnMut() -> f64,
     pub parent_module: &'h dyn Fn(usize) -> Option<String>,
@@ -49,10 +50,16 @@ impl<'h, 'a> BuiltinContext<'h, 'a> {
         (self.warn)(format!("{name}() {}", message.into()));
     }
     fn register_array(&mut self, name: &str, items: Vec<Value<'a>>) -> BResult<Value<'a>> {
-        Ok(Value::vector((self.register_array)(items, &format!("{name}() result"))?))
+        Ok(Value::vector((self.register_array)(
+            items,
+            &format!("{name}() result"),
+        )?))
     }
     fn register_string(&mut self, name: &str, value: String) -> BResult<Value<'a>> {
-        Ok(Value::string((self.register_string)(value, &format!("{name}() result"))?))
+        Ok(Value::string((self.register_string)(
+            value,
+            &format!("{name}() result"),
+        )?))
     }
 }
 
@@ -65,9 +72,17 @@ fn expect_count(name: &str, argc: usize, counts: &[usize]) -> BResult<()> {
     let expected = if counts.len() == 1 {
         counts[0].to_string()
     } else {
-        counts.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(" or ")
+        counts
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>()
+            .join(" or ")
     };
-    let plural = if counts.iter().all(|&c| c == 1) { "" } else { "s" };
+    let plural = if counts.iter().all(|&c| c == 1) {
+        ""
+    } else {
+        "s"
+    };
     fail(name, format!("expects {expected} argument{plural}"))
 }
 
@@ -86,7 +101,11 @@ fn finite_number_value(name: &str, value: &Value, argument: usize) -> BResult<f6
     Ok(number)
 }
 
-fn array_value<'v, 'a>(name: &str, value: &'v Value<'a>, argument: usize) -> BResult<&'v [Value<'a>]> {
+fn array_value<'v, 'a>(
+    name: &str,
+    value: &'v Value<'a>,
+    argument: usize,
+) -> BResult<&'v [Value<'a>]> {
     match value {
         Value::Vector(items) => Ok(items),
         _ => fail(name, format!("argument {} must be a vector", argument + 1)),
@@ -143,7 +162,10 @@ fn first_quadrant_components(angle: f64) -> (f64, f64) {
         return (0.5, SQRT_THREE_QUARTERS);
     }
     if angle == 45.0 {
-        return (std::f64::consts::FRAC_1_SQRT_2, std::f64::consts::FRAC_1_SQRT_2);
+        return (
+            std::f64::consts::FRAC_1_SQRT_2,
+            std::f64::consts::FRAC_1_SQRT_2,
+        );
     }
     if angle == 60.0 {
         return (SQRT_THREE_QUARTERS, 0.5);
@@ -181,10 +203,14 @@ fn unit_circle_components(value: f64) -> Option<(f64, f64)> {
 }
 
 fn sin_degrees(value: f64) -> f64 {
-    unit_circle_components(value).map(|(s, _)| s).unwrap_or(f64::NAN)
+    unit_circle_components(value)
+        .map(|(s, _)| s)
+        .unwrap_or(f64::NAN)
 }
 fn cos_degrees(value: f64) -> f64 {
-    unit_circle_components(value).map(|(_, c)| c).unwrap_or(f64::NAN)
+    unit_circle_components(value)
+        .map(|(_, c)| c)
+        .unwrap_or(f64::NAN)
 }
 
 fn tan_degrees(value: f64) -> f64 {
@@ -212,11 +238,7 @@ fn tan_degrees(value: f64) -> f64 {
     } else {
         (acute * DEG_TO_RAD).tan()
     };
-    if oppose {
-        -magnitude
-    } else {
-        magnitude
-    }
+    if oppose { -magnitude } else { magnitude }
 }
 
 /// C++ std::round semantics: halfway cases round away from zero.
@@ -336,9 +358,15 @@ pub fn format_expression(expression: &Expr) -> String {
         Expr::Identifier { name, .. } => name.clone(),
         Expr::Vector { items, .. } => format!(
             "[{}]",
-            items.iter().map(|i| format_expression(i)).collect::<Vec<_>>().join(", ")
+            items
+                .iter()
+                .map(|i| format_expression(i))
+                .collect::<Vec<_>>()
+                .join(", ")
         ),
-        Expr::Range { start, step, end, .. } => format!(
+        Expr::Range {
+            start, step, end, ..
+        } => format!(
             "[{} : {}{}]",
             format_expression(start),
             match step {
@@ -356,7 +384,9 @@ pub fn format_expression(expression: &Expr) -> String {
             },
             format_expression(value)
         ),
-        Expr::Binary { op, left, right, .. } => format!(
+        Expr::Binary {
+            op, left, right, ..
+        } => format!(
             "({} {} {})",
             format_expression(left),
             binary_token(*op),
@@ -369,7 +399,11 @@ pub fn format_expression(expression: &Expr) -> String {
             format_expression(no)
         ),
         Expr::Function { params, body, .. } => {
-            format!("function({}) {}", format_params(params), format_expression(body))
+            format!(
+                "function({}) {}",
+                format_params(params),
+                format_expression(body)
+            )
         }
         Expr::Call { callee, args, .. } => {
             let rendered = format_expression(callee);
@@ -385,7 +419,11 @@ pub fn format_expression(expression: &Expr) -> String {
         }
         Expr::Member { value, name, .. } => format!("{}.{}", format_expression(value), name),
         Expr::Let { args, body, .. } => {
-            format!("let({}) {}", format_expression_arguments(args), format_expression(body))
+            format!(
+                "let({}) {}",
+                format_expression_arguments(args),
+                format_expression(body)
+            )
         }
         Expr::Assert { args, body, .. } => format!(
             "assert({}){}",
@@ -408,14 +446,22 @@ pub fn format_expression(expression: &Expr) -> String {
             format_expression_arguments(args),
             format_expression(body)
         ),
-        Expr::LcForC { init, condition, update, body, .. } => format!(
+        Expr::LcForC {
+            init,
+            condition,
+            update,
+            body,
+            ..
+        } => format!(
             "for({}; {}; {}) ({})",
             format_expression_arguments(init),
             format_expression(condition),
             format_expression_arguments(update),
             format_expression(body)
         ),
-        Expr::LcIf { condition, yes, no, .. } => format!(
+        Expr::LcIf {
+            condition, yes, no, ..
+        } => format!(
             "if({}) ({}){}",
             format_expression(condition),
             format_expression(yes),
@@ -434,7 +480,11 @@ pub fn format_expression(expression: &Expr) -> String {
 }
 
 fn format_function(params: &[ModuleParam], body: &Expr) -> String {
-    format!("function({}) {}", format_params(params), format_expression(body))
+    format!(
+        "function({}) {}",
+        format_params(params),
+        format_expression(body)
+    )
 }
 
 /// `formatValue` of the TS built-ins: bare strings at the top level, quoted
@@ -572,7 +622,11 @@ impl SeededRandom {
     }
 }
 
-fn rands<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn rands<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("rands", argc, &[3, 4])?;
     let minimum_value = arg(0)?;
     let Some(minimum_value) = minimum_value.as_number() else {
@@ -580,7 +634,10 @@ fn rands<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
     };
     let mut minimum = minimum_value;
     if !minimum.is_finite() {
-        ctx.warn("rands", "range minimum is non-finite; using a bounded minimum");
+        ctx.warn(
+            "rands",
+            "range minimum is non-finite; using a bounded minimum",
+        );
         minimum = -HALF_MAX_DOUBLE;
     }
     let maximum_value = arg(1)?;
@@ -589,7 +646,10 @@ fn rands<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
     };
     let mut maximum = maximum_value;
     if !maximum.is_finite() {
-        ctx.warn("rands", "range maximum is non-finite; using a bounded maximum");
+        ctx.warn(
+            "rands",
+            "range maximum is non-finite; using a bounded maximum",
+        );
         maximum = HALF_MAX_DOUBLE;
     }
     if maximum < minimum {
@@ -608,7 +668,10 @@ fn rands<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
     if count < 0.0 || count > 9_007_199_254_740_991.0 || count > MAX_GENERATED_ITEMS as f64 {
         return fail(
             "rands",
-            format!("result exceeds {} items", crate::value::locale(MAX_GENERATED_ITEMS)),
+            format!(
+                "result exceeds {} items",
+                crate::value::locale(MAX_GENERATED_ITEMS)
+            ),
         );
     }
     let mut seeded = if argc == 4 {
@@ -631,14 +694,21 @@ fn rands<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
             None => (ctx.random)(),
         };
         if !unit.is_finite() || unit < 0.0 || unit >= 1.0 {
-            return fail("rands", "random source must return a finite value in [0, 1)");
+            return fail(
+                "rands",
+                "random source must return a finite value in [0, 1)",
+            );
         }
         result.push(Value::Number(minimum + (maximum - minimum) * unit));
     }
     ctx.register_array("rands", result)
 }
 
-fn len<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn len<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("len", argc, &[1])?;
     match &arg(0)? {
         Value::Str(s) => Ok(Value::Number(s.chars().count() as f64)),
@@ -647,7 +717,11 @@ fn len<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a
     }
 }
 
-fn log<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn log<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("log", argc, &[1, 2])?;
     if argc == 1 {
         return Ok(Value::Number(number_value("log", &arg(0)?, 0)?.log10()));
@@ -657,7 +731,11 @@ fn log<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a
     Ok(Value::Number(value.ln() / base.ln()))
 }
 
-fn str_<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn str_<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     let mut out = String::new();
     for index in 0..argc {
         out.push_str(&format_builtin_value(&arg(index)?, false));
@@ -711,7 +789,11 @@ fn character_string(value: &Value, ctx: &mut BuiltinContext) -> String {
     }
 }
 
-fn chr<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn chr<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     let mut out = String::new();
     for index in 0..argc {
         out.push_str(&character_string(&arg(index)?, ctx));
@@ -719,7 +801,11 @@ fn chr<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>
     ctx.register_string("chr", out)
 }
 
-fn ord<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn ord<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     if argc == 0 {
         return Ok(Value::Undef);
     }
@@ -738,7 +824,11 @@ fn ord<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a
     }
 }
 
-fn concat<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn concat<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     let mut result: Vec<Value<'a>> = Vec::new();
     for index in 0..argc {
         let value = arg(index)?;
@@ -749,7 +839,10 @@ fn concat<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 
         if result.len() + addition > MAX_GENERATED_ITEMS {
             return fail(
                 "concat",
-                format!("result exceeds {} items", crate::value::locale(MAX_GENERATED_ITEMS)),
+                format!(
+                    "result exceeds {} items",
+                    crate::value::locale(MAX_GENERATED_ITEMS)
+                ),
             );
         }
         match value {
@@ -760,7 +853,11 @@ fn concat<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 
     ctx.register_array("concat", result)
 }
 
-fn lookup<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn lookup<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("lookup", argc, &[2])?;
     let position_value = arg(0)?;
     let Some(position) = position_value.as_number().filter(|v| v.is_finite()) else {
@@ -796,11 +893,15 @@ fn lookup<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_,
         let Some((candidate_position, candidate_value)) = pair(row) else {
             continue;
         };
-        if candidate_position <= position && (candidate_position > low_position || low_position > position) {
+        if candidate_position <= position
+            && (candidate_position > low_position || low_position > position)
+        {
             low_position = candidate_position;
             low_value = candidate_value;
         }
-        if candidate_position >= position && (candidate_position < high_position || high_position < position) {
+        if candidate_position >= position
+            && (candidate_position < high_position || high_position < position)
+        {
             high_position = candidate_position;
             high_value = candidate_value;
         }
@@ -812,7 +913,9 @@ fn lookup<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_,
         return Ok(Value::Number(low_value));
     }
     let fraction = (position - low_position) / (high_position - low_position);
-    Ok(Value::Number(high_value * fraction + low_value * (1.0 - fraction)))
+    Ok(Value::Number(
+        high_value * fraction + low_value * (1.0 - fraction),
+    ))
 }
 
 fn unsigned_search_parameter(value: &Value) -> usize {
@@ -894,11 +997,17 @@ fn search_string_rows<'a>(
         let mut matches: Vec<Value<'a>> = Vec::new();
         for (index, row) in rows.iter().enumerate() {
             let Some(items) = row.as_vector() else {
-                ctx.warn("search", format!("table row {index} does not contain column {column}"));
+                ctx.warn(
+                    "search",
+                    format!("table row {index} does not contain column {column}"),
+                );
                 return ctx.register_array("search", Vec::new());
             };
             if items.len() <= column {
-                ctx.warn("search", format!("table row {index} does not contain column {column}"));
+                ctx.warn(
+                    "search",
+                    format!("table row {index} does not contain column {column}"),
+                );
                 return ctx.register_array("search", Vec::new());
             }
             let candidate = format_builtin_value(&items[column], false).chars().next();
@@ -923,14 +1032,26 @@ fn search_string_rows<'a>(
     ctx.register_array("search", output)
 }
 
-fn search<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn search<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     if argc < 2 {
         return fail("search", "expects at least 2 arguments");
     }
     let needle = arg(0)?;
     let table = arg(1)?;
-    let maximum = if argc > 2 { unsigned_search_parameter(&arg(2)?) } else { 1 };
-    let column = if argc > 3 { unsigned_search_parameter(&arg(3)?) } else { 0 };
+    let maximum = if argc > 2 {
+        unsigned_search_parameter(&arg(2)?)
+    } else {
+        1
+    };
+    let column = if argc > 3 {
+        unsigned_search_parameter(&arg(3)?)
+    } else {
+        0
+    };
 
     if let (Value::Str(needle), Value::Str(table)) = (&needle, &table) {
         let table_characters: Vec<char> = table.chars().collect();
@@ -981,23 +1102,33 @@ fn search<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 
             ctx.register_array("search", matches)
         }
         Value::Str(s) => search_string_rows(ctx, s.chars().collect(), &rows, maximum, column),
-        Value::Vector(items) => {
-            search_needles(ctx, &items.clone(), &rows, maximum, column, true)
-        }
+        Value::Vector(items) => search_needles(ctx, &items.clone(), &rows, maximum, column, true),
         _ => Ok(Value::Undef),
     }
 }
 
-fn version<'a>(_argc: usize, _arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn version<'a>(
+    _argc: usize,
+    _arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     // The pinned 2021.01 implementation ignores surplus arguments; the
     // official release reports an explicit zero day component.
     ctx.register_array(
         "version",
-        vec![Value::Number(2021.0), Value::Number(1.0), Value::Number(0.0)],
+        vec![
+            Value::Number(2021.0),
+            Value::Number(1.0),
+            Value::Number(0.0),
+        ],
     )
 }
 
-fn version_num<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn version_num<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     if argc == 0 {
         return Ok(Value::Number(20210100.0));
     }
@@ -1022,7 +1153,11 @@ fn version_num<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContex
     Ok(Value::Number(year * 10_000.0 + month * 100.0 + day))
 }
 
-fn norm<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn norm<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("norm", argc, &[1])?;
     let value = arg(0)?;
     let Some(vector) = value.as_vector() else {
@@ -1037,7 +1172,11 @@ fn norm<'a>(argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, '
     Ok(Value::Number(result.sqrt()))
 }
 
-fn cross<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn cross<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("cross", argc, &[2])?;
     let left_value = arg(0)?;
     let right_value = arg(1)?;
@@ -1049,7 +1188,9 @@ fn cross<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
     if left.len() == 2 {
         // Historical 2021.01 behaviour coerces non-numeric 2D elements to zero.
         let n = |v: &Value| v.as_number().unwrap_or(0.0);
-        return Ok(Value::Number(n(&left[0]) * n(&right[1]) - n(&left[1]) * n(&right[0])));
+        return Ok(Value::Number(
+            n(&left[0]) * n(&right[1]) - n(&left[1]) * n(&right[0]),
+        ));
     }
     let a = [
         finite_number_value("cross", &left[0], 0)?,
@@ -1071,9 +1212,17 @@ fn cross<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, '
     )
 }
 
-fn parent_module<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn parent_module<'a>(
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     expect_count("parent_module", argc, &[0, 1])?;
-    let value = if argc == 0 { Value::Number(1.0) } else { arg(0)? };
+    let value = if argc == 0 {
+        Value::Number(1.0)
+    } else {
+        arg(0)?
+    };
     let Some(raw_depth) = value.as_number() else {
         return Ok(Value::Undef);
     };
@@ -1087,7 +1236,13 @@ fn parent_module<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinConte
         raw_depth.trunc()
     };
     if depth < 0.0 {
-        ctx.warn("parent_module", format!("negative index {} is not allowed", js_number_to_string(depth)));
+        ctx.warn(
+            "parent_module",
+            format!(
+                "negative index {} is not allowed",
+                js_number_to_string(depth)
+            ),
+        );
         return Ok(Value::Undef);
     }
     let result = (ctx.parent_module)(depth as usize);
@@ -1096,14 +1251,22 @@ fn parent_module<'a>(argc: usize, arg: ArgReader<'_, 'a>, ctx: &mut BuiltinConte
         None => {
             ctx.warn(
                 "parent_module",
-                format!("index {} is outside the active module stack", js_number_to_string(depth)),
+                format!(
+                    "index {} is outside the active module stack",
+                    js_number_to_string(depth)
+                ),
             );
             Ok(Value::Undef)
         }
     }
 }
 
-fn min_max<'a>(name: &'static str, argc: usize, arg: ArgReader<'_, 'a>, _ctx: &mut BuiltinContext<'_, 'a>) -> BResult<Value<'a>> {
+fn min_max<'a>(
+    name: &'static str,
+    argc: usize,
+    arg: ArgReader<'_, 'a>,
+    _ctx: &mut BuiltinContext<'_, 'a>,
+) -> BResult<Value<'a>> {
     if argc == 0 {
         return fail(name, "expects at least 1 argument");
     }
@@ -1148,10 +1311,44 @@ fn predicate<'a>(
 }
 
 pub const BUILTIN_FUNCTION_NAMES: &[&str] = &[
-    "abs", "sign", "rands", "min", "max", "sin", "cos", "asin", "acos", "tan", "atan", "atan2",
-    "round", "ceil", "floor", "pow", "sqrt", "exp", "len", "log", "ln", "str", "chr", "ord",
-    "concat", "lookup", "search", "version", "version_num", "norm", "cross", "parent_module",
-    "is_undef", "is_list", "is_num", "is_bool", "is_string", "is_function",
+    "abs",
+    "sign",
+    "rands",
+    "min",
+    "max",
+    "sin",
+    "cos",
+    "asin",
+    "acos",
+    "tan",
+    "atan",
+    "atan2",
+    "round",
+    "ceil",
+    "floor",
+    "pow",
+    "sqrt",
+    "exp",
+    "len",
+    "log",
+    "ln",
+    "str",
+    "chr",
+    "ord",
+    "concat",
+    "lookup",
+    "search",
+    "version",
+    "version_num",
+    "norm",
+    "cross",
+    "parent_module",
+    "is_undef",
+    "is_list",
+    "is_num",
+    "is_bool",
+    "is_string",
+    "is_function",
 ];
 
 pub fn is_builtin_function_name(name: &str) -> bool {
@@ -1210,7 +1407,9 @@ pub fn evaluate_builtin<'a>(
         "parent_module" => parent_module(argc, arg, ctx),
         "is_undef" => predicate("is_undef", |v| v.is_undef())(argc, arg, ctx),
         "is_list" => predicate("is_list", |v| matches!(v, Value::Vector(_)))(argc, arg, ctx),
-        "is_num" => predicate("is_num", |v| matches!(v, Value::Number(n) if !n.is_nan()))(argc, arg, ctx),
+        "is_num" => {
+            predicate("is_num", |v| matches!(v, Value::Number(n) if !n.is_nan()))(argc, arg, ctx)
+        }
         "is_bool" => predicate("is_bool", |v| matches!(v, Value::Bool(_)))(argc, arg, ctx),
         "is_string" => predicate("is_string", |v| matches!(v, Value::Str(_)))(argc, arg, ctx),
         "is_function" => {

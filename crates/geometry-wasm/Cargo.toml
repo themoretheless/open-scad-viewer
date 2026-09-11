@@ -1,9 +1,10 @@
 [package]
 name = "geometry-wasm"
 version = "0.1.0"
-edition = "2021"
-publish = false
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 [lib]
 crate-type = ["cdylib"]
 [dependencies]
-geometry-bridge = { path = "../geometry-bridge" }
+geometry-bridge = { path = "../geometry-bridge", features = ["languages"] }

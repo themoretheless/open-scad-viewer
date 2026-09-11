@@ -175,16 +175,18 @@ fn rejects_invalid_solids_and_exhausted_budget() {
         .code,
         "POLYGON_BOOLEAN_RESOURCE_LIMIT"
     );
-    assert!(boolean(
-        &a,
-        &a,
-        Operation::Union,
-        &Options {
-            relative_tolerance: f64::NAN,
-            ..Options::default()
-        }
-    )
-    .is_err());
+    assert!(
+        boolean(
+            &a,
+            &a,
+            Operation::Union,
+            &Options {
+                relative_tolerance: f64::NAN,
+                ..Options::default()
+            }
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -253,13 +255,15 @@ fn rejects_crossing_shells_and_incorrect_component_orientation() {
     }
     let mut reversed = cube([4.; 3], [5.; 3]);
     reversed.reverse_winding();
-    assert!(boolean(
-        &append(&outer, &reversed),
-        &outer,
-        Operation::Union,
-        &Options::default()
-    )
-    .is_err());
+    assert!(
+        boolean(
+            &append(&outer, &reversed),
+            &outer,
+            Operation::Union,
+            &Options::default()
+        )
+        .is_err()
+    );
     assert_eq!(
         boolean(
             &outer,

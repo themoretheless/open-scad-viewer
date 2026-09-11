@@ -1,5 +1,5 @@
-use crate::curve::{basis, bounds, Curve};
-use crate::{check, numeric, Result};
+use crate::curve::{Curve, basis, bounds};
+use crate::{Result, check, numeric};
 
 #[derive(Clone, Debug)]
 pub struct Surface {
@@ -513,7 +513,16 @@ pub fn loft(curves: &[Curve]) -> Result<Surface> {
         c.validate()?;
     }
     let b = &curves[0];
-    check(b.control_points[0].len()==3 && curves.iter().all(|c|c.degree==b.degree && c.knots==b.knots && c.control_points.len()==b.control_points.len() && c.control_points[0].len()==3),"Loft curves must have identical degree, knots, dimension and control count; refine them first.")?;
+    check(
+        b.control_points[0].len() == 3
+            && curves.iter().all(|c| {
+                c.degree == b.degree
+                    && c.knots == b.knots
+                    && c.control_points.len() == b.control_points.len()
+                    && c.control_points[0].len() == 3
+            }),
+        "Loft curves must have identical degree, knots, dimension and control count; refine them first.",
+    )?;
     let mut kv = vec![0.];
     kv.extend((0..curves.len()).map(|i| i as f64));
     kv.push((curves.len() - 1) as f64);

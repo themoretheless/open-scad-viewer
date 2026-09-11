@@ -90,7 +90,7 @@ fn invalid_surface_is_rejected_before_polygons_are_created() {
 
 #[test]
 fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
-    let model = brep_kernel::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let model = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
     for segments in [1, 2, 4] {
         let mesh = crate::brep::nurbs(&model, segments).unwrap();
         assert!(mesh.built.report.closed);

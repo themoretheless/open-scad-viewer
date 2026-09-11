@@ -29,7 +29,7 @@ describe('GeometryBuildEngine', () => {
       sourceDirectedRouting: true,
       automaticFallback: false,
       routes: [
-        { languageContract: 'legacy/current', engineClass: 'manifold', fallback: 'never' },
+        { languageContract: 'legacy/current', engineClass: 'mesh', fallback: 'never' },
         { languageContract: 'openscad-viewer/brep-1', engineClass: 'brep', fallback: 'never' },
       ],
     })
@@ -40,7 +40,7 @@ describe('GeometryBuildEngine', () => {
       isolation: engine.isolation,
     }))).toEqual([
       {
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         permanent: true,
         availability: 'available',
         isolation: 'in-process-serialized',
@@ -56,7 +56,7 @@ describe('GeometryBuildEngine', () => {
 
   it('reports process-local provider availability and rejects an unqualified B-rep provider', async () => {
     expect((await new GeometryBuildEngine([]).capabilities()).engines[0]).toMatchObject({
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       availability: 'unavailable',
       unavailableReason: expect.stringContaining('No qualified runtime provider'),
     })
@@ -69,22 +69,19 @@ describe('GeometryBuildEngine', () => {
       build: vi.fn(),
     } as unknown as GeometryBackendProvider])).toThrow(/unqualified geometry provider/)
     expect(() => new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: 'unexpected-build',
       kernelFingerprint: 'unexpected-build',
-      capabilityManifestVersion: 'manifold-node-v3',
+      capabilityManifestVersion: 'own-rust-node-v1',
       warm: vi.fn().mockResolvedValue(undefined),
       build: vi.fn(),
     }])).toThrow(/identity does not match/)
   })
 
-  it('admits only the exact legacy-evaluator allowlist or a complete qualified manifest', () => {
+  it('admits only a complete qualified manifest', () => {
     expect(geometryProviderAdmissionForManifest(
-      GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
-    )).toMatchObject({ allowed: true, mode: 'legacy-grandfathered' })
-    expect(geometryProviderAdmissionForManifest(
-      GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v3'],
-    )).toMatchObject({ allowed: true, mode: 'legacy-grandfathered' })
+      GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
+    )).toMatchObject({ allowed: true, mode: 'qualified' })
     expect(geometryProviderAdmissionForManifest(
       GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
     )).toMatchObject({
@@ -93,7 +90,7 @@ describe('GeometryBuildEngine', () => {
       reasonCode: 'qualification-incomplete',
     })
     expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
       manifestDigest: '0'.repeat(64),
     })).toMatchObject({
       allowed: false,
@@ -102,11 +99,11 @@ describe('GeometryBuildEngine', () => {
     })
 
     expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
       displayName: 'tampered while retaining the admitted digest',
     })).toMatchObject({ allowed: false, reasonCode: 'manifest-integrity-failed' })
     expect(geometryProviderAdmissionForManifest({
-      ...GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1'],
+      ...GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'],
       unexpectedEvidence: true,
     } as unknown as GeometryEngineStaticManifest)).toMatchObject({
       allowed: false,
@@ -180,7 +177,7 @@ describe('GeometryBuildEngine', () => {
 
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       representation: 'mesh',
       purpose: 'analysis',
@@ -193,7 +190,7 @@ describe('GeometryBuildEngine', () => {
     const build = vi.fn()
     const warm = vi.fn().mockRejectedValue(new Error('private readiness detail'))
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -202,7 +199,7 @@ describe('GeometryBuildEngine', () => {
     }])
 
     expect((await engine.capabilities()).engines[0]).toMatchObject({
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       availability: 'unavailable',
       unavailableReason: 'The qualified provider failed its runtime readiness check.',
     })
@@ -217,7 +214,7 @@ describe('GeometryBuildEngine', () => {
   it('bounds a hung readiness check and reuses its single in-flight attempt', async () => {
     const warm = vi.fn(() => new Promise<void>(() => undefined))
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -240,7 +237,7 @@ describe('GeometryBuildEngine', () => {
   it('never warms the mesh kernel when a B-rep source selects an unavailable runtime', async () => {
     const build = vi.fn()
     const provider: GeometryBackendProvider = {
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -266,7 +263,7 @@ describe('GeometryBuildEngine', () => {
   it('rejects unsupported requirements before invoking the selected provider', async () => {
     const build = vi.fn()
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -284,7 +281,7 @@ describe('GeometryBuildEngine', () => {
   it('attaches runtime execution provenance to provider failures without changing their type', async () => {
     const failure = new RangeError('provider failure')
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -294,7 +291,7 @@ describe('GeometryBuildEngine', () => {
 
     await expect(engine.buildSource('cube(1);', request)).rejects.toBe(failure)
     expect(geometryExecutionForError(failure)).toMatchObject({
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       purpose: 'analysis',
       evidence: 'runtime',
       automaticFallback: false,
@@ -304,7 +301,7 @@ describe('GeometryBuildEngine', () => {
   it('quarantines providers that reuse errors or reject with primitives', async () => {
     const reused = new Error('reused')
     const reusedEngine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -317,7 +314,7 @@ describe('GeometryBuildEngine', () => {
     expect((await reusedEngine.capabilities()).engines[0].availability).toBe('unavailable')
 
     const primitiveEngine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -331,7 +328,7 @@ describe('GeometryBuildEngine', () => {
 
   it('rejects a provider result whose quality contradicts the execution descriptor', async () => {
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -379,7 +376,7 @@ describe('GeometryBuildEngine', () => {
     }))
     const revocations = new GeometryManifestRevocationRegistry()
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -409,7 +406,7 @@ describe('GeometryBuildEngine', () => {
     await expect(pending).rejects.toMatchObject({
       name: 'GeometryEngineUnavailableError',
       availabilityCause: 'revoked',
-      execution: { evidence: 'runtime', engineClass: 'manifold' },
+      execution: { evidence: 'runtime', engineClass: 'mesh' },
     })
     expect(build).toHaveBeenCalledTimes(1)
     await expect(engine.buildSource('cube(1);', request)).rejects.toMatchObject({
@@ -431,7 +428,7 @@ describe('GeometryBuildEngine', () => {
     const finishers: Array<(result: Result) => void> = []
     const build = vi.fn(() => new Promise<Result>(resolve => finishers.push(resolve)))
     const engine = new GeometryBuildEngine([{
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
       kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
       capabilityManifestVersion: 'own-rust-node-v1',
@@ -501,7 +498,7 @@ cube(1);`, request)
 
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',
-      engineClass: 'manifold',
+      engineClass: 'mesh',
     })
   })
 
@@ -513,7 +510,7 @@ cube(1);`, request)
 
     expect(execution).toMatchObject({
       languageContract: 'legacy/current',
-      engineClass: 'manifold',
+      engineClass: 'mesh',
     })
   })
 })

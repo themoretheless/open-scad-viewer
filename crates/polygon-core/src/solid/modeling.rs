@@ -1,7 +1,7 @@
 //! Native polygon construction. No spline or external CAD backend is used.
 use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
-use crate::{check, cross, norm, sub, BuiltMesh, Mesh, Result};
-use planar_geometry::rings::{area, inside, Rings};
+use crate::{BuiltMesh, Mesh, Result, check, cross, norm, sub};
+use planar_geometry::rings::{Rings, area, inside};
 pub type Point = [f64; 3];
 fn dot(a: Point, b: Point) -> f64 {
     a.iter().zip(b).map(|(a, b)| a * b).sum()
@@ -256,7 +256,7 @@ pub fn loft(sections: &[Vec<Point>], caps: bool) -> Result<BuiltMesh> {
 }
 /// Rotation-minimizing frames on a polyline; 180-degree reversals are rejected.
 pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result<Vec<Vec<Point>>> {
-    geometry_ops::sweep_sections(profile, path, up).map_err(crate::Error::new)
+    geometry_ops::sweep_sections(profile, path, up)
 }
 pub fn sweep(profile: &[[f64; 2]], path: &[Point], up: Point, caps: bool) -> Result<BuiltMesh> {
     loft(&sweep_sections(profile, path, up)?, caps)

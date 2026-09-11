@@ -1,14 +1,9 @@
-use mechanics_core::{analyze_layers, analyze_section, LayerSection, LoadCase};
+use mechanics_core::{LayerSection, LoadCase, analyze_layers, analyze_section};
 
 fn rect(z: f64, min: [f64; 2], max: [f64; 2]) -> LayerSection {
     LayerSection {
         z_mm: z,
-        contours: vec![vec![
-            min,
-            [max[0], min[1]],
-            max,
-            [min[0], max[1]],
-        ]],
+        contours: vec![vec![min, [max[0], min[1]], max, [min[0], max[1]]]],
     }
 }
 
@@ -51,7 +46,8 @@ fn hole_reduces_area_and_is_kept_out_of_wall_probe() {
 #[test]
 fn bending_stress_is_mc_over_i() {
     let section = rect(0.0, [-10.0, -5.0], [10.0, 5.0]);
-    let report = analyze_section(&section, &load(20.0 * 10.0_f64.powi(3) / 12.0 / 5.0, 0.0)).unwrap();
+    let report =
+        analyze_section(&section, &load(20.0 * 10.0_f64.powi(3) / 12.0 / 5.0, 0.0)).unwrap();
     assert!((report.bending_mpa - 1.0).abs() < 1e-6);
     assert!((report.factor_of_safety - 30.0).abs() < 1e-6);
 }

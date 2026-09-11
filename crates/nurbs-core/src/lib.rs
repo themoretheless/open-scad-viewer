@@ -1,68 +1,41 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
 //! No polygon-core, WASM, browser or application dependency.
-//! CAD B-rep over these curves/surfaces lives in `brep-kernel`.
+//! CAD B-rep over these curves/surfaces lives in `brep-core`.
 pub mod curve;
 pub mod edit;
 pub mod surface;
-use value_codec::{json, Value};
 use value_codec::{Deserialize, Serialize};
+use value_codec::{Value, json};
 
-#[derive(Debug)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
+pub use math_core::{Error, Result};
+pub(crate) fn input(message: impl Into<String>) -> Error {
+    Error::new("NURBS_INVALID_INPUT", message)
 }
-impl value_codec::Serialize for Error {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
-        object.insert(
-            "message".into(),
-            value_codec::Serialize::to_value(&self.message),
-        );
-        value_codec::Value::Object(object)
-    }
+pub(crate) fn numeric_err(message: impl Into<String>) -> Error {
+    Error::new("NURBS_NUMERIC_ERROR", message)
 }
-pub type Result<T> = std::result::Result<T, Error>;
-impl Error {
-    fn input(message: impl Into<String>) -> Self {
-        Self {
-            code: "NURBS_INVALID_INPUT",
-            message: message.into(),
-        }
-    }
-    fn numeric(message: impl Into<String>) -> Self {
-        Self {
-            code: "NURBS_NUMERIC_ERROR",
-            message: message.into(),
-        }
-    }
-    fn resource(message: impl Into<String>) -> Self {
-        Self {
-            code: "NURBS_RESOURCE_LIMIT",
-            message: message.into(),
-        }
-    }
+pub(crate) fn resource(message: impl Into<String>) -> Error {
+    Error::new("NURBS_RESOURCE_LIMIT", message)
 }
 fn check(condition: bool, message: &str) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(Error::input(message))
+        Err(input(message))
     }
 }
 fn numeric(condition: bool, message: &str) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(Error::numeric(message))
+        Err(numeric_err(message))
     }
 }
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
-    value_codec::from_value(v[k].clone()).map_err(|e| Error::input(format!("Invalid {k}: {e}")))
+    value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
 }
 fn encode<T: Serialize>(v: T) -> Result<Value> {
-    value_codec::to_value(v).map_err(|e| Error::numeric(e.to_string()))
+    value_codec::to_value(v).map_err(|e| numeric_err(e.to_string()))
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
@@ -132,7 +105,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 field(&v, "axis")?,
                 field(&v, "angle")?,
             )?),
-            _ => Err(Error::input("Unknown curve operation")),
+            _ => Err(input("Unknown curve operation")),
         };
     }
     let s: surface::Surface = field(&v, "surface")?;
@@ -152,24 +125,27 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "surface_trim" => encode(s.trim(field(&v, "bounds")?)?),
         "surface_iso" => encode(s.iso(field(&v, "axis")?, field(&v, "u")?)?),
         "surface_bounds" => s.bounds(),
-        _ => Err(Error::input("Unknown NURBS operation")),
+        _ => Err(input("Unknown NURBS operation")),
     }
+}
+fn error_value(error: &Error) -> Value {
+    json!({"code": error.code, "message": error.message})
 }
 fn response(result: Result<Value>) -> String {
     match result {
         Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error}),
+        Err(error) => json!({"ok":false,"error": error_value(&error)}),
     }
     .to_string()
 }
 /// Versioned, bounded JSON boundary; no host geometry fallback.
-pub fn execute(input: &str) -> String {
-    if input.len() > 2 * 1024 * 1024 {
-        return response(Err(Error::resource("NURBS request exceeds 2 MiB")));
+pub fn execute(request: &str) -> String {
+    if request.len() > 2 * 1024 * 1024 {
+        return response(Err(resource("NURBS request exceeds 2 MiB")));
     }
     response(
-        value_codec::from_str(input)
-            .map_err(|e| Error::input(e.to_string()))
+        value_codec::from_str(request)
+            .map_err(|e| input(e.to_string()))
             .and_then(dispatch),
     )
 }

@@ -1647,7 +1647,7 @@ source -> qualified lowerer -> trusted SPE1/SPC1 -> shared executor
                                            ManifoldPlanBackend
                                                      |
                                                      v
-                                      narrow ManifoldKernelOps port
+                                      narrow CadKernelOps port
 
 owning execution result + trusted core/provenance -> LegacyV5Assembler
                                                    -> neutral legacy result
@@ -1965,7 +1965,7 @@ cancellation. These are current blockers, not future test ideas.
    fake kernel and the independent validator, never a runtime direct-evaluator
    consultation.
 6. The Manifold plan delta must be split into a source-free
-   `ManifoldPlanBackend`, opaque `ManifoldKernelOps` adapter,
+   `ManifoldPlanBackend`, opaque `CadKernelOps` adapter,
    `LegacyV5CompatibilityMap`, owning `LegacyV5Assembler`, and a non-publishing
    differential/shadow runner. The backend consumes only the conservative
    `Region/d2/Mesh/RepresentationPreserving` and

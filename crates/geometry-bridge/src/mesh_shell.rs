@@ -1,5 +1,8 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
 use polygon_core::{solid::proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
+fn fail(message: impl Into<String>) -> Error {
+    Error::new("GEOMETRY_INVALID_INPUT", message)
+}
 pub(crate) type P = [f64; 3];
 use math_core::{cross, dot, sub};
 #[derive(Clone)]
@@ -143,7 +146,7 @@ pub fn shell_options(
 ) -> Result<BuiltMesh> {
     let report = mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3 <= 0. || report.degenerate_triangles > 0 {
-        return Err(Error::new(
+        return Err(fail(
             "Sampled Shell requires a closed, outward-oriented, nondegenerate mesh",
         ));
     }
@@ -153,7 +156,7 @@ pub fn shell_options(
         || step <= 0.
         || step > thickness / 3. + 1e-9
     {
-        return Err(Error::new(
+        return Err(fail(
             "Shell grid step must be positive and no larger than one third of wall thickness",
         ));
     }
@@ -163,7 +166,7 @@ pub fn shell_options(
         || openings.len() >= count
         || openings.iter().any(|&t| t >= count)
     {
-        return Err(Error::new(
+        return Err(fail(
             "Select valid openings; sampled Shell supports up to 30000 source triangles",
         ));
     }
@@ -195,14 +198,16 @@ pub fn shell_options(
         let center = std::array::from_fn(|k| (t.p[0][k] + t.p[1][k] + t.p[2][k]) / 3.);
         retained.distance(center) > thickness + step / 2.
     }) {
-        return Err(Error::new("Opening is too small for the wall thickness and grid resolution; select a larger connected face patch"));
+        return Err(fail(
+            "Opening is too small for the wall thickness and grid resolution; select a larger connected face patch",
+        ));
     }
     let all = Node::build(triangles);
     let min = std::array::from_fn(|k| all.min[k] - (2.123 + 0.07 * k as f64) * step);
     let max = std::array::from_fn(|k| all.max[k] + (2.413 + 0.11 * k as f64) * step);
     let cells: [usize; 3] = std::array::from_fn(|k| ((max[k] - min[k]) / step).ceil() as usize);
     if cells.iter().any(|&n| n > if adaptive { 256 } else { 64 }) {
-        return Err(Error::new(if adaptive {
+        return Err(fail(if adaptive {
             "Shell exceeds 256 adaptive cells per axis; increase grid step"
         } else {
             "Shell exceeds the 64-cell grid per axis; increase grid step or wall thickness"
@@ -220,7 +225,7 @@ pub fn shell_options(
     };
     let report = output.inspect()?;
     if !report.closed || output.indices.is_empty() || report.signed_volume_mm3 <= 0. {
-        return Err(Error::new(
+        return Err(fail(
             "Sampled Shell produced an invalid boundary; try a different grid step",
         ));
     }
@@ -266,7 +271,7 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
         }
         samples += cells.iter().map(|n| n + 1).product::<usize>();
         if samples > 4_000_000 {
-            return Err(Error::new(
+            return Err(fail(
                 "Adaptive Shell exceeds four million samples; increase grid step",
             ));
         }
@@ -294,7 +299,7 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
             }
         }
         if output.indices.len() > 300_000 {
-            return Err(Error::new(
+            return Err(fail(
                 "Adaptive Shell exceeds 100000 triangles; increase grid step",
             ));
         }
@@ -714,7 +719,7 @@ pub fn lattice_accelerated(
 ) -> Result<BuiltMesh> {
     let report = mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3 <= 0. || mesh.indices.len() / 3 > 30000 {
-        return Err(Error::new(
+        return Err(fail(
             "Spatial lattice requires a closed outward solid with at most 30000 source triangles",
         ));
     }
@@ -727,7 +732,7 @@ pub fn lattice_accelerated(
             .iter()
             .any(|e| e[0] >= nodes.len() || e[1] >= nodes.len() || e[0] == e[1])
     {
-        return Err(Error::new(
+        return Err(fail(
             "Spatial lattice graph exceeds limits or has invalid nodes",
         ));
     }
@@ -740,7 +745,7 @@ pub fn lattice_accelerated(
         || step > radius * 0.8
         || skin > 0. && step > skin / 2.
     {
-        return Err(Error::new(
+        return Err(fail(
             "Grid step must resolve the strut diameter and skin: step <= diameter/2.5 and skin/2",
         ));
     }
@@ -780,16 +785,18 @@ pub fn lattice_accelerated(
         })
         .collect();
     if segments.iter().any(|s| s.2 < 1e-12) {
-        return Err(Error::new("Coincident lattice nodes"));
+        return Err(fail("Coincident lattice nodes"));
     }
     let min: P = std::array::from_fn(|k| all.min[k] - (2.123 + 0.07 * k as f64) * step);
     let max: P = std::array::from_fn(|k| all.max[k] + (2.413 + 0.11 * k as f64) * step);
     let cells = std::array::from_fn(|k| ((max[k] - min[k]) / step).ceil() as usize);
     if cells.iter().any(|&n| n > 64) {
-        return Err(Error::new("Spatial lattice exceeds 64 grid cells per axis. Increase strut thickness and grid step."));
+        return Err(fail(
+            "Spatial lattice exceeds 64 grid cells per axis. Increase strut thickness and grid step.",
+        ));
     }
     if !wall_depth.is_finite() || wall_depth < 0. || wall_depth > 0. && wall_depth < step * 2. {
-        return Err(Error::new("Wall depth must be at least two sampling steps"));
+        return Err(fail("Wall depth must be at least two sampling steps"));
     }
     let blend = radius * 0.7;
     let field = |p: P| {
@@ -874,7 +881,9 @@ pub fn lattice_accelerated(
         || result.signed_volume_mm3 <= 0.
         || result.signed_volume_mm3 >= report.signed_volume_mm3
     {
-        return Err(Error::new("Spatial lattice did not produce a valid lighter closed surface; adjust cell size or resolution"));
+        return Err(fail(
+            "Spatial lattice did not produce a valid lighter closed surface; adjust cell size or resolution",
+        ));
     }
     Ok(BuiltMesh {
         mesh: output,

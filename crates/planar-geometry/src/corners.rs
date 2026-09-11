@@ -1,6 +1,6 @@
 //! Corner styles and rounded primitive → Bézier conversion.
 use crate::path::{BezierPath, PathSegment};
-use crate::{check, Result};
+use crate::{Result, check};
 
 const KAPPA: f64 = 0.552_285;
 
@@ -305,9 +305,10 @@ mod tests {
         let sq = BezierPath::from_rect([0., 0.], [4., 4.]).unwrap();
         let r = round_corners(&sq, 0.5).unwrap();
         assert!(r.closed);
-        assert!(r
-            .segments
-            .iter()
-            .any(|s| matches!(s, PathSegment::Cubic { .. })));
+        assert!(
+            r.segments
+                .iter()
+                .any(|s| matches!(s, PathSegment::Cubic { .. }))
+        );
     }
 }

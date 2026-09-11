@@ -8,9 +8,9 @@ pub mod evaluation;
 pub mod features;
 mod matching;
 pub(crate) use math_core as math;
-mod model;
 #[cfg(feature = "gpu")]
 pub mod gpu;
+mod model;
 mod pipeline;
 mod seeding;
 pub use model::{Image, Point, Reconstruction};

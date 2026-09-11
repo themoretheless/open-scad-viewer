@@ -149,7 +149,6 @@ measure context и безопасной подготовки source patch.
 - [OpenSCAD user challenges, CHI 2024](https://doi.org/10.1145/3613904.3642566).
 - [Parametric definition in programming CAD, UIST 2024](https://doi.org/10.1145/3654777.3676417).
 - [Bidirectional programming in CSG CAD](https://arxiv.org/abs/2408.01801).
-- [Manifold relationships/original IDs](https://github.com/elalish/manifold/wiki/Manifold-Library).
 - [BVH survey, Eurographics 2021](https://diglib.eg.org/items/efde7a39-536b-4a85-8901-c42cd401b859).
 - [Mesh Arrangements for Solid Geometry](https://www.cs.columbia.edu/cg/mesh-arrangements/).
 - [Quadric Error Metrics](https://mgarland.org/research/quadrics.html).

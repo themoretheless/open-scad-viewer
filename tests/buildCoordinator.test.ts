@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LEGACY_MANIFOLD_EXECUTION } from '../src/core/geometryExecution'
+import { planGeometrySourceExecution } from '../src/core/geometryExecution'
 import {
   BuildCoordinator,
   type CoordinatorTimers,
@@ -95,11 +95,8 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
     quality: request.quality,
     sourceSha256: request.sourceSha256,
     execution: {
-      ...LEGACY_MANIFOLD_EXECUTION,
-      purpose: request.quality,
-      quality: request.quality,
+      ...planGeometrySourceExecution('cube(1);', { quality: request.quality, purpose: request.quality }),
       evidence: 'runtime',
-      effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
     },
     meshes: [],
     warnings: [],

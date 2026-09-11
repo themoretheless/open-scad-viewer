@@ -11,6 +11,8 @@ coverage
 .open-scad-viewer.duckdb*
 .open-scad-runtime/
 /tmp/
+tools/manifold-bench/tmp/
+tools/manifold-bench/historical/
 
 # Machine-specific generated MCP client configurations
 .local-integrations/

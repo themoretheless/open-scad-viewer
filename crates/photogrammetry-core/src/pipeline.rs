@@ -210,7 +210,10 @@ fn run(
             for image in &mut report.images {
                 image.reason = "invalid_options";
             }
-            return Err(format!("Joint refinement is configured for at most {} photos; increase its camera limit up to 64 or explicitly disable it", bundle.max_cameras));
+            return Err(format!(
+                "Joint refinement is configured for at most {} photos; increase its camera limit up to 64 or explicitly disable it",
+                bundle.max_cameras
+            ));
         }
     }
     for (i, image) in images.iter().enumerate() {
@@ -703,7 +706,10 @@ mod tests {
             let rotated = rotation([delta[0], delta[1], delta[2]]);
             let mut updated = original.clone();
             updated.rotation = mm(rotated, original.rotation);
-            updated.translation = add(mv(rotated, original.translation), [delta[3], delta[4], delta[5]]);
+            updated.translation = add(
+                mv(rotated, original.translation),
+                [delta[3], delta[4], delta[5]],
+            );
             if i == 1 {
                 let center = scale(
                     updated.center(),
@@ -758,7 +764,11 @@ mod tests {
                 if (p * 6 + c) % 41 == 0 {
                     continue;
                 }
-                let uv = cameras[c].as_ref().unwrap().project(point.position).unwrap();
+                let uv = cameras[c]
+                    .as_ref()
+                    .unwrap()
+                    .project(point.position)
+                    .unwrap();
                 squared += (uv[0] - features[c][f].x).powi(2) + (uv[1] - features[c][f].y).powi(2);
                 count += 1;
             }
@@ -825,8 +835,7 @@ mod tests {
             .all(|run| run.filtered_observations == 0));
         eprintln!(
             "pipeline filter: removed {} observations / {} tracks, clean RMSE {off_rmse} -> {on_rmse}",
-            report.bundle_runs[0].filtered_observations,
-            report.bundle_runs[0].filtered_tracks,
+            report.bundle_runs[0].filtered_observations, report.bundle_runs[0].filtered_tracks,
         );
     }
     #[test]

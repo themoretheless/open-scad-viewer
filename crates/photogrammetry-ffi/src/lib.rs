@@ -116,10 +116,12 @@ pub fn photo_alloc(len: usize) -> usize {
 
 pub unsafe fn photo_free(ptr: usize, len: usize) {
     if ptr != 0 {
-        drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
-            ptr as *mut u8,
-            len,
-        )));
+        unsafe {
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                ptr as *mut u8,
+                len,
+            )));
+        }
     }
 }
 fn packed(result: Result<Value>) -> u64 {
@@ -152,20 +154,14 @@ fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
 /// The buffer is consumed on every path: moved into the session image on success
 /// and freed on failure, so the caller must not photo_free it afterwards.
 
-pub unsafe fn photo_add(
-    width: usize,
-    height: usize,
-    focal: f64,
-    ptr: usize,
-    len: usize,
-) -> u64 {
+pub unsafe fn photo_add(width: usize, height: usize, focal: f64, ptr: usize, len: usize) -> u64 {
     if ptr == 0
         || len > 3 * 2048 * 2048
         || width.checked_mul(height).and_then(|n| n.checked_mul(3)) != Some(len)
     {
         return packed(Err(input("Invalid photo buffer")));
     }
-    let rgb = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
+    let rgb = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len)) };
     packed(session::add(width, height, focal, rgb).map(|n| json!(n)))
 }
 /// Add measured calibration without altering the legacy photo_add ABI.
@@ -191,15 +187,11 @@ pub unsafe fn photo_add_calibrated(
     {
         return packed(Err(input("Invalid calibrated photo buffer")));
     }
-    let rgb = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
+    let rgb = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len)) };
     packed(
-        session::add_calibrated(
-            width,
-            height,
-            focal,
-            rgb,
-            std::slice::from_raw_parts(calibration_ptr as *const u8, calibration_len),
-        )
+        session::add_calibrated(width, height, focal, rgb, unsafe {
+            std::slice::from_raw_parts(calibration_ptr as *const u8, calibration_len)
+        })
         .map(|n| json!(n)),
     )
 }
@@ -239,7 +231,7 @@ pub unsafe fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
     if ptr == 0 || len == 0 || len % 4 != 0 || len > 128 * 1024 * 1024 {
         return packed(Err(input("Invalid host sweep score buffer")));
     }
-    let bytes = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len));
+    let bytes = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len)) };
     let scores: Vec<f32> = bytes
         .chunks_exact(4)
         .map(|c| f32::from_le_bytes(c.try_into().unwrap()))

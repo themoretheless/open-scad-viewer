@@ -288,7 +288,7 @@ describe('DuckDbModelStore', () => {
       modelId: 'part',
       status: 'succeeded',
       execution: {
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         purpose: 'export',
         evidence: 'runtime',
         automaticFallback: false,
@@ -397,7 +397,7 @@ describe('DuckDbModelStore', () => {
         retryable: false,
         details: {
           language_contract: 'legacy/current',
-          engine_class: 'manifold',
+          engine_class: 'mesh',
           engine_key: 'manifold-wasm-v1',
           availability_cause: 'not-deployed',
           automatic_fallback: false,
@@ -545,7 +545,7 @@ describe('DuckDbModelStore', () => {
       ...build.error,
       details: {
         language_contract: 'legacy/current',
-        engine_class: 'manifold',
+        engine_class: 'mesh',
         engine_key: 'manifold-wasm-v1',
         availability_cause: 'not-deployed',
         automatic_fallback: false,
@@ -769,7 +769,7 @@ describe('DuckDbModelStore', () => {
     await original.close()
 
     await withRawDatabase(path, async connection => {
-      await connection.run('DELETE FROM mcp_schema_migrations WHERE version = 5')
+      await connection.run('DELETE FROM mcp_schema_migrations WHERE version >= 5')
       await connection.run(`
         CREATE TABLE mcp_builds_v4 AS
         SELECT id, model_id, model_revision, source_sha256,
@@ -864,7 +864,7 @@ describe('DuckDbModelStore', () => {
       ...successfulBuildInput('route-mismatch'),
       execution: runtimeExecution({
         languageContract: 'openscad-viewer/brep-1',
-        engineClass: 'manifold',
+        engineClass: 'mesh',
       }),
     })).toThrow(/contradicts the language-contract engine route/)
     expect(() => store.recordBuild({
@@ -981,10 +981,10 @@ describe('DuckDbModelStore', () => {
     const current = await DuckDbModelStore.open(path)
     await current.close()
     await withRawDatabase(path, async connection => {
-      await connection.run('INSERT INTO mcp_schema_migrations (version) VALUES (6)')
+      await connection.run('INSERT INTO mcp_schema_migrations (version) VALUES (7)')
     })
 
-    await expect(DuckDbModelStore.open(path)).rejects.toThrow(/schema 6 is newer than supported schema 5/)
+    await expect(DuckDbModelStore.open(path)).rejects.toThrow(/schema 7 is newer than supported schema 6/)
   })
 
   it('migrates schema v2 builds with explicit legacy Manifold execution provenance', async () => {
@@ -1162,7 +1162,7 @@ describe('DuckDbModelStore', () => {
       await expect(migrated.getBuild('legacy-mismatched-build')).resolves.toMatchObject({
         modelId: null,
         modelRevision: null,
-        execution: { evidence: 'legacy-backfill', engineClass: 'manifold' },
+        execution: { evidence: 'legacy-backfill', engineClass: 'mesh' },
       })
       for (const timestamp of [model!.createdAt, model!.updatedAt, revision!.createdAt]) {
         expect(Math.abs(Date.parse(timestamp) - seededAt)).toBeLessThan(60_000)

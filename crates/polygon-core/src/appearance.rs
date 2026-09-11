@@ -1,6 +1,6 @@
 //! Document-model appearance: paints, gradients, recolor, shadows, styles.
 //! Sampling math only — no renderer.
-use crate::{check, Result};
+use crate::{Result, check};
 
 /// Non-premultiplied sRGB with alpha.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -129,11 +129,7 @@ pub fn apply_spread(t: f64, spread: GradientSpread) -> f64 {
         GradientSpread::Repeat => t.rem_euclid(1.0),
         GradientSpread::Reflect => {
             let m = t.rem_euclid(2.0);
-            if m > 1.0 {
-                2.0 - m
-            } else {
-                m
-            }
+            if m > 1.0 { 2.0 - m } else { m }
         }
     }
 }

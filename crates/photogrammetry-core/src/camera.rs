@@ -329,7 +329,13 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)], anal
                     let dt = scale(mv(dr, first.translation), -1.);
                     madd(mm(skew(t), dr), mm(skew(dt), r))
                 } else {
-                    mm(skew(sub(axis, scale(camera.translation, camera.translation[i % 3]))), r)
+                    mm(
+                        skew(sub(
+                            axis,
+                            scale(camera.translation, camera.translation[i % 3]),
+                        )),
+                        r,
+                    )
                 }
             })
         });
@@ -456,8 +462,9 @@ fn refine_joint(first: &Camera, camera: &mut Camera, observations: &[([f64; 2], 
                 for k in 0..2 {
                     let project = |d: V3| cam.focal * (d[k] * pc[2] - pc[k] * d[2]) / pc[2].powi(2);
                     let jc: [f64; 6] = std::array::from_fn(|i| project(dp[i]));
-                    let jp: [f64; 3] =
-                        std::array::from_fn(|j| project([cam.rotation[0][j], cam.rotation[1][j], cam.rotation[2][j]]));
+                    let jp: [f64; 3] = std::array::from_fn(|j| {
+                        project([cam.rotation[0][j], cam.rotation[1][j], cam.rotation[2][j]])
+                    });
                     let err = q[k] - uv[k];
                     let weight = if err.abs() > 3. { 3. / err.abs() } else { 1. };
                     for a in 0..3 {
@@ -504,7 +511,12 @@ fn refine_joint(first: &Camera, camera: &mut Camera, observations: &[([f64; 2], 
         let mut singular = false;
         for i in 0..n {
             let vinv_w: Option<[[f64; 6]; 3]> = (0..6)
-                .map(|b| solve(v_blocks[i], [w_blocks[i][0][b], w_blocks[i][1][b], w_blocks[i][2][b]]))
+                .map(|b| {
+                    solve(
+                        v_blocks[i],
+                        [w_blocks[i][0][b], w_blocks[i][1][b], w_blocks[i][2][b]],
+                    )
+                })
                 .collect::<Option<Vec<_>>>()
                 .map(|cols| std::array::from_fn(|a| std::array::from_fn(|b| cols[b][a])));
             let (Some(vinv_w), Some(vinv_g)) = (vinv_w, solve(v_blocks[i], g_points[i])) else {
@@ -514,7 +526,9 @@ fn refine_joint(first: &Camera, camera: &mut Camera, observations: &[([f64; 2], 
             for a in 0..6 {
                 gs[a] -= (0..3).map(|k| w_blocks[i][k][a] * vinv_g[k]).sum::<f64>();
                 for b in a..6 {
-                    let v = (0..3).map(|k| w_blocks[i][k][a] * vinv_w[k][b]).sum::<f64>();
+                    let v = (0..3)
+                        .map(|k| w_blocks[i][k][a] * vinv_w[k][b])
+                        .sum::<f64>();
                     s[a][b] -= v;
                     if b > a {
                         s[b][a] -= v;
@@ -1453,7 +1467,12 @@ mod tests {
         fb: f64,
         noise: f64,
         outliers: usize,
-    ) -> (Camera, Camera, Vec<([f64; 2], [f64; 2])>, Vec<(V3, [f64; 2])>) {
+    ) -> (
+        Camera,
+        Camera,
+        Vec<([f64; 2], [f64; 2])>,
+        Vec<(V3, [f64; 2])>,
+    ) {
         let a = Camera::identity(fa, 320., 240.);
         let mut b = Camera::identity(fb, 320., 240.);
         b.rotation = rotation([0.05, 0.12, -0.02]);
@@ -1544,9 +1563,20 @@ mod tests {
             .iter()
             .flatten()
             .chain(joint.0.translation.iter())
-            .zip(repeated.0.rotation.iter().flatten().chain(repeated.0.translation.iter()))
+            .zip(
+                repeated
+                    .0
+                    .rotation
+                    .iter()
+                    .flatten()
+                    .chain(repeated.0.translation.iter()),
+            )
         {
-            assert_eq!(x.to_bits(), y.to_bits(), "joint refinement must be deterministic");
+            assert_eq!(
+                x.to_bits(),
+                y.to_bits(),
+                "joint refinement must be deterministic"
+            );
         }
         let default_rmse = holdout_rmse(&frozen.0, &b, &holdout);
         let joint_rmse = holdout_rmse(&joint.0, &b, &holdout);

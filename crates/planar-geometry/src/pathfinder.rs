@@ -2,8 +2,8 @@
 //!
 //! Built on [`crate::rings::planar`] (union / intersection / difference / xor).
 //! Inputs are closed rings in document z-order: index 0 = back, last = front.
-use crate::rings::{area, contains_point, planar, Rings};
-use crate::{check, Result};
+use crate::rings::{Rings, area, contains_point, planar};
+use crate::{Result, check};
 
 /// Max shapes for exponential arrangement walks (Divide / Shape Builder).
 pub const MAX_ARRANGEMENT_INPUTS: usize = 10;
@@ -122,11 +122,7 @@ pub fn combine(a: &Rings, b: &Rings, op: &str) -> Result<Rings> {
         "intersection" => "intersection",
         "difference" | "subtract" => "difference",
         "xor" | "exclude" => "xor",
-        other => {
-            return Err(crate::Error::new(format!(
-                "Unknown pathfinder op '{other}'"
-            )))
-        }
+        other => return Err(crate::error(format!("Unknown pathfinder op '{other}'"))),
     };
     planar(a, b, op)
 }
@@ -320,7 +316,7 @@ pub fn shape_builder_extract(shapes: &[Rings], point: [f64; 2]) -> Result<Rings>
             return Ok(cell);
         }
     }
-    Err(crate::Error::new("Shape Builder: no cell under point"))
+    Err(crate::error("Shape Builder: no cell under point"))
 }
 
 /// Shape Builder delete: subtract the cell under `point` from the union of inputs.

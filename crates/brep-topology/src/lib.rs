@@ -1,35 +1,12 @@
 //! Geometry-independent indexed B-rep incidence shared by both kernels.
 //! C, S and P are application-owned edge, face and parameter-curve geometry.
+pub use math_core::{Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
-#[derive(Debug)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
-}
-impl value_codec::Serialize for Error {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
-        object.insert(
-            "message".into(),
-            value_codec::Serialize::to_value(&self.message),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-pub type Result<T> = std::result::Result<T, Error>;
 fn invalid(message: impl Into<String>) -> Error {
-    Error {
-        code: "BREP_INVALID_TOPOLOGY",
-        message: message.into(),
-    }
+    Error::new("BREP_INVALID_TOPOLOGY", message)
 }
 fn require(ok: bool, message: &str) -> Result<()> {
-    if ok {
-        Ok(())
-    } else {
-        Err(invalid(message))
-    }
+    if ok { Ok(()) } else { Err(invalid(message)) }
 }
 #[derive(Clone, Debug)]
 pub struct Vertex {
@@ -414,11 +391,11 @@ impl<C: value_codec::Serialize, S: value_codec::Serialize, P: value_codec::Seria
     }
 }
 impl<
-        'de,
-        C: value_codec::Deserialize<'de>,
-        S: value_codec::Deserialize<'de>,
-        P: value_codec::Deserialize<'de>,
-    > value_codec::Deserialize<'de> for Model<C, S, P>
+    'de,
+    C: value_codec::Deserialize<'de>,
+    S: value_codec::Deserialize<'de>,
+    P: value_codec::Deserialize<'de>,
+> value_codec::Deserialize<'de> for Model<C, S, P>
 {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = value

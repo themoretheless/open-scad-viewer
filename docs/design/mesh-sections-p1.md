@@ -1,6 +1,6 @@
 # Первый шаг слайсера: индексированные сечения mesh
 
-Статус: реализован Rust API `polygon_kernel::section::MeshSectionIndex`.
+Статус: реализован Rust API `polygon_core::solid::section::MeshSectionIndex`.
 Это вычисление ориентированных замкнутых контуров, ещё не полный этап
 `SectionGraph → RegionSet2` из [целевой архитектуры](native-geometry-architecture.md).
 Browser/WASM dispatch, планировщик слоёв, интерфейс и G-code пока не подключены.
@@ -9,10 +9,10 @@ Browser/WASM dispatch, планировщик слоёв, интерфейс и 
 ## Использование
 
 ```rust
-use polygon_kernel::{cad, section::MeshSectionIndex};
+use polygon_core::solid::{primitives, section::MeshSectionIndex};
 
-fn main() -> Result<(), polygon_kernel::Error> {
-    let mesh = cad::cube([20.0, 30.0, 10.0], false)?;
+fn main() -> Result<(), polygon_core::Error> {
+    let mesh = primitives::cube([20.0, 30.0, 10.0], false)?;
     let index = MeshSectionIndex::new(&mesh)?;
     let section = index.section(0.1)?;
     // Переиспользуем тот же индекс для следующих плоскостей, в любом порядке.
@@ -67,8 +67,8 @@ fn main() -> Result<(), polygon_kernel::Error> {
 ## Проверка
 
 ```sh
-cargo test --locked --manifest-path crates/Cargo.toml -p polygon-kernel
-cargo check --locked --manifest-path crates/Cargo.toml -p polygon-kernel --target wasm32-unknown-unknown
+cargo test --locked --manifest-path crates/Cargo.toml -p polygon-core
+cargo check --locked --manifest-path crates/Cargo.toml -p polygon-core --target wasm32-unknown-unknown
 ```
 
 Регрессии: куб на/вокруг критических высот, полый профиль, остров внутри

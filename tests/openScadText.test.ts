@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { defaultGeometryKernel } from '../src/services/manifoldGeometryKernel'
+import { defaultGeometryKernel } from '../src/services/cadGeometryKernel'
 import { OpenScadProject, type OpenScadProjectFileInput } from '../src/services/openScadProject'
 import {
   OPENSCAD_2021_TEXT_EM_SCALE,

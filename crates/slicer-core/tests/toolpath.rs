@@ -3,8 +3,8 @@ use polygon_core::solid::{
     section::{MeshSection, MeshSectionIndex, SectionContour},
 };
 use slicer_core::{
-    deposited_volume_mm3, emit_gcode, parse_gcode_preview, plan_layer, schedule_layers,
-    LayerSection, PathRole, Result, ToolpathSettings,
+    LayerSection, PathRole, Result, ToolpathSettings, deposited_volume_mm3, emit_gcode,
+    parse_gcode_preview, plan_layer, schedule_layers,
 };
 
 fn settings() -> ToolpathSettings {
@@ -45,18 +45,24 @@ fn box_section_has_outline_and_hatch() {
     let section = section_at(&index, 0.1).unwrap();
     assert!(!section.contours.is_empty());
     let layer = plan_layer(&section, &settings()).unwrap();
-    assert!(layer
-        .paths
-        .iter()
-        .any(|path| path.role == PathRole::Outline && path.closed));
-    assert!(layer
-        .paths
-        .iter()
-        .any(|path| path.role == PathRole::Inset && path.closed));
-    assert!(layer
-        .paths
-        .iter()
-        .any(|path| path.role == PathRole::Hatch && path.points.len() == 2));
+    assert!(
+        layer
+            .paths
+            .iter()
+            .any(|path| path.role == PathRole::Outline && path.closed)
+    );
+    assert!(
+        layer
+            .paths
+            .iter()
+            .any(|path| path.role == PathRole::Inset && path.closed)
+    );
+    assert!(
+        layer
+            .paths
+            .iter()
+            .any(|path| path.role == PathRole::Hatch && path.points.len() == 2)
+    );
 }
 
 #[test]
@@ -78,7 +84,11 @@ fn annulus_keeps_a_hole_out_of_hatch() {
         candidate_triangles: 2,
     });
     let layer = plan_layer(&section, &settings()).unwrap();
-    for path in layer.paths.iter().filter(|path| path.role == PathRole::Hatch) {
+    for path in layer
+        .paths
+        .iter()
+        .filter(|path| path.role == PathRole::Hatch)
+    {
         let mid = [
             (path.points[0][0] + path.points[1][0]) * 0.5,
             (path.points[0][1] + path.points[1][1]) * 0.5,

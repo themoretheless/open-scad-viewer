@@ -124,7 +124,7 @@ impl Field {
                         .extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
                 }
                 Field::Extrude { .. } | Field::Revolve { .. } | Field::Deform { .. } => {
-                    return None
+                    return None;
                 }
             }
             Some(())

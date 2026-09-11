@@ -2,14 +2,14 @@
 //! normal-aware fusion of observed samples. Experimental shared-volume extraction
 //! allows bounded continuation within pixel footprints, without global hole filling.
 mod consistency;
-mod limits;
 mod estimation;
-mod selection;
 mod fusion;
+mod limits;
 mod mesh;
 mod plane;
-mod volume;
+mod selection;
 mod simplify;
+mod volume;
 pub use estimation::{HostSweepSource, HostSweepView, PreparedView, SWEEP_WGSL};
 pub use simplify::{simplify, simplify_with_progress};
 #[cfg(test)]
@@ -179,11 +179,17 @@ impl DenseDiagnostics {
     /// Add work from another estimator pass, without duplicating output-map or fusion counts.
     /// Validate all sums before publishing any new counters.
     pub(super) fn add_estimation_work(&mut self, other: &Self) -> Result<()> {
-        let hypotheses = self.evaluated_hypotheses.checked_add(other.evaluated_hypotheses)
+        let hypotheses = self
+            .evaluated_hypotheses
+            .checked_add(other.evaluated_hypotheses)
             .ok_or("Depth hypothesis counter overflow")?;
-        let patches = self.evaluated_source_patches.checked_add(other.evaluated_source_patches)
+        let patches = self
+            .evaluated_source_patches
+            .checked_add(other.evaluated_source_patches)
             .ok_or("Depth patch counter overflow")?;
-        let pixels = self.sampled_source_pixels.checked_add(other.sampled_source_pixels)
+        let pixels = self
+            .sampled_source_pixels
+            .checked_add(other.sampled_source_pixels)
             .ok_or("Depth pixel counter overflow")?;
         self.evaluated_hypotheses = hypotheses;
         self.evaluated_source_patches = patches;
@@ -262,7 +268,11 @@ fn estimated_working_bytes(
     sparse: &Reconstruction,
     options: &DenseOptions,
 ) -> Option<usize> {
-    let mut bytes = if options.shared_volume { volume::WORKING_BYTES } else { 0usize };
+    let mut bytes = if options.shared_volume {
+        volume::WORKING_BYTES
+    } else {
+        0usize
+    };
     for (image, camera) in images.iter().zip(&sparse.cameras) {
         if camera.is_none() {
             continue;
@@ -321,21 +331,33 @@ pub fn densify_with_options(
         return Err("Dense working set exceeds 512 MiB planning budget; reduce image count or depth resolution".into());
     }
     cancelled(&mut progress, "depth", 0, images.len())?;
-    let grayscale = estimation::prepare_grayscale(images,sparse,options,&mut progress)?;
-    let (mut maps, mut diagnostics) = estimation::estimate_prepared(images, sparse, options, &grayscale, &mut progress)?;
+    let grayscale = estimation::prepare_grayscale(images, sparse, options, &mut progress)?;
+    let (mut maps, mut diagnostics) =
+        estimation::estimate_prepared(images, sparse, options, &grayscale, &mut progress)?;
     if options.dual_scale {
-        let mut secondary_options=options.clone();
-        secondary_options.patch_radius=1;
-        secondary_options.dual_scale=false;
-        let retained=selection::retained_map_bytes(&maps,maps.capacity())?;
-        selection::check_secondary_budget(estimated_working_bytes(images,sparse,&secondary_options),retained,MAX_WORKING_BYTES)?;
-        let (secondary,work)=estimation::estimate_prepared(images,sparse,&secondary_options,&grayscale,
-            &mut |_,done,total| progress("depth-secondary",done,total))?;
+        let mut secondary_options = options.clone();
+        secondary_options.patch_radius = 1;
+        secondary_options.dual_scale = false;
+        let retained = selection::retained_map_bytes(&maps, maps.capacity())?;
+        selection::check_secondary_budget(
+            estimated_working_bytes(images, sparse, &secondary_options),
+            retained,
+            MAX_WORKING_BYTES,
+        )?;
+        let (secondary, work) = estimation::estimate_prepared(
+            images,
+            sparse,
+            &secondary_options,
+            &grayscale,
+            &mut |_, done, total| progress("depth-secondary", done, total),
+        )?;
         diagnostics.add_estimation_work(&work)?;
         for map in &mut maps {
-            let other=secondary.iter().find(|m|m.image==map.image)
+            let other = secondary
+                .iter()
+                .find(|m| m.image == map.image)
                 .ok_or("Missing secondary depth map")?;
-            selection::select_depth(map,other,options.relative_depth_tolerance,&mut progress)?;
+            selection::select_depth(map, other, options.relative_depth_tolerance, &mut progress)?;
         }
     }
     drop(grayscale);
@@ -375,7 +397,14 @@ fn finish_densify(
         &mut progress,
     )?;
     let surface = if options.shared_volume {
-        volume::reconstruct(&patches, &maps, sparse, options, &mut diagnostics, &mut progress)?
+        volume::reconstruct(
+            &patches,
+            &maps,
+            sparse,
+            options,
+            &mut diagnostics,
+            &mut progress,
+        )?
     } else {
         fusion::fuse_consolidating(
             &patches,
@@ -414,7 +443,12 @@ pub fn prepare_host_sweep(
     sparse: &Reconstruction,
     options: &DenseOptions,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
-) -> Result<Option<(Vec<Option<estimation::HostSweepView>>, Vec<Option<estimation::PreparedView>>)>> {
+) -> Result<
+    Option<(
+        Vec<Option<estimation::HostSweepView>>,
+        Vec<Option<estimation::PreparedView>>,
+    )>,
+> {
     options.validate()?;
     if options.estimator != DenseEstimator::FrontoparallelSweep
         || options.coarse_to_fine
@@ -441,8 +475,9 @@ pub fn densify_with_host_scores(
 ) -> Result<DenseReconstruction> {
     options.validate()?;
     let grayscale = estimation::prepare_grayscale(images, sparse, options, progress)?;
-    let (maps, diagnostics) =
-        estimation::finish_host_views(images, sparse, options, &grayscale, prepared, scores, progress)?;
+    let (maps, diagnostics) = estimation::finish_host_views(
+        images, sparse, options, &grayscale, prepared, scores, progress,
+    )?;
     finish_densify(images, sparse, options, maps, diagnostics, progress)
 }
 
@@ -462,8 +497,7 @@ mod tests {
             ..Default::default()
         };
         assert!(!options.sparse_depth_prior && !options.coarse_to_fine);
-        let reference =
-            densify_with_options(&images, &sparse, &options, |_, _, _| true).unwrap();
+        let reference = densify_with_options(&images, &sparse, &options, |_, _, _| true).unwrap();
         // Explicitly disabled modes keep the historical output bit-identical.
         let disabled = densify_with_options(
             &images,

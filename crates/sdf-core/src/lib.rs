@@ -2,27 +2,12 @@
 //! CSG fields preserve the zero set but are not generally exact signed distances.
 //! Extraction yields a neutral triangle buffer; mesh inspect lives in the bridge.
 use geometry_ops::Triangles;
+pub use math_core::{Error, Result};
+use planar_geometry::rings::{self, Rings};
 use std::collections::BTreeMap;
-pub type Result<T> = std::result::Result<T, Error>;
-#[derive(Debug, Clone)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
+fn error(message: impl Into<String>) -> Error {
+    Error::new("SDF_INVALID_INPUT", message)
 }
-impl Error {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            code: "SDF_INVALID_INPUT",
-            message: message.into(),
-        }
-    }
-}
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-impl std::error::Error for Error {}
 pub mod flat;
 #[cfg(feature = "gpu")]
 mod gpu;
@@ -202,11 +187,11 @@ use math_core::{cross, dot, norm as length, sub};
 #[derive(Clone, Debug)]
 pub enum Field {
     Extrude {
-        profile: geometry_ops::Region2,
+        profile: Rings,
         half_height: f64,
     },
     Revolve {
-        profile: geometry_ops::Region2,
+        profile: Rings,
     },
     Deform {
         input: Box<Field>,
@@ -255,6 +240,33 @@ pub enum Field {
         vector: Point,
     },
 }
+fn profile_to_value(rings: &Rings) -> value_codec::Value {
+    let mut object = value_codec::Map::new();
+    let (outer, holes) = match rings.split_first() {
+        Some((outer, holes)) => (outer.clone(), holes.to_vec()),
+        None => (Vec::new(), Vec::new()),
+    };
+    object.insert("outer".into(), value_codec::Serialize::to_value(&outer));
+    object.insert("holes".into(), value_codec::Serialize::to_value(&holes));
+    value_codec::Value::Object(object)
+}
+fn profile_from_value(value: value_codec::Value) -> value_codec::Result<Rings> {
+    let mut object = value
+        .as_object()
+        .ok_or_else(|| value_codec::error("Expected object"))?
+        .clone();
+    let outer: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
+        object
+            .remove("outer")
+            .ok_or_else(|| value_codec::error("Missing field outer"))?,
+    )?;
+    let holes: Vec<Vec<[f64; 2]>> = if let Some(v) = object.remove("holes") {
+        value_codec::Deserialize::from_value(v)?
+    } else {
+        Default::default()
+    };
+    Ok(rings::from_outer_holes(outer, holes))
+}
 impl value_codec::Serialize for Field {
     fn to_value(&self) -> value_codec::Value {
         match self {
@@ -263,7 +275,7 @@ impl value_codec::Serialize for Field {
                 half_height,
             } => {
                 let mut object = value_codec::Map::new();
-                object.insert("profile".into(), value_codec::Serialize::to_value(profile));
+                object.insert("profile".into(), profile_to_value(profile));
                 object.insert(
                     "half_height".into(),
                     value_codec::Serialize::to_value(half_height),
@@ -273,7 +285,7 @@ impl value_codec::Serialize for Field {
             }
             Self::Revolve { profile } => {
                 let mut object = value_codec::Map::new();
-                object.insert("profile".into(), value_codec::Serialize::to_value(profile));
+                object.insert("profile".into(), profile_to_value(profile));
                 object.insert("kind".into(), value_codec::Value::String("revolve".into()));
                 value_codec::Value::Object(object)
             }
@@ -401,7 +413,7 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                     .as_object()
                     .ok_or_else(|| value_codec::error("Expected object"))?
                     .clone();
-                let profile: geometry_ops::Region2 = value_codec::Deserialize::from_value(
+                let profile = profile_from_value(
                     object
                         .remove("profile")
                         .ok_or_else(|| value_codec::error("Missing field profile"))?,
@@ -421,7 +433,7 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                     .as_object()
                     .ok_or_else(|| value_codec::error("Expected object"))?
                     .clone();
-                let profile: geometry_ops::Region2 = value_codec::Deserialize::from_value(
+                let profile = profile_from_value(
                     object
                         .remove("profile")
                         .ok_or_else(|| value_codec::error("Missing field profile"))?,
@@ -683,7 +695,7 @@ fn finish_triangles(mesh: Triangles) -> Result<Triangles> {
             .iter()
             .any(|&i| i.checked_mul(3).map(|o| o + 2 >= mesh.positions.len()) != Some(false))
     {
-        return Err(Error::new("Implicit mesh has invalid indices"));
+        return Err(error("Implicit mesh has invalid indices"));
     }
     Ok(mesh)
 }
@@ -766,14 +778,10 @@ impl Field {
                 Field::Extrude {
                     profile,
                     half_height,
-                } => profile.validate().is_ok() && positive(*half_height),
+                } => rings::validate_profile(profile).is_ok() && positive(*half_height),
                 Field::Revolve { profile } => {
-                    profile.validate().is_ok()
-                        && profile
-                            .outer
-                            .iter()
-                            .chain(profile.holes.iter().flatten())
-                            .all(|p| p[0] >= 0.)
+                    rings::validate_profile(profile).is_ok()
+                        && profile.iter().flatten().all(|p| p[0] >= 0.)
                 }
                 Field::Deform { input, deformation } => {
                     matches!(deformation, geometry_ops::Deformation::Twist { .. })
@@ -816,7 +824,7 @@ impl Field {
         if walk(self, 0, &mut 0) && self.sample_work() <= 4096 {
             Ok(())
         } else {
-            Err(Error::new("Invalid field or depth/node budget exceeded"))
+            Err(error("Invalid field or depth/node budget exceeded"))
         }
     }
     fn sample(&self, p: Point) -> f64 {
@@ -825,11 +833,11 @@ impl Field {
                 profile,
                 half_height,
             } => {
-                let a = profile.signed_distance([p[0], p[1]]);
+                let a = rings::signed_distance(profile, [p[0], p[1]]);
                 let b = p[2].abs() - half_height;
                 a.max(0.).hypot(b.max(0.)) + a.max(b).min(0.)
             }
-            Self::Revolve { profile } => profile.signed_distance([p[0].hypot(p[1]), p[2]]),
+            Self::Revolve { profile } => rings::signed_distance(profile, [p[0].hypot(p[1]), p[2]]),
             Self::Deform { input, deformation } => match deformation.inverse(p) {
                 Ok(q) => input.sample(q),
                 Err(_) => f64::NAN,
@@ -874,7 +882,7 @@ impl Field {
     }
     fn sample_work(&self) -> usize {
         match self {
-            Self::Extrude { profile, .. } | Self::Revolve { profile } => profile.work(),
+            Self::Extrude { profile, .. } | Self::Revolve { profile } => rings::work(profile),
             Self::MeshDistance { mesh, .. } => mesh.indices.len() / 3,
             Self::Union { a, b }
             | Self::Intersection { a, b }
@@ -889,13 +897,13 @@ impl Field {
     pub fn evaluate(&self, p: Point) -> Result<f64> {
         self.validate()?;
         if !finite(p) {
-            return Err(Error::new("Invalid sample point"));
+            return Err(error("Invalid sample point"));
         }
         let value = self.sample(p);
         if value.is_finite() {
             Ok(value)
         } else {
-            Err(Error::new("Field evaluation left its numeric domain"))
+            Err(error("Field evaluation left its numeric domain"))
         }
     }
 }
@@ -957,7 +965,7 @@ pub fn polygonize_tile(
         || grid.cells.iter().any(|&n| n == 0 || n > 64)
         || (0..3).any(|i| grid.max[i] <= grid.min[i])
     {
-        return Err(Error::new(
+        return Err(error(
             "Invalid grid: each axis requires 1..64 cells and ordered finite bounds",
         ));
     }
@@ -983,13 +991,13 @@ pub fn polygonize_tile(
                     v
                 };
                 if !v.is_finite() {
-                    return Err(Error::new("Field returned a non-finite value"));
+                    return Err(error("Field returned a non-finite value"));
                 }
                 if require_closed_bounds
                     && (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz)
                     && v <= 0.
                 {
-                    return Err(Error::new("Surface touches grid boundary; enlarge bounds"));
+                    return Err(error("Surface touches grid boundary; enlarge bounds"));
                 }
                 points.push(p);
                 values.push(v);
@@ -1115,7 +1123,7 @@ pub fn polygonize_tile(
                         mesh.indices.extend([a, b, c]);
                     }
                     if mesh.indices.len() / 3 > 100_000 {
-                        return Err(Error::new("Implicit mesh exceeds 100000 triangles"));
+                        return Err(error("Implicit mesh exceeds 100000 triangles"));
                     }
                 }
             }
@@ -1135,9 +1143,7 @@ pub fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
             .saturating_mul(field.sample_work())
             > 8_000_000
     {
-        return Err(Error::new(
-            "SDF extraction exceeds 8000000 sample work units",
-        ));
+        return Err(error("SDF extraction exceeds 8000000 sample work units"));
     }
     Ok(())
 }
@@ -1153,10 +1159,10 @@ pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Res
     check_grid_budget(field, grid)?;
     let expected = grid.cells.iter().map(|n| n + 1).product::<usize>();
     if values.len() != expected {
-        return Err(Error::new("Grid sample count does not match the grid"));
+        return Err(error("Grid sample count does not match the grid"));
     }
     if values.iter().any(|v| !v.is_finite()) {
-        return Err(Error::new("Field returned a non-finite value"));
+        return Err(error("Field returned a non-finite value"));
     }
     let cursor = std::cell::Cell::new(0usize);
     polygonize_with(

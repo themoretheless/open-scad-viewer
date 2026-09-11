@@ -7,7 +7,7 @@ const emptyResult = quality => ({
   surfaceArea: 0,
   quality,
   reduced: false,
-  timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+  timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
 })
 
 const envelope = request => ({

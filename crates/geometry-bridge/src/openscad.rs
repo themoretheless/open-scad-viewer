@@ -62,7 +62,7 @@ pub fn scad_eval(value: &Value) -> Value {
     let statements = match openscad_core::compile_units(&units, profile) {
         Ok(statements) => statements,
         Err(diagnostic) => {
-            return json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]})
+            return json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]});
         }
     };
     let options = openscad_core::eval::EvaluatorOptions::default();

@@ -114,9 +114,7 @@
 
 ## Важная граница текущего backend
 
-Официальная документация Manifold прямо говорит, что описание алгоритма пока не проходило peer review, WASM build serial-only, а гарантия относится прежде всего к топологической manifoldness результата при manifold input; геометрическая корректность формулируется через epsilon-valid input/output, а не exact constructions. [Manifold algorithm notes](https://github.com/elalish/manifold/wiki/Manifold-Library), [официальный repository](https://github.com/elalish/manifold).
-
-Следствие: Manifold остаётся разумным быстрым permissive backend, но UI/README не должны называть его exact. Нужны topology/status diagnostics и degeneracy corpus. Exact kernel имеет смысл только как отдельно измеренный режим, если тесты докажут проблему.
+Текущий mesh backend — собственный Rust CAD kernel. UI/README не должны называть его exact. Нужны topology/status diagnostics и degeneracy corpus. Exact kernel имеет смысл только как отдельно измеренный режим, если тесты докажут проблему.
 
 WebGPU уже предоставляет storage buffers, compute и indirect draw/dispatch arguments, поэтому chunked GPU-driven path технически возможен. Это инженерная спецификация, не научная работа: [актуальный WebGPU Editor’s Draft](https://gpuweb.github.io/gpuweb/).
 

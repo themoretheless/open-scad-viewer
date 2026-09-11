@@ -156,7 +156,7 @@ describe('MCP public errors', () => {
       ['nurbs.surfaces'],
     )).error).toMatchObject({
       code: 'capability_unavailable',
-      details: { engine_class: 'manifold', missing_capabilities: 'nurbs.surfaces' },
+      details: { engine_class: 'mesh', missing_capabilities: 'nurbs.surfaces' },
     })
 
     expect(publicToolError(new GeometryLanguageContractError(

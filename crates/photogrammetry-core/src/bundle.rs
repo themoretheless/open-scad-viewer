@@ -142,7 +142,11 @@ pub fn outlier_mask(
             cameras
                 .get(observation.camera)
                 .and_then(Option::as_ref)
-                .and_then(|camera| positions.get(observation.point).and_then(|p| camera.project(*p)))
+                .and_then(|camera| {
+                    positions
+                        .get(observation.point)
+                        .and_then(|p| camera.project(*p))
+                })
                 .is_some_and(|uv| {
                     (uv[0] - observation.xy[0]).powi(2) + (uv[1] - observation.xy[1]).powi(2)
                         <= limit
@@ -436,7 +440,10 @@ fn validate(
         let mut members = order[track.clone()].iter().map(|&i| observations[i].camera);
         let first = members.next().unwrap();
         for camera in members {
-            let (a, b) = (find_root(&mut parent, first), find_root(&mut parent, camera));
+            let (a, b) = (
+                find_root(&mut parent, first),
+                find_root(&mut parent, camera),
+            );
             if a != b {
                 parent[b] = a;
             }
@@ -678,11 +685,7 @@ fn inverse_point(mut h: M3, damping: f64) -> Option<M3> {
 
 /// Diagonally normalized Cholesky. Storage is only quadratic in camera count.
 /// Reuses caller-owned buffers so damping retries do not reallocate the system.
-fn solve_reduced(
-    h: &mut [f64],
-    rhs: &mut [f64],
-    checkpoints: &mut Checkpoints,
-) -> Option<()> {
+fn solve_reduced(h: &mut [f64], rhs: &mut [f64], checkpoints: &mut Checkpoints) -> Option<()> {
     let n = rhs.len();
     let mut scales = vec![0.; n];
     for i in 0..n {
@@ -1111,8 +1114,13 @@ mod tests {
         )
         .unwrap();
         let damping = 0.003;
-        let step = schur_step(&linear, damping, &mut SchurScratch::default(), &mut checkpoints)
-            .unwrap();
+        let step = schur_step(
+            &linear,
+            damping,
+            &mut SchurScratch::default(),
+            &mut checkpoints,
+        )
+        .unwrap();
         let nc = layout.dimension;
         let n = nc + linear.points.len() * 3;
         let mut h = vec![0.; n * n];
@@ -1381,7 +1389,9 @@ mod tests {
             robust_error < ordinary_error * 0.5,
             "Huber median shape error {robust_error}, ordinary least squares {ordinary_error}"
         );
-        eprintln!("bundle outliers: Huber median shape error {robust_error}, ordinary least squares {ordinary_error}");
+        eprintln!(
+            "bundle outliers: Huber median shape error {robust_error}, ordinary least squares {ordinary_error}"
+        );
     }
 
     #[test]
@@ -1472,15 +1482,13 @@ mod tests {
             calls < 2
         };
         let mut checkpoints = Checkpoints::new(&mut cancel_during_elimination);
-        assert!(
-            schur_step(
-                &linear,
-                options.initial_damping,
-                &mut SchurScratch::default(),
-                &mut checkpoints
-            )
-            .is_none()
-        );
+        assert!(schur_step(
+            &linear,
+            options.initial_damping,
+            &mut SchurScratch::default(),
+            &mut checkpoints
+        )
+        .is_none());
         assert!(checkpoints.cancelled);
         assert_eq!(calls, 2);
     }
@@ -1654,10 +1662,16 @@ mod tests {
             .map(|o| (o.point * 4 + o.camera) % 43 != 0)
             .collect();
         let first = outlier_mask(&cameras, &points, &observations, &filter);
-        assert_eq!(first, outlier_mask(&cameras, &points, &observations, &filter));
+        assert_eq!(
+            first,
+            outlier_mask(&cameras, &points, &observations, &filter)
+        );
         assert_eq!(first, expected);
         let report = filter_observations(&cameras, &points, &mut observations, &filter);
-        assert_eq!(report.observations_removed, expected.iter().filter(|&&k| !k).count());
+        assert_eq!(
+            report.observations_removed,
+            expected.iter().filter(|&&k| !k).count()
+        );
         assert_eq!(report.tracks_removed, 0);
         assert_eq!(observations.len(), expected.iter().filter(|&&k| k).count());
         // Every surviving observation stays within the threshold.
@@ -1783,9 +1797,7 @@ mod tests {
         );
         eprintln!(
             "bundle filter: removed {} observations / {} tracks, clean median shape error {unfiltered_error} -> {filtered_error}, second run cost {}",
-            removed.observations_removed,
-            removed.tracks_removed,
-            second.final_cost,
+            removed.observations_removed, removed.tracks_removed, second.final_cost,
         );
     }
 }

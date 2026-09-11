@@ -5,7 +5,7 @@
   "languageRoutes": [
     {
       "languageContract": "legacy/current",
-      "engineClass": "manifold",
+      "engineClass": "mesh",
       "fallback": "never"
     },
     {
@@ -89,17 +89,17 @@
     {
       "id": "empty-defaults-to-legacy",
       "input": { "kind": "literal", "value": "" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "ordinary-source-defaults-to-legacy",
       "input": { "kind": "literal", "value": "cube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "explicit-legacy",
       "input": { "kind": "literal", "value": "// @language legacy/current\ncube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "explicit-brep",
@@ -124,32 +124,32 @@
     {
       "id": "requires-union-deduplicates-and-sorts",
       "input": { "kind": "literal", "value": "// @requires zeta,geometry.mesh zeta\n// @requires analysis.metrics\ncube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": ["analysis.metrics", "geometry.mesh", "zeta"] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": ["analysis.metrics", "geometry.mesh", "zeta"] }
     },
     {
       "id": "maximum-capability-count",
       "input": { "kind": "requiredCapabilityCount", "count": 32 },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilityCount": 32 }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilityCount": 32 }
     },
     {
       "id": "maximum-capability-id-length",
       "input": { "kind": "requiredCapabilityId", "length": 128 },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilityCount": 1 }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilityCount": 1 }
     },
     {
       "id": "block-comment-shields-directive",
       "input": { "kind": "literal", "value": "/*\n// @language openscad-viewer/brep-1\n*/\ncube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "multiline-string-shields-directive",
       "input": { "kind": "literal", "value": "note = \"first\\\n// @language openscad-viewer/brep-1\nlast\";\ncube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "unknown-header-comment-is-not-reserved",
       "input": { "kind": "literal", "value": "// @owner geometry-team\ncube(1);" },
-      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "manifold", "requiredCapabilities": [] }
+      "expected": { "kind": "route", "languageContract": "legacy/current", "engineClass": "mesh", "requiredCapabilities": [] }
     },
     {
       "id": "direct-engine-is-forbidden",
@@ -251,12 +251,12 @@
     {
       "id": "missing-manifold-provider",
       "expectedError": "GeometryEngineUnavailableError",
-      "expectedMessage": "Geometry engine manifold is unavailable: No qualified runtime provider is registered.",
+      "expectedMessage": "Geometry engine mesh is unavailable: No qualified runtime provider is registered.",
       "availabilityCause": "provider-missing",
       "publicCode": "engine_unavailable",
       "retryable": false,
-      "publicDetails": { "engine_class": "manifold", "availability_cause": "provider-missing", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "publicDetails": { "engine_class": "mesh", "availability_cause": "provider-missing", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false },
       "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
@@ -273,12 +273,12 @@
     {
       "id": "unsupported-capability-before-readiness",
       "expectedError": "GeometryCapabilityUnavailableError",
-      "expectedMessage": "Geometry engine manifold does not provide required capabilities: nurbs.surfaces",
+      "expectedMessage": "Geometry engine mesh does not provide required capabilities: nurbs.surfaces",
       "missingCapabilities": ["nurbs.surfaces"],
       "publicCode": "capability_unavailable",
       "retryable": false,
-      "publicDetails": { "engine_class": "manifold", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
+      "publicDetails": { "engine_class": "mesh", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
       "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
@@ -293,34 +293,34 @@
     {
       "id": "capability-before-revocation",
       "expectedError": "GeometryCapabilityUnavailableError",
-      "expectedMessage": "Geometry engine manifold does not provide required capabilities: nurbs.surfaces",
+      "expectedMessage": "Geometry engine mesh does not provide required capabilities: nurbs.surfaces",
       "missingCapabilities": ["nurbs.surfaces"],
       "publicCode": "capability_unavailable",
       "retryable": false,
-      "publicDetails": { "engine_class": "manifold", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
+      "publicDetails": { "engine_class": "mesh", "missing_capabilities": "nurbs.surfaces", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false, "requiredCapabilities": ["nurbs.surfaces"] },
       "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
       "id": "revocation-before-provider-missing",
       "expectedError": "GeometryEngineUnavailableError",
-      "expectedMessage": "Geometry engine manifold is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
+      "expectedMessage": "Geometry engine mesh is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
       "availabilityCause": "revoked",
       "publicCode": "engine_unavailable",
       "retryable": false,
-      "publicDetails": { "engine_class": "manifold", "availability_cause": "revoked", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "publicDetails": { "engine_class": "mesh", "availability_cause": "revoked", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false },
       "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
       "id": "revoked-manifold-manifest",
       "expectedError": "GeometryEngineUnavailableError",
-      "expectedMessage": "Geometry engine manifold is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
+      "expectedMessage": "Geometry engine mesh is unavailable: The selected immutable geometry manifest is revoked by runtime policy.",
       "availabilityCause": "revoked",
       "publicCode": "engine_unavailable",
       "retryable": false,
-      "publicDetails": { "engine_class": "manifold", "availability_cause": "revoked", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "publicDetails": { "engine_class": "mesh", "availability_cause": "revoked", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false },
       "warmCalls": 0, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
@@ -337,12 +337,12 @@
     {
       "id": "readiness-failure-is-not-retried",
       "expectedError": "GeometryEngineUnavailableError",
-      "expectedMessage": "Geometry engine manifold is unavailable: The qualified provider failed its runtime readiness check.",
+      "expectedMessage": "Geometry engine mesh is unavailable: The qualified provider failed its runtime readiness check.",
       "availabilityCause": "readiness-failed",
       "publicCode": "engine_unavailable",
       "retryable": true,
-      "publicDetails": { "engine_class": "manifold", "availability_cause": "readiness-failed", "automatic_fallback": false },
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "planned", "automaticFallback": false },
+      "publicDetails": { "engine_class": "mesh", "availability_cause": "readiness-failed", "automatic_fallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "planned", "automaticFallback": false },
       "warmCalls": 1, "buildCalls": 0, "manifoldCallsForBrep": 0
     },
     {
@@ -351,7 +351,7 @@
       "expectedMessage": "provider failure",
       "publicCode": "internal_error",
       "retryable": true,
-      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "manifold", "evidence": "runtime", "automaticFallback": false },
+      "expectedExecution": { "languageContract": "legacy/current", "engineClass": "mesh", "evidence": "runtime", "automaticFallback": false },
       "warmCalls": 1, "buildCalls": 1, "manifoldCallsForBrep": 0
     }
   ],
@@ -402,7 +402,7 @@
       "surface": "worker",
       "expectedOutcome": "engine_unavailable:not-deployed/no-manifold",
       "evidenceFile": "tests/geometryWorker.test.ts",
-      "evidenceTest": "refuses an unavailable B-rep source without invoking the Manifold parser"
+      "evidenceTest": "refuses an unavailable B-rep source without invoking the mesh parser"
     },
     {
       "id": "readiness-no-retry",

@@ -118,10 +118,12 @@ fn is_digit(u: Option<u16>) -> bool {
 }
 fn is_ident_start(u: Option<u16>) -> bool {
     match u {
-        Some(u) => (0x61..=0x7a).contains(&u) // a-z
+        Some(u) => {
+            (0x61..=0x7a).contains(&u) // a-z
             || (0x41..=0x5a).contains(&u) // A-Z
             || u == 0x5f // _
-            || u == 0x24, // $
+            || u == 0x24
+        } // $
         None => false,
     }
 }
@@ -338,6 +340,11 @@ pub fn tokenize(source: &[u16]) -> Result<Vec<Token>, ParseError> {
         ));
         i += 1;
     }
-    out.push(Token::new(TT::Eof, String::new(), source.len(), source.len()));
+    out.push(Token::new(
+        TT::Eof,
+        String::new(),
+        source.len(),
+        source.len(),
+    ));
     Ok(out)
 }

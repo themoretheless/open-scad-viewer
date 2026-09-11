@@ -1,7 +1,7 @@
 //! Editor-precision helpers: snap, align/distribute, cut, measure.
 //! Pure geometry — no UI / document layer.
 use crate::path::BezierPath;
-use crate::{check, Result};
+use crate::{Result, check};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HAlign {
@@ -371,9 +371,7 @@ pub fn resolve_align_reference(
     let union = boxes.iter().copied().reduce(BBox::union).unwrap();
     match relative {
         RelativeTo::Selection => Ok(union),
-        RelativeTo::Page => {
-            page.ok_or_else(|| crate::Error::new("Align to page needs a page bbox"))
-        }
+        RelativeTo::Page => page.ok_or_else(|| crate::error("Align to page needs a page bbox")),
         RelativeTo::KeyObject => match key.filter(|&i| i < boxes.len()) {
             Some(i) => Ok(boxes[i]),
             None => Ok(union),
@@ -543,7 +541,7 @@ fn closest_on_segment(a: [f64; 2], b: [f64; 2], p: [f64; 2]) -> (f64, [f64; 2], 
 /// Scissors: cut path at click (insert split on nearest flattened edge, then split).
 pub fn scissors_cut(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Result<Vec<BezierPath>> {
     let Some(hit) = hit_test_path(path, click, max_dist)? else {
-        return Err(crate::Error::new("Scissors: no path under cursor"));
+        return Err(crate::error("Scissors: no path under cursor"));
     };
     // Work on polyline approximation so cut is exact at hit point.
     let pts = path.flatten()?;

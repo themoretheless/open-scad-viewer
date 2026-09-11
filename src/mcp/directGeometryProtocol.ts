@@ -30,8 +30,8 @@ import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
 
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
-const currentManifoldManifest = GEOMETRY_MANIFEST_ARCHIVE[
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold
+const currentMeshManifest = GEOMETRY_MANIFEST_ARCHIVE[
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh
 ]
 
 /**
@@ -42,14 +42,14 @@ const currentManifoldManifest = GEOMETRY_MANIFEST_ARCHIVE[
 export const DIRECT_GEOMETRY_IDENTITY = Object.freeze({
   boundaryVersion: 'mcp-direct-geometry-v1' as const,
   executionPath: 'legacy-direct-production' as const,
-  engineClass: currentManifoldManifest.engineClass,
-  engineKey: currentManifoldManifest.engineKey,
-  kernelFingerprint: currentManifoldManifest.kernelFingerprint,
-  semanticProgramVersion: currentManifoldManifest.semanticProgramVersion,
-  capabilityManifestVersion: currentManifoldManifest.capabilityManifestVersion,
-  manifestDigest: currentManifoldManifest.manifestDigest,
-  inputContract: currentManifoldManifest.inputContract,
-  manifestIsolation: currentManifoldManifest.isolation,
+  engineClass: currentMeshManifest.engineClass,
+  engineKey: currentMeshManifest.engineKey,
+  kernelFingerprint: currentMeshManifest.kernelFingerprint,
+  semanticProgramVersion: currentMeshManifest.semanticProgramVersion,
+  capabilityManifestVersion: currentMeshManifest.capabilityManifestVersion,
+  manifestDigest: currentMeshManifest.manifestDigest,
+  inputContract: currentMeshManifest.inputContract,
+  manifestIsolation: currentMeshManifest.isolation,
   hostIsolation: 'disposable-node-worker-per-job' as const,
   automaticFallback: false as const,
 })
@@ -550,7 +550,7 @@ export function isDirectGeometryCapabilities(
       || candidate.engines.length !== 2) return false
 
     const manifests = [
-      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
+      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
       GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep],
     ] as const
     return candidate.engines.every((engineValue, index) => {

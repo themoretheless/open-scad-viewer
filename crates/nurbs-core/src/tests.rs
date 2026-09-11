@@ -142,8 +142,7 @@ fn malformed_boundary_input_returns_errors_without_poisoning_kernel() {
     c.knots[3] = -1.;
     assert!(c.validate().is_err());
     assert_eq!(
-        dispatch(json!({"op":"curve_evaluate","curve":circle(),"u":0.5})).unwrap()
-            ["derivative_status"],
+        dispatch(json!({"op":"curve_evaluate","curve":circle(),"u":0.5})).unwrap()["derivative_status"],
         "available"
     );
 }

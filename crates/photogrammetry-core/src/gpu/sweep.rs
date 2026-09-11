@@ -164,16 +164,35 @@ impl GpuSweep {
             label: Some("ncc_sweep"),
             layout: &self.layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: hyp_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: srcf_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: srcm_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: gray_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: out_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: hyp_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: srcf_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: srcm_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: gray_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: out_buf.as_entire_binding(),
+                },
             ],
         });
-        let mut encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("sweep") });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("sweep"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("sweep"),
@@ -229,8 +248,20 @@ pub fn sweep_view(
         let shared: &Option<&(GpuContext, GpuSweep)> = cell;
         shared.map(|(_, sweep)| {
             sweep.run(
-                ref_gray, ref_width, ref_height, ref_focal, ref_cx, ref_cy, sources, grays,
-                hypotheses, width, height, patch_radius, step, needed,
+                ref_gray,
+                ref_width,
+                ref_height,
+                ref_focal,
+                ref_cx,
+                ref_cy,
+                sources,
+                grays,
+                hypotheses,
+                width,
+                height,
+                patch_radius,
+                step,
+                needed,
             )
         })
     })

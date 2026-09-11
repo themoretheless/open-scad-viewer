@@ -12,10 +12,10 @@ import {
   type ManifoldPlanPayloadFamily,
 } from '../src/services/manifoldPlanBackend'
 import type {
-  ManifoldKernelHandle,
-  ManifoldKernelOps,
-  ManifoldKernelSolidAnalysis,
-} from '../src/services/manifoldKernelOps'
+  CadKernelHandle,
+  CadKernelOps,
+  CadKernelSolidAnalysis,
+} from '../src/services/cadKernelOps'
 import {
   evaluateOpenSCADViaInjectedManifoldPlan,
   evaluateOpenSCADViaManifoldPlanForQualification,
@@ -315,6 +315,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'core/scene.ts',
       'core/semanticProgram.ts',
       'core/sha256.ts',
+      'core/topologyLineage.ts',
       'services/openscadCompiler.ts',
     ])
     const importsManifold = /(?:from\s*|import\s*\()['"]manifold-3d\//
@@ -326,7 +327,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       .not.toMatch(forbiddenPlanImports)
     expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
-    expect(readFileSync(new URL('../src/services/manifoldKernelOps.ts', import.meta.url), 'utf8'))
+    expect(readFileSync(new URL('../src/services/cadKernelOps.ts', import.meta.url), 'utf8'))
       .not.toMatch(importsManifold)
     visit(new URL('services/', root))
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
@@ -335,7 +336,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
   })
 })
 
-interface FakeHandle extends ManifoldKernelHandle {
+interface FakeHandle extends CadKernelHandle {
   readonly serial: number
   readonly original: number | null
   readonly empty: boolean
@@ -351,7 +352,7 @@ interface FakeKernelOptions {
 }
 
 function fakeKernel(options: FakeKernelOptions = {}): {
-  readonly ops: ManifoldKernelOps
+  readonly ops: CadKernelOps
   readonly live: Set<FakeHandle>
   readonly deleted: FakeHandle[]
 } {
@@ -371,7 +372,7 @@ function fakeKernel(options: FakeKernelOptions = {}): {
     return handle
   }
   const result = (dimension: 2 | 3) => create(dimension)
-  const emptyAnalysis: ManifoldKernelSolidAnalysis = {
+  const emptyAnalysis: CadKernelSolidAnalysis = {
     volume: 0,
     surfaceArea: 0,
     mesh: {
@@ -388,7 +389,7 @@ function fakeKernel(options: FakeKernelOptions = {}): {
       faceID: new Uint32Array(),
     },
   }
-  const ops: ManifoldKernelOps = {
+  const ops: CadKernelOps = {
     implementationKey: 'own-rust-cad-plan-v1',
     empty2: () => create(2, { empty: true }),
     empty3: () => create(3, { empty: true }),

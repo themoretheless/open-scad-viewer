@@ -10,30 +10,7 @@
 pub const MAX_LAYERS: usize = 2_048;
 pub const MAX_POINTS: usize = 16_384;
 
-#[derive(Debug, Clone)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
-}
-
-impl Error {
-    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for Error {}
-
-pub type Result<T> = std::result::Result<T, Error>;
+pub use math_core::{Error, Result};
 
 /// One horizontal slice: closed rings in millimeters. Not a CAD handle.
 #[derive(Clone, Debug, PartialEq)]
@@ -237,11 +214,7 @@ fn min_wall_mm(section: &LayerSection) -> f64 {
         }
         y += step;
     }
-    if min_wall.is_finite() {
-        min_wall
-    } else {
-        0.0
-    }
+    if min_wall.is_finite() { min_wall } else { 0.0 }
 }
 
 /// Second moments and stress estimates for one already-cut section.

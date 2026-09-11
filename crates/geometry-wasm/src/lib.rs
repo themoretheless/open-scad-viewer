@@ -4,7 +4,7 @@
 //! Responses are returned as packed u64 (len << 32 | ptr), which is sound
 //! because wasm32 linear memory pointers fit 32 bits.
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn abi_alloc(len: usize) -> usize {
     geometry_bridge::abi::abi_alloc(len)
 }
@@ -13,37 +13,37 @@ pub extern "C" fn abi_alloc(len: usize) -> usize {
 /// Pointers must reference live buffers allocated by this module, with their
 /// exact lengths. Mesh pointers must come from operation 9; freeing consumes
 /// them exactly once.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_free(ptr: usize, len: usize) {
-    geometry_bridge::abi::abi_free(ptr, len)
+    unsafe { geometry_bridge::abi::abi_free(ptr, len) }
 }
 
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their
 /// exact lengths.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
-    geometry_bridge::abi::abi_request(op, ptr, len)
+    unsafe { geometry_bridge::abi::abi_request(op, ptr, len) }
 }
 
 /// # Safety
 /// ptr must reference a live mesh handle returned by operation 9.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_mesh_field(ptr: usize, field: u32) -> usize {
-    geometry_bridge::abi::abi_mesh_field(ptr, field)
+    unsafe { geometry_bridge::abi::abi_mesh_field(ptr, field) }
 }
 
 /// # Safety
 /// ptr must reference a live mesh handle returned by operation 9; consumed once.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_mesh_free(ptr: usize) {
-    geometry_bridge::abi::abi_mesh_free(ptr)
+    unsafe { geometry_bridge::abi::abi_mesh_free(ptr) }
 }
 
 /// # Safety
 /// vp/vl and ip/il must reference live caller-owned buffers allocated by this
 /// module; they are only read.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_import_mesh(
     stride: usize,
     vp: usize,
@@ -51,13 +51,13 @@ pub unsafe extern "C" fn abi_import_mesh(
     ip: usize,
     il: usize,
 ) -> u64 {
-    geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il)
+    unsafe { geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il) }
 }
 
 /// # Safety
 /// vp/vl and ip/il must reference live caller-owned buffers allocated by this
 /// module; they are only read.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_bvh_build(
     stride: usize,
     leaf: usize,
@@ -66,13 +66,13 @@ pub unsafe extern "C" fn abi_bvh_build(
     ip: usize,
     il: usize,
 ) -> u64 {
-    geometry_bridge::abi::abi_bvh_build(stride, leaf, vp, vl, ip, il)
+    unsafe { geometry_bridge::abi::abi_bvh_build(stride, leaf, vp, vl, ip, il) }
 }
 
 /// # Safety
 /// All buffer pointers must reference live caller-owned buffers allocated by
 /// this module; they are only read.
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn abi_semantic_edges(
     vp: usize,
@@ -86,31 +86,33 @@ pub unsafe extern "C" fn abi_semantic_edges(
     weld: u32,
     crease_dot_threshold: f64,
 ) -> u64 {
-    geometry_bridge::abi::abi_semantic_edges(
-        vp,
-        vl,
-        ip,
-        il,
-        mfp,
-        mfl,
-        mtp,
-        mtl,
-        weld,
-        crease_dot_threshold,
-    )
+    unsafe {
+        geometry_bridge::abi::abi_semantic_edges(
+            vp,
+            vl,
+            ip,
+            il,
+            mfp,
+            mfl,
+            mtp,
+            mtl,
+            weld,
+            crease_dot_threshold,
+        )
+    }
 }
 
 /// # Safety
 /// The handle must reference a live result from `abi_bvh_build` or
 /// `abi_semantic_edges`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
-    geometry_bridge::abi::abi_array_field(handle, slot)
+    unsafe { geometry_bridge::abi::abi_array_field(handle, slot) }
 }
 
 /// # Safety
 /// The handle must reference a live analysis result; consumed once.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_array_free(handle: usize) {
-    geometry_bridge::abi::abi_array_free(handle)
+    unsafe { geometry_bridge::abi::abi_array_free(handle) }
 }

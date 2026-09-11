@@ -9,7 +9,7 @@ describe('binary CAD transport',()=>{
   try{
    const reference=callGeometryRust<{positions:number[];indices:number[];faceIds:number[]}>('cad',{action:'export_mesh',id})
    withCadMesh(id,mesh=>{expect(Array.from(mesh.positions)).toEqual(reference.positions);expect(Array.from(mesh.indices)).toEqual(reference.indices);expect(Array.from(mesh.faceIds)).toEqual(reference.faceIds)})
-   const wasm=await Module(),solid=wasm.Manifold.cube([2,3,4]),mesh=solid.getMesh();solid.delete()
+   const wasm=await Module(),solid=wasm.CadSolid.cube([2,3,4]),mesh=solid.getMesh();solid.delete()
    // The worker may transfer these buffers after the Rust snapshot/source is freed.
    const transferred=structuredClone(mesh.vertProperties,{transfer:[mesh.vertProperties.buffer]})
    expect(transferred.length).toBeGreaterThan(0);expect(Array.from(transferred).every(Number.isFinite)).toBe(true)

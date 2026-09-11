@@ -2,7 +2,7 @@
 //! and residual buffers are reused while computing numerical Jacobians.
 use crate::{Error, Result};
 use std::collections::{HashMap, HashSet};
-use value_codec::{json, Value};
+use value_codec::{Value, json};
 fn maximum(v: &[f64]) -> f64 {
     v.iter().map(|v| v.abs()).fold(0., f64::max)
 }

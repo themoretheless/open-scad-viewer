@@ -426,7 +426,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
                   },
                   {
                     "type": "array",
@@ -443,7 +446,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
                   },
                   {
                     "type": "array",
@@ -460,9 +466,15 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -524,7 +536,10 @@
                   {
                     "$ref": "#/$defs/__schema1"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               },
               "input": {
                 "type": "string",
@@ -653,7 +668,10 @@
                   {
                     "$ref": "#/$defs/__schema1"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
               },
               "slices": {
                 "type": "integer",
@@ -768,7 +786,10 @@
                   {
                     "$ref": "#/$defs/__schema1"
                   }
-                ]
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
               }
             },
             "required": [
@@ -835,7 +856,10 @@
                     {
                       "$ref": "#/$defs/__schema1"
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               },
               "sections": {
@@ -857,7 +881,10 @@
                         {
                           "$ref": "#/$defs/__schema1"
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
                     },
                     "offset": {
                       "type": "array",
@@ -868,7 +895,10 @@
                         {
                           "$ref": "#/$defs/__schema1"
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -936,7 +966,10 @@
                               {
                                 "$ref": "#/$defs/__schema1"
                               }
-                            ]
+                            ],
+                            "items": false,
+                            "minItems": 3,
+                            "maxItems": 3
                           },
                           "rotation": {
                             "type": "array",
@@ -950,7 +983,10 @@
                               {
                                 "$ref": "#/$defs/__schema1"
                               }
-                            ]
+                            ],
+                            "items": false,
+                            "minItems": 3,
+                            "maxItems": 3
                           }
                         },
                         "required": [
@@ -976,7 +1012,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         },
                         "rotation": {
                           "type": "array",
@@ -990,7 +1029,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         }
                       },
                       "required": [
@@ -1029,7 +1071,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         },
                         "joint": {
                           "type": "object",
@@ -1117,7 +1162,10 @@
                         {
                           "$ref": "#/$defs/__schema1"
                         }
-                      ]
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -1165,7 +1213,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 2,
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -1322,7 +1373,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
                   },
                   {
                     "$ref": "#/$defs/__schema1"
@@ -1388,7 +1442,10 @@
                     {
                       "$ref": "#/$defs/__schema1"
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               }
             },
@@ -1710,7 +1767,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   {
                     "$ref": "#/$defs/__schema1"
@@ -1808,7 +1868,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   {
                     "$ref": "#/$defs/__schema1"
@@ -1853,7 +1916,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   {
                     "$ref": "#/$defs/__schema1"
@@ -1898,7 +1964,10 @@
                       {
                         "$ref": "#/$defs/__schema1"
                       }
-                    ]
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   {
                     "$ref": "#/$defs/__schema1"
@@ -2427,7 +2496,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
                             },
                             {
                               "type": "array",
@@ -2444,7 +2516,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
                             },
                             {
                               "type": "array",
@@ -2461,9 +2536,15 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         }
                       },
                       "required": [
@@ -2525,7 +2606,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         },
                         "input": {
                           "type": "string",
@@ -2654,7 +2738,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 2,
+                          "maxItems": 2
                         },
                         "slices": {
                           "type": "integer",
@@ -2769,7 +2856,10 @@
                             {
                               "$ref": "#/$defs/__schema1"
                             }
-                          ]
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
                         }
                       },
                       "required": [
@@ -2836,7 +2926,10 @@
                               {
                                 "$ref": "#/$defs/__schema1"
                               }
-                            ]
+                            ],
+                            "items": false,
+                            "minItems": 2,
+                            "maxItems": 2
                           }
                         },
                         "sections": {
@@ -2858,7 +2951,10 @@
                                   {
                                     "$ref": "#/$defs/__schema1"
                                   }
-                                ]
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
                               },
                               "offset": {
                                 "type": "array",
@@ -2869,7 +2965,10 @@
                                   {
                                     "$ref": "#/$defs/__schema1"
                                   }
-                                ]
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
                               }
                             },
                             "required": [
@@ -2937,7 +3036,10 @@
                                         {
                                           "$ref": "#/$defs/__schema1"
                                         }
-                                      ]
+                                      ],
+                                      "items": false,
+                                      "minItems": 3,
+                                      "maxItems": 3
                                     },
                                     "rotation": {
                                       "type": "array",
@@ -2951,7 +3053,10 @@
                                         {
                                           "$ref": "#/$defs/__schema1"
                                         }
-                                      ]
+                                      ],
+                                      "items": false,
+                                      "minItems": 3,
+                                      "maxItems": 3
                                     }
                                   },
                                   "required": [
@@ -2977,7 +3082,10 @@
                                       {
                                         "$ref": "#/$defs/__schema1"
                                       }
-                                    ]
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
                                   },
                                   "rotation": {
                                     "type": "array",
@@ -2991,7 +3099,10 @@
                                       {
                                         "$ref": "#/$defs/__schema1"
                                       }
-                                    ]
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
                                   }
                                 },
                                 "required": [
@@ -3030,7 +3141,10 @@
                                       {
                                         "$ref": "#/$defs/__schema1"
                                       }
-                                    ]
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
                                   },
                                   "joint": {
                                     "type": "object",
@@ -3118,7 +3232,10 @@
                                   {
                                     "$ref": "#/$defs/__schema1"
                                   }
-                                ]
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
                               }
                             },
                             "required": [
@@ -3166,7 +3283,10 @@
                                       {
                                         "$ref": "#/$defs/__schema1"
                                       }
-                                    ]
+                                    ],
+                                    "items": false,
+                                    "minItems": 2,
+                                    "maxItems": 2
                                   }
                                 },
                                 "required": [
@@ -3323,7 +3443,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 2,
+                              "maxItems": 2
                             },
                             {
                               "$ref": "#/$defs/__schema1"
@@ -3389,7 +3512,10 @@
                               {
                                 "$ref": "#/$defs/__schema1"
                               }
-                            ]
+                            ],
+                            "items": false,
+                            "minItems": 2,
+                            "maxItems": 2
                           }
                         }
                       },
@@ -3711,7 +3837,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
                             },
                             {
                               "$ref": "#/$defs/__schema1"
@@ -3809,7 +3938,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
                             },
                             {
                               "$ref": "#/$defs/__schema1"
@@ -3854,7 +3986,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
                             },
                             {
                               "$ref": "#/$defs/__schema1"
@@ -3899,7 +4034,10 @@
                                 {
                                   "$ref": "#/$defs/__schema1"
                                 }
-                              ]
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
                             },
                             {
                               "$ref": "#/$defs/__schema1"
@@ -4870,7 +5008,10 @@
                     {
                       "$ref": "#/$defs/__schema1"
                     }
-                  ]
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               },
               "required": [

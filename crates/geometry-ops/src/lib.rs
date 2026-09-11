@@ -1,7 +1,10 @@
 //! Representation-independent point mappings and brush falloffs. Geometry
 //! ownership, topology updates and validity checks belong to each consuming kernel.
 pub type Point = [f64; 3];
-pub type Result<T> = std::result::Result<T, String>;
+pub use math_core::{Error, Result};
+fn fail(message: impl Into<String>) -> Error {
+    Error::new("GEOMETRY_INVALID_INPUT", message)
+}
 fn finite(p: Point) -> bool {
     p.iter().all(|v| v.is_finite() && v.abs() <= 1e6)
 }
@@ -144,13 +147,13 @@ impl Deformation {
         if valid {
             Ok(())
         } else {
-            Err("Invalid deformation parameters".into())
+            Err(fail("Invalid deformation parameters"))
         }
     }
     pub fn apply(&self, p: Point) -> Result<Point> {
         self.validate()?;
         if !finite(p) {
-            return Err("Invalid deformation point".into());
+            return Err(fail("Invalid deformation point"));
         }
         let q = match self {
             Self::Twist {
@@ -169,7 +172,7 @@ impl Deformation {
                 let y = p[1] - origin[1];
                 let z = p[2] - origin[2];
                 if r + y <= 0. || (z / r).abs() >= std::f64::consts::PI {
-                    return Err("Bend leaves its nonfolding domain".into());
+                    return Err(fail("Bend leaves its nonfolding domain"));
                 }
                 let a = z / r;
                 [
@@ -181,7 +184,7 @@ impl Deformation {
             Self::Lattice { min, max, controls } => {
                 let t: Point = std::array::from_fn(|k| (p[k] - min[k]) / (max[k] - min[k]));
                 if t.iter().any(|&v| !(-1e-12..=1. + 1e-12).contains(&v)) {
-                    return Err("Point lies outside deformation lattice".into());
+                    return Err(fail("Point lies outside deformation lattice"));
                 }
                 let mut q = [0.; 3];
                 for (i, c) in controls.iter().enumerate() {
@@ -198,7 +201,7 @@ impl Deformation {
         if finite(q) {
             Ok(q)
         } else {
-            Err("Deformation exceeds coordinate limits".into())
+            Err(fail("Deformation exceeds coordinate limits"))
         }
     }
     /// Twist has a global analytic inverse. Other fields must explicitly implement
@@ -213,7 +216,9 @@ impl Deformation {
                 radians_per_unit: -radians_per_unit,
             }
             .apply(p),
-            _ => Err("This deformation has no supported global inverse for implicit fields".into()),
+            _ => Err(fail(
+                "This deformation has no supported global inverse for implicit fields",
+            )),
         }
     }
 }
@@ -279,13 +284,13 @@ impl Brush {
         {
             Ok(())
         } else {
-            Err("Invalid brush".into())
+            Err(fail("Invalid brush"))
         }
     }
     pub fn apply(&self, p: Point) -> Result<Point> {
         self.validate()?;
         if !finite(p) {
-            return Err("Invalid brush point".into());
+            return Err(fail("Invalid brush point"));
         }
         let d = p
             .iter()
@@ -304,7 +309,7 @@ impl Brush {
         if finite(q) {
             Ok(q)
         } else {
-            Err("Brush exceeds coordinate limits".into())
+            Err(fail("Brush exceeds coordinate limits"))
         }
     }
 }
@@ -341,153 +346,6 @@ mod tests {
         };
         assert_eq!(b.apply([0.; 3]).unwrap(), [0., 0., 2.]);
         assert_eq!(b.apply([1., 0., 0.]).unwrap(), [1., 0., 0.]);
-    }
-}
-
-/// Common 2D region representation, without a triangulation or geometry kernel.
-#[derive(Clone, Debug)]
-pub struct Region2 {
-    pub outer: Vec<[f64; 2]>,
-    pub holes: Vec<Vec<[f64; 2]>>,
-}
-impl value_codec::Serialize for Region2 {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "outer".into(),
-            value_codec::Serialize::to_value(&self.outer),
-        );
-        object.insert(
-            "holes".into(),
-            value_codec::Serialize::to_value(&self.holes),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Region2 {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let outer: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
-            object
-                .remove("outer")
-                .ok_or_else(|| value_codec::error("Missing field outer"))?,
-        )?;
-        let holes: Vec<Vec<[f64; 2]>> = if let Some(v) = object.remove("holes") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            Default::default()
-        };
-        Ok(Self { outer, holes })
-    }
-}
-fn area2(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-}
-fn inside2(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
-    let mut inside = false;
-    for i in 0..ring.len() {
-        let a = ring[i];
-        let b = ring[(i + 1) % ring.len()];
-        if (a[1] > p[1]) != (b[1] > p[1])
-            && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]
-        {
-            inside = !inside;
-        }
-    }
-    inside
-}
-impl Region2 {
-    pub fn validate(&self) -> Result<()> {
-        let loops: Vec<_> = std::iter::once(&self.outer).chain(&self.holes).collect();
-        if loops.len() > 17
-            || loops.iter().map(|l| l.len()).sum::<usize>() > 512
-            || loops
-                .iter()
-                .any(|l| l.len() < 3 || l.iter().flatten().any(|v| !v.is_finite() || v.abs() > 1e6))
-        {
-            return Err("Invalid planar region".into());
-        }
-        let mut edges = Vec::new();
-        for (li, l) in loops.iter().enumerate() {
-            let area = (1..l.len() - 1)
-                .map(|i| area2(l[0], l[i], l[i + 1]))
-                .sum::<f64>();
-            if area.abs() < 1e-14 {
-                return Err("Zero-area profile loop".into());
-            }
-            for i in 0..l.len() {
-                let a = l[i];
-                let b = l[(i + 1) % l.len()];
-                if a == b {
-                    return Err("Repeated profile vertex".into());
-                }
-                edges.push((li, i, a, b));
-            }
-        }
-        let on = |p: [f64; 2], a: [f64; 2], b: [f64; 2]| {
-            area2(a, b, p).abs() <= 1e-12
-                && p[0] >= a[0].min(b[0]) - 1e-12
-                && p[0] <= a[0].max(b[0]) + 1e-12
-                && p[1] >= a[1].min(b[1]) - 1e-12
-                && p[1] <= a[1].max(b[1]) + 1e-12
-        };
-        for i in 0..edges.len() {
-            for j in i + 1..edges.len() {
-                let (li, ai, a, b) = edges[i];
-                let (lj, bi, c, d) = edges[j];
-                if li == lj
-                    && ((ai + 1) % loops[li].len() == bi || (bi + 1) % loops[li].len() == ai)
-                {
-                    continue;
-                }
-                if on(a, c, d)
-                    || on(b, c, d)
-                    || on(c, a, b)
-                    || on(d, a, b)
-                    || (area2(a, b, c) > 0.) != (area2(a, b, d) > 0.)
-                        && (area2(c, d, a) > 0.) != (area2(c, d, b) > 0.)
-                {
-                    return Err("Profile loops intersect or touch".into());
-                }
-            }
-        }
-        for (i, h) in self.holes.iter().enumerate() {
-            if !inside2(h[0], &self.outer)
-                || self
-                    .holes
-                    .iter()
-                    .enumerate()
-                    .any(|(j, other)| i != j && inside2(h[0], other))
-            {
-                return Err("Invalid hole containment".into());
-            }
-        }
-        Ok(())
-    }
-    pub fn signed_distance(&self, p: [f64; 2]) -> f64 {
-        let mut distance = f64::INFINITY;
-        for l in std::iter::once(&self.outer).chain(&self.holes) {
-            for i in 0..l.len() {
-                let a = l[i];
-                let b = l[(i + 1) % l.len()];
-                let v = [b[0] - a[0], b[1] - a[1]];
-                let t = (((p[0] - a[0]) * v[0] + (p[1] - a[1]) * v[1])
-                    / (v[0] * v[0] + v[1] * v[1]))
-                    .clamp(0., 1.);
-                distance = distance.min((p[0] - a[0] - t * v[0]).hypot(p[1] - a[1] - t * v[1]));
-            }
-        }
-        if inside2(p, &self.outer) && !self.holes.iter().any(|h| inside2(p, h)) {
-            -distance
-        } else {
-            distance
-        }
-    }
-    pub fn work(&self) -> usize {
-        self.outer.len() + self.holes.iter().map(Vec::len).sum::<usize>()
     }
 }
 
@@ -531,40 +389,27 @@ impl<'de> value_codec::Deserialize<'de> for Triangles {
     }
 }
 
-fn vsub(a: Point, b: Point) -> Point {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-fn vdot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-fn vcross(a: Point, b: Point) -> Point {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn vnorm(a: Point) -> f64 {
-    vdot(a, a).sqrt()
-}
 fn vunit(a: Point) -> Result<Point> {
-    let n = vnorm(a);
+    let n = math_core::norm(a);
     if n <= 1e-12 {
-        return Err("Direction is zero or numerically singular".into());
+        return Err(fail("Direction is zero or numerically singular"));
     }
-    Ok([a[0] / n, a[1] / n, a[2] / n])
+    Ok(math_core::scale(a, 1. / n))
 }
 
 /// Rotation-minimizing frames on a polyline; 180-degree reversals are rejected.
 pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result<Vec<Vec<Point>>> {
     if !(2..=64).contains(&path.len()) || path.iter().flatten().any(|v| !v.is_finite()) {
-        return Err("Sweep requires 2..64 finite path points".into());
+        return Err(fail("Sweep requires 2..64 finite path points"));
     }
     let tangents: Vec<Point> = path
         .windows(2)
-        .map(|w| vunit(vsub(w[1], w[0])))
+        .map(|w| vunit(math_core::sub(w[1], w[0])))
         .collect::<Result<_>>()?;
-    let mut normal = vunit(vsub(up, tangents[0].map(|v| v * vdot(up, tangents[0]))))?;
+    let mut normal = vunit(math_core::sub(
+        up,
+        tangents[0].map(|v| v * math_core::dot(up, tangents[0])),
+    ))?;
     let mut previous = tangents[0];
     let mut sections = Vec::new();
     for i in 0..path.len() {
@@ -575,22 +420,25 @@ pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result
         } else {
             vunit(std::array::from_fn(|k| tangents[i - 1][k] + tangents[i][k]))?
         };
-        let axis = vcross(previous, tangent);
-        let sine = vnorm(axis);
-        let cosine = vdot(previous, tangent).clamp(-1., 1.);
+        let axis = math_core::cross(previous, tangent);
+        let sine = math_core::norm(axis);
+        let cosine = math_core::dot(previous, tangent).clamp(-1., 1.);
         if cosine <= -1. + 1e-9 {
-            return Err("Sweep path reverses direction".into());
+            return Err(fail("Sweep path reverses direction"));
         }
         if sine > 1e-12 {
             let axis = axis.map(|v| v / sine);
-            let b = vcross(axis, normal);
-            let d = vdot(axis, normal);
+            let b = math_core::cross(axis, normal);
+            let d = math_core::dot(axis, normal);
             normal = std::array::from_fn(|k| {
                 normal[k] * cosine + b[k] * sine + axis[k] * d * (1. - cosine)
             });
         }
-        normal = vunit(vsub(normal, tangent.map(|v| v * vdot(normal, tangent))))?;
-        let binormal = vcross(tangent, normal);
+        normal = vunit(math_core::sub(
+            normal,
+            tangent.map(|v| v * math_core::dot(normal, tangent)),
+        ))?;
+        let binormal = math_core::cross(tangent, normal);
         sections.push(
             profile
                 .iter()

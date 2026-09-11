@@ -19,21 +19,21 @@ export const MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS = Object.freeze({
   bytes: 32 * 1024 * 1024,
 })
 
-const legacyManifest = GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1']
+const currentManifest = GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1']
 
 /**
  * Explicitly non-production identity for the supervised G1 adapter lane. It
  * binds the underlying pinned artifact without pretending that the adapter is
- * the legacy-direct provider recorded by the production-v5 manifest.
+ * the production mesh provider.
  */
 export const MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY = Object.freeze({
   adapterVersion: 'semantic-manifold-plan-qualification-v1' as const,
   semanticProgramSchema: '1.2' as const,
-  engineClass: 'manifold' as const,
+  engineClass: 'mesh' as const,
   engineKey: 'manifold-plan-qualification-v1' as const,
-  kernelFingerprint: legacyManifest.kernelFingerprint,
-  dependencyVersion: legacyManifest.dependency.version,
-  sourceManifestDigest: legacyManifest.manifestDigest,
+  kernelFingerprint: currentManifest.kernelFingerprint,
+  dependencyVersion: currentManifest.dependency.version,
+  sourceManifestDigest: currentManifest.manifestDigest,
   qualificationOnly: true as const,
   automaticFallback: false as const,
 })

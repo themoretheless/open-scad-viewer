@@ -256,7 +256,7 @@ source -> qualified lowerer -> trusted SemanticProgram
                        ManifoldPlanBackend
                                   |
                                   v
-                 narrow ManifoldKernelOps adapter
+                 narrow CadKernelOps adapter
 
 owning execution result + SPE1 provenance
                                   |

@@ -1,11 +1,11 @@
 //! Numeric own-geometry graph preparation. Kernel execution remains separate.
-use crate::units::{self, Numeric, ANGLE, LENGTH, SCALAR};
+use crate::units::{self, ANGLE, LENGTH, Numeric, SCALAR};
 use crate::{Error, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::OnceLock,
 };
-use value_codec::{json, Value as J};
+use value_codec::{Value as J, json};
 fn s<'a>(v: &'a J, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
 }
@@ -493,13 +493,10 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 .collect::<Result<Vec<_>>>()
                 .map(J::Array);
         }
-        Ok(json!(units::field(
-            scalar(v, params, path, 0)?,
-            dimension,
-            path,
-            false
-        )
-        .map_err(|error| text_error(path, &error.message))?))
+        Ok(json!(
+            units::field(scalar(v, params, path, 0)?, dimension, path, false)
+                .map_err(|error| text_error(path, &error.message))?
+        ))
     }
     let mut lowered = Vec::new();
     for mut node in nodes {
@@ -785,16 +782,20 @@ mod tests {
         assert_eq!(output["document"]["nodes"].as_array().unwrap().len(), 1);
         let error = compile_text(vec![bad], &[], "Bad".into()).unwrap_err();
         assert_eq!(error.code, "text_error");
-        assert!(error
-            .message
-            .starts_with("ModelGraph Text radius: Expected length^1 angle^0"));
+        assert!(
+            error
+                .message
+                .starts_with("ModelGraph Text radius: Expected length^1 angle^0")
+        );
         let mut arithmetic = sphere();
         arithmetic["radius"] =
             json!({"op":"add","args":[{"op":"quantity","value":1,"unit":"mm"},1]});
-        assert!(compile_text(vec![arithmetic], &[], "Shape".into())
-            .unwrap_err()
-            .message
-            .starts_with("ModelGraph Text radius: Incompatible dimensions"));
+        assert!(
+            compile_text(vec![arithmetic], &[], "Shape".into())
+                .unwrap_err()
+                .message
+                .starts_with("ModelGraph Text radius: Incompatible dimensions")
+        );
     }
 
     #[test]

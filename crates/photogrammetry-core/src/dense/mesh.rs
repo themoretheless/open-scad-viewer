@@ -187,7 +187,9 @@ mod compact_tests {
                 [6., 5., 5.],
                 [5., 6., 5.],
             ],
-            colors: vec![[10; 3], [20; 3], [30; 3], [40; 3], [50; 3], [60; 3], [70; 3]],
+            colors: vec![
+                [10; 3], [20; 3], [30; 3], [40; 3], [50; 3], [60; 3], [70; 3],
+            ],
             triangles: vec![[0, 1, 2], [1, 3, 2], [4, 5, 6]],
         };
         let filtered = filter_small_components(&surface, 2).unwrap();
@@ -196,8 +198,16 @@ mod compact_tests {
         assert_eq!(filtered.colors, surface.colors[..4]);
         let repeat = filter_small_components(&surface, 2).unwrap();
         assert_eq!(
-            filtered.positions.iter().map(|p| p.map(f64::to_bits)).collect::<Vec<_>>(),
-            repeat.positions.iter().map(|p| p.map(f64::to_bits)).collect::<Vec<_>>()
+            filtered
+                .positions
+                .iter()
+                .map(|p| p.map(f64::to_bits))
+                .collect::<Vec<_>>(),
+            repeat
+                .positions
+                .iter()
+                .map(|p| p.map(f64::to_bits))
+                .collect::<Vec<_>>()
         );
         assert_eq!(filtered.triangles, repeat.triangles);
         // Thresholds that keep everything clone the input unchanged; a
@@ -208,7 +218,10 @@ mod compact_tests {
             assert_eq!(kept.triangles, surface.triangles);
             assert_eq!(kept.colors, surface.colors);
         }
-        assert!(filter_small_components(&surface, 3).unwrap().triangles.is_empty());
+        assert!(filter_small_components(&surface, 3)
+            .unwrap()
+            .triangles
+            .is_empty());
         // Shared vertices join faces into one component; nothing is removed.
         let joined = Surface {
             triangles: vec![[0, 1, 2], [4, 5, 0]],
@@ -218,7 +231,10 @@ mod compact_tests {
             filter_small_components(&joined, 2).unwrap().triangles.len(),
             2
         );
-        assert!(filter_small_components(&joined, 3).unwrap().triangles.is_empty());
+        assert!(filter_small_components(&joined, 3)
+            .unwrap()
+            .triangles
+            .is_empty());
         let bad = Surface {
             positions: vec![[0.; 3]],
             colors: vec![],

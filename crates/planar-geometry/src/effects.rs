@@ -2,7 +2,7 @@
 //!
 //! Ported from Curvex path effects (MIT OR Apache-2.0), binary64 for polygon-core.
 use crate::path::{BezierPath, PathSegment};
-use crate::{check, Result};
+use crate::{Result, check};
 
 const TAU: f64 = std::f64::consts::TAU;
 const PI: f64 = std::f64::consts::PI;

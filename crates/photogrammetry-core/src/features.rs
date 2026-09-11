@@ -96,10 +96,7 @@ fn gradient_interior(p: &[f32], w: usize, x: f64, y: f64) -> (f32, f32) {
         (1. - b) * ((1. - a) * p[iy * w + ix] + a * p[iy * w + ix + 1])
             + b * ((1. - a) * p[(iy + 1) * w + ix] + a * p[(iy + 1) * w + ix + 1])
     };
-    (
-        at(x + 1., y) - at(x - 1., y),
-        at(x, y + 1.) - at(x, y - 1.),
-    )
+    (at(x + 1., y) - at(x - 1., y), at(x, y + 1.) - at(x, y - 1.))
 }
 /// Interior gradient at an integer offset from (x0, y0); every sample shares
 /// the bilinear fractions (a, b), so they are computed once per corner.
@@ -120,7 +117,10 @@ fn gradient_offset(
             + b * ((1. - a) * p[(iy + 1) * w + ix] + a * p[(iy + 1) * w + ix + 1])
     };
     let (ix, iy) = ((x0 as i32 + dx) as usize, (y0 as i32 + dy) as usize);
-    (at(ix + 1, iy) - at(ix - 1, iy), at(ix, iy + 1) - at(ix, iy - 1))
+    (
+        at(ix + 1, iy) - at(ix - 1, iy),
+        at(ix, iy + 1) - at(ix, iy - 1),
+    )
 }
 /// f32 bits biased so ascending u32 order matches `total_cmp` (-0.0 and NaN included).
 fn total_order_key(v: f32) -> u32 {
@@ -216,7 +216,11 @@ pub fn extract_with_options(
         let mut suppressed = vec![false; w * h];
         for key in corners {
             let k = (key >> 32) as u32;
-            let score = f32::from_bits(if k & 0x8000_0000 != 0 { k & 0x7fff_ffff } else { !k });
+            let score = f32::from_bits(if k & 0x8000_0000 != 0 {
+                k & 0x7fff_ffff
+            } else {
+                !k
+            });
             let pos = !(key as u32) as usize;
             let (x, y) = (pos % w, pos / w);
             if suppressed[y * w + x] {

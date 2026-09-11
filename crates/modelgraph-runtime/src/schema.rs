@@ -187,7 +187,7 @@ fn object(value: &mut Value, path: &str, fields: &[Field]) -> Result<()> {
                     return Err(invalid(
                         &child_path(path, field.name),
                         "Required field is missing.",
-                    ))
+                    ));
                 }
                 Presence::Optional => continue,
                 Presence::Number(number) => {
@@ -299,7 +299,7 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
         Rule::Text => {
             if !value
                 .as_str()
-                .is_some_and(|text| text.encode_utf16().count() <= 4096)
+                .is_some_and(|text| text.chars().count() <= 4096)
             {
                 return Err(Error::new(
                     "schema_error",
@@ -311,7 +311,7 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
         Rule::Message => {
             if !value
                 .as_str()
-                .is_some_and(|text| (1..=256).contains(&text.encode_utf16().count()))
+                .is_some_and(|text| (1..=256).contains(&text.chars().count()))
             {
                 return Err(invalid(
                     path,
@@ -511,10 +511,14 @@ fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> {
                 required("message", Rule::Message),
             ],
         )?,
-        Rule::GuardedStep => object(value, path, &[
-            required("kind", Rule::Enum(&["assert", "where", "while"])),
-            required("value", Rule::Expr),
-        ])?,
+        Rule::GuardedStep => object(
+            value,
+            path,
+            &[
+                required("kind", Rule::Enum(&["assert", "where", "while"])),
+                required("value", Rule::Expr),
+            ],
+        )?,
         Rule::GeometryAssertion => object(
             value,
             path,
@@ -683,7 +687,10 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
         "assert_value" => &[
             OP,
             optional("constraints", Rule::Array(&Rule::Constraint, 0, 64)),
-            optional("geometry_assertions", Rule::Array(&Rule::GeometryAssertion, 0, 64)),
+            optional(
+                "geometry_assertions",
+                Rule::Array(&Rule::GeometryAssertion, 0, 64),
+            ),
             required("value", Rule::Expr),
         ],
         "checked" => &[
@@ -770,7 +777,7 @@ fn expression(value: &mut Value, path: &str) -> Result<()> {
             return Err(invalid(
                 &child_path(path, "op"),
                 format!("Unknown expression operation: {op}"),
-            ))
+            ));
         }
     };
     object(value, path, fields)
@@ -992,7 +999,7 @@ fn function(value: &mut Value, path: &str) -> Result<()> {
             return Err(invalid(
                 &child_path(path, "kind"),
                 format!("Unknown function kind: {kind}"),
-            ))
+            ));
         }
     };
     object(value, path, fields)
@@ -1022,7 +1029,7 @@ fn sketch_constraint(value: &mut Value, path: &str) -> Result<()> {
             return Err(invalid(
                 &child_path(path, "kind"),
                 format!("Unknown sketch constraint kind: {kind}"),
-            ))
+            ));
         }
     };
     object(value, path, fields)
@@ -1175,9 +1182,14 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
         "extrude" => &[ID, OP, INPUT, HEIGHT, CENTER],
         "revolve" => &[ID, OP, INPUT, required("angle", Rule::Expr)],
         "assert" => &[
-            ID, OP, INPUT,
+            ID,
+            OP,
+            INPUT,
             optional("constraints", Rule::Array(&Rule::Constraint, 0, 64)),
-            optional("geometry_assertions", Rule::Array(&Rule::GeometryAssertion, 0, 64)),
+            optional(
+                "geometry_assertions",
+                Rule::Array(&Rule::GeometryAssertion, 0, 64),
+            ),
         ],
         "evaluate" => &[ID, OP, required("value", Rule::Expr)],
         "call" => &[ID, OP, FUNCTION, ARGS],
@@ -1218,7 +1230,7 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
             return Err(invalid(
                 &child_path(path, "op"),
                 format!("Unknown node operation: {op}"),
-            ))
+            ));
         }
     };
     object(value, path, fields)
@@ -1313,10 +1325,12 @@ mod tests {
             json!({"op":"bogus"}),
             json!({"local":"bad-id"}),
         ] {
-            assert!(validate(document(
-                json!({"id":"shape","op":"sphere","radius":radius})
-            ))
-            .is_err());
+            assert!(
+                validate(document(
+                    json!({"id":"shape","op":"sphere","radius":radius})
+                ))
+                .is_err()
+            );
         }
         assert!(validate(document(json!({"id":"shape","op":"box","size":[1,2]}))).is_err());
         let mut input = document(json!({"id":"shape","op":"sphere","radius":1}));
@@ -1324,12 +1338,12 @@ mod tests {
         assert!(validate(input).is_err());
     }
     #[test]
-    fn rejects_null_optional_values_and_checks_utf16_message_length() {
+    fn rejects_null_optional_values_and_checks_message_code_point_length() {
         let mut input = document(json!({"id":"shape","op":"sphere","radius":1}));
         input["type_policy"] = Value::Null;
         assert!(validate(input.clone()).is_err());
         input.as_object_mut().unwrap().remove("type_policy");
-        input["assertions"] = json!([{"condition":1,"message":"😀".repeat(129)}]);
+        input["assertions"] = json!([{"condition":1,"message":"😀".repeat(257)}]);
         assert!(validate(input).is_err());
     }
     #[test]

@@ -1,4 +1,4 @@
-import { GeometryKernelError } from '../src/services/geometry/kernel'
+import { OpenSCADParseError } from '../src/services/openscadParser'
 import { describe, expect, it, vi } from 'vitest'
 import {
   ArtifactSizeError,
@@ -26,7 +26,7 @@ color("red") cube(size);`
     expect(analysis).toMatchObject({
       execution: {
         languageContract: 'legacy/current',
-        engineClass: 'manifold',
+        engineClass: 'mesh',
         purpose: 'analysis',
         evidence: 'runtime',
         automaticFallback: false,
@@ -72,7 +72,7 @@ color("red") cube(size);`
       sourceDirectedRouting: true,
       automaticFallback: false,
       engines: [
-        { engineClass: 'manifold', permanent: true, availability: 'available' },
+        { engineClass: 'mesh', permanent: true, availability: 'available' },
         { engineClass: 'brep', permanent: true, availability: 'unavailable' },
       ],
     })
@@ -109,7 +109,7 @@ cube(width);`
 
   it('rejects non-finite geometry before analysis or export can expose corrupt meshes', async () => {
     await expect(service.analyze('cube([1e100, 1e100, 1e-200]);'))
-      .rejects.toBeInstanceOf(GeometryKernelError)
+      .rejects.toBeInstanceOf(OpenSCADParseError)
     await expect(service.export('translate([1e300, 0, 0]) cube(1);', 'stl'))
       .rejects.toBeInstanceOf(InvalidGeometryError)
   })
@@ -135,7 +135,7 @@ cube(width);`
     expect(busy).toBeInstanceOf(GeometryBusyError)
     expect(geometryExecutionForError(busy)).toMatchObject({
       languageContract: 'legacy/current',
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       evidence: 'planned',
       automaticFallback: false,
     })
@@ -167,7 +167,7 @@ cube(width);`
     expect(legacyFailure).not.toBe(brepFailure)
     expect(geometryExecutionForError(legacyFailure)).toMatchObject({
       languageContract: 'legacy/current',
-      engineClass: 'manifold',
+      engineClass: 'mesh',
       quality: 'preview',
       purpose: 'preview',
       evidence: 'planned',

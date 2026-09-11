@@ -1,10 +1,10 @@
 import type { SemanticNode, SemanticValueType } from '../core/semanticProgram'
 import {
-  loadManifoldKernelOps,
-  type ManifoldKernelHandle,
-  type ManifoldKernelOps,
-  type ManifoldKernelSolidAnalysis,
-} from './manifoldKernelOps'
+  loadCadKernelOps,
+  type CadKernelHandle,
+  type CadKernelOps,
+  type CadKernelSolidAnalysis,
+} from './cadKernelOps'
 import type {
   SemanticBackendBeginContext,
   SemanticBackendCloseOutcome,
@@ -46,8 +46,8 @@ export interface ManifoldPlanPayloadFamily {
 }
 
 interface OwnedManifoldPlanPayload extends ManifoldPlanPayload {
-  readonly handle: ManifoldKernelHandle
-  readonly kernel: ManifoldKernelOps
+  readonly handle: CadKernelHandle
+  readonly kernel: CadKernelOps
   readonly provenance: ManifoldPlanProvenanceRegistry
 }
 
@@ -103,7 +103,7 @@ export function inspectManifoldPlanPayload(payload: ManifoldPlanPayload): Manifo
 /** @internal The only allocating mesh-analysis operation exposed to assemblers. */
 export function analyzeManifoldPlanSolid(
   payload: ManifoldPlanPayload,
-): ManifoldKernelSolidAnalysis {
+): CadKernelSolidAnalysis {
   const owned = payload as Partial<OwnedManifoldPlanPayload>
   if (owned[MANIFOLD_PLAN_PAYLOAD] !== true
     || owned.handle === undefined
@@ -130,8 +130,8 @@ function backendError(
 }
 
 function safeDelete(
-  kernel: ManifoldKernelOps,
-  handle: ManifoldKernelHandle,
+  kernel: CadKernelOps,
+  handle: CadKernelHandle,
 ): unknown | undefined {
   try {
     kernel.delete(handle)
@@ -180,7 +180,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
   private quarantineCause: unknown = undefined
 
   constructor(
-    private readonly kernel: ManifoldKernelOps,
+    private readonly kernel: CadKernelOps,
     private readonly signal: AbortSignal,
     private readonly releaseSession: (quarantined: boolean, cause?: unknown) => void,
   ) {}
@@ -231,7 +231,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     }
 
     this.inEvaluate++
-    let handle: ManifoldKernelHandle | undefined
+    let handle: CadKernelHandle | undefined
     try {
       handle = this.evaluateGeometry(node, inputs, context)
       if (this.signal.aborted || context.signal.aborted) {
@@ -345,7 +345,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     node: SemanticNode,
     inputs: readonly SemanticRuntimeValue<ManifoldPlanPayloadFamily>[],
     context: SemanticBackendContext,
-  ): ManifoldKernelHandle {
+  ): CadKernelHandle {
     switch (node.kind) {
       case 'box':
         return this.kernel.box(node.size, node.center)
@@ -432,7 +432,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     radiusTop: number,
     radialSegments: number,
     center: boolean,
-  ): ManifoldKernelHandle {
+  ): CadKernelHandle {
     if (radiusBottom > 0) {
       return this.kernel.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
     }
@@ -467,7 +467,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     dimension: 2 | 3,
     inputs: readonly SemanticRuntimeValue<ManifoldPlanPayloadFamily>[],
     node: SemanticNode,
-  ): ManifoldKernelHandle {
+  ): CadKernelHandle {
     if (inputs.length === 0) {
       throw backendError('E_MANIFOLD_PLAN_CONTRACT', `${operation} received no values after shared empty reduction`)
     }
@@ -480,7 +480,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     dimension: 2 | 3,
     inputs: readonly SemanticRuntimeValue<ManifoldPlanPayloadFamily>[],
     node: SemanticNode,
-  ): ManifoldKernelHandle {
+  ): CadKernelHandle {
     if (inputs.length === 0) {
       throw backendError('E_MANIFOLD_PLAN_CONTRACT', 'hull received no values after shared empty reduction')
     }
@@ -499,7 +499,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
       || node.kind === 'rotate-extrude-polygonal'
   }
 
-  private promoteOriginal(handle: ManifoldKernelHandle, nodeIndex: number): ManifoldKernelHandle {
+  private promoteOriginal(handle: CadKernelHandle, nodeIndex: number): CadKernelHandle {
     if (handle.dimension !== 3) return handle
     let solid = handle
     try {
@@ -528,7 +528,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
   private allocate(
     node: SemanticNode,
     expectedCarrier: ManifoldPlanCarrier,
-    handle: ManifoldKernelHandle,
+    handle: CadKernelHandle,
     tag: 'value' | 'materialized-empty',
   ): SemanticBackendEvaluation<ManifoldPlanPayloadFamily> {
     const lease = Object.freeze({}) as SemanticBackendPayloadLease
@@ -593,7 +593,7 @@ export class ManifoldPlanBackend implements SemanticProgramBackend<ManifoldPlanP
   private quarantined = false
   private quarantineCause: unknown = undefined
 
-  constructor(readonly kernel: ManifoldKernelOps) {}
+  constructor(readonly kernel: CadKernelOps) {}
 
   /**
    * Qualification-lane health only. A quarantined module instance must be
@@ -636,5 +636,5 @@ export class ManifoldPlanBackend implements SemanticProgramBackend<ManifoldPlanP
 
 /** Load a non-instrumented module so ownership stays per lease, not global. */
 export async function loadManifoldPlanBackend(): Promise<ManifoldPlanBackend> {
-  return new ManifoldPlanBackend(await loadManifoldKernelOps())
+  return new ManifoldPlanBackend(await loadCadKernelOps())
 }

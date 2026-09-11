@@ -168,14 +168,12 @@ const CACHE_FIVE_MINUTES = 5 * 60 * 1_000
 const CACHE_ONE_DAY = 24 * 60 * 60 * 1_000
 const OFFICIAL_LANGUAGE_RESOURCE_URI = 'openscad://language/openscad-2021.01' as const
 const INDEPENDENT_ENGINE_ID = OPENSCAD_2021_01_INDEPENDENT_ENGINE.engineId
-const CURRENT_MANIFOLD_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold
+const CURRENT_MESH_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
+  CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh
 ]
 const CURRENT_BREP_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE[
   CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep
 ]
-const ARCHIVED_MANIFOLD_V1_MANIFEST = GEOMETRY_MANIFEST_ARCHIVE['manifold-node-v1']
-
 const OFFICIAL_LANGUAGE_SUMMARY = Object.freeze({
   id: OPENSCAD_2021_01_CONTRACT.id,
   release: OPENSCAD_2021_01_CONTRACT.languageTarget.release,
@@ -495,8 +493,8 @@ const executionCommonShape = {
   quality: qualitySchema,
   automatic_fallback: z.literal(false),
 }
-function manifoldExecutionSchemaForManifest(
-  manifest: typeof CURRENT_MANIFOLD_MANIFEST | typeof ARCHIVED_MANIFOLD_V1_MANIFEST,
+function meshExecutionSchemaForManifest(
+  manifest: typeof CURRENT_MESH_MANIFEST,
 ) {
   return z.object({
     ...executionCommonShape,
@@ -515,11 +513,8 @@ function manifoldExecutionSchemaForManifest(
     }),
   })
 }
-const currentManifoldExecutionSchema = manifoldExecutionSchemaForManifest(
-  CURRENT_MANIFOLD_MANIFEST,
-)
-const archivedManifoldV1ExecutionSchema = manifoldExecutionSchemaForManifest(
-  ARCHIVED_MANIFOLD_V1_MANIFEST,
+const currentMeshExecutionSchema = meshExecutionSchemaForManifest(
+  CURRENT_MESH_MANIFEST,
 )
 const brepExecutionSchema = z.object({
     ...executionCommonShape,
@@ -534,11 +529,11 @@ const brepExecutionSchema = z.object({
     evidence: z.literal('planned'),
     effective_limits: z.object({ sourceCharacters: z.literal(250_000) }),
   })
-const currentExecutionSchema = z.union([currentManifoldExecutionSchema, brepExecutionSchema])
+const currentExecutionSchema = z.union([currentMeshExecutionSchema, brepExecutionSchema])
 const legacyBackfillCommonShape = {
   language_contract: z.literal('legacy/current'),
   required_capabilities: z.array(z.never()).length(0),
-  engine_class: z.literal('manifold'),
+  engine_class: z.literal('mesh'),
   engine_key: z.literal(LEGACY_MANIFOLD_EXECUTION.engineKey),
   kernel_fingerprint: z.literal(LEGACY_MANIFOLD_EXECUTION.kernelFingerprint),
   semantic_program_version: z.literal(LEGACY_MANIFOLD_EXECUTION.semanticProgramVersion),
@@ -563,16 +558,12 @@ const legacyBackfillExecutionSchema = z.union([
 ])
 const executionSchema = z.union([
   currentExecutionSchema,
-  archivedManifoldV1ExecutionSchema,
   legacyBackfillExecutionSchema,
 ])
-const runtimeExecutionSchema = currentManifoldExecutionSchema.extend({
+const runtimeExecutionSchema = currentMeshExecutionSchema.extend({
   evidence: z.literal('runtime'),
 })
-const persistedRuntimeExecutionSchema = z.union([
-  runtimeExecutionSchema,
-  archivedManifoldV1ExecutionSchema.extend({ evidence: z.literal('runtime') }),
-])
+const persistedRuntimeExecutionSchema = runtimeExecutionSchema
 const engineManifestCommonShape = {
   display_name: z.string(),
   permanent: z.literal(true),
@@ -607,17 +598,17 @@ const engineManifestCommonShape = {
   }),
   automatic_fallback: z.literal(false),
 }
-const manifoldEngineManifestSchema = z.object({
+const meshEngineManifestSchema = z.object({
   ...engineManifestCommonShape,
-  engine_class: z.literal('manifold'),
+  engine_class: z.literal('mesh'),
   maturity: z.literal('production'),
-  engine_key: z.literal(CURRENT_MANIFOLD_MANIFEST.engineKey),
-  kernel_fingerprint: z.literal(CURRENT_MANIFOLD_MANIFEST.kernelFingerprint),
-  semantic_program_version: z.literal(CURRENT_MANIFOLD_MANIFEST.semanticProgramVersion),
-  capability_manifest_version: z.literal(CURRENT_MANIFOLD_MANIFEST.capabilityManifestVersion),
-  manifest_digest: z.literal(CURRENT_MANIFOLD_MANIFEST.manifestDigest),
+  engine_key: z.literal(CURRENT_MESH_MANIFEST.engineKey),
+  kernel_fingerprint: z.literal(CURRENT_MESH_MANIFEST.kernelFingerprint),
+  semantic_program_version: z.literal(CURRENT_MESH_MANIFEST.semanticProgramVersion),
+  capability_manifest_version: z.literal(CURRENT_MESH_MANIFEST.capabilityManifestVersion),
+  manifest_digest: z.literal(CURRENT_MESH_MANIFEST.manifestDigest),
   manifest_resource_uri: z.literal(
-    `openscad://engines/manifold/capabilities/${CURRENT_MANIFOLD_MANIFEST.capabilityManifestVersion}`,
+    `openscad://engines/mesh/capabilities/${CURRENT_MESH_MANIFEST.capabilityManifestVersion}`,
   ),
   language_contracts: z.tuple([z.literal('legacy/current')]),
   input_contract: z.literal('legacy-source-direct'),
@@ -660,7 +651,7 @@ const engineRegistrySchema = z.object({
   routes: z.tuple([
     z.object({
       language_contract: z.literal('legacy/current'),
-      engine_class: z.literal('manifold'),
+      engine_class: z.literal('mesh'),
       fallback: z.literal('never'),
     }).strict(),
     z.object({
@@ -669,7 +660,7 @@ const engineRegistrySchema = z.object({
       fallback: z.literal('never'),
     }).strict(),
   ]),
-  engines: z.tuple([manifoldEngineManifestSchema, brepEngineManifestSchema]),
+  engines: z.tuple([meshEngineManifestSchema, brepEngineManifestSchema]),
 })
 const wireStringSchema = z.string().max(64 * 1024)
   .refine(isWellFormedUnicode, 'String must contain well-formed Unicode')
@@ -2522,7 +2513,7 @@ First call openscad_check in preview quality and inspect its declared top-level 
   }, async (uri, variables) => {
     const engineClass = resourceVariable(uri, variables.engine_class)
     const manifestVersion = resourceVariable(uri, variables.manifest_version)
-    if (engineClass !== 'manifold' && engineClass !== 'brep') {
+    if (engineClass !== 'mesh' && engineClass !== 'brep') {
       throw new ResourceNotFoundError(uri.href)
     }
     const manifest = immutableEngineManifestToWire(

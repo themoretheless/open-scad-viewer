@@ -3,7 +3,7 @@
 //! Algorithms adapted from the Curvex vector editor (MIT OR Apache-2.0),
 //! reimplemented in binary64 to match the polygon-core CAD contract.
 //! Paths flatten to polylines for planar boolean / offset / extrude.
-use crate::{check, Result};
+use crate::{Result, check};
 
 /// One path segment: straight line or cubic Bézier. Endpoints are absolute mm.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -392,9 +392,7 @@ impl BezierPath {
             }]);
         }
         if node == 0 || node == n - 1 {
-            return Err(crate::Error::new(
-                "Cannot split an open path at an endpoint",
-            ));
+            return Err(crate::error("Cannot split an open path at an endpoint"));
         }
         let left = Self {
             start: self.start,
@@ -512,7 +510,7 @@ impl BezierPath {
         let mut outlines = crate::stroke::outline_stroke(self, &opts)?;
         outlines
             .pop()
-            .ok_or_else(|| crate::Error::new("Stroke produced no outline"))
+            .ok_or_else(|| crate::error("Stroke produced no outline"))
     }
 
     pub fn outline_stroke_with(&self, opts: &crate::stroke::StrokeOptions) -> Result<Vec<Self>> {
@@ -586,7 +584,7 @@ impl BezierPath {
             HandleSide::In => incoming_segment(self, node),
             HandleSide::Out => outgoing_segment(self, node),
         }
-        .ok_or_else(|| crate::Error::new("No handle on that side"))?;
+        .ok_or_else(|| crate::error("No handle on that side"))?;
         let mut path = self.clone();
         let from = segment_from(path.start, &path.segments, idx);
         ensure_cubic(&mut path.segments, idx, from);
@@ -736,7 +734,7 @@ impl BezierPath {
             HandleSide::In => incoming,
             HandleSide::Out => outgoing,
         }
-        .ok_or_else(|| crate::Error::new("Moved handle does not exist"))?;
+        .ok_or_else(|| crate::error("Moved handle does not exist"))?;
         let reflected = [
             2.0 * anchor[0] - moved_pos[0],
             2.0 * anchor[1] - moved_pos[1],
@@ -1184,10 +1182,11 @@ mod tests {
     fn smooth_makes_cubics() {
         let path = BezierPath::from_polyline(&[[0., 0.], [2., 1.], [4., 0.]], false).unwrap();
         let s = path.smooth().unwrap();
-        assert!(s
-            .segments
-            .iter()
-            .all(|seg| matches!(seg, PathSegment::Cubic { .. })));
+        assert!(
+            s.segments
+                .iter()
+                .all(|seg| matches!(seg, PathSegment::Cubic { .. }))
+        );
     }
 
     #[test]

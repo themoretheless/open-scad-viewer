@@ -23,7 +23,7 @@ describe('own Rust CAD qualification v1', () => {
     it('retains concavity in Minkowski sums', async () => {
         const wasm = await Module();
         const profile = new wasm.CrossSection([[0, 0], [2, 0], [2, 1], [1, 1], [1, 2], [0, 2]]);
-        const left = profile.extrude(1), right = wasm.Manifold.cube(1);
+        const left = profile.extrude(1), right = wasm.CadSolid.cube(1);
         const sum = left.minkowskiSum(right);
         // Expanded L footprint: 3*3 minus its 1*1 missing corner, height 2.
         expect(sum.volume()).toBeCloseTo(16, 6);

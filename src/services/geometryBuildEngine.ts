@@ -37,8 +37,8 @@ export function geometryExecutionForError(error: unknown): GeometryExecutionDesc
     : undefined
 }
 
-const MANIFOLD_MANIFEST: GeometryEngineManifest = Object.freeze({
-  ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
+const MESH_MANIFEST: GeometryEngineManifest = Object.freeze({
+  ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
   availability: 'available',
   unavailableReason: null,
 } satisfies GeometryEngineManifest)
@@ -50,7 +50,7 @@ const BREP_MANIFEST: GeometryEngineManifest = Object.freeze({
 } satisfies GeometryEngineManifest)
 
 const MANIFESTS: Readonly<Record<GeometryEngineClass, GeometryEngineManifest>> = Object.freeze({
-  manifold: MANIFOLD_MANIFEST,
+  mesh: MESH_MANIFEST,
   brep: BREP_MANIFEST,
 })
 
@@ -75,7 +75,7 @@ export interface GeometryBuildResult {
  * the future shared SemanticProgram contract advertised by the registry.
  */
 export interface GeometryBackendProvider {
-  readonly engineClass: 'manifold'
+  readonly engineClass: 'mesh'
   readonly engineKey: string
   readonly kernelFingerprint: string
   readonly capabilityManifestVersion: string
@@ -87,11 +87,11 @@ export interface GeometryBackendProvider {
   ): Promise<GeometryEvaluationResult>
 }
 
-class ManifoldBackendProvider implements GeometryBackendProvider {
-  readonly engineClass = 'manifold' as const
-  readonly engineKey = MANIFOLD_MANIFEST.engineKey
-  readonly kernelFingerprint = MANIFOLD_MANIFEST.kernelFingerprint
-  readonly capabilityManifestVersion = MANIFOLD_MANIFEST.capabilityManifestVersion
+class MeshBackendProvider implements GeometryBackendProvider {
+  readonly engineClass = 'mesh' as const
+  readonly engineKey = MESH_MANIFEST.engineKey
+  readonly kernelFingerprint = MESH_MANIFEST.kernelFingerprint
+  readonly capabilityManifestVersion = MESH_MANIFEST.capabilityManifestVersion
 
   async warm(): Promise<void> {
     await warmGeometryKernel()
@@ -281,7 +281,7 @@ export class GeometryBuildEngine {
   private readonly revocations: GeometryManifestRevocationRegistry | null
 
   constructor(
-    providers: readonly GeometryBackendProvider[] = [new ManifoldBackendProvider()],
+    providers: readonly GeometryBackendProvider[] = [new MeshBackendProvider()],
     policy: GeometryEngineRuntimePolicy = {},
   ) {
     const revokedManifestDigests = new Set(policy.revokedManifestDigests ?? [])
@@ -431,7 +431,7 @@ export class GeometryBuildEngine {
       sourceDirectedRouting: true,
       automaticFallback: false,
       routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
-      engines: [this.runtimeManifest('manifold'), this.runtimeManifest('brep')],
+      engines: [this.runtimeManifest('mesh'), this.runtimeManifest('brep')],
     }
   }
 

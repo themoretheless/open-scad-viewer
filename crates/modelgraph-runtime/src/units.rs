@@ -92,7 +92,7 @@ pub fn binary(op: &str, left: Numeric, right: Numeric, path: &str) -> Result<Num
                     f64::from(ad[1]) + f64::from(bd[1]),
                 ],
                 path,
-            )
+            );
         }
         "divide" => {
             return pack(
@@ -102,7 +102,7 @@ pub fn binary(op: &str, left: Numeric, right: Numeric, path: &str) -> Result<Num
                     f64::from(ad[1]) - f64::from(bd[1]),
                 ],
                 path,
-            )
+            );
         }
         "pow" => {
             scalar(right, path)?;
@@ -115,12 +115,12 @@ pub fn binary(op: &str, left: Numeric, right: Numeric, path: &str) -> Result<Num
         "and" => {
             return Ok(
                 ((scalar(left, path)? != 0.0 && scalar(right, path)? != 0.0) as u8 as f64).into(),
-            )
+            );
         }
         "or" => {
             return Ok(
                 ((scalar(left, path)? != 0.0 || scalar(right, path)? != 0.0) as u8 as f64).into(),
-            )
+            );
         }
         _ => (),
     }

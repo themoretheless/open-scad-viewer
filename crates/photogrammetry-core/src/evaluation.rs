@@ -216,11 +216,9 @@ fn distances(
         if i % 1024 == 0 && !progress("evaluation_distance", i, queries.nodes.len()) {
             return Err("Cancelled".into());
         }
-        values.push(
-            tree.nearest(n.point, &mut || {
-                progress("evaluation_distance", i, queries.nodes.len())
-            })?,
-        );
+        values.push(tree.nearest(n.point, &mut || {
+            progress("evaluation_distance", i, queries.nodes.len())
+        })?);
     }
     values.sort_unstable_by(f64::total_cmp);
     let samples = values.len();

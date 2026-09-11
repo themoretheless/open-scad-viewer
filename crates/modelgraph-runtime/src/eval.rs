@@ -5,7 +5,7 @@ use crate::units::{self, Dimension, Numeric};
 use crate::{Error, Result};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use value_codec::{json, Value as Json};
+use value_codec::{Value as Json, json};
 
 pub type Scope<'a> = Rc<HashMap<String, Value<'a>>>;
 #[derive(Clone, Debug)]
@@ -333,7 +333,7 @@ impl<'a> Evaluator<'a> {
             "quantity" => {
                 return Ok(
                     units::quantity(number(&expr["value"]), string(&expr["unit"]), path)?.into(),
-                )
+                );
             }
             "geometry" => {
                 let name = string(&expr["function"]);
@@ -565,7 +565,8 @@ impl<'a> Evaluator<'a> {
                 return Ok(items[index as usize].clone());
             }
             "guarded" => {
-                let input = self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let input =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
                 let items = sequence(&input, path)?;
                 self.allocate(items.len(), path)?;
                 let mut output = Vec::with_capacity(items.len());
@@ -578,9 +579,23 @@ impl<'a> Evaluator<'a> {
                         let value = self.resolve(&guard["value"], &bound, &current, depth + 1)?;
                         match string(&guard["kind"]) {
                             "assert" => (),
-                            "where" => if numeric(&value, &current)? == 0.0 { continue 'items; },
-                            "while" => if numeric(&value, &current)? == 0.0 { break 'items; },
-                            _ => return Err(Error::new("type_error", &current, "Unknown guarded sequence step.")),
+                            "where" => {
+                                if numeric(&value, &current)? == 0.0 {
+                                    continue 'items;
+                                }
+                            }
+                            "while" => {
+                                if numeric(&value, &current)? == 0.0 {
+                                    break 'items;
+                                }
+                            }
+                            _ => {
+                                return Err(Error::new(
+                                    "type_error",
+                                    &current,
+                                    "Unknown guarded sequence step.",
+                                ));
+                            }
                         }
                     }
                     output.push(item.clone());
@@ -651,7 +666,11 @@ impl<'a> Evaluator<'a> {
                 let key = (id, Rc::as_ptr(scope) as usize);
                 if let Some(entry) = self.memo.get(&key) {
                     if entry.expression != &expr["value"] {
-                        return Err(Error::new("memo_id_conflict", path, format!("Memo ID {id} has different expressions in the same scope.")));
+                        return Err(Error::new(
+                            "memo_id_conflict",
+                            path,
+                            format!("Memo ID {id} has different expressions in the same scope."),
+                        ));
                     }
                     return entry.result.clone();
                 }
@@ -659,18 +678,34 @@ impl<'a> Evaluator<'a> {
                     return Err(Error::new("memo_limit", path, "Maximum 4096 memo entries."));
                 }
                 if !self.active_memo.insert(key) {
-                    return Err(Error::new("memo_cycle", path, format!("Cycle through memo {id}.")));
+                    return Err(Error::new(
+                        "memo_cycle",
+                        path,
+                        format!("Cycle through memo {id}."),
+                    ));
                 }
-                let result = self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+                let result =
+                    self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
                 self.active_memo.remove(&key);
-                self.memo.insert(key, MemoEntry { _scope: scope.clone(), expression: &expr["value"], result: result.clone() });
+                self.memo.insert(
+                    key,
+                    MemoEntry {
+                        _scope: scope.clone(),
+                        expression: &expr["value"],
+                        result: result.clone(),
+                    },
+                );
                 return result;
             }
             "geometry_effects" => {
                 if !self.suppress_checks {
                     self.geometry_effect_count += 1;
                     if self.geometry_effect_count > 4096 {
-                        return Err(Error::new("assertion_limit", path, "Maximum 4096 geometry effect evaluations."));
+                        return Err(Error::new(
+                            "assertion_limit",
+                            path,
+                            "Maximum 4096 geometry effect evaluations.",
+                        ));
                     }
                     self.pending_geometry_checks.push(PendingGeometryCheck {
                         check: json!({"target":expr["input"],"check":"__effects","instance_path":path}),
@@ -688,19 +723,31 @@ impl<'a> Evaluator<'a> {
                 let mut failure_paths = HashSet::new();
                 let mut messages = Vec::new();
                 for (i, check) in array(&expr["checks"]).iter().enumerate() {
-                    if let Err(error) = self.resolve(check, scope, &format!("{path}/checks/{i}"), depth + 1) {
-                        if error.code != "constraint_failed" { return Err(error); }
-                        if !messages.contains(&error.message) { messages.push(error.message); }
+                    if let Err(error) =
+                        self.resolve(check, scope, &format!("{path}/checks/{i}"), depth + 1)
+                    {
+                        if error.code != "constraint_failed" {
+                            return Err(error);
+                        }
+                        if !messages.contains(&error.message) {
+                            messages.push(error.message);
+                        }
                         if let Some(Json::Array(report)) = error.details {
                             for row in report {
-                                let key = (string(&row["id"]).to_owned(), string(&row["path"]).to_owned());
-                                if failure_paths.insert(key) { failures.push(row); }
+                                let key = (
+                                    string(&row["id"]).to_owned(),
+                                    string(&row["path"]).to_owned(),
+                                );
+                                if failure_paths.insert(key) {
+                                    failures.push(row);
+                                }
                             }
                         }
                     }
                 }
                 if !messages.is_empty() {
-                    return Err(Error::new("constraint_failed", path, messages.join("; ")).with_details(Json::Array(failures)));
+                    return Err(Error::new("constraint_failed", path, messages.join("; "))
+                        .with_details(Json::Array(failures)));
                 }
                 return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
             }
@@ -723,7 +770,7 @@ impl<'a> Evaluator<'a> {
                     string(&expr["type"]),
                     path,
                 )?
-                .into())
+                .into());
             }
             "match" => {
                 let (arm, bound) = self.select_match_arm(
@@ -840,25 +887,59 @@ impl<'a> Evaluator<'a> {
             }
         }
         let report = self.evaluate_constraints(&document["constraints"], &scope, "/constraints")?;
-        let geometry = self.resolve_geometry_checks(&document["geometry_assertions"], &scope, "/geometry_assertions")?;
+        let geometry = self.resolve_geometry_checks(
+            &document["geometry_assertions"],
+            &scope,
+            "/geometry_assertions",
+        )?;
         Ok((Json::Array(report), Json::Array(geometry)))
     }
     pub fn scoped_checks(&mut self, value: &'a Json, scope: &Scope<'a>, path: &str) -> Result<()> {
-        if self.suppress_checks { return Ok(()); }
-        let report = self.evaluate_constraints(&value["constraints"], scope, &format!("{path}/constraints"))?;
+        if self.suppress_checks {
+            return Ok(());
+        }
+        let report = self.evaluate_constraints(
+            &value["constraints"],
+            scope,
+            &format!("{path}/constraints"),
+        )?;
         self.constraint_report.extend(report);
-        let checks = self.resolve_geometry_checks(&value["geometry_assertions"], scope, &format!("{path}/geometry_assertions"))?;
+        let checks = self.resolve_geometry_checks(
+            &value["geometry_assertions"],
+            scope,
+            &format!("{path}/geometry_assertions"),
+        )?;
         self.geometry_check_count += checks.len();
         if self.geometry_check_count > 256 {
-            return Err(Error::new("assertion_limit", path, "Maximum 256 expanded geometry checks."));
+            return Err(Error::new(
+                "assertion_limit",
+                path,
+                "Maximum 256 expanded geometry checks.",
+            ));
         }
-        self.pending_geometry_checks.extend(checks.into_iter().map(|mut check| { check["instance_path"] = json!(path); PendingGeometryCheck { check, scope: scope.clone() } }));
+        self.pending_geometry_checks
+            .extend(checks.into_iter().map(|mut check| {
+                check["instance_path"] = json!(path);
+                PendingGeometryCheck {
+                    check,
+                    scope: scope.clone(),
+                }
+            }));
         Ok(())
     }
-    fn evaluate_constraints(&mut self, constraints: &'a Json, scope: &Scope<'a>, base: &str) -> Result<Vec<Json>> {
+    fn evaluate_constraints(
+        &mut self,
+        constraints: &'a Json,
+        scope: &Scope<'a>,
+        base: &str,
+    ) -> Result<Vec<Json>> {
         self.expanded_checks += array(constraints).len();
         if self.expanded_checks > 4096 {
-            return Err(Error::new("assertion_limit", base, "Maximum 4096 expanded scalar checks."));
+            return Err(Error::new(
+                "assertion_limit",
+                base,
+                "Maximum 4096 expanded scalar checks.",
+            ));
         }
         let mut ids = HashSet::new();
         let mut report = Vec::with_capacity(array(constraints).len());
@@ -938,12 +1019,18 @@ impl<'a> Evaluator<'a> {
                 })
                 .collect::<Vec<_>>()
                 .join("; ");
-            return Err(Error::new("constraint_failed", base, &failures)
-                .with_details(Json::Array(report)));
+            return Err(
+                Error::new("constraint_failed", base, &failures).with_details(Json::Array(report))
+            );
         }
         Ok(report)
     }
-    fn resolve_geometry_checks(&mut self, checks: &'a Json, scope: &Scope<'a>, base: &str) -> Result<Vec<Json>> {
+    fn resolve_geometry_checks(
+        &mut self,
+        checks: &'a Json,
+        scope: &Scope<'a>,
+        base: &str,
+    ) -> Result<Vec<Json>> {
         let mut geometry = Vec::with_capacity(array(checks).len());
         let mut ids = HashSet::new();
         for (i, check) in array(checks).iter().enumerate() {
@@ -1221,12 +1308,16 @@ mod tests {
             .err()
             .unwrap();
         assert_eq!(error.code, "constraint_failed");
-        assert!(error
-            .message
-            .contains("A failed (actual: 1.0; required: == 2.0"));
-        assert!(error
-            .message
-            .contains("B failed (actual: 3.0; required: < 2.0"));
+        assert!(
+            error
+                .message
+                .contains("A failed (actual: 1.0; required: == 2.0")
+        );
+        assert!(
+            error
+                .message
+                .contains("B failed (actual: 3.0; required: < 2.0")
+        );
         let report = error.details.unwrap();
         assert_eq!(report.as_array().unwrap().len(), 2);
         assert_eq!(report[1]["path"], "/constraints/1");
@@ -1252,7 +1343,9 @@ mod guarded_tests {
             {"kind":"assert","value":{"op":"divide","args":[1,0]}}
         ]});
         let mut evaluator = Evaluator::new(&document).unwrap();
-        let value = evaluator.resolve(&expression, &Scope::default(), "/test", 0).unwrap();
+        let value = evaluator
+            .resolve(&expression, &Scope::default(), "/test", 0)
+            .unwrap();
         assert!(sequence(&value, "/test").unwrap().is_empty());
         assert_eq!(evaluator.constraint_report.len(), 1);
         assert_eq!(evaluator.constraint_report[0]["actual"], 2.0);
@@ -1266,7 +1359,9 @@ mod guarded_tests {
             {"kind":"while","value":{"op":"lt","args":[{"local":"item"},3]}}
         ]});
         let mut evaluator = Evaluator::new(&document).unwrap();
-        let value = evaluator.resolve(&expression, &Scope::default(), "/test", 0).unwrap();
+        let value = evaluator
+            .resolve(&expression, &Scope::default(), "/test", 0)
+            .unwrap();
         let values = sequence(&value, "/test").unwrap();
         assert_eq!(values.len(), 1);
         assert_eq!(numeric(&values[0], "/test").unwrap(), 2.0);
@@ -1283,9 +1378,16 @@ mod memo_tests {
         let expression = json!({"op":"memo","id":"m1","value":{"op":"assert_value","value":7,"constraints":[{"id":"c1","left":1,"relation":"eq","right":1,"message":"Once"}]}});
         let mut evaluator = Evaluator::new(&document).unwrap();
         let scope = Scope::default();
-        for _ in 0..3 { assert_eq!(evaluator.evaluate(&expression, &scope, "/memo", 0).unwrap(), 7.0); }
+        for _ in 0..3 {
+            assert_eq!(
+                evaluator.evaluate(&expression, &scope, "/memo", 0).unwrap(),
+                7.0
+            );
+        }
         assert_eq!(evaluator.constraint_report.len(), 1);
-        evaluator.evaluate(&expression, &Scope::default(), "/next_iteration", 0).unwrap();
+        evaluator
+            .evaluate(&expression, &Scope::default(), "/next_iteration", 0)
+            .unwrap();
         assert_eq!(evaluator.constraint_report.len(), 2);
     }
 
@@ -1296,10 +1398,20 @@ mod memo_tests {
         let conflict = json!({"op":"memo","id":"m1","value":3});
         let mut evaluator = Evaluator::new(&document).unwrap();
         let scope = Scope::default();
-        let first = evaluator.resolve(&expression, &scope, "/first", 0).unwrap_err();
-        let repeated = evaluator.resolve(&expression, &scope, "/repeated", 0).unwrap_err();
+        let first = evaluator
+            .resolve(&expression, &scope, "/first", 0)
+            .unwrap_err();
+        let repeated = evaluator
+            .resolve(&expression, &scope, "/repeated", 0)
+            .unwrap_err();
         assert_eq!(first.path, repeated.path);
         assert_eq!(first.code, repeated.code);
-        assert_eq!(evaluator.resolve(&conflict, &scope, "/conflict", 0).unwrap_err().code, "memo_id_conflict");
+        assert_eq!(
+            evaluator
+                .resolve(&conflict, &scope, "/conflict", 0)
+                .unwrap_err()
+                .code,
+            "memo_id_conflict"
+        );
     }
 }

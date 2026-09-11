@@ -2,7 +2,10 @@
 use super::*;
 use photogrammetry_core::{
     calibration::{Calibration, RectificationOptions, RectificationReport, RectifiedImage},
-    dense::{DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, Surface, SWEEP_WGSL},
+    dense::{
+        DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, Surface,
+        SWEEP_WGSL,
+    },
     diagnostics::ReconstructionReport,
     Image, Reconstruction, ReconstructionOptions,
 };
@@ -32,10 +35,10 @@ thread_local! {
 
 mod hosts;
 mod ingest;
+#[cfg(test)]
+use hosts::{browser_dense_options, dense_report_value, JS_MAX_SAFE_COUNTER};
 pub use hosts::{dense_finish_host, dense_prepare_host, set_acceleration_host};
 pub use ingest::{add, add_calibrated};
-#[cfg(test)]
-use hosts::{JS_MAX_SAFE_COUNTER, browser_dense_options, dense_report_value};
 fn report_value(report: &ReconstructionReport) -> Value {
     let images = report
         .images
@@ -235,9 +238,11 @@ mod tests {
         let add_rgb = || rgb.clone().into_boxed_slice();
         add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 70.)).unwrap();
         let before = dispatch(json!({"action": "report"})).unwrap();
-        assert!(add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 80.))
-            .unwrap_err()
-            .contains("conflicting"));
+        assert!(
+            add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 80.))
+                .unwrap_err()
+                .contains("conflicting")
+        );
         let mut wrong_size = value_codec::decode_binary(&measured("other", 70.)).unwrap();
         wrong_size["sourceWidth"] = json!(65);
         assert!(add_calibrated(

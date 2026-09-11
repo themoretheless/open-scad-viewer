@@ -41,12 +41,10 @@ Repeated patterns in the sample were:
 
 The closest modern OpenSCAD reference was
 [zacharyfmarion/openscad-studio](https://github.com/zacharyfmarion/openscad-studio):
-it uses OpenSCAD WASM in a Worker, the Manifold backend, compiler diagnostics,
+it uses OpenSCAD WASM in a Worker, a CSG backend, compiler diagnostics,
 multi-file dependencies, render caching, stale-result protection, and rich CAD
-viewport controls. The official runtime is GPL-2.0+, so this project deliberately
-takes the incremental Apache-2.0
-[manifold-3d](https://github.com/elalish/manifold) path and labels itself a strict
-subset.
+viewport controls. The official runtime is GPL-2.0+, so this project uses its
+own-Rust CAD kernel and labels itself a strict subset.
 
 ## Changes implemented from the benchmark
 
@@ -110,7 +108,6 @@ section planes, feature-edge extraction, and format export.
 | 39 | `kennetek/gridfinity-rebuilt-openscad` | 2200 | https://github.com/kennetek/gridfinity-rebuilt-openscad |
 | 40 | `mkeeter/antimony` | 2186 | https://github.com/mkeeter/antimony |
 | 41 | `webgpu/webgpu-samples` | 2146 | https://github.com/webgpu/webgpu-samples |
-| 42 | `elalish/manifold` | 2131 | https://github.com/elalish/manifold |
 | 43 | `CesiumGS/gltf-pipeline` | 2121 | https://github.com/CesiumGS/gltf-pipeline |
 | 44 | `fougue/mayo` | 2094 | https://github.com/fougue/mayo |
 | 45 | `microsoft/maker.js` | 2012 | https://github.com/microsoft/maker.js |

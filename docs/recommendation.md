@@ -75,7 +75,7 @@ Reopen these only for a demonstrated regression.
   diagnostics and content-addresses compile+bind by source digest plus
   language profile. [`geometryKernel.ts`](../src/services/geometryKernel.ts)
   defines the lifecycle port and opaque solid/section handles;
-  [`manifoldGeometryKernel.ts`](../src/services/manifoldGeometryKernel.ts)
+  [`cadGeometryKernel.ts`](../src/services/cadGeometryKernel.ts)
   exclusively owns WASM bootstrap, retry, handle-table and GC-session
   disposal. [`openscadParser.ts`](../src/services/openscadParser.ts) and
   [`svgGeometry.ts`](../src/services/svgGeometry.ts) evaluate through opaque

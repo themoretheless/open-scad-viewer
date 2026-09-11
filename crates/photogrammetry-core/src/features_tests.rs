@@ -165,7 +165,8 @@ fn second_chance_appends_relaxed_mutual_matches_without_precision_regression() {
             second_chance: true,
             ..strict
         };
-        let a = extract_with_options(&fixture::texture(seed, 0., 1., 0., 0.), 550, &strict).unwrap();
+        let a =
+            extract_with_options(&fixture::texture(seed, 0., 1., 0., 0.), 550, &strict).unwrap();
         let b = extract_with_options(
             &fixture::texture(seed, angle, 1., 0.37, -0.28),
             550,
@@ -174,21 +175,29 @@ fn second_chance_appends_relaxed_mutual_matches_without_precision_regression() {
         .unwrap();
         // Opt-out is bit-identical to the plain matcher.
         let strict_matches = matches(&a, &b);
-        assert_eq!(bits(&matches_with_options(&a, &b, &strict)), bits(&strict_matches));
+        assert_eq!(
+            bits(&matches_with_options(&a, &b, &strict)),
+            bits(&strict_matches)
+        );
         let extended = matches_with_options(&a, &b, &relaxed);
         // Deterministic across runs.
-        assert_eq!(bits(&extended), bits(&matches_with_options(&a, &b, &relaxed)));
+        assert_eq!(
+            bits(&extended),
+            bits(&matches_with_options(&a, &b, &relaxed))
+        );
         // First-pass order is untouched; extras are appended, sorted by distance.
         assert!(extended.len() > strict_matches.len());
-        assert_eq!(bits(&extended[..strict_matches.len()]), bits(&strict_matches));
-        assert!(extended[strict_matches.len()..]
-            .windows(2)
-            .all(|w| w[0]
-                .distance_squared
+        assert_eq!(
+            bits(&extended[..strict_matches.len()]),
+            bits(&strict_matches)
+        );
+        assert!(extended[strict_matches.len()..].windows(2).all(|w| {
+            w[0].distance_squared
                 .total_cmp(&w[1].distance_squared)
                 .then(w[0].a.cmp(&w[1].a))
                 .then(w[0].b.cmp(&w[1].b))
-                .is_le()));
+                .is_le()
+        }));
         let correct = |m: &Match| coordinate_error(&a, &b, m, angle) < 4.;
         let strict_correct = strict_matches.iter().filter(|m| correct(m)).count();
         let extras = &extended[strict_matches.len()..];
@@ -232,4 +241,3 @@ fn feature_pyramid_stops_at_supported_sizes_and_respects_zero_limit() {
         }
     }
 }
-

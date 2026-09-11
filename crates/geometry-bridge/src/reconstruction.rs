@@ -319,7 +319,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
 
 /// Exact planar, trimmed NURBS B-rep of the source triangle boundary. Topology
 /// budgets (notably 256 faces) apply. No smooth-face recognition is implied.
-pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_kernel::Model> {
+pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_core::Model> {
     let source = valid_source(mesh, 256)?;
     let polygon = polygon_core::solid::brep::from_mesh(&source, None)?;
     let mut faces = Vec::new();
@@ -398,7 +398,7 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_kernel::Model> {
             ),
         })
         .collect();
-    let model = brep_kernel::Model(brep_topology::Model {
+    let model = brep_core::Model(brep_topology::Model {
         vertices: polygon.vertices,
         edges,
         loops,
@@ -478,7 +478,7 @@ pub fn mesh_to_subdivision(mesh: &Mesh, iterations: usize) -> Result<Subdivision
 mod tests {
     use super::*;
     fn cube() -> Mesh {
-        let m = brep_kernel::cuboid([-1.; 3], [1.; 3]).unwrap();
+        let m = brep_core::cuboid([-1.; 3], [1.; 3]).unwrap();
         brep::nurbs(&m, 1).unwrap().built.mesh
     }
     #[test]

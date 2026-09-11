@@ -165,7 +165,7 @@ function capabilitiesSnapshot(): GeometryEngineRegistrySnapshot {
     routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
     engines: [
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.manifold],
+        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
         availability: 'available',
         unavailableReason: null,
       },
@@ -244,7 +244,7 @@ describe('DirectGeometrySupervisor', () => {
       sourceDirectedRouting: true,
       automaticFallback: false,
       engines: [
-        { engineClass: 'manifold', availability: 'available' },
+        { engineClass: 'mesh', availability: 'available' },
         { engineClass: 'brep', availability: 'unavailable' },
       ],
     })

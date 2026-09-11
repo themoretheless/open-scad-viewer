@@ -11,30 +11,7 @@ pub use gcode_core::{GcodeMove, GcodePreview};
 
 pub const MAX_LAYERS: usize = 2_048;
 
-#[derive(Debug, Clone)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
-}
-
-impl Error {
-    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for Error {}
-
-pub type Result<T> = std::result::Result<T, Error>;
+pub use math_core::{Error, Result};
 
 /// One horizontal slice: closed rings in millimeters. Not a CAD handle.
 #[derive(Clone, Debug, PartialEq)]
@@ -120,10 +97,7 @@ fn rings_of(section: &LayerSection) -> Rings {
 }
 
 fn offset_rings(source: &Rings, distance: f64) -> Result<Rings> {
-    rings::offset(source, distance, false, 8).map_err(|error| Error {
-        code: error.code,
-        message: error.message,
-    })
+    rings::offset(source, distance, false, 8)
 }
 
 fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) -> Toolpath {
@@ -317,10 +291,7 @@ fn planned_layers(layers: &[ToolpathLayer]) -> Vec<gcode_core::PlannedLayer> {
 }
 
 fn gcode_error(error: gcode_core::Error) -> Error {
-    Error {
-        code: error.code,
-        message: error.message,
-    }
+    error
 }
 
 /// One encoding of a planned toolpath. Not the only possible machine dialect.

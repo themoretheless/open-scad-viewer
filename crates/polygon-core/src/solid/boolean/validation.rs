@@ -190,7 +190,10 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                     _ => false,
                 };
                 if !allowed {
-                    return Err(invalid(&format!("Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={}, point={p:?}",shared.len())));
+                    return Err(invalid(&format!(
+                        "Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={}, point={p:?}",
+                        shared.len()
+                    )));
                 }
             }
         }
@@ -264,7 +267,9 @@ pub(super) fn orientation(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<
             budget,
         )?;
         if (inside - 1.).abs() > 1e-4 || outside.abs() > 1e-4 {
-            return Err(invalid("Shell orientation/nesting is inconsistent, or features are too close for the Boolean tolerance"));
+            return Err(invalid(
+                "Shell orientation/nesting is inconsistent, or features are too close for the Boolean tolerance",
+            ));
         }
     }
     Ok(())

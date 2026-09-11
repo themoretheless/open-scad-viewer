@@ -1,9 +1,0 @@
-{
-  "status": "failed",
-  "message": "dense-sphere failed: exit=1 signal=null",
-  "completedFixtures": [
-    "small-bracket",
-    "medium-csg",
-    "many-bodies"
-  ]
-}

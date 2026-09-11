@@ -9,7 +9,6 @@ import {
 } from '@modelcontextprotocol/server'
 import { createModelGraphMcpServer as createOpenScadMcpServer } from '../src/mcp/createModelGraphServer'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
-import { LEGACY_MANIFOLD_EXECUTION } from '../src/core/geometryExecution'
 import {
   persistedFailureStatus,
 } from '../src/mcp/createServer'
@@ -226,7 +225,7 @@ describe('OpenSCAD MCP server', () => {
         source_directed_routing: true,
         automatic_fallback: false,
         engines: [
-          { engine_class: 'manifold', permanent: true, availability: 'available' },
+          { engine_class: 'mesh', permanent: true, availability: 'available' },
           { engine_class: 'brep', permanent: true, availability: 'unavailable' },
         ],
       },
@@ -268,7 +267,7 @@ describe('OpenSCAD MCP server', () => {
     })
   })
 
-  it('discovers immutable engine manifests and refuses B-rep without Manifold fallback', async () => {
+  it('discovers immutable engine manifests and refuses B-rep without mesh fallback', async () => {
     const { request } = await connectedServer()
     const listed = await request('tools/call', {
       name: 'openscad_list_engines',
@@ -289,9 +288,9 @@ describe('OpenSCAD MCP server', () => {
       automatic_fallback: false,
       engines: [
         {
-          engine_class: 'manifold',
+          engine_class: 'mesh',
           availability: 'available',
-          manifest_resource_uri: 'openscad://engines/manifold/capabilities/own-rust-node-v1',
+          manifest_resource_uri: 'openscad://engines/mesh/capabilities/own-rust-node-v1',
         },
         { engine_class: 'brep', availability: 'unavailable' },
       ],
@@ -336,39 +335,33 @@ describe('OpenSCAD MCP server', () => {
     expect(manifestJson).not.toHaveProperty('availability')
     expect(manifestJson).not.toHaveProperty('unavailable_reason')
 
-    const manifoldManifest = await request('resources/read', {
-      uri: 'openscad://engines/manifold/capabilities/manifold-node-v2',
+    const meshManifest = await request('resources/read', {
+      uri: 'openscad://engines/mesh/capabilities/own-rust-node-v1',
     }) as { contents: Array<{ text: string }> }
-    const manifoldManifestJson = JSON.parse(manifoldManifest.contents[0].text) as
+    const meshManifestJson = JSON.parse(meshManifest.contents[0].text) as
       Record<string, unknown>
-    expect(manifoldManifestJson).toMatchObject({
-      engine_class: 'manifold',
-      capability_manifest_version: 'manifold-node-v2',
-      manifest_digest: '54cf792011b36741c5ea930af0e3b303e0a1b6f3d0707dca4ae8c099256486fe',
+    expect(meshManifestJson).toMatchObject({
+      engine_class: 'mesh',
+      capability_manifest_version: 'own-rust-node-v1',
       isolation: 'in-process-serialized',
       dependency: {
-        package_name: 'manifold-3d',
-        version: '3.5.1',
-        license_expression: 'Apache-2.0',
+        package_name: 'workspace:geometry-bridge',
+        license_expression: 'MIT',
         sbom_ref: 'THIRD_PARTY_NOTICES.md',
         sbom_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
         lockfile_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       },
     })
-    expect(manifoldManifestJson).not.toHaveProperty('geometry_host')
-    expect(manifoldManifestJson).not.toHaveProperty('mcp_host_contract_id')
-    const historicalManifoldManifest = await request('resources/read', {
-      uri: 'openscad://engines/manifold/capabilities/manifold-node-v1',
-    }) as { contents: Array<{ text: string }> }
-    expect(JSON.parse(historicalManifoldManifest.contents[0].text)).toMatchObject({
-      capability_manifest_version: 'manifold-node-v1',
-      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
-    })
+    expect(meshManifestJson).not.toHaveProperty('geometry_host')
+    expect(meshManifestJson).not.toHaveProperty('mcp_host_contract_id')
     await expect(request('resources/read', {
-      uri: 'openscad://engines/brep/capabilities/manifold-node-v1',
+      uri: 'openscad://engines/mesh/capabilities/manifold-node-v1',
     })).rejects.toThrow(/not found/i)
     await expect(request('resources/read', {
-      uri: 'openscad://engines/manifold/capabilities/missing-v1',
+      uri: 'openscad://engines/brep/capabilities/own-rust-node-v1',
+    })).rejects.toThrow(/not found/i)
+    await expect(request('resources/read', {
+      uri: 'openscad://engines/mesh/capabilities/missing-v1',
     })).rejects.toThrow(/not found/i)
 
     const parity = await request('resources/read', { uri: 'openscad://parity' }) as {
@@ -400,7 +393,7 @@ describe('OpenSCAD MCP server', () => {
       },
       engines: [
         {
-          engine_class: 'manifold',
+          engine_class: 'mesh',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
           kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].kernelFingerprint,
           browser_mcp_status: 'qualification-pending',
@@ -549,10 +542,10 @@ describe('OpenSCAD MCP server', () => {
     expect(result).toMatchObject({
       isError: true,
       structuredContent: {
-        execution: { engine_class: 'manifold', evidence: 'runtime' },
+        execution: { engine_class: 'mesh', evidence: 'runtime' },
         build: {
           status: 'failed',
-          execution: { engine_class: 'manifold', evidence: 'runtime' },
+          execution: { engine_class: 'mesh', evidence: 'runtime' },
         },
         error: { code: 'internal_error' },
       },
@@ -887,7 +880,7 @@ describe('OpenSCAD MCP server', () => {
         comparison_failure: {
           failed_side: 'right',
           completed_left: {
-            execution: { engine_class: 'manifold', evidence: 'runtime' },
+            execution: { engine_class: 'mesh', evidence: 'runtime' },
             volume: 1,
           },
         },
@@ -959,7 +952,7 @@ describe('OpenSCAD MCP server', () => {
       status: 'succeeded',
       execution: {
         language_contract: 'legacy/current',
-        engine_class: 'manifold',
+        engine_class: 'mesh',
         evidence: 'runtime',
         automatic_fallback: false,
       },
@@ -977,52 +970,9 @@ describe('OpenSCAD MCP server', () => {
     expect(history.structuredContent.builds[0].status).toBe('succeeded')
   })
 
-  it('serves archived v1 runtime provenance while new executions use v3', async () => {
-    const { request, store } = await connectedServer()
+  it('records own-rust runtime provenance on new executions', async () => {
+    const { request } = await connectedServer()
     const source = 'cube(1);'
-    await store.recordBuild({
-      id: 'historical-v1-runtime',
-      source,
-      sourceSha256: createHash('sha256').update(source).digest('hex'),
-      quality: 'full',
-      durationMs: 1,
-      warnings: [],
-      status: 'succeeded',
-      execution: {
-        ...LEGACY_MANIFOLD_EXECUTION,
-        evidence: 'runtime',
-        effectiveLimits: { sourceCharacters: 250_000, triangles: 750_000 },
-      },
-      metrics: {
-        meshCount: 1,
-        triangleCount: 12,
-        volume: 1,
-        surfaceArea: 6,
-        reduced: false,
-      },
-    })
-
-    const listedTools = await request('tools/list') as {
-      tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
-    }
-    const historySchema = listedTools.tools.find(tool => (
-      tool.name === 'openscad_build_history'
-    ))?.outputSchema
-    const history = await request('tools/call', {
-      name: 'openscad_build_history',
-      arguments: { limit: 10 },
-    }) as { structuredContent: { builds: Array<{ execution: Record<string, unknown> }> } }
-
-    expect(history.structuredContent.builds[0].execution).toMatchObject({
-      capability_manifest_version: 'manifold-node-v1',
-      manifest_digest: 'ae4ee188f2cf4898699318745e9eda48f96672e49b4b6d857f371ce7ed90013c',
-      evidence: 'runtime',
-    })
-    expect(historySchema).toBeDefined()
-    const validation = await fromJsonSchema(historySchema!)['~standard']
-      .validate(history.structuredContent)
-    expect(validation).not.toHaveProperty('issues')
-
     const current = await request('tools/call', {
       name: 'openscad_check',
       arguments: { source, quality: 'full' },
@@ -1032,6 +982,21 @@ describe('OpenSCAD MCP server', () => {
       manifest_digest: GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v1'].manifestDigest,
       evidence: 'runtime',
     })
+
+    const listedTools = await request('tools/list') as {
+      tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
+    }
+    const historySchema = listedTools.tools.find(tool => (
+      tool.name === 'openscad_build_history'
+    ))?.outputSchema
+    expect(historySchema).toBeDefined()
+    const history = await request('tools/call', {
+      name: 'openscad_build_history',
+      arguments: { limit: 10 },
+    }) as { structuredContent: { builds: Array<{ execution: Record<string, unknown> }> } }
+    const validation = await fromJsonSchema(historySchema!)['~standard']
+      .validate(history.structuredContent)
+    expect(validation).not.toHaveProperty('issues')
   })
 
   it('reports DuckDB catalog usage and quota limits without exposing SQL', async () => {
@@ -1128,7 +1093,7 @@ describe('OpenSCAD MCP server', () => {
     expect(JSON.parse(called.content[0].text)).toMatchObject({
       build: {
         status: 'failed',
-        execution: { engine_class: 'manifold', evidence: 'runtime' },
+        execution: { engine_class: 'mesh', evidence: 'runtime' },
       },
       error: { code: 'source_syntax_error', line: 2, column: 1 },
     })

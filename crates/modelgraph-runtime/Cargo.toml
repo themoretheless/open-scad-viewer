@@ -1,8 +1,9 @@
 [package]
 name = "modelgraph-runtime"
 version = "0.1.0"
-edition = "2021"
-publish = false
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 
 [dependencies]
 value-codec = { path = "../value-codec" }

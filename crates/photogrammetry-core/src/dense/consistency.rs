@@ -23,23 +23,11 @@ pub(super) struct ObservedPatch {
 fn inverse_depths(map: &DepthMap) -> Vec<f64> {
     map.depth
         .iter()
-        .map(|&z| {
-            if z.is_finite() && z > 0. {
-                1. / z
-            } else {
-                0.
-            }
-        })
+        .map(|&z| if z.is_finite() && z > 0. { 1. / z } else { 0. })
         .collect()
 }
 
-fn normal(
-    map: &DepthMap,
-    points: &[V3],
-    camera: &Camera,
-    i: usize,
-    tolerance: f64,
-) -> Option<V3> {
+fn normal(map: &DepthMap, points: &[V3], camera: &Camera, i: usize, tolerance: f64) -> Option<V3> {
     let (x, y) = (i % map.width, i / map.width);
     let z = map.depth[i];
     if z <= 0. {
@@ -79,38 +67,74 @@ fn normal(
 }
 
 // Both predicates use the same bounds, validity and planar-continuity rules.
-fn planar_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64) -> bool {
-    continuous_edge(inv,width,height,a,b,tolerance,false)
+fn planar_edge(
+    inv: &[f64],
+    width: usize,
+    height: usize,
+    a: usize,
+    b: usize,
+    tolerance: f64,
+) -> bool {
+    continuous_edge(inv, width, height, a, b, tolerance, false)
 }
-fn curved_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64) -> bool {
-    continuous_edge(inv,width,height,a,b,tolerance,true)
+fn curved_edge(
+    inv: &[f64],
+    width: usize,
+    height: usize,
+    a: usize,
+    b: usize,
+    tolerance: f64,
+) -> bool {
+    continuous_edge(inv, width, height, a, b, tolerance, true)
 }
-fn continuous_edge(inv: &[f64], width: usize, height: usize, a: usize, b: usize, tolerance: f64, allow_curvature: bool) -> bool {
-    let ax = (a % width) as isize; let ay = (a / width) as isize;
-    let bx = (b % width) as isize; let by = (b / width) as isize;
+fn continuous_edge(
+    inv: &[f64],
+    width: usize,
+    height: usize,
+    a: usize,
+    b: usize,
+    tolerance: f64,
+    allow_curvature: bool,
+) -> bool {
+    let ax = (a % width) as isize;
+    let ay = (a / width) as isize;
+    let bx = (b % width) as isize;
+    let by = (b / width) as isize;
     let sample = |x: isize, y: isize| -> Option<f64> {
-        if x < 0 || y < 0 || x >= width as isize || y >= height as isize { return None; }
+        if x < 0 || y < 0 || x >= width as isize || y >= height as isize {
+            return None;
+        }
         let iz = inv[y as usize * width + x as usize];
         (iz != 0.).then_some(iz)
     };
-    let left = sample(2*ax-bx,2*ay-by);
-    let right = sample(2*bx-ax,2*by-ay);
-    let Some(u) = sample(ax,ay) else { return false; };
-    let Some(v) = sample(bx,by) else { return false; };
+    let left = sample(2 * ax - bx, 2 * ay - by);
+    let right = sample(2 * bx - ax, 2 * by - ay);
+    let Some(u) = sample(ax, ay) else {
+        return false;
+    };
+    let Some(v) = sample(bx, by) else {
+        return false;
+    };
     let limit = tolerance * 0.1 * u.min(v);
     if let (Some(left), Some(right)) = (left, right) {
-        if (left - 2.*u + v).abs() <= limit && (u - 2.*v + right).abs() <= limit { return true; }
+        if (left - 2. * u + v).abs() <= limit && (u - 2. * v + right).abs() <= limit {
+            return true;
+        }
     }
-    if !allow_curvature { return false; }
-    let slope = v-u;
-    let continuous = |neighbor: f64| neighbor*slope > 0.
-        && neighbor.abs() >= 0.5*slope.abs()
-        && neighbor.abs() <= 2.*slope.abs();
+    if !allow_curvature {
+        return false;
+    }
+    let slope = v - u;
+    let continuous = |neighbor: f64| {
+        neighbor * slope > 0.
+            && neighbor.abs() >= 0.5 * slope.abs()
+            && neighbor.abs() <= 2. * slope.abs()
+    };
     // Missing support may use one measured slope; contradictory support may not.
     match (left, right) {
-        (Some(left), Some(right)) => continuous(u-left) && continuous(right-v),
-        (Some(left), None) => continuous(u-left),
-        (None, Some(right)) => continuous(right-v),
+        (Some(left), Some(right)) => continuous(u - left) && continuous(right - v),
+        (Some(left), None) => continuous(u - left),
+        (None, Some(right)) => continuous(right - v),
         (None, None) => false,
     }
 }
@@ -180,8 +204,7 @@ pub(super) fn filter(
                     }
                     // Opt-in COLMAP-style check: only the views selected for
                     // depth estimation may vote; the default polls every map.
-                    if options.selected_sources_consistency
-                        && !map.neighbors.contains(&other.image)
+                    if options.selected_sources_consistency && !map.neighbors.contains(&other.image)
                     {
                         continue;
                     }
@@ -259,27 +282,85 @@ pub(super) fn filter(
                         .fold(f64::INFINITY, f64::min);
                     let high = triangle.iter().map(|&i| map.depth[i]).fold(0., f64::max);
                     if high - low > options.relative_depth_tolerance * low
-                        && ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| planar_edge(&inverse[map_index],map.width,map.height,a,b,options.relative_depth_tolerance)) {
-                        if !options.dual_scale {continue;}
-                        if ![(triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])].iter().all(|&(a,b)| curved_edge(&inverse[map_index],map.width,map.height,a,b,options.relative_depth_tolerance)) { continue; }
-                        let world=triangle.map(|i|points[map_index][i]);
-                        let center=scale(add(add(world[0],world[1]),world[2]),1./3.);
-                        let mut support=0;
-                        for other in maps {
-                            if other.image==map.image {continue;}
-                            if options.selected_sources_consistency && !map.neighbors.contains(&other.image) {continue;}
-                            let nc=sparse.cameras[other.image].as_ref().unwrap();
-                            let cp=nc.camera_point(center);
-                            let Some(uv)=nc.project_camera_point(cp) else {continue;};
-                            if uv.iter().any(|v|!v.is_finite()) {continue;}
-                            let x=(uv[0]/other.step).round() as isize;
-                            let y=(uv[1]/other.step).round() as isize;
-                            if x<0 || y<0 || x>=other.width as isize || y>=other.height as isize {continue;}
-                            let z=other.depth[y as usize*other.width+x as usize];
-                            let expected=cp[2];
-                            if z>0. && (z-expected).abs()<=options.relative_depth_tolerance*expected {support+=1;}
+                        && ![
+                            (triangle[0], triangle[1]),
+                            (triangle[1], triangle[2]),
+                            (triangle[2], triangle[0]),
+                        ]
+                        .iter()
+                        .all(|&(a, b)| {
+                            planar_edge(
+                                &inverse[map_index],
+                                map.width,
+                                map.height,
+                                a,
+                                b,
+                                options.relative_depth_tolerance,
+                            )
+                        })
+                    {
+                        if !options.dual_scale {
+                            continue;
                         }
-                        if support<options.min_support_views {continue;}
+                        if ![
+                            (triangle[0], triangle[1]),
+                            (triangle[1], triangle[2]),
+                            (triangle[2], triangle[0]),
+                        ]
+                        .iter()
+                        .all(|&(a, b)| {
+                            curved_edge(
+                                &inverse[map_index],
+                                map.width,
+                                map.height,
+                                a,
+                                b,
+                                options.relative_depth_tolerance,
+                            )
+                        }) {
+                            continue;
+                        }
+                        let world = triangle.map(|i| points[map_index][i]);
+                        let center = scale(add(add(world[0], world[1]), world[2]), 1. / 3.);
+                        let mut support = 0;
+                        for other in maps {
+                            if other.image == map.image {
+                                continue;
+                            }
+                            if options.selected_sources_consistency
+                                && !map.neighbors.contains(&other.image)
+                            {
+                                continue;
+                            }
+                            let nc = sparse.cameras[other.image].as_ref().unwrap();
+                            let cp = nc.camera_point(center);
+                            let Some(uv) = nc.project_camera_point(cp) else {
+                                continue;
+                            };
+                            if uv.iter().any(|v| !v.is_finite()) {
+                                continue;
+                            }
+                            let x = (uv[0] / other.step).round() as isize;
+                            let y = (uv[1] / other.step).round() as isize;
+                            if x < 0
+                                || y < 0
+                                || x >= other.width as isize
+                                || y >= other.height as isize
+                            {
+                                continue;
+                            }
+                            let z = other.depth[y as usize * other.width + x as usize];
+                            let expected = cp[2];
+                            if z > 0.
+                                && (z - expected).abs()
+                                    <= options.relative_depth_tolerance * expected
+                            {
+                                support += 1;
+                            }
+                        }
+                        if support < options.min_support_views {
+                            continue;
+                        }
                     }
                     patch.triangles.push(triangle.map(|i| ids[i]));
                 }
@@ -386,11 +467,10 @@ mod tests {
     #[test]
     fn curved_boundary_requires_measured_support_without_contradiction() {
         let mut depths = map();
-        let (curved, planar) = (|d: &DepthMap, a, b| {
-            curved_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025)
-        }, |d: &DepthMap, a, b| {
-            planar_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025)
-        });
+        let (curved, planar) = (
+            |d: &DepthMap, a, b| curved_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025),
+            |d: &DepthMap, a, b| planar_edge(&inverse_depths(d), d.width, d.height, a, b, 0.025),
+        );
         depths.depth.fill(0.);
         depths.depth[4] = 1. / 0.25;
         depths.depth[5] = 1. / 0.26;
@@ -414,7 +494,10 @@ mod tests {
         let camera = Camera::identity(100., 2., 2.);
         let mut map = map();
         let points = world_points(&map, &camera);
-        assert_eq!(normal(&map, &points, &camera, 5, 0.025).unwrap(), [0., 0., -1.]);
+        assert_eq!(
+            normal(&map, &points, &camera, 5, 0.025).unwrap(),
+            [0., 0., -1.]
+        );
         map.depth[4] = 2.;
         map.depth[6] = 2.;
         let points = world_points(&map, &camera);
@@ -578,11 +661,27 @@ mod tests {
 #[cfg(test)]
 #[test]
 fn planar_edge_accepts_tilt_and_rejects_depth_step() {
-    let mut map = DepthMap { image:0,width:8,height:8,step:1.,depth:vec![0.;64],confidence:vec![1.;64],neighbors:vec![] };
-    for y in 0..8 { for x in 0..8 { map.depth[y*8+x]=1./(0.2+0.015*x as f64+0.01*y as f64); } }
-    assert!(planar_edge(&inverse_depths(&map),8,8,27,28,0.03));
-    assert!(planar_edge(&inverse_depths(&map),8,8,27,36,0.03));
-    for y in 0..8 { for x in 0..8 { map.depth[y*8+x]=if x<4 {3.} else {4.}; } }
-    assert!(!planar_edge(&inverse_depths(&map),8,8,27,28,0.03));
-    assert!(!planar_edge(&inverse_depths(&map),8,8,0,1,0.03));
+    let mut map = DepthMap {
+        image: 0,
+        width: 8,
+        height: 8,
+        step: 1.,
+        depth: vec![0.; 64],
+        confidence: vec![1.; 64],
+        neighbors: vec![],
+    };
+    for y in 0..8 {
+        for x in 0..8 {
+            map.depth[y * 8 + x] = 1. / (0.2 + 0.015 * x as f64 + 0.01 * y as f64);
+        }
+    }
+    assert!(planar_edge(&inverse_depths(&map), 8, 8, 27, 28, 0.03));
+    assert!(planar_edge(&inverse_depths(&map), 8, 8, 27, 36, 0.03));
+    for y in 0..8 {
+        for x in 0..8 {
+            map.depth[y * 8 + x] = if x < 4 { 3. } else { 4. };
+        }
+    }
+    assert!(!planar_edge(&inverse_depths(&map), 8, 8, 27, 28, 0.03));
+    assert!(!planar_edge(&inverse_depths(&map), 8, 8, 0, 1, 0.03));
 }

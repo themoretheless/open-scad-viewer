@@ -56,7 +56,7 @@ pub(crate) type FastSet<T> = HashSet<T, FastBuild>;
 
 type Key = [i32; 3];
 const MAX_NODES: usize = 600_000;
-use super::limits::{MAX_SURFACE_VERTICES, MAX_SURFACE_TRIANGLES};
+use super::limits::{MAX_SURFACE_TRIANGLES, MAX_SURFACE_VERTICES};
 /// Conservative collection-capacity allowance, additional to dense-map planning.
 pub(super) const WORKING_BYTES: usize = 256 * 1024 * 1024;
 const CORNERS: [Key; 8] = [
@@ -84,12 +84,19 @@ struct Node {
     color: V3,
 }
 
-enum AttemptError { NodeBudget, Other(String) }
+enum AttemptError {
+    NodeBudget,
+    Other(String),
+}
 impl From<String> for AttemptError {
-    fn from(value: String) -> Self { Self::Other(value) }
+    fn from(value: String) -> Self {
+        Self::Other(value)
+    }
 }
 impl From<&str> for AttemptError {
-    fn from(value: &str) -> Self { Self::Other(value.into()) }
+    fn from(value: &str) -> Self {
+        Self::Other(value.into())
+    }
 }
 
 pub(super) fn reconstruct(
@@ -632,7 +639,12 @@ mod tests {
         for uv in [[0.25, 0.25], [0.75, 0.75]] {
             let expected = 1. / (0.25 + uv[0] * 0.25);
             assert!(
-                (interpolate::<true>(&map, &[3, 0, 0, 0], &colors, uv).unwrap().0 - expected).abs() < 1e-12
+                (interpolate::<true>(&map, &[3, 0, 0, 0], &colors, uv)
+                    .unwrap()
+                    .0
+                    - expected)
+                    .abs()
+                    < 1e-12
             );
         }
         assert!(interpolate_observed::<true>(&map, &[1, 0, 0, 0], &colors, [0.75, 0.75]).is_none());
@@ -650,16 +662,26 @@ mod tests {
     #[test]
     fn depth_only_interpolation_preserves_acceptance_and_exact_depth() {
         let mut map = DepthMap {
-            image: 0, width: 2, height: 2, step: 1.,
+            image: 0,
+            width: 2,
+            height: 2,
+            step: 1.,
             depth: vec![4., 2., 4., 2.],
-            confidence: vec![0.2, 0.6, 0.9, 1.], neighbors: vec![],
+            confidence: vec![0.2, 0.6, 0.9, 1.],
+            neighbors: vec![],
         };
         let colors = [[10, 30, 70], [200, 20, 50], [0, 255, 80], [70, 80, 90]];
         for invalid_depth in [4., 0., -1., f64::NAN, f64::INFINITY] {
             map.depth[0] = invalid_depth;
             for bits in [0, 1, 2, 3] {
-                for uv in [[0.25, 0.25], [0.75, 0.75], [0.99, 0.01],
-                           [-0.01, 0.5], [1., 0.5], [f64::NAN, 0.]] {
+                for uv in [
+                    [0.25, 0.25],
+                    [0.75, 0.75],
+                    [0.99, 0.01],
+                    [-0.01, 0.5],
+                    [1., 0.5],
+                    [f64::NAN, 0.],
+                ] {
                     let mask = [bits, 0, 0, 0];
                     let full = interpolate::<true>(&map, &mask, &colors, uv);
                     // Empty attribute storage ensures validation never reads it.
@@ -711,7 +733,10 @@ mod tests {
                 .is_empty()
         );
         assert_eq!(
-            extract(&keys, &FastMap::default(), [0.; 3], 1., &mut |_, _, _| false).unwrap_err(),
+            extract(&keys, &FastMap::default(), [0.; 3], 1., &mut |_, _, _| {
+                false
+            })
+            .unwrap_err(),
             "Cancelled"
         );
     }
@@ -722,26 +747,37 @@ mod tests {
 fn retry_budget_and_cancellation_contract() {
     let mut diagnostics = super::DenseDiagnostics::default();
     let mut calls = 0;
-    let result = bounded_attempts(&mut diagnostics, &mut |_,_,_| true, |_,_| {
+    let result = bounded_attempts(&mut diagnostics, &mut |_, _, _| true, |_, _| {
         calls += 1;
-        if calls == 1 { Err(AttemptError::NodeBudget) } else { Ok(Surface::default()) }
+        if calls == 1 {
+            Err(AttemptError::NodeBudget)
+        } else {
+            Ok(Surface::default())
+        }
     });
-    assert!(result.is_ok()); assert_eq!(calls,2);
-    assert_eq!(diagnostics.volume_spacing_scale,Some(1.25));
+    assert!(result.is_ok());
+    assert_eq!(calls, 2);
+    assert_eq!(diagnostics.volume_spacing_scale, Some(1.25));
     calls = 0;
-    let result = bounded_attempts(&mut diagnostics, &mut |_,_,_| true, |_,_| {
-        calls += 1; Err(AttemptError::NodeBudget)
+    let result = bounded_attempts(&mut diagnostics, &mut |_, _, _| true, |_, _| {
+        calls += 1;
+        Err(AttemptError::NodeBudget)
     });
     assert!(matches!(result,Err(ref e) if e == "Volume node budget exceeded"));
-    assert_eq!(calls,4); assert_eq!(diagnostics.volume_attempts,4);
+    assert_eq!(calls, 4);
+    assert_eq!(diagnostics.volume_attempts, 4);
     calls = 0;
-    let result = bounded_attempts(&mut diagnostics, &mut |_,_,_| false, |_,_| {
-        calls += 1; Err(AttemptError::NodeBudget)
+    let result = bounded_attempts(&mut diagnostics, &mut |_, _, _| false, |_, _| {
+        calls += 1;
+        Err(AttemptError::NodeBudget)
     });
-    assert!(matches!(result,Err(ref e) if e == "Cancelled")); assert_eq!(calls,1);
+    assert!(matches!(result,Err(ref e) if e == "Cancelled"));
+    assert_eq!(calls, 1);
     calls = 0;
-    let result = bounded_attempts(&mut diagnostics, &mut |_,_,_| true, |_,_| {
-        calls += 1; Err(AttemptError::Other("invalid geometry".into()))
+    let result = bounded_attempts(&mut diagnostics, &mut |_, _, _| true, |_, _| {
+        calls += 1;
+        Err(AttemptError::Other("invalid geometry".into()))
     });
-    assert!(matches!(result,Err(ref e) if e == "invalid geometry")); assert_eq!(calls,1);
+    assert!(matches!(result,Err(ref e) if e == "invalid geometry"));
+    assert_eq!(calls, 1);
 }

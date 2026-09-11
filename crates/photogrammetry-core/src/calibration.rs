@@ -185,8 +185,8 @@ fn bilinear(image: &Image, p: [f64; 2], out: &mut [u8]) {
     for (channel, value) in out.iter_mut().enumerate() {
         *value = ((1. - b) * ((1. - a) * c00[channel] + a * c10[channel])
             + b * ((1. - a) * c01[channel] + a * c11[channel]))
-        .round()
-        .clamp(0., 255.) as u8;
+            .round()
+            .clamp(0., 255.) as u8;
     }
 }
 

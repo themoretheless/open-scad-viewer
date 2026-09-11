@@ -1374,7 +1374,7 @@
       "expected": {
         "terminal": "pass",
         "assertions": [
-          "manifold-3d imports are confined to the narrow KernelOps adapter",
+          "kernel imports are confined to the narrow KernelOps adapter",
           "compiler, core, UI, and production MCP registry do not import qualification supervisor or child",
           "legacy/current production route remains direct-v5 with automatic fallback false",
           "MCP shadow receives no production ModelStore reference"
