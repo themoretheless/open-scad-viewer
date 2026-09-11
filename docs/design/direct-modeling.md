@@ -178,6 +178,13 @@ The main viewport **Облегчение** button opens four structures: rectang
 
 Controls include cell size, minimum rib width, bounding-box frame, bottom/top skins measured along the channel axis, seed and jitter. The print controls use the actual extrusion line width and requested line count to reject thinner ribs; rounding to a multiple of line width is available. Z channels avoid adding transverse bridges within the generated lattice when Z is also the print direction; a top skin introduces bridging. Original geometry may still need supports. The rectangular bounding frame is not a contour-offset frame on arbitrary curved bodies. Preserve a bottom skin or increase ribs/frame if clipping would produce detached pieces.
 
+**FDM print optimizations** (panel → FDM print settings):
+
+- **Fit geometry** — snap rib/skin/floor to line-width × wall loops and layer multiples; force channel lattices to Z.
+- **Optimize for print** — rank X/Y/Z orientation (vertical walls preferred), open spatial tops when requested, shrink cell or thicken rib so the cell bridge ≤ printer bridge limit, then re-fit.
+- **Printability report** — issues for bridges, overhangs, thin walls, tiny features, cooling (layer-time proxy), orientation and closed skins; bilingual tips; preferred axis score.
+- **Copy slicer hints** — machine-agnostic JSON (layer height, wall loops, bridge flow/speed, fan, support enable/overhang, seam) for PrusaSlicer / Orca / Cura — not a vendor profile. Bridge and overhang estimates use cell geometry heuristics, not toolpaths.
+
 Validation rejects invalid dimensions, more than 144 sites, vanished material, non-closed output, extra disconnected components and export-scale degenerate triangles. Output volume must decrease. The panel reports percentage and cm³ before/after; no strength, stiffness, fatigue or print-time claim is made. This complements slicer infill by changing the actual exported geometry. Print preparation follows the distinction between solid geometry, wall thickness and overhangs in [Prusa's modeling guidance](https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135).
 
 A Boolean fix treats coplanar retriangulation as optional: if its multi-hole bridge heuristic fails, the stitched triangles continue through unchanged topology, intersection and orientation audits. No validation is skipped. The distribution budget increases by 10 kB for the measured ~8 kB lightening generator and controls.
@@ -189,3 +196,25 @@ Verification: four patterns, repeatable/different seeds, all channel axes, compl
 The volumetric modes support **Область сетки → Только стенки**. Wall depth restricts the lattice to a signed-distance band at all source surfaces, including floor and roof. The interior is optionally hollow (default) or a solid core. Outer skin remains independent: set it to zero to expose lattice openings. Existing thin-walled solids can also use whole-volume mode to lattice their existing material. This is a clipped spatial graph, not a surface-conforming remesher; disconnected results are rejected. Wall depth must span at least two sampling steps. FDM fitting respects this additional sampling bound.
 
 Geometry tests cover hollow walls versus full-volume lattice, optional solid core, closed output and rejected undersampled wall depth. Nineteen related tests, type checking, geometry build and distribution checks passed.
+
+### Strength-oriented structures
+
+Three additional structures target high stiffness-to-weight rather than only volume reduction:
+
+- **Октет-ферма / Octet truss** — stretch-dominated 3D graph with cube corners plus face centres, face-to-corner struts and octahedron edges between face centres. Prefer this for skeletal walls (`Только стенки`) and volumetric lightening when isotropic stiffness matters. Selecting it defaults the lattice region toward a wall band.
+- **Изогрид / Isogrid** — extruded equilateral triangular openings (NASA-style isogrid). Best channel-mode choice for planar walls and panels; use Z channels for FDM when possible.
+- **ОЦК / BCC** — body-centred cubic struts from each cell centre to its eight corners. Strong under compression with a simpler, lighter graph than octet.
+
+The panel shows a short qualitative hint for every structure (stretch / mixed / bending / organic). Hints and rankings are geometric guidance only — not FEA, fatigue or print certification. Node/edge budgets remain 125 / 400; octet and BCC need larger cells on big bodies.
+
+### Strength-of-materials estimate
+
+**Облегчение** includes an analytical strength-of-materials block (material, load case, force, safety factor). After preview it appends a report based on:
+
+- relative density from measured before/after volume (or a geometric estimate beforehand);
+- Gibson–Ashby scaling \(E^\*/E \sim C\rho^n\) with pattern-dependent stretch/bending exponents;
+- mean spatial-graph connectivity (Maxwell / Deshpande stretch vs bending);
+- strut axial stress and Euler buckling ratio for spatial lattices;
+- ranked **weak spots** with approximate XYZ: free ends, hinge nodes (Z=2), under-connected nodes, body/frame corners, acute cell corners, slender/buckling struts, long load-aligned spans, horizontal bridges and overly thin skeletal walls.
+
+Materials carry FDM orthotropy proxies (E∥ / E⊥ / inter-layer allowable), yield/fatigue screens and notch Kt, plus metal isotropic stock. Service conditions (temperature, humidity — especially nylon — infill, perimeters, print axis = anisotropy axis) knock down effective scalars. Load cases include distributed/pressure/moment actions and explicit supports (fixed/pinned/roller), with ULS-style combinations. Strut sections may be circle/square/rectangle/tube with eccentricity and joint stiffness; combined compression+bending, panel buckling and cell homogenization (continuum E*/σ*, not only ρ→E*) feed a pin-jointed truss FEA for δ, η and P/Pcr in one report. Weak-spot heuristics remain material-weighted; FEA member utilization is drawn with a second marker field. Design tips propose rib/cell/diagonal changes with expected Δη. A/B compare ranks mass / stiffness / util. Print-axis orthotropy blends E∥/E⊥ (and interlayer allowable) from the load↔print alignment; ULS combinations scale real face area/span for pressure/distributed/moment actions; pinned supports no longer over-constrain a face like fixed; analytical η is cross-checked against truss FEA (consistency ratio); corner members carry local Kt; design-tip Δη uses Gibson–Ashby ρ* scaling instead of fixed percentages. Still not certification or full solid FEA — changing material/scenario after preview refreshes markers without re-running the lightening boolean.
