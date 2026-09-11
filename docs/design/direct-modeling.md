@@ -178,6 +178,13 @@ The main viewport **Облегчение** button opens four structures: rectang
 
 Controls include cell size, minimum rib width, bounding-box frame, bottom/top skins measured along the channel axis, seed and jitter. The print controls use the actual extrusion line width and requested line count to reject thinner ribs; rounding to a multiple of line width is available. Z channels avoid adding transverse bridges within the generated lattice when Z is also the print direction; a top skin introduces bridging. Original geometry may still need supports. The rectangular bounding frame is not a contour-offset frame on arbitrary curved bodies. Preserve a bottom skin or increase ribs/frame if clipping would produce detached pieces.
 
+**FDM print optimizations** (panel → FDM print settings):
+
+- **Fit geometry** — snap rib/skin/floor to line-width × wall loops and layer multiples; force channel lattices to Z.
+- **Optimize for print** — rank X/Y/Z orientation (vertical walls preferred), open spatial tops when requested, shrink cell or thicken rib so the cell bridge ≤ printer bridge limit, then re-fit.
+- **Printability report** — issues for bridges, overhangs, thin walls, tiny features, cooling (layer-time proxy), orientation and closed skins; bilingual tips; preferred axis score.
+- **Copy slicer hints** — machine-agnostic JSON (layer height, wall loops, bridge flow/speed, fan, support enable/overhang, seam) for PrusaSlicer / Orca / Cura — not a vendor profile. Bridge and overhang estimates use cell geometry heuristics, not toolpaths.
+
 Validation rejects invalid dimensions, more than 144 sites, vanished material, non-closed output, extra disconnected components and export-scale degenerate triangles. Output volume must decrease. The panel reports percentage and cm³ before/after; no strength, stiffness, fatigue or print-time claim is made. This complements slicer infill by changing the actual exported geometry. Print preparation follows the distinction between solid geometry, wall thickness and overhangs in [Prusa's modeling guidance](https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135).
 
 A Boolean fix treats coplanar retriangulation as optional: if its multi-hole bridge heuristic fails, the stitched triangles continue through unchanged topology, intersection and orientation audits. No validation is skipped. The distribution budget increases by 10 kB for the measured ~8 kB lightening generator and controls.
