@@ -1,0 +1,56 @@
+{
+  "schema": "open-scad-viewer/brep-topology-mutations",
+  "schemaVersion": 1,
+  "baseFixture": "box-solid-v1.json",
+  "mutations": [
+    {
+      "id": "shell-role-on-shell",
+      "invariant": "Shell must not carry Outer/Cavity role; role lives only on SolidShellUse",
+      "patch": {
+        "op": "add",
+        "path": "/shells/0/role",
+        "value": "Outer"
+      },
+      "expected": "schema-reject"
+    },
+    {
+      "id": "missing-shell-use-role",
+      "invariant": "SolidShellUse.role is required",
+      "patch": {
+        "op": "remove",
+        "path": "/solids/0/shellUses/0/role"
+      },
+      "expected": "schema-reject"
+    },
+    {
+      "id": "edge-use-cardinality",
+      "invariant": "Closed SolidManifold regular edge must appear in exactly two coedges",
+      "patch": {
+        "op": "remove",
+        "path": "/faces/2/loops/0/coedges/0"
+      },
+      "expected": "local-validator-reject",
+      "detail": "edge-0-use-count"
+    },
+    {
+      "id": "serialize-arena-key",
+      "invariant": "Arena keys are not part of the public IDL",
+      "patch": {
+        "op": "add",
+        "path": "/vertices/0/arenaKey",
+        "value": { "slot": 0, "generation": 1 }
+      },
+      "expected": "schema-reject"
+    },
+    {
+      "id": "invalid-topo-id",
+      "invariant": "TopoId is 32 lowercase hex digits",
+      "patch": {
+        "op": "replace",
+        "path": "/topoIds/solid",
+        "value": "NOT-A-TOPO-ID"
+      },
+      "expected": "schema-reject"
+    }
+  ]
+}

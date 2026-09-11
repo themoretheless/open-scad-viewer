@@ -1,0 +1,129 @@
+{
+  "schema": "open-scad-viewer/g2a-predicate-inventory",
+  "schemaVersion": 1,
+  "inventoryId": "g2a-predicate-inventory-v1",
+  "recordedAt": "2026-09-12",
+  "gate": "G2a",
+  "contract": "tolerance-predicates-evidence-v1",
+  "units": "mm",
+  "scalar": "binary64",
+  "claimBoundary": {
+    "includes": [
+      "Finite exact-sign predicates required for the G2a plane/box walking slice",
+      "ToleranceContext and EvidenceLedger field inventory for that slice",
+      "Oracle isolation rule for predicate qualification"
+    ],
+    "excludes": [
+      "General CC/CS/SS intersection certificates (G5a–c)",
+      "inCircle / inSphere predicates",
+      "NURBS root isolation constructions beyond certified parameter boxes later gates need",
+      "Production predicate crate implementation (blocked until G0 closes and G1 is green)"
+    ]
+  },
+  "exactInputLeaves": [
+    {
+      "id": "binary64-bit-pattern",
+      "description": "Uninterpreted IEEE-754 binary64 bit pattern from authored or previously certified input."
+    },
+    {
+      "id": "canonical-rational-constant",
+      "description": "Finite integer or reduced rational constant with explicit numerator/denominator, never a libm result."
+    }
+  ],
+  "forbiddenExactLeaves": [
+    "division-result-as-leaf",
+    "normalized-vector-component-as-leaf",
+    "trig-or-libm-result-as-leaf",
+    "newton-iterate-as-leaf",
+    "rounded-construction-center-as-leaf"
+  ],
+  "decisionPipeline": [
+    "f64-filter",
+    "outward-interval",
+    "exact-expansion-sign"
+  ],
+  "predicates": [
+    {
+      "id": "orient2d",
+      "arity": 3,
+      "expression": "sign((b-a)x(c-a))",
+      "outputs": ["Negative", "Zero", "Positive", "Indeterminate"],
+      "requiredFor": ["planar face loops", "triangle orientation in box mesh certificate"]
+    },
+    {
+      "id": "orient3d",
+      "arity": 4,
+      "expression": "sign(scalar_triple(b-a,c-a,d-a))",
+      "outputs": ["Negative", "Zero", "Positive", "Indeterminate"],
+      "requiredFor": ["plane vs point side", "tetrahedral volume sign for box solid"]
+    },
+    {
+      "id": "compare_squared_distance",
+      "arity": "point-pair-vs-bound",
+      "expression": "sign(||p-q||^2 - r^2) with exact leaves only",
+      "outputs": ["Negative", "Zero", "Positive", "Indeterminate"],
+      "requiredFor": ["optional G2a mesh residual checks; not a substitute for orient"]
+    }
+  ],
+  "modelClassifier": {
+    "values": ["Coincident", "Separate", "Indeterminate"],
+    "rules": [
+      "distance_or_residual < on_tol with proven bound => Coincident",
+      "distance_or_residual > clear_tol with proven bound => Separate",
+      "gray band or PrecisionExhausted => Indeterminate",
+      "Indeterminate must not coerce to false or WithinTolerance success"
+    ]
+  },
+  "toleranceContextFields": [
+    "linear_abs",
+    "linear_rel",
+    "on_tol",
+    "clear_tol",
+    "angular",
+    "param_floor",
+    "ulp_guard",
+    "max_entity_error",
+    "policy"
+  ],
+  "toleranceValidation": [
+    "0 < on_tol < clear_tol",
+    "derived local bounds must respect max_entity_error",
+    "invalid profile rejected before geometry work"
+  ],
+  "evidenceLedgerFields": [
+    "positional_enclosure_or_residual",
+    "directional_or_two_sided_hausdorff",
+    "parameter_correspondence",
+    "derivative_or_normal_bound",
+    "topology_preservation"
+  ],
+  "certifiedConstruction": {
+    "fields": ["enclosure", "recipe", "residual", "uniqueness", "provenance"],
+    "rule": "A following predicate uses recipe/enclosure or returns Indeterminate; rounded centers are never re-ingested as ExactInputLeaf."
+  },
+  "shewchukPolicy": {
+    "selectedMode": "original_from_paper",
+    "forbiddenWithoutNewAdr": ["derived_port", "vendored"],
+    "note": "Paper-derived adaptive expansions only; no upstream code comparison that would reclassify the work as a port."
+  },
+  "oracleBoundary": {
+    "required": "Independent BigRational/interval implementation under tests/support that imports no production predicate module",
+    "kill": [
+      "global EPSILON",
+      "silent clamp",
+      "silent weld",
+      "Indeterminate mapped to false",
+      "NaN publication",
+      "hidden tolerance growth along operation chains"
+    ]
+  },
+  "g2aSupportedGeometry": ["Plane3", "AxisAlignedBox3"],
+  "g2aUnsupported": [
+    "curved surfaces",
+    "general NURBS",
+    "Boolean",
+    "fillet",
+    "sewing",
+    "global solid certification beyond local box invariants"
+  ]
+}

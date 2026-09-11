@@ -129,10 +129,11 @@
     }
   ],
   "open_blockers": [
-    "G0 contract pack is not complete",
-    "Executable SemanticProgram and Manifold differential adapter do not exist",
-    "Rust workspace and B-rep runtime do not exist",
-    "Independent certificate verifiers and frozen qualification corpora do not exist",
-    "Project-wide Rust licensing, inbound contribution, provenance, supervisor, and release policies are not approved"
+    "G0 contract pack is not complete; live status is docs/qualification/g0-contract-pack-status-v1.json",
+    "Blocking ADR 0005 (SemanticProgram), ADR 0006 (tolerance/predicates), and ADR 0007 (topology IDL) remain proposed, not accepted",
+    "G0.8 protocol v6 IDL, G0.12 supervisor ADR, and G0.13 reimplementation policy are still missing",
+    "Executable SemanticProgram production seam remains G1-gated; G1 plan v16 is frozen-pending-execution with unresolved bindings",
+    "Independent certificate verifiers and full cancel/MCP golden corpora do not exist",
+    "Named human owners/reviewers and organizational approvals for G0 items remain unassigned"
   ]
 }

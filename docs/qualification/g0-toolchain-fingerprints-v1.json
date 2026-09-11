@@ -1,0 +1,75 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v1",
+  "recordedAt": "2026-09-12",
+  "purpose": "G0.2 freeze of current repository toolchain identity. Changing any listed artifact requires a new fingerprint version; it does not silently amend this file.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of the listed lock/manifest/notices/toolchain files at freeze time",
+      "Observed rustc version line for the pinned nightly channel on the recording host"
+    ],
+    "excludes": [
+      "Full SPDX SBOM of every transitive crate and npm package",
+      "Browser distribution trees and Playwright qualification package locks",
+      "Rebinding of semantic-manifold-g1-plan-v16.json artifact hashes"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "ce596b60da9dbf325530e5e2381098f5e6b214e92b74f968e7e72e1c48783206",
+      "byteLength": 2441
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "39217033e038e7f6b6c9e2de50691ad6c7aef394361cd5cb2bfad81ffa7b0b06",
+      "byteLength": 3489
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "698821027e3be29d1b4cf6560f3e3dfa095d7be5b333d1f32cb7ecf9a94b4297",
+      "byteLength": 1076
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "3fd6aec52912101de49abc8f5ea4c41a81a2585b2469bad7eb996d49d16abab2",
+      "byteLength": 27520
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/semantic-manifold-g1-plan-v16.json",
+      "bindingId": "root-package-manifest",
+      "note": "G1 plan still freezes an older package.json SHA-256. G0.2 records current bytes; resolving the G1 binding requires a new G1 plan version, not silent rewrite of v16."
+    }
+  ]
+}

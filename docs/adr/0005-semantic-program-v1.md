@@ -1,7 +1,9 @@
-# ADR 0003: SemanticProgram v1 identity, encoding, and execution boundary
+# ADR 0005: SemanticProgram v1 identity, encoding, and execution boundary
 
 - Status: proposed; blocking G0 contract review
 - Date: 2026-08-01
+- Renumbered: 2026-09-12 from colliding `0003-semantic-program-v1.md`
+  (ADR 0003 remains the official OpenSCAD MCP oracle decision)
 - Contract: `semantic-program-contract-v1`
 - Core identity: `semantic-program-core-v1`
 - Capability graph: `semantic-capabilities-v1`

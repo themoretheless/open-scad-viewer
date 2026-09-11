@@ -1,0 +1,278 @@
+{
+  "schema": "open-scad-viewer/g0-contract-pack-status",
+  "schemaVersion": 1,
+  "packId": "g0-contract-pack-status-v1",
+  "recordedAt": "2026-09-12",
+  "gate": {
+    "id": "g0",
+    "name": "contract-pack",
+    "claim": "none",
+    "closed": false
+  },
+  "charter": {
+    "paths": [
+      "docs/design/rust-brep-nurbs-kernel.md",
+      "docs/design/brep-nurbs-14-stage-master-plan.md",
+      "docs/design/brep-nurbs-14-stage-review-manifest.json",
+      "docs/qualification/g0-contract-pack.md"
+    ],
+    "consensus": "GO G0 only; NO-GO G1+ until this pack closes",
+    "organizationalIndependence": false,
+    "note": "Role-separated agent reviews are design evidence, not organizational approval."
+  },
+  "adrDependencyGraph": [
+    {
+      "id": "0001",
+      "path": "docs/adr/0001-language-compatibility.md",
+      "status": "accepted",
+      "blocks": ["G0.3"]
+    },
+    {
+      "id": "0002",
+      "path": "docs/adr/0002-permanent-geometry-engine-routing.md",
+      "status": "accepted",
+      "blocks": ["G0.3"]
+    },
+    {
+      "id": "0003",
+      "path": "docs/adr/0003-official-openscad-mcp-runtime.md",
+      "status": "superseded-oracle",
+      "blocks": []
+    },
+    {
+      "id": "0004",
+      "path": "docs/adr/0004-independent-openscad-2021-engine.md",
+      "status": "accepted",
+      "blocks": []
+    },
+    {
+      "id": "0005",
+      "path": "docs/adr/0005-semantic-program-v1.md",
+      "status": "proposed",
+      "blocks": ["G0.4", "G0.5", "G0.14", "G1"],
+      "renumberedFrom": "docs/adr/0003-semantic-program-v1.md"
+    },
+    {
+      "id": "0006",
+      "path": "docs/adr/0006-tolerance-predicates-evidence-v1.md",
+      "status": "proposed",
+      "blocks": ["G0.7", "G2a"]
+    },
+    {
+      "id": "0007",
+      "path": "docs/adr/0007-brep-topology-idl-v1.md",
+      "status": "proposed",
+      "blocks": ["G0.6", "G2a"]
+    },
+    {
+      "id": "pending-protocol-v6",
+      "path": null,
+      "status": "missing",
+      "blocks": ["G0.8", "G4a"]
+    },
+    {
+      "id": "pending-supervisor",
+      "path": null,
+      "status": "missing",
+      "blocks": ["G0.12"]
+    },
+    {
+      "id": "pending-reimplementation-policy",
+      "path": null,
+      "status": "missing",
+      "blocks": ["G0.13"]
+    }
+  ],
+  "owners": {
+    "policy": "Named human owner and independent reviewer are required before any G0 item may flip to accepted/closed. Agent reviews do not fill those seats.",
+    "entries": [
+      { "item": "G0.1", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.2", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.3", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.4", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.5", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.6", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.7", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.8", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.9", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.10", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.11", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.12", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.13", "owner": "unassigned", "reviewer": "unassigned" },
+      { "item": "G0.14", "owner": "unassigned", "reviewer": "unassigned" }
+    ]
+  },
+  "items": [
+    {
+      "id": "G0.1",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/qualification/g0-contract-pack.md",
+        "docs/qualification/g0-contract-pack-status-v1.json"
+      ],
+      "missing": [
+        "Named human owner/reviewer assignments",
+        "Organizational approval of the blocking ADR list"
+      ]
+    },
+    {
+      "id": "G0.2",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/qualification/g0-toolchain-fingerprints-v1.json",
+        "tests/g0ToolchainFingerprints.test.ts"
+      ],
+      "missing": [
+        "Project-wide SPDX SBOM hash covering the full npm+Cargo graph",
+        "Reconciliation with drifted G1 plan root package.json binding"
+      ]
+    },
+    {
+      "id": "G0.3",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/adr/0001-language-compatibility.md",
+        "docs/adr/0002-permanent-geometry-engine-routing.md",
+        "docs/qualification/geometry-routing-contract-v1.json",
+        "tests/geometryRoutingContract.test.ts"
+      ],
+      "missing": [
+        "Consolidated refusal-precedence matrix covering Worker/MCP/cancel/stale/queue in one accepted ADR appendix"
+      ]
+    },
+    {
+      "id": "G0.4",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/adr/0005-semantic-program-v1.md",
+        "src/core/semanticProgram.ts",
+        "tests/support/referenceSemanticProgramV1.ts",
+        "tests/semanticProgram.test.ts",
+        "tests/semanticProgramOracle.test.ts"
+      ],
+      "missing": [
+        "ADR 0005 accepted after its Acceptance gates are green"
+      ]
+    },
+    {
+      "id": "G0.5",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/adr/0005-semantic-program-v1.md",
+        "docs/design/brep-nurbs-14-stage-master-plan.md"
+      ],
+      "missing": [
+        "Accepted standalone or accepted ADR 0005 identity section with collision rules signed off"
+      ]
+    },
+    {
+      "id": "G0.6",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/adr/0007-brep-topology-idl-v1.md",
+        "docs/qualification/topology-idl/brep-topology-idl-v1.schema.json",
+        "docs/qualification/topology-idl/box-solid-v1.json",
+        "docs/qualification/topology-idl/mutations-v1.json",
+        "tests/support/referenceTopologyIdlV1.ts",
+        "tests/topologyIdlV1.test.ts"
+      ],
+      "missing": [
+        "ADR 0007 accepted",
+        "Full JSON-Schema draft validation of every fixture field",
+        "Sibling-COW/stale-key fixture rows beyond the G2a box ownership corpus"
+      ]
+    },
+    {
+      "id": "G0.7",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/adr/0006-tolerance-predicates-evidence-v1.md",
+        "docs/qualification/g2a-predicate-inventory-v1.json"
+      ],
+      "missing": [
+        "ADR 0006 accepted",
+        "Independent BigRational/interval oracle checked in under tests/support",
+        "Production predicate crate deferred until G2a after G0/G1 close"
+      ]
+    },
+    {
+      "id": "G0.8",
+      "status": "missing",
+      "exitEvidence": [],
+      "missing": [
+        "Protocol v6 / GeometrySceneV2 discriminated IDL",
+        "Checked-in wire fixtures and v5 migration matrix"
+      ]
+    },
+    {
+      "id": "G0.9",
+      "status": "partial",
+      "exitEvidence": [
+        "tests/fixtures/manifold-plan-oracle-v1.json",
+        "tests/support/referenceFrozenLegacyOutcome.ts"
+      ],
+      "missing": [
+        "Cancel-terminal corpus rows",
+        "MCP-path golden artifacts",
+        "Standalone provenance bundle called out by master-plan G0.9"
+      ]
+    },
+    {
+      "id": "G0.10",
+      "status": "partial",
+      "exitEvidence": [
+        "tests/support/referenceLegacyDirectEvaluatorOracle.ts",
+        "tests/legacyDirectEvaluatorOracle.test.ts",
+        "docs/qualification/semantic-manifold-g1-plan-v16.json"
+      ],
+      "missing": [
+        "Versioned G0-owned comparator specification artifact separate from the G1 plan"
+      ]
+    },
+    {
+      "id": "G0.11",
+      "status": "done",
+      "exitEvidence": [
+        "docs/qualification/qualification-plan.schema.json",
+        "tests/qualificationPlanArtifact.test.ts"
+      ],
+      "missing": []
+    },
+    {
+      "id": "G0.12",
+      "status": "missing",
+      "exitEvidence": [],
+      "missing": [
+        "Accepted resource/security/supervisor ADR with memory, hard-kill, and queue policy"
+      ]
+    },
+    {
+      "id": "G0.13",
+      "status": "missing",
+      "exitEvidence": [],
+      "missing": [
+        "Machine-readable allowlisted-sources log",
+        "Rights inventory",
+        "Contributor provenance registry / PROVENANCE.yml examples"
+      ]
+    },
+    {
+      "id": "G0.14",
+      "status": "partial",
+      "exitEvidence": [
+        "docs/qualification/semantic-manifold-g1-plan-v16.json"
+      ],
+      "missing": [
+        "Resolve unresolvedRows / executionAdmission bindings",
+        "Organizational qualificationApproval",
+        "Clean post-freeze execution evidence"
+      ]
+    }
+  ],
+  "forbiddenNow": [
+    "Parallel G1–G3 product implementation treated as G0",
+    "Creating the full cad-* crate tree",
+    "Exact B-rep Boolean / fillet / analytic STEP before G5e",
+    "Treating agent review consensus as organizational acceptance"
+  ]
+}

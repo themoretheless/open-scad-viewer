@@ -1,0 +1,176 @@
+{
+  "schema": "open-scad-viewer/brep-topology-idl",
+  "schemaVersion": 1,
+  "fixtureId": "box-solid-v1",
+  "profile": "SolidManifold",
+  "units": "mm",
+  "vertices": [
+    { "point": [0, 0, 0] },
+    { "point": [1, 0, 0] },
+    { "point": [1, 1, 0] },
+    { "point": [0, 1, 0] },
+    { "point": [0, 0, 1] },
+    { "point": [1, 0, 1] },
+    { "point": [1, 1, 1] },
+    { "point": [0, 1, 1] }
+  ],
+  "edges": [
+    { "vertices": [0, 1], "geom": "Line3" },
+    { "vertices": [1, 2], "geom": "Line3" },
+    { "vertices": [2, 3], "geom": "Line3" },
+    { "vertices": [3, 0], "geom": "Line3" },
+    { "vertices": [4, 5], "geom": "Line3" },
+    { "vertices": [5, 6], "geom": "Line3" },
+    { "vertices": [6, 7], "geom": "Line3" },
+    { "vertices": [7, 4], "geom": "Line3" },
+    { "vertices": [0, 4], "geom": "Line3" },
+    { "vertices": [1, 5], "geom": "Line3" },
+    { "vertices": [2, 6], "geom": "Line3" },
+    { "vertices": [3, 7], "geom": "Line3" }
+  ],
+  "faces": [
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 0, "sense": "Forward" },
+            { "edge": 1, "sense": "Forward" },
+            { "edge": 2, "sense": "Forward" },
+            { "edge": 3, "sense": "Forward" }
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 4, "sense": "Forward" },
+            { "edge": 5, "sense": "Forward" },
+            { "edge": 6, "sense": "Forward" },
+            { "edge": 7, "sense": "Forward" }
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 0, "sense": "Forward" },
+            { "edge": 9, "sense": "Forward" },
+            { "edge": 4, "sense": "Reversed" },
+            { "edge": 8, "sense": "Reversed" }
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 1, "sense": "Forward" },
+            { "edge": 10, "sense": "Forward" },
+            { "edge": 5, "sense": "Reversed" },
+            { "edge": 9, "sense": "Reversed" }
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 2, "sense": "Forward" },
+            { "edge": 11, "sense": "Forward" },
+            { "edge": 6, "sense": "Reversed" },
+            { "edge": 10, "sense": "Reversed" }
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Plane3",
+      "surfaceSense": "Forward",
+      "loops": [
+        {
+          "kind": "Outer",
+          "coedges": [
+            { "edge": 3, "sense": "Forward" },
+            { "edge": 8, "sense": "Forward" },
+            { "edge": 7, "sense": "Reversed" },
+            { "edge": 11, "sense": "Reversed" }
+          ]
+        }
+      ]
+    }
+  ],
+  "shells": [
+    {
+      "faceUses": [
+        { "face": 0, "sense": "Reversed" },
+        { "face": 1, "sense": "Forward" },
+        { "face": 2, "sense": "Forward" },
+        { "face": 3, "sense": "Forward" },
+        { "face": 4, "sense": "Forward" },
+        { "face": 5, "sense": "Forward" }
+      ]
+    }
+  ],
+  "solids": [
+    {
+      "shellUses": [{ "shell": 0, "role": "Outer" }]
+    }
+  ],
+  "topoIds": {
+    "solid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0",
+    "shell": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "faces": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7"
+    ],
+    "edges": [
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb01",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb02",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb03",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb04",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb05",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb06",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb08",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb09",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0a",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0b"
+    ],
+    "vertices": [
+      "cccccccccccccccccccccccccccccc00",
+      "cccccccccccccccccccccccccccccc01",
+      "cccccccccccccccccccccccccccccc02",
+      "cccccccccccccccccccccccccccccc03",
+      "cccccccccccccccccccccccccccccc04",
+      "cccccccccccccccccccccccccccccc05",
+      "cccccccccccccccccccccccccccccc06",
+      "cccccccccccccccccccccccccccccc07"
+    ]
+  }
+}

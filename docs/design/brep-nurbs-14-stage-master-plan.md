@@ -792,15 +792,20 @@ qualification reset or unverifiable resource cost.
 
 Никакие пункты ниже не меняют runtime routing или geometry results.
 
+Живой статус pack: [`docs/qualification/g0-contract-pack.md`](../qualification/g0-contract-pack.md)
+и [`docs/qualification/g0-contract-pack-status-v1.json`](../qualification/g0-contract-pack-status-v1.json).
+G0 **не закрыт**, пока status JSON имеет `"closed": false` и owners остаются
+`unassigned`.
+
 | ID | Deliverable | Exit evidence |
 | --- | --- | --- |
 | G0.1 | Freeze review charter and ADR dependency graph | approved list of blocking ADR and owners |
-| G0.2 | Freeze current toolchain/dependency fingerprints | reproducible lock/notices/SBOM hashes |
+| G0.2 | Freeze current toolchain/dependency fingerprints | `g0-toolchain-fingerprints-v1.json` (+ later full SBOM) |
 | G0.3 | Engine/language/error-precedence ADR | full routing and refusal matrix |
-| G0.4 | `SemanticProgram` discriminated IDL | schema, examples, independent validator |
+| G0.4 | `SemanticProgram` discriminated IDL | ADR 0005 schema, examples, independent validator |
 | G0.5 | Source/program/topology/policy/mesh hash ADR | canonical preimages and collision rules |
-| G0.6 | Topology/ownership/typestate/lineage IDL | schema fixtures and one-invariant mutations |
-| G0.7 | Tolerance/predicates/constructions/evidence ADR | finite inventory for G2a and oracle boundary |
+| G0.6 | Topology/ownership/typestate/lineage IDL | ADR 0007 + `topology-idl/` fixtures and mutations |
+| G0.7 | Tolerance/predicates/constructions/evidence ADR | ADR 0006 + `g2a-predicate-inventory-v1.json` |
 | G0.8 | Protocol v6/`GeometrySceneV2` IDL | checked-in wire fixtures and v5 migration matrix |
 | G0.9 | Versioned legacy golden corpus manifest | source, output, error, cancel, MCP and provenance artifacts |
 | G0.10 | Field-by-field differential comparator | mutation tests proving comparator sensitivity |

@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-scad-viewer.invalid/schemas/brep-topology-idl-v1.schema.json",
+  "title": "B-rep topology IDL v1 (G2a)",
+  "description": "Canonical ownership snapshot for G0.6 / G2a. Handles are fixture-local ordinals, not durable TopoIds and not serializable arena keys.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "profile",
+    "units",
+    "vertices",
+    "edges",
+    "faces",
+    "shells",
+    "solids",
+    "topoIds"
+  ],
+  "properties": {
+    "schema": { "const": "open-scad-viewer/brep-topology-idl" },
+    "schemaVersion": { "const": 1 },
+    "fixtureId": { "type": "string", "minLength": 1 },
+    "profile": { "enum": ["SolidManifold"] },
+    "units": { "const": "mm" },
+    "vertices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["point"],
+        "properties": {
+          "point": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["vertices", "geom"],
+        "properties": {
+          "vertices": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "integer", "minimum": 0 }
+          },
+          "geom": { "enum": ["Line3"] }
+        }
+      }
+    },
+    "faces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "surfaceSense", "loops"],
+        "properties": {
+          "surface": { "enum": ["Plane3"] },
+          "surfaceSense": { "enum": ["Forward", "Reversed"] },
+          "loops": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "coedges"],
+              "properties": {
+                "kind": { "enum": ["Outer"] },
+                "coedges": {
+                  "type": "array",
+                  "minItems": 3,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["edge", "sense"],
+                    "properties": {
+                      "edge": { "type": "integer", "minimum": 0 },
+                      "sense": { "enum": ["Forward", "Reversed"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "shells": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["faceUses"],
+        "properties": {
+          "faceUses": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["face", "sense"],
+              "properties": {
+                "face": { "type": "integer", "minimum": 0 },
+                "sense": { "enum": ["Forward", "Reversed"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "solids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["shellUses"],
+        "properties": {
+          "shellUses": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["shell", "role"],
+              "properties": {
+                "shell": { "type": "integer", "minimum": 0 },
+                "role": { "enum": ["Outer", "Cavity"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "topoIds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["solid", "shell", "faces", "edges", "vertices"],
+      "properties": {
+        "solid": { "$ref": "#/$defs/topoId" },
+        "shell": { "$ref": "#/$defs/topoId" },
+        "faces": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/topoId" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/topoId" }
+        },
+        "vertices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/topoId" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "topoId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    }
+  }
+}
