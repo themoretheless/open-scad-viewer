@@ -19,6 +19,7 @@
 pub const MAX_POINTS: usize = 16_384;
 
 pub use math_core::{Error, Result};
+use math_core::{cross2, sub2};
 pub use planar_geometry::{LayerSection, MAX_LAYERS};
 
 /// Bending moments about the section x/y axes and optional axial force.
@@ -140,20 +141,13 @@ fn extrema(section: &LayerSection, centroid: [f64; 2]) -> (f64, f64) {
     (max_x, max_y)
 }
 
-fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
-}
-
 fn winding(point: [f64; 2], contours: &[Vec<[f64; 2]>]) -> i32 {
     let mut winding = 0;
     for ring in contours {
         for i in 0..ring.len() {
             let a = ring[i];
             let b = ring[(i + 1) % ring.len()];
-            let c = cross2(
-                [b[0] - a[0], b[1] - a[1]],
-                [point[0] - a[0], point[1] - a[1]],
-            );
+            let c = cross2(sub2(b, a), sub2(point, a));
             if a[1] <= point[1] && b[1] > point[1] && c > 0.0 {
                 winding += 1;
             }

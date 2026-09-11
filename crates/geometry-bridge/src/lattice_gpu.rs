@@ -281,10 +281,6 @@ pub(crate) fn try_gpu(
                     },
                     &sdf_core::Grid { min, max, cells },
                 )
-                .map_err(|e| polygon_core::Error {
-                    code: e.code,
-                    message: e.message,
-                })
                 .map(crate::mesh_from_triangles)
                 .map(Some)
             })

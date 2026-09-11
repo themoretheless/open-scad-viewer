@@ -220,10 +220,7 @@ pub fn shell_options(
     let output = if adaptive {
         adaptive_tiles(field, &grid)?
     } else {
-        crate::mesh_from_triangles(sdf_core::polygonize_with(field, &grid).map_err(|e| Error {
-            code: e.code,
-            message: e.message,
-        })?)
+        crate::mesh_from_triangles(sdf_core::polygonize_with(field, &grid)?)
     };
     let report = output.inspect()?;
     if !report.closed || output.indices.is_empty() || report.signed_volume_mm3 <= 0. {
@@ -277,11 +274,8 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
                 "Adaptive Shell exceeds four million samples; increase grid step",
             ));
         }
-        let tile = sdf_core::polygonize_tile(&field, &sdf_core::Grid { min, max, cells }, false)
-            .map_err(|e| Error {
-                code: e.code,
-                message: e.message,
-            })?;
+        let tile =
+            sdf_core::polygonize_tile(&field, &sdf_core::Grid { min, max, cells }, false)?;
         let ids: Vec<usize> = tile
             .positions
             .as_chunks::<3>()
@@ -763,33 +757,19 @@ pub fn lattice_accelerated(
             )? {
                 Some(mesh) => mesh,
                 None => crate::mesh_from_triangles(
-                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })
-                        .map_err(|e| Error {
-                            code: e.code,
-                            message: e.message,
-                        })?,
+                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })?,
                 ),
             }
         } else {
             crate::mesh_from_triangles(
-                sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells }).map_err(
-                    |e| Error {
-                        code: e.code,
-                        message: e.message,
-                    },
-                )?,
+                sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })?,
             )
         }
         #[cfg(not(feature = "gpu"))]
         {
             let _ = acceleration;
             crate::mesh_from_triangles(
-                sdf_core::polygonize_with(field, &sdf_core::Grid { min, max, cells }).map_err(
-                    |e| Error {
-                        code: e.code,
-                        message: e.message,
-                    },
-                )?,
+                sdf_core::polygonize_with(field, &sdf_core::Grid { min, max, cells })?,
             )
         }
     };

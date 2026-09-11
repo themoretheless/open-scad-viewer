@@ -42,30 +42,12 @@ use polygon_core::{
 use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
 
-#[derive(Debug)]
-pub struct Error {
-    pub code: &'static str,
-    pub message: String,
+pub use math_core::{Error, Result};
+fn input(message: impl Into<String>) -> Error {
+    Error::new("GEOMETRY_INVALID_INPUT", message)
 }
-impl value_codec::Serialize for Error {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("code".into(), value_codec::Serialize::to_value(&self.code));
-        object.insert(
-            "message".into(),
-            value_codec::Serialize::to_value(&self.message),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-pub type Result<T> = std::result::Result<T, Error>;
-impl From<math_core::Error> for Error {
-    fn from(e: math_core::Error) -> Self {
-        Self {
-            code: e.code,
-            message: e.message,
-        }
-    }
+fn error_json(error: &Error) -> Value {
+    json!({"code": error.code, "message": error.message})
 }
 pub(crate) fn mesh_from_triangles(t: geometry_ops::Triangles) -> Mesh {
     Mesh {
@@ -80,12 +62,6 @@ pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
         indices: m.indices.clone(),
     }
 }
-fn input(message: impl Into<String>) -> Error {
-    Error {
-        code: "GEOMETRY_INVALID_INPUT",
-        message: message.into(),
-    }
-}
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
 }
@@ -95,7 +71,7 @@ fn encode(v: impl Serialize) -> Result<Value> {
 fn response(result: Result<Value>) -> String {
     match result {
         Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error}),
+        Err(error) => json!({"ok":false,"error":error_json(&error)}),
     }
     .to_string()
 }
@@ -121,13 +97,7 @@ impl ParametricSurface for NurbsSurfaceAdapter {
         ]
     }
     fn point(&self, u: f64, v: f64) -> polygon_core::Result<[f64; 3]> {
-        self.sampler
-            .evaluate(u, v)
-            .map(|e| e.point)
-            .map_err(|e| polygon_core::Error {
-                code: e.code,
-                message: e.message,
-            })
+        self.sampler.evaluate(u, v).map(|e| e.point)
     }
     fn boundary(&self) -> Boundary {
         let s = self.sampler.definition();

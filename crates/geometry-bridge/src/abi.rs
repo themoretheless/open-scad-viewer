@@ -53,7 +53,7 @@ fn packed(v: Value) -> u64 {
 fn geometry(result: Result<Value>) -> Value {
     match result {
         Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error}),
+        Err(error) => json!({"ok":false,"error":crate::error_json(&error)}),
     }
 }
 /// # Safety

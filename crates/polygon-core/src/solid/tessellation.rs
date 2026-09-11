@@ -1,6 +1,7 @@
 //! Parametric surface meshing and polygonal UV clipping. The sampler contract
 //! supports any surface implementation; this module knows nothing about NURBS.
 use crate::{BuiltMesh, Construction, MAX_TRIANGLES, Mesh, Result, Seams, check, error, norm, sub};
+use math_core::{cross2 as orient2, sub2};
 use std::collections::BTreeMap;
 pub type UV = [f64; 2];
 #[derive(Clone, Debug)]
@@ -122,7 +123,7 @@ fn same(a: UV, b: UV) -> bool {
     close(a[0], b[0]) && close(a[1], b[1])
 }
 fn cross2(a: UV, b: UV, c: UV) -> f64 {
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    orient2(sub2(b, a), sub2(c, a))
 }
 fn area(p: &[UV]) -> f64 {
     p.iter()
