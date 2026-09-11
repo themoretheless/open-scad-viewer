@@ -196,7 +196,8 @@ export function analyzeLatticePrintability(
  const orientations = suggestPrintOrientation(o, p)
  const preferredAxis = orientations[0]?.axis ?? 'z'
  const bridge = bridgeSpanMm(o)
- const oh = overhangRisk(o, preferredAxis, maxOh)
+ // Risk for the current lattice axis vs build-Z (not the recommended axis).
+ const oh = overhangRisk(o, isSpatialPattern(o.pattern) ? preferredAxis : (o.axis ?? 'z'), maxOh)
  const issues: PrintIssue[] = []
  const tips: {ru: string; en: string}[] = []
 
