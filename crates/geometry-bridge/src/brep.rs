@@ -23,7 +23,7 @@ pub(crate) fn weld(mesh: Mesh, tolerance: f64) -> Result<Mesh> {
     let mut positions = Vec::<f64>::new();
     let mut cells = BTreeMap::<[i64; 3], Vec<usize>>::new();
     let mut remap = vec![];
-    for p in mesh.positions.chunks_exact(3) {
+    for p in mesh.positions.as_chunks::<3>().0 {
         let cell = [
             (p[0] / tolerance).floor() as i64,
             (p[1] / tolerance).floor() as i64,
@@ -115,7 +115,7 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
             )?;
             let base = mesh.positions.len() / 3;
             mesh.positions.extend(&built.mesh.positions);
-            for t in built.mesh.indices.chunks_exact(3) {
+            for t in built.mesh.indices.as_chunks::<3>().0 {
                 let t = if u.reversed {
                     [t[0], t[2], t[1]]
                 } else {

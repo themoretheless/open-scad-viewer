@@ -6,7 +6,7 @@
 //! CUDA hardware class is covered through Vulkan.
 
 pub(crate) use gpu_compute::{
-    pack_f32, read_buffer, storage_entry, uniform_entry, wgpu, GpuContext,
+    GpuContext, pack_f32, read_buffer, storage_entry, uniform_entry, wgpu,
 };
 
 pub mod matching;

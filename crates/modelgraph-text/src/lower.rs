@@ -3,7 +3,7 @@ use crate::parser::{Statement, number};
 use crate::value::json;
 use std::{collections::BTreeSet as Set, rc::Rc};
 use value_codec::Value as J;
-type R<T> = Result<T, String>;
+type R<T> = crate::Result<T>;
 type Env = Map<String, V>;
 type Types = Map<String, J>;
 #[derive(Clone)]
@@ -66,7 +66,7 @@ fn typename(t: &J) -> String {
 }
 fn substitute(t: &J, bs: &Types, depth: usize) -> R<J> {
     if depth > 16 {
-        return Err("Type substitution depth exceeds 16".into());
+        return Err(crate::error("Type substitution depth exceeds 16"));
     }
     if let Some(x) = bs.get(s(t, "name")) {
         return Ok(x.clone());
@@ -98,7 +98,7 @@ fn scalar(v: V) -> R<J> {
         {
             Ok(j)
         }
-        _ => Err("Expected scalar".into()),
+        _ => Err(crate::error("Expected scalar")),
     }
 }
 fn expression(v: V) -> R<J> {
@@ -123,7 +123,7 @@ fn list(v: V) -> R<J> {
         V::Array(_) => expression(v),
         V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
         V::Json(j) if j.get("geometry").is_none() && j.get("text").is_none() => Ok(j.clone()),
-        _ => Err("Expected a sequence".into()),
+        _ => Err(crate::error("Expected a sequence")),
     }
 }
 fn raw(v: V) -> R<J> {
@@ -131,7 +131,7 @@ fn raw(v: V) -> R<J> {
         V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
         V::Json(j) => Ok(j),
         V::Array(a) => a.into_iter().map(raw).collect::<R<Vec<_>>>().map(J::Array),
-        _ => Err("Expected numeric geometry argument".into()),
+        _ => Err(crate::error("Expected numeric geometry argument")),
     }
 }
 struct Compiler {
@@ -154,7 +154,7 @@ struct Compiler {
 impl Compiler {
     fn add(&mut self, mut node: J) -> R<V> {
         if self.nodes.len() >= 128 {
-            return Err("At most 128 geometry nodes".into());
+            return Err(crate::error("At most 128 geometry nodes"));
         }
         self.serial += 1;
         let id = format!("n{}", self.serial);
@@ -204,7 +204,7 @@ impl Compiler {
                 self.collections.insert(id.clone());
                 Ok(id)
             }
-            _ => Err("Expected geometry".into()),
+            _ => Err(crate::error("Expected geometry")),
         }
     }
     fn mark(&mut self, v: &J) {
@@ -219,7 +219,7 @@ impl Compiler {
     }
     fn eval(&mut self, a: &J, e: &Env, b: usize) -> R<V> {
         if b > 64 {
-            return Err("Function expansion exceeds 64".into());
+            return Err(crate::error("Function expansion exceeds 64"));
         }
         let b = b + 1;
         let name = s(a, "value");
@@ -228,9 +228,11 @@ impl Compiler {
             "function" => {
                 for generic in arr(a, "generics") {
                     for bound in arr(&a["bounds"], generic.as_str().unwrap()) {
-                        let name = bound.as_str().ok_or("Invalid trait constraint")?;
+                        let name = bound
+                            .as_str()
+                            .ok_or_else(|| crate::error("Invalid trait constraint"))?;
                         if !self.traits.contains_key(name) {
-                            return Err(format!("Unknown trait {name}"));
+                            return Err(crate::error(format!("Unknown trait {name}")));
                         }
                     }
                 }
@@ -259,7 +261,9 @@ impl Compiler {
             "with" => {
                 let base = self.eval(&a["left"], e, b)?;
                 let V::Record(mut fields, nominal, marker, bounds) = base else {
-                    return Err("with requires a record or structure with known fields".into());
+                    return Err(crate::error(
+                        "with requires a record or structure with known fields",
+                    ));
                 };
                 let original = V::Record(fields.clone(), nominal.clone(), marker, bounds.clone());
                 let declared_fields = nominal.as_ref().map(|t| self.type_fields(t)).transpose()?;
@@ -268,9 +272,12 @@ impl Compiler {
                     let key = s(update, "name");
                     let old = fields
                         .get(key)
-                        .ok_or_else(|| format!("with: unknown field {key}"))?;
+                        .ok_or_else(|| crate::error(format!("with: unknown field {key}")))?;
                     let expected = if let Some(declared) = &declared_fields {
-                        declared.get(key).cloned().ok_or("Missing declared field")?
+                        declared
+                            .get(key)
+                            .cloned()
+                            .ok_or_else(|| crate::error("Missing declared field"))?
                     } else {
                         self.infer_type(old)?
                     };
@@ -313,11 +320,11 @@ impl Compiler {
                 return match v {
                     V::Record(mut r, _, _, _) => r
                         .shift_remove(name)
-                        .ok_or_else(|| format!("Unknown record field {name}")),
+                        .ok_or_else(|| crate::error(format!("Unknown record field {name}"))),
                     V::Json(j) if j.get("geometry").is_none() => {
                         Ok(V::Json(json!({"op":"field","input":j,"name":name})))
                     }
-                    _ => Err(format!("Unknown record field {name}")),
+                    _ => Err(crate::error(format!("Unknown record field {name}"))),
                 };
             }
             "number" => {
@@ -335,7 +342,7 @@ impl Compiler {
                 return e
                     .get(name)
                     .cloned()
-                    .ok_or_else(|| format!("Unknown name {name}"));
+                    .ok_or_else(|| crate::error(format!("Unknown name {name}")));
             }
             "array" => {
                 return arr(a, "items")
@@ -349,7 +356,7 @@ impl Compiler {
                 let index = scalar(self.eval(&a["right"], e, b)?)?;
                 if is_geometry(&value) {
                     let V::Array(items) = value else {
-                        return Err("Indexing requires a list".into());
+                        return Err(crate::error("Indexing requires a list"));
                     };
                     let mut arms = Vec::new();
                     for (i, item) in items.into_iter().enumerate() {
@@ -403,7 +410,9 @@ impl Compiler {
                     let bindings = binding_names(&pattern);
                     for name in &bindings {
                         if !names.insert(name.to_string()) {
-                            return Err(format!("Duplicate match body binding {name}"));
+                            return Err(crate::error(format!(
+                                "Duplicate match body binding {name}"
+                            )));
                         }
                     }
                     let value = self.eval(&item["value"], &scope, b)?;
@@ -422,9 +431,9 @@ impl Compiler {
                 let no = self.eval(&a["items"][1], e, b)?;
                 if is_geometry(&yes) || is_geometry(&no) {
                     if !is_geometry(&yes) || !is_geometry(&no) {
-                        return Err(
-                            "Conditional branches must both be geometry or both be values".into(),
-                        );
+                        return Err(crate::error(
+                            "Conditional branches must both be geometry or both be values",
+                        ));
                     }
                     let y = self.geometry(yes)?;
                     let n = self.geometry(no)?;
@@ -436,10 +445,10 @@ impl Compiler {
                     }
                     return Ok(result);
                 }
-                if let (V::Array(y), V::Array(n)) = (&yes, &no) {
-                    if y.len() == n.len() {
-                        return y.iter().cloned().zip(n.iter().cloned()).map(|(y,n)|Ok(V::Json(json!({"op":"if","condition":&condition,"then":expression(y)?,"else":expression(n)?})))).collect::<R<Vec<_>>>().map(V::Array);
-                    }
+                if let (V::Array(y), V::Array(n)) = (&yes, &no)
+                    && y.len() == n.len()
+                {
+                    return y.iter().cloned().zip(n.iter().cloned()).map(|(y,n)|Ok(V::Json(json!({"op":"if","condition":&condition,"then":expression(y)?,"else":expression(n)?})))).collect::<R<Vec<_>>>().map(V::Array);
                 }
                 let seq = matches!(&yes, V::Array(_))
                     || matches!(&no, V::Array(_))
@@ -519,9 +528,9 @@ impl Compiler {
                 let args = arr(&call, "args");
                 let first = args
                     .first()
-                    .ok_or("Qualified trait call requires a receiver")?;
+                    .ok_or_else(|| crate::error("Qualified trait call requires a receiver"))?;
                 if first.get("name").is_some() {
-                    return Err("Qualified trait receiver must be positional".into());
+                    return Err(crate::error("Qualified trait receiver must be positional"));
                 }
                 let receiver = self.eval(&first["value"], e, b)?;
                 call["args"] = json!(args[1..].to_vec());
@@ -546,13 +555,15 @@ impl Compiler {
             (a, None)
         };
         if s(call, "kind") != "call" {
-            return Err("Expected a call".into());
+            return Err(crate::error("Expected a call"));
         }
         let name = s(call, "value");
         let args = arr(call, "args");
         if ["zip", "enumerate", "length", "at"].contains(&name) {
             if input.is_some() || args.iter().any(|a| a.get("name").is_some()) {
-                return Err("Sequence functions require positional arguments".into());
+                return Err(crate::error(
+                    "Sequence functions require positional arguments",
+                ));
             }
             let mut values = args
                 .iter()
@@ -560,14 +571,14 @@ impl Compiler {
                 .collect::<R<Vec<_>>>()?;
             if name == "zip" {
                 if !(2..=8).contains(&values.len()) {
-                    return Err("zip expects 2..8 sequences".into());
+                    return Err(crate::error("zip expects 2..8 sequences"));
                 }
                 return Ok(V::Json(
                     json!({"sequence":{"op":"zip","inputs":values.into_iter().map(list).collect::<R<Vec<_>>>()?}}),
                 ));
             }
             if values.len() != if name == "at" { 2 } else { 1 } {
-                return Err("Invalid sequence function arity".into());
+                return Err(crate::error("Invalid sequence function arity"));
             }
             let seq = list(values.remove(0))?;
             return Ok(V::Json(match name {
@@ -578,13 +589,13 @@ impl Compiler {
         }
         if name == "repeat" {
             if input.is_some() || args.len() != 2 || args.iter().any(|a| a.get("name").is_some()) {
-                return Err("repeat(count, i => geometry) expected".into());
+                return Err(crate::error("repeat(count, i => geometry) expected"));
             }
             let count = scalar(self.eval(&args[0]["value"], e, b)?)?;
             self.mark(&count);
             let (f, value) = self.callback(&args[1]["value"], e, b, 1)?;
             if arr(&f, "parameters").len() != 1 {
-                return Err("repeat callback requires one index parameter".into());
+                return Err(crate::error("repeat callback requires one index parameter"));
             }
             let id = self.geometry(value)?;
             return self
@@ -597,7 +608,7 @@ impl Compiler {
                         || args.len() != f.parameters.len()
                         || args.iter().any(|a| a.get("name").is_some())
                     {
-                        return Err("Lambda argument count mismatch".into());
+                        return Err(crate::error("Lambda argument count mismatch"));
                     }
                     let mut scope = f.env.clone();
                     for (name, arg) in f.parameters.iter().zip(args) {
@@ -607,10 +618,9 @@ impl Compiler {
                 }
                 V::Function(f) => {
                     if input.is_some() {
-                        return Err(
-                            "Block functions are called directly, not through geometry pipelines"
-                                .into(),
-                        );
+                        return Err(crate::error(
+                            "Block functions are called directly, not through geometry pipelines",
+                        ));
                     }
                     return self.invoke(f, call, e, b);
                 }
@@ -630,12 +640,12 @@ impl Compiler {
     }
     fn comprehension(&mut self, a: &J, offset: usize, outer: &Env, b: usize) -> R<V> {
         if b > 64 {
-            return Err("Function expansion exceeds 64".into());
+            return Err(crate::error("Function expansion exceeds 64"));
         }
         let clauses = arr(a, "items");
         let clause = &clauses[offset];
         if s(clause, "kind") != "for" {
-            return Err("Generator must start with for".into());
+            return Err(crate::error("Generator must start with for"));
         }
         let mut input = list(self.eval(&clause["left"], outer, b)?)?;
         self.serial += 1;
@@ -749,12 +759,11 @@ impl Compiler {
                 None
             };
             if args.iter().any(|(n, _)| n.is_some()) {
-                return Err(if name.starts_with("sdf_") {
+                return Err(crate::error(if name.starts_with("sdf_") {
                     "SDF operands are positional; smooth radius is named"
                 } else {
                     "Boolean arguments are positional"
-                }
-                .into());
+                }));
             }
             let mut inputs = Vec::new();
             if let Some(i) = input {
@@ -764,18 +773,20 @@ impl Compiler {
                 inputs.push(self.geometry(v)?)
             }
             if name.starts_with("sdf_") && (inputs.len() != 2 || smooth && radius.is_none()) {
-                return Err(
-                    "SDF operation requires two fields; smooth union also requires radius".into(),
-                );
+                return Err(crate::error(
+                    "SDF operation requires two fields; smooth union also requires radius",
+                ));
             }
             if name.starts_with("mesh_") {
                 if inputs.len() != 2 {
-                    return Err("Mesh Boolean operation requires exactly two meshes".into());
+                    return Err(crate::error(
+                        "Mesh Boolean operation requires exactly two meshes",
+                    ));
                 }
                 return self.add(json!({"op":"mesh_boolean","inputs":inputs,"operation":match name{"mesh_union"=>"union","mesh_intersection"=>"intersection",_=>"difference"}}));
             }
             if inputs.is_empty() && ["union", "intersection", "subtract", "hull"].contains(&name) {
-                return Err("Boolean operation needs geometry".into());
+                return Err(crate::error("Boolean operation needs geometry"));
             }
             let mut node = if name == "subtract" {
                 json!({"op":"difference","base":&inputs[0],"subtract":&inputs[1..]})
@@ -809,7 +820,7 @@ impl Compiler {
             if args.iter().any(|(n, _)| {
                 !matches!(n.as_deref(), Some("x" | "y" | "z")) || !names.insert(n.clone())
             }) {
-                return Err("Use unique x/y/z arguments or one vector".into());
+                return Err(crate::error("Use unique x/y/z arguments or one vector"));
             }
             let vec = ["x", "y", "z"]
                 .iter()
@@ -826,21 +837,22 @@ impl Compiler {
         }
         if name == "offset" && args.iter().any(|(n, _)| n.as_deref() == Some("delta")) {
             if input.is_none() || args.len() != 1 || args[0].0.as_deref() != Some("delta") {
-                return Err(
-                    "offset(delta: distance) requires one argument and piped geometry".into(),
-                );
+                return Err(crate::error(
+                    "offset(delta: distance) requires one argument and piped geometry",
+                ));
             }
             return self.add(json!({"op":"offset","input":input,"distance":raw(args.remove(0).1)?,"mode":"delta"}));
         }
-        let sig = signature(name).ok_or_else(|| format!("Unknown operation {name}"))?;
+        let sig =
+            signature(name).ok_or_else(|| crate::error(format!("Unknown operation {name}")))?;
         let mut node = json!({"op":name});
         for (i, (n, v)) in args.into_iter().enumerate() {
             let key = n
                 .as_deref()
                 .or_else(|| sig.get(i).copied())
-                .ok_or("Unknown or duplicate argument")?;
+                .ok_or_else(|| crate::error("Unknown or duplicate argument"))?;
             if !sig.contains(&key) || node.get(key).is_some() {
-                return Err("Unknown or duplicate argument".into());
+                return Err(crate::error("Unknown or duplicate argument"));
             }
             node[key] = raw(v)?
         }
@@ -873,15 +885,19 @@ impl Compiler {
         ]
         .contains(&name);
         if modifier && input.is_none() {
-            return Err(format!("{name} requires piped geometry"));
+            return Err(crate::error(format!("{name} requires piped geometry")));
         }
         if !modifier && input.is_some() {
-            return Err(format!("{name} does not accept piped geometry"));
+            return Err(crate::error(format!(
+                "{name} does not accept piped geometry"
+            )));
         }
         if let Some(i) = input {
             let collection = self.collections.contains(&i);
             if collection && !["translate", "rotate", "scale", "mirror"].contains(&name) {
-                return Err("Transform each generated part inside the generator, or explicitly union the collection first".into());
+                return Err(crate::error(
+                    "Transform each generated part inside the generator, or explicitly union the collection first",
+                ));
             }
             node["input"] = json!(i);
             let result = self.add(node)?;
@@ -899,7 +915,7 @@ impl Compiler {
         if name == "$record" {
             for field in t["fields"]
                 .as_object()
-                .ok_or("Invalid record type")?
+                .ok_or_else(|| crate::error("Invalid record type"))?
                 .values()
             {
                 self.validate(field, g, visiting)?;
@@ -908,31 +924,33 @@ impl Compiler {
         }
         if g.contains(name) {
             if !args.is_empty() {
-                return Err("Generic parameter cannot have type arguments".into());
+                return Err(crate::error("Generic parameter cannot have type arguments"));
             }
             return Ok(());
         }
         if ["int", "f32", "f64", "str", "length", "angle", "Geometry"].contains(&name) {
             if !args.is_empty() {
-                return Err(format!("Type {name} takes no arguments"));
+                return Err(crate::error(format!("Type {name} takes no arguments")));
             }
             return Ok(());
         }
         if name == "Vec" {
             if args.len() != 1 {
-                return Err("Vec requires one element type".into());
+                return Err(crate::error("Vec requires one element type"));
             }
             return self.validate(&args[0], g, visiting);
         }
         let def = self
             .structs
             .get(name)
-            .ok_or_else(|| format!("Unknown type {name}"))?;
+            .ok_or_else(|| crate::error(format!("Unknown type {name}")))?;
         if visiting.contains(name) {
-            return Err("Recursive value structures are not supported".into());
+            return Err(crate::error("Recursive value structures are not supported"));
         }
         if args.len() != arr(def, "generics").len() {
-            return Err(format!("Wrong type argument count for {name}"));
+            return Err(crate::error(format!(
+                "Wrong type argument count for {name}"
+            )));
         }
         for a in args {
             self.validate(a, g, visiting)?
@@ -952,22 +970,24 @@ impl Compiler {
                 return Ok(json!({"name":"$record","args":[],"fields":J::Object(types)}));
             }
             V::Array(a) => {
-                let first = a.first().ok_or(
-                    "Cannot infer element type of an empty vector; specify generic arguments",
-                )?;
+                let first = a.first().ok_or_else(|| {
+                    crate::error(
+                        "Cannot infer element type of an empty vector; specify generic arguments",
+                    )
+                })?;
                 let element = self.infer_type(first)?;
                 for v in a {
                     if typename(&self.infer_type(v)?) != typename(&element) {
-                        return Err("Generic vector requires one element type".into());
+                        return Err(crate::error("Generic vector requires one element type"));
                     }
                 }
                 return Ok(ty("Vec", vec![element]));
             }
             V::Json(j) => {
-                if let Some(sequence) = j.get("sequence") {
-                    if ["typed_value", "checked", "memo"].contains(&s(sequence, "op")) {
-                        return self.infer_type(&V::Json(sequence.clone()));
-                    }
+                if let Some(sequence) = j.get("sequence")
+                    && ["typed_value", "checked", "memo"].contains(&s(sequence, "op"))
+                {
+                    return self.infer_type(&V::Json(sequence.clone()));
                 }
                 if s(j, "op") == "negate" {
                     return self.infer_type(&V::Json(j["value"].clone()));
@@ -1024,7 +1044,7 @@ impl Compiler {
                         .parameters
                         .iter()
                         .find(|p| s(p, "id") == id)
-                        .ok_or("Unknown parameter")?;
+                        .ok_or_else(|| crate::error("Unknown parameter"))?;
                     if p.get("unit").is_some() {
                         if ["deg", "rad"].contains(&s(p, "unit")) {
                             "angle"
@@ -1049,24 +1069,24 @@ impl Compiler {
     }
     fn check_type(&mut self, v: V, t: &J, bs: &Types, label: &str, level: usize) -> R<V> {
         if level > 16 {
-            return Err("Record type nesting exceeds 16".into());
+            return Err(crate::error("Record type nesting exceeds 16"));
         }
         let t = substitute(t, bs, 0)?;
         let name = s(&t, "name");
         if name == "$record" {
             let V::Record(mut fields, nominal, marker, bounds) = v else {
-                return Err(format!("{label}: expected record"));
+                return Err(crate::error(format!("{label}: expected record")));
             };
             let expected = t["fields"]
                 .as_object()
-                .ok_or("Invalid structural record type")?;
+                .ok_or_else(|| crate::error("Invalid structural record type"))?;
             if fields.len() != expected.len() {
-                return Err(format!("{label}: record fields must match"));
+                return Err(crate::error(format!("{label}: record fields must match")));
             }
             for (key, field_type) in expected {
                 let value = fields
                     .shift_remove(key.as_str())
-                    .ok_or_else(|| format!("{label}: missing field {key}"))?;
+                    .ok_or_else(|| crate::error(format!("{label}: missing field {key}")))?;
                 fields.insert(
                     key.clone(),
                     self.check_type(value, field_type, bs, &format!("{label}.{key}"), level + 1)?,
@@ -1087,7 +1107,7 @@ impl Compiler {
         }
         if name == "str" {
             if !matches!(&v,V::Json(j) if j.get("text").is_some()) {
-                return Err(format!("{label}: expected str"));
+                return Err(crate::error(format!("{label}: expected str")));
             }
             return Ok(v);
         }
@@ -1099,67 +1119,72 @@ impl Compiler {
             let v = scalar(v)?;
             if let Some(n) = v.as_f64() {
                 if name == "int" && n.fract() != 0.0 {
-                    return Err(format!("{label}: expected int"));
+                    return Err(crate::error(format!("{label}: expected int")));
                 }
                 if name == "length" || name == "angle" {
-                    return Err(format!("{label}: expected {name} units"));
+                    return Err(crate::error(format!("{label}: expected {name} units")));
                 }
             }
             if s(&v, "op") == "quantity" && name != "length" && name != "angle" {
-                return Err(format!("{label}: expected dimensionless {name}"));
+                return Err(crate::error(format!(
+                    "{label}: expected dimensionless {name}"
+                )));
             }
             return Ok(V::Json(json!({"op":"typed","type":name,"value":v})));
         }
         if name == "Vec" {
-            if let V::Array(a) = v {
-                if arr(&t, "args").len() == 1 {
-                    return a
-                        .into_iter()
-                        .enumerate()
-                        .map(|(i, v)| {
-                            self.check_type(
-                                v,
-                                &t["args"][0],
-                                bs,
-                                &format!("{label}[{i}]"),
-                                level + 1,
-                            )
-                        })
-                        .collect::<R<Vec<_>>>()
-                        .map(V::Array);
-                }
+            if let V::Array(a) = v
+                && arr(&t, "args").len() == 1
+            {
+                return a
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        self.check_type(v, &t["args"][0], bs, &format!("{label}[{i}]"), level + 1)
+                    })
+                    .collect::<R<Vec<_>>>()
+                    .map(V::Array);
             }
-            return Err(format!("{label}: expected {} literal vector", typename(&t)));
+            return Err(crate::error(format!(
+                "{label}: expected {} literal vector",
+                typename(&t)
+            )));
         }
-        let def = self
-            .structs
-            .get(name)
-            .cloned()
-            .ok_or_else(|| format!("{label}: unknown or incomplete type {}", typename(&t)))?;
-        if arr(&t, "args").len() != arr(&def, "generics").len() {
-            return Err(format!(
+        let def = self.structs.get(name).cloned().ok_or_else(|| {
+            crate::error(format!(
                 "{label}: unknown or incomplete type {}",
                 typename(&t)
-            ));
+            ))
+        })?;
+        if arr(&t, "args").len() != arr(&def, "generics").len() {
+            return Err(crate::error(format!(
+                "{label}: unknown or incomplete type {}",
+                typename(&t)
+            )));
         }
         let V::Record(mut r, old, _, bounds) = v else {
-            return Err(format!("{label}: expected {} record", typename(&t)));
+            return Err(crate::error(format!(
+                "{label}: expected {} record",
+                typename(&t)
+            )));
         };
-        if let Some(old) = old {
-            if typename(&old) != typename(&t) {
-                return Err(format!(
-                    "{label}: expected {}, got {}",
-                    typename(&t),
-                    typename(&old)
-                ));
-            }
+        if let Some(old) = old
+            && typename(&old) != typename(&t)
+        {
+            return Err(crate::error(format!(
+                "{label}: expected {}, got {}",
+                typename(&t),
+                typename(&old)
+            )));
         }
         if r.len() != arr(&def, "fields").len()
             || arr(&def, "fields")
                 .iter()
                 .any(|f| !r.contains_key(s(f, "name")))
         {
-            return Err(format!("{label}: fields must exactly match {name}"));
+            return Err(crate::error(format!(
+                "{label}: fields must exactly match {name}"
+            )));
         }
         let types = arr(&def, "generics")
             .iter()
@@ -1187,7 +1212,7 @@ impl Compiler {
         if s(t, "name") == "$record" {
             return Ok(t["fields"]
                 .as_object()
-                .ok_or("Invalid structural type")?
+                .ok_or_else(|| crate::error("Invalid structural type"))?
                 .iter()
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect());
@@ -1195,7 +1220,7 @@ impl Compiler {
         let def = self
             .structs
             .get(s(t, "name"))
-            .ok_or("Expected a record type")?;
+            .ok_or_else(|| crate::error("Expected a record type"))?;
         let bs: Types = arr(def, "generics")
             .iter()
             .zip(arr(t, "args"))
@@ -1208,11 +1233,11 @@ impl Compiler {
     }
     fn invoke(&mut self, f: &Function, call: &J, caller: &Env, b: usize) -> R<V> {
         if b > 64 {
-            return Err("Function expansion exceeds 64".into());
+            return Err(crate::error("Function expansion exceeds 64"));
         }
         self.expansions += 1;
         if self.expansions > 256 {
-            return Err("Block function call expansion exceeds 256".into());
+            return Err(crate::error("Block function call expansion exceeds 256"));
         }
         let def = &f.ast;
         let mut bs = f.types.clone();
@@ -1228,7 +1253,7 @@ impl Compiler {
         let explicit = call.get("types").is_some();
         if explicit {
             if arr(call, "types").len() != arr(def, "generics").len() {
-                return Err("Wrong generic argument count".into());
+                return Err(crate::error("Wrong generic argument count"));
             }
             for (t, g) in arr(call, "types").iter().zip(arr(def, "generics")) {
                 let resolved = substitute(t, &self.active, 0)?;
@@ -1239,7 +1264,7 @@ impl Compiler {
         let args = arr(call, "args");
         let inputs = arr(def, "inputs");
         if args.len() > inputs.len() {
-            return Err("Function argument count mismatch".into());
+            return Err(crate::error("Function argument count mismatch"));
         }
         let named = args.iter().any(|a| a.get("name").is_some());
         let mut names = Set::new();
@@ -1250,7 +1275,9 @@ impl Compiler {
                     || !inputs.iter().any(|f| s(f, "name") == s(a, "name"))
             })
         {
-            return Err("Named arguments must exactly match parameters".into());
+            return Err(crate::error(
+                "Named arguments must exactly match parameters",
+            ));
         }
         // Defaults see the declaration environment and already-bound parameters,
         // while explicitly supplied arguments see the caller's environment.
@@ -1270,9 +1297,9 @@ impl Compiler {
                 self.active = previous;
                 value?
             } else {
-                return Err(format!(
+                return Err(crate::error(format!(
                     "Function argument count mismatch: missing required argument {name}"
-                ));
+                )));
             };
             if !generic.is_empty() && !explicit {
                 infer(
@@ -1287,23 +1314,24 @@ impl Compiler {
             let value =
                 self.check_type(value, &field["type"], &bs, &format!("argument {name}"), 0)?;
             let mut value = self.constrain_receiver(value, &field["type"], &def["bounds"], 0)?;
-            if name == "self" {
-                if let (Some(owner), V::Record(_, _, _, bounds)) =
+            if name == "self"
+                && let (Some(owner), V::Record(_, _, _, bounds)) =
                     (def["traitOwner"].as_str(), &mut value)
-                {
-                    *bounds = vec![owner.into()];
-                }
+            {
+                *bounds = vec![owner.into()];
             }
             scope.insert(name.into(), value);
         }
         for g in &generic {
             if !bs.contains_key(g) {
-                return Err(format!("Cannot infer {g}; provide explicit type arguments"));
+                return Err(crate::error(format!(
+                    "Cannot infer {g}; provide explicit type arguments"
+                )));
             }
         }
         self.resolve_function_bounds(def, &mut bs)?;
         let previous = std::mem::replace(&mut self.active, bs.clone());
-        let result = (|| {
+        let result: R<V> = try {
             let mut locals: Set<String> = inputs.iter().map(|f| s(f, "name").into()).collect();
             let mut statement_checks = Vec::new();
             for st in arr(def, "items") {
@@ -1327,7 +1355,7 @@ impl Compiler {
                 };
                 for name in names {
                     if !locals.insert(name.into()) {
-                        return Err(format!("Duplicate local {name}"));
+                        do yeet crate::error(format!("Duplicate local {name}"));
                     }
                     scope.shift_remove(name);
                 }
@@ -1338,21 +1366,21 @@ impl Compiler {
             let result = self.eval(&def["left"], &scope, b + 1)?;
             let output = if flag(def, "inferResult") {
                 if matches!(result, V::Void(_)) {
-                    return Err("A result expression cannot return a no-result function".into());
+                    do yeet crate::error("A result expression cannot return a no-result function");
                 }
                 result
             } else if flag(def, "singleResult") {
                 self.check_type(result, &def["outputs"][0]["type"], &bs, "result", 0)?
             } else {
                 let V::Record(mut r, _, _, _) = result else {
-                    return Err("ret must return named fields".into());
+                    do yeet crate::error("ret must return named fields");
                 };
                 if r.len() != arr(def, "outputs").len()
                     || arr(def, "outputs")
                         .iter()
                         .any(|f| !r.contains_key(s(f, "name")))
                 {
-                    return Err("ret fields must exactly match named results".into());
+                    do yeet crate::error("ret fields must exactly match named results");
                 }
                 let mut out = Map::new();
                 for field in arr(def, "outputs") {
@@ -1377,14 +1405,15 @@ impl Compiler {
             checks.extend(statement_checks);
             gather(&output, &mut checks);
             if checks.len() > 256 {
-                return Err("Function type checks exceed 256".into());
+                do yeet crate::error("Function type checks exceed 256");
             }
             if flag(def, "voidResult") {
-                return Ok(V::Void(checks));
+                V::Void(checks)
+            } else {
+                let output = self.protect(output, &checks)?;
+                self.memo_value(output)?
             }
-            let output = self.protect(output, &checks)?;
-            self.memo_value(output)
-        })();
+        };
         self.active = previous;
         result
     }
@@ -1560,7 +1589,7 @@ impl Compiler {
                 || args[0].get("name").is_some()
                 || s(&args[0]["value"], "kind") != "string"
             {
-                return Err("message requires one string".into());
+                return Err(crate::error("message requires one string"));
             }
             message = s(&args[0]["value"], "value").into();
             chain.pop();
@@ -1580,7 +1609,9 @@ impl Compiler {
         if measurement {
             let args = arr(&subject["left"], "args");
             if kind != "assert" || args.len() != 1 || args[0].get("name").is_some() {
-                return Err("assert measure(root).height/width/depth expected".into());
+                return Err(crate::error(
+                    "assert measure(root).height/width/depth expected",
+                ));
             }
             let v = self.eval(&args[0]["value"], e, 0)?;
             target = Some(self.geometry(v)?)
@@ -1588,7 +1619,7 @@ impl Compiler {
             let v = self.eval(subject, e, 0)?;
             if matches!(&v,V::Json(j) if j.get("geometry").is_some()) {
                 if kind != "assert" {
-                    return Err("Use assert for geometry".into());
+                    return Err(crate::error("Use assert for geometry"));
                 }
                 target = Some(self.geometry(v)?)
             } else {
@@ -1612,15 +1643,15 @@ impl Compiler {
                         || args[0].get("name").is_some()
                         || (args.len() == 2 && s(&args[1], "name") != "tolerance")
                     {
-                        return Err(
-                            "Measurement requires approximately(value, tolerance: value)".into(),
-                        );
+                        return Err(crate::error(
+                            "Measurement requires approximately(value, tolerance: value)",
+                        ));
                     }
                 } else if !["hasBodies", "isWatertight", "hasNoDegenerateTriangles"].contains(&rule)
                     || named
                     || args.len() != if rule == "hasBodies" { 1 } else { 0 }
                 {
-                    return Err("Unknown geometry check or invalid arguments".into());
+                    return Err(crate::error("Unknown geometry check or invalid arguments"));
                 }
                 let id = self.check_id("g");
                 let mut check = json!({"id":id,"target":target,"check":if measurement{s(subject,"value")}else{rule},"message":&message});
@@ -1633,7 +1664,7 @@ impl Compiler {
                 self.checks.push(check)
             } else if rule == "between" {
                 if values.len() != 2 || named {
-                    return Err("between(min,max) expected".into());
+                    return Err(crate::error("between(min,max) expected"));
                 }
                 for (v, relation) in values.into_iter().zip(["ge", "le"]) {
                     let id = self.check_id("v");
@@ -1654,7 +1685,7 @@ impl Compiler {
                     || args[0].get("name").is_some()
                     || (args.len() == 2 && s(&args[1], "name") != "tolerance")
                 {
-                    return Err("Unknown scalar check or invalid arguments".into());
+                    return Err(crate::error("Unknown scalar check or invalid arguments"));
                 }
                 let id = self.check_id("v");
                 let mut check = json!({"id":id,"left":&left,"relation":relation,"right":&values[0],"message":&message});
@@ -1705,11 +1736,11 @@ fn infer(expected: &J, actual: &J, g: &Set<String>, bs: &mut Types, explicit: bo
     if g.contains(name) {
         if let Some(old) = bs.get(name) {
             if !explicit && typename(old) != typename(actual) {
-                return Err(format!(
+                return Err(crate::error(format!(
                     "Conflicting inference for {name}: {} and {}",
                     typename(old),
                     typename(actual)
-                ));
+                )));
             }
         } else {
             bs.insert(name.into(), actual.clone());
@@ -1734,12 +1765,12 @@ fn binding_names(pattern: &J) -> Vec<&str> {
 impl Compiler {
     fn bind(&mut self, p: &J, v: V, e: &mut Env) -> R<Vec<J>> {
         if matches!(&v, V::Void(_)) {
-            return Err("Function has no return value".into());
+            return Err(crate::error("Function has no return value"));
         }
         if s(p, "kind") == "name" {
             let name = s(p, "value");
             if e.contains_key(name) {
-                return Err(format!("Duplicate name {name}"));
+                return Err(crate::error(format!("Duplicate name {name}")));
             }
             e.insert(name.into(), v);
             return Ok(Vec::new());
@@ -1748,15 +1779,15 @@ impl Compiler {
             let items = arr(p, "items");
             for item in items {
                 if e.contains_key(s(item, "value")) {
-                    return Err(format!("Duplicate name {}", s(item, "value")));
+                    return Err(crate::error(format!("Duplicate name {}", s(item, "value"))));
                 }
             }
             if let V::Array(values) = v {
                 if values.len() != items.len() {
-                    return Err(format!(
+                    return Err(crate::error(format!(
                         "List destructuring requires exactly {} elements",
                         items.len()
-                    ));
+                    )));
                 }
                 for (item, value) in items.iter().zip(values) {
                     e.insert(s(item, "value").into(), value);
@@ -1772,15 +1803,15 @@ impl Compiler {
             return Ok(vec![check]);
         }
         let V::Record(r, _, _, _) = v else {
-            return Err("Destructuring requires a record".into());
+            return Err(crate::error("Destructuring requires a record"));
         };
         for item in arr(p, "items") {
             let name = s(item, "value");
             if !r.contains_key(name) {
-                return Err(format!("Unknown result field {name}"));
+                return Err(crate::error(format!("Unknown result field {name}")));
             }
             if e.contains_key(name) {
-                return Err(format!("Duplicate name {name}"));
+                return Err(crate::error(format!("Duplicate name {name}")));
             }
         }
         for item in arr(p, "items") {
@@ -1813,24 +1844,24 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
     let mut segments = None;
     for statement in statements {
         let a = statement.node;
-        let result = (|| {
+        let result: R<()> = try {
             let name = s(&a, "name");
             match s(&a, "kind") {
                 "bind" => {
                     if e.contains_key(name) {
-                        return Err(format!("Duplicate name {name}"));
+                        do yeet crate::error(format!("Duplicate name {name}"));
                     }
                     let v = c.eval(&a["value"], &e, 0)?;
                     if matches!(&v, V::Void(_)) {
-                        return Err("Function has no return value".into());
+                        do yeet crate::error("Function has no return value");
                     }
                     if c.needs_assertion(&v) {
                         c.statement_checks(&v);
                     }
-                    if let V::Json(j) = &v {
-                        if j.get("geometry").is_some() {
-                            root = s(j, "geometry").into()
-                        }
+                    if let V::Json(j) = &v
+                        && j.get("geometry").is_some()
+                    {
+                        root = s(j, "geometry").into()
                     }
                     e.insert(name.into(), v);
                 }
@@ -1842,7 +1873,7 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                         ]
                         .contains(&name)
                     {
-                        return Err(format!("Duplicate or reserved type {name}"));
+                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
                     }
                     c.validate_trait(&a)?;
                     c.traits.insert(name.into(), a.clone());
@@ -1857,7 +1888,7 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                         ]
                         .contains(&name)
                     {
-                        return Err(format!("Duplicate or reserved type {name}"));
+                        do yeet crate::error(format!("Duplicate or reserved type {name}"));
                     }
                     c.structs.insert(name.into(), a.clone());
                     let g = arr(&a, "generics")
@@ -1881,13 +1912,13 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                 "validate" | "assert" => c.check(s(&a, "kind"), &a["value"], &e)?,
                 "segments" => {
                     if segments.is_some() {
-                        return Err("Duplicate segments declaration".into());
+                        do yeet crate::error("Duplicate segments declaration");
                     }
                     segments = Some(a["value"].clone())
                 }
                 "param" => {
                     if e.contains_key(name) {
-                        return Err(format!("Duplicate name {name}"));
+                        do yeet crate::error(format!("Duplicate name {name}"));
                     }
                     c.parameters.push(a["parameter"].clone());
                     c.controls.push(a["control"].clone());
@@ -1901,14 +1932,14 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                     let value = c.eval(&a["value"], &e, 0)?;
                     c.statement_checks(&value);
                 }
-                _ => return Err("Unknown statement".into()),
+                _ => do yeet crate::error("Unknown statement"),
             }
-            Ok(())
-        })();
-        result.map_err(|m: String| format!("ModelGraph Text line {}: {m}", statement.line))?;
+        };
+        result
+            .map_err(|e| crate::error(format!("ModelGraph Text line {}: {}", statement.line, e)))?;
     }
     if root.is_empty() {
-        return Err("No geometry to show".into());
+        return Err(crate::error("No geometry to show"));
     }
     let mut result = json!({"nodes":c.nodes,"parameters":c.parameters,"customizer":c.controls,"root":root,"constraints":c.constraints,"checks":c.checks});
     if let Some(s) = segments {

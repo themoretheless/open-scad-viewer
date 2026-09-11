@@ -6,11 +6,11 @@ use crate::{encode, field, input};
 use sdf_core::{Field, Grid, SDF_WGSL};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use value_codec::{json, Value};
+use value_codec::{Value, json};
 
 thread_local! {
     static PENDING: RefCell<(u64, BTreeMap<u64, (Field, Grid)>)> =
-        RefCell::new((0, BTreeMap::new()));
+        const { RefCell::new((0, BTreeMap::new())) };
 }
 
 pub fn prepare(v: &Value) -> crate::Result<Value> {

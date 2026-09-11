@@ -4,6 +4,7 @@
 //! reimplemented in binary64 to match the polygon-core CAD contract.
 //! Paths flatten to polylines for planar boolean / offset / extrude.
 use crate::{Result, check};
+use math_core::{cross2, norm2, sub2};
 
 /// One path segment: straight line or cubic Bézier. Endpoints are absolute mm.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -47,21 +48,17 @@ fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 }
 
 fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
-}
-
-fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] - b[0], a[1] - b[1]]
+    norm2(sub2(a, b))
 }
 
 fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
-    let ab = sub(b, a);
-    let ap = sub(p, a);
-    let len = ab[0].hypot(ab[1]);
+    let ab = sub2(b, a);
+    let ap = sub2(p, a);
+    let len = norm2(ab);
     if len < 1e-15 {
-        return ap[0].hypot(ap[1]);
+        return norm2(ap);
     }
-    ((ab[0] * ap[1] - ab[1] * ap[0]) / len).abs()
+    (cross2(ab, ap) / len).abs()
 }
 
 impl BezierPath {
@@ -409,7 +406,7 @@ impl BezierPath {
 
     pub fn make_anchor_smooth(&self, node: usize) -> Result<Self> {
         let (prev, anchor, next) = neighbour_anchors(self, node)?;
-        let dir = sub(next, prev);
+        let dir = sub2(next, prev);
         let len = dir[0].hypot(dir[1]);
         check(len > 1e-9, "Degenerate smooth: neighbours coincide")?;
         let ux = dir[0] / len;
@@ -447,15 +444,15 @@ impl BezierPath {
             self.segments[node - 1].end()
         };
         let mut segments = self.segments.clone();
-        if let Some(oi) = outgoing_segment(self, node) {
-            if let PathSegment::Cubic { ref mut c1, .. } = segments[oi] {
-                *c1 = anchor;
-            }
+        if let Some(oi) = outgoing_segment(self, node)
+            && let PathSegment::Cubic { ref mut c1, .. } = segments[oi]
+        {
+            *c1 = anchor;
         }
-        if let Some(ii) = incoming_segment(self, node) {
-            if let PathSegment::Cubic { ref mut c2, .. } = segments[ii] {
-                *c2 = anchor;
-            }
+        if let Some(ii) = incoming_segment(self, node)
+            && let PathSegment::Cubic { ref mut c2, .. } = segments[ii]
+        {
+            *c2 = anchor;
         }
         Ok(Self {
             start: self.start,
@@ -640,10 +637,11 @@ impl BezierPath {
     pub fn open_path(&self) -> Result<Self> {
         check(self.closed, "Path is already open")?;
         let mut segments = self.segments.clone();
-        if let Some(last) = segments.last() {
-            if dist(last.end(), self.start) <= 1e-3 && segments.len() >= 2 {
-                segments.pop();
-            }
+        if let Some(last) = segments.last()
+            && dist(last.end(), self.start) <= 1e-3
+            && segments.len() >= 2
+        {
+            segments.pop();
         }
         Self::open(self.start, segments)
     }
@@ -825,11 +823,11 @@ fn offset_open_polyline(path: &BezierPath, distance: f64) -> Result<BezierPath> 
         } else {
             (pts[i - 1], pts[i])
         };
-        let d = sub(b, a);
+        let d = sub2(b, a);
         let len = d[0].hypot(d[1]).max(1e-12);
         let n = [-d[1] / len * distance, d[0] / len * distance];
         if i > 0 && i + 1 < pts.len() {
-            let prev = sub(pts[i], pts[i - 1]);
+            let prev = sub2(pts[i], pts[i - 1]);
             let plen = prev[0].hypot(prev[1]).max(1e-12);
             let n0 = [-prev[1] / plen * distance, prev[0] / plen * distance];
             out.push([
@@ -866,10 +864,10 @@ pub fn join_paths(
         tail.clone()
     };
     check(
-        a.segments.len() + b.segments.len() + 1 <= MAX_SEGMENTS,
+        a.segments.len() + b.segments.len() < MAX_SEGMENTS,
         "Joined path exceeds segment budget",
     )?;
-    let head_end = a.segments.last().map(|s| s.end()).unwrap_or(a.start);
+    let head_end = a.segments.last().map_or(a.start, |s| s.end());
     let mut segments = a.segments;
     let coincide = dist(head_end, b.start) <= weld_eps;
     if !coincide {

@@ -1,6 +1,6 @@
 //! Photometric hypotheses only. Geometry checks and fusion do not mutate these maps.
-use super::{cancelled, DenseDiagnostics, DenseEstimator, DenseOptions, DepthMap};
-use crate::{camera::Camera, math::*, Image, Reconstruction, Result};
+use super::{DenseDiagnostics, DenseEstimator, DenseOptions, DepthMap, cancelled};
+use crate::{Image, Reconstruction, Result, camera::Camera, math::*};
 
 /// The NCC sweep compute shader (WGSL), shared by the native `gpu` feature and
 /// the browser WebGPU host path; both must execute the identical text.
@@ -828,7 +828,9 @@ pub fn finish_host_views(
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<(Vec<DepthMap>, DenseDiagnostics)> {
     if prepared.len() != images.len() || scores.len() != images.len() {
-        return Err("Host sweep state does not match the session images".into());
+        return Err(crate::error(
+            "Host sweep state does not match the session images",
+        ));
     }
     let active: Vec<_> = sparse
         .cameras
@@ -851,10 +853,10 @@ pub fn finish_host_views(
         };
         let expected = prep.width * prep.height * options.depth_hypotheses;
         if view_scores.len() != expected {
-            return Err(format!(
+            return Err(crate::error(format!(
                 "Host sweep scores for image {index} have {}, expected {expected} values",
                 view_scores.len()
-            ));
+            )));
         }
         let sources = build_view_sources(
             sparse,
@@ -1315,11 +1317,10 @@ fn sweep_depth(
                         &patch,
                         hypotheses[d],
                         &mut diagnostics.sampled_source_pixels,
-                    ) {
-                        if ncc > 0.4 {
-                            sum += ncc;
-                            count += 1;
-                        }
+                    ) && ncc > 0.4
+                    {
+                        sum += ncc;
+                        count += 1;
                     }
                 }
                 if count >= needed {

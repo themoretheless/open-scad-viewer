@@ -332,9 +332,7 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
         edge.0[1] + (edge.1[1] - edge.0[1]) * (x - edge.0[0]) / (edge.1[0] - edge.0[0])
     };
     let mut cells = Vec::new();
-    for pair in xs.windows(2) {
-        let left = pair[0];
-        let right = pair[1];
+    for &[left, right] in xs.array_windows() {
         let mid = (left + right) / 2.;
         let mut crossing: Vec<_> = edges
             .iter()
@@ -345,7 +343,7 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
             crossing.len() % 2 == 0,
             "Trim decomposition has an unmatched crossing.",
         )?;
-        for edges in crossing.chunks_exact(2) {
+        for edges in crossing.as_chunks::<2>().0 {
             let low = edges[0];
             let high = edges[1];
             let trapezoid = vec![
@@ -354,8 +352,8 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
                 [right, y_at(high, right)],
                 [left, y_at(high, left)],
             ];
-            for band in grid_v.windows(2) {
-                let clipped = clip(clip(trapezoid.clone(), band[0], true), band[1], false);
+            for [lo, hi] in grid_v.array_windows() {
+                let clipped = clip(clip(trapezoid.clone(), *lo, true), *hi, false);
                 if !clipped.is_empty() {
                     cells.push(clipped);
                 }
@@ -394,14 +392,14 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
                         .map(|y| [a[0], *y])
                         .collect();
                 }
-            } else if close(a[1], b[1]) {
-                if let Some(values) = horizontal.get(&key(a[1])) {
-                    extra = values
-                        .iter()
-                        .filter(|x| **x > a[0].min(b[0]) + EPS && **x < a[0].max(b[0]) - EPS)
-                        .map(|x| [*x, a[1]])
-                        .collect();
-                }
+            } else if close(a[1], b[1])
+                && let Some(values) = horizontal.get(&key(a[1]))
+            {
+                extra = values
+                    .iter()
+                    .filter(|x| **x > a[0].min(b[0]) + EPS && **x < a[0].max(b[0]) - EPS)
+                    .map(|x| [*x, a[1]])
+                    .collect();
             }
             extra.sort_by(|p, q| {
                 ((p[0] - q[0]) * (b[0] - a[0]) + (p[1] - q[1]) * (b[1] - a[1])).total_cmp(&0.)
@@ -432,11 +430,11 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
         }
     }
     let mut positions = Vec::new();
-    for p in uv.chunks_exact(2) {
+    for p in uv.as_chunks::<2>().0 {
         positions.extend(evaluate(p[0], p[1])?);
     }
     let mut deviation = 0_f64;
-    for t in indices.chunks_exact(3) {
+    for t in indices.as_chunks::<3>().0 {
         let actual = evaluate(
             t.iter().map(|i| uv[2 * i]).sum::<f64>() / 3.,
             t.iter().map(|i| uv[2 * i + 1]).sum::<f64>() / 3.,
@@ -444,7 +442,7 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
         let delta: [f64; 3] = std::array::from_fn(|a| {
             actual[a] - t.iter().map(|i| positions[3 * i + a]).sum::<f64>() / 3.
         });
-        deviation = deviation.max(norm(&delta));
+        deviation = deviation.max(norm(delta));
     }
     let mut mesh = Mesh {
         positions,
@@ -501,7 +499,7 @@ fn weld(mesh: &mut Mesh, boundary: &Boundary) -> Result<()> {
     let mut out_uv = Vec::new();
     let mut aliases = Vec::new();
     let mut by_key = BTreeMap::new();
-    for (i, p) in uv.chunks_exact(2).enumerate() {
+    for (i, p) in uv.as_chunks::<2>().0.iter().enumerate() {
         let u = p[0];
         let v = p[1];
         let bounds = [close(u, 0.), close(u, 1.), close(v, 0.), close(v, 1.)];
@@ -525,7 +523,7 @@ fn weld(mesh: &mut Mesh, boundary: &Boundary) -> Result<()> {
                 positions[3 * mapped + 2],
             ];
             check(
-                norm(&sub(mesh.point(i)?, stored)) <= tolerance,
+                norm(sub(mesh.point(i)?, stored)) <= tolerance,
                 "Declared parameter seam does not close within floating-point tolerance.",
             )?;
             mapped
@@ -539,7 +537,7 @@ fn weld(mesh: &mut Mesh, boundary: &Boundary) -> Result<()> {
         aliases.push(mapped);
     }
     let mut indices = Vec::new();
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let a = aliases[t[0]];
         let b = aliases[t[1]];
         let c = aliases[t[2]];

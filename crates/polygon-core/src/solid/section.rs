@@ -121,7 +121,7 @@ impl MeshSectionIndex {
         let mut points = Vec::new();
         let mut identities = BTreeMap::new();
         let mut vertex_ids = Vec::with_capacity(mesh.positions.len() / 3);
-        for p in mesh.positions.chunks_exact(3) {
+        for p in mesh.positions.as_chunks::<3>().0 {
             let p = [p[0], p[1], p[2]];
             let key = p.map(|v| if v == 0.0 { 0 } else { v.to_bits() });
             let id = *identities.entry(key).or_insert_with(|| {
@@ -131,7 +131,7 @@ impl MeshSectionIndex {
             vertex_ids.push(id);
         }
         let mut triangles = Vec::with_capacity(mesh.indices.len() / 3);
-        for (source, t) in mesh.indices.chunks_exact(3).enumerate() {
+        for (source, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
             let vertices = [vertex_ids[t[0]], vertex_ids[t[1]], vertex_ids[t[2]]];
             let z = vertices.map(|i| points[i][2]);
             let min_z = z.into_iter().fold(f64::INFINITY, f64::min);
@@ -272,7 +272,7 @@ impl MeshSectionIndex {
 
 pub fn project(mesh: &Mesh) -> Result<Rings> {
     let mut triangles = Vec::new();
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let mut r: Vec<_> = t
             .iter()
             .map(|&i| {
@@ -288,7 +288,7 @@ pub fn project(mesh: &Mesh) -> Result<Rings> {
         }
         triangles.push(r)
     }
-    Ok(planar(&triangles, &vec![], "union")?)
+    planar(&triangles, &vec![], "union")
 }
 
 pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
@@ -297,7 +297,7 @@ pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
     let mut points = Vec::new();
     let mut ids = HashMap::new();
     let mut edges = BTreeSet::new();
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let p = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
         let n = cross(sub(p[1], p[0]), sub(p[2], p[0]));
         let mut hits = Vec::new();
@@ -352,5 +352,5 @@ pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
             rings.push(ring)
         }
     }
-    Ok(planar(&rings, &vec![], "union")?)
+    planar(&rings, &vec![], "union")
 }

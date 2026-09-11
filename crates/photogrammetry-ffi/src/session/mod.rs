@@ -1,13 +1,13 @@
 //! Worker-owned storage and serialization. Reconstruction algorithms do not depend on Value.
 use super::*;
 use photogrammetry_core::{
+    Image, Reconstruction, ReconstructionOptions,
     calibration::{Calibration, RectificationOptions, RectificationReport, RectifiedImage},
     dense::{
-        DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, Surface,
-        SWEEP_WGSL,
+        DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, SWEEP_WGSL,
+        Surface,
     },
     diagnostics::ReconstructionReport,
-    Image, Reconstruction, ReconstructionOptions,
 };
 use std::{cell::RefCell, collections::BTreeMap};
 
@@ -36,7 +36,7 @@ thread_local! {
 mod hosts;
 mod ingest;
 #[cfg(test)]
-use hosts::{browser_dense_options, dense_report_value, JS_MAX_SAFE_COUNTER};
+use hosts::{JS_MAX_SAFE_COUNTER, browser_dense_options, dense_report_value};
 pub use hosts::{dense_finish_host, dense_prepare_host, set_acceleration_host};
 pub use ingest::{add, add_calibrated};
 fn report_value(report: &ReconstructionReport) -> Value {
@@ -130,10 +130,7 @@ pub fn dispatch_bytes(value: Value) -> Result<Vec<u8>> {
                     .dense
                     .as_ref()
                     .ok_or_else(|| input("Build a surface first"))?;
-                response::surface(
-                    &photogrammetry_core::dense::compact(mesh, 24).map_err(input)?,
-                    None,
-                )
+                response::surface(&photogrammetry_core::dense::compact(mesh, 24)?, None)
             }
             _ => Err(input("Unknown photogrammetry action")),
         }
@@ -147,7 +144,7 @@ mod tests {
 
     fn dispatch(value: Value) -> Result<Value> {
         let bytes = dispatch_bytes(value)?;
-        let decoded = value_codec::decode_binary(&bytes).map_err(|e| e.to_string())?;
+        let decoded = value_codec::decode_binary(&bytes).map_err(|e| input(e.to_string()))?;
         assert_eq!(decoded["ok"], Value::Bool(true));
         Ok(decoded["value"].clone())
     }
@@ -241,18 +238,21 @@ mod tests {
         assert!(
             add_calibrated(64, 64, 50., add_rgb(), &measured("lens", 80.))
                 .unwrap_err()
+                .message
                 .contains("conflicting")
         );
         let mut wrong_size = value_codec::decode_binary(&measured("other", 70.)).unwrap();
         wrong_size["sourceWidth"] = json!(65);
-        assert!(add_calibrated(
-            64,
-            64,
-            50.,
-            add_rgb(),
-            &value_codec::encode_binary(&wrong_size).unwrap()
-        )
-        .is_err());
+        assert!(
+            add_calibrated(
+                64,
+                64,
+                50.,
+                add_rgb(),
+                &value_codec::encode_binary(&wrong_size).unwrap()
+            )
+            .is_err()
+        );
         assert!(add_calibrated(64, 64, 50., add_rgb(), b"{broken JSON}").is_err());
         assert_eq!(dispatch(json!({"action": "report"})).unwrap(), before);
         assert_eq!(PHOTO.with(|session| session.borrow().images.len()), 1);
@@ -332,19 +332,25 @@ mod tests {
         assert!(volume.shared_volume && volume.dual_scale);
         assert_eq!(volume.patch_radius, 2);
         assert!(browser_dense_options(129, 2).is_err());
-        assert!(browser_dense_options(128, 3)
-            .unwrap_err()
-            .contains("Unknown dense"));
-        assert!(browser_dense_options(300, 1)
-            .unwrap_err()
-            .contains("resolution"));
+        assert!(
+            browser_dense_options(128, 3)
+                .unwrap_err()
+                .message
+                .contains("Unknown dense")
+        );
+        assert!(
+            browser_dense_options(300, 1)
+                .unwrap_err()
+                .message
+                .contains("resolution")
+        );
     }
 
     #[test]
     fn dense_dispatch_rejects_invalid_presets_before_starting_reconstruction() {
         dispatch(json!({"action": "clear"})).unwrap();
         let legacy = dispatch(json!({"action": "dense", "resolution": 128})).unwrap_err();
-        assert_eq!(legacy, "Reconstruct cameras first");
+        assert_eq!(legacy.message, "Reconstruct cameras first");
         assert_eq!(
             dispatch(json!({"action": "dense", "resolution": 128, "preset": 1})).unwrap_err(),
             legacy
@@ -352,6 +358,7 @@ mod tests {
         assert!(
             dispatch(json!({"action": "dense", "resolution": 128, "preset": 3}))
                 .unwrap_err()
+                .message
                 .contains("Unknown dense")
         );
         assert!(dispatch(json!({"action": "dense", "resolution": 128, "preset": null})).is_err());
@@ -381,9 +388,12 @@ mod tests {
         report.sampled_source_pixels = JS_MAX_SAFE_COUNTER;
         assert!(dense_report_value(&report, &options).is_ok());
         report.sampled_source_pixels += 1;
-        assert!(dense_report_value(&report, &options)
-            .unwrap_err()
-            .contains("safe integer"));
+        assert!(
+            dense_report_value(&report, &options)
+                .unwrap_err()
+                .message
+                .contains("safe integer")
+        );
         report.sampled_source_pixels = u64::MAX;
         assert!(dense_report_value(&report, &options).is_err());
     }

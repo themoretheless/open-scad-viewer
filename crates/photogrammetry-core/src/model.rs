@@ -1,4 +1,4 @@
-use crate::{camera::Camera, math::V3, Result};
+use crate::{Result, camera::Camera, math::V3};
 #[derive(Clone)]
 pub struct Image {
     pub width: usize,
@@ -14,16 +14,20 @@ impl Image {
             || self.height > 2048
             || self.rgb.len() != self.width * self.height * 3
         {
-            return Err("Expected RGB images between 48 and 2048 pixels per side".into());
+            return Err(crate::error(
+                "Expected RGB images between 48 and 2048 pixels per side",
+            ));
         }
         if !self.focal.is_finite() || self.focal < 20. || self.focal > 20000. {
-            return Err("Invalid focal length in pixels".into());
+            return Err(crate::error("Invalid focal length in pixels"));
         }
         Ok(())
     }
     pub fn gray(&self) -> Vec<f32> {
         self.rgb
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| (0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32) / 255.)
             .collect()
     }

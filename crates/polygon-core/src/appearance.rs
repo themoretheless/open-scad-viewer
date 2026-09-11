@@ -147,8 +147,7 @@ fn sample_stops(stops: &[GradientStop], t: f64) -> Color {
     if t >= last.offset {
         return last.color;
     }
-    for w in owned.windows(2) {
-        let (a, b) = (w[0], w[1]);
+    for [a, b] in owned.array_windows() {
         if t >= a.offset && t <= b.offset {
             let span = b.offset - a.offset;
             let f = if span > 1e-12 {

@@ -3,11 +3,10 @@
 //! view tessellations can still overlap when they do not share all three vertices.
 use super::volume::{FastMap, FastSet};
 use super::{
-    cancelled,
+    DenseDiagnostics, Surface, cancelled,
     consistency::{ObservedPatch, Sample},
-    DenseDiagnostics, Surface,
 };
-use crate::{math::*, Result};
+use crate::{Result, math::*};
 
 struct Surfel {
     /// Fixed anchor bounds correspondence; accumulated averages cannot drift
@@ -251,12 +250,11 @@ pub(super) fn fuse_consolidating(
                             };
                             for &id in candidates {
                                 if let Some(distance) = surfels[id as usize].accepts(sample, radius)
-                                {
-                                    if best.is_none_or(|(d, best_id)| {
+                                    && best.is_none_or(|(d, best_id)| {
                                         distance < d || (distance == d && id < best_id)
-                                    }) {
-                                        best = Some((distance, id));
-                                    }
+                                    })
+                                {
+                                    best = Some((distance, id));
                                 }
                             }
                         }
@@ -501,7 +499,8 @@ mod tests {
                 &mut DenseDiagnostics::default(),
                 &mut |_, _, _| false
             )
-            .unwrap_err(),
+            .unwrap_err()
+            .message,
             "Cancelled"
         );
     }

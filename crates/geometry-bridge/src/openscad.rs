@@ -4,8 +4,8 @@
 //! `{"ok": false, "diagnostics": [{code, message, start, end, line, column}]}`.
 //! Diagnostics keep the exact codes and UTF-16 positions of the TypeScript
 //! parser so the language conformance corpus gates parity.
-use openscad_core::{LanguageProfile, ParseError, MAX_SOURCE_LENGTH};
-use value_codec::{json, Value};
+use openscad_core::{LanguageProfile, MAX_SOURCE_LENGTH, ParseError};
+use value_codec::{Value, json};
 
 pub fn scad_compile(value: &Value) -> Value {
     let Some(source) = value["source"].as_str() else {

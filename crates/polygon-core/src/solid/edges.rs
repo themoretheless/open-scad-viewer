@@ -406,36 +406,38 @@ pub fn extract_semantic_edges(
     }
 
     let output_edge_count = diagnostics.boundary + diagnostics.crease + diagnostics.non_manifold;
-    let mut output = Vec::with_capacity(output_edge_count as usize * 2);
-    let mut group_start = 0usize;
-    while group_start < edge_count {
-        let first_occurrence = sorted_occurrences[group_start] as usize;
-        let a = edge_a[first_occurrence];
-        let b = edge_b[first_occurrence];
-        let mut group_end = group_start + 1;
-        while group_end < edge_count {
-            let occurrence = sorted_occurrences[group_end] as usize;
-            if edge_a[occurrence] != a || edge_b[occurrence] != b {
-                break;
+    let indices = Vec::from_iter(gen {
+        let mut group_start = 0usize;
+        while group_start < edge_count {
+            let first_occurrence = sorted_occurrences[group_start] as usize;
+            let a = edge_a[first_occurrence];
+            let b = edge_b[first_occurrence];
+            let mut group_end = group_start + 1;
+            while group_end < edge_count {
+                let occurrence = sorted_occurrences[group_end] as usize;
+                if edge_a[occurrence] != a || edge_b[occurrence] != b {
+                    break;
+                }
+                group_end += 1;
             }
-            group_end += 1;
+            if classify_edge_group(
+                &sorted_occurrences,
+                group_start,
+                group_end,
+                &face_normals,
+                crease_dot_threshold,
+            ) != EdgeKind::Hidden
+            {
+                yield a;
+                yield b;
+            }
+            group_start = group_end;
         }
-        if classify_edge_group(
-            &sorted_occurrences,
-            group_start,
-            group_end,
-            &face_normals,
-            crease_dot_threshold,
-        ) != EdgeKind::Hidden
-        {
-            output.push(a);
-            output.push(b);
-        }
-        group_start = group_end;
-    }
+    });
+    debug_assert_eq!(indices.len(), output_edge_count as usize * 2);
 
     SemanticEdges {
-        indices: output,
+        indices,
         diagnostics,
     }
 }

@@ -1,6 +1,7 @@
 //! Polyline stroke expansion: caps, joins, optional dash → filled outline paths.
 use crate::path::BezierPath;
 use crate::{Result, check};
+use math_core::{add2, norm2, scale2, sub2, unit2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LineCap {
@@ -52,21 +53,8 @@ impl Default for StrokeOptions {
     }
 }
 
-fn add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] + b[0], a[1] + b[1]]
-}
-fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] - b[0], a[1] - b[1]]
-}
-fn mul(a: [f64; 2], s: f64) -> [f64; 2] {
-    [a[0] * s, a[1] * s]
-}
 fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
-}
-fn norm(v: [f64; 2]) -> [f64; 2] {
-    let l = v[0].hypot(v[1]).max(1e-15);
-    [v[0] / l, v[1] / l]
+    norm2(sub2(a, b))
 }
 fn perp(v: [f64; 2]) -> [f64; 2] {
     [-v[1], v[0]]
@@ -188,14 +176,14 @@ pub fn path_arrow_markers(
     check(pts.len() >= 2, "Path too short for markers")?;
     let mut out = Vec::new();
     if start != ArrowMarker::None {
-        let d = sub(pts[0], pts[1]);
+        let d = sub2(pts[0], pts[1]);
         if let Some(p) = arrow_marker_path(start, pts[0], d, stroke_width)? {
             out.push(p);
         }
     }
     if end != ArrowMarker::None {
         let n = pts.len();
-        let d = sub(pts[n - 1], pts[n - 2]);
+        let d = sub2(pts[n - 1], pts[n - 2]);
         if let Some(p) = arrow_marker_path(end, pts[n - 1], d, stroke_width)? {
             out.push(p);
         }
@@ -243,7 +231,7 @@ fn dash_polylines(
         t += *d;
     }
     let mut remain = pattern[phase_idx] - (off - t);
-    let mut drawing = phase_idx % 2 == 0;
+    let mut drawing = phase_idx.is_multiple_of(2);
     let mut out = Vec::new();
     let mut cur: Vec<[f64; 2]> = Vec::new();
 
@@ -256,7 +244,7 @@ fn dash_polylines(
             }
             d -= len;
         }
-        edges.last().map(|e| e.1).unwrap_or(pts[0])
+        edges.last().map_or(pts[0], |e| e.1)
     };
 
     let mut walk = 0.0_f64;
@@ -281,7 +269,7 @@ fn dash_polylines(
         if remain <= 1e-12 {
             phase_idx = (phase_idx + 1) % pattern.len();
             remain = pattern[phase_idx];
-            drawing = phase_idx % 2 == 0;
+            drawing = phase_idx.is_multiple_of(2);
             if !drawing && cur.len() >= 2 {
                 out.push((std::mem::take(&mut cur), false));
             }
@@ -304,7 +292,7 @@ fn stroke_polyline(
     check(n >= 2, "Polyline too short")?;
     let mut left = Vec::with_capacity(n + 8);
     let mut right = Vec::with_capacity(n + 8);
-    let dir = |i: usize, j: usize| norm(sub(pts[j % n], pts[i % n]));
+    let dir = |i: usize, j: usize| unit2(sub2(pts[j % n], pts[i % n]));
 
     for i in 0..n {
         if !closed && (i == 0 || i == n - 1) {
@@ -313,18 +301,18 @@ fn stroke_polyline(
             } else {
                 (pts[n - 2], pts[n - 1])
             };
-            let d = norm(sub(b, a));
-            let nr = mul(perp(d), half);
-            left.push(add(pts[i], nr));
-            right.push(sub(pts[i], nr));
+            let d = unit2(sub2(b, a));
+            let nr = scale2(perp(d), half);
+            left.push(add2(pts[i], nr));
+            right.push(sub2(pts[i], nr));
             continue;
         }
         let prev = if i == 0 { n - 1 } else { i - 1 };
         let next = (i + 1) % n;
         let d0 = dir(prev, i);
         let d1 = dir(i, next);
-        let n0 = mul(perp(d0), half);
-        let n1 = mul(perp(d1), half);
+        let n0 = scale2(perp(d0), half);
+        let n1 = scale2(perp(d1), half);
         let (l, r) = join_offsets(pts[i], d0, d1, n0, n1, opts)?;
         left.push(l);
         right.push(r);
@@ -341,10 +329,10 @@ fn stroke_polyline(
     match opts.cap {
         LineCap::Butt => {}
         LineCap::Square => {
-            let d = norm(sub(pts[1], pts[0]));
-            let ext = mul(d, -half);
-            left[0] = add(left[0], ext);
-            right[0] = add(right[0], ext);
+            let d = unit2(sub2(pts[1], pts[0]));
+            let ext = scale2(d, -half);
+            left[0] = add2(left[0], ext);
+            right[0] = add2(right[0], ext);
         }
         LineCap::Round => {
             // semicircle from right[0] to left[0] around pts[0]
@@ -366,12 +354,12 @@ fn stroke_polyline(
     }
     // End square cap adjustment
     if opts.cap == LineCap::Square {
-        let d = norm(sub(pts[n - 1], pts[n - 2]));
-        let ext = mul(d, half);
+        let d = unit2(sub2(pts[n - 1], pts[n - 2]));
+        let ext = scale2(d, half);
         let li = left.len() - 1;
         let ri = right.len() - 1;
-        left[li] = add(left[li], ext);
-        right[ri] = add(right[ri], ext);
+        left[li] = add2(left[li], ext);
+        right[ri] = add2(right[ri], ext);
     }
     outline.extend(left);
     outline.extend(right.iter().rev().copied());
@@ -390,15 +378,15 @@ fn join_offsets(
     let dot = d0[0] * d1[0] + d0[1] * d1[1];
     // Nearly straight
     if cross.abs() < 1e-10 && dot > 0. {
-        return Ok((add(p, n0), sub(p, n0)));
+        return Ok((add2(p, n0), sub2(p, n0)));
     }
-    let left0 = add(p, n0);
-    let left1 = add(p, n1);
-    let right0 = sub(p, n0);
-    let right1 = sub(p, n1);
+    let left0 = add2(p, n0);
+    let left1 = add2(p, n1);
+    let right0 = sub2(p, n0);
+    let right1 = sub2(p, n1);
 
-    let miter_left = line_intersect(left0, add(left0, d0), left1, add(left1, d1));
-    let miter_right = line_intersect(right0, add(right0, d0), right1, add(right1, d1));
+    let miter_left = line_intersect(left0, add2(left0, d0), left1, add2(left1, d1));
+    let miter_right = line_intersect(right0, add2(right0, d0), right1, add2(right1, d1));
 
     match opts.join {
         LineJoin::Bevel => Ok((left1, right1)), // simplified: use outgoing offset
@@ -435,13 +423,13 @@ fn join_offsets(
 }
 
 fn line_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<[f64; 2]> {
-    let r = sub(b, a);
-    let s = sub(d, c);
+    let r = sub2(b, a);
+    let s = sub2(d, c);
     let den = r[0] * s[1] - r[1] * s[0];
     if den.abs() < 1e-15 {
         return None;
     }
-    let qp = sub(c, a);
+    let qp = sub2(c, a);
     let t = (qp[0] * s[1] - qp[1] * s[0]) / den;
     Some([a[0] + t * r[0], a[1] + t * r[1]])
 }
@@ -464,11 +452,13 @@ fn append_arc(
         delta -= std::f64::consts::TAU;
     }
     let steps = ((delta.abs() / (std::f64::consts::PI * 0.25)).ceil() as usize).clamp(2, 16);
-    for i in 1..=steps {
-        let t = i as f64 / steps as f64;
-        let a = a0 + delta * t;
-        out.push([center[0] + radius * a.cos(), center[1] + radius * a.sin()]);
-    }
+    out.extend(gen {
+        for i in 1..=steps {
+            let t = i as f64 / steps as f64;
+            let a = a0 + delta * t;
+            yield [center[0] + radius * a.cos(), center[1] + radius * a.sin()];
+        }
+    });
 }
 
 #[cfg(test)]

@@ -1,7 +1,17 @@
 //! Shared bounded 2D sketch solver. Independent of polygon and NURBS geometry.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub use math_core::{Error, Result};
+const INVALID_INPUT: &str = "SKETCH_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
-    Error::new("SKETCH_INVALID_INPUT", message)
+    Error::new(INVALID_INPUT, message)
 }
 #[derive(Clone, Debug)]
 pub struct Circle {

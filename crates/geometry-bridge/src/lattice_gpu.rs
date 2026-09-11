@@ -2,8 +2,8 @@
 //! flattened to plain arrays; each grid point runs `LATTICE_WGSL` on the GPU
 //! in f32. Points whose ray-parity walk overflows write NaN and are recomputed
 //! by the CPU field closure. Extraction stays on the CPU reference path.
-use crate::mesh_shell::{Node, LATTICE_WGSL, P};
-use gpu_compute::{read_buffer, storage_entry, uniform_entry, wgpu, GpuContext};
+use crate::mesh_shell::{LATTICE_WGSL, Node, P};
+use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 use wgpu::util::DeviceExt;
 
 type Segments = [(P, P, f64, f64)];

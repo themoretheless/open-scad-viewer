@@ -1,7 +1,25 @@
 //! Small dense linear algebra shared by the geometry and photogrammetry cores. No external runtime.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
+pub type V2 = [f64; 2];
 pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
 pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+
+/// Compute placement. `Cpu` is the deterministic reference; `Gpu` is opt-in.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Acceleration {
+    #[default]
+    Cpu,
+    Gpu,
+}
 
 /// Shared geometry error. Codes stay crate-specific; the type is one.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,6 +33,28 @@ impl Error {
             code,
             message: message.into(),
         }
+    }
+    pub fn contains(&self, needle: &str) -> bool {
+        self.message.contains(needle)
+    }
+    /// Shared precondition check. Codes stay crate-specific at the call site.
+    #[inline]
+    pub fn ensure(ok: bool, code: &'static str, message: impl Into<String>) -> Result<()> {
+        if ok {
+            Ok(())
+        } else {
+            Err(Self::new(code, message))
+        }
+    }
+}
+/// Same as [`Error::ensure`]; free function for crate `check` wrappers.
+#[inline]
+pub fn ensure(ok: bool, code: &'static str, message: impl Into<String>) -> Result<()> {
+    Error::ensure(ok, code, message)
+}
+impl From<Error> for String {
+    fn from(error: Error) -> Self {
+        error.message
     }
 }
 impl std::fmt::Display for Error {
@@ -50,6 +90,38 @@ pub fn norm(a: V3) -> f64 {
 #[inline(always)]
 pub fn unit(a: V3) -> V3 {
     scale(a, 1. / norm(a).max(1e-15))
+}
+#[inline(always)]
+pub fn finite(p: V3) -> bool {
+    p.iter().all(|v| v.is_finite() && v.abs() <= 1e6)
+}
+#[inline(always)]
+pub fn add2(a: V2, b: V2) -> V2 {
+    [a[0] + b[0], a[1] + b[1]]
+}
+#[inline(always)]
+pub fn sub2(a: V2, b: V2) -> V2 {
+    [a[0] - b[0], a[1] - b[1]]
+}
+#[inline(always)]
+pub fn scale2(a: V2, s: f64) -> V2 {
+    [a[0] * s, a[1] * s]
+}
+#[inline(always)]
+pub fn dot2(a: V2, b: V2) -> f64 {
+    a[0] * b[0] + a[1] * b[1]
+}
+#[inline(always)]
+pub fn cross2(a: V2, b: V2) -> f64 {
+    a[0] * b[1] - a[1] * b[0]
+}
+#[inline(always)]
+pub fn norm2(a: V2) -> f64 {
+    a[0].hypot(a[1])
+}
+#[inline(always)]
+pub fn unit2(a: V2) -> V2 {
+    scale2(a, 1. / norm2(a).max(1e-15))
 }
 #[inline(always)]
 pub fn cross(a: V3, b: V3) -> V3 {

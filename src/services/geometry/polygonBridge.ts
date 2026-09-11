@@ -3,12 +3,8 @@ import type { NurbsCurve } from '../nurbsCurve'
 import type { NurbsSurface } from '../nurbsSurface'
 import type { PolygonBuild, PolygonMesh } from './polygon'
 import { callGeometryRust } from './kernel'
-export interface SurfaceMeshingOptions {
-  segmentsU: number
-  segmentsV: number
-  trim?: { outer: number[][]; holes?: number[][][] }
-  maxTriangles?: number
-}
+import type { NurbsTessellationOptions } from './tessellation'
+export type SurfaceMeshingOptions = NurbsTessellationOptions
 export function nurbsToPolygonMesh(surface: NurbsSurface, options: SurfaceMeshingOptions): PolygonBuild {
   return callGeometryRust('surface_tessellate', { surface, options })
 }

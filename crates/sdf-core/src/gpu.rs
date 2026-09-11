@@ -1,8 +1,8 @@
 //! GPU grid sampler (feature `gpu`): runs the shared SDF_WGSL shader over the
-//! flattened field tree. f32 arithmetic — see `Acceleration` in lib.rs.
-use crate::flat::FlatField;
+//! flattened field tree. f32 arithmetic — see `math_core::Acceleration`.
 use crate::Grid;
-use gpu_compute::{read_buffer, storage_entry, uniform_entry, wgpu, GpuContext};
+use crate::flat::FlatField;
+use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 use wgpu::util::DeviceExt;
 
 struct GpuSdf {

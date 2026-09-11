@@ -2,14 +2,8 @@
 use crate::{Result, check};
 use std::collections::{BTreeSet, HashMap};
 
-pub type Rings = Vec<Vec<[f64; 2]>>;
-
-pub fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
-}
-pub fn sub2(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] - b[0], a[1] - b[1]]
-}
+pub type Rings = Vec<Vec<math_core::V2>>;
+pub use math_core::{cross2, sub2};
 pub fn area(r: &[[f64; 2]]) -> f64 {
     (0..r.len())
         .map(|i| cross2(r[i], r[(i + 1) % r.len()]))
@@ -145,9 +139,9 @@ fn planar_rule(a: &Rings, b: &Rings, op: &str, nonzero: bool) -> Result<Rings> {
         }
         ts.sort_by(f64::total_cmp);
         ts.dedup_by(|a, b| (*a - *b).abs() < 1e-10);
-        for t in ts.windows(2) {
-            let u = [p[0] + d[0] * t[0], p[1] + d[1] * t[0]];
-            let v = [p[0] + d[0] * t[1], p[1] + d[1] * t[1]];
+        for [t0, t1] in ts.array_windows() {
+            let u = [p[0] + d[0] * t0, p[1] + d[1] * t0];
+            let v = [p[0] + d[0] * t1, p[1] + d[1] * t1];
             let len = ((v[0] - u[0]).powi(2) + (v[1] - u[1]).powi(2)).sqrt();
             if len < eps {
                 continue;

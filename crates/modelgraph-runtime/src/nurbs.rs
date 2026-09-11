@@ -59,10 +59,10 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
             _ => true,
         };
         let mut matching = choices.iter().filter(matches_shape);
-        if let Some(choice) = matching.next() {
-            if matching.next().is_none() {
-                return normalize(v, choice, path, depth + 1);
-            }
+        if let Some(choice) = matching.next()
+            && matching.next().is_none()
+        {
+            return normalize(v, choice, path, depth + 1);
         }
         for choice in choices {
             let matches = match s(choice, "type") {
@@ -82,15 +82,15 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
         }
         return Err(err(path, "Invalid input: no matching schema variant."));
     }
-    if let Some(expected) = schema.get("const") {
-        if v != expected {
-            return Err(err(path, format!("Expected {expected}.")));
-        }
+    if let Some(expected) = schema.get("const")
+        && v != expected
+    {
+        return Err(err(path, format!("Expected {expected}.")));
     }
-    if let Some(values) = schema["enum"].as_array() {
-        if !values.contains(v) {
-            return Err(err(path, "Invalid enum value."));
-        }
+    if let Some(values) = schema["enum"].as_array()
+        && !values.contains(v)
+    {
+        return Err(err(path, "Invalid enum value."));
     }
     match s(schema, "type") {
         "object" => {
@@ -100,16 +100,16 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
             let props = schema["properties"]
                 .as_object()
                 .ok_or_else(|| err(path, "Invalid object schema."))?;
-            if schema["additionalProperties"] == false {
-                if let Some(key) = object.keys().find(|k| !props.contains_key(*k)) {
-                    return Err(err(path, format!("Unrecognized key: {key}")));
-                }
+            if schema["additionalProperties"] == false
+                && let Some(key) = object.keys().find(|k| !props.contains_key(*k))
+            {
+                return Err(err(path, format!("Unrecognized key: {key}")));
             }
             for (key, sub) in props {
-                if !object.contains_key(key) {
-                    if let Some(default) = sub.get("default") {
-                        object.insert(key.clone(), default.clone());
-                    }
+                if !object.contains_key(key)
+                    && let Some(default) = sub.get("default")
+                {
+                    object.insert(key.clone(), default.clone());
                 }
             }
             if let Some(required) = schema["required"].as_array() {
@@ -379,10 +379,10 @@ fn scalar_inner(
             path,
         ),
         _ => {
-            if let Some(args) = expr["args"].as_array() {
-                if args.len() == 2 {
-                    return units::binary(s(expr, "op"), sub(&args[0])?, sub(&args[1])?, path);
-                }
+            if let Some(args) = expr["args"].as_array()
+                && args.len() == 2
+            {
+                return units::binary(s(expr, "op"), sub(&args[0])?, sub(&args[1])?, path);
             }
             if expr.get("value").is_some() {
                 return units::unary(s(expr, "op"), sub(&expr["value"])?, path, false);

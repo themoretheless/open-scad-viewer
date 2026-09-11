@@ -1,5 +1,5 @@
 //! Analytic images and true visibility; scene scale is arbitrary, not millimeters.
-use super::{add, dot, mv, norm, scale, sub, tr, Camera, Image, Point, Reconstruction, V3};
+use super::{Camera, Image, Point, Reconstruction, V3, add, dot, mv, norm, scale, sub, tr};
 pub const SIDE: usize = 80;
 pub const FOCAL: f64 = 110.;
 fn texture(p: V3, object: usize) -> u8 {

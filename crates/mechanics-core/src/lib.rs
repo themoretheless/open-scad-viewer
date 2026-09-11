@@ -6,18 +6,20 @@
 //! Not FEA, not a print process, not a material certificate. The host (CAD)
 //! sections a mesh; this crate never holds CAD handles. Coordinates are
 //! millimeters, force is newtons, stress is MPa (N/mm²).
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 
-pub const MAX_LAYERS: usize = 2_048;
 pub const MAX_POINTS: usize = 16_384;
 
 pub use math_core::{Error, Result};
-
-/// One horizontal slice: closed rings in millimeters. Not a CAD handle.
-#[derive(Clone, Debug, PartialEq)]
-pub struct LayerSection {
-    pub z_mm: f64,
-    pub contours: Vec<Vec<[f64; 2]>>,
-}
+pub use planar_geometry::{LayerSection, MAX_LAYERS};
 
 /// Bending moments about the section x/y axes and optional axial force.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -328,8 +330,7 @@ pub fn analyze_layers(sections: &[LayerSection], load: &LoadCase) -> Result<Stre
                     .then_with(|| a.wx_mm3.min(a.wy_mm3).total_cmp(&b.wx_mm3.min(b.wy_mm3))),
             }
         })
-        .map(|(index, _)| index)
-        .unwrap_or(0);
+        .map_or(0, |(index, _)| index);
     Ok(StrengthReport {
         layers,
         weakest_index,

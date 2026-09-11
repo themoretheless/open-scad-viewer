@@ -27,11 +27,11 @@ impl Parser<'_> {
         let token = self.pop()?;
         if token.starts_with('"') && !negative {
             return Ok(
-                json!({"kind":"string","value":value_codec::from_str::<J>(&token).map_err(|e|e.to_string())?}),
+                json!({"kind":"string","value":value_codec::from_str::<J>(&token).map_err(|e| crate::error(e.to_string()))?}),
             );
         }
         let token = if negative { format!("-{token}") } else { token };
-        number(&token).map_err(|_| format!("Expected a pattern literal, got {token}"))?;
+        number(&token).map_err(|_| crate::error(format!("Expected a pattern literal, got {token}")))?;
         Ok(json!({"kind":"number","value":token}))
     }
     fn match_atom(&mut self, depth: usize) -> R<J> {

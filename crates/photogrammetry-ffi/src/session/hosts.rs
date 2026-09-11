@@ -95,7 +95,7 @@ impl Session {
         let mut diagnostics = report_value(&outcome.report);
         diagnostics["calibrations"] = Value::Array(self.calibrations.clone());
         self.diagnostics = Some(diagnostics);
-        let reconstruction = outcome.reconstruction.map_err(input)?;
+        let reconstruction = outcome.reconstruction?;
         self.sparse = Some(reconstruction);
         response::sparse(
             self.sparse.as_ref().unwrap(),
@@ -115,8 +115,7 @@ impl Session {
             sparse,
             &options,
             |_, _, _| true,
-        )
-        .map_err(input)?;
+        )?;
         let diagnostics = dense_report_value(&run.diagnostics, &options)?;
         self.dense = Some(run.surface);
         response::surface(self.dense.as_ref().unwrap(), Some(&diagnostics))
@@ -142,8 +141,7 @@ impl Session {
             sparse,
             &options,
             &mut |_, _, _| true,
-        )
-        .map_err(input)?
+        )?
         else {
             return Ok(Value::Null);
         };
@@ -196,8 +194,7 @@ impl Session {
             &prepared,
             &scores,
             &mut |_, _, _| true,
-        )
-        .map_err(input)?;
+        )?;
         let diagnostics = dense_report_value(&run.diagnostics, &options)?;
         self.dense = Some(run.surface);
         response::surface(self.dense.as_ref().unwrap(), Some(&diagnostics))

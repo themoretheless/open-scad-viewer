@@ -1,26 +1,26 @@
 //! Negative-inside implicit fields and bounded marching-tetrahedra extraction.
 //! CSG fields preserve the zero set but are not generally exact signed distances.
 //! Extraction yields a neutral triangle buffer; mesh inspect lives in the bridge.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 use geometry_ops::Triangles;
-pub use math_core::{Error, Result};
+pub use math_core::{Acceleration, Error, Result, V3, finite};
 use planar_geometry::rings::{self, Rings};
 use std::collections::BTreeMap;
+const INVALID_INPUT: &str = "SDF_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
-    Error::new("SDF_INVALID_INPUT", message)
+    Error::new(INVALID_INPUT, message)
 }
 pub mod flat;
 #[cfg(feature = "gpu")]
 mod gpu;
-
-/// Compute backend for grid sampling. `Cpu` is the deterministic reference and
-/// the default; `Gpu` (feature `gpu`) evaluates the flattened field tree on the
-/// GPU in f32 and is qualified separately — outputs are not bit-identical.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Acceleration {
-    #[default]
-    Cpu,
-    Gpu,
-}
 
 /// The grid-sampling compute shader (WGSL), shared by the native `gpu` feature
 /// and the browser WebGPU host path; both must execute the identical text.
@@ -182,7 +182,7 @@ fn idx_decompose_x(idx: u32, row: u32) -> u32 {
     return idx % row;
 }
 "##;
-pub type Point = [f64; 3];
+pub type Point = V3;
 use math_core::{cross, dot, norm as length, sub};
 #[derive(Clone, Debug)]
 pub enum Field {
@@ -645,9 +645,6 @@ impl<'de> value_codec::Deserialize<'de> for Field {
         }
     }
 }
-fn finite(p: Point) -> bool {
-    p.iter().all(|x| x.is_finite() && x.abs() <= 1e6)
-}
 fn positive(x: f64) -> bool {
     x.is_finite() && x > 0. && x <= 1e6
 }
@@ -662,8 +659,8 @@ fn triangles_ok(mesh: &Triangles) -> bool {
     let n = mesh.indices.len() / 3;
     n > 0
         && n <= 4096
-        && mesh.indices.len() % 3 == 0
-        && mesh.positions.len() % 3 == 0
+        && mesh.indices.len().is_multiple_of(3)
+        && mesh.positions.len().is_multiple_of(3)
         && mesh.indices.iter().all(|&i| {
             i.checked_mul(3)
                 .is_some_and(|o| o + 2 < mesh.positions.len())
@@ -672,7 +669,7 @@ fn triangles_ok(mesh: &Triangles) -> bool {
             .positions
             .iter()
             .all(|x| x.is_finite() && x.abs() <= 1e6)
-        && mesh.indices.chunks_exact(3).all(|t| {
+        && mesh.indices.as_chunks::<3>().0.iter().all(|t| {
             length(cross(
                 sub(point(mesh, t[1]), point(mesh, t[0])),
                 sub(point(mesh, t[2]), point(mesh, t[0])),
@@ -681,7 +678,7 @@ fn triangles_ok(mesh: &Triangles) -> bool {
 }
 fn triangles_closed(mesh: &Triangles) -> bool {
     let mut edges = BTreeMap::new();
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
             *edges.entry((a.min(b), a.max(b))).or_insert(0) += 1;
         }
@@ -689,11 +686,11 @@ fn triangles_closed(mesh: &Triangles) -> bool {
     !edges.is_empty() && edges.values().all(|&n| n == 2)
 }
 fn finish_triangles(mesh: Triangles) -> Result<Triangles> {
-    if mesh.indices.len() % 3 != 0
-        || mesh
-            .indices
-            .iter()
-            .any(|&i| i.checked_mul(3).map(|o| o + 2 >= mesh.positions.len()) != Some(false))
+    if !mesh.indices.len().is_multiple_of(3)
+        || mesh.indices.iter().any(|&i| {
+            i.checked_mul(3)
+                .is_none_or(|o| o + 2 >= mesh.positions.len())
+        })
     {
         return Err(error("Implicit mesh has invalid indices"));
     }
@@ -734,7 +731,7 @@ fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
 fn closest_point(mesh: &Triangles, p: Point) -> (Point, f64) {
     let mut best = p;
     let mut distance = f64::INFINITY;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let q = closest_triangle(p, point(mesh, t[0]), point(mesh, t[1]), point(mesh, t[2]));
         let d = length(sub(p, q));
         if d < distance {
@@ -750,7 +747,7 @@ fn signed_distance(mesh: &Triangles, p: Point) -> f64 {
         return 0.;
     }
     let mut angle = 0.;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let a = sub(point(mesh, t[0]), p);
         let b = sub(point(mesh, t[1]), p);
         let c = sub(point(mesh, t[2]), p);
@@ -1186,10 +1183,10 @@ pub fn polygonize_accelerated(
     #[cfg(feature = "gpu")]
     if acceleration == Acceleration::Gpu {
         check_grid_budget(field, grid)?;
-        if let Some(flat) = field.to_flat() {
-            if let Some(values) = gpu::sample_grid_gpu(&flat, grid) {
-                return polygonize_with_values(field, grid, &values);
-            }
+        if let Some(flat) = field.to_flat()
+            && let Some(values) = gpu::sample_grid_gpu(&flat, grid)
+        {
+            return polygonize_with_values(field, grid, &values);
         }
     }
     polygonize(field, grid)
@@ -1369,7 +1366,9 @@ mod tests {
     }
     fn signed_volume(mesh: &Triangles) -> f64 {
         mesh.indices
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|t| {
                 let a = point(mesh, t[0]);
                 let b = point(mesh, t[1]);

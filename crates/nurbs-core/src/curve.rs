@@ -439,11 +439,11 @@ impl Curve {
             .collect();
         breaks.dedup();
         breaks
-            .windows(2)
-            .map(|w| {
+            .array_windows()
+            .map(|[a, b]| {
                 Ok(Segment {
-                    curve: self.trim(w[0], w[1])?,
-                    domain: [w[0], w[1]],
+                    curve: self.trim(*a, *b)?,
+                    domain: [*a, *b],
                 })
             })
             .collect()

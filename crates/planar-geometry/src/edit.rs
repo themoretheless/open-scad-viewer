@@ -513,7 +513,7 @@ pub fn hit_test_path(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Resul
         let a = pts[i];
         let b = pts[(i + 1) % pts.len()];
         let (t, p, d) = closest_on_segment(a, b, click);
-        if d <= max_dist && best.as_ref().map(|h| d < h.distance).unwrap_or(true) {
+        if d <= max_dist && best.as_ref().is_none_or(|h| d < h.distance) {
             best = Some(PathHit {
                 segment: i,
                 t,
@@ -631,10 +631,8 @@ pub fn knife_cut(path: &BezierPath, a: [f64; 2], b: [f64; 2]) -> Result<Vec<Bezi
             cur = vec![hit];
             prev = hit;
         }
-        if i + 1 < pts.len() || path.closed {
-            if dist(prev, p1) > 1e-9 {
-                cur.push(p1);
-            }
+        if (i + 1 < pts.len() || path.closed) && dist(prev, p1) > 1e-9 {
+            cur.push(p1);
         }
     }
     if path.closed {

@@ -4,21 +4,21 @@
 //! The host (CAD) sections a mesh and passes rings. This crate offsets walls,
 //! hatches infill, and can encode the plan through `gcode-core`. Coordinates
 //! are millimeters.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 
 use planar_geometry::rings::{self as rings, Rings};
 
 pub use gcode_core::{GcodeMove, GcodePreview};
-
-pub const MAX_LAYERS: usize = 2_048;
-
 pub use math_core::{Error, Result};
-
-/// One horizontal slice: closed rings in millimeters. Not a CAD handle.
-#[derive(Clone, Debug, PartialEq)]
-pub struct LayerSection {
-    pub z_mm: f64,
-    pub contours: Vec<Vec<[f64; 2]>>,
-}
+pub use planar_geometry::{LayerSection, MAX_LAYERS};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathRole {
@@ -92,8 +92,8 @@ fn require_settings(settings: &ToolpathSettings) -> Result<()> {
     Ok(())
 }
 
-fn rings_of(section: &LayerSection) -> Rings {
-    section.contours.clone()
+fn rings_of(section: &LayerSection) -> &Rings {
+    &section.contours
 }
 
 fn offset_rings(source: &Rings, distance: f64) -> Result<Rings> {
@@ -205,7 +205,7 @@ pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result
     let mut paths = Vec::new();
     for wall in 0..settings.wall_count {
         let inset = -(wall as f64 + 0.5) * settings.line_width_mm;
-        let offset = offset_rings(&rings_of(section), inset)?;
+        let offset = offset_rings(rings_of(section), inset)?;
         let role = if wall == 0 {
             PathRole::Outline
         } else {
@@ -218,7 +218,7 @@ pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result
         }
     }
     let remaining = offset_rings(
-        &rings_of(section),
+        rings_of(section),
         -(settings.wall_count as f64) * settings.line_width_mm,
     )?;
     paths.extend(hatch(&remaining, settings.infill_spacing_mm));

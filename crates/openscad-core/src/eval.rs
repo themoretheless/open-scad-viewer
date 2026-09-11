@@ -195,10 +195,10 @@ impl<'a> Evaluator<'a> {
     }
 
     fn poll(&self) -> EvalResult<()> {
-        if let Some(abort) = self.should_abort {
-            if abort() {
-                return Err(EvalFailure::Aborted);
-            }
+        if let Some(abort) = self.should_abort
+            && abort()
+        {
+            return Err(EvalFailure::Aborted);
         }
         Ok(())
     }
@@ -224,8 +224,7 @@ impl<'a> Evaluator<'a> {
                 .value_meta
                 .borrow()
                 .get(&(Rc::as_ptr(items)))
-                .map(|(weight, _)| *weight)
-                .unwrap_or(items.len() as u64 + 1),
+                .map_or(items.len() as u64 + 1, |(weight, _)| *weight),
             Value::Str(s) => s.encode_utf16().count().max(1) as u64,
             _ => 1,
         }
@@ -237,8 +236,7 @@ impl<'a> Evaluator<'a> {
                 .value_meta
                 .borrow()
                 .get(&(Rc::as_ptr(items)))
-                .map(|(_, depth)| *depth)
-                .unwrap_or(1),
+                .map_or(1, |(_, depth)| *depth),
             _ => 0,
         }
     }
@@ -326,13 +324,13 @@ impl<'a> Evaluator<'a> {
         name: &str,
         ctx: &Ctx<'a>,
     ) -> EvalResult<VariableResolution<'a>> {
-        if name.starts_with('$') {
-            if let Some(value) = ctx.env.borrow().get(name) {
-                return Ok(VariableResolution {
-                    found: true,
-                    value: value.clone(),
-                });
-            }
+        if name.starts_with('$')
+            && let Some(value) = ctx.env.borrow().get(name)
+        {
+            return Ok(VariableResolution {
+                found: true,
+                value: value.clone(),
+            });
         }
         let mut scope = ctx.stable_scope.clone();
         let mut visible_before = ctx.scope_visible_before;
@@ -355,15 +353,14 @@ impl<'a> Evaluator<'a> {
             if local.found {
                 return Ok(local);
             }
-            if let Some(root) = &ctx.stable_scope {
-                if Rc::ptr_eq(&current, root) {
-                    if let Some(value) = ctx.env.borrow().get(name) {
-                        return Ok(VariableResolution {
-                            found: true,
-                            value: value.clone(),
-                        });
-                    }
-                }
+            if let Some(root) = &ctx.stable_scope
+                && Rc::ptr_eq(&current, root)
+                && let Some(value) = ctx.env.borrow().get(name)
+            {
+                return Ok(VariableResolution {
+                    found: true,
+                    value: value.clone(),
+                });
             }
             scope = current.parent.clone();
             visible_before = usize::MAX;
@@ -500,11 +497,11 @@ impl<'a> Evaluator<'a> {
                 let mut values: Vec<Value<'a>> = Vec::new();
                 for item in items {
                     let value = self.eval_expression(item, ctx, depth + 1)?;
-                    if item.is_list_comprehension() {
-                        if let Value::Vector(comprehension) = &value {
-                            self.append_comprehension_values(&mut values, comprehension, item)?;
-                            continue;
-                        }
+                    if item.is_list_comprehension()
+                        && let Value::Vector(comprehension) = &value
+                    {
+                        self.append_comprehension_values(&mut values, comprehension, item)?;
+                        continue;
                     }
                     values.push(value);
                 }
@@ -697,8 +694,9 @@ impl<'a> Evaluator<'a> {
                         }
                         Ok(s.encode_utf16()
                             .nth(index as usize)
-                            .map(|unit| Value::string(String::from_utf16_lossy(&[unit])))
-                            .unwrap_or(Value::Undef))
+                            .map_or(Value::Undef, |unit| {
+                                Value::string(String::from_utf16_lossy(&[unit]))
+                            }))
                     }
                     _ => Err(self.error(*p, "Only vectors and strings can be indexed")),
                 }
@@ -878,10 +876,10 @@ impl<'a> Evaluator<'a> {
         depth: usize,
     ) -> EvalResult<Vec<Value<'a>>> {
         let value = self.eval_expression(expr, ctx, depth + 1)?;
-        if expr.is_list_comprehension() {
-            if let Value::Vector(items) = &value {
-                return Ok(items.as_ref().clone());
-            }
+        if expr.is_list_comprehension()
+            && let Value::Vector(items) = &value
+        {
+            return Ok(items.as_ref().clone());
         }
         Ok(vec![value])
     }
@@ -1127,28 +1125,28 @@ impl<'a> Evaluator<'a> {
                 .as_ref()
                 .map(|(node, _)| *node)
                 .or_else(|| self.functions.get(name).copied());
-            if let Some(definition) = definition {
-                if !self.is_stable() || declaration.is_some() {
-                    let closure = match &declaration {
-                        Some((_, scope)) => scope.env.borrow().clone(),
-                        None => ctx.env.borrow().clone(),
-                    };
-                    let value = FunctionValue {
-                        name: Some(definition.name.clone()),
-                        params: &definition.params,
-                        body: &definition.body,
-                        closure: Rc::new(closure),
-                        lexical_scope: if self.is_stable() {
-                            declaration
-                                .as_ref()
-                                .map(|(_, scope)| scope.clone())
-                                .or_else(|| ctx.stable_scope.clone())
-                        } else {
-                            None
-                        },
-                    };
-                    return self.invoke_user_function(&value, args, ctx, depth);
-                }
+            if let Some(definition) = definition
+                && (!self.is_stable() || declaration.is_some())
+            {
+                let closure = match &declaration {
+                    Some((_, scope)) => scope.env.borrow().clone(),
+                    None => ctx.env.borrow().clone(),
+                };
+                let value = FunctionValue {
+                    name: Some(definition.name.clone()),
+                    params: &definition.params,
+                    body: &definition.body,
+                    closure: Rc::new(closure),
+                    lexical_scope: if self.is_stable() {
+                        declaration
+                            .as_ref()
+                            .map(|(_, scope)| scope.clone())
+                            .or_else(|| ctx.stable_scope.clone())
+                    } else {
+                        None
+                    },
+                };
+                return self.invoke_user_function(&value, args, ctx, depth);
             }
             let resolved = if self.is_stable() {
                 self.resolve_stable_variable(name, ctx)?
@@ -1164,11 +1162,11 @@ impl<'a> Evaluator<'a> {
                     },
                 }
             };
-            if resolved.found {
-                if let Value::Function(function) = &resolved.value {
-                    let function = function.clone();
-                    return self.invoke_user_function(&function, args, ctx, depth);
-                }
+            if resolved.found
+                && let Value::Function(function) = &resolved.value
+            {
+                let function = function.clone();
+                return self.invoke_user_function(&function, args, ctx, depth);
             }
             return self.eval_builtin(name, args, *p, ctx, depth);
         }
@@ -1189,7 +1187,7 @@ impl<'a> Evaluator<'a> {
     ) -> EvalResult<Value<'a>> {
         if ctx.function_stack.len() >= MAX_EVAL_DEPTH {
             return Err(self.error(
-                args.first().map(|a| a.p).unwrap_or(expr_p(function.body)),
+                args.first().map_or(expr_p(function.body), |a| a.p),
                 format!("Evaluation exceeds {MAX_EVAL_DEPTH} nested function calls"),
             ));
         }
@@ -1200,7 +1198,7 @@ impl<'a> Evaluator<'a> {
                 .or_else(|| ctx.stable_scope.clone());
             let Some(lexical_scope) = lexical_scope else {
                 return Err(self.error(
-                    args.first().map(|a| a.p).unwrap_or(expr_p(function.body)),
+                    args.first().map_or(expr_p(function.body), |a| a.p),
                     "Stable function is missing its lexical scope",
                 ));
             };
@@ -1260,16 +1258,14 @@ impl<'a> Evaluator<'a> {
                 let p = args
                     .iter()
                     .find(|a| a.name.as_deref() == Some(name))
-                    .map(|a| a.p)
-                    .unwrap_or(expr_p(function.body));
+                    .map_or(expr_p(function.body), |a| a.p);
                 return Err(self.error(p, format!("Unknown argument {name}")));
             }
         }
         if positional.len() > function.params.len() {
             let p = positional
                 .get(function.params.len())
-                .map(|a| a.p)
-                .unwrap_or(expr_p(function.body));
+                .map_or(expr_p(function.body), |a| a.p);
             return Err(self.error(p, "Too many function arguments"));
         }
         let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
@@ -1375,18 +1371,16 @@ impl<'a> Evaluator<'a> {
             let argument = &args[index];
             // OpenSCAD permits probing an undeclared bare name with is_undef()
             // without emitting the ordinary unknown-variable warning.
-            if is_undef_probe {
-                if let Expr::Identifier { name, .. } = &argument.value {
-                    if name == "PI" {
-                        return Ok(Value::Number(std::f64::consts::PI));
-                    }
-                    let resolved = self.resolve_stable_variable(name, ctx)?;
-                    return Ok(if resolved.found {
-                        resolved.value
-                    } else {
-                        Value::Undef
-                    });
+            if is_undef_probe && let Expr::Identifier { name, .. } = &argument.value {
+                if name == "PI" {
+                    return Ok(Value::Number(std::f64::consts::PI));
                 }
+                let resolved = self.resolve_stable_variable(name, ctx)?;
+                return Ok(if resolved.found {
+                    resolved.value
+                } else {
+                    Value::Undef
+                });
             }
             Ok(self.eval_expression(&argument.value, ctx, depth + 1)?)
         };
@@ -1414,10 +1408,10 @@ impl<'a> Evaluator<'a> {
             self.register_string(value, p, label)
         };
         let mut random = || {
-            if let Some(host) = self.random_host {
-                if let Ok(mut host) = host.try_borrow_mut() {
-                    return (host)();
-                }
+            if let Some(host) = self.random_host
+                && let Ok(mut host) = host.try_borrow_mut()
+            {
+                return (host)();
             }
             let (next, value) = splitmix64(self.random_state.get());
             self.random_state.set(next);
@@ -2010,7 +2004,7 @@ impl<'a> Evaluator<'a> {
                 let sx = values.first().copied().unwrap_or(1.0);
                 let sy = values.get(1).copied().unwrap_or(sx);
                 let sz = values.get(2).copied().unwrap_or(sx);
-                if [sx, sy, sz].iter().any(|v| *v == 0.0) {
+                if [sx, sy, sz].contains(&0.0) {
                     return Err(self.error(node.p, "Scale values cannot be zero"));
                 }
                 self.eval_nodes(&node.children, &ctx, true)
@@ -2235,10 +2229,10 @@ impl<'a> Evaluator<'a> {
                     &["convexity", "$fn", "$fa", "$fs"],
                 )?;
                 let file = values.get("file").cloned().unwrap_or(Value::Undef);
-                if let Value::Str(file) = &file {
-                    if !file.is_empty() {
-                        return Err(self.import_project_required(node, "dxf_linear_extrude"));
-                    }
+                if let Value::Str(file) = &file
+                    && !file.is_empty()
+                {
+                    return Err(self.import_project_required(node, "dxf_linear_extrude"));
                 }
                 let sections = self.eval_nodes(&node.children, &ctx, true)?;
                 let sections =

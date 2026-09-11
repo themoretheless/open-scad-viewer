@@ -1,5 +1,5 @@
 use super::*;
-use crate::camera::{triangulate, Camera};
+use crate::camera::{Camera, triangulate};
 
 fn calibration() -> Calibration {
     Calibration {
@@ -57,14 +57,18 @@ fn resize_uses_pixel_centres_and_rejects_wrong_crop_or_orientation() {
     c.cx = (c.cx + 0.5) * 3. - 0.5;
     c.cy = (c.cy + 0.5) * 3. - 0.5;
     assert_eq!(c.resized(320, 240, [960, 720]).unwrap(), calibration());
-    assert!(c
-        .resized(320, 240, [720, 960])
-        .unwrap_err()
-        .contains("oriented"));
-    assert!(c
-        .resized(300, 240, [960, 720])
-        .unwrap_err()
-        .contains("aspect"));
+    assert!(
+        c.resized(320, 240, [720, 960])
+            .unwrap_err()
+            .message
+            .contains("oriented")
+    );
+    assert!(
+        c.resized(300, 240, [960, 720])
+            .unwrap_err()
+            .message
+            .contains("aspect")
+    );
 }
 
 #[test]
@@ -94,7 +98,7 @@ fn cancellation_and_limits_never_change_the_input() {
             calls < 25
         },
     );
-    assert_eq!(cancelled.err().unwrap(), "Cancelled");
+    assert_eq!(cancelled.err().unwrap().message, "Cancelled");
     assert_eq!(input.rgb, before);
     let memory = RectificationOptions {
         max_output_bytes: 5,
@@ -109,6 +113,7 @@ fn cancellation_and_limits_never_change_the_input() {
         rectify(&input, &calibration(), [320, 240], &work, |_, _| true)
             .err()
             .unwrap()
+            .message
             .contains("work limit")
     );
 }
@@ -136,14 +141,17 @@ fn invalid_calibration_and_no_valid_rectangle_are_rejected() {
         rectify(&input, &c, [320, 240], &Default::default(), |_, _| true)
             .err()
             .unwrap()
+            .message
             .contains("zoom limit")
     );
-    assert!(Calibration {
-        k1: -3.,
-        ..calibration()
-    }
-    .project_ray([0.5, 0.])
-    .is_none());
+    assert!(
+        Calibration {
+            k1: -3.,
+            ..calibration()
+        }
+        .project_ray([0.5, 0.])
+        .is_none()
+    );
 }
 
 // Independent forward renderer: known non-coplanar 3D landmarks are rendered as

@@ -140,10 +140,10 @@ fn binary_number<'a>(
 
 // Degree-exact trigonometry: normalize once, solve a first-quadrant pair and
 // restore signs by quadrant so common angles stay exact after full rotations.
-const DEG_TO_RAD: f64 = 0.017453292519943295769;
-const RAD_TO_DEG: f64 = 57.2957795130823208767;
-const SQRT_THREE_QUARTERS: f64 = 0.86602540378443859659;
-const SQRT_ONE_THIRD: f64 = 0.57735026918962573106;
+const DEG_TO_RAD: f64 = 0.017_453_292_519_943_295;
+const RAD_TO_DEG: f64 = 57.295_779_513_082_32;
+const SQRT_THREE_QUARTERS: f64 = 0.866_025_403_784_438_6;
+const SQRT_ONE_THIRD: f64 = 0.577_350_269_189_625_7;
 const TRIG_HUGE_VALUE: f64 = 360.0 * 4_503_599_627_370_496.0; // 360 * 2^52
 
 fn reduce_degrees(value: f64, period: f64) -> Option<(f64, f64)> {
@@ -203,14 +203,10 @@ fn unit_circle_components(value: f64) -> Option<(f64, f64)> {
 }
 
 fn sin_degrees(value: f64) -> f64 {
-    unit_circle_components(value)
-        .map(|(s, _)| s)
-        .unwrap_or(f64::NAN)
+    unit_circle_components(value).map_or(f64::NAN, |(s, _)| s)
 }
 fn cos_degrees(value: f64) -> f64 {
-    unit_circle_components(value)
-        .map(|(_, c)| c)
-        .unwrap_or(f64::NAN)
+    unit_circle_components(value).map_or(f64::NAN, |(_, c)| c)
 }
 
 fn tan_degrees(value: f64) -> f64 {
@@ -360,7 +356,7 @@ pub fn format_expression(expression: &Expr) -> String {
             "[{}]",
             items
                 .iter()
-                .map(|i| format_expression(i))
+                .map(format_expression)
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -711,8 +707,8 @@ fn len<'a>(
 ) -> BResult<Value<'a>> {
     expect_count("len", argc, &[1])?;
     match &arg(0)? {
-        Value::Str(s) => Ok(Value::Number(s.chars().count() as f64)),
-        Value::Vector(items) => Ok(Value::Number(items.len() as f64)),
+        Value::Str(deref!(s)) => Ok(Value::Number(s.chars().count() as f64)),
+        Value::Vector(deref!(items)) => Ok(Value::Number(items.len() as f64)),
         _ => fail("len", "argument 1 must be a string or vector"),
     }
 }
@@ -813,7 +809,7 @@ fn ord<'a>(
         return fail("ord", "expects 1 argument");
     }
     let value = arg(0)?;
-    let Value::Str(s) = &value else {
+    let Value::Str(deref!(s)) = &value else {
         return fail("ord", "argument 1 must be a string");
     };
     // Rust strings are well-formed UTF-8 by construction, so the TS
@@ -1053,7 +1049,7 @@ fn search<'a>(
         0
     };
 
-    if let (Value::Str(needle), Value::Str(table)) = (&needle, &table) {
+    if let (Value::Str(deref!(needle)), Value::Str(deref!(table))) = (&needle, &table) {
         let table_characters: Vec<char> = table.chars().collect();
         let mut output: Vec<Value<'a>> = Vec::new();
         for character in needle.chars() {
@@ -1271,24 +1267,24 @@ fn min_max<'a>(
         return fail(name, "expects at least 1 argument");
     }
     let first = arg(0)?;
-    if argc == 1 {
-        if let Value::Vector(values) = &first {
-            if values.is_empty() {
-                return fail(name, "expects at least 1 vector element");
-            }
-            let mut selected = values[0].clone();
-            for value in values.iter().skip(1) {
-                let compared = if name == "min" {
-                    compare_values(value, &selected)
-                } else {
-                    compare_values(&selected, value)
-                };
-                if compared.is_some_and(|c| c < 0.0) {
-                    selected = value.clone();
-                }
-            }
-            return Ok(selected);
+    if argc == 1
+        && let Value::Vector(values) = &first
+    {
+        if values.is_empty() {
+            return fail(name, "expects at least 1 vector element");
         }
+        let mut selected = values[0].clone();
+        for value in values.iter().skip(1) {
+            let compared = if name == "min" {
+                compare_values(value, &selected)
+            } else {
+                compare_values(&selected, value)
+            };
+            if compared.is_some_and(|c| c < 0.0) {
+                selected = value.clone();
+            }
+        }
+        return Ok(selected);
     }
     let mut selected = number_value(name, &first, 0)?;
     for index in 1..argc {

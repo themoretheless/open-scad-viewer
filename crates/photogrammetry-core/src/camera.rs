@@ -146,6 +146,12 @@ impl Rng {
         r
     }
 }
+
+impl Default for Rng {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 /// Independent switches keep the frozen estimator available for measured comparisons.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GeometryOptions {
@@ -175,7 +181,9 @@ impl GeometryOptions {
         if !self.minimum_seed_inlier_ratio.is_finite()
             || !(0. ..=1.).contains(&self.minimum_seed_inlier_ratio)
         {
-            return Err("Seed inlier ratio must be finite and between zero and one".into());
+            return Err(crate::error(
+                "Seed inlier ratio must be finite and between zero and one",
+            ));
         }
         Ok(())
     }
@@ -294,11 +302,7 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)], anal
             .iter()
             .map(|&(x, y)| {
                 let r = residual(e, et, x, y).abs();
-                if r <= 2.5 {
-                    r * r
-                } else {
-                    5. * r - 6.25
-                }
+                if r <= 2.5 { r * r } else { 5. * r - 6.25 }
             })
             .sum::<f64>()
     };
@@ -1326,14 +1330,16 @@ mod tests {
         let camera = Camera::identity(600., 320., 240.);
         let pixels = vec![([f64::NAN, 0.], [0., 0.]); 20];
         let mut report = RobustReport::default();
-        assert!(relative_with_options(
-            &camera,
-            &camera,
-            &pixels,
-            &GeometryOptions::ROBUST,
-            &mut report
-        )
-        .is_none());
+        assert!(
+            relative_with_options(
+                &camera,
+                &camera,
+                &pixels,
+                &GeometryOptions::ROBUST,
+                &mut report
+            )
+            .is_none()
+        );
         assert_eq!(report.iterations, 0);
         let points = vec![([0., 0., 4.], [f64::INFINITY, 0.]); 20];
         assert!(
@@ -1413,14 +1419,16 @@ mod tests {
                 .map(|(p, _, y)| (first.project(*p).unwrap(), *y))
                 .collect::<Vec<_>>();
             let mut report = RobustReport::default();
-            assert!(relative_with_options(
-                &first,
-                &b,
-                &pixels,
-                &GeometryOptions::default(),
-                &mut report
-            )
-            .is_none());
+            assert!(
+                relative_with_options(
+                    &first,
+                    &b,
+                    &pixels,
+                    &GeometryOptions::default(),
+                    &mut report
+                )
+                .is_none()
+            );
             assert!(report.invalid_first_camera);
             assert_eq!(report.iterations, 0);
             assert_eq!(report.hypotheses, 0);
@@ -1447,14 +1455,10 @@ mod tests {
             a.rotation = ID;
             a.rotation[0][0] = rotation_value;
             a.translation = [translation_value, 0., 0.];
-            assert!(relative_with_options(
-                &a,
-                &b,
-                &pixels,
-                &GeometryOptions::default(),
-                &mut report
-            )
-            .is_none());
+            assert!(
+                relative_with_options(&a, &b, &pixels, &GeometryOptions::default(), &mut report)
+                    .is_none()
+            );
             assert!(report.invalid_first_camera);
             assert_eq!(report.iterations, 0);
         }

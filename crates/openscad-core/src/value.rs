@@ -435,19 +435,19 @@ fn multiply<'a>(
     if let (Value::Number(a), Value::Number(b)) = (left, right) {
         return Ok(Value::Number(a * b));
     }
-    if let Value::Number(scalar) = left {
-        if let Value::Vector(items) = right {
-            let items = items.clone();
-            let scaled = scale_vector(&items, *scalar, ctx)?;
-            return Ok(Value::vector(ctx.register(scaled, "scaled vector")?));
-        }
+    if let Value::Number(scalar) = left
+        && let Value::Vector(items) = right
+    {
+        let items = items.clone();
+        let scaled = scale_vector(&items, *scalar, ctx)?;
+        return Ok(Value::vector(ctx.register(scaled, "scaled vector")?));
     }
-    if let Value::Vector(items) = left {
-        if let Value::Number(scalar) = right {
-            let items = items.clone();
-            let scaled = scale_vector(&items, *scalar, ctx)?;
-            return Ok(Value::vector(ctx.register(scaled, "scaled vector")?));
-        }
+    if let Value::Vector(items) = left
+        && let Value::Number(scalar) = right
+    {
+        let items = items.clone();
+        let scaled = scale_vector(&items, *scalar, ctx)?;
+        return Ok(Value::vector(ctx.register(scaled, "scaled vector")?));
     }
     if let (Some(l), Some(r)) = (numeric_vector(left), numeric_vector(right)) {
         let (l, r) = (l.clone(), r.clone());
@@ -642,8 +642,7 @@ pub fn index<'a>(
         Value::Str(s) => Ok(s
             .chars()
             .nth(index)
-            .map(|ch| Value::string(ch.to_string()))
-            .unwrap_or(Value::Undef)),
+            .map_or(Value::Undef, |ch| Value::string(ch.to_string()))),
         Value::Range { start, step, end } => Ok(match index {
             0 => Value::Number(*start),
             1 => Value::Number(*step),
@@ -683,7 +682,7 @@ pub fn locale(value: usize) -> String {
     let digits = value.to_string();
     let mut out = String::new();
     for (index, ch) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index) % 3 == 0 {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);
@@ -714,13 +713,13 @@ pub fn js_number_to_string(value: f64) -> String {
     let n = exponent + 1;
     let body = if k <= n && n <= 21 {
         let mut out = digits;
-        out.extend(std::iter::repeat('0').take((n - k) as usize));
+        out.extend(std::iter::repeat_n('0', (n - k) as usize));
         out
     } else if 0 < n && n <= 21 {
         format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
     } else if -6 < n && n <= 0 {
         let mut out = String::from("0.");
-        out.extend(std::iter::repeat('0').take((-n) as usize));
+        out.extend(std::iter::repeat_n('0', (-n) as usize));
         out.push_str(&digits);
         out
     } else {
@@ -731,7 +730,7 @@ pub fn js_number_to_string(value: f64) -> String {
             out.push_str(&digits[1..]);
         }
         out.push('e');
-        out.push(if n - 1 >= 0 { '+' } else { '-' });
+        out.push(if n > 0 { '+' } else { '-' });
         out.push_str(&(n - 1).abs().to_string());
         out
     };
@@ -779,7 +778,7 @@ pub fn js_to_precision(value: f64, precision: usize) -> String {
         out
     } else {
         let mut out = String::from("0.");
-        out.extend(std::iter::repeat('0').take((-exponent - 1) as usize));
+        out.extend(std::iter::repeat_n('0', (-exponent - 1) as usize));
         out.push_str(&digits);
         out
     };

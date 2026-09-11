@@ -22,11 +22,10 @@ impl<'a> Evaluator<'a> {
             let mut bound = (**scope).clone();
             bound.extend(bindings);
             let bound = Rc::new(bound);
-            if let Some(guard) = arm.get("guard") {
-                if self.evaluate(guard, &bound, &format!("{arm_path}/guard"), depth + 1)? == 0.0 {
+            if let Some(guard) = arm.get("guard")
+                && self.evaluate(guard, &bound, &format!("{arm_path}/guard"), depth + 1)? == 0.0 {
                     continue;
                 }
-            }
             return Ok((index, bound));
         }
         Err(Error::new(
@@ -338,7 +337,7 @@ mod typed_value_tests {
         }});
         let mut expr = json!({"op":"typed_value","value":subject,"type":descriptor});
         let Value::Record(record) = run(&expr).unwrap() else { panic!("expected record") };
-        assert!(matches!(record["label"],Value::Text("point")));
+        ::std::assert_matches!(record["label"], Value::Text("point"));
         assert_eq!(sequence(&record["values"],"/").unwrap().len(),2);
         expr["type"]["fields"]["label"] = json!({"name":"int"});
         assert_eq!(run(&expr).unwrap_err().path,"/typed/label");

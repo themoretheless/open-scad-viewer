@@ -3,6 +3,15 @@
 //! the `extern "C"` surface the TypeScript host (`services/geometry`) uses.
 //! Responses are returned as packed u64 (len << 32 | ptr), which is sound
 //! because wasm32 linear memory pointers fit 32 bits.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 
 #[unsafe(no_mangle)]
 pub extern "C" fn abi_alloc(len: usize) -> usize {

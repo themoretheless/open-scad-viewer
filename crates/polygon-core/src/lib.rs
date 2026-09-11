@@ -7,6 +7,15 @@
 //! - [`appearance`] — paint / style (not shape)
 //!
 //! 2D paths/rings live in `planar-geometry`. Print planning lives in `slicer-core`.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub mod appearance;
 pub mod solid;
 use std::collections::{BTreeMap, BTreeSet};
@@ -16,20 +25,14 @@ pub const MAX_TRIANGLES: usize = 20_000;
 pub const MAX_MESH_TRIANGLES: usize = 100_000;
 pub const MAX_VERTICES: usize = 300_000;
 pub use math_core::{Error, Result};
+pub(crate) const INVALID_INPUT: &str = "POLYGON_INVALID_INPUT";
 pub(crate) fn error(message: impl Into<String>) -> Error {
-    Error::new("POLYGON_INVALID_INPUT", message)
+    Error::new(INVALID_INPUT, message)
 }
 pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
-    if condition {
-        Ok(())
-    } else {
-        Err(error(message))
-    }
+    math_core::ensure(condition, INVALID_INPUT, message)
 }
-pub(crate) fn norm(v: &[f64]) -> f64 {
-    v.iter().fold(0_f64, |n, x| n.hypot(*x))
-}
-pub(crate) use math_core::{cross, sub};
+pub(crate) use math_core::{cross, dot, norm, scale, sub};
 /// Common owned exchange format: independent buffers, no kernel pointers.
 #[derive(Debug, Clone)]
 pub struct Mesh {
@@ -421,7 +424,7 @@ impl Mesh {
     }
     fn edges(&self) -> BTreeMap<(usize, usize), Vec<[usize; 2]>> {
         let mut edges = BTreeMap::<_, Vec<_>>::new();
-        for t in self.indices.chunks_exact(3) {
+        for t in self.indices.as_chunks::<3>().0 {
             for k in 0..3 {
                 let a = t[k];
                 let b = t[(k + 1) % 3];
@@ -440,14 +443,14 @@ impl Mesh {
         let mut volume = 0.;
         let mut volume_compensation = 0.;
         let mut degenerate = 0;
-        for t in self.indices.chunks_exact(3) {
+        for t in self.indices.as_chunks::<3>().0 {
             let a = self.point(t[0])?;
             let b = self.point(t[1])?;
             let c = self.point(t[2])?;
             let ab = sub(b, a);
             let ac = sub(c, a);
             let normal = cross(ab, ac);
-            if norm(&normal) <= f64::EPSILON * (norm(&ab) * norm(&ac)).max(1.) {
+            if norm(normal) <= f64::EPSILON * (norm(ab) * norm(ac)).max(1.) {
                 degenerate += 1;
             }
             let ar = sub(a, reference);
@@ -550,7 +553,7 @@ impl Mesh {
             "Mesh transform must be nonsingular.",
         )?;
         let mut result = self.clone();
-        for p in result.positions.chunks_exact_mut(3) {
+        for p in result.positions.as_chunks_mut::<3>().0 {
             let q = [p[0], p[1], p[2]];
             for i in 0..3 {
                 p[i] = m[i][3] + (0..3).map(|j| m[i][j] * q[j]).sum::<f64>();
@@ -563,13 +566,13 @@ impl Mesh {
         Ok(result)
     }
     pub fn reverse_winding(&mut self) {
-        for t in self.indices.chunks_exact_mut(3) {
+        for t in self.indices.as_chunks_mut::<3>().0 {
             t.swap(1, 2);
         }
     }
     pub fn thicken(&self, vector: [f64; 3]) -> Result<BuiltMesh> {
         check(
-            vector.iter().all(|v| v.is_finite()) && norm(&vector) > 0.,
+            vector.iter().all(|v| v.is_finite()) && norm(vector) > 0.,
             "Thickening vector must be finite and nonzero.",
         )?;
         let source = self.inspect()?;
@@ -593,7 +596,7 @@ impl Mesh {
                 .map(|(i, v)| v + vector[i % 3]),
         );
         let mut indices = Vec::new();
-        for t in self.indices.chunks_exact(3) {
+        for t in self.indices.as_chunks::<3>().0 {
             let [a, b, c] = [t[0], t[1], t[2]];
             indices.extend([a, c, b, a + count, b + count, c + count]);
         }
@@ -626,12 +629,12 @@ impl Mesh {
             "STL export requires a closed, consistently oriented mesh with positive volume.",
         )?;
         let mut output = String::from("solid modelgraph_nurbs_sampled\n");
-        for t in self.indices.chunks_exact(3) {
+        for t in self.indices.as_chunks::<3>().0 {
             let a = self.point(t[0])?;
             let b = self.point(t[1])?;
             let c = self.point(t[2])?;
             let normal = cross(sub(b, a), sub(c, a));
-            let len = norm(&normal);
+            let len = norm(normal);
             writeln!(
                 output,
                 "  facet normal {} {} {}\n    outer loop",

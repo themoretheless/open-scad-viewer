@@ -1,10 +1,20 @@
 //! Bounded Catmull–Clark refinement. Original polygon IDs survive refinement.
 //! Tessellation is a neutral triangle buffer; mesh inspect/fit lives in the bridge.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 use std::collections::{BTreeMap, BTreeSet};
-type Point = [f64; 3];
+type Point = math_core::V3;
 pub use math_core::{Error, Result};
+const INVALID_INPUT: &str = "SUBDIVISION_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
-    Error::new("SUBDIVISION_INVALID_INPUT", message)
+    Error::new(INVALID_INPUT, message)
 }
 #[derive(Clone, Debug)]
 pub struct Cage {
@@ -284,7 +294,7 @@ mod tests {
     }
     fn boundary_edges(t: &geometry_ops::Triangles) -> usize {
         let mut edges = BTreeMap::new();
-        for tri in t.indices.chunks_exact(3) {
+        for tri in t.indices.as_chunks::<3>().0 {
             for (a, b) in [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])] {
                 let key = (a.min(b), a.max(b));
                 *edges.entry(key).or_insert(0) += 1;

@@ -163,10 +163,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"evaluation_ms\":{}}}",
         options.tolerance,
-        options
-            .voxel_size
-            .map(|v| v.to_string())
-            .unwrap_or("null".into()),
+        options.voxel_size.map_or("null".into(), |v| v.to_string()),
         r.input_reconstructed,
         r.input_reference,
         summary(&r.reconstructed_to_reference),

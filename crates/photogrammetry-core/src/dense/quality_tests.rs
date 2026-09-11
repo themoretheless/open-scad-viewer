@@ -1,5 +1,5 @@
 use super::*;
-use crate::{camera::Camera, Point};
+use crate::{Point, camera::Camera};
 #[path = "../../examples/support/dense_fixture.rs"]
 mod fixture;
 use fixture::*;
@@ -76,7 +76,7 @@ fn refinement_can_be_cancelled_after_global_initialization() {
     })
     .unwrap_err();
     assert!(reached_refinement);
-    assert_eq!(error, "Cancelled");
+    assert_eq!(error.message, "Cancelled");
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn planning_budget_accounts_for_temporary_plane_states() {
         panic!("allocation must be rejected before computation")
     })
     .unwrap_err();
-    assert!(error.contains("512 MiB"));
+    assert!(error.message.contains("512 MiB"));
 }
 
 #[test]
@@ -162,12 +162,14 @@ fn invalid_patch_radius_is_rejected() {
 
 #[test]
 fn dual_scale_requires_large_patch_and_cancels_secondary_pass() {
-    assert!(DenseOptions {
-        dual_scale: true,
-        ..Default::default()
-    }
-    .validate()
-    .is_err());
+    assert!(
+        DenseOptions {
+            dual_scale: true,
+            ..Default::default()
+        }
+        .validate()
+        .is_err()
+    );
     let (images, sparse, _) = fixture(Scene {
         angle: 0.,
         thin: false,

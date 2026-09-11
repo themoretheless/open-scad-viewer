@@ -3,7 +3,7 @@
 impl Compiler {
     fn constrain_receiver(&self, value: V, declared: &J, constraints: &J, depth: usize) -> R<V> {
         if depth > 16 {
-            return Err("Receiver type nesting exceeds 16".into());
+            return Err(crate::error("Receiver type nesting exceeds 16"));
         }
         let bounds = arr(constraints, s(declared, "name"))
             .iter()
@@ -45,13 +45,13 @@ impl Compiler {
     }
     fn associated_names(&self, def: &J, allowed: &mut Set<String>) -> R<()> {
         for generic in arr(def, "generics") {
-            let generic = generic.as_str().ok_or("Invalid generic name")?;
+            let generic = generic.as_str().ok_or_else(|| crate::error("Invalid generic name"))?;
             for bound in arr(&def["bounds"], generic) {
-                let bound = bound.as_str().ok_or("Invalid trait name")?;
+                let bound = bound.as_str().ok_or_else(|| crate::error("Invalid trait name"))?;
                 let contract = self
                     .traits
                     .get(bound)
-                    .ok_or_else(|| format!("Unknown trait {bound}"))?;
+                    .ok_or_else(|| crate::error(format!("Unknown trait {bound}")))?;
                 for associated in arr(contract, "associated") {
                     allowed.insert(format!("{generic}.{}", s(associated, "name")));
                 }
@@ -82,13 +82,13 @@ impl Compiler {
                 || typename(&input["type"]) != "Self"
                 || input.get("default").is_some()
         }) {
-            return Err(format!(
+            return Err(crate::error(format!(
                 "Method {} must start with self: Self",
                 s(method, "name")
-            ));
+            )));
         }
         if !arr(method, "generics").is_empty() {
-            return Err("Method generic parameters are not supported".into());
+            return Err(crate::error("Method generic parameters are not supported"));
         }
         Ok(())
     }
@@ -99,13 +99,13 @@ impl Compiler {
         let contract = self
             .traits
             .get(bound)
-            .ok_or_else(|| format!("Unknown trait {bound}"))?;
+            .ok_or_else(|| crate::error(format!("Unknown trait {bound}")))?;
         let implementation = self.implementations.get(&Self::impl_key(bound, target));
         if implementation.is_none()
             && (!arr(contract, "associated").is_empty()
                 || arr(contract, "methods").iter().any(|m| flag(m, "required")))
         {
-            return Err(format!("{} requires impl {bound}", typename(target)));
+            return Err(crate::error(format!("{} requires impl {bound}", typename(target))));
         }
         let mut bindings = Types::from_iter([("Self".into(), target.clone())]);
         if let Some((implementation, _)) = implementation {
@@ -119,33 +119,33 @@ impl Compiler {
         // A record always remains its concrete type; traits only constrain it.
         let fields = self
             .type_fields(target)
-            .map_err(|_| format!("trait {bound} requires a record type"))?;
+            .map_err(|_| crate::error(format!("trait {bound} requires a record type")))?;
         for field in arr(contract, "fields") {
             let key = s(field, "name");
             let actual = fields
                 .get(key)
-                .ok_or_else(|| format!("trait {bound} requires field {key}"))?;
+                .ok_or_else(|| crate::error(format!("trait {bound} requires field {key}")))?;
             let expected = substitute(&field["type"], &bindings, 0)?;
             let widening =
                 ["int", "f32"].contains(&s(actual, "name")) && s(&expected, "name") == "f64";
             if typename(actual) != typename(&expected) && !widening {
-                return Err(format!(
+                return Err(crate::error(format!(
                     "{key}: trait {bound} expects {}, got {}",
                     typename(&expected),
                     typename(actual)
-                ));
+                )));
             }
         }
         Ok(bindings)
     }
     fn resolve_function_bounds(&self, def: &J, bindings: &mut Types) -> R<()> {
         for generic in arr(def, "generics") {
-            let generic = generic.as_str().ok_or("Invalid generic name")?;
+            let generic = generic.as_str().ok_or_else(|| crate::error("Invalid generic name"))?;
             let Some(target) = bindings.get(generic).cloned() else {
                 continue;
             };
             for bound in arr(&def["bounds"], generic) {
-                let bound = bound.as_str().ok_or("Invalid trait name")?;
+                let bound = bound.as_str().ok_or_else(|| crate::error("Invalid trait name"))?;
                 let resolved = self.trait_bindings(bound, &target)?;
                 for (key, value) in resolved {
                     if let Some(member) = key.strip_prefix("Self.") {
@@ -154,7 +154,7 @@ impl Compiler {
                             .get(&key)
                             .is_some_and(|old| typename(old) != typename(&value))
                         {
-                            return Err(format!("Ambiguous associated type {key}"));
+                            return Err(crate::error(format!("Ambiguous associated type {key}")));
                         }
                         bindings.insert(key, value);
                     }
@@ -171,23 +171,23 @@ impl Compiler {
         depth: usize,
     ) -> R<J> {
         if depth > 16 {
-            return Err("Associated type nesting exceeds 16".into());
+            return Err(crate::error("Associated type nesting exceeds 16"));
         }
         let name = s(t, "name");
         if (name == "Self" || name.starts_with("Self.")) && !arr(t, "args").is_empty() {
-            return Err("Self and associated types take no type arguments".into());
+            return Err(crate::error("Self and associated types take no type arguments"));
         }
         if name == "Self" {
             return Ok(target.clone());
         }
         if let Some(member) = name.strip_prefix("Self.") {
             if !visiting.insert(member.into()) {
-                return Err(format!("Cyclic associated type {member}"));
+                return Err(crate::error(format!("Cyclic associated type {member}")));
             }
             let definition = arr(implementation, "associated")
                 .iter()
                 .find(|a| s(a, "name") == member)
-                .ok_or_else(|| format!("Unknown associated type {member}"))?;
+                .ok_or_else(|| crate::error(format!("Unknown associated type {member}")))?;
             let value = Self::resolve_associated(
                 &definition["type"],
                 target,
@@ -211,23 +211,23 @@ impl Compiler {
         let target = &original["target"];
         self.validate(target, &Set::new(), &Set::new())?;
         if !self.structs.contains_key(s(target, "name")) {
-            return Err("impl requires a named structure type".into());
+            return Err(crate::error("impl requires a named structure type"));
         }
         let contract = self
             .traits
             .get(bound)
             .cloned()
-            .ok_or_else(|| format!("Unknown trait {bound}"))?;
+            .ok_or_else(|| crate::error(format!("Unknown trait {bound}")))?;
         let key = Self::impl_key(bound, target);
         if self.implementations.contains_key(&key) {
-            return Err(format!("Duplicate impl {bound} for {}", typename(target)));
+            return Err(crate::error(format!("Duplicate impl {bound} for {}", typename(target))));
         }
         let mut implementation = original.clone();
         let mut types = Types::from_iter([("Self".into(), target.clone())]);
         if arr(original, "associated").len() != arr(&contract, "associated").len() {
-            return Err(format!(
+            return Err(crate::error(format!(
                 "impl {bound}: associated types must match the trait"
-            ));
+            )));
         }
         for associated in arr(original, "associated") {
             let name = s(associated, "name");
@@ -235,7 +235,7 @@ impl Compiler {
                 .iter()
                 .any(|a| s(a, "name") == name)
             {
-                return Err(format!("Unknown associated type {name}"));
+                return Err(crate::error(format!("Unknown associated type {name}")));
             }
             let value = Self::resolve_associated(
                 &associated["type"],
@@ -253,10 +253,10 @@ impl Compiler {
             let expected = arr(&contract, "methods")
                 .iter()
                 .find(|m| s(m, "name") == name)
-                .ok_or_else(|| format!("Unknown trait method {name}"))?;
+                .ok_or_else(|| crate::error(format!("Unknown trait method {name}")))?;
             self.validate_receiver(method)?;
             if arr(method, "inputs").len() != arr(expected, "inputs").len() {
-                return Err(format!("Method {name}: input count differs from trait"));
+                return Err(crate::error(format!("Method {name}: input count differs from trait")));
             }
             let mut method = method.clone();
             let mut inputs = Vec::new();
@@ -265,28 +265,25 @@ impl Compiler {
                     || typename(&substitute(&actual["type"], &types, 0)?)
                         != typename(&substitute(&expected["type"], &types, 0)?)
                 {
-                    return Err(format!(
+                    return Err(crate::error(format!(
                         "Method {name}: incompatible parameter {}",
                         s(expected, "name")
-                    ));
+                    )));
                 }
                 let mut input = actual.clone();
-                if input.get("default").is_none() {
-                    if let Some(value) = expected.get("default") {
+                if input.get("default").is_none()
+                    && let Some(value) = expected.get("default") {
                         input["default"] = value.clone();
                     }
-                }
                 inputs.push(input);
             }
             if !flag(&method, "inferResult") && arr(&method, "outputs") != arr(expected, "outputs")
-            {
-                if arr(&method, "outputs").len() != 1
+                && (arr(&method, "outputs").len() != 1
                     || typename(&substitute(&method["outputs"][0]["type"], &types, 0)?)
-                        != typename(&substitute(&expected["outputs"][0]["type"], &types, 0)?)
+                        != typename(&substitute(&expected["outputs"][0]["type"], &types, 0)?))
                 {
-                    return Err(format!("Method {name}: incompatible result type"));
+                    return Err(crate::error(format!("Method {name}: incompatible result type")));
                 }
-            }
             method["inputs"] = json!(inputs);
             method["outputs"] = expected["outputs"].clone();
             method["inferResult"] = json!(false);
@@ -297,10 +294,10 @@ impl Compiler {
             if flag(method, "required")
                 && !methods.iter().any(|m| s(m, "name") == s(method, "name"))
             {
-                return Err(format!(
+                return Err(crate::error(format!(
                     "impl {bound}: missing method {}",
                     s(method, "name")
-                ));
+                )));
             }
         }
         implementation["methods"] = json!(methods);
@@ -348,14 +345,14 @@ impl Compiler {
             }
         }
         if candidates.len() != 1 {
-            return Err(if candidates.is_empty() {
+            return Err(crate::error(if candidates.is_empty() {
                 format!(
                     "No applicable trait method {name} for {}",
                     typename(&target)
                 )
             } else {
                 format!("Ambiguous trait method {name}: {}", candidates.join(", "))
-            });
+            }));
         }
         let bound = &candidates[0];
         let types = self.trait_bindings(bound, &target)?;
@@ -388,7 +385,7 @@ impl Compiler {
         scope.insert(local.clone(), receiver);
         let mut args = arr(call, "args").to_vec();
         if args.iter().any(|a| s(a, "name") == "self") {
-            return Err("Method receiver is supplied by the dot call".into());
+            return Err(crate::error("Method receiver is supplied by the dot call"));
         }
         let named = args.iter().any(|a| a.get("name").is_some());
         let mut first = json!({"value":{"kind":"name","value":local}});

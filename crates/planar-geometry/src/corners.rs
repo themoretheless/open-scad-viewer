@@ -1,6 +1,7 @@
 //! Corner styles and rounded primitive → Bézier conversion.
 use crate::path::{BezierPath, PathSegment};
 use crate::{Result, check};
+use math_core::{norm2, sub2};
 
 const KAPPA: f64 = 0.552_285;
 
@@ -18,7 +19,7 @@ fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 }
 
 fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
+    norm2(sub2(a, b))
 }
 
 fn resolve_corner(radii: &[f64], styles: &[CornerStyle], i: usize) -> (CornerStyle, f64) {
@@ -203,7 +204,7 @@ pub fn rounded_polygon(
                 let at = if i == 0 {
                     start
                 } else {
-                    segments.last().map(|s| s.end()).unwrap_or(start)
+                    segments.last().map_or(start, |s| s.end())
                 };
                 if dist(at, v) > 1e-9 {
                     segments.push(PathSegment::Line { to: v });
@@ -221,7 +222,7 @@ pub fn rounded_polygon(
             }
         }
     }
-    let at = segments.last().map(|s| s.end()).unwrap_or(start);
+    let at = segments.last().map_or(start, |s| s.end());
     if dist(at, start) > 1e-9 {
         segments.push(PathSegment::Line { to: start });
     }

@@ -15,11 +15,11 @@ pub use simplify::{simplify, simplify_with_progress};
 #[cfg(test)]
 mod quality_tests;
 
-use crate::{math::*, Image, Reconstruction, Result};
+use crate::{Image, Reconstruction, Result, math::*};
 pub use mesh::{compact, filter_small_components};
 
 #[cfg(test)]
-use crate::{camera::Camera, Point};
+use crate::{Point, camera::Camera};
 #[cfg(test)]
 #[path = "../examples/support/dense_fixture.rs"]
 mod fixture;
@@ -138,7 +138,7 @@ impl DenseOptions {
             || !(0.1..=4.).contains(&self.reprojection_tolerance)
             || self.min_component_triangles > limits::MAX_SURFACE_TRIANGLES
         {
-            return Err("Invalid dense reconstruction options".into());
+            return Err(crate::error("Invalid dense reconstruction options"));
         }
         Ok(())
     }
@@ -182,15 +182,15 @@ impl DenseDiagnostics {
         let hypotheses = self
             .evaluated_hypotheses
             .checked_add(other.evaluated_hypotheses)
-            .ok_or("Depth hypothesis counter overflow")?;
+            .ok_or_else(|| crate::error("Depth hypothesis counter overflow"))?;
         let patches = self
             .evaluated_source_patches
             .checked_add(other.evaluated_source_patches)
-            .ok_or("Depth patch counter overflow")?;
+            .ok_or_else(|| crate::error("Depth patch counter overflow"))?;
         let pixels = self
             .sampled_source_pixels
             .checked_add(other.sampled_source_pixels)
-            .ok_or("Depth pixel counter overflow")?;
+            .ok_or_else(|| crate::error("Depth pixel counter overflow"))?;
         self.evaluated_hypotheses = hypotheses;
         self.evaluated_source_patches = patches;
         self.sampled_source_pixels = pixels;
@@ -237,7 +237,7 @@ fn cancelled(
     if progress(stage, n, total) {
         Ok(())
     } else {
-        Err("Cancelled".into())
+        Err(crate::error("Cancelled"))
     }
 }
 
@@ -305,7 +305,9 @@ pub fn densify_with_options(
 ) -> Result<DenseReconstruction> {
     options.validate()?;
     if images.len() != sparse.cameras.len() || !(2..=200).contains(&images.len()) {
-        return Err("Expected 2 to 200 matching images and camera slots".into());
+        return Err(crate::error(
+            "Expected 2 to 200 matching images and camera slots",
+        ));
     }
     for image in images {
         image.validate()?;
@@ -322,13 +324,15 @@ pub fn densify_with_options(
                 .chain(camera.translation.iter())
                 .any(|x| !x.is_finite())
         {
-            return Err("Invalid camera for dense reconstruction".into());
+            return Err(crate::error("Invalid camera for dense reconstruction"));
         }
     }
     if estimated_working_bytes(images, sparse, options)
         .is_none_or(|bytes| bytes > MAX_WORKING_BYTES)
     {
-        return Err("Dense working set exceeds 512 MiB planning budget; reduce image count or depth resolution".into());
+        return Err(crate::error(
+            "Dense working set exceeds 512 MiB planning budget; reduce image count or depth resolution",
+        ));
     }
     cancelled(&mut progress, "depth", 0, images.len())?;
     let grayscale = estimation::prepare_grayscale(images, sparse, options, &mut progress)?;
@@ -356,7 +360,7 @@ pub fn densify_with_options(
             let other = secondary
                 .iter()
                 .find(|m| m.image == map.image)
-                .ok_or("Missing secondary depth map")?;
+                .ok_or_else(|| crate::error("Missing secondary depth map"))?;
             selection::select_depth(map, other, options.relative_depth_tolerance, &mut progress)?;
         }
     }
@@ -420,10 +424,9 @@ fn finish_densify(
         surface
     };
     if surface.positions.len() < 20 {
-        return Err(
-            "Insufficient multi-view depth agreement; only sparse reconstruction is available"
-                .into(),
-        );
+        return Err(crate::error(
+            "Insufficient multi-view depth agreement; only sparse reconstruction is available",
+        ));
     }
     diagnostics.vertices = surface.positions.len();
     diagnostics.triangles = surface.triangles.len();
@@ -458,7 +461,7 @@ pub fn prepare_host_sweep(
         return Ok(None);
     }
     if images.len() != sparse.cameras.len() {
-        return Err("Expected matching images and camera slots".into());
+        return Err(crate::error("Expected matching images and camera slots"));
     }
     estimation::prepare_host_views(images, sparse, options, progress).map(Some)
 }
@@ -486,7 +489,7 @@ mod tests {
     use super::*;
     #[test]
     fn depth_priors_are_opt_in_and_deterministic() {
-        use fixture::{fixture, Scene};
+        use fixture::{Scene, fixture};
         let (images, sparse, _) = fixture(Scene {
             angle: 30.,
             thin: true,
@@ -546,7 +549,9 @@ mod tests {
         };
         let images = [image.clone(), image];
         assert_eq!(
-            densify(&images, &sparse, 64, |_, _, _| false).unwrap_err(),
+            densify(&images, &sparse, 64, |_, _, _| false)
+                .unwrap_err()
+                .message,
             "Cancelled"
         );
         let options = DenseOptions {
@@ -572,7 +577,7 @@ mod tests {
             panic!("Invalid options must fail before work")
         })
         .unwrap_err();
-        assert_eq!(error, "Invalid dense reconstruction options");
+        assert_eq!(error.message, "Invalid dense reconstruction options");
     }
     #[test]
     fn working_set_budget_is_checked_before_starting_depth_estimation() {
@@ -597,7 +602,7 @@ mod tests {
             panic!("Depth computation must not start above its planning budget")
         })
         .unwrap_err();
-        assert!(error.contains("512 MiB"), "{error}");
+        assert!(error.message.contains("512 MiB"), "{error}");
     }
     #[test]
     fn narrow_images_fail_without_unsigned_underflow() {

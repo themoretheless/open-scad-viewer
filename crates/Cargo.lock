@@ -361,6 +361,7 @@ name = "mechanics-core"
 version = "0.1.0"
 dependencies = [
  "math-core",
+ "planar-geometry",
 ]
 
 [[package]]
@@ -374,6 +375,7 @@ dependencies = [
 name = "modelgraph-text"
 version = "0.1.0"
 dependencies = [
+ "math-core",
  "value-codec",
 ]
 

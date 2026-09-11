@@ -1,10 +1,10 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
-use crate::{encode, field, input, Result};
+use crate::{Result, encode, field, input};
 use planar_geometry::rings::{self as planar, Rings};
-use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use polygon_core::Mesh;
+use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
-use value_codec::{json, Value};
+use value_codec::{Value, json};
 #[derive(Clone)]
 enum Shape {
     Solid(Mesh),
@@ -53,10 +53,10 @@ fn profile(s: &Shape) -> Result<&Rings> {
     }
 }
 fn boolean(a: &Mesh, b: &Mesh, op: &str) -> Result<Mesh> {
-    if op == "union" {
-        if let Some(m) = solid::join_touching(a, b)? {
-            return Ok(m);
-        }
+    if op == "union"
+        && let Some(m) = solid::join_touching(a, b)?
+    {
+        return Ok(m);
     }
     if let Some(m) = solid::prism_boolean(a, b, op)? {
         return Ok(m);
@@ -302,7 +302,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                         return Err(input("Invalid affine matrix"));
                     }
                     let mut out = s.clone();
-                    for p in out.positions.chunks_exact_mut(3) {
+                    for p in out.positions.as_chunks_mut::<3>().0 {
                         let q = std::array::from_fn::<_, 3, _>(|i| {
                             m[i][0] * p[0] + m[i][1] * p[1] + m[i][2] * p[2] + m[i][3]
                         });
@@ -384,7 +384,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             Shape::Solid(m) => {
                 let report = m.inspect()?;
                 let mut area = 0.;
-                for t in m.indices.chunks_exact(3) {
+                for t in m.indices.as_chunks::<3>().0 {
                     let a = m.point(t[0])?;
                     let b = m.point(t[1])?;
                     let c = m.point(t[2])?;
@@ -397,7 +397,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 }
                 let mut min = [f64::INFINITY; 3];
                 let mut max = [f64::NEG_INFINITY; 3];
-                for p in m.positions.chunks_exact(3) {
+                for p in m.positions.as_chunks::<3>().0 {
                     for k in 0..3 {
                         min[k] = min[k].min(p[k]);
                         max[k] = max[k].max(p[k])
@@ -437,7 +437,7 @@ fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> 
         return Err(input("Minkowski convex decomposition budget exceeded"));
     }
     let mut split = None;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let a = mesh.point(t[0])?;
         let b = mesh.point(t[1])?;
         let c = mesh.point(t[2])?;
@@ -456,7 +456,9 @@ fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> 
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
         if mesh
             .positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .any(|p| n[0] * p[0] + n[1] * p[1] + n[2] * p[2] - d > 1e-8)
         {
             split = Some((n, d));
@@ -503,7 +505,7 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
     let mut groups = std::collections::BTreeMap::new();
     let mut ids = Vec::new();
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
-    for t in m.indices.chunks_exact(3) {
+    for t in m.indices.as_chunks::<3>().0 {
         let a = m.point(t[0])?;
         let b = m.point(t[1])?;
         let c = m.point(t[2])?;

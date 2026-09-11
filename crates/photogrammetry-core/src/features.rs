@@ -332,7 +332,7 @@ fn describe(
             let (gx, gy) = if interior {
                 gradient_offset(p, w, x0, y0, dx, dy, fa, fb)
             } else {
-                gradient(&p, w, h, x + dx as f64, y + dy as f64)
+                gradient(p, w, h, x + dx as f64, y + dy as f64)
             };
             let angle = gy.atan2(gx);
             let b = ((angle + std::f32::consts::PI) * 36. / std::f32::consts::TAU) as usize % 36;
@@ -378,11 +378,11 @@ fn describe(
     for iy in 0..16 {
         for ix in 0..16 {
             let (u, v) = (ix as f64 - 7.5, iy as f64 - 7.5);
-            let (sx, sy) = (x as f64 + c * u - s * v, y as f64 + s * u + c * v);
+            let (sx, sy) = (x + c * u - s * v, y + s * u + c * v);
             let (gx, gy) = if interior {
                 gradient_interior(p, w, sx, sy)
             } else {
-                gradient(&p, w, h, sx, sy)
+                gradient(p, w, h, sx, sy)
             };
             let mag = (gx * gx + gy * gy).sqrt() * weights.descriptor[iy * 16 + ix];
             let a = (gy.atan2(gx) as f64 - angle).rem_euclid(std::f64::consts::TAU) * 8.
@@ -471,7 +471,7 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
                 let cutoff = best_a[i].2.max(best_b[j].1);
                 // Partial sums never decrease, so checking the cutoff once per
                 // 16-component chunk rejects the same pairs as checking every k.
-                for (cx, cy) in x.chunks_exact(16).zip(y.chunks_exact(16)) {
+                for (cx, cy) in x.as_chunks::<16>().0.iter().zip(y.chunks_exact(16)) {
                     for k in 0..16 {
                         let v = cx[k] - cy[k];
                         d += v * v;

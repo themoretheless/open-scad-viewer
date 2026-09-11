@@ -1,9 +1,9 @@
 //! JSON transport for planar path / effects / editor helpers.
-use crate::{encode, field, input, Result};
+use crate::{Result, encode, field, input};
 use planar_geometry::edit;
 use planar_geometry::effects::{self, ArcMode, StippleKind};
 use planar_geometry::path::{BezierPath, PathSegment};
-use value_codec::{json, Value};
+use value_codec::{Value, json};
 
 fn encode_path(path: &BezierPath) -> Value {
     let segments: Vec<Value> = path
@@ -485,7 +485,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "gap")?,
         )?)?,
         "arrow_markers" => {
-            use planar_geometry::stroke::{path_arrow_markers, ArrowMarker};
+            use planar_geometry::stroke::{ArrowMarker, path_arrow_markers};
             let parse = |s: &str| match s {
                 "arrow" => ArrowMarker::Arrow,
                 "dot" => ArrowMarker::Dot,
@@ -500,7 +500,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             )?)
         }
         "recolor" => {
-            use polygon_core::appearance::{shift_color, Color};
+            use polygon_core::appearance::{Color, shift_color};
             let c = field::<[u8; 4]>(&v, "color")?;
             let out = shift_color(
                 Color::from_rgba(c),

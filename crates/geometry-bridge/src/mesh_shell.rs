@@ -1,5 +1,5 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
-use polygon_core::{solid::proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
+use polygon_core::{BuiltMesh, Error, Mesh, Result, solid::proximity::closest_triangle};
 fn fail(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
@@ -172,7 +172,9 @@ pub fn shell_options(
     }
     let triangles: Vec<_> = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|ids| {
             let p = ids.map_array(mesh);
             Triangle {
@@ -282,7 +284,9 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
             })?;
         let ids: Vec<usize> = tile
             .positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| {
                 let key = std::array::from_fn(|k| ((p[k] - grid.min[k]) / quantum).round() as i64);
                 *welded.entry(key).or_insert_with(|| {
@@ -292,7 +296,7 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
                 })
             })
             .collect();
-        for t in tile.indices.chunks_exact(3) {
+        for t in tile.indices.as_chunks::<3>().0 {
             let tri = t.iter().map(|&i| ids[i]).collect::<Vec<_>>();
             if tri[0] != tri[1] && tri[1] != tri[2] && tri[0] != tri[2] {
                 output.indices.extend(tri)
@@ -312,95 +316,6 @@ trait TrianglePoints {
 impl TrianglePoints for [usize] {
     fn map_array(&self, mesh: &Mesh) -> [P; 3] {
         std::array::from_fn(|i| std::array::from_fn(|k| mesh.positions[self[i] * 3 + k]))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn gpu_lattice_matches_cpu_reference() {
-        let mesh = polygon_core::solid::primitives::cube([30.; 3], false).unwrap();
-        let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
-        let edges = vec![[0, 1], [0, 2], [0, 3]];
-        let reference = lattice(
-            &mesh,
-            nodes.clone(),
-            edges.clone(),
-            2.,
-            0.,
-            1.,
-            false,
-            false,
-            0.,
-            false,
-        )
-        .unwrap();
-        let accelerated = lattice_accelerated(
-            &mesh,
-            nodes,
-            edges,
-            2.,
-            0.,
-            1.,
-            false,
-            false,
-            0.,
-            false,
-            sdf_core::Acceleration::Gpu,
-        )
-        .unwrap();
-        if crate::lattice_gpu::try_gpu_available() {
-            let dt =
-                (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
-            assert!(
-                dt <= 0.01 * reference.mesh.indices.len() as f64,
-                "triangle counts diverge: {} vs {}",
-                reference.mesh.indices.len(),
-                accelerated.mesh.indices.len()
-            );
-            let dv = (accelerated.report.signed_volume_mm3 - reference.report.signed_volume_mm3)
-                .abs()
-                / reference.report.signed_volume_mm3;
-            assert!(dv < 0.001, "volume diverges: {dv}");
-        }
-    }
-
-    #[test]
-    fn bvh_distance_and_sign_agree_with_reference() {
-        let mesh = polygon_core::solid::primitives::cube([10.; 3], false).unwrap();
-        let triangles = mesh
-            .indices
-            .chunks_exact(3)
-            .map(|ids| {
-                let p = ids.map_array(&mesh);
-                Triangle {
-                    min: std::array::from_fn(|k| {
-                        p.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min)
-                    }),
-                    max: std::array::from_fn(|k| {
-                        p.iter().map(|p| p[k]).fold(f64::NEG_INFINITY, f64::max)
-                    }),
-                    p,
-                }
-            })
-            .collect();
-        let bvh = Node::build(triangles);
-        for i in 0..250 {
-            let p = [
-                ((i * 73) % 197) as f64 / 10. - 5.,
-                ((i * 31) % 193) as f64 / 10. - 5.,
-                ((i * 17) % 191) as f64 / 10. - 5.,
-            ];
-            let actual = bvh.signed_distance(p);
-            let expected = polygon_core::solid::proximity::signed_distance(&mesh, p);
-            assert!(
-                (actual - expected).abs() < 1e-7,
-                "{p:?}: {actual} != {expected}"
-            )
-        }
     }
 }
 
@@ -751,7 +666,9 @@ pub fn lattice_accelerated(
     }
     let triangles = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|ids| {
             let p = ids.map_array(mesh);
             Triangle {
@@ -837,44 +754,45 @@ pub fn lattice_accelerated(
         };
         source.max(material)
     };
-    let output =
+    let output = {
+        #[cfg(feature = "gpu")]
+        if acceleration == sdf_core::Acceleration::Gpu {
+            match crate::lattice_gpu::try_gpu(
+                &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
+                blend, &field,
+            )? {
+                Some(mesh) => mesh,
+                None => crate::mesh_from_triangles(
+                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })
+                        .map_err(|e| Error {
+                            code: e.code,
+                            message: e.message,
+                        })?,
+                ),
+            }
+        } else {
+            crate::mesh_from_triangles(
+                sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells }).map_err(
+                    |e| Error {
+                        code: e.code,
+                        message: e.message,
+                    },
+                )?,
+            )
+        }
+        #[cfg(not(feature = "gpu"))]
         {
-            #[cfg(feature = "gpu")]
-            if acceleration == sdf_core::Acceleration::Gpu {
-                match crate::lattice_gpu::try_gpu(
-                    &all, &segments, min, max, cells, skin, organic, open_top, wall_depth,
-                    keep_core, blend, &field,
-                )? {
-                    Some(mesh) => mesh,
-                    None => crate::mesh_from_triangles(
-                        sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })
-                            .map_err(|e| Error {
-                                code: e.code,
-                                message: e.message,
-                            })?,
-                    ),
-                }
-            } else {
-                crate::mesh_from_triangles(
-                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })
-                        .map_err(|e| Error {
-                            code: e.code,
-                            message: e.message,
-                        })?,
-                )
-            }
-            #[cfg(not(feature = "gpu"))]
-            {
-                let _ = acceleration;
-                crate::mesh_from_triangles(
-                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })
-                        .map_err(|e| Error {
-                            code: e.code,
-                            message: e.message,
-                        })?,
-                )
-            }
-        };
+            let _ = acceleration;
+            crate::mesh_from_triangles(
+                sdf_core::polygonize_with(field, &sdf_core::Grid { min, max, cells }).map_err(
+                    |e| Error {
+                        code: e.code,
+                        message: e.message,
+                    },
+                )?,
+            )
+        }
+    };
     let result = output.inspect()?;
     if !result.closed
         || result.degenerate_triangles > 0
@@ -889,4 +807,95 @@ pub fn lattice_accelerated(
         mesh: output,
         report: result,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn gpu_lattice_matches_cpu_reference() {
+        let mesh = polygon_core::solid::primitives::cube([30.; 3], false).unwrap();
+        let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
+        let edges = vec![[0, 1], [0, 2], [0, 3]];
+        let reference = lattice(
+            &mesh,
+            nodes.clone(),
+            edges.clone(),
+            2.,
+            0.,
+            1.,
+            false,
+            false,
+            0.,
+            false,
+        )
+        .unwrap();
+        let accelerated = lattice_accelerated(
+            &mesh,
+            nodes,
+            edges,
+            2.,
+            0.,
+            1.,
+            false,
+            false,
+            0.,
+            false,
+            sdf_core::Acceleration::Gpu,
+        )
+        .unwrap();
+        if crate::lattice_gpu::try_gpu_available() {
+            let dt =
+                (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
+            assert!(
+                dt <= 0.01 * reference.mesh.indices.len() as f64,
+                "triangle counts diverge: {} vs {}",
+                reference.mesh.indices.len(),
+                accelerated.mesh.indices.len()
+            );
+            let dv = (accelerated.report.signed_volume_mm3 - reference.report.signed_volume_mm3)
+                .abs()
+                / reference.report.signed_volume_mm3;
+            assert!(dv < 0.001, "volume diverges: {dv}");
+        }
+    }
+
+    #[test]
+    fn bvh_distance_and_sign_agree_with_reference() {
+        let mesh = polygon_core::solid::primitives::cube([10.; 3], false).unwrap();
+        let triangles = mesh
+            .indices
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|ids| {
+                let p = ids.map_array(&mesh);
+                Triangle {
+                    min: std::array::from_fn(|k| {
+                        p.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min)
+                    }),
+                    max: std::array::from_fn(|k| {
+                        p.iter().map(|p| p[k]).fold(f64::NEG_INFINITY, f64::max)
+                    }),
+                    p,
+                }
+            })
+            .collect();
+        let bvh = Node::build(triangles);
+        for i in 0..250 {
+            let p = [
+                ((i * 73) % 197) as f64 / 10. - 5.,
+                ((i * 31) % 193) as f64 / 10. - 5.,
+                ((i * 17) % 191) as f64 / 10. - 5.,
+            ];
+            let actual = bvh.signed_distance(p);
+            let expected = polygon_core::solid::proximity::signed_distance(&mesh, p);
+            assert!(
+                (actual - expected).abs() < 1e-7,
+                "{p:?}: {actual} != {expected}"
+            )
+        }
+    }
 }

@@ -292,12 +292,12 @@ pub fn tokenize(source: &[u16]) -> Result<Vec<Token>, ParseError> {
             ([b'&' as u16, b'&' as u16], TT::And),
             ([b'|' as u16, b'|' as u16], TT::Or),
         ];
-        if let Some(pair) = two {
-            if let Some((_, t)) = doubles.iter().find(|(k, _)| *k == pair) {
-                out.push(Token::new(*t, decode_units(&pair), p, i + 2));
-                i += 2;
-                continue;
-            }
+        if let Some(pair) = two
+            && let Some((_, t)) = doubles.iter().find(|(k, _)| *k == pair)
+        {
+            out.push(Token::new(*t, decode_units(&pair), p, i + 2));
+            i += 2;
+            continue;
         }
 
         let single = match ch {

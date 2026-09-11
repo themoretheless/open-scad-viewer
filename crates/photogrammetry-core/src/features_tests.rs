@@ -191,13 +191,17 @@ fn second_chance_appends_relaxed_mutual_matches_without_precision_regression() {
             bits(&extended[..strict_matches.len()]),
             bits(&strict_matches)
         );
-        assert!(extended[strict_matches.len()..].windows(2).all(|w| {
-            w[0].distance_squared
-                .total_cmp(&w[1].distance_squared)
-                .then(w[0].a.cmp(&w[1].a))
-                .then(w[0].b.cmp(&w[1].b))
-                .is_le()
-        }));
+        assert!(
+            extended[strict_matches.len()..]
+                .array_windows()
+                .all(|[a, b]| {
+                    a.distance_squared
+                        .total_cmp(&b.distance_squared)
+                        .then(a.a.cmp(&b.a))
+                        .then(a.b.cmp(&b.b))
+                        .is_le()
+                })
+        );
         let correct = |m: &Match| coordinate_error(&a, &b, m, angle) < 4.;
         let strict_correct = strict_matches.iter().filter(|m| correct(m)).count();
         let extras = &extended[strict_matches.len()..];

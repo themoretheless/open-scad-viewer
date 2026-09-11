@@ -76,16 +76,18 @@ fn mesh_boundary_can_construct_a_new_nurbs_surface() {
 fn invalid_surface_is_rejected_before_polygons_are_created() {
     let mut source = plane();
     source.weights[0][0] = 0.;
-    assert!(tessellate_nurbs(
-        &source,
-        &Options {
-            segments_u: 2,
-            segments_v: 2,
-            trim: None,
-            max_triangles: None
-        }
-    )
-    .is_err());
+    assert!(
+        tessellate_nurbs(
+            &source,
+            &Options {
+                segments_u: 2,
+                segments_v: 2,
+                trim: None,
+                max_triangles: None
+            }
+        )
+        .is_err()
+    );
 }
 
 #[test]

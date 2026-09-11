@@ -1,4 +1,13 @@
 //! Canonical ModelGraph validation and execution planning without a JavaScript evaluator.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 mod assembly;
 pub mod emit;
 pub mod eval;

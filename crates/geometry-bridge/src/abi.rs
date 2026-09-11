@@ -72,48 +72,60 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
     packed(match op {
         0 => geometry(dispatch(value)),
         1 | 2 | 3 | 4 | 5 | 10 | 11 => language_abi(op, value),
-        6 => geometry((|| {
-            let surface: Surface =
-                value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
-            let sampler = SurfaceSampler::new(&surface)?;
-            SAMPLERS.with(|s| {
-                let mut s = s.borrow_mut();
-                let id = s.iter().position(Option::is_none).unwrap_or(s.len());
-                if id == s.len() {
-                    s.push(Some(sampler));
-                } else {
-                    s[id] = Some(sampler);
-                }
-                encode(id)
-            })
-        })()),
-        7 => geometry((|| {
-            let id = field::<usize>(&value, "id")?;
-            let u = field(&value, "u")?;
-            let v = field(&value, "v")?;
-            SAMPLERS.with(|s| {
-                let s = s.borrow();
-                let sampler = s
-                    .get(id)
-                    .and_then(Option::as_ref)
-                    .ok_or_else(|| input("Surface evaluator is disposed"))?;
-                encode(sampler.evaluate(u, v)?)
-            })
-        })()),
-        8 => geometry((|| {
-            let id = field::<usize>(&value, "id")?;
-            SAMPLERS.with(|s| {
-                if let Some(s) = s.borrow_mut().get_mut(id) {
-                    *s = None
-                }
-            });
-            Ok(Value::Null)
-        })()),
-        9 => geometry((|| {
-            let id = field::<u32>(&value, "id")?;
-            let mesh = mesh::export_buffers(id)?;
-            encode(Box::into_raw(Box::new(mesh)) as usize)
-        })()),
+        6 => {
+            let result: Result<Value> = try {
+                let surface: Surface =
+                    value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
+                let sampler = SurfaceSampler::new(&surface).map_err(Error::from)?;
+                SAMPLERS.with(|s| {
+                    let mut s = s.borrow_mut();
+                    let id = s.iter().position(Option::is_none).unwrap_or(s.len());
+                    if id == s.len() {
+                        s.push(Some(sampler));
+                    } else {
+                        s[id] = Some(sampler);
+                    }
+                    encode(id)
+                })?
+            };
+            geometry(result)
+        }
+        7 => {
+            let result: Result<Value> = try {
+                let id = field::<usize>(&value, "id")?;
+                let u = field(&value, "u")?;
+                let v = field(&value, "v")?;
+                SAMPLERS.with(|s| {
+                    let s = s.borrow();
+                    let sampler = s
+                        .get(id)
+                        .and_then(Option::as_ref)
+                        .ok_or_else(|| input("Surface evaluator is disposed"))?;
+                    encode(sampler.evaluate(u, v).map_err(Error::from)?)
+                })?
+            };
+            geometry(result)
+        }
+        8 => {
+            let result: Result<Value> = try {
+                let id = field::<usize>(&value, "id")?;
+                SAMPLERS.with(|s| {
+                    if let Some(s) = s.borrow_mut().get_mut(id) {
+                        *s = None
+                    }
+                });
+                Value::Null
+            };
+            geometry(result)
+        }
+        9 => {
+            let result: Result<Value> = try {
+                let id = field::<u32>(&value, "id")?;
+                let mesh = mesh::export_buffers(id)?;
+                encode(Box::into_raw(Box::new(mesh)) as usize)?
+            };
+            geometry(result)
+        }
         _ => geometry(Err(input("Unknown ABI operation"))),
     })
 }

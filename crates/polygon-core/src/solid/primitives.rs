@@ -1,6 +1,6 @@
 //! Mesh primitives: cube / cylinder / sphere, join, hull, clean.
 //! Closed-ring boolean lives in `planar_geometry::rings`.
-use crate::{Mesh, Result, check, cross, norm, sub};
+use crate::{Mesh, Result, check, cross, dot, norm, sub};
 use planar_geometry::rings::{Rings, area, cross2, inside, planar, sub2};
 use std::collections::{BTreeSet, HashMap};
 
@@ -10,9 +10,6 @@ pub fn empty() -> Mesh {
         indices: vec![],
         uv: None,
     }
-}
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
 }
 pub fn join(meshes: &[Mesh]) -> Result<Mesh> {
     let mut out = empty();
@@ -107,11 +104,11 @@ pub fn sphere(radius: f64, n: usize) -> Result<Mesh> {
 pub fn clean(mut m: Mesh) -> Result<Mesh> {
     m = crate::solid::proximity::weld_exact(&m)?;
     let mut indices = Vec::new();
-    for t in m.indices.chunks_exact(3) {
+    for t in m.indices.as_chunks::<3>().0 {
         let a = m.point(t[0])?;
         let b = m.point(t[1])?;
         let c = m.point(t[2])?;
-        if norm(&cross(sub(b, a), sub(c, a))) > 1e-16 {
+        if norm(cross(sub(b, a), sub(c, a))) > 1e-16 {
             indices.extend(t)
         }
     }
@@ -124,7 +121,13 @@ pub fn clean(mut m: Mesh) -> Result<Mesh> {
 pub fn hull3(meshes: &[Mesh]) -> Result<Mesh> {
     let mut p: Vec<[f64; 3]> = meshes
         .iter()
-        .flat_map(|m| m.positions.chunks_exact(3).map(|p| [p[0], p[1], p[2]]))
+        .flat_map(|m| {
+            m.positions
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .map(|p| [p[0], p[1], p[2]])
+        })
         .collect();
     p.sort_by(|a, b| {
         a[0].total_cmp(&b[0])
@@ -140,8 +143,8 @@ pub fn hull3(meshes: &[Mesh]) -> Result<Mesh> {
     let b = p.len() - 1;
     let c = (0..p.len())
         .max_by(|&i, &j| {
-            norm(&cross(sub(p[b], p[a]), sub(p[i], p[a])))
-                .total_cmp(&norm(&cross(sub(p[b], p[a]), sub(p[j], p[a]))))
+            norm(cross(sub(p[b], p[a]), sub(p[i], p[a])))
+                .total_cmp(&norm(cross(sub(p[b], p[a]), sub(p[j], p[a]))))
         })
         .unwrap();
     let n = cross(sub(p[b], p[a]), sub(p[c], p[a]));
@@ -172,12 +175,12 @@ pub fn hull3(meshes: &[Mesh]) -> Result<Mesh> {
         orient([a, c, d]),
         orient([b, d, c]),
     ];
-    let eps = norm(&sub(p[b], p[a])) * 1e-10;
+    let eps = norm(sub(p[b], p[a])) * 1e-10;
     for i in 0..p.len() {
         let mut edge = BTreeSet::new();
         faces.retain(|f| {
             let normal = cross(sub(p[f[1]], p[f[0]]), sub(p[f[2]], p[f[0]]));
-            if dot(normal, sub(p[i], p[f[0]])) > eps * norm(&normal) {
+            if dot(normal, sub(p[i], p[f[0]])) > eps * norm(normal) {
                 for j in 0..3 {
                     let x = f[j];
                     let y = f[(j + 1) % 3];
@@ -214,11 +217,11 @@ pub fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
         "Minkowski vertex budget exceeded",
     )?;
     for (m, p) in [(a, &a_points), (b, &b_points)] {
-        for t in m.indices.chunks_exact(3) {
+        for t in m.indices.as_chunks::<3>().0 {
             let u = m.point(t[0])?;
             let n = cross(sub(m.point(t[1])?, u), sub(m.point(t[2])?, u));
             check(
-                p.iter().all(|&v| dot(n, sub(v, u)) <= norm(&n) * 1e-8),
+                p.iter().all(|&v| dot(n, sub(v, u)) <= norm(n) * 1e-8),
                 "Own 3D Minkowski currently requires convex operands",
             )?;
         }
@@ -239,10 +242,10 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
     let mut groups: Vec<([f64; 3], f64, Vec<usize>)> = vec![];
     let extent = mesh.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
     let eps = extent * 1e-9;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let a = mesh.point(t[0])?;
         let normal = cross(sub(mesh.point(t[1])?, a), sub(mesh.point(t[2])?, a));
-        let len = norm(&normal);
+        let len = norm(normal);
         if len < 1e-16 {
             continue;
         }
@@ -276,7 +279,7 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
         }
         let origin = part.point(loops[0][0])?;
         let delta = sub(part.point(loops[0][1])?, origin);
-        let len = norm(&delta);
+        let len = norm(delta);
         let u = delta.map(|v| v / len);
         let v = cross(n, u);
         let mut rings: Rings = loops
@@ -319,7 +322,7 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
                 outer: outer.clone(),
                 holes,
             })?;
-            for p in cap.positions.chunks_exact_mut(3) {
+            for p in cap.positions.as_chunks_mut::<3>().0 {
                 let point =
                     std::array::from_fn::<_, 3, _>(|k| origin[k] + p[0] * u[k] + p[1] * v[k]);
                 p.copy_from_slice(&point)
@@ -331,7 +334,7 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
     let mut cells = HashMap::<[i64; 3], Vec<usize>>::new();
     let mut positions = vec![];
     let mut remap = vec![];
-    for p in out.positions.chunks_exact(3) {
+    for p in out.positions.as_chunks::<3>().0 {
         let p = [p[0], p[1], p[2]];
         let cell = p.map(|x| (x / eps).floor() as i64);
         let mut found = None;
@@ -341,7 +344,7 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
                     if let Some(ids) = cells.get(&[cell[0] + x, cell[1] + y, cell[2] + z]) {
                         for &i in ids {
                             let q = [positions[3 * i], positions[3 * i + 1], positions[3 * i + 2]];
-                            if norm(&sub(p, q)) < eps {
+                            if norm(sub(p, q)) < eps {
                                 found = Some(i);
                                 break 'near;
                             }
@@ -498,7 +501,7 @@ pub fn triangulate(profile: &crate::solid::modeling::Profile) -> Result<Mesh> {
 }
 
 pub fn halfspace(mesh: &Mesh, normal: [f64; 3], offset: f64) -> Result<Mesh> {
-    let length = norm(&normal);
+    let length = norm(normal);
     check(length > 0. && offset.is_finite(), "Invalid cutting plane")?;
     let n = normal.map(|x| x / length);
     let a = if n[0].abs() < 0.8 {
@@ -507,12 +510,12 @@ pub fn halfspace(mesh: &Mesh, normal: [f64; 3], offset: f64) -> Result<Mesh> {
         [0., 1., 0.]
     };
     let u = cross(n, a);
-    let ul = norm(&u);
+    let ul = norm(u);
     let u = u.map(|x| x / ul);
     let v = cross(n, u);
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
-    for p in mesh.positions.chunks_exact(3) {
+    for p in mesh.positions.as_chunks::<3>().0 {
         for k in 0..3 {
             min[k] = min[k].min(p[k]);
             max[k] = max[k].max(p[k])
@@ -521,9 +524,9 @@ pub fn halfspace(mesh: &Mesh, normal: [f64; 3], offset: f64) -> Result<Mesh> {
     let c = std::array::from_fn(|k| (min[k] + max[k]) / 2.);
     let distance = offset - dot(c, n);
     let origin = std::array::from_fn::<_, 3, _>(|k| c[k] + distance * n[k]);
-    let extent = norm(&sub(max, min)) + distance.abs() + 1.;
+    let extent = norm(sub(max, min)) + distance.abs() + 1.;
     let mut box_mesh = cube([2. * extent, 2. * extent, extent], false)?;
-    for p in box_mesh.positions.chunks_exact_mut(3) {
+    for p in box_mesh.positions.as_chunks_mut::<3>().0 {
         let q = std::array::from_fn::<_, 3, _>(|k| {
             origin[k] + (p[0] - extent) * u[k] + (p[1] - extent) * v[k] + p[2] * n[k]
         });
@@ -541,24 +544,28 @@ pub fn prism_boolean(a: &Mesh, b: &Mesh, operation: &str) -> Result<Option<Mesh>
         }
         let lo = m
             .positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| p[2])
             .fold(f64::INFINITY, f64::min);
         let hi = m
             .positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| p[2])
             .fold(f64::NEG_INFINITY, f64::max);
         let eps = (hi - lo).abs().max(1.) * 1e-9;
         if hi - lo <= eps {
             return None;
         }
-        for t in m.indices.chunks_exact(3) {
+        for t in m.indices.as_chunks::<3>().0 {
             let a = m.point(t[0]).ok()?;
             let b = m.point(t[1]).ok()?;
             let c = m.point(t[2]).ok()?;
             let n = cross(sub(b, a), sub(c, a));
-            if n[2].abs() > norm(&n) * 1e-9
+            if n[2].abs() > norm(n) * 1e-9
                 && (![a, b, c].iter().all(|p| (p[2] - lo).abs() < eps)
                     && ![a, b, c].iter().all(|p| (p[2] - hi).abs() < eps))
             {
@@ -577,7 +584,7 @@ pub fn prism_boolean(a: &Mesh, b: &Mesh, operation: &str) -> Result<Option<Mesh>
     let pb = crate::solid::section::slice(b, (lo + hi) / 2.)?;
     let p = planar(&pa, &pb, operation)?;
     let mut result = crate::solid::modeling::extrude_rings(&p, hi - lo, 1, 0., [1., 1.], false)?;
-    for v in result.positions.chunks_exact_mut(3) {
+    for v in result.positions.as_chunks_mut::<3>().0 {
         v[2] += lo
     }
     Ok(Some(result))
@@ -592,11 +599,15 @@ pub fn join_touching(a: &Mesh, b: &Mesh) -> Result<Option<Mesh>> {
     let range = |m: &Mesh| {
         (
             m.positions
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|p| p[2])
                 .fold(f64::INFINITY, f64::min),
             m.positions
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|p| p[2])
                 .fold(f64::NEG_INFINITY, f64::max),
         )
@@ -617,7 +628,7 @@ pub fn join_touching(a: &Mesh, b: &Mesh) -> Result<Option<Mesh>> {
         let mut top = empty();
         top.positions = m.positions.clone();
         rest.indices.clear();
-        for t in m.indices.chunks_exact(3) {
+        for t in m.indices.as_chunks::<3>().0 {
             if t.iter().all(|&i| (m.positions[i * 3 + 2] - z).abs() < eps) {
                 top.indices.extend(t)
             } else {
@@ -629,15 +640,15 @@ pub fn join_touching(a: &Mesh, b: &Mesh) -> Result<Option<Mesh>> {
         }
         let mut edges = BTreeSet::new();
         for ring in top.boundary_loops()? {
-            for edge in ring.windows(2) {
+            for [i, j] in ring.array_windows() {
                 let key = |i: usize| {
                     [
                         (m.positions[i * 3] / eps).round() as i64,
                         (m.positions[i * 3 + 1] / eps).round() as i64,
                     ]
                 };
-                let x = key(edge[0]);
-                let y = key(edge[1]);
+                let x = key(*i);
+                let y = key(*j);
                 edges.insert(if x < y { (x, y) } else { (y, x) });
             }
         }
@@ -655,7 +666,7 @@ pub fn join_touching(a: &Mesh, b: &Mesh) -> Result<Option<Mesh>> {
     let mut out = join(&[left, right])?;
     let mut shared = HashMap::new();
     let mut remap: Vec<_> = (0..out.positions.len() / 3).collect();
-    for (i, p) in out.positions.chunks_exact(3).enumerate() {
+    for (i, p) in out.positions.as_chunks::<3>().0.iter().enumerate() {
         if (p[2] - z).abs() < eps {
             let key = [(p[0] / eps).round() as i64, (p[1] / eps).round() as i64];
             remap[i] = *shared.entry(key).or_insert(i);

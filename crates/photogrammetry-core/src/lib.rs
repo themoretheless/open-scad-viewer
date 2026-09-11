@@ -1,4 +1,13 @@
 //! Deterministic photo reconstruction. Algorithms use Rust std only; host owns codecs and UI.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub mod bundle;
 pub mod calibration;
 pub mod camera;
@@ -13,19 +22,17 @@ pub mod gpu;
 mod model;
 mod pipeline;
 mod seeding;
-pub use model::{Image, Point, Reconstruction};
-pub use pipeline::{
-    reconstruct, reconstruct_detailed, ReconstructionOptions, ReconstructionOutcome,
-};
-pub use seeding::SeedOptions;
 /// Compute backend for the heavy stages. `Cpu` is the deterministic reference
 /// and the default; `Gpu` is opt-in and requires the `gpu` crate feature.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Acceleration {
-    #[default]
-    Cpu,
-    Gpu,
+pub use math_core::{Acceleration, Error, Result};
+pub use model::{Image, Point, Reconstruction};
+pub use pipeline::{
+    ReconstructionOptions, ReconstructionOutcome, reconstruct, reconstruct_detailed,
+};
+pub use seeding::SeedOptions;
+pub const INVALID_INPUT: &str = "PHOTOGRAMMETRY_INVALID_INPUT";
+pub fn error(message: impl Into<String>) -> Error {
+    Error::new(INVALID_INPUT, message)
 }
-pub type Result<T> = std::result::Result<T, String>;
 #[cfg(test)]
 mod integration_tests;

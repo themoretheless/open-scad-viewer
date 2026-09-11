@@ -3,6 +3,7 @@
 //! Ported from Curvex path effects (MIT OR Apache-2.0), binary64 for polygon-core.
 use crate::path::{BezierPath, PathSegment};
 use crate::{Result, check};
+use math_core::{add2, norm2, scale2, sub2};
 
 const TAU: f64 = std::f64::consts::TAU;
 const PI: f64 = std::f64::consts::PI;
@@ -12,18 +13,6 @@ const MAX_SAMPLES: usize = 4096;
 
 fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
-
-fn add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] + b[0], a[1] + b[1]]
-}
-
-fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] - b[0], a[1] - b[1]]
-}
-
-fn mul(a: [f64; 2], s: f64) -> [f64; 2] {
-    [a[0] * s, a[1] * s]
 }
 
 fn bbox_of(points: &[[f64; 2]]) -> Result<([f64; 2], [f64; 2])> {
@@ -65,14 +54,14 @@ fn map_path_points(path: &BezierPath, mut f: impl FnMut([f64; 2]) -> [f64; 2]) -
 }
 
 fn translate_path(path: &BezierPath, d: [f64; 2]) -> BezierPath {
-    map_path_points(path, |p| add(p, d))
+    map_path_points(path, |p| add2(p, d))
 }
 
 fn rotate_about(p: [f64; 2], pivot: [f64; 2], radians: f64) -> [f64; 2] {
     let c = radians.cos();
     let s = radians.sin();
-    let v = sub(p, pivot);
-    add(pivot, [v[0] * c - v[1] * s, v[0] * s + v[1] * c])
+    let v = sub2(p, pivot);
+    add2(pivot, [v[0] * c - v[1] * s, v[0] * s + v[1] * c])
 }
 
 fn deterministic_noise(seed: u64, i: usize) -> f64 {
@@ -220,7 +209,7 @@ pub fn step_and_repeat(
     check((1..=MAX_COPIES).contains(&count), "Invalid repeat count")?;
     check(delta.iter().all(|x| x.is_finite()), "Invalid delta")?;
     Ok((0..count)
-        .map(|i| translate_path(path, mul(delta, i as f64)))
+        .map(|i| translate_path(path, scale2(delta, i as f64)))
         .collect())
 }
 
@@ -311,7 +300,7 @@ fn hatch_dir(ring: &[[f64; 2]], spacing: f64, angle: f64) -> Result<Vec<BezierPa
         let b = [x_max * c - y * s, x_max * s + y * c];
         let mut ts = clip_segment_to_ring(a, b, ring);
         ts.sort_by(f64::total_cmp);
-        for pair in ts.chunks_exact(2) {
+        for pair in ts.as_chunks::<2>().0 {
             let p0 = lerp(a, b, pair[0]);
             let p1 = lerp(a, b, pair[1]);
             if (p0[0] - p1[0]).hypot(p0[1] - p1[1]) > 1e-9 {
@@ -329,34 +318,35 @@ fn clip_segment_to_ring(a: [f64; 2], b: [f64; 2], ring: &[[f64; 2]]) -> Vec<f64>
     for i in 0..ring.len() {
         let c = ring[i];
         let d = ring[(i + 1) % ring.len()];
-        if let Some(t) = seg_intersect_t(a, b, c, d) {
-            if t > 1e-9 && t < 1.0 - 1e-9 {
-                ts.push(t);
-            }
+        if let Some(t) = seg_intersect_t(a, b, c, d)
+            && t > 1e-9
+            && t < 1.0 - 1e-9
+        {
+            ts.push(t);
         }
     }
     ts.sort_by(f64::total_cmp);
     ts.dedup_by(|x, y| (*x - *y).abs() < 1e-10);
     let mut keep = Vec::new();
-    for w in ts.windows(2) {
-        let mid = (w[0] + w[1]) * 0.5;
+    for [t0, t1] in ts.array_windows() {
+        let mid = (t0 + t1) * 0.5;
         let p = lerp(a, b, mid);
         if contains_point(p, ring) {
-            keep.push(w[0]);
-            keep.push(w[1]);
+            keep.push(*t0);
+            keep.push(*t1);
         }
     }
     keep
 }
 
 fn seg_intersect_t(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<f64> {
-    let r = sub(b, a);
-    let s = sub(d, c);
+    let r = sub2(b, a);
+    let s = sub2(d, c);
     let den = r[0] * s[1] - r[1] * s[0];
     if den.abs() < 1e-15 {
         return None;
     }
-    let qp = sub(c, a);
+    let qp = sub2(c, a);
     let t = (qp[0] * s[1] - qp[1] * s[0]) / den;
     let u = (qp[0] * r[1] - qp[1] * r[0]) / den;
     if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
@@ -440,7 +430,7 @@ pub fn zig_zag(path: &BezierPath, amplitude: f64, wavelength: f64) -> Result<Bez
     let mut dist_acc = 0.0;
     out.push(pts[0]);
     for i in 1..pts.len() {
-        let d = sub(pts[i], pts[i - 1]);
+        let d = sub2(pts[i], pts[i - 1]);
         let len = d[0].hypot(d[1]).max(1e-12);
         let n = [-d[1] / len, d[0] / len];
         dist_acc += len;
@@ -457,8 +447,8 @@ pub fn pucker_bloat(path: &BezierPath, amount: f64) -> Result<BezierPath> {
     let (min, max) = path_bbox(path)?;
     let center = [(min[0] + max[0]) * 0.5, (min[1] + max[1]) * 0.5];
     Ok(map_path_points(path, |p| {
-        let v = sub(p, center);
-        add(center, mul(v, 1.0 + amount))
+        let v = sub2(p, center);
+        add2(center, scale2(v, 1.0 + amount))
     }))
 }
 
@@ -479,7 +469,7 @@ pub fn twist(path: &BezierPath, radians: f64) -> Result<BezierPath> {
     let center = [(min[0] + max[0]) * 0.5, (min[1] + max[1]) * 0.5];
     let extent = ((max[0] - min[0]).hypot(max[1] - min[1])).max(1e-9);
     Ok(map_path_points(path, |p| {
-        let r = sub(p, center)[0].hypot(sub(p, center)[1]) / extent;
+        let r = norm2(sub2(p, center)) / extent;
         rotate_about(p, center, radians * r)
     }))
 }
@@ -601,9 +591,9 @@ pub fn free_distort(path: &BezierPath, quad: [[f64; 2]; 4]) -> Result<BezierPath
         let v = (p[1] - min[1]) / h;
         // bilinar: (1-u)(1-v) TL + u(1-v) TR + u v BR + (1-u) v BL
         let [tl, tr, br, bl] = quad;
-        add(
-            add(mul(tl, (1.0 - u) * (1.0 - v)), mul(tr, u * (1.0 - v))),
-            add(mul(br, u * v), mul(bl, (1.0 - u) * v)),
+        add2(
+            add2(scale2(tl, (1.0 - u) * (1.0 - v)), scale2(tr, u * (1.0 - v))),
+            add2(scale2(br, u * v), scale2(bl, (1.0 - u) * v)),
         )
     }))
 }

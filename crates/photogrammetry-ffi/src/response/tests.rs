@@ -1,6 +1,6 @@
 use super::*;
 use crate::{response_bytes, response_value};
-use photogrammetry_core::{camera::Camera, Point};
+use photogrammetry_core::{Point, camera::Camera};
 
 fn generic_surface(mesh: &Surface, diagnostics: Option<&Value>) -> Vec<u8> {
     let value = if let Some(diagnostics) = diagnostics {
@@ -89,7 +89,7 @@ fn borrowed_metadata_uses_the_same_complete_envelope_limits() {
     }
     assert!(value(&nested).is_ok());
     let nested = Value::Array(vec![nested]);
-    assert_eq!(value(&nested).unwrap_err(), TRANSPORT_ERROR);
+    assert_eq!(value(&nested).unwrap_err().message, TRANSPORT_ERROR);
     assert_eq!(
         value_codec::decode_binary(&response_bytes(Ok(nested))).unwrap()["ok"],
         json!(false)
@@ -133,7 +133,7 @@ fn oversized_geometry_is_rejected_before_allocating_an_intermediate_value_tree()
         colors: vec![[0; 3]; 500_000],
         triangles: vec![],
     };
-    assert_eq!(surface(&mesh, None).unwrap_err(), TRANSPORT_ERROR);
+    assert_eq!(surface(&mesh, None).unwrap_err().message, TRANSPORT_ERROR);
     let envelope = response_value(Err(surface(&mesh, None).unwrap_err()));
     assert_eq!(envelope["message"], json!(TRANSPORT_ERROR));
 }

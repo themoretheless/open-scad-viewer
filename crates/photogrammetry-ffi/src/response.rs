@@ -4,9 +4,9 @@
 //! still encoded by value-codec. Preflight includes the envelope and all keys,
 //! and reserves the exact output size before writing any geometry.
 use super::{
-    input, ResponseBudget, Result, Value, DEPTH_LIMIT, ITEM_LIMIT, LIMIT, TRANSPORT_ERROR,
+    DEPTH_LIMIT, ITEM_LIMIT, LIMIT, ResponseBudget, Result, TRANSPORT_ERROR, Value, input,
 };
-use photogrammetry_core::{dense::Surface, Point, Reconstruction};
+use photogrammetry_core::{Point, Reconstruction, dense::Surface};
 use value_codec::json;
 
 enum Field<'a> {
@@ -48,7 +48,7 @@ fn triples_budget(
     if rows == 0 {
         return Ok(());
     }
-    let items = rows.checked_mul(4).ok_or(TRANSPORT_ERROR)?;
+    let items = rows.checked_mul(4).ok_or_else(|| input(TRANSPORT_ERROR))?;
     let bytes = rows
         .checked_mul(32)
         .and_then(|bytes| {
@@ -56,7 +56,7 @@ fn triples_budget(
                 .checked_mul(8)
                 .and_then(|nulls| bytes.checked_sub(nulls))
         })
-        .ok_or(TRANSPORT_ERROR)?;
+        .ok_or_else(|| input(TRANSPORT_ERROR))?;
     reserve_many(budget, depth + 2, items, bytes)
 }
 
@@ -100,7 +100,7 @@ impl Field<'_> {
         match self {
             Self::Value(value) => {
                 // The shared encoder remains authoritative for arbitrary metadata.
-                let bytes = value_codec::encode_binary(value).map_err(|e| e.to_string())?;
+                let bytes = value_codec::encode_binary(value).map_err(|e| input(e.to_string()))?;
                 out.extend_from_slice(&bytes[4..]);
             }
             Self::Object(fields) => {

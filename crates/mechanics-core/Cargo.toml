@@ -7,3 +7,4 @@ publish.workspace = true
 
 [dependencies]
 math-core = { path = "../math-core" }
+planar-geometry = { path = "../planar-geometry" }

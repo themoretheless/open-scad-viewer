@@ -1281,7 +1281,7 @@ mod tests {
                 .unwrap(),
             6.0
         );
-        assert!(matches!(
+        ::std::assert_matches!(
             evaluator
                 .resolve(&shape, &Scope::default(), "/", 0)
                 .unwrap(),
@@ -1289,7 +1289,7 @@ mod tests {
                 function: "Shape",
                 ..
             }
-        ));
+        );
         assert_eq!(
             evaluator
                 .resolve(&wrong, &Scope::default(), "/", 0)

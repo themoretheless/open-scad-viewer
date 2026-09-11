@@ -1,10 +1,10 @@
 //! Bounded geometric seed proposals; no scene mutation or image decoding.
 use crate::{
+    Image, Result,
     camera::{self, Camera},
     diagnostics::ReconstructionReport,
     features::{Feature, Match},
     matching::MatchGraph,
-    Image, Result,
 };
 
 pub(crate) struct Seed {
@@ -92,7 +92,7 @@ pub(crate) fn propose_with_options(
                 cache.computed_pairs,
                 images.len() * (images.len() - 1) / 2,
             ) {
-                return Err("Cancelled".into());
+                return Err(crate::error("Cancelled"));
             }
             let matches = cache.between(features, a, b).collect::<Vec<_>>();
             if matches.len() >= 12 {
@@ -143,7 +143,7 @@ pub(crate) fn propose_with_options(
     let mut seeds = Vec::new();
     for (_, a, b) in selected {
         if !progress("initial_pair", report.seed_pairs_tested, limit) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         report.seed_pairs_tested += 1;
         let matches = match matches_by_pair.remove(&(a, b)) {

@@ -2,8 +2,8 @@
 //! propagated, unlike copying the neighbor's depth at a different image ray.
 //! This is deterministic bounded local refinement, not the complete ACMH method.
 use super::estimation::{GrayImage, Patch, Source};
-use super::{cancelled, DenseDiagnostics, DenseOptions};
-use crate::{camera::Camera, math::*, Result};
+use super::{DenseDiagnostics, DenseOptions, cancelled};
+use crate::{Result, camera::Camera, math::*};
 
 #[derive(Clone, Copy)]
 struct Hypothesis {
@@ -131,11 +131,11 @@ impl PixelCost<'_, '_> {
                 continue;
             }
             usable += 1;
-            if let Some(ncc) = correlation.finish() {
-                if ncc > 0.4 {
-                    votes[count] = (ncc, area_ratio.min(1. / area_ratio).sqrt());
-                    count += 1;
-                }
+            if let Some(ncc) = correlation.finish()
+                && ncc > 0.4
+            {
+                votes[count] = (ncc, area_ratio.min(1. / area_ratio).sqrt());
+                count += 1;
             }
         }
         let needed = usable.min(2).max(options.min_support_views);
@@ -180,7 +180,7 @@ fn in_depth_range(inv: f64, q: V3, ray: V3, low: f64, high: f64) -> bool {
 #[cfg(test)]
 #[test]
 fn depth_range_accepts_roundoff_but_rejects_real_excursions() {
-    let low = 0.215727407728201120_f64;
+    let low = 0.215_727_407_728_201_12_f64;
     let below = f64::from_bits(low.to_bits() - 1);
     assert!(in_depth_range(
         below,

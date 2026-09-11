@@ -104,7 +104,7 @@ impl TopologyLineage {
             .records
             .iter()
             .rev()
-            .find(|record| record.parents.iter().any(|id| *id == selection));
+            .find(|record| record.parents.contains(&selection));
         match latest {
             None => SelectionTransfer::Persistent(selection),
             Some(record) if record.kind == LineageKind::Split && record.children.len() != 1 => {
@@ -115,10 +115,10 @@ impl TopologyLineage {
     }
 
     pub fn snapshot(&self, selection: Option<TopoId>) -> Result<DurableSnapshot> {
-        if let Some(id) = selection {
-            if !self.kinds.contains_key(&id) {
-                return Err(invalid("Snapshot selection is not in this lineage"));
-            }
+        if let Some(id) = selection
+            && !self.kinds.contains_key(&id)
+        {
+            return Err(invalid("Snapshot selection is not in this lineage"));
         }
         Ok(DurableSnapshot {
             schema: 1,

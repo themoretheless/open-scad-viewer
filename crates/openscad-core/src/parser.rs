@@ -403,16 +403,17 @@ impl<'a> Parser<'a> {
             let mut positional = 0usize;
             while self.peek().t != TT::RParen {
                 let key: String;
-                let kind: &'static str;
-                if self.peek().t == TT::Ident && self.peek_at(1).t == TT::Eq {
-                    key = self.advance().v.clone();
-                    self.advance();
-                    kind = "named";
-                } else {
-                    key = format!("_{positional}");
-                    positional += 1;
-                    kind = "positional";
-                }
+
+                let kind: &'static str =
+                    if self.peek().t == TT::Ident && self.peek_at(1).t == TT::Eq {
+                        key = self.advance().v.clone();
+                        self.advance();
+                        "named"
+                    } else {
+                        key = format!("_{positional}");
+                        positional += 1;
+                        "positional"
+                    };
                 if args.iter().any(|(k, _)| *k == key) && !self.profile.is_stable() {
                     return Err(self.fail(format!("Duplicate argument {key}")));
                 }

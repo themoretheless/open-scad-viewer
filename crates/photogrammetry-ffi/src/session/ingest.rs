@@ -15,7 +15,7 @@ impl MeasuredInput {
         if bytes.len() > 16 * 1024 {
             return Err(input("Calibration metadata exceeds 16 KiB"));
         }
-        let value = value_codec::decode_binary(bytes).map_err(|e| e.to_string())?;
+        let value = value_codec::decode_binary(bytes).map_err(|e| input(e.to_string()))?;
         let group = value["group"].clone();
         let id: String = field(&group, "id")?;
         let label: String = field(&group, "label")?;
@@ -50,7 +50,7 @@ impl MeasuredInput {
             p1: field(distortion, "p1")?,
             p2: field(distortion, "p2")?,
         };
-        calibration.validate().map_err(input)?;
+        calibration.validate()?;
         let source_size = [
             field(&value, "sourceWidth")?,
             field(&value, "sourceHeight")?,
@@ -166,20 +166,22 @@ fn rectify_searched(
         || image.rgb.len() > options.max_output_bytes
         || options.max_pixel_evaluations == 0
     {
-        return Err("Rectification exceeds configured image/work limits".into());
+        return Err(input("Rectification exceeds configured image/work limits"));
     }
     let cal = calibration.resized(image.width, image.height, source_size)?;
     let base_focal = (cal.fx * cal.fy).sqrt();
     if !(20. ..=20000.).contains(&base_focal) {
-        return Err("Resized measured focal is outside the kernel's supported range".into());
+        return Err(input(
+            "Resized measured focal is outside the kernel's supported range",
+        ));
     }
     let mut work = 0usize;
     let mut checkpoint = |amount: usize| -> Result<()> {
         work = work
             .checked_add(amount)
-            .ok_or("Rectification work overflow")?;
+            .ok_or_else(|| input("Rectification work overflow"))?;
         if work > options.max_pixel_evaluations {
-            return Err("Rectification mapping work limit exceeded".into());
+            return Err(input("Rectification mapping work limit exceeded"));
         }
         // The kernel's progress callback is always `true` here; the WASM host
         // cancels by terminating its disposable Worker instead.
@@ -241,7 +243,9 @@ fn rectify_searched(
             let mut high = base_focal;
             while !grid_valid(high)? {
                 if high >= max_focal {
-                    return Err("Calibration has no fully valid view within the zoom limit".into());
+                    return Err(input(
+                        "Calibration has no fully valid view within the zoom limit",
+                    ));
                 }
                 low = high;
                 high = (high * 1.2).min(max_focal);
@@ -307,7 +311,9 @@ fn rectify_searched(
         }
         high = (high * 1.04).min(max_focal);
     }
-    Err("Calibration contains invalid or folded pixels; no border-filled image was produced".into())
+    Err(input(
+        "Calibration contains invalid or folded pixels; no border-filled image was produced",
+    ))
 }
 
 fn add_image(
@@ -329,12 +335,14 @@ fn add_image(
         {
             return Err(input("Photo session exceeds 24 images or 96 MiB"));
         }
-        if let Some(input) = &measured {
+        if let Some(measured) = &measured {
             if s.groups
-                .get(&input.id)
-                .is_some_and(|group| group != &input.group)
+                .get(&measured.id)
+                .is_some_and(|group| group != &measured.group)
             {
-                return Err("The same calibration group id has conflicting measurements".into());
+                return Err(input(
+                    "The same calibration group id has conflicting measurements",
+                ));
             }
         }
         let raw = Image {
@@ -344,7 +352,7 @@ fn add_image(
             // The WASM host's buffer is adopted instead of copied.
             rgb: rgb.into_vec(),
         };
-        raw.validate().map_err(input)?;
+        raw.validate()?;
         let (image, provenance) = if let Some(input) = &measured {
             // Rectify exactly once. Both sparse and dense read these same stored pixels.
             // Worker termination owns browser cancellation during synchronous WASM.

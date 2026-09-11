@@ -1,10 +1,10 @@
 //! Experimental endpoint collapses with bounded vertex displacement.
 use super::volume::FastMap;
 use super::{
-    limits::{MAX_SURFACE_TRIANGLES, MAX_SURFACE_VERTICES},
     Surface,
+    limits::{MAX_SURFACE_TRIANGLES, MAX_SURFACE_VERTICES},
 };
-use crate::{math::*, Result};
+use crate::{Result, math::*};
 
 pub fn simplify(input: &Surface, tolerance: f64, passes: usize) -> Result<Surface> {
     simplify_with_progress(input, tolerance, passes, |_, _, _| true)
@@ -21,10 +21,10 @@ pub fn simplify_with_progress(
     // are element-count caps, not a guarantee of peak allocator/RSS usage.
     if input.positions.len() > MAX_SURFACE_VERTICES || input.triangles.len() > MAX_SURFACE_TRIANGLES
     {
-        return Err("Simplification input budget exceeded".into());
+        return Err(crate::error("Simplification input budget exceeded"));
     }
     if !tolerance.is_finite() || tolerance < 0. || passes > 16 {
-        return Err("Invalid simplification limits".into());
+        return Err(crate::error("Invalid simplification limits"));
     }
     if input.colors.len() != input.positions.len()
         || input.positions.iter().flatten().any(|v| !v.is_finite())
@@ -34,7 +34,7 @@ pub fn simplify_with_progress(
             .flatten()
             .any(|&i| i as usize >= input.positions.len())
     {
-        return Err("Invalid simplification mesh".into());
+        return Err(crate::error("Invalid simplification mesh"));
     }
     let mut parent: Vec<_> = (0..input.positions.len()).collect();
     fn root(parent: &mut [usize], mut i: usize) -> usize {
@@ -138,11 +138,10 @@ pub fn simplify_with_progress(
         let normals: Vec<_> = faces
             .iter()
             .map(|t| {
-                t.map(|t| {
+                t.map_or([0.; 3], |t| {
                     let p = t.map(|i| input.positions[i as usize]);
                     cross(sub(p[1], p[0]), sub(p[2], p[0]))
                 })
-                .unwrap_or([0.; 3])
             })
             .collect();
         let mut locked = vec![false; input.positions.len()];
@@ -385,7 +384,7 @@ fn cancellation_preserves_source_and_budget_precedes_work() {
     let original = mesh.clone();
     for stop in ["simplify", "simplify-index", "simplify-compact"] {
         let result = simplify_with_progress(&mesh, 1., 2, |stage, _, _| stage != stop);
-        assert!(matches!(result,Err(ref e) if e=="Cancelled"));
+        assert!(matches!(result, Err(ref e) if e.message == "Cancelled"));
         assert_eq!(mesh.positions, original.positions);
         assert_eq!(mesh.triangles, original.triangles);
         assert_eq!(mesh.colors, original.colors);
@@ -395,14 +394,14 @@ fn cancellation_preserves_source_and_budget_precedes_work() {
         ..Default::default()
     };
     assert!(
-        matches!(simplify(&oversized_faces,1.,1),Err(ref e) if e=="Simplification input budget exceeded")
+        matches!(simplify(&oversized_faces,1.,1),Err(ref e) if e.message == "Simplification input budget exceeded")
     );
     let oversized = Surface {
         positions: vec![[0.; 3]; 500001],
         ..Default::default()
     };
     assert!(
-        matches!(simplify(&oversized,1.,1),Err(ref e) if e=="Simplification input budget exceeded")
+        matches!(simplify(&oversized,1.,1),Err(ref e) if e.message == "Simplification input budget exceeded")
     );
 }
 
@@ -437,9 +436,10 @@ fn close_opposing_sheets_preserve_identity_orientation_and_area() {
     let mut areas = [0.; 2];
     for &t in &output.triangles {
         let layer = output.colors[t[0] as usize][0] as usize;
-        assert!(t
-            .iter()
-            .all(|&i| output.colors[i as usize][0] as usize == layer));
+        assert!(
+            t.iter()
+                .all(|&i| output.colors[i as usize][0] as usize == layer)
+        );
         let p = t.map(|i| output.positions[i as usize]);
         assert!(p.iter().all(|v| v[2] == layer as f64 * 0.00001));
         let n = cross(sub(p[1], p[0]), sub(p[2], p[0]));
@@ -452,11 +452,13 @@ fn close_opposing_sheets_preserve_identity_orientation_and_area() {
     // All perimeter points on both sheets remain, including spatially close pairs.
     for (p, c) in mesh.positions.iter().zip(&mesh.colors) {
         if p[0] == 0. || p[1] == 0. || p[0] == 19. * 0.1 || p[1] == 19. * 0.1 {
-            assert!(output
-                .positions
-                .iter()
-                .zip(&output.colors)
-                .any(|(q, d)| p == q && c == d));
+            assert!(
+                output
+                    .positions
+                    .iter()
+                    .zip(&output.colors)
+                    .any(|(q, d)| p == q && c == d)
+            );
         }
     }
     let mut reached = false;
@@ -469,7 +471,7 @@ fn close_opposing_sheets_preserve_identity_orientation_and_area() {
         }
     });
     assert!(reached);
-    assert!(matches!(result,Err(ref e) if e=="Cancelled"));
+    assert!(matches!(result, Err(ref e) if e.message == "Cancelled"));
 }
 
 #[cfg(test)]
@@ -578,16 +580,14 @@ fn smooth_thin_torus_volume_diagnostic() {
             out.triangles.len()
         );
         assert!(ratio.is_finite());
-        assert!(ratio >= 0.99 - 1e-10 && ratio <= 1.01 + 1e-10);
+        assert!((0.99 - 1e-10..=1.01 + 1e-10).contains(&ratio));
         if tolerance == 0. {
             assert_eq!(out.triangles.len(), mesh.triangles.len());
             assert_eq!(ratio, 1.);
         }
     }
     // Separate opposite-winding components must not cancel each other's budgets.
-    for color in &mut mesh.colors {
-        *color = [0; 3];
-    }
+    mesh.colors.fill([0; 3]);
     let offset = mesh.positions.len() as u32;
     let old_positions = mesh.positions.clone();
     let old_faces = mesh.triangles.clone();
@@ -613,6 +613,6 @@ fn smooth_thin_torus_volume_diagnostic() {
     };
     for layer in [0, 1] {
         let ratio = component_volume(&output, layer) / component_volume(&mesh, layer);
-        assert!(ratio >= 0.99 - 1e-10 && ratio <= 1.01 + 1e-10);
+        assert!((0.99 - 1e-10..=1.01 + 1e-10).contains(&ratio));
     }
 }

@@ -24,7 +24,7 @@ fn area(section: &MeshSection) -> f64 {
 }
 
 fn shifted(mut mesh: Mesh, delta: [f64; 3]) -> Mesh {
-    for p in mesh.positions.chunks_exact_mut(3) {
+    for p in mesh.positions.as_chunks_mut::<3>().0 {
         for axis in 0..3 {
             p[axis] += delta[axis];
         }
@@ -143,7 +143,7 @@ fn exact_triangle_soup_seams_and_signed_zero_share_identity() {
     let mut soup = mesh::empty();
     for &i in &mesh.indices {
         let mut p = mesh.point(i).unwrap();
-        if soup.indices.len() % 2 == 0 {
+        if soup.indices.len().is_multiple_of(2) {
             for v in &mut p {
                 if *v == 0. {
                     *v = -0.;
@@ -163,7 +163,9 @@ fn open_boundary_is_an_error_instead_of_a_repaired_ring() {
     let mut mesh = mesh::cube([1., 1., 1.], false).unwrap();
     let triangle = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .position(|t| {
             let z: Vec<_> = t.iter().map(|&i| mesh.positions[i * 3 + 2]).collect();
             z.contains(&0.) && z.contains(&1.)

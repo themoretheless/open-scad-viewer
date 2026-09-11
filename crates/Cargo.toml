@@ -4,6 +4,7 @@ resolver = "3"
 
 [workspace.package]
 edition = "2024"
+# Last stable Cargo accepts as rust-version. Dev/CI compile with nightly-2026-09-10.
 rust-version = "1.98"
 publish = false
 

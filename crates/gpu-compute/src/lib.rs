@@ -3,6 +3,15 @@
 //! fallback. wgpu drives Metal on macOS and Vulkan on Linux/Windows (NVIDIA
 //! included) — there is no separate CUDA backend because these kernels are
 //! custom shaders and the CUDA hardware class is covered through Vulkan.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 
 pub use wgpu;
 
@@ -101,7 +110,10 @@ pub fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer, size: usize) ->
     });
     let _ = device.poll(wgpu::PollType::wait_indefinitely());
     match rx.recv() {
-        Ok(Ok(())) => slice.get_mapped_range().map(|view| view.to_vec()).unwrap_or_default(),
+        Ok(Ok(())) => slice
+            .get_mapped_range()
+            .map(|view| view.to_vec())
+            .unwrap_or_default(),
         _ => Vec::new(),
     }
 }

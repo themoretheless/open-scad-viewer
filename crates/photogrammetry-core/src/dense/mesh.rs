@@ -1,5 +1,5 @@
 use super::Surface;
-use crate::{math::*, Result};
+use crate::{Result, math::*};
 
 fn validate(surface: &Surface, operation: &str) -> Result<()> {
     if surface.colors.len() != surface.positions.len()
@@ -10,7 +10,7 @@ fn validate(surface: &Surface, operation: &str) -> Result<()> {
             .flatten()
             .any(|&i| i as usize >= surface.positions.len())
     {
-        return Err(format!("Invalid surface for {operation}"));
+        return Err(crate::error(format!("Invalid surface for {operation}")));
     }
     Ok(())
 }
@@ -163,10 +163,12 @@ mod compact_tests {
         assert_eq!(source.positions.len(), 4);
         assert_eq!(result.positions.len(), 3);
         assert_eq!(result.triangles.len(), 1);
-        assert!(result
-            .positions
-            .iter()
-            .any(|p| (p[0] - 0.00005).abs() < 1e-8));
+        assert!(
+            result
+                .positions
+                .iter()
+                .any(|p| (p[0] - 0.00005).abs() < 1e-8)
+        );
         let bad = Surface {
             positions: vec![[0.; 3]],
             colors: vec![],
@@ -218,10 +220,12 @@ mod compact_tests {
             assert_eq!(kept.triangles, surface.triangles);
             assert_eq!(kept.colors, surface.colors);
         }
-        assert!(filter_small_components(&surface, 3)
-            .unwrap()
-            .triangles
-            .is_empty());
+        assert!(
+            filter_small_components(&surface, 3)
+                .unwrap()
+                .triangles
+                .is_empty()
+        );
         // Shared vertices join faces into one component; nothing is removed.
         let joined = Surface {
             triangles: vec![[0, 1, 2], [4, 5, 0]],
@@ -231,10 +235,12 @@ mod compact_tests {
             filter_small_components(&joined, 2).unwrap().triangles.len(),
             2
         );
-        assert!(filter_small_components(&joined, 3)
-            .unwrap()
-            .triangles
-            .is_empty());
+        assert!(
+            filter_small_components(&joined, 3)
+                .unwrap()
+                .triangles
+                .is_empty()
+        );
         let bad = Surface {
             positions: vec![[0.; 3]],
             colors: vec![],

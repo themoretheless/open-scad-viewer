@@ -1,4 +1,4 @@
-use photogrammetry_core::{reconstruct_detailed, Image, ReconstructionOptions};
+use photogrammetry_core::{Image, ReconstructionOptions, reconstruct_detailed};
 use std::{fs, io::Write};
 fn main() {
     if let Err(e) = run() {
@@ -80,15 +80,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // correspondences, joint two-view refinement and post-BA outlier filtering.
     if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
         options.feature_options.second_chance = true;
-        options.seed_options = photogrammetry_core::SeedOptions { verify_runners_up: true };
+        options.seed_options = photogrammetry_core::SeedOptions {
+            verify_runners_up: true,
+        };
         options.geometry_options = photogrammetry_core::camera::GeometryOptions::JOINT;
-        options.bundle = options.bundle.map(|b| photogrammetry_core::bundle::BundleOptions {
-            filter: Some(photogrammetry_core::bundle::FilterOptions {
-                max_reprojection_error: 2.0,
-                min_parallax: 0.,
-            }),
-            ..b
-        });
+        options.bundle = options
+            .bundle
+            .map(|b| photogrammetry_core::bundle::BundleOptions {
+                filter: Some(photogrammetry_core::bundle::FilterOptions {
+                    max_reprojection_error: 2.0,
+                    min_parallax: 0.,
+                }),
+                ..b
+            });
     }
     // PHOTO_ACCELERATION=gpu requires building with --features gpu.
     if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
@@ -126,8 +130,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         match std::env::var("PHOTO_DENSE_PROFILE").as_deref() {
             Ok("slanted") => {
-                dense_options.estimator =
-                    photogrammetry_core::dense::DenseEstimator::SlantedPlane;
+                dense_options.estimator = photogrammetry_core::dense::DenseEstimator::SlantedPlane;
                 dense_options.patch_radius = 2;
             }
             Ok("baseline") | Err(_) => (),
@@ -154,7 +157,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
         let dense = dense.surface;
         let mut f = fs::File::create(format!("{}.surface.ply", args[0]))?;
-        writeln!(f,"ply\nformat ascii 1.0\nelement vertex {}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nelement face {}\nproperty list uchar int vertex_indices\nend_header",dense.positions.len(),dense.triangles.len())?;
+        writeln!(
+            f,
+            "ply\nformat ascii 1.0\nelement vertex {}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nelement face {}\nproperty list uchar int vertex_indices\nend_header",
+            dense.positions.len(),
+            dense.triangles.len()
+        )?;
         for (p, c) in dense.positions.iter().zip(&dense.colors) {
             writeln!(f, "{} {} {} {} {} {}", p[0], p[1], p[2], c[0], c[1], c[2])?;
         }
@@ -168,7 +176,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     let mut file = fs::File::create(&args[0])?;
-    writeln!(file,"ply\nformat ascii 1.0\nelement vertex {}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header",result.points.len())?;
+    writeln!(
+        file,
+        "ply\nformat ascii 1.0\nelement vertex {}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header",
+        result.points.len()
+    )?;
     for p in &result.points {
         writeln!(
             file,

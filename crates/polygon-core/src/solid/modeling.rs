@@ -1,13 +1,10 @@
 //! Native polygon construction. No spline or external CAD backend is used.
 use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
-use crate::{BuiltMesh, Mesh, Result, check, cross, norm, sub};
+use crate::{BuiltMesh, Mesh, Result, check, cross, dot, norm, sub};
 use planar_geometry::rings::{Rings, area, inside};
-pub type Point = [f64; 3];
-fn dot(a: Point, b: Point) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
-}
+pub type Point = math_core::V3;
 fn unit(a: Point) -> Result<Point> {
-    let l = norm(&a);
+    let l = norm(a);
     check(l > 1e-12, "Direction is zero or numerically singular")?;
     Ok(a.map(|v| v / l))
 }
@@ -122,7 +119,7 @@ fn cap(ring: &[Point]) -> Result<Vec<usize>> {
     let normal = unit(normal)?;
     let u = unit(sub(ring[1], a))?;
     let v = cross(normal, u);
-    let size = ring.iter().map(|&p| norm(&sub(p, a))).fold(0., f64::max);
+    let size = ring.iter().map(|&p| norm(sub(p, a))).fold(0., f64::max);
     check(
         ring.iter()
             .all(|&p| dot(sub(p, a), normal).abs() <= size * 1e-9),
@@ -239,7 +236,7 @@ pub fn loft(sections: &[Vec<Point>], caps: bool) -> Result<BuiltMesh> {
         }
     }
     if caps {
-        for t in cap(&sections[0])?.chunks_exact(3) {
+        for t in cap(&sections[0])?.as_chunks::<3>().0 {
             indices.extend([t[0], t[2], t[1]]);
         }
         let base = (sections.len() - 1) * n;
@@ -317,7 +314,7 @@ pub fn revolve(
         }
     }
     if !full && caps {
-        for t in cap(&sections[0])?.chunks_exact(3) {
+        for t in cap(&sections[0])?.as_chunks::<3>().0 {
             indices.extend([t[0], t[2], t[1]]);
         }
         indices.extend(cap(&sections[segments])?.iter().map(|i| segments * n + i));
@@ -329,7 +326,9 @@ pub fn revolve(
     })?;
     mesh.indices = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .filter(|t| t[0] != t[1] && t[1] != t[2] && t[2] != t[0])
         .flatten()
         .copied()
@@ -387,7 +386,7 @@ pub fn extrude_rings(
             for row in 0..=steps {
                 let f = row as f64 / steps as f64;
                 let a = (-twist * f).to_radians();
-                for p in base.positions.chunks_exact(3) {
+                for p in base.positions.as_chunks::<3>().0 {
                     let x = p[0] * (1. + (scale[0] - 1.) * f);
                     let y = p[1] * (1. + (scale[1] - 1.) * f);
                     m.positions.extend([
@@ -397,7 +396,7 @@ pub fn extrude_rings(
                     ]);
                 }
             }
-            for t in base.indices.chunks_exact(3) {
+            for t in base.indices.as_chunks::<3>().0 {
                 m.indices.extend([
                     t[2],
                     t[1],
@@ -418,7 +417,7 @@ pub fn extrude_rings(
             }
         }
         if center {
-            for p in m.positions.chunks_exact_mut(3) {
+            for p in m.positions.as_chunks_mut::<3>().0 {
                 p[2] -= height / 2.
             }
         }

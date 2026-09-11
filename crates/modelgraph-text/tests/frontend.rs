@@ -47,15 +47,21 @@ fn rejects_invalid_layout_and_bounded_resource_abuse() {
             "Recursive value structures",
         ),
     ] {
-        assert!(compile(source).unwrap_err().contains(error));
+        assert!(compile(source).unwrap_err().message.contains(error));
     }
     assert!(
         compile(&" ".repeat(262145))
             .unwrap_err()
+            .message
             .contains("256 KiB")
     );
     let deep = format!("show sphere({}1{})", "(".repeat(70), ")".repeat(70));
-    assert!(compile(&deep).unwrap_err().contains("nesting exceeds 64"));
+    assert!(
+        compile(&deep)
+            .unwrap_err()
+            .message
+            .contains("nesting exceeds 64")
+    );
 }
 #[test]
 fn geometry_collection_remains_a_parameterized_collect() {

@@ -1,29 +1,29 @@
 use super::*;
 fn inside_triangle(p: Point, t: [Point; 3], eps: f64) -> bool {
     let normal = cross(sub(t[1], t[0]), sub(t[2], t[0]));
-    let n = scale(normal, 1. / norm(&normal));
+    let n = scale(normal, 1. / norm(normal));
     (0..3).all(|i| {
         let edge = sub(t[(i + 1) % 3], t[i]);
-        dot(cross(edge, sub(p, t[i])), n) >= -eps * norm(&edge)
+        dot(cross(edge, sub(p, t[i])), n) >= -eps * norm(edge)
     })
 }
 fn on_segment(p: Point, a: Point, b: Point, eps: f64) -> bool {
     let d = sub(b, a);
-    let length = norm(&d);
+    let length = norm(d);
     if length <= eps {
-        return norm(&sub(p, a)) <= eps;
+        return norm(sub(p, a)) <= eps;
     }
     let u = dot(sub(p, a), d) / (length * length);
-    u >= -eps / length && u <= 1. + eps / length && norm(&sub(sub(p, a), scale(d, u))) <= eps * 2.
+    u >= -eps / length && u <= 1. + eps / length && norm(sub(sub(p, a), scale(d, u))) <= eps * 2.
 }
 fn intersections(a: [Point; 3], b: [Point; 3], eps: f64) -> Vec<Point> {
     let na = cross(sub(a[1], a[0]), sub(a[2], a[0]));
-    let na = scale(na, 1. / norm(&na));
+    let na = scale(na, 1. / norm(na));
     let nb = cross(sub(b[1], b[0]), sub(b[2], b[0]));
-    let nb = scale(nb, 1. / norm(&nb));
+    let nb = scale(nb, 1. / norm(nb));
     let mut points = Vec::new();
     let coplanar =
-        norm(&cross(na, nb)) <= eps && a.iter().all(|p| dot(nb, sub(*p, b[0])).abs() <= eps);
+        norm(cross(na, nb)) <= eps && a.iter().all(|p| dot(nb, sub(*p, b[0])).abs() <= eps);
     if coplanar {
         for p in a {
             if inside_triangle(p, b, eps) {
@@ -48,7 +48,7 @@ fn intersections(a: [Point; 3], b: [Point; 3], eps: f64) -> Vec<Point> {
                 let r = sub(a[(ai + 1) % 3], p);
                 let s = sub(b[(bi + 1) % 3], q);
                 let det = cross2(r, s);
-                if det.abs() > eps * norm(&r) * norm(&s) {
+                if det.abs() > eps * norm(r) * norm(s) {
                     let t = cross2(sub(q, p), s) / det;
                     let u = cross2(sub(q, p), r) / det;
                     if (0. ..=1.).contains(&t) && (0. ..=1.).contains(&u) {
@@ -84,7 +84,9 @@ fn intersections(a: [Point; 3], b: [Point; 3], eps: f64) -> Vec<Point> {
 pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()> {
     let triangles: Vec<[Point; 3]> = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|t| {
             [
                 mesh.point(t[0]).unwrap(),
@@ -185,7 +187,7 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                 .collect();
             for p in intersections(triangles[a], triangles[b], eps) {
                 let allowed = match shared.as_slice() {
-                    [a] => norm(&sub(p, *a)) <= eps * 2.,
+                    [a] => norm(sub(p, *a)) <= eps * 2.,
                     [a, b] => on_segment(p, *a, *b, eps),
                     _ => false,
                 };
@@ -202,14 +204,14 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
 }
 fn winding(mesh: &Mesh, p: Point, budget: &mut Budget) -> Result<f64> {
     let mut angle = 0.;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         budget.tick(1)?;
         let a = sub(mesh.point(t[0])?, p);
         let b = sub(mesh.point(t[1])?, p);
         let c = sub(mesh.point(t[2])?, p);
-        let aa = norm(&a);
-        let bb = norm(&b);
-        let cc = norm(&c);
+        let aa = norm(a);
+        let bb = norm(b);
+        let cc = norm(c);
         angle += 2.
             * dot(a, cross(b, c))
                 .atan2(aa * bb * cc + dot(a, b) * cc + dot(b, c) * aa + dot(c, a) * bb);
@@ -223,7 +225,7 @@ pub(super) fn orientation(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<
         return Ok(());
     }
     let mut by_vertex = BTreeMap::<usize, Vec<usize>>::new();
-    for (i, t) in mesh.indices.chunks_exact(3).enumerate() {
+    for (i, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
         for v in t {
             by_vertex.entry(*v).or_default().push(i);
         }
@@ -242,7 +244,7 @@ pub(super) fn orientation(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<
             }
             seen[i] = true;
             let t = &mesh.indices[3 * i..3 * i + 3];
-            let n = norm(&cross(
+            let n = norm(cross(
                 sub(mesh.point(t[1])?, mesh.point(t[0])?),
                 sub(mesh.point(t[2])?, mesh.point(t[0])?),
             ));

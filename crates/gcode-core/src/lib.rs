@@ -1,6 +1,15 @@
 //! G-code encoding of a planned toolpath. Not a print process and not the
 //! only possible machine dialect. No mesh/NURBS/WASM dependency.
 //! Coordinates are millimeters; feedrate is mm/s internally and F is mm/min.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 
 pub const DIALECT: &str = "open-scad-viewer/print-preview 1";
 pub const MAX_LAYERS: usize = 2_048;
@@ -129,8 +138,8 @@ pub fn path_length_mm(path: &PlannedPath) -> f64 {
         return 0.0;
     }
     points
-        .windows(2)
-        .map(|window| (window[1][0] - window[0][0]).hypot(window[1][1] - window[0][1]))
+        .array_windows()
+        .map(|[a, b]| (b[0] - a[0]).hypot(b[1] - a[1]))
         .sum()
 }
 
@@ -173,9 +182,7 @@ pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String>
                 "G0 X{:.5} Y{:.5} F{travel_f:.3}\n",
                 start[0], start[1]
             ));
-            for window in path_vertices(path).windows(2) {
-                let a = window[0];
-                let b = window[1];
+            for [a, b] in path_vertices(path).array_windows() {
                 let length = (b[0] - a[0]).hypot(b[1] - a[1]);
                 e += length * area / filament;
                 out.push_str(&format!(
@@ -210,10 +217,10 @@ pub fn parse(gcode: &str) -> Result<GcodePreview> {
     let mut z = 0.0;
     let mut moves = Vec::new();
     for line in gcode.lines() {
-        if let Some(rest) = line.strip_prefix(";LAYER:") {
-            if rest.parse::<usize>().is_ok() {
-                layers += 1;
-            }
+        if let Some(rest) = line.strip_prefix(";LAYER:")
+            && rest.parse::<usize>().is_ok()
+        {
+            layers += 1;
         }
         let command = line.split_whitespace().next().unwrap_or("");
         if command != "G0" && command != "G1" {

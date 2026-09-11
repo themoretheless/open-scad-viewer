@@ -2,10 +2,12 @@
 //! Implemented here in Rust; no external geometry engine. Binary64 predicates
 //! use a common normalized frame. Results are stitched and topology-checked;
 //! this is not an exact-arithmetic or globally certified geometry algorithm.
-use crate::{BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, norm, sub};
+use crate::{
+    BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, dot, norm, scale, sub,
+};
 use std::collections::{BTreeMap, BTreeSet};
 mod validation;
-type Point = [f64; 3];
+type Point = math_core::V3;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
     Union,
@@ -209,12 +211,6 @@ fn limit() -> Error {
         "Boolean work/fragment/output budget exceeded; reduce mesh complexity",
     )
 }
-fn dot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-fn scale(p: Point, k: f64) -> Point {
-    p.map(|v| v * k)
-}
 struct Budget {
     stage: &'static str,
     work: usize,
@@ -267,11 +263,11 @@ impl Polygon {
     fn new(vertices: Vec<Point>, eps: f64, budget: &mut Budget) -> Result<Option<Self>> {
         let mut clean = Vec::new();
         for p in vertices {
-            if clean.last().is_none_or(|q| norm(&sub(p, *q)) > eps) {
+            if clean.last().is_none_or(|q| norm(sub(p, *q)) > eps) {
                 clean.push(p);
             }
         }
-        if clean.len() > 1 && norm(&sub(clean[0], *clean.last().unwrap())) <= eps {
+        if clean.len() > 1 && norm(sub(clean[0], *clean.last().unwrap())) <= eps {
             clean.pop();
         }
         if clean.len() < 3 {
@@ -285,7 +281,7 @@ impl Polygon {
                 area[a] += n[a];
             }
         }
-        let magnitude = norm(&area);
+        let magnitude = norm(area);
         if magnitude <= eps * eps {
             return Ok(None);
         }
@@ -494,10 +490,10 @@ impl Bsp {
                 output.append(&mut parts.front);
             }
             // Absence of a back child denotes the solid interior.
-            if let Some(back) = n.back {
-                if !parts.back.is_empty() {
-                    stack.push((back, parts.back));
-                }
+            if let Some(back) = n.back
+                && !parts.back.is_empty()
+            {
+                stack.push((back, parts.back));
             }
         }
         Ok(output)
@@ -515,7 +511,7 @@ impl Bsp {
 /// Reject disconnected vertex fans (edge counts alone miss pinched vertices).
 fn vertex_manifold(mesh: &Mesh) -> Result<()> {
     let mut links = BTreeMap::<usize, Vec<(usize, usize)>>::new();
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         for i in 0..3 {
             links
                 .entry(t[i])
@@ -588,7 +584,9 @@ fn normalized(mesh: &Mesh, origin: Point, scale: f64) -> Result<Mesh> {
 fn polygons(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
     let polygons = mesh
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|t| {
             Polygon::new(
                 vec![mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?],
@@ -647,7 +645,7 @@ fn merge_coplanar(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Resu
                     v.push(q.vertices[(l + offset) % q.vertices.len()]);
                 }
                 budget.tick(v.len().saturating_mul(v.len()))?;
-                if (0..v.len()).all(|a| (a + 1..v.len()).all(|b| norm(&sub(v[a], v[b])) > eps))
+                if (0..v.len()).all(|a| (a + 1..v.len()).all(|b| norm(sub(v[a], v[b])) > eps))
                     && (0..v.len()).all(|t| {
                         dot(
                             cross(
@@ -711,7 +709,7 @@ impl Vertices {
                     if let Some(indices) = self.cells.get(&[cell[0] + x, cell[1] + y, cell[2] + z])
                     {
                         for &i in indices {
-                            if norm(&sub(self.points[i], p)) <= self.eps {
+                            if norm(sub(self.points[i], p)) <= self.eps {
                                 return i;
                             }
                         }
@@ -760,7 +758,7 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
                 let p = vertices.points[key.0];
                 let q = vertices.points[key.1];
                 let direction = sub(q, p);
-                let length = norm(&direction);
+                let length = norm(direction);
                 if length <= eps {
                     return Err(numeric("Collapsed Boolean edge"));
                 }
@@ -787,7 +785,7 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
                     let t = dot(delta, direction) / (length * length);
                     if t > eps / length
                         && t < 1. - eps / length
-                        && norm(&sub(delta, scale(direction, t))) <= eps
+                        && norm(sub(delta, scale(direction, t))) <= eps
                     {
                         along.push((t, id));
                     }
@@ -824,7 +822,7 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
     }
     // Canonical triangle accounting removes coincident zero-thickness faces.
     let mut unique = BTreeMap::<[usize; 3], ([usize; 3], i32)>::new();
-    for t in indices.chunks_exact(3) {
+    for t in indices.as_chunks::<3>().0 {
         let t = [t[0], t[1], t[2]];
         let mut key = t;
         key.sort();
@@ -929,17 +927,21 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         if outer.indices.is_empty() || inner.indices.is_empty() || outer.indices.len() / 3 > 128 {
             return Ok(false);
         }
-        for t in outer.indices.chunks_exact(3) {
+        for t in outer.indices.as_chunks::<3>().0 {
             let p = outer.point(t[0])?;
             let n = cross(sub(outer.point(t[1])?, p), sub(outer.point(t[2])?, p));
-            let tolerance = eps * norm(&n);
+            let tolerance = eps * norm(n);
             if outer
                 .positions
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .any(|v| dot(n, sub([v[0], v[1], v[2]], p)) > tolerance)
                 || inner
                     .positions
-                    .chunks_exact(3)
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .any(|v| dot(n, sub([v[0], v[1], v[2]], p)) >= -tolerance)
             {
                 return Ok(false);
@@ -950,11 +952,15 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
     let center = |m: &Mesh| {
         std::array::from_fn::<_, 3, _>(|k| {
             (m.positions
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|p| p[k])
                 .fold(f64::INFINITY, f64::min)
                 + m.positions
-                    .chunks_exact(3)
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .map(|p| p[k])
                     .fold(f64::NEG_INFINITY, f64::max))
                 / 2.
@@ -964,12 +970,16 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
     let separated = !a.indices.is_empty()
         && !b.indices.is_empty()
         && a.positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| dot(axis, [p[0], p[1], p[2]]))
             .fold(f64::NEG_INFINITY, f64::max)
-            + eps * norm(&axis)
+            + eps * norm(axis)
             < b.positions
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|p| dot(axis, [p[0], p[1], p[2]]))
                 .fold(f64::INFINITY, f64::min);
     let mut result = if separated {
@@ -1093,7 +1103,7 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         }
     })?;
     validation::orientation(&result, eps, &mut budget)?;
-    for p in result.positions.chunks_exact_mut(3) {
+    for p in result.positions.as_chunks_mut::<3>().0 {
         for axis in 0..3 {
             p[axis] = origin[axis] + p[axis] * extent;
         }

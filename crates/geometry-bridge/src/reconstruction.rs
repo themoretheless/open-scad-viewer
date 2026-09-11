@@ -2,7 +2,7 @@
 //! they do not recover unknown original CAD surfaces or prove global continuity.
 use super::*;
 use polygon_core::solid::proximity::{closest_triangle, valid_source};
-type Point = [f64; 3];
+type Point = math_core::V3;
 use math_core::{cross, dot, norm, sub};
 #[derive(Clone, Copy)]
 pub enum Mode {
@@ -186,7 +186,7 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
                 "Point-normal fitting requires consistently oriented manifold edges",
             ));
         }
-        for t in mesh.indices.chunks_exact(3) {
+        for t in mesh.indices.as_chunks::<3>().0 {
             let n = cross(sub(point(t[1]), point(t[0])), sub(point(t[2]), point(t[0])));
             for &i in t {
                 for (k, v) in normals[i].iter_mut().enumerate() {
@@ -209,7 +209,7 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
     let mut patches = Vec::new();
     let mut maximum: f64 = 0.;
     let mut count = 0;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let p = [point(t[0]), point(t[1]), point(t[2])];
         let n = [normals[t[0]], normals[t[1]], normals[t[2]]];
         let s = match mode {
@@ -301,7 +301,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
     let mut lo = [f64::INFINITY; 3];
     let mut hi = [f64::NEG_INFINITY; 3];
     let mut magnitude: f64 = 1.;
-    for p in mesh.positions.chunks_exact(3) {
+    for p in mesh.positions.as_chunks::<3>().0 {
         for k in 0..3 {
             lo[k] = lo[k].min(p[k]);
             hi[k] = hi[k].max(p[k]);
@@ -454,10 +454,18 @@ pub fn mesh_to_subdivision(mesh: &Mesh, iterations: usize) -> Result<Subdivision
     let cage = subdivision_core::Cage::from_faces(
         source
             .positions
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|p| [p[0], p[1], p[2]])
             .collect(),
-        source.indices.chunks_exact(3).map(|t| t.to_vec()).collect(),
+        source
+            .indices
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|t| t.to_vec())
+            .collect(),
     )?;
     let preview = crate::mesh_from_triangles(cage.subdivide(1)?.triangulate()?.0);
     polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
@@ -517,7 +525,7 @@ mod tests {
         let mut hollow = m.clone();
         let offset = hollow.positions.len() / 3;
         hollow.positions.extend(m.positions.iter().map(|v| v / 2.));
-        for t in m.indices.chunks_exact(3) {
+        for t in m.indices.as_chunks::<3>().0 {
             hollow
                 .indices
                 .extend([offset + t[0], offset + t[2], offset + t[1]]);

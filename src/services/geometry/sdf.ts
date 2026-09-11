@@ -1,7 +1,7 @@
 import {callGeometryRust} from './kernel'
 import type {GeometryDeformation} from '../geometryEditing'
-import type {PolygonBuild,PolygonMesh} from './polygon'
-export interface SdfProfile {outer:number[][];holes:number[][][]}
+import type {PolygonBuild,PolygonMesh,PolygonProfile} from './polygon'
+export type SdfProfile = PolygonProfile
 export type SdfField =
  | {kind:'extrude';profile:SdfProfile;half_height:number}
  | {kind:'revolve';profile:SdfProfile}

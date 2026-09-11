@@ -4,6 +4,15 @@
 //!
 //! Default feature `languages` pulls OpenSCAD and ModelGraph. Kernel-only
 //! builds: `--no-default-features`.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub mod brep;
 #[cfg(feature = "languages")]
 mod languages;
@@ -27,11 +36,11 @@ use nurbs_core::{
     surface::{Surface, SurfaceSampler},
 };
 use polygon_core::{
-    solid::tessellation::{self, Boundary, Options, ParametricSurface},
     BuiltMesh, Mesh, Seams,
+    solid::tessellation::{self, Boundary, Options, ParametricSurface},
 };
-use value_codec::{json, Value};
 use value_codec::{Deserialize, Serialize};
+use value_codec::{Value, json};
 
 #[derive(Debug)]
 pub struct Error {

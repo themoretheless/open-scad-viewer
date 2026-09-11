@@ -1,7 +1,7 @@
 //! Experimental bounded projective signed-distance integration.
 //! Unknown nodes never create a surface. A shared edge cache joins view geometry.
-use super::{cancelled, consistency::ObservedPatch, DenseOptions, DepthMap, Surface};
-use crate::{math::*, Reconstruction, Result};
+use super::{DenseOptions, DepthMap, Surface, cancelled, consistency::ObservedPatch};
+use crate::{Reconstruction, Result, math::*};
 use std::collections::{HashMap, HashSet};
 
 /// Multiply-rotate hasher for small integer keys, in the spirit of FxHash.
@@ -98,6 +98,11 @@ impl From<&str> for AttemptError {
         Self::Other(value.into())
     }
 }
+impl From<crate::Error> for AttemptError {
+    fn from(value: crate::Error) -> Self {
+        Self::Other(value.message)
+    }
+}
 
 pub(super) fn reconstruct(
     patches: &[ObservedPatch],
@@ -126,8 +131,10 @@ fn bounded_attempts<P: FnMut(&str, usize, usize) -> bool>(
                 cancelled(progress, "volume-coarsen", attempt as usize + 1, 3)?;
             }
             Ok(surface) => return Ok(surface),
-            Err(AttemptError::NodeBudget) => return Err("Volume node budget exceeded".into()),
-            Err(AttemptError::Other(error)) => return Err(error),
+            Err(AttemptError::NodeBudget) => {
+                return Err(crate::error("Volume node budget exceeded"));
+            }
+            Err(AttemptError::Other(error)) => return Err(crate::error(error)),
         }
     }
     unreachable!()
@@ -156,7 +163,7 @@ fn reconstruct_at_scale(
     let step = footprints[mid] * 0.5 * spacing_scale;
     let depth_tolerance = footprints[mid] * 0.75;
     if !step.is_finite() || step <= 1e-12 {
-        return Err("Invalid volume spacing".into());
+        return Err(crate::error("Invalid volume spacing").into());
     }
     let mut origin = [f64::INFINITY; 3];
     for sample in patches.iter().flat_map(|p| p.samples.iter()) {
@@ -222,7 +229,7 @@ fn reconstruct_at_scale(
                 .iter()
                 .any(|v| !v.is_finite() || *v < 0. || *v > i32::MAX as f64 - 4.)
             {
-                return Err("Volume coordinate exceeds bounded grid".into());
+                return Err(crate::error("Volume coordinate exceeds bounded grid").into());
             }
             let cell = cell.map(|v| v as i32);
             for z in -2..=2 {
@@ -313,12 +320,12 @@ fn reconstruct_at_scale(
             if (depth - z).abs() <= depth_tolerance {
                 agreeing += 1;
                 // Further views cannot change the accepted support predicate.
-                if agreeing >= options.min_support_views + 1 {
+                if agreeing > options.min_support_views {
                     break;
                 }
             }
         }
-        valid[i] = agreeing >= options.min_support_views + 1;
+        valid[i] = agreeing > options.min_support_views;
     }
     // Validate the extracted surface, rather than eroding the whole narrow band.
     // Reindex exactly; no point movement or automatic hole filling occurs here.
@@ -538,7 +545,7 @@ fn extract(
                         id
                     } else {
                         if output.positions.len() == MAX_SURFACE_VERTICES {
-                            return Err("Volume vertex budget exceeded".into());
+                            return Err(crate::error("Volume vertex budget exceeded"));
                         }
                         let t = va.distance / (va.distance - vb.distance);
                         let p = add(
@@ -584,7 +591,7 @@ fn extract(
                 sorted.sort_unstable();
                 if unique.insert(sorted) {
                     if output.triangles.len() == MAX_SURFACE_TRIANGLES {
-                        return Err("Volume triangle budget exceeded".into());
+                        return Err(crate::error("Volume triangle budget exceeded"));
                     }
                     output.triangles.push(tri);
                 }
@@ -736,7 +743,8 @@ mod tests {
             extract(&keys, &FastMap::default(), [0.; 3], 1., &mut |_, _, _| {
                 false
             })
-            .unwrap_err(),
+            .unwrap_err()
+            .message,
             "Cancelled"
         );
     }
@@ -763,7 +771,7 @@ fn retry_budget_and_cancellation_contract() {
         calls += 1;
         Err(AttemptError::NodeBudget)
     });
-    assert!(matches!(result,Err(ref e) if e == "Volume node budget exceeded"));
+    assert!(matches!(result, Err(ref e) if e.message == "Volume node budget exceeded"));
     assert_eq!(calls, 4);
     assert_eq!(diagnostics.volume_attempts, 4);
     calls = 0;
@@ -771,13 +779,13 @@ fn retry_budget_and_cancellation_contract() {
         calls += 1;
         Err(AttemptError::NodeBudget)
     });
-    assert!(matches!(result,Err(ref e) if e == "Cancelled"));
+    assert!(matches!(result, Err(ref e) if e.message == "Cancelled"));
     assert_eq!(calls, 1);
     calls = 0;
     let result = bounded_attempts(&mut diagnostics, &mut |_, _, _| true, |_, _| {
         calls += 1;
         Err(AttemptError::Other("invalid geometry".into()))
     });
-    assert!(matches!(result,Err(ref e) if e == "invalid geometry"));
+    assert!(matches!(result, Err(ref e) if e.message == "invalid geometry"));
     assert_eq!(calls, 1);
 }

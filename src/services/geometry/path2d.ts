@@ -1,6 +1,7 @@
 import { callGeometryRust } from './kernel'
+import type { Vec2 } from './module'
 
-export type PathPoint = [number, number]
+export type PathPoint = Vec2
 export type PathSegmentJson =
   | { type: 'line'; to: PathPoint }
   | { type: 'cubic'; c1: PathPoint; c2: PathPoint; to: PathPoint }

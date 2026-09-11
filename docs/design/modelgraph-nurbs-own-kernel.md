@@ -70,7 +70,7 @@ JSON сохраняет исходный параметрический NURBS-д
 
 ## Сборка Rust-ядра
 
-Нужны Rust/Cargo 1.98 (`rust-toolchain.toml`) и target `wasm32-unknown-unknown`. WASM — прямой `cdylib` без `wasm-bindgen`. `npm run build:geometry` собирает обе библиотеки через `geometry-bridge` и генерирует синхронный WASM-модуль в `src/generated/geometry-kernels/`. Стандартные `npm run dev`, `npm run build`, `npm test`, `npm run typecheck` и `npm run mcp` вызывают сборку автоматически. При прямом запуске `tsx`/`vitest` сначала выполните `npm run build:geometry`.
+Нужны Rust/Cargo nightly-2026-09-10 (rustc 1.100, `rust-toolchain.toml`) и target `wasm32-unknown-unknown`. WASM — прямой `cdylib` без `wasm-bindgen`. `npm run build:geometry` собирает обе библиотеки через `geometry-bridge` и генерирует синхронный WASM-модуль в `src/generated/geometry-kernels/`. Стандартные `npm run dev`, `npm run build`, `npm test`, `npm run typecheck` и `npm run mcp` вызывают сборку автоматически. При прямом запуске `tsx`/`vitest` сначала выполните `npm run build:geometry`.
 
 `npm run test:geometry` запускает нативные Rust-тесты и интеграционные проверки через WASM, включая MCP-подпроцесс. `report.kernel` равен `own-rust-nurbs`. Автоматического перехода на TypeScript-математику нет. Тесселяция целиком выполняется внутри Rust над неизменяемым снимком поверхности; память освобождается по RAII и при успехе, и при ошибке.
 

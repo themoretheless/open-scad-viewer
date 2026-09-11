@@ -1,6 +1,6 @@
 use crate::value::json;
 use value_codec::Value as J;
-type R<T> = Result<T, String>;
+type R<T> = crate::Result<T>;
 #[derive(Clone)]
 struct Token {
     text: String,
@@ -31,7 +31,7 @@ fn unique(xs: impl IntoIterator<Item = String>) -> bool {
 }
 fn lex(source: &str) -> R<Vec<Token>> {
     if source.encode_utf16().count() > 262144 {
-        return Err("ModelGraph Text exceeds 256 KiB.".into());
+        return Err(crate::error("ModelGraph Text exceeds 256 KiB."));
     }
     let b = source.as_bytes();
     let mut p = 0;
@@ -48,11 +48,11 @@ fn lex(source: &str) -> R<Vec<Token>> {
             }
             continue;
         }
-        if source[p..].starts_with("/*") {
-            if let Some(end) = source[p + 2..].find("*/") {
-                p += end + 4;
-                continue;
-            }
+        if source[p..].starts_with("/*")
+            && let Some(end) = source[p + 2..].find("*/")
+        {
+            p += end + 4;
+            continue;
         }
         if b[p] == b'"' {
             p += 1;
@@ -74,7 +74,7 @@ fn lex(source: &str) -> R<Vec<Token>> {
                 }
             }
             if !closed {
-                return Err(format!("Unexpected character at {start}: \""));
+                return Err(crate::error(format!("Unexpected character at {start}: \"")));
             }
         } else if b[p].is_ascii_digit()
             || (b[p] == b'.' && b.get(p + 1).is_some_and(u8::is_ascii_digit))
@@ -134,11 +134,11 @@ fn lex(source: &str) -> R<Vec<Token>> {
         } else if b"\n{}()[],.?:;=+*/%<>-!|@".contains(&b[p]) {
             p += 1
         } else {
-            return Err(format!(
+            return Err(crate::error(format!(
                 "Unexpected character at {}: {}",
                 source[..p].encode_utf16().count(),
                 source[p..].chars().next().unwrap()
-            ));
+            )));
         }
         out.push(Token {
             text: source[start..p].into(),
@@ -163,11 +163,11 @@ impl Parser<'_> {
             .map_or("EOF", |t| t.text.as_str())
     }
     fn err<T>(&self, m: impl AsRef<str>) -> R<T> {
-        Err(format!(
+        Err(crate::error(format!(
             "ModelGraph Text line {}: {}",
             self.line(),
             m.as_ref()
-        ))
+        )))
     }
     fn line(&self) -> usize {
         self.line_starts
@@ -490,10 +490,10 @@ impl Parser<'_> {
         }
         let close = if self.peek() == "[" { "]" } else { "}" };
         self.tokens[self.p..]
-            .windows(2)
+            .array_windows()
             .take(100)
-            .find(|tokens| tokens[0].text == close)
-            .is_some_and(|tokens| tokens[1].text == "=")
+            .find(|[a, _]| a.text == close)
+            .is_some_and(|[_, b]| b.text == "=")
     }
     fn check_statement(&mut self) -> R<J> {
         let kind = self.pop()?;
@@ -987,7 +987,7 @@ impl Parser<'_> {
             }
             _ => {
                 if t.starts_with('"') {
-                    json!({"kind":"string","value":value_codec::from_str::<J>(&t).map_err(|e|e.to_string())?})
+                    json!({"kind":"string","value":value_codec::from_str::<J>(&t).map_err(|e| crate::error(e.to_string()))?})
                 } else if t.starts_with(|c: char| c.is_ascii_digit() || c == '.') {
                     json!({"kind":"number","value":t})
                 } else if ident(&t) && t != "EOF" {
@@ -1138,10 +1138,10 @@ impl Parser<'_> {
         let t = self.tokens[self.p].clone();
         self.pop()?;
         let (v, u) = number(&t.text).map_err(|_| {
-            format!(
+            crate::error(format!(
                 "ModelGraph Text line {}: Parameter default must be a numeric literal",
                 self.line()
-            )
+            ))
         })?;
         Ok((
             sign * v,
@@ -1158,9 +1158,9 @@ pub fn number(s: &str) -> R<(f64, String)> {
         .unwrap_or("");
     let num = s[..s.len() - unit.len()]
         .parse::<f64>()
-        .map_err(|_| "Invalid number".to_string())?;
+        .map_err(|_| crate::error("Invalid number"))?;
     if !num.is_finite() {
-        return Err("Numeric literal must be finite".into());
+        return Err(crate::error("Numeric literal must be finite"));
     }
     Ok((num, unit.into()))
 }
@@ -1432,7 +1432,7 @@ mod statement_check_tests {
             let error = parse(&source)
                 .err()
                 .expect("Statement budget must apply to checks");
-            assert!(error.contains("At most 64"), "{error}");
+            assert!(error.message.contains("At most 64"), "{error}");
         }
     }
 }

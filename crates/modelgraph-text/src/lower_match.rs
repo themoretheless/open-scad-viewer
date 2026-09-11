@@ -15,7 +15,7 @@ fn pattern_bindings(p: &J) -> R<Set<String>> {
     let mut add = |children: Set<String>| -> R<()> {
         for name in children {
             if !names.insert(name.clone()) {
-                return Err(format!("Duplicate pattern binding {name}"));
+                return Err(crate::error(format!("Duplicate pattern binding {name}")));
             }
         }
         Ok(())
@@ -31,10 +31,10 @@ fn pattern_bindings(p: &J) -> R<Set<String>> {
         "or" => {
             let alternatives = arr(p, "patterns");
             let expected =
-                pattern_bindings(alternatives.first().ok_or("Empty pattern alternatives")?)?;
+                pattern_bindings(alternatives.first().ok_or_else(|| crate::error("Empty pattern alternatives"))?)?;
             for alternative in &alternatives[1..] {
                 if pattern_bindings(alternative)? != expected {
-                    return Err("Pattern alternatives must bind the same names".into());
+                    return Err(crate::error("Pattern alternatives must bind the same names"));
                 }
             }
             add(expected)?;
@@ -61,14 +61,14 @@ fn pattern_bindings(p: &J) -> R<Set<String>> {
 }
 impl Compiler {
     fn runtime_type_descriptor(&self,t:&J,depth:usize)->R<J> {
-        if depth>16 {return Err("Runtime type nesting exceeds 16".into());}
+        if depth>16 {return Err(crate::error("Runtime type nesting exceeds 16"));}
         let name=s(t,"name");
         let mut descriptor=t.clone();
         if name=="Vec" {
             descriptor["args"]=json!([self.runtime_type_descriptor(&t["args"][0],depth+1)?]);
         } else if let Some(def)=self.structs.get(name) {
             let mut bindings=Types::new();
-            for (generic,value) in arr(def,"generics").iter().zip(arr(t,"args")) {bindings.insert(generic.as_str().ok_or("Invalid generic name")?.into(),value.clone());}
+            for (generic,value) in arr(def,"generics").iter().zip(arr(t,"args")) {bindings.insert(generic.as_str().ok_or_else(|| crate::error("Invalid generic name"))?.into(),value.clone());}
             let mut fields=value_codec::Map::new();
             for field in arr(def,"fields") {
                 let ty=substitute(&field["type"],&bindings,0)?;
@@ -82,10 +82,10 @@ impl Compiler {
         let mut result = p.clone();
         match s(p, "kind") {
             "bind" => {
-                result["name"] = json!(names.get(s(p, "name")).ok_or("Missing pattern binding")?)
+                result["name"] = json!(names.get(s(p, "name")).ok_or_else(|| crate::error("Missing pattern binding"))?)
             }
             "as" => {
-                result["name"] = json!(names.get(s(p, "name")).ok_or("Missing alias binding")?);
+                result["name"] = json!(names.get(s(p, "name")).ok_or_else(|| crate::error("Missing alias binding"))?);
                 result["pattern"] = self.portable_pattern(&p["pattern"], e, b, names)?;
             }
             "type" => result["pattern"] = self.portable_pattern(&p["pattern"], e, b, names)?,
@@ -108,12 +108,12 @@ impl Compiler {
                         .collect::<R<Vec<_>>>()?);
                 }
                 if let Some(rest) = p["rest"].as_str().filter(|r| *r != "_") {
-                    result["rest"] = json!(names.get(rest).ok_or("Missing list rest binding")?);
+                    result["rest"] = json!(names.get(rest).ok_or_else(|| crate::error("Missing list rest binding"))?);
                 }
             }
             "record" => {
                 let mut fields = value_codec::Map::new();
-                for (name, p) in p["fields"].as_object().ok_or("Expected pattern fields")? {
+                for (name, p) in p["fields"].as_object().ok_or_else(|| crate::error("Expected pattern fields"))? {
                     fields.insert(name.clone(), self.portable_pattern(p, e, b, names)?);
                 }
                 result["fields"] = J::Object(fields);
@@ -150,7 +150,7 @@ impl Compiler {
                 .iter()
                 .all(|r| is_geometry(r) || matches!(r,V::Array(a) if a.is_empty()) || matches!(r,V::Json(j) if empty_value_sequence(&j["sequence"])))
             {
-                return Err("Match arms must all return geometry or all return values".into());
+                return Err(crate::error("Match arms must all return geometry or all return values"));
             }
             let mut collection = false;
             for (arm, result) in arms.iter_mut().zip(results) {

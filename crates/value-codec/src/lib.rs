@@ -1,4 +1,13 @@
 //! Repository-owned document values and bounded JSON/binary codecs.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 use std::{
     collections::BTreeMap,
     fmt,
@@ -56,10 +65,10 @@ impl fmt::Display for Number {
             Self::Signed(v) => write!(f, "{v}"),
             Self::Float(v) => {
                 let s = format!("{v:?}");
-                if let Some((a, b)) = s.split_once('e') {
-                    if !b.starts_with('-') {
-                        return write!(f, "{a}e+{b}");
-                    }
+                if let Some((a, b)) = s.split_once('e')
+                    && !b.starts_with('-')
+                {
+                    return write!(f, "{a}e+{b}");
                 }
                 f.write_str(&s)
             }

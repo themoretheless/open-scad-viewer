@@ -1,12 +1,22 @@
 //! Geometry-independent indexed B-rep incidence shared by both kernels.
 //! C, S and P are application-owned edge, face and parameter-curve geometry.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub use math_core::{Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
+const INVALID_TOPOLOGY: &str = "BREP_INVALID_TOPOLOGY";
 fn invalid(message: impl Into<String>) -> Error {
-    Error::new("BREP_INVALID_TOPOLOGY", message)
+    Error::new(INVALID_TOPOLOGY, message)
 }
 fn require(ok: bool, message: &str) -> Result<()> {
-    if ok { Ok(()) } else { Err(invalid(message)) }
+    math_core::ensure(ok, INVALID_TOPOLOGY, message)
 }
 #[derive(Clone, Debug)]
 pub struct Vertex {

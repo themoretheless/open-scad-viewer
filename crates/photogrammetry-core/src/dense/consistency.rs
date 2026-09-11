@@ -1,6 +1,6 @@
 //! Reciprocal depth/reprojection checks define which observations may enter fusion.
-use super::{cancelled, world_points, DenseDiagnostics, DenseOptions, DepthMap};
-use crate::{camera::Camera, math::*, Image, Reconstruction, Result};
+use super::{DenseDiagnostics, DenseOptions, DepthMap, cancelled, world_points};
+use crate::{Image, Reconstruction, Result, camera::Camera, math::*};
 
 #[derive(Clone, Debug)]
 pub(super) struct Sample {
@@ -116,10 +116,11 @@ fn continuous_edge(
         return false;
     };
     let limit = tolerance * 0.1 * u.min(v);
-    if let (Some(left), Some(right)) = (left, right) {
-        if (left - 2. * u + v).abs() <= limit && (u - 2. * v + right).abs() <= limit {
-            return true;
-        }
+    if let (Some(left), Some(right)) = (left, right)
+        && (left - 2. * u + v).abs() <= limit
+        && (u - 2. * v + right).abs() <= limit
+    {
+        return true;
     }
     if !allow_curvature {
         return false;
@@ -232,10 +233,10 @@ pub(super) fn filter(
                     {
                         continue;
                     }
-                    if let (Some(a), Some(b)) = (n, normals[other_index][j]) {
-                        if dot(a, b) < 0.5 {
-                            continue;
-                        }
+                    if let (Some(a), Some(b)) = (n, normals[other_index][j])
+                        && dot(a, b) < 0.5
+                    {
+                        continue;
                     }
                     let Some(back) = camera.project(points[other_index][j]) else {
                         continue;

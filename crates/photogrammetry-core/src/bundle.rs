@@ -4,8 +4,9 @@
 //! camera system. The anchor pose is fixed; a projection-preserving similarity fixes
 //! the initial anchor/scale-camera baseline after each candidate, removing scale drift.
 //! Inputs are committed only after successful completion, including the final callback.
+use crate::Result;
 use crate::camera::Camera;
-use crate::math::{add, cross, det, dot, mm, mv, norm, rotation, scale, sub, tr, unit, M3, V3};
+use crate::math::{M3, V3, add, cross, det, dot, mm, mv, norm, rotation, scale, sub, tr, unit};
 use std::ops::Range;
 
 #[derive(Clone, Copy, Debug)]
@@ -58,7 +59,7 @@ impl Default for BundleOptions {
 
 impl BundleOptions {
     /// Checks the numerical/resource policy before a caller prepares image data.
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<()> {
         if !(1..=100).contains(&self.max_iterations)
             || !(1..=16).contains(&self.max_trials)
             || !(2..=64).contains(&self.max_cameras)
@@ -71,17 +72,16 @@ impl BundleOptions {
             || !self.relative_cost_tolerance.is_finite()
             || !(0. ..=0.01).contains(&self.relative_cost_tolerance)
         {
-            return Err("Invalid bundle adjustment options".into());
+            return Err(crate::error("Invalid bundle adjustment options"));
         }
-        if let Some(filter) = &self.filter {
-            if !filter.max_reprojection_error.is_finite()
+        if let Some(filter) = &self.filter
+            && (!filter.max_reprojection_error.is_finite()
                 || !(0. ..=100.).contains(&filter.max_reprojection_error)
                 || filter.max_reprojection_error <= 0.
                 || !filter.min_parallax.is_finite()
-                || !(0. ..=1.).contains(&filter.min_parallax)
-            {
-                return Err("Invalid bundle adjustment filter options".into());
-            }
+                || !(0. ..=1.).contains(&filter.min_parallax))
+        {
+            return Err(crate::error("Invalid bundle adjustment filter options"));
         }
         Ok(())
     }
@@ -264,7 +264,7 @@ impl<'a> Checkpoints<'a> {
         !self.cancelled
     }
     fn every(&mut self, index: usize, interval: usize) -> bool {
-        index % interval != 0 || self.check()
+        !index.is_multiple_of(interval) || self.check()
     }
 }
 
@@ -295,9 +295,9 @@ fn validate(
     scale_camera: usize,
     options: &BundleOptions,
     checkpoints: &mut Checkpoints,
-) -> Result<Layout, String> {
+) -> Result<Layout> {
     if !checkpoints.check() {
-        return Err("Cancelled".into());
+        do yeet crate::error("Cancelled");
     }
     options.validate()?;
     if cameras.len() > 200
@@ -307,18 +307,20 @@ fn validate(
         || positions.len() < 6
         || observations.len() < 12
     {
-        return Err("Bundle adjustment input exceeds its bounds or has too little support".into());
+        do yeet crate::error(
+            "Bundle adjustment input exceeds its bounds or has too little support",
+        );
     }
     let Some(anchor_pose) = cameras.get(anchor).and_then(Option::as_ref) else {
-        return Err("Bundle anchor camera is not registered".into());
+        do yeet crate::error("Bundle anchor camera is not registered");
     };
     let Some(scale_pose) = cameras.get(scale_camera).and_then(Option::as_ref) else {
-        return Err("Bundle scale camera is not registered".into());
+        do yeet crate::error("Bundle scale camera is not registered");
     };
     let anchor_center = anchor_pose.center();
     let baseline = norm(sub(scale_pose.center(), anchor_center));
     if anchor == scale_camera || !baseline.is_finite() || baseline <= 1e-10 {
-        return Err("Bundle adjustment needs a nonzero initial baseline".into());
+        do yeet crate::error("Bundle adjustment needs a nonzero initial baseline");
     }
     for camera in cameras.iter().flatten() {
         if !camera.rotation.iter().flatten().all(|v| v.is_finite())
@@ -329,58 +331,58 @@ fn validate(
             || !camera.cy.is_finite()
             || (det(camera.rotation) - 1.).abs() > 1e-3
         {
-            return Err("Invalid bundle camera".into());
+            do yeet crate::error("Invalid bundle camera");
         }
         let rrt = mm(camera.rotation, tr(camera.rotation));
         if (0..3).any(|i| (0..3).any(|j| (rrt[i][j] - f64::from(i == j)).abs() > 1e-3)) {
-            return Err("Bundle camera rotation is not orthonormal".into());
+            do yeet crate::error("Bundle camera rotation is not orthonormal");
         }
     }
     for (index, point) in positions.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            return Err("Cancelled".into());
+            do yeet crate::error("Cancelled");
         }
         if !point.iter().all(|v| v.is_finite()) {
-            return Err("Non-finite bundle point".into());
+            do yeet crate::error("Non-finite bundle point");
         }
     }
     let mut seen = vec![false; cameras.len()];
     for (index, observation) in observations.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            return Err("Cancelled".into());
+            do yeet crate::error("Cancelled");
         }
         let Some(camera) = cameras.get(observation.camera).and_then(Option::as_ref) else {
-            return Err("Bundle observation references an unregistered camera".into());
+            do yeet crate::error("Bundle observation references an unregistered camera");
         };
         let Some(&position) = positions.get(observation.point) else {
-            return Err("Bundle observation references a missing point".into());
+            do yeet crate::error("Bundle observation references a missing point");
         };
         if !observation.xy.iter().all(|v| v.is_finite()) || projection(camera, position).is_none() {
-            return Err("Invalid bundle observation or non-positive initial depth".into());
+            do yeet crate::error("Invalid bundle observation or non-positive initial depth");
         }
         seen[observation.camera] = true;
     }
     if !seen[anchor] || !seen[scale_camera] {
-        return Err("Bundle gauge cameras must have observations".into());
+        return Err(crate::error("Bundle gauge cameras must have observations"));
     }
     // Bounded counting order replaces a non-interruptible O(n log n) sort.
     let mut offsets = vec![0; positions.len() + 1];
     for (index, observation) in observations.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         offsets[observation.point + 1] += 1;
     }
     for index in 1..offsets.len() {
         if !checkpoints.every(index, 256) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         offsets[index] += offsets[index - 1];
     }
     let mut order = vec![0; observations.len()];
     for (index, observation) in observations.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         order[offsets[observation.point]] = index;
         offsets[observation.point] += 1;
@@ -392,20 +394,24 @@ fn validate(
     let mut start = 0;
     while start < order.len() {
         if !checkpoints.every(tracks.len(), 128) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         let point = observations[order[start]].point;
         let mut end = start;
         while end < order.len() && observations[order[end]].point == point {
             let camera = observations[order[end]].camera;
             if last_point[camera] == point {
-                return Err("Duplicate bundle observation for one point and camera".into());
+                return Err(crate::error(
+                    "Duplicate bundle observation for one point and camera",
+                ));
             }
             last_point[camera] = point;
             end += 1;
         }
         if end - start < 2 {
-            return Err("Bundle points need at least two distinct views".into());
+            return Err(crate::error(
+                "Bundle points need at least two distinct views",
+            ));
         }
         let mut ray = |index: usize| {
             let camera = observations[order[index]].camera;
@@ -421,13 +427,15 @@ fn validate(
         };
         let first_ray = ray(start);
         if !(start + 1..end).any(|index| norm(cross(first_ray, ray(index))) > 1e-6) {
-            return Err("Bundle point has no triangulation parallax".into());
+            return Err(crate::error("Bundle point has no triangulation parallax"));
         }
         tracks.push(start..end);
         start = end;
     }
     if tracks.len() < 6 {
-        return Err("Bundle adjustment needs at least six observed points".into());
+        return Err(crate::error(
+            "Bundle adjustment needs at least six observed points",
+        ));
     }
     // Reject disconnected components: every optimized pose must share a track path
     // with the anchor, otherwise a single gauge cannot constrain the whole problem.
@@ -435,7 +443,7 @@ fn validate(
     let mut parent: Vec<usize> = (0..cameras.len()).collect();
     for (index, track) in tracks.iter().enumerate() {
         if !checkpoints.every(index, 128) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         let mut members = order[track.clone()].iter().map(|&i| observations[i].camera);
         let first = members.next().unwrap();
@@ -455,7 +463,9 @@ fn validate(
         .enumerate()
         .any(|(camera, &seen)| seen && find_root(&mut parent, camera) != anchor_root)
     {
-        return Err("Bundle observations contain disconnected camera groups".into());
+        return Err(crate::error(
+            "Bundle observations contain disconnected camera groups",
+        ));
     }
     let active_cameras: Vec<_> = (0..cameras.len()).filter(|&i| seen[i]).collect();
     let mut columns = vec![None; cameras.len()];
@@ -900,7 +910,7 @@ pub fn optimize(
     scale_camera: usize,
     options: &BundleOptions,
     mut progress: impl FnMut(BundleProgress) -> bool,
-) -> Result<BundleReport, String> {
+) -> Result<BundleReport> {
     let mut checkpoints = Checkpoints::new(&mut progress);
     let layout = validate(
         cameras,
@@ -919,9 +929,10 @@ pub fn optimize(
         &mut checkpoints,
     );
     if checkpoints.cancelled {
-        return Err("Cancelled".into());
+        return Err(crate::error("Cancelled"));
     }
-    let initial_cost = initial_cost.ok_or("Non-finite initial bundle objective")?;
+    let initial_cost =
+        initial_cost.ok_or_else(|| crate::error("Non-finite initial bundle objective"))?;
     let mut report = BundleReport {
         initial_cost,
         final_cost: initial_cost,
@@ -944,7 +955,7 @@ pub fn optimize(
             cost: report.final_cost,
         };
         if !checkpoints.check() {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         let linear = linearize(
             &current_cameras,
@@ -954,12 +965,12 @@ pub fn optimize(
             options.huber_delta,
             &mut checkpoints,
         )
-        .ok_or("Cancelled")?;
+        .ok_or_else(|| crate::error("Cancelled"))?;
         let previous = report.final_cost;
         let mut accepted = false;
         for _ in 0..options.max_trials {
             if !checkpoints.check() {
-                return Err("Cancelled".into());
+                return Err(crate::error("Cancelled"));
             }
             let proposed = schur_step(&linear, damping, &mut schur_scratch, &mut checkpoints)
                 .and_then(|step| {
@@ -976,27 +987,26 @@ pub fn optimize(
                     )
                 })
                 .is_some();
-            if proposed {
-                if let Some(next_cost) = cost(
+            if proposed
+                && let Some(next_cost) = cost(
                     &trial_cameras,
                     &trial_points,
                     observations,
                     options.huber_delta,
                     &mut checkpoints,
-                ) {
-                    if next_cost < previous {
-                        std::mem::swap(&mut current_cameras, &mut trial_cameras);
-                        std::mem::swap(&mut current_points, &mut trial_points);
-                        report.final_cost = next_cost;
-                        report.accepted_steps += 1;
-                        damping = (damping / 3.).max(1e-12);
-                        accepted = true;
-                        break;
-                    }
-                }
+                )
+                && next_cost < previous
+            {
+                std::mem::swap(&mut current_cameras, &mut trial_cameras);
+                std::mem::swap(&mut current_points, &mut trial_points);
+                report.final_cost = next_cost;
+                report.accepted_steps += 1;
+                damping = (damping / 3.).max(1e-12);
+                accepted = true;
+                break;
             }
             if checkpoints.cancelled {
-                return Err("Cancelled".into());
+                return Err(crate::error("Cancelled"));
             }
             damping = (damping * 10.).min(1e12);
         }
@@ -1015,7 +1025,7 @@ pub fn optimize(
         cost: report.final_cost,
     };
     if !checkpoints.check() {
-        return Err("Cancelled".into());
+        return Err(crate::error("Cancelled"));
     }
     cameras.clone_from_slice(&current_cameras);
     positions.copy_from_slice(&current_points);
@@ -1174,33 +1184,39 @@ mod tests {
             .copied()
             .filter(|o| (o.point < 60) == (o.camera < 2))
             .collect();
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &disconnected,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("disconnected"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &disconnected,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("disconnected")
+        );
         let single_view: Vec<_> = observations
             .iter()
             .copied()
             .filter(|o| o.point != 0 || o.camera == 0)
             .collect();
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &single_view,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("two distinct"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &single_view,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("two distinct")
+        );
     }
 
     #[test]
@@ -1216,17 +1232,20 @@ mod tests {
                 o.xy = camera.project(points[o.point]).unwrap();
             }
         }
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &observations,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("parallax"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &observations,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("parallax")
+        );
     }
 
     #[test]
@@ -1416,7 +1435,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(error, "Cancelled");
+        assert_eq!(error.message, "Cancelled");
         assert_eq!(calls, 1);
         assert_eq!(points, before_points);
         assert_eq!(format!("{cameras:?}"), before_cameras);
@@ -1445,7 +1464,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(error, "Cancelled");
+        assert_eq!(error.message, "Cancelled");
         assert_eq!(numerical_checkpoints, 3);
         assert_eq!(points, before_points);
         assert_eq!(format!("{cameras:?}"), before_cameras);
@@ -1482,13 +1501,15 @@ mod tests {
             calls < 2
         };
         let mut checkpoints = Checkpoints::new(&mut cancel_during_elimination);
-        assert!(schur_step(
-            &linear,
-            options.initial_damping,
-            &mut SchurScratch::default(),
-            &mut checkpoints
-        )
-        .is_none());
+        assert!(
+            schur_step(
+                &linear,
+                options.initial_damping,
+                &mut SchurScratch::default(),
+                &mut checkpoints
+            )
+            .is_none()
+        );
         assert!(checkpoints.cancelled);
         assert_eq!(calls, 2);
     }
@@ -1515,7 +1536,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(error, "Cancelled");
+        assert_eq!(error.message, "Cancelled");
         assert!(saw_improvement);
         assert_eq!(points, initial_points);
         assert_eq!(format!("{cameras:?}"), initial_cameras);
@@ -1526,59 +1547,70 @@ mod tests {
         let (mut cameras, mut points, mut observations) = scene(false, false);
         let initial_points = points.clone();
         cameras[1] = cameras[0].clone();
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &observations,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("baseline"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &observations,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("baseline")
+        );
         let (mut cameras, _, _) = scene(false, false);
         observations.push(observations[0]);
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &observations,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("Duplicate"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &observations,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("Duplicate")
+        );
         observations.pop();
         points[0][2] = -1.;
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &observations,
-            0,
-            1,
-            &BundleOptions::default(),
-            |_| true
-        )
-        .unwrap_err()
-        .contains("depth"));
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &observations,
+                0,
+                1,
+                &BundleOptions::default(),
+                |_| true
+            )
+            .unwrap_err()
+            .message
+            .contains("depth")
+        );
         points = initial_points.clone();
         let initial_cameras = format!("{cameras:?}");
         let options = BundleOptions {
             max_cameras: 3,
             ..Default::default()
         };
-        assert!(optimize(
-            &mut cameras,
-            &mut points,
-            &observations,
-            0,
-            1,
-            &options,
-            |_| true
-        )
-        .is_err());
+        assert!(
+            optimize(
+                &mut cameras,
+                &mut points,
+                &observations,
+                0,
+                1,
+                &options,
+                |_| true
+            )
+            .is_err()
+        );
         assert_eq!(points, initial_points);
         assert_eq!(format!("{cameras:?}"), initial_cameras);
     }

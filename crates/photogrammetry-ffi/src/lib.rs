@@ -1,14 +1,20 @@
 //! Shared photogrammetry host ABI core, consumed by the `photogrammetry-wasm`
 //! shell, which adds the `extern "C"` export surface.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 mod response;
 mod session;
-use value_codec::{json, Deserialize, Map, Value};
-type Result<T> = std::result::Result<T, String>;
-fn input(message: impl Into<String>) -> String {
-    message.into()
-}
+use photogrammetry_core::{Result, error as input};
+use value_codec::{Deserialize, Map, Value, json};
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, key: &str) -> Result<T> {
-    value_codec::from_value(v[key].clone()).map_err(|e| e.to_string())
+    value_codec::from_value(v[key].clone()).map_err(|e| input(e.to_string()))
 }
 // Keep these equal to the existing MGV1 decoders (Rust and valueBinaryCodec.ts).
 // The photo adapter checks all three before encoding; the shared codec is unchanged.
@@ -39,7 +45,9 @@ impl ResponseBudget {
         let shallow_bytes = match value {
             Value::Null | Value::Bool(_) => 1,
             Value::Number(_) => 9,
-            Value::String(text) => 5usize.checked_add(text.len()).ok_or(TRANSPORT_ERROR)?,
+            Value::String(text) => 5usize
+                .checked_add(text.len())
+                .ok_or_else(|| input(TRANSPORT_ERROR))?,
             Value::Array(_) | Value::Object(_) => 5,
         };
         self.reserve(depth, shallow_bytes)?;
@@ -54,7 +62,9 @@ impl ResponseBudget {
                     // Object keys are full string values in MGV1, including their item/depth budget.
                     self.reserve(
                         depth + 1,
-                        5usize.checked_add(key.len()).ok_or(TRANSPORT_ERROR)?,
+                        5usize
+                            .checked_add(key.len())
+                            .ok_or_else(|| input(TRANSPORT_ERROR))?,
                     )?;
                     self.visit(value, depth + 1)?;
                 }
@@ -73,9 +83,9 @@ fn response_value(result: Result<Value>) -> Value {
             fields.insert("ok".into(), Value::Bool(true));
             fields.insert("value".into(), value);
         }
-        Err(message) => {
+        Err(error) => {
             fields.insert("ok".into(), Value::Bool(false));
-            fields.insert("message".into(), Value::String(message));
+            fields.insert("message".into(), Value::String(error.message));
         }
     }
     Value::Object(fields)
@@ -88,7 +98,7 @@ fn response_bytes(result: Result<Value>) -> Vec<u8> {
     let mut budget = ResponseBudget { bytes: 4, items: 0 };
     match budget
         .visit(&value, 0)
-        .and_then(|()| value_codec::encode_binary(&value).map_err(|e| e.to_string()))
+        .and_then(|()| value_codec::encode_binary(&value).map_err(|e| input(e.to_string())))
     {
         Ok(bytes) => bytes,
         Err(_) => value_codec::encode_binary(&response_value(Err(input(TRANSPORT_ERROR))))
@@ -142,7 +152,7 @@ pub fn photo_response_len() -> usize {
     LAST_RESPONSE.with(|last| last.get().1)
 }
 fn packed_bytes(result: Result<Vec<u8>>) -> u64 {
-    let bytes = result.unwrap_or_else(|message| response_bytes(Err(message)));
+    let bytes = result.unwrap_or_else(|error| response_bytes(Err(error)));
     let len = bytes.len();
     let ptr = Box::into_raw(bytes.into_boxed_slice()) as *mut u8 as usize;
     LAST_RESPONSE.with(|last| last.set((ptr, len)));

@@ -1,5 +1,14 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::BTreeMap;
 
@@ -101,7 +110,7 @@ fn invalid(message: impl Into<String>) -> Error {
     }
 }
 fn require(ok: bool, message: &str) -> Result<()> {
-    if ok { Ok(()) } else { Err(invalid(message)) }
+    ok.ok_or_else(|| invalid(message))
 }
 fn distance(a: &[f64], b: &[f64]) -> f64 {
     a.iter()

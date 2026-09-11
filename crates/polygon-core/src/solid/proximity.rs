@@ -1,10 +1,7 @@
 //! Mesh reconstruction helpers. Exact-coordinate welding never guesses a tolerance.
-use crate::{Mesh, Result, cross, error, norm, sub};
+use crate::{Mesh, Result, cross, dot, error, norm, sub};
 use std::collections::BTreeMap;
-pub type Point = [f64; 3];
-fn dot(a: Point, b: Point) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
-}
+pub type Point = math_core::V3;
 pub fn weld_exact(mesh: &Mesh) -> Result<Mesh> {
     mesh.validate()?;
     let mut points = Vec::new();
@@ -64,7 +61,7 @@ pub fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
             0.
         };
         let q = std::array::from_fn(|i| a[i] + t * d[i]);
-        let dist = norm(&sub(p, q));
+        let dist = norm(sub(p, q));
         if dist < distance {
             best = q;
             distance = dist;
@@ -76,7 +73,7 @@ pub fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
 pub fn closest_point(mesh: &Mesh, p: Point) -> (Point, f64) {
     let mut best = p;
     let mut distance = f64::INFINITY;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let point = |i: usize| {
             [
                 mesh.positions[3 * i],
@@ -85,7 +82,7 @@ pub fn closest_point(mesh: &Mesh, p: Point) -> (Point, f64) {
             ]
         };
         let q = closest_triangle(p, point(t[0]), point(t[1]), point(t[2]));
-        let d = norm(&sub(p, q));
+        let d = norm(sub(p, q));
         if d < distance {
             best = q;
             distance = d;
@@ -101,12 +98,12 @@ pub fn signed_distance(mesh: &Mesh, p: Point) -> f64 {
         return 0.;
     }
     let mut angle = 0.;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let q = t.map_point(mesh, p);
         let [a, b, c] = q;
-        let la = norm(&a);
-        let lb = norm(&b);
-        let lc = norm(&c);
+        let la = norm(a);
+        let lb = norm(b);
+        let lc = norm(c);
         angle += 2.
             * dot(a, cross(b, c))
                 .atan2(la * lb * lc + dot(a, b) * lc + dot(b, c) * la + dot(c, a) * lb);
@@ -184,8 +181,13 @@ pub fn sample_deviation(a: &Mesh, b: &Mesh) -> Result<Deviation> {
     let mut sum = 0.;
     let mut samples = 0;
     for (source, target) in [(a, b), (b, a)] {
-        let points = source.positions.chunks_exact(3).map(|p| [p[0], p[1], p[2]]);
-        let centers = source.indices.chunks_exact(3).map(|t| {
+        let points = source
+            .positions
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|p| [p[0], p[1], p[2]]);
+        let centers = source.indices.as_chunks::<3>().0.iter().map(|t| {
             std::array::from_fn(|k| t.iter().map(|&i| source.positions[i * 3 + k] / 3.).sum())
         });
         for p in points.chain(centers) {

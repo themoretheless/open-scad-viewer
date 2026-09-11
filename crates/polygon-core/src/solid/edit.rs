@@ -17,7 +17,9 @@ pub fn deform(mesh: &Mesh, operation: &geometry_ops::Deformation) -> Result<Buil
     let mut result = mesh.clone();
     result.positions = mesh
         .positions
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|p| operation.apply([p[0], p[1], p[2]]))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
@@ -31,7 +33,9 @@ pub fn brush(mesh: &Mesh, brush: &geometry_ops::Brush) -> Result<BuiltMesh> {
     let mut result = mesh.clone();
     result.positions = mesh
         .positions
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|p| brush.apply([p[0], p[1], p[2]]))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
@@ -86,7 +90,7 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
         }
     }
     let mut indices = Vec::new();
-    for (i, t) in mesh.indices.chunks_exact(3).enumerate() {
+    for (i, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
         for v in t {
             indices.push(if selected.contains(&i) { remap[v] } else { *v });
         }

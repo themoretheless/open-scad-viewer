@@ -1,5 +1,6 @@
 use crate::curve::{Curve, basis, bounds};
 use crate::{Result, check, numeric};
+use math_core::{cross, dot, norm};
 
 #[derive(Clone, Debug)]
 pub struct Surface {
@@ -186,19 +187,6 @@ impl value_codec::Serialize for Evaluation {
         value_codec::Value::Object(object)
     }
 }
-pub fn cross(a: &[f64], b: &[f64]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-pub fn norm(a: &[f64]) -> f64 {
-    a.iter().fold(0_f64, |n, x| n.hypot(*x))
-}
 impl Surface {
     fn axis_curves(&self, axis: Axis) -> Vec<Curve> {
         match axis {
@@ -330,20 +318,20 @@ impl Surface {
         let second = su >= 2 && sv >= 2;
         let (mut normal, mut gaussian, mut mean) = (None, None, None);
         if first {
-            let direction = cross(&du, &dv);
-            let magnitude = norm(&direction);
-            let speed_u = norm(&du);
-            let speed_v = norm(&dv);
+            let direction = cross(du, dv);
+            let magnitude = norm(direction);
+            let speed_u = norm(du);
+            let speed_v = norm(dv);
             if magnitude > 1e-12 * speed_u * speed_v && speed_u > 0. && speed_v > 0. {
                 let n = direction.map(|v| v / magnitude);
                 normal = Some(n);
                 if second {
-                    let e = dot(&du, &du);
-                    let f = dot(&du, &dv);
-                    let g = dot(&dv, &dv);
-                    let l = dot(&n, &duu);
-                    let m = dot(&n, &duv);
-                    let nn = dot(&n, &dvv);
+                    let e = dot(du, du);
+                    let f = dot(du, dv);
+                    let g = dot(dv, dv);
+                    let l = dot(n, duu);
+                    let m = dot(n, duv);
+                    let nn = dot(n, dvv);
                     let determinant = magnitude * magnitude;
                     let k = (l * nn - m * m) / determinant;
                     let h = (e * nn - 2. * f * m + g * l) / (2. * determinant);
@@ -545,7 +533,7 @@ pub fn loft(curves: &[Curve]) -> Result<Surface> {
 }
 pub fn extrude(c: &Curve, vector: [f64; 3]) -> Result<Surface> {
     check(
-        vector.iter().all(|v| v.is_finite()) && norm(&vector) > 0.,
+        vector.iter().all(|v| v.is_finite()) && norm(vector) > 0.,
         "Extrusion vector must be finite and nonzero.",
     )?;
     c.validate()?;
@@ -566,12 +554,12 @@ pub fn revolve(c: &Curve, origin: [f64; 3], axis: [f64; 3], angle: f64) -> Resul
                 .chain(&axis)
                 .chain([angle].iter())
                 .all(|v| v.is_finite())
-            && norm(&axis) > 0.
+            && norm(axis) > 0.
             && angle != 0.
             && angle.abs() <= 360.,
         "Revolution requires 3D data, a nonzero axis and angle within +/-360 degrees.",
     )?;
-    let unit = axis.map(|v| v / norm(&axis));
+    let unit = axis.map(|v| v / norm(axis));
     let arcs = (angle.abs() / 90.).ceil() as usize;
     let delta = angle * std::f64::consts::PI / 180. / arcs as f64;
     let mut kv = vec![0.; 3];
@@ -586,11 +574,11 @@ pub fn revolve(c: &Curve, origin: [f64; 3], axis: [f64; 3], angle: f64) -> Resul
         .control_points
         .iter()
         .map(|p| {
-            let relative: Vec<f64> = (0..3).map(|i| p[i] - origin[i]).collect();
-            let projection = dot(&relative, &unit);
+            let relative: [f64; 3] = std::array::from_fn(|i| p[i] - origin[i]);
+            let projection = dot(relative, unit);
             let center: [f64; 3] = std::array::from_fn(|i| origin[i] + projection * unit[i]);
             let radial: [f64; 3] = std::array::from_fn(|i| p[i] - center[i]);
-            let perpendicular = cross(&unit, &radial);
+            let perpendicular = cross(unit, radial);
             aw.iter()
                 .enumerate()
                 .map(|(j, w)| {

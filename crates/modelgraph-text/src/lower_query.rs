@@ -7,7 +7,7 @@ impl Compiler {
             let inputs = arr(&f.ast, "inputs");
             let count = if arity == 1 && inputs.get(1).is_some_and(|input| input.get("default").is_none()) { 2 } else { arity };
             if inputs.len() < count || inputs[count..].iter().any(|input| input.get("default").is_none()) {
-                return Err(format!("Callback requires {arity} parameters (an optional index is allowed for single-item callbacks)"));
+                return Err(crate::error(format!("Callback requires {arity} parameters (an optional index is allowed for single-item callbacks)")));
             }
             let mut scope = e.clone();
             let mut names = Vec::new();
@@ -23,10 +23,10 @@ impl Compiler {
             return Ok((json!({"op":"lambda","parameters":names}), body));
         }
         let V::Lambda(f) = callable else {
-            return Err("Sequence callback requires a lambda or function".into());
+            return Err(crate::error("Sequence callback requires a lambda or function"));
         };
         if f.parameters.len() != arity && !(arity == 1 && f.parameters.len() == 2) {
-            return Err(format!("Callback requires {arity} parameters"));
+            return Err(crate::error(format!("Callback requires {arity} parameters")));
         }
         let mut scope = f.env.clone();
         let mut names = Vec::new();
@@ -43,7 +43,7 @@ impl Compiler {
         let name = s(call, "value");
         let args = arr(call, "args");
         if args.iter().any(|a| a.get("name").is_some()) {
-            return Err("Sequence methods take positional arguments".into());
+            return Err(crate::error("Sequence methods take positional arguments"));
         }
         let mut input = list(receiver)?;
         let arity = match name {
@@ -57,10 +57,10 @@ impl Compiler {
             "count" | "any" | "all" | "first" | "last" | "single" | "sum" | "min" | "max"
             | "average" | "firstOrDefault" | "lastOrDefault" | "defaultIfEmpty" => (0, 1),
             "reverse" | "distinct" | "toArray" | "enumerate" | "length" | "flatten" => (0, 0),
-            _ => return Err(format!("Unknown sequence method {name}")),
+            _ => return Err(crate::error(format!("Unknown sequence method {name}"))),
         };
         if args.len() < arity.0 || args.len() > arity.1 || (name == "all" && args.is_empty()) {
-            return Err(format!("Invalid argument count for {name}"));
+            return Err(crate::error(format!("Invalid argument count for {name}")));
         }
         if name == "toArray" {
             return Ok(V::Json(json!({"sequence":input})));
@@ -69,7 +69,7 @@ impl Compiler {
             let (mut f, body) = self.callback(&args[0]["value"], e, b, 1)?;
             if is_geometry(&body) {
                 if ["where", "filter"].contains(&name) {
-                    return Err("Predicate must be numeric".into());
+                    return Err(crate::error("Predicate must be numeric"));
                 }
                 let id = self.geometry(body)?;
                 if arr(&f, "parameters").len() == 2 {
@@ -158,7 +158,7 @@ impl Compiler {
             if name.starts_with("then") {
                 input = node["input"].clone();
                 if s(&input, "op") != "query" || s(&input, "method") != "orderBy" {
-                    return Err("thenBy must immediately follow orderBy or thenBy".into());
+                    return Err(crate::error("thenBy must immediately follow orderBy or thenBy"));
                 }
                 let mut keys = arr(&input, "keys").to_vec();
                 keys.push(key);

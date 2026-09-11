@@ -1,5 +1,5 @@
 //! Cross-scale selection primitive. Caller owns maps and discards partial work on cancellation.
-use super::{cancelled, DepthMap};
+use super::{DepthMap, cancelled};
 use crate::Result;
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -20,7 +20,7 @@ pub(super) fn select_depth(
     let count = primary
         .width
         .checked_mul(primary.height)
-        .ok_or("Depth selection dimensions overflow")?;
+        .ok_or_else(|| crate::error("Depth selection dimensions overflow"))?;
     if !tolerance.is_finite()
         || tolerance < 0.
         || primary.image != secondary.image
@@ -34,7 +34,9 @@ pub(super) fn select_depth(
         || primary.confidence.len() != count
         || secondary.confidence.len() != count
     {
-        return Err("Incompatible depth selection maps or tolerance".into());
+        return Err(crate::error(
+            "Incompatible depth selection maps or tolerance",
+        ));
     }
     for i in 0..count {
         if i % 4096 == 0 {
@@ -47,7 +49,7 @@ pub(super) fn select_depth(
             || !primary.confidence[i].is_finite()
             || !secondary.confidence[i].is_finite()
         {
-            return Err("Invalid depth selection sample".into());
+            return Err(crate::error("Invalid depth selection sample"));
         }
     }
     let mut stats = SelectionStats::default();
@@ -113,10 +115,12 @@ mod tests {
     fn cancellation_is_polled_during_large_selection() {
         let mut a = map(vec![4.; 8193], 0.8);
         let b = map(vec![3.; 8193], 0.9);
-        assert!(select_depth(&mut a, &b, 0.025, &mut |stage, i, _| !(stage
-            == "depth-selection"
-            && i == 4096))
-        .is_err());
+        assert!(
+            select_depth(&mut a, &b, 0.025, &mut |stage, i, _| !(stage
+                == "depth-selection"
+                && i == 4096))
+            .is_err()
+        );
         assert_eq!(a.depth[0], 3.);
         assert_eq!(a.depth[4096], 4.);
         // Partial scratch map must not be published by the owning pipeline.
@@ -174,9 +178,9 @@ fn estimator_work_merge_is_transactional_and_preserves_output_counts() {
 /// This counts capacities, not process RSS or allocator metadata.
 pub(super) fn retained_map_bytes(maps: &[DepthMap], outer_capacity: usize) -> Result<usize> {
     if outer_capacity < maps.len() {
-        return Err("Invalid depth map capacity".into());
+        return Err(crate::error("Invalid depth map capacity"));
     }
-    let overflow = || "Retained depth map size overflow".to_string();
+    let overflow = || crate::error("Retained depth map size overflow");
     let mut bytes = outer_capacity
         .checked_mul(std::mem::size_of::<DepthMap>())
         .ok_or_else(overflow)?;
@@ -201,7 +205,9 @@ pub(super) fn check_secondary_budget(
 ) -> Result<()> {
     match estimated.and_then(|bytes| bytes.checked_add(retained)) {
         Some(total) if total <= limit => Ok(()),
-        _ => Err("Secondary depth estimation exceeds planning budget".into()),
+        _ => Err(crate::error(
+            "Secondary depth estimation exceeds planning budget",
+        )),
     }
 }
 

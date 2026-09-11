@@ -1,13 +1,13 @@
 use crate::{
+    Image, Point, Reconstruction, Result,
+    camera::{self, Camera, triangulate},
+    features::{self, Feature},
+    math::*,
+};
+use crate::{
     bundle,
     diagnostics::{ImageReport, ReconstructionReport},
     matching::{AssociationVotes, MatchGraph},
-};
-use crate::{
-    camera::{self, triangulate, Camera},
-    features::{self, Feature},
-    math::*,
-    Image, Point, Reconstruction, Result,
 };
 fn pixel(f: &Feature) -> [f64; 2] {
     [f.x, f.y]
@@ -69,7 +69,7 @@ pub fn reconstruct_detailed(
     let reconstruction = run(images, options, &mut report, &mut progress);
     if let Err(error) = &reconstruction {
         for image in &mut report.images {
-            if error == "Cancelled" && !image.registered {
+            if error.message == "Cancelled" && !image.registered {
                 image.reason = "cancelled";
             } else if image.reason == "features_ready" {
                 image.reason = "initialization_failed";
@@ -157,7 +157,7 @@ fn optimize_geometry(
         }
         Err(error) => {
             if cancelled {
-                return Err("Cancelled".into());
+                return Err(crate::error("Cancelled"));
             }
             let warning = format!("Bundle adjustment skipped: {error}");
             if !report.warnings.contains(&warning) {
@@ -188,29 +188,29 @@ fn run(
         for image in &mut report.images {
             image.reason = "invalid_options";
         }
-        return Err("Invalid reconstruction options".into());
+        do yeet crate::error("Invalid reconstruction options");
     }
     if let Err(error) = options.geometry_options.validate() {
         for image in &mut report.images {
             image.reason = "invalid_options";
         }
-        return Err(error);
+        do yeet error;
     }
     if images.len() < 2 || images.len() > 200 {
-        return Err("Provide 2 to 200 overlapping photos".into());
+        do yeet crate::error("Provide 2 to 200 overlapping photos");
     }
     if let Some(bundle) = &options.bundle {
         if let Err(error) = bundle.validate() {
             for image in &mut report.images {
                 image.reason = "invalid_options";
             }
-            return Err(error);
+            do yeet error;
         }
         if images.len() > bundle.max_cameras {
             for image in &mut report.images {
                 image.reason = "invalid_options";
             }
-            return Err(format!(
+            do yeet crate::error(format!(
                 "Joint refinement is configured for at most {} photos; increase its camera limit up to 64 or explicitly disable it",
                 bundle.max_cameras
             ));
@@ -219,13 +219,13 @@ fn run(
     for (i, image) in images.iter().enumerate() {
         if let Err(error) = image.validate() {
             report.images[i].reason = "invalid_image";
-            return Err(error);
+            do yeet error;
         }
     }
     let mut features = Vec::new();
     for (i, image) in images.iter().enumerate() {
         if !progress("features", i, images.len()) {
-            return Err("Cancelled".into());
+            do yeet crate::error("Cancelled");
         }
         features.push(features::extract_with_options(
             image,
@@ -252,7 +252,9 @@ fn run(
     )?;
     let mut best: Option<(Reconstruction, ReconstructionReport)> = None;
     let mut trials = Vec::new();
-    let mut last_error = "Could not initialize 3D: use sharper overlapping views with camera translation, texture, and correct focal lengths".to_string();
+    let mut last_error = crate::error(
+        "Could not initialize 3D: use sharper overlapping views with camera translation, texture, and correct focal lengths",
+    );
     for _ in 0..options.max_seed_attempts {
         if seeds.is_empty() {
             break;
@@ -305,7 +307,7 @@ fn run(
                 }
             }
             Err(error) => {
-                if error == "Cancelled" {
+                if error.message == "Cancelled" {
                     report.seed_trials = trials;
                     report.matching_requests = cache.requests;
                     report.computed_pairs = cache.computed_pairs;
@@ -316,7 +318,7 @@ fn run(
                     registered_images: 0,
                     points: 0,
                     reprojection_rmse: None,
-                    error: Some(error.clone()),
+                    error: Some(error.message.clone()),
                 });
                 last_error = error;
             }
@@ -381,7 +383,7 @@ fn grow(
     loop {
         let registered = cameras.iter().filter(|c| c.is_some()).count();
         if !progress("cameras", registered, images.len()) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         let mut candidates = Vec::new();
         for i in 0..images.len() {
@@ -394,7 +396,7 @@ fn grow(
                     continue;
                 }
                 if !progress("register_matches", i, images.len()) {
-                    return Err("Cancelled".into());
+                    return Err(crate::error("Cancelled"));
                 }
                 for m in cache.between(features, j, i) {
                     if let Some(point) = tracks[j][m.a] {
@@ -443,7 +445,7 @@ fn grow(
             let mut recovered = None;
             for (_, mut guess) in guesses.into_iter().take(3) {
                 if !progress("pose", i, images.len()) {
-                    return Err("Cancelled".into());
+                    return Err(crate::error("Cancelled"));
                 }
                 let intrinsic = images[i].camera();
                 guess.focal = intrinsic.focal;
@@ -490,7 +492,7 @@ fn grow(
                     continue;
                 }
                 if !progress("register_matches", i, images.len()) {
-                    return Err("Cancelled".into());
+                    return Err(crate::error("Cancelled"));
                 }
                 let cj_center = cameras[j].as_ref().unwrap().center();
                 for m in cache.between(features, j, i) {
@@ -633,7 +635,7 @@ fn finalize(
         }
     }
     if points.len() < 12 || cameras.iter().flatten().count() < 2 {
-        return Err("Too few geometrically consistent points".into());
+        return Err(crate::error("Too few geometrically consistent points"));
     }
     Ok(Reconstruction {
         input_images: cameras.len(),
@@ -787,10 +789,12 @@ mod tests {
             &bundle::BundleOptions::default(),
         );
         assert_eq!(report.bundle_runs.len(), 2);
-        assert!(report
-            .bundle_runs
-            .iter()
-            .all(|run| run.filtered_observations == 0 && run.filtered_tracks == 0));
+        assert!(
+            report
+                .bundle_runs
+                .iter()
+                .all(|run| run.filtered_observations == 0 && run.filtered_tracks == 0)
+        );
         let after: Vec<usize> = points.iter().map(|p| p.observations.len()).collect();
         assert_eq!(counts, after);
     }
@@ -829,10 +833,12 @@ mod tests {
             format!("{:?}", report.bundle_runs),
             format!("{:?}", again.bundle_runs)
         );
-        assert!(off_report
-            .bundle_runs
-            .iter()
-            .all(|run| run.filtered_observations == 0));
+        assert!(
+            off_report
+                .bundle_runs
+                .iter()
+                .all(|run| run.filtered_observations == 0)
+        );
         eprintln!(
             "pipeline filter: removed {} observations / {} tracks, clean RMSE {off_rmse} -> {on_rmse}",
             report.bundle_runs[0].filtered_observations, report.bundle_runs[0].filtered_tracks,
@@ -920,10 +926,12 @@ mod tests {
             |_, _, _| true,
         );
         assert!(blank.reconstruction.is_err());
-        assert!(blank
-            .report
-            .images
-            .iter()
-            .all(|i| i.reason == "insufficient_features"));
+        assert!(
+            blank
+                .report
+                .images
+                .iter()
+                .all(|i| i.reason == "insufficient_features")
+        );
     }
 }

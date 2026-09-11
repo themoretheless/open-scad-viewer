@@ -5,7 +5,7 @@ use super::*;
 pub fn compile_modelgraph_text(source: &str) -> String {
     match modelgraph_text::compile(source) {
         Ok(value) => json!({"ok":true,"value":value}).to_string(),
-        Err(message) => json!({"ok":false,"message":message}).to_string(),
+        Err(error) => json!({"ok":false,"message":error.message}).to_string(),
     }
 }
 
@@ -55,15 +55,19 @@ pub fn execute_modelgraph_text(source: &str) -> String {
 pub(crate) fn execute_text_value(source: &str) -> Value {
     let mut graph = match modelgraph_text::compile(source) {
         Ok(graph) => graph,
-        Err(message) => {
+        Err(error) => {
             return runtime_value(
-                Err(modelgraph_runtime::Error::new("text_error", "", message)),
+                Err(modelgraph_runtime::Error::new(
+                    "text_error",
+                    "",
+                    error.message,
+                )),
                 None,
             );
         }
     };
     let controls = graph["customizer"].take();
-    let result = (|| {
+    let result = try {
         let nodes = graph["nodes"].take();
         let own = nodes.as_array().unwrap().iter().any(|n| {
             [
@@ -85,18 +89,18 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
             if !graph["constraints"].as_array().unwrap().is_empty()
                 || !graph["checks"].as_array().unwrap().is_empty()
             {
-                return Err(modelgraph_runtime::Error::new(
+                do yeet modelgraph_runtime::Error::new(
                     "text_error",
                     "",
                     "NURBS text checks are not supported; use the build topology report",
-                ));
+                );
             }
             if graph.get("segments").is_some() {
-                return Err(modelgraph_runtime::Error::new(
+                do yeet modelgraph_runtime::Error::new(
                     "text_error",
                     "",
                     "segments applies only to legacy geometry; use explicit tessellation arguments for own geometry",
-                ));
+                );
             }
             let Value::Array(nodes) = nodes else {
                 unreachable!()
@@ -141,8 +145,8 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
             modelgraph_runtime::compile(Value::Object(document))?
         };
         compiled["customizer"] = controls.clone();
-        Ok(compiled)
-    })();
+        compiled
+    };
     runtime_value(result, Some(controls))
 }
 
@@ -171,7 +175,7 @@ pub(crate) fn abi_language(op: u32, value: Value) -> Value {
         1 => match value.as_str() {
             Some(s) => match modelgraph_text::compile(s) {
                 Ok(value) => json!({"ok":true,"value":value}),
-                Err(message) => json!({"ok":false,"message":message}),
+                Err(error) => json!({"ok":false,"message":error.message}),
             },
             None => json!({"ok":false,"message":"Expected source string"}),
         },
@@ -189,7 +193,7 @@ pub(crate) fn abi_language(op: u32, value: Value) -> Value {
             ),
         },
         5 => runtime_value(
-            (|| {
+            try {
                 let nodes = value["nodes"].as_array().ok_or_else(|| {
                     modelgraph_runtime::Error::new("invalid_document", "/nodes", "Expected nodes")
                 })?;
@@ -203,8 +207,8 @@ pub(crate) fn abi_language(op: u32, value: Value) -> Value {
                 let root = value["root"].as_str().ok_or_else(|| {
                     modelgraph_runtime::Error::new("invalid_document", "/root", "Expected root")
                 })?;
-                modelgraph_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())
-            })(),
+                modelgraph_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())?
+            },
             None,
         ),
         10 => crate::openscad::scad_compile(&value),

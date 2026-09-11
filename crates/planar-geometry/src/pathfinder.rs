@@ -63,14 +63,14 @@ pub fn classify_compounds(mut rings: Rings) -> Result<Vec<Compound>> {
             }
         }
     }
-    let mut outers: Vec<usize> = (0..n).filter(|&i| depth[i] % 2 == 0).collect();
+    let mut outers: Vec<usize> = (0..n).filter(|&i| depth[i].is_multiple_of(2)).collect();
     outers.sort_by(|&a, &b| area(&rings[b]).abs().total_cmp(&area(&rings[a]).abs()));
     let mut used_hole = vec![false; n];
     let mut compounds = Vec::new();
     for oi in outers {
         let mut holes = Vec::new();
         for hi in 0..n {
-            if hi == oi || used_hole[hi] || depth[hi] % 2 == 0 {
+            if hi == oi || used_hole[hi] || depth[hi].is_multiple_of(2) {
                 continue;
             }
             if ring_contains_ring(&rings[oi], &rings[hi]) {
@@ -79,7 +79,7 @@ pub fn classify_compounds(mut rings: Rings) -> Result<Vec<Compound>> {
                 let between = (0..n).any(|m| {
                     m != oi
                         && m != hi
-                        && depth[m] % 2 == 0
+                        && depth[m].is_multiple_of(2)
                         && ring_contains_ring(&rings[oi], &rings[m])
                         && ring_contains_ring(&rings[m], &rings[hi])
                 });
@@ -165,8 +165,10 @@ pub fn minus_by_zorder(shapes: &[Rings], keep_back: bool) -> Result<Rings> {
         let (last, rest) = shapes.split_last().unwrap();
         (last, rest.iter().collect())
     };
-    let cutter_rings: Vec<Rings> = cutters.iter().map(|c| (*c).clone()).collect();
-    let cut = union_all(&cutter_rings)?;
+    let cut = {
+        super let cutter_rings: Vec<Rings> = cutters.iter().map(|c| (*c).clone()).collect();
+        union_all(&cutter_rings)?
+    };
     planar(survivor, &cut, "difference")
 }
 

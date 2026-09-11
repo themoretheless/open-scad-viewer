@@ -1,6 +1,15 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
 //! No polygon-core, WASM, browser or application dependency.
 //! CAD B-rep over these curves/surfaces lives in `brep-core`.
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
 pub mod curve;
 pub mod edit;
 pub mod surface;
@@ -8,28 +17,23 @@ use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
 
 pub use math_core::{Error, Result};
+pub(crate) const INVALID_INPUT: &str = "NURBS_INVALID_INPUT";
+pub(crate) const NUMERIC_ERROR: &str = "NURBS_NUMERIC_ERROR";
+pub(crate) const RESOURCE_LIMIT: &str = "NURBS_RESOURCE_LIMIT";
 pub(crate) fn input(message: impl Into<String>) -> Error {
-    Error::new("NURBS_INVALID_INPUT", message)
+    Error::new(INVALID_INPUT, message)
 }
 pub(crate) fn numeric_err(message: impl Into<String>) -> Error {
-    Error::new("NURBS_NUMERIC_ERROR", message)
+    Error::new(NUMERIC_ERROR, message)
 }
 pub(crate) fn resource(message: impl Into<String>) -> Error {
-    Error::new("NURBS_RESOURCE_LIMIT", message)
+    Error::new(RESOURCE_LIMIT, message)
 }
 fn check(condition: bool, message: &str) -> Result<()> {
-    if condition {
-        Ok(())
-    } else {
-        Err(input(message))
-    }
+    math_core::ensure(condition, INVALID_INPUT, message)
 }
 fn numeric(condition: bool, message: &str) -> Result<()> {
-    if condition {
-        Ok(())
-    } else {
-        Err(numeric_err(message))
-    }
+    math_core::ensure(condition, NUMERIC_ERROR, message)
 }
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))

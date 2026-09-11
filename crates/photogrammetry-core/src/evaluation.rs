@@ -4,7 +4,7 @@ use crate::Result;
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
-type Point = [f64; 3];
+type Point = math_core::V3;
 const MAX_POINTS: usize = 2_000_000;
 const NONE: usize = usize::MAX;
 
@@ -62,14 +62,18 @@ pub struct CloudEvaluation {
 
 fn validate(points: &[Point]) -> Result<()> {
     if points.is_empty() || points.len() > MAX_POINTS {
-        return Err("Evaluation expects 1 to 2000000 samples per cloud".into());
+        return Err(crate::error(
+            "Evaluation expects 1 to 2000000 samples per cloud",
+        ));
     }
     if points
         .iter()
         .flatten()
         .any(|v| !v.is_finite() || v.abs() > 1e12)
     {
-        return Err("Evaluation coordinates must be finite and at most 1e12 in magnitude".into());
+        return Err(crate::error(
+            "Evaluation coordinates must be finite and at most 1e12 in magnitude",
+        ));
     }
     Ok(())
 }
@@ -85,13 +89,15 @@ fn sampled(
     let mut cells = HashMap::<[i64; 3], (Point, usize), BuildHasherDefault<VoxelHasher>>::default();
     for (i, p) in points.iter().enumerate() {
         if i % 4096 == 0 && !progress("evaluation_sample", i, points.len()) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         let mut key = [0; 3];
         for k in 0..3 {
             let q = (p[k] / size).floor();
             if !q.is_finite() || q.abs() >= (1i64 << 60) as f64 {
-                return Err("Evaluation voxel size is too small for these coordinates".into());
+                return Err(crate::error(
+                    "Evaluation voxel size is too small for these coordinates",
+                ));
             }
             key[k] = q as i64;
         }
@@ -138,8 +144,10 @@ impl Tree {
         if points.is_empty() {
             return Ok(NONE);
         }
-        if self.nodes.len() % 4096 == 0 && !progress("evaluation_index", self.nodes.len(), total) {
-            return Err("Cancelled".into());
+        if self.nodes.len().is_multiple_of(4096)
+            && !progress("evaluation_index", self.nodes.len(), total)
+        {
+            return Err(crate::error("Cancelled"));
         }
         let axis = level % 3;
         let mid = points.len() / 2;
@@ -183,7 +191,7 @@ impl Tree {
         // on the visited count, without the division on every node.
         if *until_check == 0 {
             if !keep_going() {
-                return Err("Cancelled".into());
+                return Err(crate::error("Cancelled"));
             }
             *until_check = 4096;
         }
@@ -214,7 +222,7 @@ fn distances(
     let mut values = Vec::with_capacity(queries.nodes.len());
     for (i, n) in queries.nodes.iter().enumerate() {
         if i % 1024 == 0 && !progress("evaluation_distance", i, queries.nodes.len()) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         values.push(tree.nearest(n.point, &mut || {
             progress("evaluation_distance", i, queries.nodes.len())
@@ -248,7 +256,7 @@ pub fn evaluate_clouds(
     mut progress: impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<CloudEvaluation> {
     if !progress("evaluation", 0, 1) {
-        return Err("Cancelled".into());
+        return Err(crate::error("Cancelled"));
     }
     validate(reconstructed)?;
     validate(reference)?;
@@ -258,9 +266,9 @@ pub fn evaluate_clouds(
             .voxel_size
             .is_some_and(|v| !v.is_finite() || v <= 0.)
     {
-        return Err(
-            "Evaluation tolerance and optional voxel size must be finite and positive".into(),
-        );
+        return Err(crate::error(
+            "Evaluation tolerance and optional voxel size must be finite and positive",
+        ));
     }
     let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
     let b = sampled(reference, options.voxel_size, &mut progress)?;
@@ -356,7 +364,7 @@ mod tests {
             checks += 1;
             checks < 2
         });
-        assert_eq!(result.unwrap_err(), "Cancelled");
+        assert_eq!(result.unwrap_err().message, "Cancelled");
         assert_eq!(checks, 2);
     }
     #[test]
@@ -380,13 +388,16 @@ mod tests {
         assert!(evaluate_clouds(&p, &[], &options(), |_, _, _| true).is_err());
         assert!(evaluate_clouds(&[[f64::NAN, 0., 0.]], &p, &options(), |_, _, _| true).is_err());
         assert_eq!(
-            evaluate_clouds(&p, &p, &options(), |_, _, _| false).unwrap_err(),
+            evaluate_clouds(&p, &p, &options(), |_, _, _| false)
+                .unwrap_err()
+                .message,
             "Cancelled"
         );
         assert_eq!(
             evaluate_clouds(&p, &p, &options(), |stage, _, _| stage
                 != "evaluation_distance")
-            .unwrap_err(),
+            .unwrap_err()
+            .message,
             "Cancelled"
         );
     }

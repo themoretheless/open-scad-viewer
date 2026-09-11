@@ -1,12 +1,19 @@
 //! Representation-independent point mappings and brush falloffs. Geometry
 //! ownership, topology updates and validity checks belong to each consuming kernel.
-pub type Point = [f64; 3];
-pub use math_core::{Error, Result};
+#![feature(
+    try_blocks,
+    gen_blocks,
+    yield_expr,
+    super_let,
+    deref_patterns,
+    yeet_expr
+)]
+#![allow(unused_features)]
+pub use math_core::{Error, Result, V3, finite};
+pub type Point = V3;
+const INVALID_INPUT: &str = "GEOMETRY_INVALID_INPUT";
 fn fail(message: impl Into<String>) -> Error {
-    Error::new("GEOMETRY_INVALID_INPUT", message)
-}
-fn finite(p: Point) -> bool {
-    p.iter().all(|v| v.is_finite() && v.abs() <= 1e6)
+    Error::new(INVALID_INPUT, message)
 }
 #[derive(Clone, Debug)]
 pub enum Deformation {
@@ -403,8 +410,8 @@ pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result
         return Err(fail("Sweep requires 2..64 finite path points"));
     }
     let tangents: Vec<Point> = path
-        .windows(2)
-        .map(|w| vunit(math_core::sub(w[1], w[0])))
+        .array_windows()
+        .map(|[a, b]| vunit(math_core::sub(*b, *a)))
         .collect::<Result<_>>()?;
     let mut normal = vunit(math_core::sub(
         up,

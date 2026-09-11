@@ -22,12 +22,10 @@ fn save_xyz(path: &std::path::Path, points: impl IntoIterator<Item = V3>) {
 fn main() {
     let radius: usize = std::env::var("DENSE_PATCH_RADIUS")
         .ok()
-        .map(|s| s.parse().unwrap())
-        .unwrap_or(2);
+        .map_or(2, |s| s.parse().unwrap());
     let repeats: usize = std::env::var("DENSE_REPEAT")
         .ok()
-        .map(|s| s.parse().unwrap())
-        .unwrap_or(3);
+        .map_or(3, |s| s.parse().unwrap());
     assert!(repeats > 0);
     let export = std::env::var_os("DENSE_FIXTURES").map(std::path::PathBuf::from);
     if let Some(path) = &export {

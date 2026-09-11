@@ -71,7 +71,7 @@ pub fn from_mesh(mesh: &Mesh, face_ids: Option<&[usize]>) -> Result<Model> {
         return Err(invalid("Expected one face ID per triangle"));
     }
     let mut groups = BTreeMap::<usize, Vec<usize>>::new();
-    for (i, t) in mesh.indices.chunks_exact(3).enumerate() {
+    for (i, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
         groups
             .entry(face_ids.map_or(i, |ids| ids[i]))
             .or_default()
@@ -132,7 +132,7 @@ pub fn from_mesh(mesh: &Mesh, face_ids: Option<&[usize]>) -> Result<Model> {
                     n[j] += c[j];
                 }
             }
-            crate::norm(&n)
+            crate::norm(n)
         };
         let outer = boundaries
             .iter()
@@ -260,7 +260,7 @@ pub fn validate(m: &Model) -> Result<()> {
             }
         }
         let mut adjacency = BTreeMap::<(usize, usize), Vec<usize>>::new();
-        for (ti, t) in mesh.indices.chunks_exact(3).enumerate() {
+        for (ti, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
             for i in 0..3 {
                 let a = t[i];
                 let b = t[(i + 1) % 3];
@@ -300,8 +300,8 @@ pub fn validate(m: &Model) -> Result<()> {
                     .enumerate()
                     .find(|(i, (x, y))| {
                         !found[*i]
-                            && crate::norm(&crate::sub(a, *x)) <= m.tolerance_mm
-                            && crate::norm(&crate::sub(b, *y)) <= m.tolerance_mm
+                            && crate::norm(crate::sub(a, *x)) <= m.tolerance_mm
+                            && crate::norm(crate::sub(b, *y)) <= m.tolerance_mm
                     })
                     .map(|(i, _)| i)
                     .ok_or_else(|| invalid("Polygon face boundary does not match B-rep coedges"))?;
@@ -346,7 +346,7 @@ pub fn tessellate(m: &Model) -> Result<Tessellation> {
             let f = &m.faces[u.face].surface.mesh;
             let base = mesh.positions.len() / 3;
             mesh.positions.extend(&f.positions);
-            for t in f.indices.chunks_exact(3) {
+            for t in f.indices.as_chunks::<3>().0 {
                 let t = if u.reversed {
                     [t[0], t[2], t[1]]
                 } else {

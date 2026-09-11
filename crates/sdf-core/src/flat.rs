@@ -107,7 +107,7 @@ impl Field {
                 }
                 Field::MeshDistance { mesh, signed } => {
                     let start = (flat.triangles.len() / 9) as u32;
-                    for t in mesh.indices.chunks_exact(3) {
+                    for t in mesh.indices.as_chunks::<3>().0 {
                         for &i in t {
                             for k in 0..3 {
                                 flat.triangles.push(mesh.positions[3 * i + k] as f32);

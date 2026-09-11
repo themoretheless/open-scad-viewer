@@ -29,7 +29,9 @@ impl Calibration {
                 .checked_mul(self.height)
                 .is_none_or(|n| n > 50_000_000)
         {
-            return Err("Calibration requires an original raster of at most 50 megapixels".into());
+            return Err(crate::error(
+                "Calibration requires an original raster of at most 50 megapixels",
+            ));
         }
         if ![
             self.fx, self.fy, self.cx, self.cy, self.k1, self.k2, self.k3, self.p1, self.p2,
@@ -48,9 +50,9 @@ impl Calibration {
                 .iter()
                 .any(|v| v.abs() > 10.)
         {
-            return Err(
-                "Invalid measured calibration; check pixel units and Brown coefficients".into(),
-            );
+            return Err(crate::error(
+                "Invalid measured calibration; check pixel units and Brown coefficients",
+            ));
         }
         Ok(())
     }
@@ -60,7 +62,9 @@ impl Calibration {
     pub fn resized(&self, width: usize, height: usize, source_size: [usize; 2]) -> Result<Self> {
         self.validate()?;
         if source_size != [self.width, self.height] {
-            return Err("Calibration dimensions do not match the oriented original photo".into());
+            return Err(crate::error(
+                "Calibration dimensions do not match the oriented original photo",
+            ));
         }
         if width < 48
             || height < 48
@@ -69,7 +73,7 @@ impl Calibration {
             || width > self.width
             || height > self.height
         {
-            return Err("Invalid resized calibration raster".into());
+            return Err(crate::error("Invalid resized calibration raster"));
         }
         let sx = width as f64 / self.width as f64;
         let sy = height as f64 / self.height as f64;
@@ -78,7 +82,9 @@ impl Calibration {
         if (width as f64 - self.width as f64 * sy).abs() > 1.01
             || (height as f64 - self.height as f64 * sx).abs() > 1.01
         {
-            return Err("Calibration requires an aspect-preserving photo resize".into());
+            return Err(crate::error(
+                "Calibration requires an aspect-preserving photo resize",
+            ));
         }
         Ok(Self {
             width,
@@ -206,23 +212,27 @@ pub fn rectify(
         || image.rgb.len() > options.max_output_bytes
         || options.max_pixel_evaluations == 0
     {
-        return Err("Rectification exceeds configured image/work limits".into());
+        return Err(crate::error(
+            "Rectification exceeds configured image/work limits",
+        ));
     }
     let cal = calibration.resized(image.width, image.height, source_size)?;
     let base_focal = (cal.fx * cal.fy).sqrt();
     if !(20. ..=20000.).contains(&base_focal) {
-        return Err("Resized measured focal is outside the kernel's supported range".into());
+        return Err(crate::error(
+            "Resized measured focal is outside the kernel's supported range",
+        ));
     }
     let mut work = 0usize;
     let mut checkpoint = |amount: usize| -> Result<()> {
         work = work
             .checked_add(amount)
-            .ok_or("Rectification work overflow")?;
+            .ok_or_else(|| crate::error("Rectification work overflow"))?;
         if work > options.max_pixel_evaluations {
-            return Err("Rectification mapping work limit exceeded".into());
+            return Err(crate::error("Rectification mapping work limit exceeded"));
         }
         if !progress(work, options.max_pixel_evaluations) {
-            return Err("Cancelled".into());
+            return Err(crate::error("Cancelled"));
         }
         Ok(())
     };
@@ -275,7 +285,9 @@ pub fn rectify(
     let mut high = base_focal;
     while !grid_valid(high)? {
         if high >= max_focal {
-            return Err("Calibration has no fully valid view within the zoom limit".into());
+            return Err(crate::error(
+                "Calibration has no fully valid view within the zoom limit",
+            ));
         }
         low = high;
         high = (high * 1.2).min(max_focal);
@@ -334,7 +346,9 @@ pub fn rectify(
         }
         high = (high * 1.04).min(max_focal);
     }
-    Err("Calibration contains invalid or folded pixels; no border-filled image was produced".into())
+    Err(crate::error(
+        "Calibration contains invalid or folded pixels; no border-filled image was produced",
+    ))
 }
 
 #[cfg(test)]

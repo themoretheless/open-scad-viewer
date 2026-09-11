@@ -562,8 +562,7 @@ impl<'a> Emitter<'a> {
                     let input = str_at(&component, "input").to_owned();
                     let is_assembly = nodes
                         .get(input.as_str())
-                        .map(|n| str_at(n, "op") == "assembly")
-                        .unwrap_or(false);
+                        .is_some_and(|n| str_at(n, "op") == "assembly");
                     component["matrix"] = json!(world);
                     for a in component["anchors"].as_array_mut().unwrap() {
                         if let Some(p) = parent {
@@ -1294,10 +1293,10 @@ impl<'a> Emitter<'a> {
 fn collect_assertion_targets<'a>(value: &'a Value, targets: &mut HashSet<&'a str>) {
     match value {
         Value::Object(fields) => {
-            if fields.get("op").and_then(Value::as_str) == Some("geometry_effects") {
-                if let Some(target) = fields.get("input").and_then(Value::as_str) {
-                    targets.insert(target);
-                }
+            if fields.get("op").and_then(Value::as_str) == Some("geometry_effects")
+                && let Some(target) = fields.get("input").and_then(Value::as_str)
+            {
+                targets.insert(target);
             }
             if let Some(checks) = fields.get("geometry_assertions").and_then(Value::as_array) {
                 targets.extend(checks.iter().filter_map(|check| check["target"].as_str()));

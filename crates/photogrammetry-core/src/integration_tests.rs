@@ -16,7 +16,9 @@ fn rejects_invalid_images_and_cancels_before_features() {
         focal: 100.,
     };
     assert_eq!(
-        reconstruct(&[image.clone(), image], |_, _, _| false).unwrap_err(),
+        reconstruct(&[image.clone(), image], |_, _, _| false)
+            .unwrap_err()
+            .message,
         "Cancelled"
     );
 }
@@ -112,9 +114,11 @@ fn dense_plane_recovers_known_depth() {
         "{}",
         errors[errors.len() / 2]
     );
-    assert!(surface
-        .triangles
-        .iter()
-        .flatten()
-        .all(|&i| (i as usize) < surface.positions.len()));
+    assert!(
+        surface
+            .triangles
+            .iter()
+            .flatten()
+            .all(|&i| (i as usize) < surface.positions.len())
+    );
 }
