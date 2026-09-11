@@ -4,6 +4,7 @@
  */
 import {
  actionToForceN,
+ faceMetricsFromSize,
  sectionProperties,
  type LatticeAction,
  type LatticeSupport,
@@ -87,15 +88,32 @@ function nearestNode(nodes: number[][], at: Vec3): number {
 
 function assembleLoads(nodes: number[][], actions: LatticeAction[], size: Vec3): Float64Array {
  const F = new Float64Array(nodes.length * 3)
- const faceArea = Math.max(size[0] * size[1], size[0] * size[2], size[1] * size[2], 1)
+ const fallback = faceMetricsFromSize(size, [0, 0, 1])
  for (const action of actions) {
   const idxs = action.faceNormal
    ? faceNodes(nodes, action.faceNormal)
    : [nearestNode(nodes, action.at ?? centroid(nodes))]
   if (!idxs.length) continue
-  const force = actionToForceN(action, faceArea)
+  const metrics = action.faceNormal
+   ? faceMetricsFromSize(size, action.faceNormal)
+   : fallback
   const L = Math.hypot(action.direction[0], action.direction[1], action.direction[2]) || 1
   const dir: Vec3 = [action.direction[0] / L, action.direction[1] / L, action.direction[2] / L]
+  if (action.kind === 'moment' && idxs.length >= 2) {
+   // Force couple on face extremities along the load direction.
+   let minI = idxs[0], maxI = idxs[0], minP = Infinity, maxP = -Infinity
+   for (const i of idxs) {
+    const p = nodes[i][0] * dir[0] + nodes[i][1] * dir[1] + nodes[i][2] * dir[2]
+    if (p < minP) {minP = p; minI = i}
+    if (p > maxP) {maxP = p; maxI = i}
+   }
+   const lever = Math.max(Math.abs(maxP - minP), 0.25 * metrics.spanMm, 1)
+   const couple = action.magnitude / lever
+   F[minI * 3] -= couple * dir[0]; F[minI * 3 + 1] -= couple * dir[1]; F[minI * 3 + 2] -= couple * dir[2]
+   F[maxI * 3] += couple * dir[0]; F[maxI * 3 + 1] += couple * dir[1]; F[maxI * 3 + 2] += couple * dir[2]
+   continue
+  }
+  const force = actionToForceN(action, metrics.areaMm2, metrics.spanMm)
   const share = force / idxs.length
   for (const i of idxs) {
    F[i * 3] += share * dir[0]
@@ -106,17 +124,41 @@ function assembleLoads(nodes: number[][], actions: LatticeAction[], size: Vec3):
  return F
 }
 
+/** Nodes near ≥2 bounding-box faces (geometric corners / edge junctions). */
+function cornerNodeFlags(nodes: number[][], tolFrac = 0.1): boolean[] {
+ const {min, max, size} = bodyBounds(nodes)
+ const tol = Math.max(1e-3, Math.hypot(size[0], size[1], size[2]) * tolFrac)
+ return nodes.map(p => {
+  let hits = 0
+  if (Math.abs(p[0] - min[0]) <= tol || Math.abs(p[0] - max[0]) <= tol) hits++
+  if (Math.abs(p[1] - min[1]) <= tol || Math.abs(p[1] - max[1]) <= tol) hits++
+  if (Math.abs(p[2] - min[2]) <= tol || Math.abs(p[2] - max[2]) <= tol) hits++
+  return hits >= 2
+ })
+}
+
 function restrain(nodes: number[][], supports: LatticeSupport[]): boolean[] {
  const fixed = new Array(nodes.length * 3).fill(false)
  for (const s of supports) {
-  for (const i of faceNodes(nodes, s.normal)) {
-   if (s.kind === 'roller') {
-    const ax = Math.abs(s.normal[0]) > 0.5 ? 0 : Math.abs(s.normal[1]) > 0.5 ? 1 : 2
-    fixed[i * 3 + ax] = true
-   } else {
-    fixed[i * 3] = fixed[i * 3 + 1] = fixed[i * 3 + 2] = true
-   }
+  const face = faceNodes(nodes, s.normal)
+  if (!face.length) continue
+  if (s.kind === 'roller') {
+   const ax = Math.abs(s.normal[0]) > 0.5 ? 0 : Math.abs(s.normal[1]) > 0.5 ? 1 : 2
+   for (const i of face) fixed[i * 3 + ax] = true
+   continue
   }
+  if (s.kind === 'pinned') {
+   // Pin on a face: restrain normal on all face nodes; fully fix the face centroid
+   // so the truss stays determinate without over-constraining in-plane expansion.
+   const ax = Math.abs(s.normal[0]) > 0.5 ? 0 : Math.abs(s.normal[1]) > 0.5 ? 1 : 2
+   for (const i of face) fixed[i * 3 + ax] = true
+   const c = centroid(face.map(i => nodes[i]))
+   const anchor = nearestNode(nodes, c)
+   fixed[anchor * 3] = fixed[anchor * 3 + 1] = fixed[anchor * 3 + 2] = true
+   continue
+  }
+  // fixed / encastre face
+  for (const i of face) fixed[i * 3] = fixed[i * 3 + 1] = fixed[i * 3 + 2] = true
  }
  if (!fixed.some(Boolean)) {
   const {min} = bodyBounds(nodes)
@@ -166,6 +208,8 @@ export function solveLatticeTruss(options: {
  supports: LatticeSupport[]
  actions: LatticeAction[]
  relativeDensity: number
+ /** Local stress concentration at corner nodes (default 1). */
+ Kt?: number
 }): TrussFeaResult {
  const {nodes, edges} = options.graph
  const warnings: {ru: string; en: string}[] = []
@@ -181,6 +225,8 @@ export function solveLatticeTruss(options: {
  const ecc = Math.max(0, options.section.eccentricity ?? 0)
  const joint = Math.min(1, Math.max(0, options.section.jointStiffness ?? 0.5))
  const Klen = 1 - 0.5 * joint
+ const Kt = Math.max(1, options.Kt ?? 1)
+ const corner = cornerNodeFlags(nodes)
  const n = nodes.length, ndof = n * 3
  const Kglob = new Float64Array(ndof * ndof)
  const {size} = bodyBounds(nodes)
@@ -241,12 +287,13 @@ export function solveLatticeTruss(options: {
   const cx = dx / L, cy = dy / L, cz = dz / L
   const elongation = (u[b * 3] - u[a * 3]) * cx + (u[b * 3 + 1] - u[a * 3 + 1]) * cy + (u[b * 3 + 2] - u[a * 3 + 2]) * cz
   const axialN = options.E * area / L * elongation
-  const stress = axialN / area
+  const localKt = (corner[a] || corner[b]) ? Kt : 1
+  const stress = axialN / area * localKt
   const util = Math.abs(stress) / Math.max(options.sigmaAllow / options.safety, EPS)
   const Pcr = (Math.PI ** 2 * options.E * I) / ((Klen * L) ** 2)
   const buck = axialN < 0 ? Math.abs(axialN) / Math.max(Pcr, EPS) : 0
   const bending = ecc > 0 && W > 0 ? Math.abs(axialN) * ecc / W : 0
-  const combined = (Math.abs(stress) + bending) / Math.max(options.sigmaAllow / options.safety, EPS)
+  const combined = (Math.abs(stress) + bending * localKt) / Math.max(options.sigmaAllow / options.safety, EPS)
   maxUtil = Math.max(maxUtil, util, combined)
   maxBuck = Math.max(maxBuck, buck)
   reaction += Math.abs(axialN)
@@ -274,6 +321,10 @@ export function solveLatticeTruss(options: {
  if (ecc > 0) warnings.push({
   ru: `Учтено сжатие+изгиб (e=${ecc} mm).`,
   en: `Combined compression+bending included (e=${ecc} mm).`,
+ })
+ if (Kt > 1.01 && corner.some(Boolean)) warnings.push({
+  ru: `Локальный Kt=${round(Kt, 2)} на стержнях у углов графа.`,
+  en: `Local Kt=${round(Kt, 2)} on members at graph corners.`,
  })
 
  return {
@@ -335,6 +386,15 @@ export function compareLatticeVariants(
  }
 }
 
+/** Ashby-based expected delta E* / delta m for a relative-density scale factor. */
+function ashbyDeltas(rhoScale: number, n: number): {deltaStiffnessPct: number; deltaMassPct: number} {
+ const r = Math.max(1e-6, rhoScale)
+ return {
+  deltaMassPct: Math.round((r - 1) * 100),
+  deltaStiffnessPct: Math.round((r ** n - 1) * 100),
+ }
+}
+
 export function latticeDesignAdvice(input: {
  cell: number
  rib: number
@@ -345,25 +405,35 @@ export function latticeDesignAdvice(input: {
  minWallMm: number
  hasDiagonals: boolean
  wallDepth?: number
+ /** Gibson–Ashby exponent for Δη estimates (default 1.5). */
+ ashbyExponent?: number
 }): {ru: string; en: string; deltaStiffnessPct: number; deltaMassPct: number}[] {
  const tips: {ru: string; en: string; deltaStiffnessPct: number; deltaMassPct: number}[] = []
+ const n = Math.max(1, input.ashbyExponent ?? 1.5)
+ // Spatial strut lattices: ρ* ∼ (rib/cell)²; channel grids closer to rib/cell.
+ const strutScale = input.pattern === 'grid' || input.pattern === 'web' || input.pattern === 'honey' ? 1 : 2
  if (input.bucklingRatio > 0.7 || input.utilization > 1) {
+  const ribScale = 1.25
+  const dRib = ashbyDeltas(ribScale ** strutScale, n)
   tips.push({
-   ru: `Увеличить диаметр стержня ${input.rib.toFixed(1)} → ${(input.rib * 1.25).toFixed(1)} mm`,
-   en: `Increase strut diameter ${input.rib.toFixed(1)} → ${(input.rib * 1.25).toFixed(1)} mm`,
-   deltaStiffnessPct: 35, deltaMassPct: 56,
+   ru: `Увеличить диаметр стержня ${input.rib.toFixed(1)} → ${(input.rib * ribScale).toFixed(1)} mm`,
+   en: `Increase strut diameter ${input.rib.toFixed(1)} → ${(input.rib * ribScale).toFixed(1)} mm`,
+   ...dRib,
   })
+  const cellScale = 0.85
+  const dCell = ashbyDeltas((1 / cellScale) ** strutScale, n)
   tips.push({
-   ru: `Уменьшить ячейку ${input.cell.toFixed(1)} → ${(input.cell * 0.85).toFixed(1)} mm`,
-   en: `Reduce cell ${input.cell.toFixed(1)} → ${(input.cell * 0.85).toFixed(1)} mm`,
-   deltaStiffnessPct: 20, deltaMassPct: 15,
+   ru: `Уменьшить ячейку ${input.cell.toFixed(1)} → ${(input.cell * cellScale).toFixed(1)} mm`,
+   en: `Reduce cell ${input.cell.toFixed(1)} → ${(input.cell * cellScale).toFixed(1)} mm`,
+   ...dCell,
   })
  }
  if (!input.hasDiagonals && (input.pattern === 'spatial' || input.pattern === 'grid' || input.pattern === 'bcc')) {
   tips.push({
    ru: 'Добавить диагонали (stretch-dominated) — рост E* при той же ρ*',
    en: 'Add diagonals (stretch-dominated) — higher E* at same ρ*',
-   deltaStiffnessPct: 40, deltaMassPct: 12,
+   deltaStiffnessPct: Math.round(25 + 10 * Math.max(0, n - 1)),
+   deltaMassPct: 12,
   })
  }
  if (input.cell - input.rib > input.maxBridgeMm) {
@@ -384,14 +454,14 @@ export function latticeDesignAdvice(input: {
   tips.push({
    ru: 'Углубить скелетную стенку ≥ 2·диаметра стержня',
    en: 'Deepen skeletal wall to ≥ 2× strut diameter',
-   deltaStiffnessPct: 15, deltaMassPct: 10,
+   ...ashbyDeltas(1.15, n),
   })
  }
  if (!tips.length) {
   tips.push({
    ru: 'Запасы приемлемы; можно слегка увеличить ячейку для экономии массы',
    en: 'Margins OK; slightly larger cell can save mass',
-   deltaStiffnessPct: -8, deltaMassPct: -12,
+   ...ashbyDeltas(0.88, n),
   })
  }
  return tips

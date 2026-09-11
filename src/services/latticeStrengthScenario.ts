@@ -113,6 +113,18 @@ export function defaultCompressionScenario(forceN: number, safety = 2): LatticeS
      ru: 'Давление на +Z', en: 'Pressure on +Z',
     }],
    },
+   {
+    id: 'distributed', ru: 'Распределённая нагрузка', en: 'Distributed load', safety,
+    supports: [
+     {id: 'left', kind: 'pinned', normal: [-1, 0, 0], ru: 'Шарнир −X', en: 'Pinned −X'},
+     {id: 'right', kind: 'roller', normal: [1, 0, 0], ru: 'Каток +X', en: 'Roller +X'},
+    ],
+    actions: [{
+     id: 'top-line', kind: 'distributed', direction: [0, 0, -1],
+     magnitude: Math.max(0.5, forceN / 20), faceNormal: [0, 0, 1],
+     ru: 'Линейная нагрузка на +Z (N/mm)', en: 'Line load on +Z (N/mm)',
+    }],
+   },
   ],
   combinations: [{
    id: 'uls',
@@ -123,11 +135,25 @@ export function defaultCompressionScenario(forceN: number, safety = 2): LatticeS
  }
 }
 
-export function actionToForceN(action: LatticeAction, faceAreaMm2: number): number {
- if (action.kind === 'force' || action.kind === 'distributed') return action.magnitude
- if (action.kind === 'pressure') return action.magnitude * Math.max(faceAreaMm2, 1)
- const lever = Math.max(1, 0.25 * Math.sqrt(Math.max(faceAreaMm2, 1)))
+export function actionToForceN(action: LatticeAction, faceAreaMm2: number, faceSpanMm = 0): number {
+ const area = Math.max(faceAreaMm2, 1)
+ const span = Math.max(faceSpanMm, Math.sqrt(area))
+ if (action.kind === 'force') return action.magnitude
+ // distributed: N/mm along face span → total N
+ if (action.kind === 'distributed') return action.magnitude * span
+ if (action.kind === 'pressure') return action.magnitude * area
+ // moment N·mm → couple force via lever ≈ 0.25·span
+ const lever = Math.max(1, 0.25 * span)
  return action.magnitude / lever
+}
+
+/** Face area and characteristic span from body size and a face/load normal. */
+export function faceMetricsFromSize(size: Vec3, normal: Vec3): {areaMm2: number; spanMm: number} {
+ const ax = Math.abs(normal[0]) > 0.5 ? 0 : Math.abs(normal[1]) > 0.5 ? 1 : 2
+ const u = (ax + 1) % 3, v = (ax + 2) % 3
+ const areaMm2 = Math.max(size[u] * size[v], 1)
+ const spanMm = Math.max(size[u], size[v], 1)
+ return {areaMm2, spanMm}
 }
 
 function averageDir(dirs: Vec3[]): Vec3 {
@@ -138,7 +164,10 @@ function averageDir(dirs: Vec3[]): Vec3 {
  return [s[0] / L, s[1] / L, s[2] / L]
 }
 
-export function resolveActiveCase(scenario: LatticeStrengthScenario): {
+export function resolveActiveCase(
+ scenario: LatticeStrengthScenario,
+ face?: {areaMm2?: number; spanMm?: number},
+): {
  caseDef: LatticeLoadCaseDef
  forceN: number
  safety: number
@@ -147,6 +176,8 @@ export function resolveActiveCase(scenario: LatticeStrengthScenario): {
  supports: LatticeSupport[]
  actions: LatticeAction[]
 } {
+ const area = Math.max(face?.areaMm2 ?? 240, 1)
+ const span = Math.max(face?.spanMm ?? Math.sqrt(area), 1)
  const combo = scenario.combinations.find(c => c.id === scenario.activeId)
  if (combo) {
   let forceN = 0, safety = 1
@@ -164,7 +195,7 @@ export function resolveActiveCase(scenario: LatticeStrengthScenario): {
    for (const a of c.actions) {
     const scaled: LatticeAction = {...a, magnitude: a.magnitude * term.factor}
     actions.push(scaled)
-    forceN += Math.abs(actionToForceN(scaled, 240))
+    forceN += Math.abs(actionToForceN(scaled, area, span))
     dirs.push(a.direction)
     primaryKind = a.kind
    }
@@ -172,7 +203,7 @@ export function resolveActiveCase(scenario: LatticeStrengthScenario): {
   return {caseDef, forceN: Math.max(forceN, 1e-6), safety, primaryKind, loadAxis: averageDir(dirs), supports, actions}
  }
  const caseDef = scenario.cases.find(c => c.id === scenario.activeId) ?? scenario.cases[0]
- const forceN = caseDef.actions.reduce((s, a) => s + Math.abs(actionToForceN(a, 240)), 0)
+ const forceN = caseDef.actions.reduce((s, a) => s + Math.abs(actionToForceN(a, area, span)), 0)
  return {
   caseDef,
   forceN: Math.max(forceN, 1e-6),
@@ -209,7 +240,14 @@ export function sectionProperties(section: StrutSection): {area: number; I: numb
 export function effectiveMaterialScalars(
  base: {id: string; E: number; sigmaAllow: number; density: number; process: 'fdm' | 'metal'},
  service: PrintServiceConditions,
- opts?: {EParallel?: number; EPerp?: number; sigmaInterlayer?: number; sigmaYield?: number},
+ opts?: {
+  EParallel?: number
+  EPerp?: number
+  sigmaInterlayer?: number
+  sigmaYield?: number
+  /** Load direction; with printAxis selects E∥ (in-layer) vs E⊥ (across layers). */
+  loadAxis?: Vec3
+ },
 ): {
  E: number
  EParallel: number
@@ -218,6 +256,8 @@ export function effectiveMaterialScalars(
  sigmaInterlayer: number
  sigmaYield: number
  envFactor: number
+ /** 0 = load in layer plane (∥ roads); 1 = load along print axis (⊥ layers). */
+ layerAlignment: number
 } {
  const EParallel = opts?.EParallel ?? base.E
  const EPerp = opts?.EPerp ?? (base.process === 'fdm' ? base.E * 0.55 : base.E)
@@ -230,8 +270,21 @@ export function effectiveMaterialScalars(
   env *= 0.55 + 0.45 * Math.min(1, Math.max(0.15, service.infill))
   env *= Math.min(1, 0.7 + 0.1 * Math.max(1, service.perimeters))
  }
- const E = base.process === 'fdm' ? Math.sqrt(EParallel * EPerp) * env : base.E * env
- const sigmaAllow = Math.min(base.sigmaAllow, sigmaInterlayer * (base.process === 'fdm' ? 1.15 : 1)) * env
+ const printDir: Vec3 = service.printAxis === 'x' ? [1, 0, 0] : service.printAxis === 'y' ? [0, 1, 0] : [0, 0, 1]
+ const load = opts?.loadAxis ?? [0, 0, -1]
+ const loadL = Math.hypot(load[0], load[1], load[2]) || 1
+ // Alignment of load with print axis (layer normal): 1 → across layers (weak), 0 → in-plane (strong).
+ const layerAlignment = base.process === 'fdm'
+  ? Math.min(1, Math.abs(load[0] / loadL * printDir[0] + load[1] / loadL * printDir[1] + load[2] / loadL * printDir[2]))
+  : 0
+ const Egeo = base.process === 'fdm'
+  ? EParallel * (1 - layerAlignment) + EPerp * layerAlignment
+  : base.E
+ const sigmaGeo = base.process === 'fdm'
+  ? Math.min(base.sigmaAllow, base.sigmaAllow * (1 - layerAlignment) + sigmaInterlayer * layerAlignment)
+  : base.sigmaAllow
+ const E = Egeo * env
+ const sigmaAllow = sigmaGeo * env
  return {
   E,
   EParallel: EParallel * env,
@@ -240,5 +293,6 @@ export function effectiveMaterialScalars(
   sigmaInterlayer: sigmaInterlayer * env,
   sigmaYield: sigmaYield * env,
   envFactor: env,
+  layerAlignment,
  }
 }

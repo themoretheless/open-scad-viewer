@@ -16,6 +16,7 @@ import {
  defaultCompressionScenario,
  defaultStrutSection,
  effectiveMaterialScalars,
+ faceMetricsFromSize,
  resolveActiveCase,
  sectionProperties,
  type LatticeStrengthScenario,
@@ -103,6 +104,7 @@ export interface LatticeStrengthReport {
   sigmaInterlayer: number
   sigmaYield: number
   envFactor: number
+  layerAlignment: number
  }
  /** Section used for strut checks. */
  sectionLabel?: string
@@ -120,6 +122,12 @@ export interface LatticeStrengthReport {
  advice?: {ru: string; en: string; deltaStiffnessPct: number; deltaMassPct: number}[]
  /** Support / action summary for the report. */
  boundarySummary?: {ru: string; en: string}
+ /** Analytical vs truss-FEA utilization cross-check. */
+ consistency?: {
+  analyticalUtilization: number
+  feaUtilization: number
+  ratio: number
+ } | null
 }
 
 export type LatticeWeakKind =
@@ -613,16 +621,22 @@ export function analyzeLatticeStrength(
   s.service = {...DEFAULT_PRINT_SERVICE, printAxis: o.axis}
   return s
  })()
- const active = resolveActiveCase(scenarioResolved)
  const service = scenarioResolved.service ?? DEFAULT_PRINT_SERVICE
  const section = {...(scenarioResolved.section ?? defaultStrutSection(o.rib)), a: scenarioResolved.section?.a ?? o.rib}
  const sec = sectionProperties(section)
  const ecc = Math.max(0, section.eccentricity ?? 0)
+ const {size: bodySize} = bodyBounds(body)
+ const provisional = resolveActiveCase(scenarioResolved)
+ const face = faceMetricsFromSize(bodySize, provisional.loadAxis)
+ const active = resolveActiveCase(scenarioResolved, face)
+ const forceN = active.forceN
+ const safety = Math.max(load.safety, active.safety)
  const eff = effectiveMaterialScalars(material, service, {
   EParallel: material.EParallel,
   EPerp: material.EPerp,
   sigmaInterlayer: material.sigmaInterlayer,
   sigmaYield: material.sigmaYield,
+  loadAxis: active.loadAxis,
  })
  const hint = latticeStructureHint(o.pattern)
  const relativeDensity = volumes && volumes.beforeMm3 > 0
@@ -635,7 +649,7 @@ export function analyzeLatticeStrength(
  const relativeStiffness = round(C_E * relativeDensity ** n, 4)
  const relativeStrength = round(C_S * relativeDensity ** (load.case === 'bending' ? n : Math.max(1, n * 0.85)), 4)
  const specificStiffness = round(relativeStiffness / Math.max(relativeDensity, 1e-6), 3)
- const {size} = bodyBounds(body)
+ const size = bodySize
  const metrics = graphMetrics(body, o)
  const warnings: {ru: string; en: string}[] = []
  let strutAreaMm2: number | null = null
@@ -649,10 +663,12 @@ export function analyzeLatticeStrength(
  let feaMembers: LatticeStrengthReport['feaMembers'] = undefined
  let homogenized: LatticeStrengthReport['homogenized'] = null
  let advice: LatticeStrengthReport['advice'] = []
+ let consistency: LatticeStrengthReport['consistency'] = null
+ let analyticalUtilization: number | null = null
 
  const fatigueCap = material.sigmaAllow * (material.fatigueRatio ?? 1)
  const sigmaAllowEff = Math.min(eff.sigmaAllow, fatigueCap)
- const allowWithSafety = Math.max(1e-6, sigmaAllowEff / load.safety)
+ const allowWithSafety = Math.max(1e-6, sigmaAllowEff / safety)
  const Euse = Math.max(1, eff.E)
  const Kt = material.Kt ?? 1
 
@@ -660,7 +676,7 @@ export function analyzeLatticeStrength(
   strutAreaMm2 = round(sec.area, 4)
   const L = Math.max(metrics.meanLength ?? o.cell, o.rib)
   const paths = parallelPaths(o, size, metrics.edgeCount)
-  const forcePerStrut = load.forceN / paths
+  const forcePerStrut = forceN / paths
   const sigmaAxial = forcePerStrut / sec.area
   const sigmaBend = ecc > 0 && sec.W > 0 ? Math.abs(forcePerStrut) * ecc / sec.W : 0
   strutStressMPa = round(Kt * (Math.abs(sigmaAxial) + sigmaBend), 4)
@@ -668,6 +684,7 @@ export function analyzeLatticeStrength(
   bucklingRatio = round(Math.abs(forcePerStrut) / Math.max(eulerBucklingN, 1e-9), 3)
   utilization = round(strutStressMPa / allowWithSafety, 3)
   combinedUtilization = utilization
+  analyticalUtilization = utilization
   panelBucklingMPa = round(panelBucklingStressMPa({
    E: Euse,
    cellSize: o.cell,
@@ -708,12 +725,14 @@ export function analyzeLatticeStrength(
     supports: active.supports,
     actions: active.actions,
     relativeDensity,
+    Kt,
    })
    maxDeflectionMm = round(fea.maxDeflectionMm, 4)
    combinedUtilization = round(Math.max(utilization ?? 0, fea.maxUtilization), 3)
    utilization = combinedUtilization
+   // FEA stress already includes local corner Kt; keep bending eccentricity add-on.
    const topStress = Math.max(0, ...fea.members.map(m => Math.abs(m.stressMPa) + (ecc > 0 && sec.W > 0 ? Math.abs(m.axialN) * ecc / sec.W : 0)))
-   if (topStress > 0) strutStressMPa = round(Math.max(strutStressMPa ?? 0, Kt * topStress), 4)
+   if (topStress > 0) strutStressMPa = round(Math.max(strutStressMPa ?? 0, topStress), 4)
    if (fea.maxBucklingRatio > 0) bucklingRatio = round(Math.max(bucklingRatio ?? 0, fea.maxBucklingRatio), 3)
    feaMembers = fea.members.slice(0, 12).map(m => ({
     mid: m.mid,
@@ -727,6 +746,25 @@ export function analyzeLatticeStrength(
     relativeDensity,
    }
    if (fea.warnings.length) warnings.push(...fea.warnings)
+   if (analyticalUtilization != null && fea.maxUtilization > 0) {
+    const ratio = round(fea.maxUtilization / Math.max(analyticalUtilization, 1e-6), 3)
+    consistency = {
+     analyticalUtilization: round(analyticalUtilization, 3),
+     feaUtilization: round(fea.maxUtilization, 3),
+     ratio,
+    }
+    if (ratio > 1.4 || ratio < 0.7) {
+     warnings.push({
+      ru: `Расхождение SoM↔FEA: η_аналит≈${consistency.analyticalUtilization}, η_FEA≈${consistency.feaUtilization} (отношение ${ratio}). Уточните опоры/сечения.`,
+      en: `SoM↔FEA mismatch: η_anal≈${consistency.analyticalUtilization}, η_FEA≈${consistency.feaUtilization} (ratio ${ratio}). Refine supports/sections.`,
+     })
+    } else {
+     warnings.push({
+      ru: `Сходимость SoM↔truss FEA: η_аналит≈${consistency.analyticalUtilization}, η_FEA≈${consistency.feaUtilization} (отношение ${ratio}).`,
+      en: `SoM↔truss FEA agreement: η_anal≈${consistency.analyticalUtilization}, η_FEA≈${consistency.feaUtilization} (ratio ${ratio}).`,
+     })
+    }
+   }
   } catch (e) {
    warnings.push({
     ru: `Упрощённый FEA фермы не сошёлся: ${e instanceof Error ? e.message : String(e)}`,
@@ -749,9 +787,10 @@ export function analyzeLatticeStrength(
   const paths = parallelPaths(o, size, 0)
   const axisIndex = o.axis === 'x' ? 0 : o.axis === 'y' ? 1 : 2
   strutAreaMm2 = round(o.rib * Math.max(size[axisIndex] - o.bottom - o.top, o.rib), 3)
-  strutStressMPa = round(load.forceN / (paths * Math.max(o.rib * o.rib, 1e-6)), 4)
+  strutStressMPa = round(forceN / (paths * Math.max(o.rib * o.rib, 1e-6)), 4)
   utilization = round(strutStressMPa / allowWithSafety, 3)
   combinedUtilization = utilization
+  analyticalUtilization = utilization
  }
 
  if (!homogenized) {
@@ -772,6 +811,7 @@ export function analyzeLatticeStrength(
   maxBridgeMm: service.maxBridgeMm,
   minWallMm: service.minWallMm,
   wallDepth: o.wallDepth,
+  ashbyExponent: n,
  })
 
  if (load.case === 'bending' && relativeDensity < 0.25) {
@@ -781,10 +821,17 @@ export function analyzeLatticeStrength(
   })
  }
  if (material.process === 'fdm') {
+  const alignPct = Math.round(eff.layerAlignment * 100)
   warnings.push({
-   ru: `FDM ортотропия: E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} MPa, σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
-   en: `FDM orthotropy: E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} MPa, σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
+   ru: `FDM ортотропия: E_eff=${round(eff.E, 0)} MPa из E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} (выравнивание нагрузки с осью печати ${alignPct}%), σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
+   en: `FDM orthotropy: E_eff=${round(eff.E, 0)} MPa from E∥=${round(eff.EParallel, 0)} / E⊥=${round(eff.EPerp, 0)} (load↔print-axis alignment ${alignPct}%), σ_inter≈${round(eff.sigmaInterlayer, 1)} MPa (T=${service.temperatureC}°C, RH=${service.humidityPct}%, infill=${Math.round(service.infill * 100)}%, peri=${service.perimeters}, print ${service.printAxis.toUpperCase()}).`,
   })
+  if (eff.layerAlignment >= 0.7) {
+   warnings.push({
+    ru: 'Нагрузка почти вдоль оси печати — работает межслойная прочность (E⊥ / σ_inter). Поверните деталь или усильте периметры.',
+    en: 'Load nearly along print axis — interlayer strength governs (E⊥ / σ_inter). Reorient the part or add perimeters.',
+   })
+  }
   if (material.id === 'nylon' && service.humidityPct >= 40) {
    warnings.push({
     ru: 'Nylon: высокая влажность заметно снижает E и прочность — сушите филамент и учитывайте кондиционирование детали.',
@@ -855,6 +902,7 @@ export function analyzeLatticeStrength(
    sigmaInterlayer: round(eff.sigmaInterlayer, 2),
    sigmaYield: round(eff.sigmaYield, 2),
    envFactor: round(eff.envFactor, 3),
+   layerAlignment: round(eff.layerAlignment, 3),
   },
   sectionLabel: sec.label,
   combinedUtilization,
@@ -864,6 +912,7 @@ export function analyzeLatticeStrength(
   feaMembers,
   advice,
   boundarySummary,
+  consistency,
   disclaimer: {
    ru: 'Сопромат+упрощённый FEA фермы (опоры/нагрузки/ортотропия FDM). Не сертификат и не полный solid FEA.',
    en: 'SoM + simplified truss FEA (supports/loads/FDM orthotropy). Not certification or full solid FEA.',
@@ -894,9 +943,15 @@ export function formatLatticeStrengthReport(
  ]
  if (r.boundarySummary) lines.push(L ? r.boundarySummary.ru : r.boundarySummary.en)
  if (r.materialEffective) {
+  const align = r.materialEffective.layerAlignment != null ? `, align=${r.materialEffective.layerAlignment}` : ''
   lines.push(L
-   ? `Материал эфф.: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}`
-   : `Effective material: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}`)
+   ? `Материал эфф.: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}${align}`
+   : `Effective material: E=${r.materialEffective.E} MPa (∥${r.materialEffective.EParallel}/⊥${r.materialEffective.EPerp}), [σ]=${r.materialEffective.sigmaAllow}, σ_inter=${r.materialEffective.sigmaInterlayer}, env×${r.materialEffective.envFactor}${align}`)
+ }
+ if (r.consistency) {
+  lines.push(L
+   ? `Сверка SoM↔FEA: η_аналит=${r.consistency.analyticalUtilization}, η_FEA=${r.consistency.feaUtilization}, отношение=${r.consistency.ratio}`
+   : `SoM↔FEA check: η_anal=${r.consistency.analyticalUtilization}, η_FEA=${r.consistency.feaUtilization}, ratio=${r.consistency.ratio}`)
  }
  if (r.sectionLabel) {
   lines.push(L ? `Сечение стержня: ${r.sectionLabel}` : `Strut section: ${r.sectionLabel}`)

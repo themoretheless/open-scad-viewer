@@ -130,7 +130,6 @@ describe('lattice strength analysis', () => {
   expect(spots.length).toBeGreaterThan(0)
   expect(spots.some(s => s.kind === 'sharp_corner' || s.kind === 'body_corner')).toBe(true)
  })
-})
 
  it('weights weak spots by material: PLA elevates corners/bridges, steel elevates slender buckling', () => {
   const o = {...base, cell: 16, rib: 1.2}
@@ -233,3 +232,46 @@ describe('lattice strength analysis', () => {
   const b = analyzeLatticeStrength(box(), {...base, pattern: 'octet', cell: 12, rib: 2.4}, pla, load, undefined, eccentric)
   expect((b.combinedUtilization ?? b.utilization ?? 0)).toBeGreaterThanOrEqual((a.combinedUtilization ?? a.utilization ?? 0))
  })
+
+ it('blends FDM E by print/load axis alignment', () => {
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const along = effectiveMaterialScalars(pla, {...DEFAULT_PRINT_SERVICE, printAxis: 'z'}, {
+   EParallel: pla.EParallel, EPerp: pla.EPerp, loadAxis: [0, 0, -1],
+  })
+  const across = effectiveMaterialScalars(pla, {...DEFAULT_PRINT_SERVICE, printAxis: 'z'}, {
+   EParallel: pla.EParallel, EPerp: pla.EPerp, loadAxis: [1, 0, 0],
+  })
+  expect(along.layerAlignment).toBeCloseTo(1, 5)
+  expect(across.layerAlignment).toBeCloseTo(0, 5)
+  expect(along.E).toBeLessThan(across.E)
+  expect(along.E).toBeCloseTo(along.EPerp, 5)
+  expect(across.E).toBeCloseTo(across.EParallel, 5)
+ })
+
+ it('scales ULS force above the base compression case and reports SoM↔FEA consistency', () => {
+  const pla = LATTICE_MATERIALS.find(m => m.id === 'pla')!
+  const load = {case: 'compression' as const, forceN: 200, safety: 2}
+  const baseSc = defaultCompressionScenario(load.forceN, load.safety)
+  const ulsSc = defaultCompressionScenario(load.forceN, load.safety)
+  ulsSc.activeId = 'uls'
+  const opts = {...base, pattern: 'octet' as const, cell: 12, rib: 2.8, wallDepth: 3.6, keepCore: false}
+  const baseR = analyzeLatticeStrength(box(), opts, pla, load, undefined, baseSc)
+  const uls = analyzeLatticeStrength(box(), opts, pla, load, undefined, ulsSc)
+  expect(uls.scenarioId).toBe('uls')
+  expect(uls.consistency).toBeTruthy()
+  expect(uls.consistency!.ratio).toBeGreaterThan(0)
+  expect((uls.combinedUtilization ?? uls.utilization ?? 0)).toBeGreaterThanOrEqual((baseR.combinedUtilization ?? baseR.utilization ?? 0))
+  const text = formatLatticeStrengthReport(uls, pla, load, 'en')
+  expect(text).toMatch(/SoM↔FEA|align=/)
+ })
+
+ it('converts face pressure and distributed loads with real face metrics', async () => {
+  const {actionToForceN, faceMetricsFromSize} = await import('../src/services/latticeStrengthScenario')
+  const face = faceMetricsFromSize([20, 12, 10], [0, 0, 1])
+  expect(face.areaMm2).toBe(240)
+  expect(face.spanMm).toBe(20)
+  expect(actionToForceN({id: 'p', kind: 'pressure', direction: [0, 0, -1], magnitude: 0.5, faceNormal: [0, 0, 1], ru: '', en: ''}, face.areaMm2, face.spanMm)).toBe(120)
+  expect(actionToForceN({id: 'd', kind: 'distributed', direction: [0, 0, -1], magnitude: 2, faceNormal: [0, 0, 1], ru: '', en: ''}, face.areaMm2, face.spanMm)).toBe(40)
+ })
+
+})
