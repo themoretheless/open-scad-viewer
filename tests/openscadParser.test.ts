@@ -20,6 +20,15 @@ function bounds(meshes: MeshData[]) {
 }
 
 describe('OpenSCAD parser and Manifold evaluator', () => {
+  it('reports bind as its own nonnegative phase', async () => {
+    const result = await parseOpenSCAD('cube(1);')
+    expect(Object.keys(result.timings)).toEqual([
+      'parseMs', 'bindMs', 'initializeMs', 'evaluateMs', 'analyzeMs',
+    ])
+    expect(result.timings.bindMs).toBeGreaterThanOrEqual(0)
+    expect(result.timings.parseMs).toBeGreaterThanOrEqual(0)
+  })
+
   it('evaluates variables and arithmetic', async () => {
     const result = await parseOpenSCAD('x = 10; cube([x, 2 + 3, 4]);')
     expect(result.meshes).toHaveLength(1)
@@ -432,7 +441,7 @@ describe('preview reduction flag', () => {
     const normalizeEphemeralKernelIds = (result: typeof preview) => ({
       ...result,
       quality: 'full' as const,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
       meshes: result.meshes.map(mesh => ({
         ...mesh,
         provenance: mesh.provenance.map(run => ({

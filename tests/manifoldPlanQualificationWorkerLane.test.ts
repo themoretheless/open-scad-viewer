@@ -44,7 +44,7 @@ class ScriptedWorker implements ManifoldPlanQualificationWorkerLike {
         surfaceArea: 0,
         quality: request.quality,
         reduced: false,
-        timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+        timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
       },
     }))
   }

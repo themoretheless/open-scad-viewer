@@ -106,7 +106,7 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
     volume: request.documentRevision,
     surfaceArea: 0,
     reduced: false,
-    timings: { parseMs: 1, initializeMs: 1, evaluateMs: 2, analyzeMs: 6 },
+    timings: { parseMs: 1, bindMs: 0, initializeMs: 1, evaluateMs: 2, analyzeMs: 6 },
     durationMs: 10,
   }
 }

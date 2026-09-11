@@ -125,7 +125,7 @@ function succeeded(): GeometryWorkerEvent {
     volume: 0,
     surfaceArea: 0,
     reduced: false,
-    timings: { parseMs: 0.1, initializeMs: 0.2, evaluateMs: 0.3, analyzeMs: 0.4 },
+    timings: { parseMs: 0.1, bindMs: 0, initializeMs: 0.2, evaluateMs: 0.3, analyzeMs: 0.4 },
     durationMs: 1,
   }
 }
@@ -193,7 +193,8 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent({ ...succeeded(), reduced: 1 })).toBe(false)
     expect(isGeometryWorkerEvent({ ...succeeded(), reduced: true })).toBe(true)
     expect(isGeometryWorkerEvent({ ...succeeded(), timings: undefined })).toBe(false)
-    expect(isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: -1, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } })).toBe(false)
+    expect(isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: -1, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } })).toBe(false)
+    expect(isGeometryWorkerEvent({ ...succeeded(), timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 } })).toBe(false)
   })
 
   it('requires coherent runtime engine provenance on successful publications', () => {

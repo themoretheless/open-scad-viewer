@@ -74,7 +74,7 @@ function evaluationResult(request: DirectGeometryBuildRequest) {
     surfaceArea: 0,
     quality: request.quality,
     reduced: false,
-    timings: { parseMs: 1, initializeMs: 2, evaluateMs: 3, analyzeMs: 4 },
+    timings: { parseMs: 1, bindMs: 0, initializeMs: 2, evaluateMs: 3, analyzeMs: 4 },
   }
 }
 

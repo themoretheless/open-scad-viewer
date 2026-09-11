@@ -343,7 +343,7 @@ describe('GeometryBuildEngine', () => {
         surfaceArea: 0,
         quality: 'preview',
         reduced: false,
-        timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+        timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
       }),
     }])
 
@@ -372,7 +372,7 @@ describe('GeometryBuildEngine', () => {
       surfaceArea: number
       quality: 'full'
       reduced: false
-      timings: { parseMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
+      timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
     const build = vi.fn(() => new Promise<Parameters<typeof finish>[0]>(resolve => {
       finish = resolve
@@ -403,7 +403,7 @@ describe('GeometryBuildEngine', () => {
       surfaceArea: 6,
       quality: 'full',
       reduced: false,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
 
     await expect(pending).rejects.toMatchObject({
@@ -426,7 +426,7 @@ describe('GeometryBuildEngine', () => {
       surfaceArea: number
       quality: 'preview' | 'full'
       reduced: false
-      timings: { parseMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
+      timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }
     const finishers: Array<(result: Result) => void> = []
     const build = vi.fn(() => new Promise<Result>(resolve => finishers.push(resolve)))
@@ -443,7 +443,7 @@ describe('GeometryBuildEngine', () => {
     await vi.waitFor(() => expect(finishers).toHaveLength(2))
     const base = {
       meshes: [] as [], warnings: [] as [], volume: 1, surfaceArea: 6, reduced: false as const,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     }
     finishers[0]({ ...base, quality: 'preview' })
     await expect(first).rejects.toBeInstanceOf(GeometryProviderContractError)

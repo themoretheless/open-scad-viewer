@@ -3712,13 +3712,25 @@ async function parseInternal(
   const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
   let ast: readonly Statement[]
   let bound
+  let parseMs: number
+  let bindMs: number
   if (project === undefined) {
-    const prepared = prepareOpenScadFrontEnd(source, { languageProfile, compile: () => compileAst() })
+    const prepared = prepareOpenScadFrontEnd(source, {
+      languageProfile,
+      compile: () => compileAst(),
+      now,
+    })
     ast = prepared.program
     bound = prepared.bound
+    parseMs = prepared.compileMs
+    bindMs = prepared.bindMs
   } else {
     ast = compileAst()
+    const compiledAt = now()
     bound = bindOpenScad(ast, { languageProfile, source })
+    const boundAt = now()
+    parseMs = Math.max(0, compiledAt - startedAt)
+    bindMs = Math.max(0, boundAt - compiledAt)
   }
   const forcedImportAssets = project === undefined
     ? []
@@ -3857,7 +3869,8 @@ async function parseInternal(
     return {
       meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
       timings: {
-        parseMs: Math.max(0, parsedAt - startedAt),
+        parseMs,
+        bindMs,
         initializeMs: Math.max(0, initializedAt - parsedAt),
         evaluateMs: Math.max(0, evaluatedAt - initializedAt),
         analyzeMs: Math.max(0, analyzedAt - evaluatedAt),

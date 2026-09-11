@@ -14,7 +14,7 @@ import { sha256Hex } from '../core/sha256'
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 5 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 6 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -241,9 +241,10 @@ function isNonNegativeFiniteNumber(value: unknown): value is number {
 
 function isPhaseTimings(value: unknown): value is GeometryPhaseTimings {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['parseMs', 'initializeMs', 'evaluateMs', 'analyzeMs'])) return false
+    || !hasExactKeys(value, ['parseMs', 'bindMs', 'initializeMs', 'evaluateMs', 'analyzeMs'])) return false
   const candidate = value as Partial<GeometryPhaseTimings>
   return isNonNegativeFiniteNumber(candidate.parseMs)
+    && isNonNegativeFiniteNumber(candidate.bindMs)
     && isNonNegativeFiniteNumber(candidate.initializeMs)
     && isNonNegativeFiniteNumber(candidate.evaluateMs)
     && isNonNegativeFiniteNumber(candidate.analyzeMs)

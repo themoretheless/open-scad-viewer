@@ -6,6 +6,7 @@ export type GeometryQuality = 'preview' | 'full'
 /** Compiler-owned timings; queue/transport time belongs to the coordinator. */
 export interface GeometryPhaseTimings {
   parseMs: number
+  bindMs: number
   initializeMs: number
   evaluateMs: number
   analyzeMs: number

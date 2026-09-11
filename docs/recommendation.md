@@ -52,7 +52,7 @@ Reopen these only for a demonstrated regression.
   `if` / `let` bodies), yields between nested statements, polls immediately
   before Manifold boolean/hull/difference, forces a macrotask checkpoint
   before extraction, polls cancellation through chunked publication work, and
-  reports required parse/initialize/evaluate/analyze timings. A tokenized
+  reports required parse/bind/initialize/evaluate/analyze timings. A tokenized
   watchdog prevents stale timers from cancelling newer work. Synchronous
   Manifold, BVH and topology WASM calls still cannot observe messages, so
   Worker replacement remains the final cancellation boundary for those phases.
@@ -81,12 +81,13 @@ Reopen these only for a demonstrated regression.
   [`svgGeometry.ts`](../src/services/svgGeometry.ts) evaluate through opaque
   handle-only kernel ops; tessellation uses `analyzeSolid`. Boolean/hull
   and primitive constructors normalize kernel failures to source positions.
-  The public facade and serialized lifetime remain compatible and parity-covered.
+  Compiler phase timings report `bindMs` separately from `parseMs` on the
+  protocol-v6 Worker wire. The public facade and serialized lifetime remain
+  compatible and parity-covered.
 - **Risk:** language, kernel and inspection changes invalidate the entire
   pipeline and main-thread modules depend on a Worker implementation detail.
 - **Acceptance remaining:** yield and position every deferred kernel error;
-  Worker protocol phase timings still fold bind into `parseMs`; subtree-level
-  IR cache beyond the whole-source compile/bind digest.
+  subtree-level IR cache beyond the whole-source compile/bind digest.
 
 ### R4 — Establish one owner for scene and viewport state
 

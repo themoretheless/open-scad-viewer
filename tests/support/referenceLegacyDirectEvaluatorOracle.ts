@@ -27,7 +27,7 @@ const LIMIT = Object.freeze({
 
 const KEY = Object.freeze({
   result: ['meshes', 'warnings', 'volume', 'surfaceArea', 'quality', 'reduced', 'timings'],
-  timings: ['parseMs', 'initializeMs', 'evaluateMs', 'analyzeMs'],
+  timings: ['parseMs', 'bindMs', 'initializeMs', 'evaluateMs', 'analyzeMs'],
   mesh: [
     'entityId', 'geometryAssetId', 'vertices', 'indices', 'bvh', 'edgeIndices',
     'color', 'transform', 'faceIds', 'provenance', 'topology',
@@ -58,7 +58,7 @@ export const REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT = Object.freeze({
     surfaceArea: Object.freeze({ absolute: 1e-9, relative: 1e-9 }),
   }),
   validateOnly: Object.freeze([
-    'timings.parseMs/initializeMs/evaluateMs/analyzeMs are finite and nonnegative',
+    'timings.parseMs/bindMs/initializeMs/evaluateMs/analyzeMs are finite and nonnegative',
     'provenance.source.originalId is a nonnegative process-local handle',
   ]),
   unavailableFromDirectEvaluator: Object.freeze([
@@ -184,6 +184,7 @@ export interface ReferenceLegacySuccessSnapshot {
   /** Values are intentionally erased after validation. */
   readonly timings: Readonly<{
     parseMs: 0
+    bindMs: 0
     initializeMs: 0
     evaluateMs: 0
     analyzeMs: 0
@@ -524,7 +525,7 @@ export function referenceSnapshotLegacySuccess(value: unknown): ReferenceLegacyS
     surfaceArea: finite(result.surfaceArea, '$.surfaceArea', true),
     quality,
     reduced: booleanValue(result.reduced, '$.reduced'),
-    timings: Object.freeze({ parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 }),
+    timings: Object.freeze({ parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 }),
     meshes: Object.freeze(meshes),
     scene: referenceProjectLegacyScene(meshes),
   })

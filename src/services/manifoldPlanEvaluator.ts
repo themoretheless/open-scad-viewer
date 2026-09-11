@@ -163,6 +163,7 @@ async function evaluateInternal(
       ...result,
       timings: {
         parseMs: Math.max(0, parsedAt - startedAt),
+        bindMs: 0,
         initializeMs: Math.max(0, initializedAt - parsedAt),
         evaluateMs: Math.max(0, evaluatedAt - initializedAt),
         analyzeMs: Math.max(0, analyzedAt - evaluatedAt),

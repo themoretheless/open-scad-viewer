@@ -61,6 +61,21 @@ describe('OpenSCAD bind phase', () => {
     expect(compileBindCacheSize()).toBe(0)
   })
 
+  it('measures compile and bind separately and reports a cache hit as zero work', () => {
+    resetCompileBindCache()
+    let clock = 0
+    const now = () => { clock += 1; return clock }
+    const first = prepareOpenScadFrontEnd('cube(2);', { now })
+    const second = prepareOpenScadFrontEnd('cube(2);', { now })
+    expect(first.cacheHit).toBe(false)
+    expect(first.compileMs).toBeGreaterThan(0)
+    expect(first.bindMs).toBeGreaterThan(0)
+    expect(second.cacheHit).toBe(true)
+    expect(second.compileMs).toBe(0)
+    expect(second.bindMs).toBe(0)
+    resetCompileBindCache()
+  })
+
   it('keeps compiler, binder and kernel-port sources free of Manifold imports', () => {
     const files = [
       '../src/services/openscadCompiler.ts',

@@ -3,7 +3,7 @@ import { BuildPerformanceHistory } from '../src/services/buildPerformance'
 
 const sample = () => ({
   revision: 1, quality: 'preview' as const,
-  phases: { parseMs: 1, initializeMs: 2, evaluateMs: 3, analyzeMs: 4 },
+  phases: { parseMs: 1, bindMs: 0, initializeMs: 2, evaluateMs: 3, analyzeMs: 4 },
   workerMs: 10, hostMs: 20, publicationMs: 5, transferBytes: 128,
   upload: { geometryUploadBytes: 64, geometryBuffersCreated: 2, reusedEntities: 0 },
 })

@@ -37,7 +37,7 @@ let highestAcceptedJobId = -1
 const UNPUBLISHABLE_RESULT_ERROR = Object.freeze({
   name: 'GeometryWorkerProtocolError',
   code: 'WORKER_RESULT_UNPUBLISHABLE',
-  message: 'Geometry result cannot be published under protocol v5',
+  message: `Geometry result cannot be published under protocol v${GEOMETRY_WORKER_PROTOCOL_VERSION}`,
 } satisfies GeometryBuildError)
 
 function postEvent(event: GeometryWorkerEvent, transfer: Transferable[] = []) {
@@ -214,7 +214,7 @@ async function runBuild(
       durationMs: elapsed(job),
     })
     // Validate the complete success packet while every ArrayBuffer is still
-    // Worker-owned. In particular, a legacy identity longer than v5's frozen
+    // Worker-owned. In particular, a legacy identity longer than the frozen
     // 256-code-unit limit must never cross the boundary as an invalid success
     // (and must never be truncated or replaced with a synthetic alias).
     if (!isGeometryWorkerEvent(response)) {

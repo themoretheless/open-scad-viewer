@@ -52,7 +52,7 @@ WorkspaceDocumentSnapshot
         └─ per-writer localStorage recovery journals + causal IDB bases
         │
         ▼
-BuildCoordinator ───── protocol-v5 ordering, cancellation and Worker lifetime
+BuildCoordinator ───── protocol-v6 ordering, cancellation and Worker lifetime
         │
         ▼
 geometry.worker.ts
@@ -114,7 +114,7 @@ createOpenScadMcpServer
 | [`src/services/workspaceIndexedDb.ts`](src/services/workspaceIndexedDb.ts) | Browser-only active-head repository with runtime validation, compare-and-swap writes, upgrade handling and bounded open failure. |
 | [`src/services/workspacePersistence.ts`](src/services/workspacePersistence.ts) | Pre-mount hydration, ordered autosaves, causal IDB/per-writer-journal reconciliation, CAS conflict handling, and crash journal lifecycle. |
 | [`src/services/workspaceShare.ts`](src/services/workspaceShare.ts) | Bounded URL-safe codec for shared source imports. |
-| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v5 job ordering, exact-source/route/span re-attestation, post-clone provenance freezing, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
+| [`src/services/buildCoordinator.ts`](src/services/buildCoordinator.ts) | Protocol-v6 job ordering, exact-source/route/span re-attestation, post-clone provenance freezing, latest-result publication, preview/full policy, cancellation, hard preemption and Worker disposal. |
 | [`src/services/geometryWorkerProtocol.ts`](src/services/geometryWorkerProtocol.ts) | Versioned and runtime-validated request/event contract: revision, monotonic job, exact source digest, quality, phase, bounded sorted provenance, progress and terminal state. |
 | [`src/services/commandRegistry.ts`](src/services/commandRegistry.ts) | One typed inventory for palette metadata and deterministic, scope-aware keyboard routing. |
 | [`src/workers/geometry.worker.ts`](src/workers/geometry.worker.ts) | Isolates compilation, validates routing before queue state, rejects replay/stale work, warms only the selected provider, reports checkpoints and transfers geometry buffers. |
@@ -158,7 +158,7 @@ the asynchronous build identity.
 
 ### Build identity and publication
 
-Protocol v5 is the only App/Worker path. Every request/event contains a protocol
+Protocol v6 is the only App/Worker path. Every request/event contains a protocol
 version, document revision, job ID and SHA-256 of the exact UTF-8 source;
 build events also carry quality and a typed phase. Runtime guards validate the
 digest on both sides, reject same-route replay, bound all transferred text and

@@ -61,7 +61,7 @@ describe('MCP Manifold-plan qualification Node worker', () => {
       surfaceArea: 0,
       quality: 'full',
       reduced: false,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
     await import('../src/mcp/manifoldPlanQualification.worker')
     const source = 'cube(1);'

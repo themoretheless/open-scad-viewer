@@ -74,6 +74,7 @@ export interface BindOpenScadOptions {
 export interface PrepareOpenScadFrontEndOptions {
   readonly languageProfile?: OpenScadLanguageProfile
   readonly compile?: (source: string) => readonly Statement[]
+  readonly now?: () => number
 }
 
 export interface PreparedOpenScadFrontEnd {
@@ -81,6 +82,8 @@ export interface PreparedOpenScadFrontEnd {
   readonly bound: BoundProgram
   readonly cacheHit: boolean
   readonly cacheKey: string
+  readonly compileMs: number
+  readonly bindMs: number
 }
 
 const BUILTIN_MODULES = new Set<string>(OPENSCAD_BUILTIN_MODULE_NAMES)
@@ -334,15 +337,21 @@ export function prepareOpenScadFrontEnd(
   const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
   const cacheKey = bindProgramCacheKey(source, languageProfile)
   const cached = frontEndCache.get(cacheKey)
-  if (cached) return { ...cached, cacheHit: true }
+  if (cached) return { ...cached, cacheHit: true, compileMs: 0, bindMs: 0 }
+  const now = options.now ?? (() => 0)
   const compile = options.compile ?? (text => compileOpenSCAD(text, { languageProfile }))
+  const compileStarted = now()
   const program = compile(source)
+  const compiledAt = now()
   const bound = bindOpenScad(program, { languageProfile, source })
+  const boundAt = now()
   const prepared: PreparedOpenScadFrontEnd = {
     program,
     bound,
     cacheHit: false,
     cacheKey,
+    compileMs: Math.max(0, compiledAt - compileStarted),
+    bindMs: Math.max(0, boundAt - compiledAt),
   }
   frontEndCache.set(cacheKey, prepared)
   if (frontEndCache.size > FRONT_END_CACHE_LIMIT) {

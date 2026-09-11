@@ -117,7 +117,7 @@ function identityResult(options: {
     surfaceArea: 0.5,
     quality: 'full' as const,
     reduced: false as const,
-    timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+    timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
   }
 }
 
@@ -207,7 +207,7 @@ describe('geometry Worker lifecycle', () => {
       error: {
         name: 'GeometryWorkerProtocolError',
         code: 'WORKER_RESULT_UNPUBLISHABLE',
-        message: 'Geometry result cannot be published under protocol v5',
+        message: 'Geometry result cannot be published under protocol v6',
       },
     }))
     const firstJobEvents = scope.events.filter(event => event.jobId === 1)
@@ -242,7 +242,7 @@ describe('geometry Worker lifecycle', () => {
       surfaceArea: number
       quality: 'full'
       reduced: false
-      timings: { parseMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
+      timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
     parseOpenSCADMock.mockReturnValue(new Promise(resolve => {
       finish = resolve
@@ -264,7 +264,7 @@ describe('geometry Worker lifecycle', () => {
     scope.dispatchMessage(request)
     finish({
       meshes: [], warnings: [], volume: 1, surfaceArea: 6, quality: 'full', reduced: false,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
 
     await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
@@ -276,7 +276,7 @@ describe('geometry Worker lifecycle', () => {
     parseOpenSCADMock.mockImplementation(async source => ({
       meshes: [], warnings: [], volume: source.length, surfaceArea: 0, quality: 'full' as const,
       reduced: false,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     }))
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -374,7 +374,7 @@ describe('geometry Worker lifecycle', () => {
       surfaceArea: number
       quality: 'full'
       reduced: false
-      timings: { parseMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
+      timings: { parseMs: number; bindMs: number; initializeMs: number; evaluateMs: number; analyzeMs: number }
     }) => void
     parseOpenSCADMock.mockReturnValue(new Promise(resolve => { finish = resolve }))
     const scope = new FakeWorkerScope()
@@ -403,7 +403,7 @@ describe('geometry Worker lifecycle', () => {
 
     finish({
       meshes: [], warnings: [], volume: 1, surfaceArea: 6, quality: 'full', reduced: false,
-      timings: { parseMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+      timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
     })
     await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({ jobId: 1, status: 'succeeded' }))
     expect(scope.events.some(event => event.jobId === 1 && event.status === 'stale')).toBe(false)
@@ -526,7 +526,7 @@ describe('geometry Worker lifecycle', () => {
         surfaceArea: 0,
         quality: 'full' as const,
         reduced: false,
-        timings: { parseMs: 1, initializeMs: 1, evaluateMs: 1, analyzeMs: 1 },
+        timings: { parseMs: 1, bindMs: 0, initializeMs: 1, evaluateMs: 1, analyzeMs: 1 },
       }
     })
 
@@ -620,7 +620,7 @@ describe('geometry Worker lifecycle', () => {
       surfaceArea: 6,
       quality: 'full',
       reduced: false,
-      timings: { parseMs: 1, initializeMs: 1, evaluateMs: 1, analyzeMs: 1 },
+      timings: { parseMs: 1, bindMs: 0, initializeMs: 1, evaluateMs: 1, analyzeMs: 1 },
     })
     const scope = new CloneFailingWorkerScope()
     vi.stubGlobal('self', scope)
