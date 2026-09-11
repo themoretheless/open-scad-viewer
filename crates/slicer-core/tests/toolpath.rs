@@ -1,12 +1,10 @@
-use polygon_core::{
-    solid::{
-        primitives as cad,
-        section::{MeshSection, MeshSectionIndex, SectionContour},
-    },
-    toolpath::{
-        deposited_volume_mm3, emit_gcode, parse_gcode_preview, plan_layer, schedule_layers,
-        PathRole, ToolpathSettings,
-    },
+use polygon_core::solid::{
+    primitives as cad,
+    section::{MeshSection, MeshSectionIndex, SectionContour},
+};
+use slicer_core::{
+    deposited_volume_mm3, emit_gcode, parse_gcode_preview, plan_layer, schedule_layers,
+    LayerSection, PathRole, Result, ToolpathSettings,
 };
 
 fn settings() -> ToolpathSettings {
@@ -19,11 +17,32 @@ fn settings() -> ToolpathSettings {
     }
 }
 
+fn layer_section(section: MeshSection) -> LayerSection {
+    LayerSection {
+        z_mm: section.z_mm,
+        contours: section
+            .contours
+            .into_iter()
+            .map(|contour| contour.points)
+            .collect(),
+    }
+}
+
+fn section_at(index: &MeshSectionIndex, z: f64) -> Result<LayerSection> {
+    index
+        .section(z)
+        .map(layer_section)
+        .map_err(|error| slicer_core::Error {
+            code: error.code,
+            message: error.message,
+        })
+}
+
 #[test]
 fn box_section_has_outline_and_hatch() {
     let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
-    let section = index.section(0.1).unwrap();
+    let section = section_at(&index, 0.1).unwrap();
     assert!(!section.contours.is_empty());
     let layer = plan_layer(&section, &settings()).unwrap();
     assert!(layer
@@ -44,7 +63,7 @@ fn box_section_has_outline_and_hatch() {
 fn annulus_keeps_a_hole_out_of_hatch() {
     let outer = vec![[0.0, 0.0], [20.0, 0.0], [20.0, 20.0], [0.0, 20.0]];
     let hole = vec![[8.0, 8.0], [8.0, 12.0], [12.0, 12.0], [12.0, 8.0]];
-    let section = MeshSection {
+    let section = layer_section(MeshSection {
         z_mm: 0.1,
         contours: vec![
             SectionContour {
@@ -57,7 +76,7 @@ fn annulus_keeps_a_hole_out_of_hatch() {
             },
         ],
         candidate_triangles: 2,
-    };
+    });
     let layer = plan_layer(&section, &settings()).unwrap();
     for path in layer.paths.iter().filter(|path| path.role == PathRole::Hatch) {
         let mid = [
@@ -76,7 +95,7 @@ fn gcode_is_one_encoding_of_the_plan() {
     let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     let settings = settings();
-    let layers = schedule_layers(&index, 0.0, 10.0, &settings).unwrap();
+    let layers = schedule_layers(|z| section_at(&index, z), 0.0, 10.0, &settings).unwrap();
     assert!(!layers.is_empty());
     let gcode = emit_gcode(&layers, &settings).unwrap();
     let preview = parse_gcode_preview(&gcode).unwrap();

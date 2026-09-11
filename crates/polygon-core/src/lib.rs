@@ -6,11 +6,11 @@
 //! - [`planar`] — 2D paths, rings, Pathfinder, edit
 //! - [`solid`] — triangle meshes
 //! - [`appearance`] — paint / style (not shape)
-//! - [`toolpath`] — layered toolpaths; G-code is one encoding
+//!
+//! Print planning lives in `slicer-core`; this crate only cuts mesh sections.
 pub mod appearance;
 pub mod planar;
 pub mod solid;
-pub mod toolpath;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 

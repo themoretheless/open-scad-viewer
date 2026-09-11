@@ -1,5 +1,5 @@
 [workspace]
-members = ["value-codec", "math-core", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "brep-topology", "nurbs-core", "polygon-core", "gcode-core", "openscad-core", "geometry-bridge", "geometry-wasm", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
+members = ["value-codec", "math-core", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "brep-topology", "nurbs-core", "polygon-core", "gcode-core", "slicer-core", "mechanics-core", "openscad-core", "geometry-bridge", "geometry-wasm", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
 resolver = "2"
 
 [profile.release]

@@ -1,4 +1,6 @@
-//! Indexed horizontal mesh sections for toolpath planning.
+//! Indexed horizontal mesh sections for CAD slice/project.
+//!
+//! Print walls/infill/G-code are `slicer-core`; this module only cuts contours.
 //!
 //! Coordinates are millimeters. The half-open rule is `min_z <= z < max_z`:
 //! vertices on the plane belong to the lower side and horizontal triangles do

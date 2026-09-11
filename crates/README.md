@@ -5,6 +5,8 @@
 | `nurbs-core` | Rational control data, curve/surface evaluation and editing, surface constructors | polygon-core, WASM, Manifold, the application |
 | `polygon-core` | Vertex/index buffers, UV polygon clipping and meshing, mesh topology, transforms, boundary loops, thickening, STL | nurbs-core, WASM, Manifold, the application |
 | `gcode-core` | Completed print-plan serialization and independent preview parse | polygon-core, NURBS, WASM, Manifold, the application |
+| `slicer-core` | Layer walls, infill and G-code from already-cut contours | CAD handles, NURBS, WASM, the application |
+| `mechanics-core` | Section properties, beam stress estimates and weak-layer ranking | CAD handles, slicer, NURBS, WASM, the application |
 
 `geometry-bridge` is integration/transport code. It implements the polygon library's `ParametricSurface` trait for a validated NURBS snapshot and transfers boundary vertices into the NURBS polyline constructor. Both domain libraries can be used directly as normal native Rust dependencies; the application links both through one generated WASM module. Its compressed bytes are shared by the UI and Worker chunks and expanded synchronously with the repository-owned bounded DEFLATE decoder. The two libraries do not call each other or maintain shared mutable state.
 

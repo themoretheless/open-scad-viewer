@@ -1,0 +1,9 @@
+[package]
+name = "slicer-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+gcode-core = { path = "../gcode-core" }
+polygon-core = { path = "../polygon-core" }

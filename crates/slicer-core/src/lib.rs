@@ -1,13 +1,47 @@
-//! Layered toolpaths from a mesh section. Not a print process.
+//! Layered toolpaths from already-cut contours. Not a CAD kernel and not a
+//! print process.
 //!
-//! G-code is one serialization (`gcode-core`). The same plan can feed CNC,
-//! laser, or FDM later. This module only offsets contours and hatches.
+//! The host (CAD) sections a mesh and passes rings. This crate offsets walls,
+//! hatches infill, and can encode the plan through `gcode-core`. Coordinates
+//! are millimeters.
 
-use crate::planar::rings::{self as rings, Rings};
-use crate::solid::section::{MeshSection, MeshSectionIndex};
-use crate::{Error, Result};
+use polygon_core::planar::rings::{self as rings, Rings};
 
 pub use gcode_core::{GcodeMove, GcodePreview};
+
+pub const MAX_LAYERS: usize = 2_048;
+
+#[derive(Debug, Clone)]
+pub struct Error {
+    pub code: &'static str,
+    pub message: String,
+}
+
+impl Error {
+    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for Error {}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// One horizontal slice: closed rings in millimeters. Not a CAD handle.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LayerSection {
+    pub z_mm: f64,
+    pub contours: Vec<Vec<[f64; 2]>>,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathRole {
@@ -56,10 +90,7 @@ impl Default for ToolpathSettings {
 }
 
 fn invalid(code: &'static str, message: &str) -> Error {
-    Error {
-        code,
-        message: message.into(),
-    }
+    Error::new(code, message)
 }
 
 fn require_settings(settings: &ToolpathSettings) -> Result<()> {
@@ -76,17 +107,23 @@ fn require_settings(settings: &ToolpathSettings) -> Result<()> {
         || settings.wall_count == 0
         || settings.wall_count > 8
     {
-        return Err(invalid("TOOLPATH_INVALID_SETTINGS", "Toolpath settings are out of range"));
+        return Err(invalid(
+            "TOOLPATH_INVALID_SETTINGS",
+            "Toolpath settings are out of range",
+        ));
     }
     Ok(())
 }
 
-fn rings_of(section: &MeshSection) -> Rings {
-    section.contours.iter().map(|contour| contour.points.clone()).collect()
+fn rings_of(section: &LayerSection) -> Rings {
+    section.contours.clone()
 }
 
-fn offset_rings(rings: &Rings, distance: f64) -> Result<Rings> {
-    rings::offset(rings, distance, false, 8)
+fn offset_rings(source: &Rings, distance: f64) -> Result<Rings> {
+    rings::offset(source, distance, false, 8).map_err(|error| Error {
+        code: error.code,
+        message: error.message,
+    })
 }
 
 fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) -> Toolpath {
@@ -101,9 +138,9 @@ fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
 
-fn winding(point: [f64; 2], rings: &Rings) -> i32 {
+fn winding(point: [f64; 2], source: &Rings) -> i32 {
     let mut winding = 0;
-    for ring in rings {
+    for ring in source {
         for i in 0..ring.len() {
             let a = ring[i];
             let b = ring[(i + 1) % ring.len()];
@@ -119,10 +156,10 @@ fn winding(point: [f64; 2], rings: &Rings) -> i32 {
     winding
 }
 
-fn hatch(rings: &Rings, spacing: f64) -> Vec<Toolpath> {
+fn hatch(source: &Rings, spacing: f64) -> Vec<Toolpath> {
     let mut xs = Vec::new();
     let mut ys = Vec::new();
-    for ring in rings {
+    for ring in source {
         for point in ring {
             xs.push(point[0]);
             ys.push(point[1]);
@@ -132,7 +169,6 @@ fn hatch(rings: &Rings, spacing: f64) -> Vec<Toolpath> {
         return Vec::new();
     }
     let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
-    let _max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
     let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     if !min_x.is_finite() || max_y - min_y < spacing * 0.25 {
@@ -143,7 +179,7 @@ fn hatch(rings: &Rings, spacing: f64) -> Vec<Toolpath> {
     let mut reverse = false;
     while y <= max_y - spacing * 0.25 {
         let mut hits = Vec::new();
-        for ring in rings {
+        for ring in source {
             for i in 0..ring.len() {
                 let a = ring[i];
                 let b = ring[(i + 1) % ring.len()];
@@ -165,7 +201,7 @@ fn hatch(rings: &Rings, spacing: f64) -> Vec<Toolpath> {
                 std::mem::swap(&mut x0, &mut x1);
             }
             let mid = [(x0 + x1) * 0.5, y];
-            if winding(mid, rings) != 0 {
+            if winding(mid, source) != 0 {
                 paths.push(Toolpath {
                     role: PathRole::Hatch,
                     points: vec![[x0, y], [x1, y]],
@@ -180,28 +216,34 @@ fn hatch(rings: &Rings, spacing: f64) -> Vec<Toolpath> {
     paths
 }
 
-/// Offset contours and hatch one already-computed mesh section.
-pub fn plan_layer(section: &MeshSection, settings: &ToolpathSettings) -> Result<ToolpathLayer> {
+/// Offset contours and hatch one already-computed layer section.
+pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result<ToolpathLayer> {
     require_settings(settings)?;
     if !section.z_mm.is_finite() {
-        return Err(invalid("TOOLPATH_INVALID_HEIGHT", "Layer height must be finite"));
+        return Err(invalid(
+            "TOOLPATH_INVALID_HEIGHT",
+            "Layer height must be finite",
+        ));
     }
     let mut paths = Vec::new();
     for wall in 0..settings.wall_count {
         let inset = -(wall as f64 + 0.5) * settings.line_width_mm;
-        let rings = offset_rings(&rings_of(section), inset)?;
+        let offset = offset_rings(&rings_of(section), inset)?;
         let role = if wall == 0 {
             PathRole::Outline
         } else {
             PathRole::Inset
         };
-        for ring in &rings {
+        for ring in &offset {
             if ring.len() >= 3 {
                 paths.push(path_from_ring(role, ring, true));
             }
         }
     }
-    let remaining = offset_rings(&rings_of(section), -(settings.wall_count as f64) * settings.line_width_mm)?;
+    let remaining = offset_rings(
+        &rings_of(section),
+        -(settings.wall_count as f64) * settings.line_width_mm,
+    )?;
     paths.extend(hatch(&remaining, settings.infill_spacing_mm));
     Ok(ToolpathLayer {
         z_mm: section.z_mm,
@@ -209,26 +251,36 @@ pub fn plan_layer(section: &MeshSection, settings: &ToolpathSettings) -> Result<
     })
 }
 
-pub fn schedule_layers(
-    index: &MeshSectionIndex,
+/// Walk a height range. `section_at` comes from the host (CAD mesh section).
+pub fn schedule_layers<F>(
+    mut section_at: F,
     z_min: f64,
     z_max: f64,
     settings: &ToolpathSettings,
-) -> Result<Vec<ToolpathLayer>> {
+) -> Result<Vec<ToolpathLayer>>
+where
+    F: FnMut(f64) -> Result<LayerSection>,
+{
     require_settings(settings)?;
     if !z_min.is_finite() || !z_max.is_finite() || z_max <= z_min {
-        return Err(invalid("TOOLPATH_INVALID_RANGE", "Layer range must be finite and increasing"));
+        return Err(invalid(
+            "TOOLPATH_INVALID_RANGE",
+            "Layer range must be finite and increasing",
+        ));
     }
     let mut layers = Vec::new();
     let mut z = z_min;
     while z < z_max {
-        let section = index.section(z)?;
+        let section = section_at(z)?;
         if !section.contours.is_empty() {
             layers.push(plan_layer(&section, settings)?);
         }
         z += settings.layer_height_mm;
-        if layers.len() > 2_048 {
-            return Err(invalid("TOOLPATH_LAYER_LIMIT", "Toolpath plan exceeded 2048 layers"));
+        if layers.len() > MAX_LAYERS {
+            return Err(invalid(
+                "TOOLPATH_LAYER_LIMIT",
+                "Toolpath plan exceeded 2048 layers",
+            ));
         }
     }
     Ok(layers)
