@@ -12,8 +12,9 @@
 //! arrangement or printable regions. Intersections, shell containment and
 //! material classification still require a subsequent validation stage.
 
-use crate::{Error, Mesh, Result};
-use std::collections::{BTreeMap, BTreeSet};
+use crate::planar::rings::{area, planar, Rings};
+use crate::{check, cross, sub, Error, Mesh, Result};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 #[derive(Debug, Clone)]
 pub struct SectionContour {
@@ -265,4 +266,89 @@ impl MeshSectionIndex {
             candidate_triangles: candidates.len(),
         })
     }
+}
+
+pub fn project(mesh: &Mesh) -> Result<Rings> {
+    let mut triangles = Vec::new();
+    for t in mesh.indices.chunks_exact(3) {
+        let mut r: Vec<_> = t
+            .iter()
+            .map(|&i| {
+                let p = mesh.point(i).unwrap();
+                [p[0], p[1]]
+            })
+            .collect();
+        if area(&r).abs() < 1e-12 {
+            continue;
+        }
+        if area(&r) < 0. {
+            r.reverse()
+        }
+        triangles.push(r)
+    }
+    planar(&triangles, &vec![], "union")
+}
+
+pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
+    check(z.is_finite(), "Invalid slice height")?;
+    let eps = 1e-8;
+    let mut points = Vec::new();
+    let mut ids = HashMap::new();
+    let mut edges = BTreeSet::new();
+    for t in mesh.indices.chunks_exact(3) {
+        let p = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
+        let n = cross(sub(p[1], p[0]), sub(p[2], p[0]));
+        let mut hits = Vec::new();
+        for i in 0..3 {
+            let a = p[i];
+            let b = p[(i + 1) % 3];
+            if (a[2] > z) != (b[2] > z) {
+                let f = (z - a[2]) / (b[2] - a[2]);
+                let h = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+                if hits
+                    .iter()
+                    .all(|v: &[f64; 2]| (v[0] - h[0]).hypot(v[1] - h[1]) > eps)
+                {
+                    hits.push(h)
+                }
+            }
+        }
+        if hits.len() != 2 {
+            continue;
+        }
+        if (hits[1][0] - hits[0][0]) * (-n[1]) + (hits[1][1] - hits[0][1]) * n[0] < 0. {
+            hits.swap(0, 1)
+        }
+        let mut index = |p: [f64; 2]| {
+            *ids.entry(((p[0] / eps).round() as i64, (p[1] / eps).round() as i64))
+                .or_insert_with(|| {
+                    points.push(p);
+                    points.len() - 1
+                })
+        };
+        let a = index(hits[0]);
+        let b = index(hits[1]);
+        if a != b {
+            edges.insert((a, b));
+        }
+    }
+    let mut rings = vec![];
+    while let Some(&(start, end)) = edges.iter().next() {
+        edges.remove(&(start, end));
+        let mut ring = vec![points[start]];
+        let mut at = end;
+        while at != start {
+            ring.push(points[at]);
+            check(ring.len() <= mesh.indices.len(), "Slice boundary budget")?;
+            let next = edges.iter().find(|e| e.0 == at).copied();
+            check(next.is_some(), "Open or ambiguous slice boundary")?;
+            let edge = next.unwrap();
+            edges.remove(&edge);
+            at = edge.1;
+        }
+        if ring.len() >= 3 {
+            rings.push(ring)
+        }
+    }
+    planar(&rings, &vec![], "union")
 }

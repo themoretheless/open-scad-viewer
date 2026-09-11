@@ -1,4 +1,4 @@
-//! Mesh primitives: cube / cylinder / sphere, join, hull, extrude, slice.
+//! Mesh primitives: cube / cylinder / sphere, join, hull, clean.
 //! Closed-ring boolean lives in `crate::planar::rings`.
 use crate::planar::rings::{area, cross2, inside, planar, sub2, Rings};
 use crate::{check, cross, norm, sub, Mesh, Result};
@@ -25,110 +25,32 @@ pub fn join(meshes: &[Mesh]) -> Result<Mesh> {
     out.validate()?;
     Ok(out)
 }
-pub fn extrude(
-    rings: &Rings,
-    height: f64,
-    slices: usize,
-    twist: f64,
-    scale: [f64; 2],
-    center: bool,
-) -> Result<Mesh> {
-    check(
-        height.is_finite() && height > 0. && slices <= 513,
-        "Invalid extrusion",
-    )?;
-    check(
-        rings
-            .iter()
-            .map(Vec::len)
-            .sum::<usize>()
-            .saturating_mul(if twist != 0. || scale != [1., 1.] {
-                slices.max(1)
-            } else {
-                1
-            })
-            .saturating_mul(2)
-            <= 20000,
-        "Extrusion triangle budget exceeded",
-    )?;
-    let mut pieces = Vec::new();
-    for outer in rings.iter().filter(|r| area(r) > 0.) {
-        let holes = rings
-            .iter()
-            .filter(|h| area(h) < 0. && inside(h[0], &vec![outer.clone()]))
-            .cloned()
-            .collect();
-        let profile = crate::solid::modeling::Profile {
-            outer: outer.clone(),
-            holes,
-        };
-        let mut m = triangulate(&profile)?.thicken([0., 0., height])?.mesh;
-        if twist != 0. || scale != [1., 1.] {
-            // Subdivide every vertical side consistently, retaining triangulated caps.
-            let base = triangulate(&profile)?;
-            let n = base.positions.len() / 3;
-            let steps = slices.max(1);
-            m = empty();
-            for row in 0..=steps {
-                let f = row as f64 / steps as f64;
-                let a = (-twist * f).to_radians();
-                for p in base.positions.chunks_exact(3) {
-                    let x = p[0] * (1. + (scale[0] - 1.) * f);
-                    let y = p[1] * (1. + (scale[1] - 1.) * f);
-                    m.positions.extend([
-                        x * a.cos() - y * a.sin(),
-                        x * a.sin() + y * a.cos(),
-                        height * f,
-                    ]);
-                }
-            }
-            for t in base.indices.chunks_exact(3) {
-                m.indices.extend([
-                    t[2],
-                    t[1],
-                    t[0],
-                    t[0] + steps * n,
-                    t[1] + steps * n,
-                    t[2] + steps * n,
-                ]);
-            }
-            for ring in base.boundary_loops()? {
-                for row in 0..steps {
-                    for i in 0..ring.len() - 1 {
-                        let a = ring[i] + row * n;
-                        let b = ring[i + 1] + row * n;
-                        m.indices.extend([a, b, b + n, a, b + n, a + n]);
-                    }
-                }
-            }
-        }
-        if center {
-            for p in m.positions.chunks_exact_mut(3) {
-                p[2] -= height / 2.
-            }
-        }
-        pieces.push(m);
-    }
-    join(&pieces)
-}
 pub fn cube(size: [f64; 3], center: bool) -> Result<Mesh> {
     if size.contains(&0.) {
         return Ok(empty());
     }
-    let r = vec![vec![
-        [0., 0.],
-        [size[0], 0.],
-        [size[0], size[1]],
-        [0., size[1]],
-    ]];
-    let mut m = extrude(&r, size[2], 1, 0., [1., 1.], false)?;
-    if center {
-        for p in m.positions.chunks_exact_mut(3) {
-            for k in 0..3 {
-                p[k] -= size[k] / 2.
-            }
-        }
-    }
+    let (x, y, z) = (size[0], size[1], size[2]);
+    let o = if center {
+        [-x / 2., -y / 2., -z / 2.]
+    } else {
+        [0., 0., 0.]
+    };
+    let p = [
+        [o[0], o[1], o[2]],
+        [o[0] + x, o[1], o[2]],
+        [o[0] + x, o[1] + y, o[2]],
+        [o[0], o[1] + y, o[2]],
+        [o[0], o[1], o[2] + z],
+        [o[0] + x, o[1], o[2] + z],
+        [o[0] + x, o[1] + y, o[2] + z],
+        [o[0], o[1] + y, o[2] + z],
+    ];
+    let mut m = empty();
+    m.positions = p.into_iter().flatten().collect();
+    m.indices = vec![
+        0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6,
+        3, 0, 4, 3, 4, 7,
+    ];
     Ok(m)
 }
 pub fn cylinder(height: f64, r1: f64, r2: f64, n: usize, center: bool) -> Result<Mesh> {
@@ -280,89 +202,6 @@ pub fn hull3(meshes: &[Mesh]) -> Result<Mesh> {
     })
 }
 
-pub fn project(mesh: &Mesh) -> Result<Rings> {
-    let mut triangles = Vec::new();
-    for t in mesh.indices.chunks_exact(3) {
-        let mut r: Vec<_> = t
-            .iter()
-            .map(|&i| {
-                let p = mesh.point(i).unwrap();
-                [p[0], p[1]]
-            })
-            .collect();
-        if area(&r).abs() < 1e-12 {
-            continue;
-        }
-        if area(&r) < 0. {
-            r.reverse()
-        }
-        triangles.push(r)
-    }
-    planar(&triangles, &vec![], "union")
-}
-pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
-    check(z.is_finite(), "Invalid slice height")?;
-    let eps = 1e-8;
-    let mut points = Vec::new();
-    let mut ids = HashMap::new();
-    let mut edges = BTreeSet::new();
-    for t in mesh.indices.chunks_exact(3) {
-        let p = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
-        let n = cross(sub(p[1], p[0]), sub(p[2], p[0]));
-        let mut hits = Vec::new();
-        for i in 0..3 {
-            let a = p[i];
-            let b = p[(i + 1) % 3];
-            if (a[2] > z) != (b[2] > z) {
-                let f = (z - a[2]) / (b[2] - a[2]);
-                let h = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
-                if hits
-                    .iter()
-                    .all(|v: &[f64; 2]| (v[0] - h[0]).hypot(v[1] - h[1]) > eps)
-                {
-                    hits.push(h)
-                }
-            }
-        }
-        if hits.len() != 2 {
-            continue;
-        }
-        if (hits[1][0] - hits[0][0]) * (-n[1]) + (hits[1][1] - hits[0][1]) * n[0] < 0. {
-            hits.swap(0, 1)
-        }
-        let mut index = |p: [f64; 2]| {
-            *ids.entry(((p[0] / eps).round() as i64, (p[1] / eps).round() as i64))
-                .or_insert_with(|| {
-                    points.push(p);
-                    points.len() - 1
-                })
-        };
-        let a = index(hits[0]);
-        let b = index(hits[1]);
-        if a != b {
-            edges.insert((a, b));
-        }
-    }
-    let mut rings = vec![];
-    while let Some(&(start, end)) = edges.iter().next() {
-        edges.remove(&(start, end));
-        let mut ring = vec![points[start]];
-        let mut at = end;
-        while at != start {
-            ring.push(points[at]);
-            check(ring.len() <= mesh.indices.len(), "Slice boundary budget")?;
-            let next = edges.iter().find(|e| e.0 == at).copied();
-            check(next.is_some(), "Open or ambiguous slice boundary")?;
-            let edge = next.unwrap();
-            edges.remove(&edge);
-            at = edge.1;
-        }
-        if ring.len() >= 3 {
-            rings.push(ring)
-        }
-    }
-    planar(&rings, &vec![], "union")
-}
 pub fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
     fn vertices(m: &Mesh) -> Vec<[f64; 3]> {
         let ids: BTreeSet<_> = m.indices.iter().copied().collect();
@@ -734,10 +573,10 @@ pub fn prism_boolean(a: &Mesh, b: &Mesh, operation: &str) -> Result<Option<Mesh>
     if (lo - other_lo).abs() > 1e-9 || (hi - other_hi).abs() > 1e-9 {
         return Ok(None);
     }
-    let pa = slice(a, (lo + hi) / 2.)?;
-    let pb = slice(b, (lo + hi) / 2.)?;
+    let pa = crate::solid::section::slice(a, (lo + hi) / 2.)?;
+    let pb = crate::solid::section::slice(b, (lo + hi) / 2.)?;
     let p = planar(&pa, &pb, operation)?;
-    let mut result = extrude(&p, hi - lo, 1, 0., [1., 1.], false)?;
+    let mut result = crate::solid::modeling::extrude_rings(&p, hi - lo, 1, 0., [1., 1.], false)?;
     for v in result.positions.chunks_exact_mut(3) {
         v[2] += lo
     }
@@ -859,4 +698,3 @@ mod tests {
         assert!((r.signed_volume_mm3 - 24.).abs() < 1e-8)
     }
 }
-

@@ -1,7 +1,7 @@
 use polygon_core::{
     planar::rings as cad,
     solid::{
-        primitives as mesh,
+        modeling, primitives as mesh,
         section::{MeshSection, MeshSectionIndex},
     },
     Mesh,
@@ -73,7 +73,7 @@ fn hollow_extrusion_preserves_hole_winding() {
     let outer = vec![vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]]];
     let hole = vec![vec![[1., 1.], [3., 1.], [3., 3.], [1., 3.]]];
     let rings = cad::planar(&outer, &hole, "difference").unwrap();
-    let mesh = mesh::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
+    let mesh = modeling::extrude_rings(&rings, 2., 1, 0., [1., 1.], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     for z in [0., 0.5, 1., 1.999] {
         let section = index.section(z).unwrap();
@@ -189,7 +189,10 @@ fn duplicate_and_touching_boundaries_are_explicitly_ambiguous() {
 
 #[test]
 fn large_translation_does_not_saturate_coordinate_quantization() {
-    let mesh = shifted(mesh::cube([2., 3., 4.], false).unwrap(), [1e12, -1e12, 1e12]);
+    let mesh = shifted(
+        mesh::cube([2., 3., 4.], false).unwrap(),
+        [1e12, -1e12, 1e12],
+    );
     let section = MeshSectionIndex::new(&mesh)
         .unwrap()
         .section(1e12 + 2.)
@@ -234,7 +237,7 @@ fn island_inside_a_hole_remains_a_separate_oriented_contour() {
     let outer = vec![vec![[0., 0.], [6., 0.], [6., 6.], [0., 6.]]];
     let hole = vec![vec![[1., 1.], [5., 1.], [5., 5.], [1., 5.]]];
     let rings = cad::planar(&outer, &hole, "difference").unwrap();
-    let shell = mesh::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
+    let shell = modeling::extrude_rings(&rings, 2., 1, 0., [1., 1.], false).unwrap();
     let island = shifted(mesh::cube([2., 2., 2.], false).unwrap(), [2., 2., 0.]);
     let section = MeshSectionIndex::new(&join(&[shell, island]))
         .unwrap()

@@ -1,4 +1,5 @@
 //! Native polygon construction. No spline or external CAD backend is used.
+use crate::planar::rings::{area, inside, Rings};
 use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
 use crate::{check, cross, norm, sub, BuiltMesh, Mesh, Result};
 pub type Point = [f64; 3];
@@ -378,6 +379,97 @@ pub fn revolve(
         .collect();
     finish(mesh, full || caps)
 }
+
+/// Linear extrude of closed rings (OpenSCAD-style height / twist / scale).
+pub fn extrude_rings(
+    rings: &Rings,
+    height: f64,
+    slices: usize,
+    twist: f64,
+    scale: [f64; 2],
+    center: bool,
+) -> Result<Mesh> {
+    check(
+        height.is_finite() && height > 0. && slices <= 513,
+        "Invalid extrusion",
+    )?;
+    check(
+        rings
+            .iter()
+            .map(Vec::len)
+            .sum::<usize>()
+            .saturating_mul(if twist != 0. || scale != [1., 1.] {
+                slices.max(1)
+            } else {
+                1
+            })
+            .saturating_mul(2)
+            <= 20000,
+        "Extrusion triangle budget exceeded",
+    )?;
+    let mut pieces = Vec::new();
+    for outer in rings.iter().filter(|r| area(r) > 0.) {
+        let holes = rings
+            .iter()
+            .filter(|h| area(h) < 0. && inside(h[0], &vec![outer.clone()]))
+            .cloned()
+            .collect();
+        let profile = Profile {
+            outer: outer.clone(),
+            holes,
+        };
+        let mut m = crate::solid::primitives::triangulate(&profile)?
+            .thicken([0., 0., height])?
+            .mesh;
+        if twist != 0. || scale != [1., 1.] {
+            // Subdivide every vertical side consistently, retaining triangulated caps.
+            let base = crate::solid::primitives::triangulate(&profile)?;
+            let n = base.positions.len() / 3;
+            let steps = slices.max(1);
+            m = crate::solid::primitives::empty();
+            for row in 0..=steps {
+                let f = row as f64 / steps as f64;
+                let a = (-twist * f).to_radians();
+                for p in base.positions.chunks_exact(3) {
+                    let x = p[0] * (1. + (scale[0] - 1.) * f);
+                    let y = p[1] * (1. + (scale[1] - 1.) * f);
+                    m.positions.extend([
+                        x * a.cos() - y * a.sin(),
+                        x * a.sin() + y * a.cos(),
+                        height * f,
+                    ]);
+                }
+            }
+            for t in base.indices.chunks_exact(3) {
+                m.indices.extend([
+                    t[2],
+                    t[1],
+                    t[0],
+                    t[0] + steps * n,
+                    t[1] + steps * n,
+                    t[2] + steps * n,
+                ]);
+            }
+            for ring in base.boundary_loops()? {
+                for row in 0..steps {
+                    for i in 0..ring.len() - 1 {
+                        let a = ring[i] + row * n;
+                        let b = ring[i + 1] + row * n;
+                        m.indices.extend([a, b, b + n, a, b + n, a + n]);
+                    }
+                }
+            }
+        }
+        if center {
+            for p in m.positions.chunks_exact_mut(3) {
+                p[2] -= height / 2.
+            }
+        }
+        pieces.push(m);
+    }
+    crate::solid::primitives::join(&pieces)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

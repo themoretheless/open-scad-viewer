@@ -1,7 +1,7 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
 use polygon_core::planar::rings::{self as planar, Rings};
-use polygon_core::solid::{boolean, modeling, primitives as solid};
+use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use polygon_core::Mesh;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{json, Value};
@@ -339,7 +339,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             v["join"].as_str().unwrap_or("Round"),
             field(&v, "segments")?,
         )?)),
-        "extrude" => put(Shape::Solid(solid::extrude(
+        "extrude" => put(Shape::Solid(modeling::extrude_rings(
             profile(&shape)?,
             field(&v, "height")?,
             field(&v, "slices")?,
@@ -355,13 +355,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 if planar::area(&ring) < 0. {
                     ring.reverse()
                 }
-                let part = modeling::revolve(
-                    &ring,
-                    field(&v, "angle")?,
-                    field(&v, "segments")?,
-                    true,
-                )?
-                .mesh;
+                let part =
+                    modeling::revolve(&ring, field(&v, "angle")?, field(&v, "segments")?, true)?
+                        .mesh;
                 m = boolean(
                     &m,
                     &part,
@@ -374,8 +370,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
             put(Shape::Solid(m))
         }
-        "project" => put(Shape::Profile(solid::project(solid(&shape)?)?)),
-        "slice" => put(Shape::Profile(solid::slice(
+        "project" => put(Shape::Profile(section::project(solid(&shape)?)?)),
+        "slice" => put(Shape::Profile(section::slice(
             solid(&shape)?,
             field(&v, "height")?,
         )?)),
