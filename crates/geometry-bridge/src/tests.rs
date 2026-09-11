@@ -104,7 +104,7 @@ fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
             6
         );
         let polygon =
-            polygon_core::brep::from_mesh(&mesh.built.mesh, Some(&mesh.face_ids)).unwrap();
+            polygon_core::solid::brep::from_mesh(&mesh.built.mesh, Some(&mesh.face_ids)).unwrap();
         assert_eq!(polygon.faces.len(), 6);
         assert_eq!(polygon.bodies.len(), 1);
         let back = crate::brep::polygons(&polygon).unwrap();

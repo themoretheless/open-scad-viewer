@@ -23,6 +23,28 @@ describe('SceneController', () => {
     expect(listener).toHaveBeenCalledTimes(3)
   })
 
+  it('owns hover, measurement and section on the same snapshot', () => {
+    const controller = new SceneController<{ meshIndex: number }>()
+    controller.publish({
+      meshes: [mesh('a'), mesh('b')],
+      visibility: [true, true],
+      selectedIndex: 0,
+      isolated: false,
+    })
+    controller.applyRendererHover({ meshIndex: 1 })
+    controller.setMeasurement({ points: [[0, 0, 0], [1, 0, 0]], distance: 1 }, true)
+    controller.setSection({ enabled: true, axis: 'x', offset: 4, initialized: true })
+    expect(controller.state).toMatchObject({
+      hoveredHit: { meshIndex: 1 },
+      measureActive: true,
+      section: { enabled: true, axis: 'x', offset: 4 },
+    })
+    controller.setVisibility(1, false)
+    expect(controller.state.hoveredHit).toBeNull()
+    expect(controller.state.section.enabled).toBe(true)
+    expect(controller.state.measurement?.distance).toBe(1)
+  })
+
   it('normalizes malformed recovery state and ignores invalid visibility targets', () => {
     const controller = new SceneController()
     controller.publish({ meshes: [mesh('a')], visibility: [], selectedIndex: 8, isolated: true })

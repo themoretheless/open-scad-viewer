@@ -42,7 +42,7 @@ pub fn brush(mesh: &Mesh, brush: &geometry_ops::Brush) -> Result<BuiltMesh> {
 /// Extrudes selected triangles together, retaining neighboring faces and adding
 /// walls around every boundary loop. Selecting the entire closed mesh is rejected.
 pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Result<BuiltMesh> {
-    let mesh = crate::proximity::valid_source(mesh, 10_000)?;
+    let mesh = crate::solid::proximity::valid_source(mesh, 10_000)?;
     let source = mesh.inspect()?;
     if source.non_manifold_edges > 0 || source.orientation_conflicts > 0 {
         return Err(Error::new(
@@ -98,7 +98,7 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
         let d = remap[&a];
         indices.extend([a, b, c, a, c, d]);
     }
-    let result = finish(crate::proximity::weld_exact(&Mesh {
+    let result = finish(crate::solid::proximity::weld_exact(&Mesh {
         positions,
         indices,
         uv: None,

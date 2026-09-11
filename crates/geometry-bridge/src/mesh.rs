@@ -1,12 +1,14 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
-use polygon_core::{cad, Mesh};
+use polygon_core::planar::rings::{self as planar, Rings};
+use polygon_core::solid::{boolean, cad as solid, modeling};
+use polygon_core::Mesh;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{json, Value};
 #[derive(Clone)]
 enum Shape {
     Solid(Mesh),
-    Profile(cad::Rings),
+    Profile(Rings),
 }
 #[derive(Default)]
 struct Store {
@@ -44,7 +46,7 @@ fn solid(s: &Shape) -> Result<&Mesh> {
         _ => Err(input("Expected solid")),
     }
 }
-fn profile(s: &Shape) -> Result<&cad::Rings> {
+fn profile(s: &Shape) -> Result<&Rings> {
     match s {
         Shape::Profile(r) => Ok(r),
         _ => Err(input("Expected profile")),
@@ -52,20 +54,20 @@ fn profile(s: &Shape) -> Result<&cad::Rings> {
 }
 fn boolean(a: &Mesh, b: &Mesh, op: &str) -> Result<Mesh> {
     if op == "union" {
-        if let Some(m) = cad::join_touching(a, b)? {
+        if let Some(m) = solid::join_touching(a, b)? {
             return Ok(m);
         }
     }
-    if let Some(m) = cad::prism_boolean(a, b, op)? {
+    if let Some(m) = solid::prism_boolean(a, b, op)? {
         return Ok(m);
     }
-    Ok(polygon_core::boolean::boolean(
+    Ok(boolean::boolean(
         a,
         b,
         match op {
-            "difference" => polygon_core::boolean::Operation::Difference,
-            "intersection" => polygon_core::boolean::Operation::Intersection,
-            _ => polygon_core::boolean::Operation::Union,
+            "difference" => boolean::Operation::Difference,
+            "intersection" => boolean::Operation::Intersection,
+            _ => boolean::Operation::Union,
         },
         &Default::default(),
     )?
@@ -84,19 +86,19 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return Ok(Value::Null);
     }
     if action == "cube" {
-        return put(Shape::Solid(cad::cube(
+        return put(Shape::Solid(solid::cube(
             field(&v, "size")?,
             field(&v, "center")?,
         )?));
     }
     if action == "sphere" {
-        return put(Shape::Solid(cad::sphere(
+        return put(Shape::Solid(solid::sphere(
             field(&v, "radius")?,
             field(&v, "segments")?,
         )?));
     }
     if action == "cylinder" {
-        return put(Shape::Solid(cad::cylinder(
+        return put(Shape::Solid(solid::cylinder(
             field(&v, "height")?,
             field(&v, "bottom")?,
             field(&v, "top")?,
@@ -105,10 +107,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?));
     }
     if action == "mesh" {
-        return put(Shape::Solid(cad::clean(field(&v, "mesh")?)?));
+        return put(Shape::Solid(solid::clean(field(&v, "mesh")?)?));
     }
     if action == "profile" {
-        let mut rings: cad::Rings = field(&v, "rings")?;
+        let mut rings: Rings = field(&v, "rings")?;
         rings.retain(|r| r.len() >= 3);
         if v["fill"] == "EvenOdd" {
             let copy = rings.clone();
@@ -133,15 +135,15 @@ pub fn dispatch(v: Value) -> Result<Value> {
                         depth += 1
                     }
                 }
-                if (cad::area(r) > 0.) != (depth % 2 == 0) {
+                if (planar::area(r) > 0.) != (depth % 2 == 0) {
                     r.reverse()
                 }
             }
         }
         return put(Shape::Profile(if v["fill"] == "NonZero" {
-            cad::nonzero(&rings)?
+            planar::nonzero(&rings)?
         } else {
-            cad::planar(&rings, &vec![], "union")?
+            planar::planar(&rings, &vec![], "union")?
         }));
     }
     if action == "combine" || action == "hull" {
@@ -161,17 +163,23 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     .flatten()
                     .copied()
                     .collect();
-                let r = cad::hull2(points);
+                let r = planar::hull2(points);
                 if r.len() >= 3 {
                     rings.push(r)
                 }
             } else {
+                let planar_op = match op {
+                    "xor" | "exclude" => "xor",
+                    "intersection" => "intersection",
+                    "difference" | "subtract" => "difference",
+                    _ => "union",
+                };
                 for (i, s) in shapes.iter().enumerate() {
                     let r = profile(s)?;
                     rings = if i == 0 {
                         r.clone()
                     } else {
-                        cad::planar(&rings, r, op)?
+                        planar::planar(&rings, r, planar_op)?
                     };
                 }
             }
@@ -182,11 +190,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             .map(|s| solid(s).cloned())
             .collect::<Result<Vec<_>>>()?;
         let m = if action == "hull" {
-            cad::hull3(&meshes)?
+            solid::hull3(&meshes)?
         } else if op == "compose" {
-            cad::join(&meshes)?
+            solid::join(&meshes)?
         } else {
-            let mut m = cad::empty();
+            let mut m = solid::empty();
             for (i, b) in meshes.iter().enumerate() {
                 m = if i == 0 {
                     b.clone()
@@ -198,12 +206,73 @@ pub fn dispatch(v: Value) -> Result<Value> {
         };
         return put(Shape::Solid(m));
     }
+    if matches!(
+        action,
+        "divide"
+            | "crop"
+            | "trim"
+            | "minus_front"
+            | "minus_back"
+            | "shape_builder_extract"
+            | "shape_builder_delete"
+            | "make_compound"
+    ) {
+        let ids: Vec<u32> = field(&v, "ids")?;
+        let shapes: Vec<_> = ids.into_iter().map(get).collect::<Result<_>>()?;
+        let rings: Vec<Rings> = shapes
+            .iter()
+            .map(|s| profile(s).cloned())
+            .collect::<Result<_>>()?;
+        use polygon_core::planar::pathfinder;
+        return match action {
+            "divide" => put(Shape::Profile(pathfinder::divide(&rings)?)),
+            "crop" => {
+                let pieces = pathfinder::crop_to_front(&rings)?;
+                let mut ids = vec![];
+                for p in pieces {
+                    ids.push(put(Shape::Profile(p))?);
+                }
+                Ok(json!(ids))
+            }
+            "trim" => {
+                let pieces = pathfinder::trim_by_zorder(&rings)?;
+                let mut ids = vec![];
+                for p in pieces.into_iter().flatten() {
+                    ids.push(put(Shape::Profile(p))?);
+                }
+                Ok(json!(ids))
+            }
+            "minus_front" => put(Shape::Profile(pathfinder::minus_front(&rings)?)),
+            "minus_back" => put(Shape::Profile(pathfinder::minus_back(&rings)?)),
+            "shape_builder_extract" => {
+                let point: [f64; 2] = field(&v, "point")?;
+                put(Shape::Profile(pathfinder::shape_builder_extract(
+                    &rings, point,
+                )?))
+            }
+            "shape_builder_delete" => {
+                let point: [f64; 2] = field(&v, "point")?;
+                put(Shape::Profile(pathfinder::shape_builder_delete(
+                    &rings, point,
+                )?))
+            }
+            "make_compound" => {
+                let compounds = pathfinder::make_compound(&rings)?;
+                let mut ids = vec![];
+                for c in compounds {
+                    ids.push(put(Shape::Profile(c.rings()))?);
+                }
+                Ok(json!(ids))
+            }
+            _ => unreachable!(),
+        };
+    }
     let shape = get(field(&v, "id")?)?;
     match action {
         "copy" => put((*shape).clone()),
         "split" => {
             let mesh = solid(&shape)?;
-            let cutter = cad::halfspace(mesh, field(&v, "normal")?, field(&v, "offset")?)?;
+            let cutter = solid::halfspace(mesh, field(&v, "normal")?, field(&v, "offset")?)?;
             let left = boolean(mesh, &cutter, "intersection")?;
             let right = boolean(mesh, &cutter, "difference")?;
             let a = put(Shape::Solid(left))?;
@@ -213,12 +282,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "decompose" => {
             let rings = profile(&shape)?;
             let mut ids = vec![];
-            for outer in rings.iter().filter(|r| cad::area(r) > 0.) {
+            for outer in rings.iter().filter(|r| planar::area(r) > 0.) {
                 let mut piece = vec![outer.clone()];
                 piece.extend(
                     rings
                         .iter()
-                        .filter(|r| cad::area(r) < 0. && cad::contains_point(r[0], outer))
+                        .filter(|r| planar::area(r) < 0. && planar::contains_point(r[0], outer))
                         .cloned(),
                 );
                 ids.push(put(Shape::Profile(piece))?)
@@ -264,13 +333,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 }
             }
         }
-        "offset" => put(Shape::Profile(cad::offset_join(
+        "offset" => put(Shape::Profile(planar::offset_join(
             profile(&shape)?,
             field(&v, "distance")?,
             v["join"].as_str().unwrap_or("Round"),
             field(&v, "segments")?,
         )?)),
-        "extrude" => put(Shape::Solid(cad::extrude(
+        "extrude" => put(Shape::Solid(solid::extrude(
             profile(&shape)?,
             field(&v, "height")?,
             field(&v, "slices")?,
@@ -280,13 +349,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?)),
         "revolve" => {
             let rings = profile(&shape)?;
-            let mut m = cad::empty();
+            let mut m = solid::empty();
             for r in rings {
                 let mut ring = r.clone();
-                if cad::area(&ring) < 0. {
+                if planar::area(&ring) < 0. {
                     ring.reverse()
                 }
-                let part = polygon_core::modeling::revolve(
+                let part = modeling::revolve(
                     &ring,
                     field(&v, "angle")?,
                     field(&v, "segments")?,
@@ -296,7 +365,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 m = boolean(
                     &m,
                     &part,
-                    if cad::area(r) < 0. {
+                    if planar::area(r) < 0. {
                         "difference"
                     } else {
                         "union"
@@ -305,8 +374,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
             put(Shape::Solid(m))
         }
-        "project" => put(Shape::Profile(cad::project(solid(&shape)?)?)),
-        "slice" => put(Shape::Profile(cad::slice(
+        "project" => put(Shape::Profile(solid::project(solid(&shape)?)?)),
+        "slice" => put(Shape::Profile(solid::slice(
             solid(&shape)?,
             field(&v, "height")?,
         )?)),
@@ -352,7 +421,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     }
                 }
                 Ok(
-                    json!({"empty":r.is_empty(),"area":r.iter().map(|r|cad::area(r)).sum::<f64>(),"min":min,"max":max}),
+                    json!({"empty":r.is_empty(),"area":r.iter().map(|r|planar::area(r)).sum::<f64>(),"min":min,"max":max}),
                 )
             }
         },
@@ -399,7 +468,7 @@ fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> 
         }
     }
     if let Some((n, d)) = split {
-        let cutter = cad::halfspace(mesh, n, d)?;
+        let cutter = solid::halfspace(mesh, n, d)?;
         let a = boolean(mesh, &cutter, "intersection")?;
         let b = boolean(mesh, &cutter, "difference")?;
         if a.indices.is_empty() || b.indices.is_empty() {
@@ -420,10 +489,10 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
     if left.len() * right.len() > 256 {
         return Err(input("Minkowski pair budget exceeded"));
     }
-    let mut result = cad::empty();
+    let mut result = solid::empty();
     for a in &left {
         for b in &right {
-            let sum = cad::minkowski(a, b)?;
+            let sum = solid::minkowski(a, b)?;
             result = boolean(&result, &sum, "union")?;
         }
     }
@@ -484,6 +553,6 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -
         indices: indices.iter().map(|&i| i as usize).collect(),
         uv: None,
     };
-    let id = put(Shape::Solid(cad::clean(mesh)?))?;
+    let id = put(Shape::Solid(solid::clean(mesh)?))?;
     Ok(id.as_u64().unwrap() as u32)
 }

@@ -64,7 +64,7 @@ import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
 import { withSelectionSurfaces } from './services/meshSurfaceGroups'
 import { SceneController } from './services/sceneController'
-import { standardViewForCamera } from './services/viewportModel'
+import { ViewportController } from './services/viewportController'
 import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
 import {
   setStorageFailureHandler,
@@ -387,14 +387,18 @@ function undoMainGeometry(redo=false){
  previewMainGeometry(null);from.value.pop();to.value.push(entry);replacePresetSource(redo?entry.after:entry.before);void nextTick(()=>doRender('full'))
 }
 
-const projection = ref<ProjectionMode>('perspective')
+const viewportController = new ViewportController()
+const viewportState = shallowRef(viewportController.state)
+viewportController.subscribe(state => { viewportState.value = state })
+const projection = computed(() => viewportState.value.camera.projection)
 const gridVisible = ref(true)
-const standardView = ref<StandardView>('iso')
-const activeView = ref<StandardView | 'custom'>('iso')
-const cameraYaw = ref(Math.PI / 4)
-const cameraPitch = ref(Math.atan(1 / Math.sqrt(2)))
-/** Projection to restore once the camera leaves an orthographic face-view snap. */
-const projectionBeforeFaceSnap = ref<ProjectionMode | null>(null)
+const standardView = computed({
+  get: () => viewportState.value.standardView,
+  set: (view: StandardView) => { viewportController.setStandardView(view) },
+})
+const activeView = computed(() => viewportState.value.activeView)
+const cameraYaw = computed(() => viewportState.value.camera.yaw)
+const cameraPitch = computed(() => viewportState.value.camera.pitch)
 const displayMode = ref<DisplayMode>('shaded')
 const sceneController = new SceneController<PickHit>()
 const sceneState = shallowRef(sceneController.state)
@@ -407,14 +411,14 @@ const selectedHit = computed({
   get: () => sceneState.value.selectedHit,
   set: (selectedHit: PickHit | null) => { sceneController.update({ selectedHit }) },
 })
-const hoveredHit = ref<PickHit | null>(null)
+const hoveredHit = computed(() => sceneState.value.hoveredHit)
 const isolated = computed({
   get: () => sceneState.value.isolated,
   set: (isolated: boolean) => { sceneController.update({ isolated }) },
 })
 const paletteOpen = ref(false)
 const shortcutHelpOpen = ref(false)
-const canPreviousView = ref(false)
+const canPreviousView = computed(() => viewportState.value.canGoBack)
 const commandMru = ref<string[]>(readCommandMru())
 const sceneMeshes = computed({
   get: () => sceneState.value.meshes,
@@ -425,15 +429,14 @@ const meshVisibility = computed({
   set: (visibility: boolean[]) => { sceneController.update({ visibility }) },
 })
 const selectionMode = ref<SelectionMode>('face')
-const measurement = ref<DistanceMeasurement | null>(null)
-const measureActive = ref(false)
-const sectionEnabled = ref(false)
-const sectionAxis = ref<SectionAxis>('z')
-const sectionOffset = ref(0)
-const sectionFlip = ref(false)
+const measurement = computed(() => sceneState.value.measurement)
+const measureActive = computed(() => sceneState.value.measureActive)
+const sectionEnabled = computed(() => sceneState.value.section.enabled)
+const sectionAxis = computed(() => sceneState.value.section.axis)
+const sectionOffset = computed(() => sceneState.value.section.offset)
+const sectionFlip = computed(() => sceneState.value.section.flip)
 const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
-let sectionInitialized = false
 const dockTab = ref<'scene' | 'inspect' | 'parameters'>('scene')
 const dockOpen = ref(true)
 const findOpen = ref(false)
@@ -727,8 +730,6 @@ let restoringWorkspace = false
 let applyingWorkspaceReplacement = false
 let componentActive = true
 let noticeTimeout: ReturnType<typeof setTimeout> | null = null
-let rendererRecoveryToken = 0
-let activeRendererRecoveryToken: number | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 let resizing = false
@@ -814,21 +815,20 @@ async function initializeViewportRenderer() {
 
 function bindRendererCallbacks(instance: WebGPURenderer) {
   instance.onSelectionChange = (index, isIsolated, hit) => {
-    if (activeRendererRecoveryToken !== null || mainPreviewActive) return
+    if (viewportController.isRecovering || mainPreviewActive) return
     if(mainShiftSelection.value&&index!==null){const ids=new Set(mainSelectedIndices.value);ids.has(index)?ids.delete(index):ids.add(index);mainSelectedIndices.value=[...ids];if(!ids.has(index)){index=mainSelectedIndices.value.at(-1)??null;hit=null}}
     else if(!mainPreserveGroup)mainSelectedIndices.value=index===null?[]:[index]
     mainShiftSelection.value=false
     sceneController.applyRendererSelection(index, isIsolated, hit)
   }
   instance.onHoverChange = hit => {
-    if (activeRendererRecoveryToken !== null || mainPreviewActive) return
-    hoveredHit.value = hit
+    if (viewportController.isRecovering || mainPreviewActive) return
+    sceneController.applyRendererHover(hit)
   }
   instance.onMeasurementChange = (value, active) => {
-    measurement.value = value
-    measureActive.value = active
+    sceneController.applyRendererMeasurement(value, active)
   }
-  instance.onCameraHistoryChange = available => { canPreviousView.value = available }
+  instance.onCameraHistoryChange = available => { viewportController.applyHistoryAvailability(available) }
   instance.onFrameSubmitted = (token, at) => {
     if (instance !== renderer) return
     if (!pendingPerformanceFrame || pendingPerformanceFrame.frameToken !== token) return
@@ -836,7 +836,7 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
   }
   instance.onCameraChange = syncCameraState
   instance.onStatusChange = event => handleRendererStatus(instance, event)
-  canPreviousView.value = instance.canGoToPreviousView
+  viewportController.applyHistoryAvailability(instance.canGoToPreviousView)
   syncCameraState(instance.getCameraState())
 }
 
@@ -844,8 +844,7 @@ onUnmounted(() => {
   cancelGeometryAnalysis()
   layoutResizeObserver?.disconnect()
   layoutResizeObserver = null
-  rendererRecoveryToken++
-  activeRendererRecoveryToken = null
+  viewportController.invalidateRecovery()
   rendererRecoveryGate.reset()
   autoBuildScheduler.cancel()
   if (storageDebounce) {
@@ -911,18 +910,17 @@ async function recoverRenderer(
     rendererRecoveryGate.reset()
     return
   }
-  const token = ++rendererRecoveryToken
-  activeRendererRecoveryToken = token
+  const token = viewportController.beginRecovery()
   // Triangle identities and hover ownership are renderer-local. Object
   // selection can be restored by scene identity, but stale surface hits cannot.
   selectedHit.value = null
-  hoveredHit.value = null
+  sceneController.applyRendererHover(null)
   let ready = false
   let failureMessage = t('gpuRecoverFailed')
 
   try {
     const recovered = await instance.init(canvas)
-    if (token !== rendererRecoveryToken || renderer !== instance) return
+    if (!viewportController.isCurrentRecovery(token) || renderer !== instance) return
     if (!recovered) return
     if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
       rendererRecoveryGate.registerDeviceLoss()
@@ -969,8 +967,8 @@ async function recoverRenderer(
   } catch (caught) {
     failureMessage = caught instanceof Error ? caught.message : t('gpuRecoverFailed')
   } finally {
-    if (activeRendererRecoveryToken === token) activeRendererRecoveryToken = null
-    if (token !== rendererRecoveryToken || renderer !== instance) return
+    viewportController.completeRecovery(token)
+    if (!viewportController.isCurrentRecovery(token) || renderer !== instance) return
 
     const completion = rendererRecoveryGate.completeAttempt()
     if (completion === 'retry') {
@@ -985,7 +983,7 @@ async function recoverRenderer(
     }
 
     selectedHit.value = null
-    hoveredHit.value = null
+    sceneController.applyRendererHover(null)
     gpuOk.value = true
     if (error.value === t('gpuRecoverFailed')) error.value = ''
     showNotice(t('gpuRecovered'))
@@ -1414,7 +1412,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       isolated: publication.nextIsolated,
     })
     renderer?.setMeshVisibilityBatch(meshVisibility.value)
-    hoveredHit.value = null
+    sceneController.applyRendererHover(null)
     if (publication.nextSelectedIndex !== null) {
       const faceRestored = previousFaceHit && previousMeshes[previousFaceHit.meshIndex]
         && renderer?.restoreNativeFaceSelection(previousMeshes[previousFaceHit.meshIndex], previousFaceHit, publication.nextSelectedIndex)
@@ -1431,11 +1429,9 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     if (publication.measurementMayBePreserved) {
       // The renderer may rebuild this overlay; retaining the UI value avoids a
       // preview → full flash and lets it restore the exact world-space points.
-      measurement.value = previousMeasurement
-      measureActive.value = previousMeasureActive
+      sceneController.setMeasurement(previousMeasurement, previousMeasureActive)
     } else {
-      measurement.value = null
-      measureActive.value = false
+      sceneController.setMeasurement(null, false)
     }
     if (fitNextRender) {
       renderer?.fitView()
@@ -1749,48 +1745,21 @@ function replaceSharedRecoveryHash(source: string) {
 
 function fitView() { renderer?.fitView() }
 function resetView() {
-  standardView.value = 'iso'
-  activeView.value = 'iso'
-  restoreProjectionAfterFaceSnap()
+  viewportController.resetView()
   renderer?.resetView()
 }
 function previousView() {
   const state = renderer?.previousView()
   if (!state) return
-  // History restores an explicit projection; a pending face-snap restore is obsolete.
-  projectionBeforeFaceSnap.value = null
-  projection.value = state.projection
-  const restoredView = standardViewForCamera(state)
-  if (restoredView) {
-    standardView.value = restoredView
-    activeView.value = restoredView
-  } else {
-    activeView.value = 'custom'
-  }
+  viewportController.applyRestoredCamera(state)
 }
-
-const FACE_VIEWS: readonly StandardView[] = ['front', 'back', 'left', 'right', 'top', 'bottom']
 
 /** Mirrors the renderer camera into the UI so the view cube stays truthful. */
 function syncCameraState(state: CameraState) {
   mainCameraRevision.value++
-  cameraYaw.value = state.yaw
-  cameraPitch.value = state.pitch
-  projection.value = state.projection
-  const matched = standardViewForCamera(state)
-  activeView.value = matched ?? 'custom'
-  if (matched) standardView.value = matched
-  // Orbiting away from a snapped face view (or landing on ISO) restores the
-  // projection the user had before the orthographic snap.
-  if (matched === null || matched === 'iso') restoreProjectionAfterFaceSnap()
-}
-
-function restoreProjectionAfterFaceSnap() {
-  const previous = projectionBeforeFaceSnap.value
-  projectionBeforeFaceSnap.value = null
-  if (previous !== null && projection.value !== previous) {
-    projection.value = previous
-    renderer?.setProjection(previous)
+  viewportController.applyCamera(state)
+  if (viewportController.state.camera.projection !== state.projection) {
+    renderer?.setProjection(viewportController.state.camera.projection)
   }
 }
 
@@ -1802,35 +1771,18 @@ function toggleIsolate() {
   isolated.value = renderer?.toggleIsolateSelection() ?? false
 }
 function toggleProjection() {
-  // An explicit projection choice cancels any pending face-snap restore.
-  projectionBeforeFaceSnap.value = null
-  projection.value = projection.value === 'perspective' ? 'orthographic' : 'perspective'
-  renderer?.setProjection(projection.value)
+  renderer?.setProjection(viewportController.toggleProjection())
 }
 function toggleGrid() {
   gridVisible.value = !gridVisible.value
   renderer?.setGridVisible(gridVisible.value)
 }
 function changeStandardView() {
-  const view = standardView.value
-  activeView.value = view
-  if (FACE_VIEWS.includes(view)) {
-    // Face views snap to orthographic; remember what to restore on orbit-away/ISO.
-    if (projectionBeforeFaceSnap.value === null && projection.value === 'perspective') {
-      projectionBeforeFaceSnap.value = 'perspective'
-    }
-    if (projection.value !== 'orthographic') {
-      projection.value = 'orthographic'
-    }
-  } else {
-    const previous = projectionBeforeFaceSnap.value
-    projectionBeforeFaceSnap.value = null
-    if (previous !== null) projection.value = previous
-  }
-  renderer?.setCameraPreset(view, projection.value)
+  const { view, projection: nextProjection } = viewportController.applyStandardView(viewportController.state.standardView)
+  renderer?.setCameraPreset(view, nextProjection)
 }
 function setStandardView(view: StandardView) {
-  standardView.value = view
+  viewportController.setStandardView(view)
   changeStandardView()
 }
 function setDisplayMode(mode: DisplayMode) {
@@ -2036,14 +1988,14 @@ function revealCurrentDiagnostic() {
 }
 
 function startMeasure() {
-  measureActive.value = true
+  sceneController.setMeasurement(measurement.value, true)
   dockOpen.value = true
   dockTab.value = 'inspect'
   renderer?.setMeasureMode(true)
 }
 
 function cancelMeasure() {
-  measureActive.value = false
+  sceneController.setMeasurement(measurement.value, false)
   renderer?.setMeasureMode(false)
 }
 
@@ -2074,44 +2026,49 @@ function applySection() {
 function syncSectionRange() {
   const { min, max } = sectionRange.value
   if (sectionOffset.value < min || sectionOffset.value > max) {
-    sectionOffset.value = (min + max) / 2
+    sceneController.setSection({ offset: (min + max) / 2 })
   }
   applySection()
 }
 
 function setSectionEnabled(enabled: boolean) {
   if (enabled && !sectionAvailable.value) return
-  if (enabled && !sectionInitialized) {
-    sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
-    sectionInitialized = true
-  }
-  sectionEnabled.value = enabled
+  const patch = enabled && !sceneState.value.section.initialized
+    ? { enabled, offset: (sectionRange.value.min + sectionRange.value.max) / 2, initialized: true }
+    : { enabled }
+  sceneController.setSection(patch)
   applySection()
 }
 
 function setSectionAxis(axis: SectionAxis) {
-  sectionAxis.value = axis
-  sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
-  sectionInitialized = true
+  sceneController.setSection({
+    axis,
+    offset: (sectionRange.value.min + sectionRange.value.max) / 2,
+    initialized: true,
+  })
   applySection()
 }
 
 function setSectionOffset(offset: number) {
   if (!Number.isFinite(offset)) return
-  sectionOffset.value = clamp(offset, sectionRange.value.min, sectionRange.value.max)
-  sectionInitialized = true
+  sceneController.setSection({
+    offset: clamp(offset, sectionRange.value.min, sectionRange.value.max),
+    initialized: true,
+  })
   applySection()
 }
 
 function setSectionFlip(flip: boolean) {
-  sectionFlip.value = flip
+  sceneController.setSection({ flip })
   applySection()
 }
 
 function resetSection() {
-  sectionOffset.value = (sectionRange.value.min + sectionRange.value.max) / 2
-  sectionFlip.value = false
-  sectionInitialized = true
+  sceneController.setSection({
+    offset: (sectionRange.value.min + sectionRange.value.max) / 2,
+    flip: false,
+    initialized: true,
+  })
   applySection()
 }
 

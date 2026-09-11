@@ -48,10 +48,6 @@ fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     [a[0] - b[0], a[1] - b[1]]
 }
 
-fn add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-    [a[0] + b[0], a[1] + b[1]]
-}
-
 fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
     let ab = sub(b, a);
     let ap = sub(p, a);
@@ -485,34 +481,338 @@ impl BezierPath {
 
     /// Stroke → filled outline via flattened parallel ribbons (butt caps, miter joins).
     pub fn outline_stroke(&self, width: f64) -> Result<Self> {
-        check(width > 0. && width.is_finite(), "Stroke width must be positive")?;
-        let half = width * 0.5;
-        let pts = self.flatten()?;
-        check(pts.len() >= 2, "Path too short to outline")?;
-        let mut left = Vec::with_capacity(pts.len());
-        let mut right = Vec::with_capacity(pts.len());
-        for i in 0..pts.len() {
-            let (a, b) = if i + 1 < pts.len() {
-                (pts[i], pts[i + 1])
-            } else if self.closed {
-                (pts[i], pts[0])
-            } else {
-                (pts[i - 1], pts[i])
-            };
-            let d = sub(b, a);
-            let len = d[0].hypot(d[1]).max(1e-12);
-            let n = [-d[1] / len * half, d[0] / len * half];
-            left.push(add(pts[i], n));
-            right.push(sub(pts[i], n));
-        }
-        let mut outline = left;
-        if self.closed {
-            outline.extend(right.iter().rev().copied());
-            return Self::from_polyline(&outline, true);
-        }
-        outline.extend(right.iter().rev().copied());
-        Self::from_polyline(&outline, true)
+        let opts = crate::planar::stroke::StrokeOptions {
+            width,
+            ..Default::default()
+        };
+        let mut outlines = crate::planar::stroke::outline_stroke(self, &opts)?;
+        outlines
+            .pop()
+            .ok_or_else(|| crate::Error::new("Stroke produced no outline"))
     }
+
+    pub fn outline_stroke_with(
+        &self,
+        opts: &crate::planar::stroke::StrokeOptions,
+    ) -> Result<Vec<Self>> {
+        crate::planar::stroke::outline_stroke(self, opts)
+    }
+
+    pub fn set_anchor_position(&self, node: usize, new_pos: [f64; 2]) -> Result<Self> {
+        check(
+            new_pos.iter().all(|x| x.is_finite()),
+            "Non-finite anchor position",
+        )?;
+        let n = self.anchor_count();
+        check(node < n, "Anchor index out of range")?;
+        let mut path = self.clone();
+        if node == 0 {
+            let old = path.start;
+            path.start = new_pos;
+            if path.closed {
+                for seg in &mut path.segments {
+                    let end = seg.end();
+                    if dist(end, old) <= 1e-3 {
+                        match seg {
+                            PathSegment::Line { to } => *to = new_pos,
+                            PathSegment::Cubic { to, .. } => *to = new_pos,
+                        }
+                    }
+                }
+            }
+        } else {
+            match &mut path.segments[node - 1] {
+                PathSegment::Line { to } => *to = new_pos,
+                PathSegment::Cubic { to, .. } => *to = new_pos,
+            }
+        }
+        Ok(path)
+    }
+
+    pub fn average_anchors(&self, nodes: &[usize], axis: AverageAxis) -> Result<Self> {
+        check(!nodes.is_empty(), "No anchors to average")?;
+        let anchors = self.anchors();
+        let mut positions = Vec::with_capacity(nodes.len());
+        for &node in nodes {
+            check(node < anchors.len(), "Anchor index out of range")?;
+            positions.push(anchors[node]);
+        }
+        let targets = average_anchor_targets(&positions, axis);
+        let mut path = self.clone();
+        for (&node, &pos) in nodes.iter().zip(targets.iter()) {
+            path = path.set_anchor_position(node, pos)?;
+        }
+        Ok(path)
+    }
+
+    pub fn anchor_handles(&self, node: usize) -> Result<(Option<[f64; 2]>, Option<[f64; 2]>)> {
+        check(node < self.anchor_count(), "Anchor index out of range")?;
+        let incoming = incoming_segment(self, node).and_then(|i| match self.segments[i] {
+            PathSegment::Cubic { c2, .. } => Some(c2),
+            PathSegment::Line { .. } => None,
+        });
+        let outgoing = outgoing_segment(self, node).and_then(|i| match self.segments[i] {
+            PathSegment::Cubic { c1, .. } => Some(c1),
+            PathSegment::Line { .. } => None,
+        });
+        Ok((incoming, outgoing))
+    }
+
+    pub fn set_anchor_handle(
+        &self,
+        node: usize,
+        side: HandleSide,
+        pos: [f64; 2],
+    ) -> Result<Self> {
+        check(pos.iter().all(|x| x.is_finite()), "Non-finite handle")?;
+        check(node < self.anchor_count(), "Anchor index out of range")?;
+        let idx = match side {
+            HandleSide::In => incoming_segment(self, node),
+            HandleSide::Out => outgoing_segment(self, node),
+        }
+        .ok_or_else(|| crate::Error::new("No handle on that side"))?;
+        let mut path = self.clone();
+        let from = segment_from(path.start, &path.segments, idx);
+        ensure_cubic(&mut path.segments, idx, from);
+        if let PathSegment::Cubic { ref mut c1, ref mut c2, .. } = path.segments[idx] {
+            match side {
+                HandleSide::Out => *c1 = pos,
+                HandleSide::In => *c2 = pos,
+            }
+        }
+        Ok(path)
+    }
+
+    /// Offset a closed path via planar CAD (result is a Bézier polyline path).
+    /// Open paths get a parallel curve of the flattened polyline.
+    pub fn offset(&self, distance: f64, join: &str, segments: usize) -> Result<Vec<Self>> {
+        check(distance.is_finite() && distance.abs() <= 1e6, "Invalid offset")?;
+        if distance.abs() < 1e-12 {
+            return Ok(vec![self.clone()]);
+        }
+        if self.closed {
+            let ring = self.to_ring(FLATTEN_TOLERANCE)?;
+            let out = crate::planar::rings::offset_join(&vec![ring], distance, join, segments)?;
+            check(!out.is_empty(), "Offset collapsed the path")?;
+            return out
+                .into_iter()
+                .map(|r| Self::from_polyline(&r, true))
+                .collect();
+        }
+        Ok(vec![offset_open_polyline(self, distance)?])
+    }
+
+    /// Rebuild cubics through the current anchors with uniform Catmull–Rom.
+    pub fn smooth(&self) -> Result<Self> {
+        let pts = self.anchors();
+        check(pts.len() >= 2, "Smooth needs at least two anchors")?;
+        let segments = catmull_rom_segments(&pts, self.closed);
+        if self.closed {
+            Self::closed(pts[0], segments)
+        } else {
+            Self::open(pts[0], segments)
+        }
+    }
+
+    /// Drop the closing flag (and a redundant return-to-start segment).
+    pub fn open_path(&self) -> Result<Self> {
+        check(self.closed, "Path is already open")?;
+        let mut segments = self.segments.clone();
+        if let Some(last) = segments.last() {
+            if dist(last.end(), self.start) <= 1e-3 && segments.len() >= 2 {
+                segments.pop();
+            }
+        }
+        Self::open(self.start, segments)
+    }
+
+    /// Delete edges whose both endpoints are in `nodes`. Returns open pieces.
+    pub fn delete_segments(&self, nodes: &[usize]) -> Result<Vec<Self>> {
+        let n = self.anchor_count();
+        check(n >= 2, "Path too short to delete a segment")?;
+        let mut selected: Vec<usize> = nodes.iter().copied().filter(|&m| m < n).collect();
+        selected.sort_unstable();
+        selected.dedup();
+        check(selected.len() >= 2, "Delete segment needs two endpoints")?;
+        let is_selected = |a: usize| selected.binary_search(&a).is_ok();
+        let points = self.anchors();
+        let edge_count = self.segments.len();
+        let endpoints = |e: usize| -> (usize, usize) {
+            if self.closed {
+                (e, (e + 1) % n)
+            } else {
+                (e, e + 1)
+            }
+        };
+        let deleted: Vec<bool> = (0..edge_count)
+            .map(|e| {
+                let (a, b) = endpoints(e);
+                is_selected(a) && is_selected(b)
+            })
+            .collect();
+        check(deleted.iter().any(|&d| d), "No selected edge to delete")?;
+        let mut runs: Vec<( [f64; 2], Vec<PathSegment>)> = Vec::new();
+        if self.closed {
+            let first_deleted = deleted.iter().position(|&d| d).unwrap();
+            let (_, mut cur_start) = endpoints(first_deleted);
+            let mut cur_segs = Vec::new();
+            for k in 1..=edge_count {
+                let e = (first_deleted + k) % edge_count;
+                if deleted[e] {
+                    if !cur_segs.is_empty() {
+                        runs.push((points[cur_start], std::mem::take(&mut cur_segs)));
+                    }
+                    cur_start = endpoints(e).1;
+                } else {
+                    cur_segs.push(self.segments[e]);
+                }
+            }
+            if !cur_segs.is_empty() {
+                runs.push((points[cur_start], cur_segs));
+            }
+        } else {
+            let mut cur_start = 0usize;
+            let mut cur_segs = Vec::new();
+            for e in 0..edge_count {
+                if deleted[e] {
+                    if !cur_segs.is_empty() {
+                        runs.push((points[cur_start], std::mem::take(&mut cur_segs)));
+                    }
+                    cur_start = e + 1;
+                } else {
+                    cur_segs.push(self.segments[e]);
+                }
+            }
+            if !cur_segs.is_empty() {
+                runs.push((points[cur_start], cur_segs));
+            }
+        }
+        check(!runs.is_empty(), "Delete segment produced nothing")?;
+        runs.into_iter()
+            .map(|(start, segs)| Self::open(start, segs))
+            .collect()
+    }
+
+    pub fn apply_handle_link(
+        &self,
+        node: usize,
+        moved: HandleSide,
+        mode: HandleLink,
+    ) -> Result<Self> {
+        if mode == HandleLink::Free {
+            return Ok(self.clone());
+        }
+        let anchor = if node == 0 {
+            self.start
+        } else {
+            self.segments[node - 1].end()
+        };
+        let (incoming, outgoing) = self.anchor_handles(node)?;
+        let moved_pos = match moved {
+            HandleSide::In => incoming,
+            HandleSide::Out => outgoing,
+        }
+        .ok_or_else(|| crate::Error::new("Moved handle does not exist"))?;
+        let reflected = [2.0 * anchor[0] - moved_pos[0], 2.0 * anchor[1] - moved_pos[1]];
+        let opposite = match moved {
+            HandleSide::In => HandleSide::Out,
+            HandleSide::Out => HandleSide::In,
+        };
+        self.set_anchor_handle(node, opposite, reflected)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AverageAxis {
+    Horizontal,
+    Vertical,
+    Both,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HandleSide {
+    In,
+    Out,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HandleLink {
+    Free,
+    Mirrored,
+    Symmetric,
+}
+
+pub fn average_anchor_targets(positions: &[[f64; 2]], axis: AverageAxis) -> Vec<[f64; 2]> {
+    if positions.is_empty() {
+        return Vec::new();
+    }
+    let n = positions.len() as f64;
+    let mean_x = positions.iter().map(|p| p[0]).sum::<f64>() / n;
+    let mean_y = positions.iter().map(|p| p[1]).sum::<f64>() / n;
+    positions
+        .iter()
+        .map(|p| match axis {
+            AverageAxis::Horizontal => [mean_x, p[1]],
+            AverageAxis::Vertical => [p[0], mean_y],
+            AverageAxis::Both => [mean_x, mean_y],
+        })
+        .collect()
+}
+
+fn catmull_rom_segments(pts: &[[f64; 2]], closed: bool) -> Vec<PathSegment> {
+    let n = pts.len();
+    let seg_count = if closed { n } else { n.saturating_sub(1) };
+    const T: f64 = 1.0 / 6.0;
+    let mut segs = Vec::with_capacity(seg_count);
+    for i in 0..seg_count {
+        let p1 = pts[i];
+        let p2 = pts[(i + 1) % n];
+        let p0 = if closed {
+            pts[(i + n - 1) % n]
+        } else if i == 0 {
+            p1
+        } else {
+            pts[i - 1]
+        };
+        let p3 = if closed {
+            pts[(i + 2) % n]
+        } else if i + 2 < n {
+            pts[i + 2]
+        } else {
+            p2
+        };
+        segs.push(PathSegment::Cubic {
+            c1: [p1[0] + (p2[0] - p0[0]) * T, p1[1] + (p2[1] - p0[1]) * T],
+            c2: [p2[0] - (p3[0] - p1[0]) * T, p2[1] - (p3[1] - p1[1]) * T],
+            to: p2,
+        });
+    }
+    segs
+}
+
+fn offset_open_polyline(path: &BezierPath, distance: f64) -> Result<BezierPath> {
+    let pts = path.flatten()?;
+    check(pts.len() >= 2, "Open path too short to offset")?;
+    let mut out = Vec::with_capacity(pts.len());
+    for i in 0..pts.len() {
+        let (a, b) = if i + 1 < pts.len() {
+            (pts[i], pts[i + 1])
+        } else {
+            (pts[i - 1], pts[i])
+        };
+        let d = sub(b, a);
+        let len = d[0].hypot(d[1]).max(1e-12);
+        let n = [-d[1] / len * distance, d[0] / len * distance];
+        if i > 0 && i + 1 < pts.len() {
+            let prev = sub(pts[i], pts[i - 1]);
+            let plen = prev[0].hypot(prev[1]).max(1e-12);
+            let n0 = [-prev[1] / plen * distance, prev[0] / plen * distance];
+            out.push([(pts[i][0] + n0[0] + n[0]) * 0.5, (pts[i][1] + n0[1] + n[1]) * 0.5]);
+        } else {
+            out.push([pts[i][0] + n[0], pts[i][1] + n[1]]);
+        }
+    }
+    BezierPath::from_polyline(&out, false)
 }
 
 /// Join two open paths end-to-end, optionally reversing either side.
@@ -795,5 +1095,68 @@ mod tests {
         let pieces = path.split_at_anchor(1).unwrap();
         assert_eq!(pieces.len(), 1);
         assert!(!pieces[0].closed);
+    }
+
+    #[test]
+    fn average_and_handle_link() {
+        let path = BezierPath::from_polyline(&[[0., 0.], [2., 2.], [4., 0.]], false).unwrap();
+        let avg = path.average_anchors(&[0, 2], AverageAxis::Horizontal).unwrap();
+        assert!((avg.start[0] - 2.).abs() < 1e-9);
+        assert!((avg.segments[1].end()[0] - 2.).abs() < 1e-9);
+        let cubic = BezierPath::open(
+            [0., 0.],
+            vec![
+                PathSegment::Cubic {
+                    c1: [1., 1.],
+                    c2: [2., 1.],
+                    to: [3., 0.],
+                },
+                PathSegment::Cubic {
+                    c1: [4., 1.],
+                    c2: [5., 1.],
+                    to: [6., 0.],
+                },
+            ],
+        )
+        .unwrap();
+        let edited = cubic
+            .set_anchor_handle(1, HandleSide::Out, [3., 2.])
+            .unwrap()
+            .apply_handle_link(1, HandleSide::Out, HandleLink::Mirrored)
+            .unwrap();
+        let (inn, out) = edited.anchor_handles(1).unwrap();
+        assert_eq!(out, Some([3., 2.]));
+        assert_eq!(inn, Some([3., -2.]));
+    }
+
+    #[test]
+    fn offset_closed_grows_area() {
+        let path = BezierPath::from_rect([0., 0.], [4., 4.]).unwrap();
+        let out = path.offset(1., "Miter", 8).unwrap();
+        assert_eq!(out.len(), 1);
+        let a: f64 = crate::planar::rings::area(&out[0].to_ring(0.05).unwrap()).abs();
+        assert!((a - 36.).abs() < 1., "area={a}");
+    }
+
+    #[test]
+    fn smooth_makes_cubics() {
+        let path = BezierPath::from_polyline(&[[0., 0.], [2., 1.], [4., 0.]], false).unwrap();
+        let s = path.smooth().unwrap();
+        assert!(s.segments.iter().all(|seg| matches!(seg, PathSegment::Cubic { .. })));
+    }
+
+    #[test]
+    fn open_path_drops_close() {
+        let path = BezierPath::from_rect([0., 0.], [2., 2.]).unwrap();
+        let open = path.open_path().unwrap();
+        assert!(!open.closed);
+    }
+
+    #[test]
+    fn delete_segment_splits_open() {
+        let path = BezierPath::from_polyline(&[[0., 0.], [1., 0.], [2., 0.], [3., 0.]], false).unwrap();
+        let parts = path.delete_segments(&[1, 2]).unwrap();
+        assert_eq!(parts.len(), 2);
+        assert!(parts.iter().all(|p| !p.closed));
     }
 }

@@ -295,7 +295,7 @@ pub struct Reconstruction {
     pub iterations: usize,
     pub vertex_residual_before_mm: f64,
     pub vertex_residual_after_mm: f64,
-    pub deviation: polygon_core::proximity::Deviation,
+    pub deviation: polygon_core::solid::proximity::Deviation,
     pub correspondence: &'static str,
 }
 impl value_codec::Serialize for Reconstruction {
@@ -328,7 +328,7 @@ impl value_codec::Serialize for Reconstruction {
 impl Cage {
     /// Retains welded source triangle topology. No hidden quad remeshing or decimation.
     pub fn from_mesh(mesh: &Mesh) -> Result<Self> {
-        let source = polygon_core::proximity::valid_source(mesh, 2048)?;
+        let source = polygon_core::solid::proximity::valid_source(mesh, 2048)?;
         let cage = Self {
             vertices: source
                 .positions
@@ -349,11 +349,11 @@ pub fn reconstruct(mesh: &Mesh, iterations: usize) -> Result<Reconstruction> {
     if iterations > 32 {
         return Err(Error::new("Subdivision fitting requires 0..32 iterations"));
     }
-    let source = polygon_core::proximity::valid_source(mesh, 2048)?;
+    let source = polygon_core::solid::proximity::valid_source(mesh, 2048)?;
     let mut cage = Cage::from_mesh(&source)?;
     let preview = cage.subdivide(1)?.triangulate()?.0;
     // Check the work budget before fitting; also establishes a valid baseline.
-    polygon_core::proximity::sample_deviation(&source, &preview)?;
+    polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
     let target = cage.vertices.clone();
     let residual = |c: &Cage| -> Result<(f64, Vec<Point>)> {
         let r = c.subdivide(1)?;
@@ -396,7 +396,7 @@ pub fn reconstruct(mesh: &Mesh, iterations: usize) -> Result<Reconstruction> {
         }
     }
     let output = cage.subdivide(1)?.triangulate()?.0;
-    let deviation = polygon_core::proximity::sample_deviation(&source, &output)?;
+    let deviation = polygon_core::solid::proximity::sample_deviation(&source, &output)?;
     Ok(Reconstruction {
         cage,
         iterations: completed,
@@ -483,7 +483,7 @@ impl Cage {
     }
     pub fn sweep(profile: &[[f64; 2]], path: &[Point], up: Point, caps: bool) -> Result<Self> {
         Self::loft(
-            &polygon_core::modeling::sweep_sections(profile, path, up)?,
+            &polygon_core::solid::modeling::sweep_sections(profile, path, up)?,
             caps,
         )
     }

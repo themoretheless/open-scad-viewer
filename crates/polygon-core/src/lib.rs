@@ -1,18 +1,16 @@
 //! Independent polygon/triangle-mesh algorithms in Rust.
 //! Does not depend on NURBS, Manifold, C/C++, WASM or the application.
 //! Coordinates in this host contract are millimeters; algorithms use binary64.
-pub mod boolean;
-pub mod brep;
-pub mod bvh;
-pub mod cad;
-pub mod edges;
-pub mod edit;
-pub mod modeling;
-pub mod path;
-pub mod pathfinder;
-pub mod proximity;
-pub mod section;
-pub mod tessellation;
+//!
+//! Public layout:
+//! - [`planar`] — 2D paths, rings, Pathfinder, edit
+//! - [`solid`] — triangle meshes
+//! - [`appearance`] — paint / style (not shape)
+//! - [`print`] — slice planning / G-code (not shape)
+pub mod appearance;
+pub mod planar;
+pub mod print;
+pub mod solid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
@@ -177,7 +175,7 @@ impl<'de> value_codec::Deserialize<'de> for Construction {
 }
 #[derive(Debug, Clone)]
 pub struct Report {
-    pub boolean: Option<boolean::BooleanReport>,
+    pub boolean: Option<solid::boolean::BooleanReport>,
     pub triangle_count: usize,
     pub vertex_count: usize,
     pub boundary_edges: usize,
@@ -280,7 +278,7 @@ impl<'de> value_codec::Deserialize<'de> for Report {
             .as_object()
             .ok_or_else(|| value_codec::error("Expected object"))?
             .clone();
-        let boolean: Option<boolean::BooleanReport> = if let Some(v) = object.remove("boolean") {
+        let boolean: Option<solid::boolean::BooleanReport> = if let Some(v) = object.remove("boolean") {
             value_codec::Deserialize::from_value(v)?
         } else {
             Default::default()

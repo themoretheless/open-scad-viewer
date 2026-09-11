@@ -167,7 +167,17 @@ export class CrossSection extends Handle {
     static union(values: CrossSection[]) { return this.combine(values, 'union'); }
     static intersection(values: CrossSection[]) { return this.combine(values, 'intersection'); }
     static difference(values: CrossSection[]) { return this.combine(values, 'difference'); }
+    static xor(values: CrossSection[]) { return this.combine(values, 'xor'); }
+    static exclude(values: CrossSection[]) { return this.xor(values); }
     static hull(values: CrossSection[]) { return new CrossSection(call<number>('hull', { ids: values.map(v => v.handle), dimension: 2 })); }
+    static divide(values: CrossSection[]) { return new CrossSection(call<number>('divide', { ids: values.map(v => v.handle) })); }
+    static crop(values: CrossSection[]) { return call<number[]>('crop', { ids: values.map(v => v.handle) }).map(id => new CrossSection(id)); }
+    static trim(values: CrossSection[]) { return call<number[]>('trim', { ids: values.map(v => v.handle) }).map(id => new CrossSection(id)); }
+    static minusFront(values: CrossSection[]) { return new CrossSection(call<number>('minus_front', { ids: values.map(v => v.handle) })); }
+    static minusBack(values: CrossSection[]) { return new CrossSection(call<number>('minus_back', { ids: values.map(v => v.handle) })); }
+    static shapeBuilderExtract(values: CrossSection[], point: Vec2) { return new CrossSection(call<number>('shape_builder_extract', { ids: values.map(v => v.handle), point })); }
+    static shapeBuilderDelete(values: CrossSection[], point: Vec2) { return new CrossSection(call<number>('shape_builder_delete', { ids: values.map(v => v.handle), point })); }
+    static makeCompound(values: CrossSection[]) { return call<number[]>('make_compound', { ids: values.map(v => v.handle) }).map(id => new CrossSection(id)); }
     add(b: CrossSection) { return CrossSection.union([this, b]); }
     subtract(b: CrossSection) { return CrossSection.difference([this, b]); }
     intersect(b: CrossSection) { return CrossSection.intersection([this, b]); }

@@ -1,7 +1,7 @@
 //! Explicit mesh-to-NURBS conversion. PN patches approximate a chosen smoothing;
 //! they do not recover unknown original CAD surfaces or prove global continuity.
 use super::*;
-use polygon_core::proximity::{closest_triangle, valid_source};
+use polygon_core::solid::proximity::{closest_triangle, valid_source};
 type Point = [f64; 3];
 use math_core::{cross, dot, norm, sub};
 #[derive(Clone, Copy)]
@@ -321,7 +321,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
 /// budgets (notably 256 faces) apply. No smooth-face recognition is implied.
 pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_core::brep::Model> {
     let source = valid_source(mesh, 256)?;
-    let polygon = polygon_core::brep::from_mesh(&source, None)?;
+    let polygon = polygon_core::solid::brep::from_mesh(&source, None)?;
     let mut faces = Vec::new();
     let mut loops = polygon
         .loops
@@ -427,7 +427,7 @@ mod tests {
         assert!(output.built.report.closed);
         assert!((output.built.report.signed_volume_mm3 - 8.).abs() < 1e-9);
         assert!(
-            polygon_core::proximity::sample_deviation(&mesh, &output.built.mesh)
+            polygon_core::solid::proximity::sample_deviation(&mesh, &output.built.mesh)
                 .unwrap()
                 .sampled_max_mm
                 < 1e-9

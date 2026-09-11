@@ -704,9 +704,9 @@ impl Field {
             },
             Self::MeshDistance { mesh, signed } => {
                 if *signed {
-                    polygon_core::proximity::signed_distance(mesh, p)
+                    polygon_core::solid::proximity::signed_distance(mesh, p)
                 } else {
-                    polygon_core::proximity::closest_point(mesh, p).1
+                    polygon_core::solid::proximity::closest_point(mesh, p).1
                 }
             }
             Self::Sphere { center, radius } => length(sub(p, *center)) - radius,
@@ -737,7 +737,7 @@ impl Field {
     }
     pub fn from_mesh(mesh: &Mesh, signed: bool) -> Result<Self> {
         let field = Self::MeshDistance {
-            mesh: polygon_core::proximity::valid_source(mesh, 4096)?,
+            mesh: polygon_core::solid::proximity::valid_source(mesh, 4096)?,
             signed,
         };
         field.validate()?;

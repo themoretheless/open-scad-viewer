@@ -1,8 +1,8 @@
 //! Illustrator-style Pathfinder ops on planar CAD rings.
 //!
-//! Built on [`crate::cad::planar`] (union / intersection / difference / xor).
+//! Built on [`crate::planar::rings::planar`] (union / intersection / difference / xor).
 //! Inputs are closed rings in document z-order: index 0 = back, last = front.
-use crate::cad::{area, contains_point, planar, Rings};
+use crate::planar::rings::{area, contains_point, planar, Rings};
 use crate::{check, Result};
 
 /// Max shapes for exponential arrangement walks (Divide / Shape Builder).
@@ -348,6 +348,46 @@ pub fn release_compound(compound: &Compound) -> Rings {
     compound.rings()
 }
 
+/// Closed region tagged with a fill color for Merge-by-Color.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColoredRegion {
+    pub rings: Rings,
+    pub color: [u8; 4],
+}
+
+/// Union every closed region that shares the same RGBA key.
+/// Front-most (last) appearance of a bucket wins the output color.
+pub fn merge_by_color(shapes: &[ColoredRegion]) -> Result<Vec<ColoredRegion>> {
+    check(shapes.len() >= 2, "Merge by color needs at least 2 shapes")?;
+    for s in shapes {
+        validate_closed(&s.rings)?;
+    }
+    let mut buckets: Vec<( [u8; 4], Vec<Rings> )> = Vec::new();
+    for s in shapes {
+        if let Some((_, rings)) = buckets.iter_mut().find(|(c, _)| *c == s.color) {
+            rings.push(s.rings.clone());
+        } else {
+            buckets.push((s.color, vec![s.rings.clone()]));
+        }
+    }
+    check(
+        buckets.iter().any(|(_, r)| r.len() >= 2),
+        "Merge by color: no shared fill",
+    )?;
+    let mut out = Vec::new();
+    for (color, group) in buckets {
+        let rings = if group.len() == 1 {
+            group.into_iter().next().unwrap()
+        } else {
+            union_all(&group)?
+        };
+        if !rings.is_empty() {
+            out.push(ColoredRegion { rings, color });
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -446,5 +486,26 @@ mod tests {
         let ar: f64 = rest.iter().map(|r| area(r).abs()).sum();
         // union area 24, delete left-only 8 → 16
         assert!((ar - 16.).abs() < 1e-6, "rest={ar}");
+    }
+
+    #[test]
+    fn merge_by_color_unions_same_fill() {
+        let a = ColoredRegion {
+            rings: sq(0., 0., 2., 2.),
+            color: [255, 0, 0, 255],
+        };
+        let b = ColoredRegion {
+            rings: sq(1., 0., 3., 2.),
+            color: [255, 0, 0, 255],
+        };
+        let c = ColoredRegion {
+            rings: sq(10., 0., 11., 1.),
+            color: [0, 0, 255, 255],
+        };
+        let out = merge_by_color(&[a, b, c]).unwrap();
+        assert_eq!(out.len(), 2);
+        let red = out.iter().find(|r| r.color == [255, 0, 0, 255]).unwrap();
+        let a_red: f64 = red.rings.iter().map(|r| area(r).abs()).sum();
+        assert!((a_red - 6.).abs() < 1e-6, "red={a_red}");
     }
 }

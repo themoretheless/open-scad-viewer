@@ -48,20 +48,19 @@ Reopen these only for a demonstrated regression.
 - **Evidence:** `BuildCoordinator` keeps same-revision preview/full work on a
   warm Worker, coalesces identical active requests and bounds pending work by
   revision/quality. The evaluator yields between top-level statements, yields
-  mid-iteration inside top-level `for` / `intersection_for` (macrotask +
-  `shouldAbort` poll), forces a macrotask checkpoint before extraction, polls
-  cancellation through chunked publication work, and reports required
-  parse/initialize/evaluate/analyze timings. Nested sync loops poll
-  `shouldAbort` each iteration when a control handle is present. A tokenized
+  mid-iteration inside `for` / `intersection_for` at any nesting (module /
+  `if` / `let` bodies), yields between nested statements, polls immediately
+  before Manifold boolean/hull/difference, forces a macrotask checkpoint
+  before extraction, polls cancellation through chunked publication work, and
+  reports required parse/initialize/evaluate/analyze timings. A tokenized
   watchdog prevents stale timers from cancelling newer work. Synchronous
-  Manifold, BVH and topology calls still cannot observe messages, so Worker
-  replacement remains the final cancellation boundary for those phases.
+  Manifold, BVH and topology WASM calls still cannot observe messages, so
+  Worker replacement remains the final cancellation boundary for those phases.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.
-- **Acceptance remaining:** cooperative yields inside nested module-body loops /
-  guarded blocks beyond top-level `for`; cooperative/async kernel, BVH and
-  topology phases; real-browser tests for App↔Worker supersession, watchdog
-  recovery, crash and disposal.
+- **Acceptance remaining:** cooperative/async kernel, BVH and topology phases
+  that yield *inside* WASM; real-browser tests for App↔Worker supersession,
+  watchdog recovery, crash and disposal.
 
 ### R3 — Split compiler and kernel phases
 
@@ -71,39 +70,43 @@ Reopen these only for a demonstrated regression.
   one module. The pure [`openscadCompiler.ts`](../src/services/openscadCompiler.ts)
   now owns tokenization, parsing and stable operation identity and returns a
   deeply frozen, structured-clone-safe operation IR without importing
-  Manifold. [`geometryKernel.ts`](../src/services/geometryKernel.ts) defines the
-  lifecycle port, while [`manifoldGeometryKernel.ts`](../src/services/manifoldGeometryKernel.ts)
-  exclusively owns WASM bootstrap, retry and GC-session disposal. The public
-  facade and serialized lifetime remain compatible and parity-covered.
+  Manifold. [`openscadBinder.ts`](../src/services/openscadBinder.ts) binds that
+  IR to builtin/user modules and functions, records positioned unresolved-name
+  diagnostics and content-addresses compile+bind by source digest plus
+  language profile. [`geometryKernel.ts`](../src/services/geometryKernel.ts)
+  defines the lifecycle port and opaque solid/section handles;
+  [`manifoldGeometryKernel.ts`](../src/services/manifoldGeometryKernel.ts)
+  exclusively owns WASM bootstrap, retry, handle-table and GC-session
+  disposal. Tessellation looks up solids through those handles; boolean/hull
+  and primitive constructors normalize kernel failures to source positions.
+  The public facade and serialized lifetime remain compatible and parity-covered.
 - **Risk:** language, kernel and inspection changes invalidate the entire
   pipeline and main-thread modules depend on a Worker implementation detail.
-- **Acceptance remaining:** split binding from syntax and evaluation from the
-  facade; route solid/section operations through opaque kernel handles;
-  normalize immediate and deferred kernel errors to source positions; typed
-  parse→bind/diagnose→immutable operation IR→kernel→
-  tessellation→analysis phases; preserve the neutral core contracts;
-  transitive import guards; exclusive phase tests/timing and content-addressed
-  subtree caching.
+- **Acceptance remaining:** move evaluation off the facade onto handle-only
+  kernel ops; yield and position every deferred kernel error; Worker protocol
+  phase timings still fold bind into `parseMs`; subtree-level IR cache beyond
+  the whole-source compile/bind digest.
 
 ### R4 — Establish one owner for scene and viewport state
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
   isolation, visibility, projection and camera-related state. The canonical
-  CPU-side meshes/visibility/selection/isolation snapshot now lives in
-  [`sceneController.ts`](../src/services/sceneController.ts); Vue exposes computed
-  projections and renderer callbacks are typed intents into that owner.
-  Replacement-scene publication commits atomically through the controller,
-  hidden selections fail closed, and camera face presets now apply orientation
-  plus projection as one history action. Renderer GPU resources remain a
-  deliberate disposable projection of semantic state.
+  CPU-side meshes/visibility/selection/isolation/hover/measurement/section
+  snapshot now lives in [`sceneController.ts`](../src/services/sceneController.ts);
+  [`viewportController.ts`](../src/services/viewportController.ts) owns camera,
+  face-preset projection, history availability and recovery-revision fencing.
+  Vue exposes computed projections and renderer callbacks are typed intents
+  into those owners. Replacement-scene publication commits atomically through
+  the scene controller, hidden selections and hovers fail closed, and camera
+  face presets apply orientation plus projection as one history action.
+  Renderer GPU resources remain a deliberate disposable projection of semantic
+  state.
 - **Risk:** every rebuild/recovery manually reconstructs interaction state and
   new tools can create synchronization bugs.
-- **Acceptance remaining:** extend controller ownership to measurement,
-  section and hover generation; add a navigation controller for camera/history
-  and recovery-revision fencing; renderer consumes explicit state deltas and
-  emits generation-tagged intents; App becomes composition rather than
-  workflow logic.
+- **Acceptance remaining:** renderer consumes explicit state deltas and emits
+  generation-tagged intents; App becomes composition rather than remaining
+  workflow glue around the two controllers.
 
 ### R5 — Separate scene entities from geometry artifacts
 
@@ -299,6 +302,28 @@ Reopen these only for a demonstrated regression.
   archive the exact donor SHA under an immutable tag, fix the remote default
   branch (currently points at the donor), decide service-worker retirement, and
   retire the donor only after the ledger has no unreviewed decisions.
+
+### Native P0 — topology lineage and edge selection
+
+- **Priority/status:** P0 / In progress
+- **Evidence:** [`topologyLineage.ts`](../src/core/topologyLineage.ts) and
+  [`polygon-core` lineage](../crates/polygon-core/src/lineage.rs) record
+  persist/split/merge of opaque `TopoId`s, transfer or explicitly lose
+  selection, and emit a schema-1 durable snapshot. Native edge and
+  control-point references are revision-fenced like faces.
+- **Acceptance remaining:** attach lineage to Boolean split/merge products;
+  renderer edge/control-point picking; persist snapshots beside native
+  geometry artifacts.
+
+### Print P2 — mesh sections to G-code preview
+
+- **Priority/status:** P2 / In progress
+- **Evidence:** [`polygon-core` print](../crates/polygon-core/src/print.rs)
+  turns indexed mesh sections into concentric walls, sparse hatch infill and
+  a parse-back G-code preview with filament-length E. Box and annulus
+  regressions cover hole exclusion and volume-flow agreement.
+- **Acceptance remaining:** browser/WASM dispatch, machine-profile dialects,
+  variable width and a UI layer preview. Does not launch a printer.
 
 ## Update rule
 

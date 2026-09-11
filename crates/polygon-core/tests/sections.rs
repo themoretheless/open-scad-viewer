@@ -1,6 +1,9 @@
 use polygon_core::{
-    cad,
-    section::{MeshSection, MeshSectionIndex},
+    planar::rings as cad,
+    solid::{
+        cad as mesh,
+        section::{MeshSection, MeshSectionIndex},
+    },
     Mesh,
 };
 
@@ -30,7 +33,7 @@ fn shifted(mut mesh: Mesh, delta: [f64; 3]) -> Mesh {
 }
 
 fn join(meshes: &[Mesh]) -> Mesh {
-    let mut result = cad::empty();
+    let mut result = mesh::empty();
     for mesh in meshes {
         let offset = result.positions.len() / 3;
         result.positions.extend(&mesh.positions);
@@ -43,7 +46,7 @@ fn join(meshes: &[Mesh]) -> Mesh {
 
 #[test]
 fn box_uses_documented_half_open_rule_at_horizontal_faces() {
-    let mesh = cad::cube([2., 3., 4.], false).unwrap();
+    let mesh = mesh::cube([2., 3., 4.], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     for z in [0., 1e-12, 2., 4. - 1e-12] {
         let section = index.section(z).unwrap();
@@ -70,7 +73,7 @@ fn hollow_extrusion_preserves_hole_winding() {
     let outer = vec![vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]]];
     let hole = vec![vec![[1., 1.], [3., 1.], [3., 3.], [1., 3.]]];
     let rings = cad::planar(&outer, &hole, "difference").unwrap();
-    let mesh = cad::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
+    let mesh = mesh::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();
     for z in [0., 0.5, 1., 1.999] {
         let section = index.section(z).unwrap();
@@ -88,7 +91,7 @@ fn hollow_extrusion_preserves_hole_winding() {
 
 #[test]
 fn cylinder_section_matches_its_polygon_not_the_analytic_circle() {
-    let mesh = cad::cylinder(3., 2., 2., 32, false).unwrap();
+    let mesh = mesh::cylinder(3., 2., 2., 32, false).unwrap();
     let section = MeshSectionIndex::new(&mesh).unwrap().section(1.5).unwrap();
     let expected = 0.5 * 32. * 4. * (std::f64::consts::TAU / 32.).sin();
     assert_eq!(section.contours.len(), 1);
@@ -122,7 +125,7 @@ fn shared_plane_vertices_and_edges_do_not_create_double_segments() {
 
 #[test]
 fn gap_smaller_than_old_welding_epsilon_is_preserved() {
-    let left = cad::cube([1., 1., 1.], false).unwrap();
+    let left = mesh::cube([1., 1., 1.], false).unwrap();
     let right = shifted(left.clone(), [1. + 1e-10, 0., 0.]);
     let section = MeshSectionIndex::new(&join(&[left, right]))
         .unwrap()
@@ -134,8 +137,8 @@ fn gap_smaller_than_old_welding_epsilon_is_preserved() {
 
 #[test]
 fn exact_triangle_soup_seams_and_signed_zero_share_identity() {
-    let mesh = cad::cube([1., 1., 1.], false).unwrap();
-    let mut soup = cad::empty();
+    let mesh = mesh::cube([1., 1., 1.], false).unwrap();
+    let mut soup = mesh::empty();
     for &i in &mesh.indices {
         let mut p = mesh.point(i).unwrap();
         if soup.indices.len() % 2 == 0 {
@@ -155,7 +158,7 @@ fn exact_triangle_soup_seams_and_signed_zero_share_identity() {
 
 #[test]
 fn open_boundary_is_an_error_instead_of_a_repaired_ring() {
-    let mut mesh = cad::cube([1., 1., 1.], false).unwrap();
+    let mut mesh = mesh::cube([1., 1., 1.], false).unwrap();
     let triangle = mesh
         .indices
         .chunks_exact(3)
@@ -174,7 +177,7 @@ fn open_boundary_is_an_error_instead_of_a_repaired_ring() {
 
 #[test]
 fn duplicate_and_touching_boundaries_are_explicitly_ambiguous() {
-    let cube = cad::cube([1., 1., 1.], false).unwrap();
+    let cube = mesh::cube([1., 1., 1.], false).unwrap();
     for other in [cube.clone(), shifted(cube.clone(), [1., 1., 0.])] {
         let index = MeshSectionIndex::new(&join(&[cube.clone(), other])).unwrap();
         assert_eq!(
@@ -186,7 +189,7 @@ fn duplicate_and_touching_boundaries_are_explicitly_ambiguous() {
 
 #[test]
 fn large_translation_does_not_saturate_coordinate_quantization() {
-    let mesh = shifted(cad::cube([2., 3., 4.], false).unwrap(), [1e12, -1e12, 1e12]);
+    let mesh = shifted(mesh::cube([2., 3., 4.], false).unwrap(), [1e12, -1e12, 1e12]);
     let section = MeshSectionIndex::new(&mesh)
         .unwrap()
         .section(1e12 + 2.)
@@ -197,7 +200,7 @@ fn large_translation_does_not_saturate_coordinate_quantization() {
 
 #[test]
 fn reusable_index_restricts_candidates_to_the_current_height() {
-    let cube = cad::cube([1., 1., 1.], false).unwrap();
+    let cube = mesh::cube([1., 1., 1.], false).unwrap();
     let meshes: Vec<_> = (0..100)
         .map(|i| shifted(cube.clone(), [0., 0., i as f64 * 2.]))
         .collect();
@@ -213,7 +216,7 @@ fn reusable_index_restricts_candidates_to_the_current_height() {
 
 #[test]
 fn invalid_inputs_fail_before_slicing_and_empty_mesh_is_supported() {
-    let index = MeshSectionIndex::new(&cad::empty()).unwrap();
+    let index = MeshSectionIndex::new(&mesh::empty()).unwrap();
     assert!(index.section(0.).unwrap().contours.is_empty());
     for z in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         assert_eq!(index.section(z).unwrap_err().code, "SECTION_INVALID_HEIGHT");
@@ -231,8 +234,8 @@ fn island_inside_a_hole_remains_a_separate_oriented_contour() {
     let outer = vec![vec![[0., 0.], [6., 0.], [6., 6.], [0., 6.]]];
     let hole = vec![vec![[1., 1.], [5., 1.], [5., 5.], [1., 5.]]];
     let rings = cad::planar(&outer, &hole, "difference").unwrap();
-    let shell = cad::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
-    let island = shifted(cad::cube([2., 2., 2.], false).unwrap(), [2., 2., 0.]);
+    let shell = mesh::extrude(&rings, 2., 1, 0., [1., 1.], false).unwrap();
+    let island = shifted(mesh::cube([2., 2., 2.], false).unwrap(), [2., 2., 0.]);
     let section = MeshSectionIndex::new(&join(&[shell, island]))
         .unwrap()
         .section(1.)

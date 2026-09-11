@@ -1,5 +1,5 @@
 import Module, { type Manifold, type ManifoldToplevel } from './geometry/module'
-import type { GeometryKernel, GeometryKernelSession } from './geometryKernel'
+import { KernelHandleTable, type GeometryKernel, type GeometryKernelSession } from './geometryKernel'
 
 export interface ManifoldKernelDependencies {
   load(): Promise<ManifoldToplevel>
@@ -156,12 +156,15 @@ export class ManifoldGeometryKernel implements GeometryKernel<ManifoldToplevel> 
 
   async openSession(): Promise<GeometryKernelSession<ManifoldToplevel>> {
     const module = await this.warm()
+    const handles = new KernelHandleTable()
     let disposed = false
     return {
       module,
+      handles,
       dispose: () => {
         if (disposed) return
         disposed = true
+        handles.clear()
         this.dependencies.cleanup()
       },
     }

@@ -138,7 +138,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
         })()),
         9 => geometry((|| {
             let id = field::<u32>(&value, "id")?;
-            let mesh = cad::export_buffers(id)?;
+            let mesh = mesh::export_buffers(id)?;
             encode(Box::into_raw(Box::new(mesh)) as usize)
         })()),
         10 => openscad::scad_compile(&value),
@@ -229,7 +229,7 @@ pub unsafe fn abi_bvh_build(
     }
     let vertices = read_f32(vp, vl);
     let indices = read_u32(ip, il);
-    let bvh = polygon_core::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
+    let bvh = polygon_core::solid::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
     let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Bvh {
         bounds: bvh.bounds,
         nodes: bvh.nodes,
@@ -262,7 +262,7 @@ pub unsafe fn abi_semantic_edges(
     let indices = read_u32(ip, il);
     let merge_from = read_u32(mfp, mfl);
     let merge_to = read_u32(mtp, mtl);
-    let edges = polygon_core::edges::extract_semantic_edges(
+    let edges = polygon_core::solid::edges::extract_semantic_edges(
         &vertices,
         &indices,
         &merge_from,

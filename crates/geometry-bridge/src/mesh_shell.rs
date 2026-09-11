@@ -1,5 +1,5 @@
 //! Sampled inward shell for closed triangle meshes. BVHs keep grid queries bounded.
-use polygon_core::{proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
+use polygon_core::{solid::proximity::closest_triangle, BuiltMesh, Error, Mesh, Result};
 pub(crate) type P = [f64; 3];
 use math_core::{cross, dot, sub};
 #[derive(Clone)]
@@ -258,7 +258,7 @@ mod tests {
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_lattice_matches_cpu_reference() {
-        let mesh = polygon_core::cad::cube([30.; 3], false).unwrap();
+        let mesh = polygon_core::solid::cad::cube([30.; 3], false).unwrap();
         let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
         let edges = vec![[0, 1], [0, 2], [0, 3]];
         let reference = lattice(&mesh, nodes.clone(), edges.clone(), 2., 0., 1., false, false, 0., false).unwrap();
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn bvh_distance_and_sign_agree_with_reference() {
-        let mesh = polygon_core::cad::cube([10.; 3], false).unwrap();
+        let mesh = polygon_core::solid::cad::cube([10.; 3], false).unwrap();
         let triangles = mesh
             .indices
             .chunks_exact(3)
@@ -299,7 +299,7 @@ mod tests {
                 ((i * 17) % 191) as f64 / 10. - 5.,
             ];
             let actual = bvh.signed_distance(p);
-            let expected = polygon_core::proximity::signed_distance(&mesh, p);
+            let expected = polygon_core::solid::proximity::signed_distance(&mesh, p);
             assert!(
                 (actual - expected).abs() < 1e-7,
                 "{p:?}: {actual} != {expected}"

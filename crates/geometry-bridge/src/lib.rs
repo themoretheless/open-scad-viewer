@@ -2,11 +2,12 @@
 //! Owns the NURBS-to-polygon sampler and the WASM/JSON transport, not a third
 //! geometry representation. Native clients can use the same typed adapters.
 pub mod brep;
-mod cad;
+mod mesh;
 pub mod openscad;
 pub mod reconstruction;
 pub mod mesh_analysis;
 pub mod mesh_shell;
+mod path2d;
 mod sdf_gpu;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
@@ -15,7 +16,7 @@ use nurbs_core::{
     surface::{Surface, SurfaceSampler},
 };
 use polygon_core::{
-    tessellation::{self, Boundary, Options, ParametricSurface},
+    solid::tessellation::{self, Boundary, Options, ParametricSurface},
     BuiltMesh, Mesh, Seams,
 };
 use value_codec::{json, Value};
@@ -168,7 +169,8 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
-        "cad" => cad::dispatch(v),
+        "cad" | "mesh" => mesh::dispatch(v),
+        "path2d" => path2d::dispatch(v),
         "subdivision_extrude" => encode(subdivision_core::Cage::extrude(
             &field::<Vec<[f64; 3]>>(&v, "profile")?,
             field(&v, "vector")?,
@@ -190,15 +192,15 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "sketch_solve" => encode(
             sketch_core::solve(&field(&v, "sketch")?, field(&v, "tolerance")?).map_err(input)?,
         ),
-        "polygon_deform" => encode(polygon_core::edit::deform(
+        "polygon_deform" => encode(polygon_core::solid::edit::deform(
             &field(&v, "mesh")?,
             &field(&v, "deformation")?,
         )?),
-        "polygon_brush" => encode(polygon_core::edit::brush(
+        "polygon_brush" => encode(polygon_core::solid::edit::brush(
             &field(&v, "mesh")?,
             &field(&v, "brush")?,
         )?),
-        "polygon_extrude_faces" => encode(polygon_core::edit::extrude_faces(
+        "polygon_extrude_faces" => encode(polygon_core::solid::edit::extrude_faces(
             &field(&v, "mesh")?,
             &field::<Vec<usize>>(&v, "triangles")?,
             field(&v, "vector")?,
@@ -217,21 +219,21 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "radius")?,
             field(&v, "remove")?,
         )?),
-        "polygon_extrude" => encode(polygon_core::modeling::extrude(
+        "polygon_extrude" => encode(polygon_core::solid::modeling::extrude(
             &field(&v, "profile")?,
             field(&v, "vector")?,
         )?),
-        "polygon_revolve" => encode(polygon_core::modeling::revolve(
+        "polygon_revolve" => encode(polygon_core::solid::modeling::revolve(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "angle")?,
             field(&v, "segments")?,
             field(&v, "caps")?,
         )?),
-        "polygon_loft" => encode(polygon_core::modeling::loft(
+        "polygon_loft" => encode(polygon_core::solid::modeling::loft(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
             field(&v, "caps")?,
         )?),
-        "polygon_sweep" => encode(polygon_core::modeling::sweep(
+        "polygon_sweep" => encode(polygon_core::solid::modeling::sweep(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             &field::<Vec<[f64; 3]>>(&v, "path")?,
             field(&v, "up")?,
@@ -284,7 +286,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             &field(&v, "options")?,
         )?),
-        "mesh_boolean" => encode(polygon_core::boolean::boolean(
+        "mesh_boolean" => encode(polygon_core::solid::boolean::boolean(
             &field::<Mesh>(&v, "a")?,
             &field::<Mesh>(&v, "b")?,
             field(&v, "operation")?,
@@ -292,7 +294,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 Some(options) => {
                     value_codec::from_value(options.clone()).map_err(|e| input(e.to_string()))?
                 }
-                None => polygon_core::boolean::Options::default(),
+                None => polygon_core::solid::boolean::Options::default(),
             },
         )?),
         "brep_nurbs_box" => encode(nurbs_core::brep::cuboid(
@@ -307,7 +309,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         }
         "brep_nurbs_to_polygon" => {
             let t = brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;
-            encode(polygon_core::brep::from_mesh(
+            encode(polygon_core::solid::brep::from_mesh(
                 &t.built.mesh,
                 Some(&t.face_ids),
             )?)
@@ -315,13 +317,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "brep_polygon_from_mesh" => {
             let ids: Option<Vec<usize>> =
                 v.get("faceIds").map(|_| field(&v, "faceIds")).transpose()?;
-            encode(polygon_core::brep::from_mesh(
+            encode(polygon_core::solid::brep::from_mesh(
                 &field(&v, "mesh")?,
                 ids.as_deref(),
             )?)
         }
         "brep_polygon_inspect" => {
-            polygon_core::brep::validate(&field(&v, "model")?)?;
+            polygon_core::solid::brep::validate(&field(&v, "model")?)?;
             encode(json!({"topologyValid":true,"solidGeometryStatus":"not_certified"}))
         }
         "brep_polygon_tessellate" => encode(brep::polygons(&field(&v, "model")?)?),
@@ -556,7 +558,7 @@ impl CadMeshBuffer {
 }
 /// Typed native entry point shared with the WASM import adapter.
 pub fn import_cad_mesh(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
-    cad::import_buffers(stride, vertices, indices)
+    mesh::import_buffers(stride, vertices, indices)
 }
 
 /// Linear-memory ABI core shared by the geometry-wasm shell.

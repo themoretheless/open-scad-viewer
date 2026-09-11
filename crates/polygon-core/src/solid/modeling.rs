@@ -1,5 +1,5 @@
 //! Native polygon construction. No spline or external CAD backend is used.
-use crate::tessellation::{self, Options, ParametricSurface, Trim};
+use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
 use crate::{check, cross, norm, sub, BuiltMesh, Mesh, Result};
 pub type Point = [f64; 3];
 fn dot(a: Point, b: Point) -> f64 {
@@ -364,7 +364,7 @@ pub fn revolve(
         }
         indices.extend(cap(&sections[segments])?.iter().map(|i| segments * n + i));
     }
-    let mut mesh = crate::proximity::weld_exact(&Mesh {
+    let mut mesh = crate::solid::proximity::weld_exact(&Mesh {
         positions,
         indices,
         uv: None,

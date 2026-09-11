@@ -136,8 +136,8 @@ pub fn nurbs(model: &nurbs_core::brep::Model, segments: usize) -> Result<Tessell
         model.shells.iter().all(|s| s.closed),
     )
 }
-pub fn polygons(model: &polygon_core::brep::Model) -> Result<Tessellation> {
-    let t = polygon_core::brep::tessellate(model)?;
+pub fn polygons(model: &polygon_core::solid::brep::Model) -> Result<Tessellation> {
+    let t = polygon_core::solid::brep::tessellate(model)?;
     finish(
         t.mesh,
         t.face_ids,

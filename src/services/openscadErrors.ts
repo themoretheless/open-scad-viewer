@@ -6,6 +6,14 @@ export class AbortedError extends Error {
   }
 }
 
+/** Attach a kernel/runtime failure to the call that produced it. */
+export function positionKernelError(source: string, position: number, error: unknown): OpenSCADParseError {
+  if (error instanceof OpenSCADParseError) return error
+  const raw = error instanceof Error ? error.message : String(error)
+  const message = raw.startsWith('Geometry kernel:') ? raw : `Geometry kernel: ${raw || 'operation failed'}`
+  return new OpenSCADParseError(source, position, message)
+}
+
 /** Syntax or evaluation error carrying a stable source position. */
 export class OpenSCADParseError extends Error {
   readonly line: number

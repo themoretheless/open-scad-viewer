@@ -393,6 +393,20 @@ describe('cooperative cancellation (shouldAbort)', () => {
     expect(yields).toBe(1)
   })
 
+  it('aborts a for-loop nested in a module body, not only top-level loops', async () => {
+    let cancelled = false
+    let yields = 0
+    let clock = 0
+    const result = parseOpenSCAD('module row() { for (i = [0:80]) cube([1, 1, 1]); } row();', {
+      shouldAbort: () => cancelled,
+      now: () => { clock += 60; return clock },
+      yieldControl: async () => { yields++; cancelled = true },
+    })
+
+    await expect(result).rejects.toBeInstanceOf(AbortedError)
+    expect(yields).toBe(1)
+  })
+
   it('still delivers a forced post-evaluation yield when a for-loop finishes without aborting', async () => {
     let yields = 0
     let clock = 0

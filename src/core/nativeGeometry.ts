@@ -40,3 +40,16 @@ export function nativeFaceReference(artifact:NativeGeometryArtifact,faceId:numbe
 export function assertNativeReferenceCurrent(artifact:NativeGeometryArtifact,reference:NativeFaceReference):void {
   if(reference.nodeId!==artifact.nodeId||reference.kind!==artifact.kind||reference.revision!==artifact.revision)throw new Error('Native geometry selection is stale')
 }
+export {
+  TopologyLineage,
+  assertNativeControlPointCurrent,
+  assertNativeEdgeCurrent,
+  nativeControlPointReference,
+  nativeEdgeReference,
+  topoIdFromParts,
+  type DurableTopologySnapshot,
+  type NativeControlPointReference,
+  type NativeEdgeReference,
+  type SelectionTransfer,
+  type TopoId,
+} from './topologyLineage'

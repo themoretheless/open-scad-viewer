@@ -31,7 +31,8 @@ import type {
 import { identity, type Mat4 } from './math3d'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
-import { AbortedError, OpenSCADParseError } from './openscadErrors'
+import { AbortedError, OpenSCADParseError, positionKernelError } from './openscadErrors'
+import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'
 import {
   createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
@@ -285,6 +286,14 @@ function trackedSolid(geometry: ManifoldGeometry, color: RGBA, node: CallNode, c
 
 function warn(ctx: EvalContext, message: string) { if (!ctx.warnings.includes(message)) ctx.warnings.push(message) }
 function evaluationError(ctx: EvalContext, p: number, message: string): never { throw new OpenSCADParseError(ctx.source, p, message) }
+function kernelCall<T>(ctx: EvalContext, p: number, run: () => T): T {
+  try {
+    return run()
+  } catch (error) {
+    if (error instanceof OpenSCADParseError || error instanceof AbortedError) throw error
+    throw positionKernelError(ctx.source, p, error)
+  }
+}
 
 function valueWeight(value: Value, ctx: EvalContext): number {
   if (Array.isArray(value)) return ctx.valueWeights.get(value) ?? value.length + 1
@@ -1329,11 +1338,16 @@ function stableCompatibilityForcedAssets(
   )))
 }
 
-function evalNodes(nodes: readonly Statement[], parent: EvalContext, scoped = true): Shape[] {
+/** Yield to the event loop after this many statements or loop iterations… */
+const YIELD_EVERY_STATEMENTS = 25
+/** …or once this much wall-clock time has elapsed since the last yield. */
+const YIELD_EVERY_MS = 50
+
+async function evalNodes(nodes: readonly Statement[], parent: EvalContext, scoped = true): Promise<Shape[]> {
   const ctx: EvalContext = isStableProfile(parent)
     ? enterStableStatementScope(nodes, parent)
     : { ...parent, env: scoped ? new Map(parent.env) : parent.env }
-  return evalPreparedNodes(nodes, ctx)
+  return await evalPreparedNodes(nodes, ctx)
 }
 
 function stableViewportDisabled(statement: Statement, ctx: EvalContext): boolean {
@@ -1349,11 +1363,11 @@ function stableViewportDisabled(statement: Statement, ctx: EvalContext): boolean
  * shapes, and make the preview limitation explicit instead of claiming a
  * background layer that downstream consumers cannot distinguish.
  */
-function evalPreparedCall(node: CallNode, ctx: EvalContext): Shape[] {
+async function evalPreparedCall(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const background = isStableProfile(ctx)
     && ctx.viewportRootOwner !== node
     && hasOpenScadViewportModifier(node, 'background')
-  const shapes = evalNode(node, ctx)
+  const shapes = await evalNode(node, ctx)
   if (!background) return shapes
   if (ctx.quality === 'preview' && shapes.length > 0) {
     warn(ctx, 'Viewport background (%) geometry is omitted in preview because the mesh result contract has no background-layer metadata')
@@ -1361,9 +1375,15 @@ function evalPreparedCall(node: CallNode, ctx: EvalContext): Shape[] {
   return []
 }
 
-function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): Shape[] {
+async function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): Promise<Shape[]> {
   const output: Shape[] = []
+  let statementsSinceYield = 0
   for (const node of nodes) {
+    if (ctx.control && statementsSinceYield >= YIELD_EVERY_STATEMENTS) {
+      statementsSinceYield = 0
+      await ctx.control.yieldIfDue()
+    }
+    statementsSinceYield++
     // Unlike every other viewport modifier, `*` suppresses argument, effect,
     // child, and geometry evaluation for the complete call subtree.
     if (stableViewportDisabled(node, ctx)) continue
@@ -1373,16 +1393,11 @@ function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): Shape
       continue
     }
     if (node.type === 'module' || node.type === 'function') continue
-    output.push(...evalPreparedCall(node, ctx))
+    output.push(...await evalPreparedCall(node, ctx))
     if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
   }
   return output
 }
-
-/** Yield to the event loop after this many top-level statements… */
-const YIELD_EVERY_STATEMENTS = 25
-/** …or once this much wall-clock time has elapsed since the last yield. */
-const YIELD_EVERY_MS = 50
 
 class CooperativeCheckpoint {
   private lastYield: number
@@ -1414,80 +1429,19 @@ class CooperativeCheckpoint {
 }
 
 /**
- * Top-level statement loop with cooperative cancellation. Mirrors
- * evalNodes(nodes, ctx, false) — shared env, shared budget, cumulative shape
- * cap — but yields to the event loop every {@link YIELD_EVERY_STATEMENTS}
- * statements or {@link YIELD_EVERY_MS} ms so a hosting worker can receive
- * queued messages, then consults shouldAbort. The yield must be a macrotask
- * (setTimeout, not a resolved-promise microtask): worker message events are
- * only delivered between macrotasks.
- *
- * Top-level `for` / `intersection_for` also yield between iterations. A single
- * enormous boolean/Manifold call still will not yield mid-call; the hosting
- * BuildCoordinator's worker-replacement grace timer remains that hard boundary.
+ * Top-level evaluation with cooperative cancellation. Nested `for` / `if` /
+ * module bodies share the same checkpoint, so a Worker can receive cancel
+ * mid-loop. A single enormous Manifold/BVH call still cannot yield mid-WASM;
+ * the coordinator grace timer remains that hard boundary.
  */
 async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, control: CooperativeCheckpoint): Promise<Shape[]> {
   control.poll()
-  const output: Shape[] = []
-  let statementsSinceYield = 0
   try {
-    for (const node of nodes) {
-      // Check the clock only every N statements, and sleep only when the time
-      // budget is actually spent — an unconditional every-N yield would pay the
-      // ~4ms clamped setTimeout tax hundreds of times on statement-heavy models.
-      if (statementsSinceYield >= YIELD_EVERY_STATEMENTS) {
-        statementsSinceYield = 0
-        await control.yieldIfDue()
-      }
-      statementsSinceYield++
-      if (stableViewportDisabled(node, ctx)) continue
-      if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-      if (node.type === 'assign') {
-        if (!isStableProfile(ctx)) ctx.env.set(node.name, evalExpression(node.value, ctx))
-        continue
-      }
-      if (node.type === 'module' || node.type === 'function') continue
-      if (node.type === 'call' && (node.name === 'for' || node.name === 'intersection_for')) {
-        output.push(...await evalPreparedLoopCall(node, ctx, control))
-      } else {
-        output.push(...evalPreparedCall(node, ctx))
-      }
-      if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
-    }
+    return await evalPreparedNodes(nodes, { ...ctx, control })
   } catch (error) {
     if (error instanceof StableViewportRootSelection) return error.shapes
     throw error
   }
-  return output
-}
-
-/** Top-level for/intersection_for with mid-iteration cooperative yields. */
-async function evalPreparedLoopCall(
-  node: CallNode,
-  ctx: EvalContext,
-  control: CooperativeCheckpoint,
-): Promise<Shape[]> {
-  const background = isStableProfile(ctx)
-    && ctx.viewportRootOwner !== node
-    && hasOpenScadViewportModifier(node, 'background')
-  let shapes: Shape[]
-  if (node.name === 'intersection_for') {
-    requireStableProfile(ctx, node)
-    shapes = booleanShapes(
-      await evalForAsync(node, ctx, control, 'intersection_for'),
-      'intersection',
-      ctx,
-      node.p,
-      'intersection_for',
-    )
-  } else {
-    shapes = await evalForAsync(node, ctx, control, 'for')
-  }
-  if (!background) return shapes
-  if (ctx.quality === 'preview' && shapes.length > 0) {
-    warn(ctx, 'Viewport background (%) geometry is omitted in preview because the mesh result contract has no background-layer metadata')
-  }
-  return []
 }
 
 function viewportRootActivates(node: CallNode, shapes: readonly Shape[]): boolean {
@@ -1528,10 +1482,10 @@ function compatibilityDeprecation(
   warn(ctx, message)
 }
 
-function evalNode(node: CallNode, parent: EvalContext): Shape[] {
+async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
   if (isStableProfile(parent) && !parent.viewportRootLocked
     && hasOpenScadViewportModifier(node, 'root')) {
-    const shapes = evalNode(node, {
+    const shapes = await evalNode(node, {
       ...parent,
       viewportRootLocked: true,
       viewportRootOwner: node,
@@ -1546,7 +1500,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
     depth: parent.depth + 1,
     instancePath: `${parent.instancePath}>${operationId}`,
   }
-  const childShapes = () => evalNodes(node.children, ctx)
+  const childShapes = async () => await evalNodes(node.children, ctx)
 
   switch (node.name) {
     case 'assign': {
@@ -1559,7 +1513,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         env.set(argument.name, evalExpression(argument.value, ctx))
       }
       return booleanShapes(
-        evalNodes(node.children, stableOverlayContext(ctx, env), false),
+        await evalNodes(node.children, stableOverlayContext(ctx, env), false),
         'union',
         ctx,
         node.p,
@@ -1587,7 +1541,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
             : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
           evaluationError(ctx, node.p, `Assertion '${conditionText}' failed${detail}`)
         }
-        return childShapes()
+        return await childShapes()
       }
       const bound = bindAssertArguments(node, ctx)
       const condition = evalExpression(bound.condition, ctx)
@@ -1601,7 +1555,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
           : ''
         evaluationError(ctx, node.p, `Assertion '${bound.conditionText}' failed${detail}`)
       }
-      return childShapes()
+      return await childShapes()
     }
     case 'cube': {
       if (isStableProfile(ctx)) return makeStableCube(node, ctx)
@@ -1609,7 +1563,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'cube size') : [finiteNumber(raw, ctx, node.p, 'cube size')]
       const dimensions: Vec3 = [size[0] ?? 1, size[1] ?? size[0] ?? 1, size[2] ?? size[0] ?? 1]
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Cube dimensions must be positive')
-      const geometry = ctx.wasm.Manifold.cube(dimensions, arg(node, 'center', 1, false, ctx) === true)
+      const geometry = kernelCall(ctx, node.p, () => ctx.wasm.Manifold.cube(dimensions, arg(node, 'center', 1, false, ctx) === true))
       return [trackedSolid(geometry, nextColor(), node, ctx)]
     }
     case 'sphere': {
@@ -1619,7 +1573,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
       const r = finiteNumber(radius, ctx, node.p, 'sphere radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Sphere radius must be positive')
-      return [trackedSolid(ctx.wasm.Manifold.sphere(r, segments(node, ctx, 32, 4, r)), nextColor(), node, ctx)]
+      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.wasm.Manifold.sphere(r, segments(node, ctx, 32, 4, r))), nextColor(), node, ctx)]
     }
     case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
     case 'polyhedron': return isStableProfile(ctx) ? makeStablePolyhedron(node, ctx) : makePolyhedron(node, ctx)
@@ -1676,37 +1630,37 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
     }
     case 'polygon': return isStableProfile(ctx) ? makeStablePolygon(node, ctx) : makePolygon(node, ctx)
     case 'translate': {
-      if (isStableProfile(ctx)) return transformStableChildren(node, ctx)
+      if (isStableProfile(ctx)) return await transformStableChildren(node, ctx)
       const vector = vectorValue(arg(node, 'v', 0, [0, 0, 0], ctx), ctx, node.p, 'translate vector')
-      return childShapes().map(shape => shape.dimension === 3
+      return (await childShapes()).map(shape => shape.dimension === 3
         ? { ...shape, geometry: shape.geometry.translate([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
         : { ...shape, geometry: shape.geometry.translate([vector[0] ?? 0, vector[1] ?? 0]) })
     }
-    case 'rotate': return isStableProfile(ctx) ? transformStableChildren(node, ctx) : rotateShapes(childShapes(), node, ctx)
+    case 'rotate': return isStableProfile(ctx) ? await transformStableChildren(node, ctx) : rotateShapes(await childShapes(), node, ctx)
     case 'scale': {
-      if (isStableProfile(ctx)) return transformStableChildren(node, ctx)
+      if (isStableProfile(ctx)) return await transformStableChildren(node, ctx)
       const raw = arg(node, 'v', 0, [1, 1, 1], ctx)
       const values = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'scale vector') : [finiteNumber(raw, ctx, node.p, 'scale')]
       const sx = values[0] ?? 1, sy = values[1] ?? sx, sz = values[2] ?? sx
       if ([sx, sy, sz].some(value => value === 0)) evaluationError(ctx, node.p, 'Scale values cannot be zero')
-      return childShapes().map(shape => shape.dimension === 3
+      return (await childShapes()).map(shape => shape.dimension === 3
         ? { ...shape, geometry: shape.geometry.scale([sx, sy, sz]) }
         : { ...shape, geometry: shape.geometry.scale([sx, sy]) })
     }
     case 'resize': {
       requireStableProfile(ctx, node)
-      return resizeChildren(node, ctx)
+      return await resizeChildren(node, ctx)
     }
     case 'mirror': {
-      if (isStableProfile(ctx)) return transformStableChildren(node, ctx)
+      if (isStableProfile(ctx)) return await transformStableChildren(node, ctx)
       const vector = vectorValue(arg(node, 'v', 0, [1, 0, 0], ctx), ctx, node.p, 'mirror normal')
-      return childShapes().map(shape => shape.dimension === 3
+      return (await childShapes()).map(shape => shape.dimension === 3
         ? { ...shape, geometry: shape.geometry.mirror([vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]) }
         : { ...shape, geometry: shape.geometry.mirror([vector[0] ?? 0, vector[1] ?? 0]) })
     }
     case 'multmatrix': return isStableProfile(ctx)
-      ? transformStableChildren(node, ctx)
-      : transformByMatrix(childShapes(), arg(node, 'm', 0, undefined, ctx), node, ctx)
+      ? await transformStableChildren(node, ctx)
+      : transformByMatrix(await childShapes(), arg(node, 'm', 0, undefined, ctx), node, ctx)
     case 'color': {
       const colorValue = arg(node, 'c', 0, isStableProfile(ctx) ? undefined : [0.5, 0.5, 0.5], ctx)
       const alpha = arg(node, 'alpha', 1, undefined, ctx)
@@ -1716,26 +1670,26 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
       if (!isStableProfile(ctx) && alpha !== undefined) {
         color[3] = clamp01(finiteNumber(alpha, ctx, node.p, 'color alpha'))
       }
-      return childShapes().map(shape => ({ ...shape, color: [...color] as RGBA }))
+      return (await childShapes()).map(shape => ({ ...shape, color: [...color] as RGBA }))
     }
-    case 'union': return booleanShapes(childShapes(), 'union', ctx, node.p)
-    case 'difference': return differenceChildren(node, ctx)
-    case 'intersection': return booleanShapes(childShapes(), 'intersection', ctx, node.p)
+    case 'union': return booleanShapes(await childShapes(), 'union', ctx, node.p)
+    case 'difference': return await differenceChildren(node, ctx)
+    case 'intersection': return booleanShapes(await childShapes(), 'intersection', ctx, node.p)
     case 'minkowski': {
       requireStableProfile(ctx, node)
-      return minkowskiShapes(childShapes(), node, ctx)
+      return minkowskiShapes(await childShapes(), node, ctx)
     }
-    case 'hull': return hullShapes(childShapes(), node, ctx)
-    case 'linear_extrude': return linearExtrude(node, ctx)
-    case 'rotate_extrude': return rotateExtrude(node, ctx)
+    case 'hull': return hullShapes(await childShapes(), node, ctx)
+    case 'linear_extrude': return await linearExtrude(node, ctx)
+    case 'rotate_extrude': return await rotateExtrude(node, ctx)
     case 'dxf_linear_extrude':
       requireStableProfile(ctx, node)
       compatibilityDeprecation(node, ctx, 'linear_extrude()')
-      return dxfLinearExtrude(node, ctx)
+      return await dxfLinearExtrude(node, ctx)
     case 'dxf_rotate_extrude':
       requireStableProfile(ctx, node)
       compatibilityDeprecation(node, ctx, 'rotate_extrude()')
-      return dxfRotateExtrude(node, ctx)
+      return await dxfRotateExtrude(node, ctx)
     case 'projection': {
       if (isStableProfile(ctx)) {
         const values = evaluateStableBuiltinModuleArguments(
@@ -1745,7 +1699,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
           ctx,
         )
         const cut = values.get('cut') === true
-        const children = childShapes()
+        const children = await childShapes()
         const solids = children.filter((shape): shape is Shape3D => shape.dimension === 3)
         if (solids.length !== children.length) {
           warn(ctx, 'projection() ignored non-3D child geometry')
@@ -1758,7 +1712,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         return [{ dimension: 2, geometry, color, entityId: currentEntityId(ctx) }]
       }
       const cut = arg(node, 'cut', 0, false, ctx) === true
-      return childShapes().map(shape => {
+      return (await childShapes()).map(shape => {
         if (shape.dimension !== 3) evaluationError(ctx, node.p, 'projection() requires 3D children')
         return {
           dimension: 2,
@@ -1781,7 +1735,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         const circularSegments = resolved.joinType === 'Round'
           ? segments(node, ctx, 48, 3, Math.abs(resolved.distance))
           : undefined
-        return childShapes().map(shape => {
+        return (await childShapes()).map(shape => {
           if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
           return {
             ...shape,
@@ -1796,41 +1750,41 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         })
       }
       const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
-      return childShapes().map(shape => {
+      return (await childShapes()).map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
         return { ...shape, geometry: shape.geometry.offset(distance), entityId: currentEntityId(ctx) }
       })
     }
     case 'group': {
-      const shapes = childShapes()
+      const shapes = await childShapes()
       return isStableProfile(ctx) ? booleanShapes(shapes, 'union', ctx, node.p, 'group') : shapes
     }
     case 'render': {
       if (isStableProfile(ctx)) {
         evaluateStableBuiltinModuleArguments(node, ['convexity'], [], ctx)
-        return booleanShapes(childShapes(), 'union', ctx, node.p, 'render')
+        return booleanShapes(await childShapes(), 'union', ctx, node.p, 'render')
       }
-      return childShapes()
+      return await childShapes()
     }
     case 'if': {
       const condition = arg(node, '_0', 0, false, ctx)
       const branch = isStableProfile(ctx) ? openScadTruthy(condition) : truthy(condition)
-      return evalNodes(branch ? node.children : node.alternative, ctx)
+      return await evalNodes(branch ? node.children : node.alternative, ctx)
     }
     case 'let': {
       if (isStableProfile(ctx)) {
         const env = evaluateSequentialBindings(callExpressionArguments(node), ctx, 0)
-        return evalNodes(node.children, stableOverlayContext(ctx, env), false)
+        return await evalNodes(node.children, stableOverlayContext(ctx, env), false)
       }
       const env = new Map(ctx.env)
       for (const [name, expression] of Object.entries(node.args)) if (!name.startsWith('_')) env.set(name, evalExpression(expression, ctx))
-      return evalNodes(node.children, { ...ctx, env }, false)
+      return await evalNodes(node.children, { ...ctx, env }, false)
     }
-    case 'for': return evalFor(node, ctx, 'for')
+    case 'for': return await evalFor(node, ctx, 'for')
     case 'intersection_for': {
       requireStableProfile(ctx, node)
       return booleanShapes(
-        evalFor(node, ctx, 'intersection_for'),
+        await evalFor(node, ctx, 'intersection_for'),
         'intersection',
         ctx,
         node.p,
@@ -1844,7 +1798,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         return node.argKinds[name] === 'named' ? `${name} = ${value}` : value
       })
       ctx.warnings.push(`ECHO:${values.length ? ` ${values.join(', ')}` : ''}`)
-      return childShapes()
+      return await childShapes()
     }
     case 'children': {
       const passed = passedCallChildren(ctx)
@@ -1858,20 +1812,20 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
           childCount: all.length,
           maximumRangeItems: MAX_RANGE_ITEMS,
         }, stableGeometrySemanticsContext(ctx))
-        if (selectorExpression === undefined) return evalNodes(all, childContext)
+        if (selectorExpression === undefined) return await evalNodes(all, childContext)
         const output: Shape[] = []
-        selected.forEach((childIndex, occurrence) => {
-          output.push(...evalNodes([all[childIndex]], {
+        for (const [occurrence, childIndex] of selected.entries()) {
+          output.push(...await evalNodes([all[childIndex]], {
             ...childContext,
             instancePath: `${childContext.instancePath}>children:${childIndex}#${occurrence}`,
           }))
-        })
+        }
         return output
       }
       const index = arg(node, '_0', 0, undefined, ctx)
-      if (index === undefined) return evalNodes(all, childContext)
+      if (index === undefined) return await evalNodes(all, childContext)
       const childIndex = Math.trunc(finiteNumber(index, ctx, node.p, 'children index'))
-      return all[childIndex] ? evalNodes([all[childIndex]], childContext) : []
+      return all[childIndex] ? await evalNodes([all[childIndex]], childContext) : []
     }
     case 'child': {
       requireStableProfile(ctx, node)
@@ -1895,7 +1849,7 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
         }
         return []
       }
-      return evalNodes([statement], {
+      return await evalNodes([statement], {
         ...passed.context,
         instancePath: `${passed.context.instancePath}>child:${index}`,
       })
@@ -1904,10 +1858,10 @@ function evalNode(node: CallNode, parent: EvalContext): Shape[] {
 
   if (isStableProfile(ctx)) {
     const declaration = ctx.stableScope?.moduleDeclaration(node.name)
-    if (declaration !== undefined) return evalUserModule(node, declaration.node, ctx, declaration.scope)
+    if (declaration !== undefined) return await evalUserModule(node, declaration.node, ctx, declaration.scope)
   } else {
     const module = ctx.modules.get(node.name)
-    if (module) return evalUserModule(node, module, ctx)
+    if (module) return await evalUserModule(node, module, ctx)
   }
   evaluationError(ctx, node.p, `Unsupported geometry operation ${node.name}()`)
 }
@@ -2965,11 +2919,11 @@ function stableTransformPlan(node: CallNode, ctx: EvalContext): OpenScadStableTr
   }
 }
 
-function transformStableChildren(node: CallNode, ctx: EvalContext): Shape[] {
+async function transformStableChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   // Argument binding and expression effects happen before child instantiation.
   const plan = stableTransformPlan(node, ctx)
   const shapes = booleanShapes(
-    evalNodes(node.children, ctx),
+    await evalNodes(node.children, ctx),
     'union',
     ctx,
     node.p,
@@ -3086,33 +3040,34 @@ function booleanShapes(
     shapes = shapes.filter(shape => shape.dimension === dimension)
   }
   if (shapes.length === 1) return shapes
+  ctx.control?.poll()
   if (dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
-    const geometry = operation === 'union' ? ctx.wasm.Manifold.union(solids) : ctx.wasm.Manifold.intersection(solids)
+    const geometry = kernelCall(ctx, p, () => operation === 'union' ? ctx.wasm.Manifold.union(solids) : ctx.wasm.Manifold.intersection(solids))
     return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
-  const geometry = operation === 'union' ? ctx.wasm.CrossSection.union(sections) : ctx.wasm.CrossSection.intersection(sections)
+  const geometry = kernelCall(ctx, p, () => operation === 'union' ? ctx.wasm.CrossSection.union(sections) : ctx.wasm.CrossSection.intersection(sections))
   return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
 }
 
-function differenceChildren(node: CallNode, ctx: EvalContext): Shape[] {
+async function differenceChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   if (node.children.length === 0) return []
   const childContext = isStableProfile(ctx)
     ? enterStableStatementScope(node.children, ctx)
     : null
   const base = booleanShapes(
     childContext === null
-      ? evalNodes([node.children[0]], ctx)
-      : evalPreparedNodes([node.children[0]], childContext),
+      ? await evalNodes([node.children[0]], ctx)
+      : await evalPreparedNodes([node.children[0]], childContext),
     'union',
     ctx,
     node.p,
   )
   const cutters = booleanShapes(
     childContext === null
-      ? evalNodes(node.children.slice(1), ctx)
-      : evalPreparedNodes(node.children.slice(1), childContext),
+      ? await evalNodes(node.children.slice(1), ctx)
+      : await evalPreparedNodes(node.children.slice(1), childContext),
     'union',
     ctx,
     node.p,
@@ -3125,6 +3080,7 @@ function differenceChildren(node: CallNode, ctx: EvalContext): Shape[] {
     }
     evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
   }
+  ctx.control?.poll()
   if (base[0].dimension === 3) {
     return [{
       dimension: 3,
@@ -3149,19 +3105,20 @@ function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] 
     warn(ctx, 'hull() ignored child geometry with a different dimension')
     shapes = shapes.filter(shape => shape.dimension === dimension)
   }
+  ctx.control?.poll()
   if (dimension === 3) {
-    const geometry = ctx.wasm.Manifold.hull(shapes.map(shape => (shape as Shape3D).geometry))
+    const geometry = kernelCall(ctx, node.p, () => ctx.wasm.Manifold.hull(shapes.map(shape => (shape as Shape3D).geometry)))
     return [trackedSolid(geometry, shapes[0].color, node, ctx)]
   }
   return [{
     dimension: 2,
-    geometry: ctx.wasm.CrossSection.hull(shapes.map(shape => (shape as Shape2D).geometry)),
+    geometry: kernelCall(ctx, node.p, () => ctx.wasm.CrossSection.hull(shapes.map(shape => (shape as Shape2D).geometry))),
     color: shapes[0].color,
     entityId: currentEntityId(ctx),
   }]
 }
 
-function resizeChildren(node: CallNode, ctx: EvalContext): Shape[] {
+async function resizeChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const evaluated = evaluateStableBuiltinModuleArguments(
     node,
     ['newsize', 'auto', 'convexity'],
@@ -3170,7 +3127,7 @@ function resizeChildren(node: CallNode, ctx: EvalContext): Shape[] {
   )
   const rawNewsize = evaluated.get('newsize')
   const rawAuto = evaluated.get('auto') ?? false
-  const shapes = evalNodes(node.children, ctx)
+  const shapes = await evalNodes(node.children, ctx)
   if (shapes.length === 0) return shapes
 
   const dimension = shapes[0].dimension
@@ -3398,7 +3355,7 @@ function stableLinearExtrudeSections(
   }
 }
 
-function linearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
+async function linearExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const evaluated = isStableProfile(ctx)
     ? evaluateStableBuiltinModuleArguments(
         node,
@@ -3407,7 +3364,7 @@ function linearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
         ctx,
       )
     : null
-  const sections = booleanShapes(evalNodes(node.children, ctx), 'union', ctx, node.p)
+  const sections = booleanShapes(await evalNodes(node.children, ctx), 'union', ctx, node.p)
 
   if (evaluated !== null) {
     return stableLinearExtrudeSections(node, ctx, evaluated, sections)
@@ -3433,7 +3390,7 @@ function linearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   }
 }
 
-function dxfLinearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
+async function dxfLinearExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const evaluated = evaluateStableCompatibilityArguments(
     node,
     ['file', 'layer', 'height', 'origin', 'scale', 'center', 'twist', 'slices'],
@@ -3462,7 +3419,7 @@ function dxfLinearExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   const file = values.get('file')
   const sourceSections = typeof file === 'string' && file.length > 0
     ? compatibilityDxfProfile(node, ctx, values, file, importScale)
-    : evalNodes(node.children, ctx)
+    : await evalNodes(node.children, ctx)
   const sections = booleanShapes(sourceSections, 'union', ctx, node.p, node.name)
   return stableLinearExtrudeSections(node, ctx, values, sections)
 }
@@ -3514,7 +3471,7 @@ function stableRotateExtrudeSections(
   }
 }
 
-function dxfRotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
+async function dxfRotateExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const evaluated = evaluateStableCompatibilityArguments(
     node,
     ['file', 'layer', 'origin', 'scale'],
@@ -3530,12 +3487,12 @@ function dxfRotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   const file = rawFile === undefined ? '' : compatibilityString(rawFile)
   const sourceSections = file.length > 0
     ? compatibilityDxfProfile(node, ctx, values, file, importScale)
-    : evalNodes(node.children, ctx)
+    : await evalNodes(node.children, ctx)
   const sections = booleanShapes(sourceSections, 'union', ctx, node.p, node.name)
   return stableRotateExtrudeSections(node, ctx, values, sections)
 }
 
-function rotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
+async function rotateExtrude(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
   const evaluated = isStableProfile(ctx)
     ? evaluateStableBuiltinModuleArguments(
         node,
@@ -3544,7 +3501,7 @@ function rotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
         ctx,
       )
     : null
-  const sections = booleanShapes(evalNodes(node.children, ctx), 'union', ctx, node.p)
+  const sections = booleanShapes(await evalNodes(node.children, ctx), 'union', ctx, node.p)
   if (evaluated !== null) {
     return stableRotateExtrudeSections(node, ctx, evaluated, sections)
   }
@@ -3563,94 +3520,9 @@ function rotateExtrude(node: CallNode, ctx: EvalContext): Shape[] {
   }
 }
 
-function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' | 'intersection_for'): Shape[] {
+async function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' | 'intersection_for'): Promise<Shape[]> {
+  const control = ctx.control
   if (isStableProfile(ctx)) {
-    const bindings = callExpressionArguments(node)
-    const output: Shape[] = []
-    const occurrences = new Map<string, number>()
-    const visit = (
-      bindingIndex: number,
-      iterationContext: EvalContext,
-      path: readonly string[],
-    ): void => {
-      if (bindingIndex >= bindings.length) {
-        const valueKey = path.join(',')
-        const occurrence = occurrences.get(valueKey) ?? 0
-        occurrences.set(valueKey, occurrence + 1)
-        output.push(...evalNodes(node.children, {
-          ...iterationContext,
-          instancePath: `${ctx.instancePath}>loop:${valueKey}#${occurrence}`,
-        }, false))
-        if (output.length > MAX_SHAPES) {
-          evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
-        }
-        return
-      }
-      const binding = bindings[bindingIndex]
-      const values = stableIterable(
-        evalExpression(binding.value, iterationContext),
-        iterationContext,
-        binding.p,
-      )
-      if (binding.name === undefined) {
-        warn(ctx, `Ignoring ${diagnosticName}() iterator without variable name`)
-        return
-      }
-      for (const value of values) {
-        ctx.control?.poll()
-        if (++ctx.budget.ops > MAX_EVAL_OPS) {
-          evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-        }
-        const env = new Map(iterationContext.env)
-        env.set(binding.name, value)
-        const segment = `${encodeURIComponent(binding.name)}=${encodeURIComponent(identityValue(value))}`
-        visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [...path, segment])
-      }
-    }
-    visit(0, ctx, [])
-    return output
-  }
-  const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
-  if (entries.length !== 1) evaluationError(ctx, node.p, `${diagnosticName}() currently requires one named iterator`)
-  const [name, expression] = entries[0]
-  const values = evalExpression(expression, ctx)
-  if (!Array.isArray(values)) evaluationError(ctx, node.p, `${diagnosticName}() iterator must be a vector or range`)
-  const output: Shape[] = []
-  const occurrences = new Map<string, number>()
-  for (const value of values) {
-    // Nested/sync path: poll only (no macrotask). Top-level loops use evalForAsync.
-    ctx.control?.poll()
-    // Count each iteration even when the body produces no statements/shapes —
-    // nested empty-bodied loops are otherwise invisible to every other limit.
-    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-    const env = new Map(ctx.env)
-    env.set(name, value)
-    const valueKey = encodeURIComponent(identityValue(value))
-    const occurrence = occurrences.get(valueKey) ?? 0
-    occurrences.set(valueKey, occurrence + 1)
-    output.push(...evalNodes(node.children, {
-      ...ctx,
-      env,
-      instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
-    }, false))
-    if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
-  }
-  return output
-}
-
-/**
- * Cooperative for/intersection_for used from the top-level statement loop.
- * Yields every {@link YIELD_EVERY_STATEMENTS} iterations (when the time budget
- * is spent) so a Worker can deliver cancel between cubes of a giant loop.
- */
-async function evalForAsync(
-  node: CallNode,
-  ctx: EvalContext,
-  control: CooperativeCheckpoint,
-  diagnosticName: 'for' | 'intersection_for',
-): Promise<Shape[]> {
-  const loopCtx: EvalContext = { ...ctx, control }
-  if (isStableProfile(loopCtx)) {
     const bindings = callExpressionArguments(node)
     const output: Shape[] = []
     const occurrences = new Map<string, number>()
@@ -3664,13 +3536,13 @@ async function evalForAsync(
         const valueKey = path.join(',')
         const occurrence = occurrences.get(valueKey) ?? 0
         occurrences.set(valueKey, occurrence + 1)
-        if (iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
+        if (control && iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
           iterationsSinceYield = 0
           await control.yieldIfDue()
         }
         iterationsSinceYield++
-        control.poll()
-        output.push(...evalNodes(node.children, {
+        control?.poll()
+        output.push(...await evalNodes(node.children, {
           ...iterationContext,
           instancePath: `${ctx.instancePath}>loop:${valueKey}#${occurrence}`,
         }, false))
@@ -3699,32 +3571,32 @@ async function evalForAsync(
         await visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [...path, segment])
       }
     }
-    await visit(0, loopCtx, [])
+    await visit(0, ctx, [])
     return output
   }
   const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
   if (entries.length !== 1) evaluationError(ctx, node.p, `${diagnosticName}() currently requires one named iterator`)
   const [name, expression] = entries[0]
-  const values = evalExpression(expression, loopCtx)
+  const values = evalExpression(expression, ctx)
   if (!Array.isArray(values)) evaluationError(ctx, node.p, `${diagnosticName}() iterator must be a vector or range`)
   const output: Shape[] = []
   const occurrences = new Map<string, number>()
   let iterationsSinceYield = 0
   for (const value of values) {
-    if (iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
+    if (control && iterationsSinceYield >= YIELD_EVERY_STATEMENTS) {
       iterationsSinceYield = 0
       await control.yieldIfDue()
     }
     iterationsSinceYield++
-    control.poll()
+    control?.poll()
     if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-    const env = new Map(loopCtx.env)
+    const env = new Map(ctx.env)
     env.set(name, value)
     const valueKey = encodeURIComponent(identityValue(value))
     const occurrence = occurrences.get(valueKey) ?? 0
     occurrences.set(valueKey, occurrence + 1)
-    output.push(...evalNodes(node.children, {
-      ...loopCtx,
+    output.push(...await evalNodes(node.children, {
+      ...ctx,
       env,
       instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
     }, false))
@@ -3742,12 +3614,12 @@ function identityValue(value: Value): string {
   return String(value)
 }
 
-function evalUserModule(
+async function evalUserModule(
   call: CallNode,
   module: ModuleNode,
   ctx: EvalContext,
   definitionScope?: OpenScadStableScope,
-): Shape[] {
+): Promise<Shape[]> {
   let env = new Map(ctx.env)
   if (isStableProfile(ctx)) {
     if (definitionScope === undefined) {
@@ -3785,7 +3657,7 @@ function evalUserModule(
     }
     env = new Map(definitionEnv)
     for (const [name, value] of parameterValues) env.set(name, value)
-    return booleanShapes(evalNodes(module.children, {
+    return booleanShapes(await evalNodes(module.children, {
       ...definitionContext,
       env,
       callChildren: {
@@ -3803,7 +3675,7 @@ function evalUserModule(
       env.set(param.name, expression ? evalExpression(expression, { ...ctx, env }) : undefined)
     }
   }
-  return evalNodes(module.children, {
+  return await evalNodes(module.children, {
     ...ctx,
     env,
     callChildren: call.children,
@@ -3852,7 +3724,17 @@ async function parseInternal(
     throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
   }
   resetPalette()
-  const ast = compileAst()
+  const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
+  let ast: readonly Statement[]
+  let bound
+  if (project === undefined) {
+    const prepared = prepareOpenScadFrontEnd(source, { languageProfile, compile: () => compileAst() })
+    ast = prepared.program
+    bound = prepared.bound
+  } else {
+    ast = compileAst()
+    bound = bindOpenScad(ast, { languageProfile, source })
+  }
   const forcedImportAssets = project === undefined
     ? []
     : stableCompatibilityForcedAssets(project, ast)
@@ -3867,12 +3749,9 @@ async function parseInternal(
   const kernelSession = await defaultGeometryKernel.openSession()
   const wasm = kernelSession.module
   const warnings: string[] = []
-  const modules = new Map<string, ModuleNode>()
-  const functions = new Map<string, FunctionNode>()
-  collectModules(ast, modules)
-  collectFunctions(ast, functions)
+  const modules = new Map(bound.modules)
+  const functions = new Map(bound.functions)
   const quality = options.quality ?? 'full'
-  const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
   const env = languageProfile === 'openscad/stable-2021.01'
     ? new Map<string, Value>(Array.from(
         createOpenScadStableRuntimeVariables({ quality, animationTime: options.animationTime }),
@@ -3922,6 +3801,7 @@ async function parseInternal(
     if (options.shouldAbort?.()) throw new AbortedError()
     const sections = shapes.filter(shape => shape.dimension === 2)
     if (sections.length) warn(ctx, `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`)
+    for (const section of sections) kernelSession.handles.adoptSection(section.geometry)
     const solids = shapes.filter((shape): shape is Shape3D => shape.dimension === 3 && !shape.geometry.isEmpty())
     const meshes: MeshData[] = []
     let volume = 0
@@ -3929,9 +3809,11 @@ async function parseInternal(
     let triangleCount = 0
     for (const shape of solids) {
       if (options.shouldAbort?.()) throw new AbortedError()
-      volume += shape.geometry.volume()
-      surfaceArea += shape.geometry.surfaceArea()
-      const withNormals = shape.geometry.calculateNormals(0, 52.5)
+      const handle = kernelSession.handles.adoptSolid(shape.geometry)
+      const geometry = kernelSession.handles.requireSolid(handle) as ManifoldGeometry
+      volume += geometry.volume()
+      surfaceArea += geometry.surfaceArea()
+      const withNormals = geometry.calculateNormals(0, 52.5)
       const mesh = withNormals.getMesh()
       await control.yieldIfDue()
       triangleCount += mesh.numTri
