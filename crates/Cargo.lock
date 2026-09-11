@@ -69,6 +69,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "brep-kernel"
+version = "0.1.0"
+dependencies = [
+ "brep-topology",
+ "nurbs-core",
+ "value-codec",
+]
+
+[[package]]
 name = "brep-topology"
 version = "0.1.0"
 dependencies = [
@@ -191,13 +200,16 @@ version = "0.1.0"
 name = "geometry-bridge"
 version = "0.1.0"
 dependencies = [
+ "brep-kernel",
  "brep-topology",
+ "geometry-ops",
  "gpu-compute",
  "math-core",
  "modelgraph-runtime",
  "modelgraph-text",
  "nurbs-core",
  "openscad-core",
+ "planar-geometry",
  "polygon-core",
  "sdf-core",
  "sketch-core",
@@ -409,7 +421,6 @@ dependencies = [
 name = "nurbs-core"
 version = "0.1.0"
 dependencies = [
- "brep-topology",
  "geometry-ops",
  "value-codec",
 ]
@@ -575,12 +586,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
+name = "planar-geometry"
+version = "0.1.0"
+dependencies = [
+ "value-codec",
+]
+
+[[package]]
 name = "polygon-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
  "geometry-ops",
  "math-core",
+ "planar-geometry",
  "value-codec",
 ]
 
@@ -687,7 +706,6 @@ dependencies = [
  "geometry-ops",
  "gpu-compute",
  "math-core",
- "polygon-core",
  "value-codec",
 ]
 
@@ -709,6 +727,7 @@ name = "slicer-core"
 version = "0.1.0"
 dependencies = [
  "gcode-core",
+ "planar-geometry",
  "polygon-core",
 ]
 
@@ -738,7 +757,6 @@ name = "subdivision-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "polygon-core",
  "value-codec",
 ]
 

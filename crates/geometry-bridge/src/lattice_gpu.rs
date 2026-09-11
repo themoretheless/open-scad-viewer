@@ -2,7 +2,7 @@
 //! flattened to plain arrays; each grid point runs `LATTICE_WGSL` on the GPU
 //! in f32. Points whose ray-parity walk overflows write NaN and are recomputed
 //! by the CPU field closure. Extraction stays on the CPU reference path.
-use crate::mesh_shell::{LATTICE_WGSL, Node, P};
+use crate::mesh_shell::{Node, LATTICE_WGSL, P};
 use gpu_compute::{read_buffer, storage_entry, uniform_entry, wgpu, GpuContext};
 use wgpu::util::DeviceExt;
 
@@ -82,7 +82,12 @@ impl GpuLattice {
             compilation_options: Default::default(),
             cache: None,
         });
-        Self { device: device.clone(), queue: context.queue.clone(), layout, pipeline }
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -105,7 +110,16 @@ impl GpuLattice {
         let total = (cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1);
         let device = &self.device;
         let mut params = Vec::with_capacity(80);
-        for v in [cells[0] as u32, cells[1] as u32, cells[2] as u32, segments.len() as u32, (nodes.len() / 10) as u32, organic as u32, open_top as u32, keep_core as u32] {
+        for v in [
+            cells[0] as u32,
+            cells[1] as u32,
+            cells[2] as u32,
+            segments.len() as u32,
+            (nodes.len() / 10) as u32,
+            organic as u32,
+            open_top as u32,
+            keep_core as u32,
+        ] {
             params.extend_from_slice(&v.to_ne_bytes());
         }
         for i in 0..3 {
@@ -115,7 +129,14 @@ impl GpuLattice {
             // The shader maps grid indices by p = min + i * step.
             params.extend_from_slice(&(((max[i] - min[i]) / cells[i] as f64) as f32).to_ne_bytes());
         }
-        for v in [skin as f32, blend as f32, wall_depth as f32, top_z as f32, 0., 0.] {
+        for v in [
+            skin as f32,
+            blend as f32,
+            wall_depth as f32,
+            top_z as f32,
+            0.,
+            0.,
+        ] {
             params.extend_from_slice(&v.to_ne_bytes());
         }
         let mk = |label: &str, bytes: &[u8], usage| {
@@ -156,15 +177,31 @@ impl GpuLattice {
             label: Some("lattice"),
             layout: &self.layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: nodes_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: tris_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: seg_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: out_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: nodes_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: tris_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: seg_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: out_buf.as_entire_binding(),
+                },
             ],
         });
-        let mut encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("lattice") });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("lattice"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("lattice"),
@@ -226,7 +263,9 @@ pub(crate) fn try_gpu(
                     for y in 0..=cells[1] {
                         for x in 0..=cells[0] {
                             if !values[index].is_finite() {
-                                let p: P = std::array::from_fn(|k| min[k] + delta[k] * [x, y, z][k] as f64);
+                                let p: P = std::array::from_fn(|k| {
+                                    min[k] + delta[k] * [x, y, z][k] as f64
+                                });
                                 values[index] = field(p) as f32;
                             }
                             index += 1;
@@ -242,6 +281,11 @@ pub(crate) fn try_gpu(
                     },
                     &sdf_core::Grid { min, max, cells },
                 )
+                .map_err(|e| polygon_core::Error {
+                    code: e.code,
+                    message: e.message,
+                })
+                .map(crate::mesh_from_triangles)
                 .map(Some)
             })
             .transpose()

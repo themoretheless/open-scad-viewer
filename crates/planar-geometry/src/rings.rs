@@ -4,10 +4,10 @@ use std::collections::{BTreeSet, HashMap};
 
 pub type Rings = Vec<Vec<[f64; 2]>>;
 
-pub(crate) fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
+pub fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
-pub(crate) fn sub2(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+pub fn sub2(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     [a[0] - b[0], a[1] - b[1]]
 }
 pub fn area(r: &[[f64; 2]]) -> f64 {
@@ -36,7 +36,7 @@ fn winding(p: [f64; 2], rings: &Rings) -> i32 {
 pub fn contains_point(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
     inside(p, &vec![ring.to_vec()])
 }
-pub(crate) fn inside(p: [f64; 2], rings: &Rings) -> bool {
+pub fn inside(p: [f64; 2], rings: &Rings) -> bool {
     winding(p, rings) != 0
 }
 pub fn hull2(mut p: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
@@ -317,8 +317,6 @@ mod tests {
         let b = vec![vec![[1., 1.], [3., 1.], [3., 3.], [1., 3.]]];
         let r = planar(&a, &b, "difference").unwrap();
         assert!((r.iter().map(|r| area(r)).sum::<f64>() - 12.).abs() < 1e-8);
-        let m = crate::solid::modeling::extrude_rings(&r, 2., 1, 0., [1., 1.], false).unwrap();
-        assert!((m.inspect().unwrap().signed_volume_mm3 - 24.).abs() < 1e-8);
     }
 
     #[test]

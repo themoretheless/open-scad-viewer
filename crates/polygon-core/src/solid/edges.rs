@@ -288,12 +288,12 @@ pub fn extract_semantic_edges(
     let mut degenerate = 0u32;
 
     let add_occurrence = |edge_a: &mut [u32],
-                              edge_b: &mut [u32],
-                              occurrence_order: &mut [u32],
-                              edge_count: usize,
-                              occurrence: usize,
-                              first: u32,
-                              second: u32| {
+                          edge_b: &mut [u32],
+                          occurrence_order: &mut [u32],
+                          edge_count: usize,
+                          occurrence: usize,
+                          first: u32,
+                          second: u32| {
         edge_a[occurrence] = first.min(second);
         edge_b[occurrence] = first.max(second);
         occurrence_order[edge_count] = occurrence as u32;
@@ -328,12 +328,8 @@ pub fn extract_semantic_edges(
         let cross_y = e10z * e20x - e10x * e20z;
         let cross_z = e10x * e20y - e10y * e20x;
         let twice_area = hypot3(cross_x, cross_y, cross_z);
-        let edge_scale = e10x * e10x
-            + e10y * e10y
-            + e10z * e10z
-            + e20x * e20x
-            + e20y * e20y
-            + e20z * e20z;
+        let edge_scale =
+            e10x * e10x + e10y * e10y + e10z * e10z + e20x * e20x + e20y * e20y + e20z * e20z;
         let area_epsilon = edge_scale * AREA_EPSILON_FACTOR;
 
         if !twice_area.is_finite() || twice_area <= area_epsilon {
@@ -413,8 +409,7 @@ pub fn extract_semantic_edges(
         group_start = group_end;
     }
 
-    let output_edge_count =
-        diagnostics.boundary + diagnostics.crease + diagnostics.non_manifold;
+    let output_edge_count = diagnostics.boundary + diagnostics.crease + diagnostics.non_manifold;
     let mut output = Vec::with_capacity(output_edge_count as usize * 2);
     let mut group_start = 0usize;
     while group_start < edge_count {
@@ -504,8 +499,8 @@ mod tests {
             [0.0, 1.0, 1.0],
         ]);
         let cube_triangles = [
-            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2,
-            7, 6, 3, 0, 4, 3, 4, 7,
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7,
+            6, 3, 0, 4, 3, 4, 7,
         ];
         let result = extract_semantic_edges(
             &cube_vertices,
@@ -531,14 +526,8 @@ mod tests {
             [0.0, 1.0, 0.0],
         ]);
         let triangles = [0, 1, 2, 3, 4, 5];
-        let exact_weld = extract_semantic_edges(
-            &duplicated,
-            &triangles,
-            &[],
-            &[],
-            true,
-            cos_degrees(30.0),
-        );
+        let exact_weld =
+            extract_semantic_edges(&duplicated, &triangles, &[], &[], true, cos_degrees(30.0));
         let manifold_merge = extract_semantic_edges(
             &duplicated,
             &triangles,
@@ -589,10 +578,8 @@ mod tests {
         ]);
         let forward = [0u32, 1, 2, 1, 0, 3];
         let reversed = [1u32, 0, 3, 0, 1, 2];
-        let visible =
-            extract_semantic_edges(&folded, &forward, &[], &[], true, cos_degrees(45.0));
-        let hidden =
-            extract_semantic_edges(&folded, &forward, &[], &[], true, cos_degrees(100.0));
+        let visible = extract_semantic_edges(&folded, &forward, &[], &[], true, cos_degrees(45.0));
+        let hidden = extract_semantic_edges(&folded, &forward, &[], &[], true, cos_degrees(100.0));
         let reordered =
             extract_semantic_edges(&folded, &reversed, &[], &[], true, cos_degrees(45.0));
         assert_eq!(visible.diagnostics.crease, 1);

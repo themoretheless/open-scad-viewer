@@ -82,7 +82,7 @@ fn finish(mesh: Mesh, face_ids: Vec<usize>, tolerance: f64, closed: bool) -> Res
         face_ids,
     })
 }
-pub fn nurbs(model: &nurbs_core::brep::Model, segments: usize) -> Result<Tessellation> {
+pub fn nurbs(model: &brep_kernel::Model, segments: usize) -> Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));

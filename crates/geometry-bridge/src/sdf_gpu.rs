@@ -47,7 +47,8 @@ pub fn finish(v: &Value) -> crate::Result<Value> {
     let (field, grid) = PENDING
         .with(|pending| pending.borrow_mut().1.remove(&id))
         .ok_or_else(|| input("Unknown SDF sweep handle"))?;
-    let mesh = sdf_core::polygonize_with_values(&field, &grid, &values)?;
+    let mesh =
+        crate::mesh_from_triangles(sdf_core::polygonize_with_values(&field, &grid, &values)?);
     let report = mesh.inspect()?;
     encode(polygon_core::BuiltMesh { mesh, report })
 }
@@ -61,7 +62,8 @@ mod tests {
     fn prepare_finish_roundtrip_matches_reference_extraction() {
         // Sphere radius 10 at the origin, small grid.
         let field = json!({"kind": "sphere", "center": [0., 0., 0.], "radius": 10.});
-        let grid = json!({"min": [-12., -12., -12.], "max": [12., 12., 12.], "cells": [16, 16, 16]});
+        let grid =
+            json!({"min": [-12., -12., -12.], "max": [12., 12., 12.], "cells": [16, 16, 16]});
         let prepared = prepare(&json!({"field": field, "grid": grid})).unwrap();
         let id = prepared["id"].as_f64().unwrap() as u64;
         assert!(prepared["wgsl"].as_str().unwrap().contains("@compute"));
@@ -77,7 +79,8 @@ mod tests {
         for z in 0..=nz {
             for y in 0..=ny {
                 for x in 0..=nx {
-                    let p: [f64; 3] = std::array::from_fn(|i| -12. + 24. * [x, y, z][i] as f64 / 16.);
+                    let p: [f64; 3] =
+                        std::array::from_fn(|i| -12. + 24. * [x, y, z][i] as f64 / 16.);
                     let dist = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt() - 10.;
                     values.push(dist as f32 as f64);
                 }

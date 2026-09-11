@@ -175,13 +175,7 @@ pub unsafe fn abi_mesh_free(ptr: usize) {
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
 
-pub unsafe fn abi_import_mesh(
-    stride: usize,
-    vp: usize,
-    vl: usize,
-    ip: usize,
-    il: usize,
-) -> u64 {
+pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il: usize) -> u64 {
     if vl > LIMIT / 4 || il > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
     }

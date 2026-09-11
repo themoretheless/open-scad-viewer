@@ -1,6 +1,6 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
-use crate::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
 use std::collections::BTreeMap;
 
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};

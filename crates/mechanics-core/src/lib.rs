@@ -1,10 +1,11 @@
 //! Strength-of-materials estimates from already-cut contours.
 //!
 //! Beam/section formulas only: area, centroid, second moments, section moduli,
-//! a scanline wall-width probe, and σ = Mc/I (+ N/A). Not FEA, not a print
-//! process, not a material certificate. The host (CAD) sections a mesh; this
-//! crate never holds CAD handles. Coordinates are millimeters, force is
-//! newtons, stress is MPa (N/mm²).
+//! a scanline wall-width probe, and σ = Mc/I (+ N/A). Not a surface kernel,
+//! not a subdivision cage, not gear/thread generation (those live in ModelGraph).
+//! Not FEA, not a print process, not a material certificate. The host (CAD)
+//! sections a mesh; this crate never holds CAD handles. Coordinates are
+//! millimeters, force is newtons, stress is MPa (N/mm²).
 
 pub const MAX_LAYERS: usize = 2_048;
 pub const MAX_POINTS: usize = 16_384;
@@ -170,7 +171,10 @@ fn winding(point: [f64; 2], contours: &[Vec<[f64; 2]>]) -> i32 {
         for i in 0..ring.len() {
             let a = ring[i];
             let b = ring[(i + 1) % ring.len()];
-            let c = cross2([b[0] - a[0], b[1] - a[1]], [point[0] - a[0], point[1] - a[1]]);
+            let c = cross2(
+                [b[0] - a[0], b[1] - a[1]],
+                [point[0] - a[0], point[1] - a[1]],
+            );
             if a[1] <= point[1] && b[1] > point[1] && c > 0.0 {
                 winding += 1;
             }
@@ -285,8 +289,15 @@ pub fn analyze_section(section: &LayerSection, load: &LoadCase) -> Result<Sectio
     let (max_x, max_y) = extrema(section, centroid);
     let wx = if max_y > 0.0 { ixx.abs() / max_y } else { 0.0 };
     let wy = if max_x > 0.0 { iyy.abs() / max_x } else { 0.0 };
-    let bending = if wx > 0.0 { load.moment_x_nmm.abs() / wx } else { 0.0 }
-        + if wy > 0.0 { load.moment_y_nmm.abs() / wy } else { 0.0 };
+    let bending = if wx > 0.0 {
+        load.moment_x_nmm.abs() / wx
+    } else {
+        0.0
+    } + if wy > 0.0 {
+        load.moment_y_nmm.abs() / wy
+    } else {
+        0.0
+    };
     let axial = load.axial_n / area;
     let von_mises = (bending + axial.abs()).abs();
     let fos = if von_mises > 0.0 {
@@ -313,10 +324,7 @@ pub fn analyze_section(section: &LayerSection, load: &LoadCase) -> Result<Sectio
 
 /// Rank already-cut layers. Weakest is the smallest finite factor of safety,
 /// then the smallest section modulus.
-pub fn analyze_layers(
-    sections: &[LayerSection],
-    load: &LoadCase,
-) -> Result<StrengthReport> {
+pub fn analyze_layers(sections: &[LayerSection], load: &LoadCase) -> Result<StrengthReport> {
     require_load(load)?;
     if sections.is_empty() {
         return Err(invalid("MECHANICS_EMPTY_SECTION", "No layers to analyze"));

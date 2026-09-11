@@ -1,7 +1,27 @@
 //! Bounded Catmull–Clark refinement. Original polygon IDs survive refinement.
-use polygon_core::{Error, Mesh, Result};
+//! Tessellation is a neutral triangle buffer; mesh inspect/fit lives in the bridge.
 use std::collections::{BTreeMap, BTreeSet};
 type Point = [f64; 3];
+pub type Result<T> = std::result::Result<T, Error>;
+#[derive(Debug, Clone)]
+pub struct Error {
+    pub code: &'static str,
+    pub message: String,
+}
+impl Error {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            code: "SUBDIVISION_INVALID_INPUT",
+            message: message.into(),
+        }
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+impl std::error::Error for Error {}
 #[derive(Clone, Debug)]
 pub struct Cage {
     pub vertices: Vec<Point>,
@@ -231,7 +251,7 @@ impl Cage {
 }
 impl Refined {
     /// Fan triangulation of convex faces. Concave/folded faces are not certified.
-    pub fn triangulate(&self) -> Result<(Mesh, Vec<usize>)> {
+    pub fn triangulate(&self) -> Result<(geometry_ops::Triangles, Vec<usize>)> {
         self.cage.validate()?;
         let mut indices = Vec::new();
         let mut ids = Vec::new();
@@ -244,13 +264,13 @@ impl Refined {
                 ids.push(self.face_ids[fi]);
             }
         }
-        let mesh = Mesh {
-            positions: self.cage.vertices.iter().flatten().copied().collect(),
-            indices,
-            uv: None,
-        };
-        mesh.validate()?;
-        Ok((mesh, ids))
+        Ok((
+            geometry_ops::Triangles {
+                positions: self.cage.vertices.iter().flatten().copied().collect(),
+                indices,
+            },
+            ids,
+        ))
     }
 }
 #[cfg(test)]
@@ -269,16 +289,7 @@ mod tests {
         assert!(r.face_ids.iter().all(|x| *x == 0));
         let first = square().subdivide(1).unwrap();
         assert_eq!(first.cage.vertices[0], [0.125, 0.125, 0.]);
-        assert_eq!(
-            first
-                .triangulate()
-                .unwrap()
-                .0
-                .inspect()
-                .unwrap()
-                .boundary_edges,
-            8
-        );
+        assert_eq!(boundary_edges(&first.triangulate().unwrap().0), 8);
     }
     #[test]
     fn invalid_inputs() {
@@ -287,73 +298,43 @@ mod tests {
         assert!(c.validate().is_err());
         assert!(square().subdivide(6).is_err());
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct Reconstruction {
-    pub cage: Cage,
-    pub iterations: usize,
-    pub vertex_residual_before_mm: f64,
-    pub vertex_residual_after_mm: f64,
-    pub deviation: polygon_core::solid::proximity::Deviation,
-    pub correspondence: &'static str,
-}
-impl value_codec::Serialize for Reconstruction {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("cage".into(), value_codec::Serialize::to_value(&self.cage));
-        object.insert(
-            "iterations".into(),
-            value_codec::Serialize::to_value(&self.iterations),
-        );
-        object.insert(
-            "vertexResidualBeforeMm".into(),
-            value_codec::Serialize::to_value(&self.vertex_residual_before_mm),
-        );
-        object.insert(
-            "vertexResidualAfterMm".into(),
-            value_codec::Serialize::to_value(&self.vertex_residual_after_mm),
-        );
-        object.insert(
-            "deviation".into(),
-            value_codec::Serialize::to_value(&self.deviation),
-        );
-        object.insert(
-            "correspondence".into(),
-            value_codec::Serialize::to_value(&self.correspondence),
-        );
-        value_codec::Value::Object(object)
+    fn boundary_edges(t: &geometry_ops::Triangles) -> usize {
+        let mut edges = BTreeMap::new();
+        for tri in t.indices.chunks_exact(3) {
+            for (a, b) in [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])] {
+                let key = (a.min(b), a.max(b));
+                *edges.entry(key).or_insert(0) += 1;
+            }
+        }
+        edges.values().filter(|&&n| n == 1).count()
     }
 }
+
 impl Cage {
-    /// Retains welded source triangle topology. No hidden quad remeshing or decimation.
-    pub fn from_mesh(mesh: &Mesh) -> Result<Self> {
-        let source = polygon_core::solid::proximity::valid_source(mesh, 2048)?;
-        let cage = Self {
-            vertices: source
-                .positions
-                .chunks_exact(3)
-                .map(|p| [p[0], p[1], p[2]])
-                .collect(),
-            faces: source.indices.chunks_exact(3).map(|t| t.to_vec()).collect(),
-        };
+    pub fn from_faces(vertices: Vec<Point>, faces: Vec<Vec<usize>>) -> Result<Self> {
+        let cage = Self { vertices, faces };
         cage.validate()?;
         Ok(cage)
     }
 }
-/// Fits the positions of a source-topology cage so the original-vertex samples
-/// after one Catmull–Clark step interpolate source vertices more closely.
-/// Backtracking accepts only residual-reducing iterations. This is not a unique
-/// inverse limit surface or automatic recovery of a low-poly artist cage.
-pub fn reconstruct(mesh: &Mesh, iterations: usize) -> Result<Reconstruction> {
+
+#[derive(Clone, Debug)]
+pub struct Fit {
+    pub cage: Cage,
+    pub iterations: usize,
+    pub vertex_residual_before_mm: f64,
+    pub vertex_residual_after_mm: f64,
+    pub correspondence: &'static str,
+}
+
+/// Fits cage positions so one Catmull–Clark step interpolates the original
+/// vertices more closely. Not a unique inverse limit surface.
+pub fn fit(cage: &Cage, iterations: usize) -> Result<Fit> {
     if iterations > 32 {
         return Err(Error::new("Subdivision fitting requires 0..32 iterations"));
     }
-    let source = polygon_core::solid::proximity::valid_source(mesh, 2048)?;
-    let mut cage = Cage::from_mesh(&source)?;
-    let preview = cage.subdivide(1)?.triangulate()?.0;
-    // Check the work budget before fitting; also establishes a valid baseline.
-    polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
+    cage.validate()?;
+    let mut cage = cage.clone();
     let target = cage.vertices.clone();
     let residual = |c: &Cage| -> Result<(f64, Vec<Point>)> {
         let r = c.subdivide(1)?;
@@ -395,14 +376,11 @@ pub fn reconstruct(mesh: &Mesh, iterations: usize) -> Result<Reconstruction> {
             break;
         }
     }
-    let output = cage.subdivide(1)?.triangulate()?.0;
-    let deviation = polygon_core::solid::proximity::sample_deviation(&source, &output)?;
-    Ok(Reconstruction {
+    Ok(Fit {
         cage,
         iterations: completed,
         vertex_residual_before_mm: before,
         vertex_residual_after_mm: after,
-        deviation,
         correspondence: "source_triangle_topology_one_refinement_step",
     })
 }
@@ -483,7 +461,7 @@ impl Cage {
     }
     pub fn sweep(profile: &[[f64; 2]], path: &[Point], up: Point, caps: bool) -> Result<Self> {
         Self::loft(
-            &polygon_core::solid::modeling::sweep_sections(profile, path, up)?,
+            &geometry_ops::sweep_sections(profile, path, up).map_err(Error::new)?,
             caps,
         )
     }

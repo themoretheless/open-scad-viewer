@@ -155,8 +155,13 @@ fn sample_stops(stops: &[GradientStop], t: f64) -> Color {
         let (a, b) = (w[0], w[1]);
         if t >= a.offset && t <= b.offset {
             let span = b.offset - a.offset;
-            let f = if span > 1e-12 { (t - a.offset) / span } else { 0.0 };
-            let lerp = |x: u8, y: u8| (f64::from(x) + (f64::from(y) - f64::from(x)) * f).round() as u8;
+            let f = if span > 1e-12 {
+                (t - a.offset) / span
+            } else {
+                0.0
+            };
+            let lerp =
+                |x: u8, y: u8| (f64::from(x) + (f64::from(y) - f64::from(x)) * f).round() as u8;
             return Color::rgba(
                 lerp(a.color.r, b.color.r),
                 lerp(a.color.g, b.color.g),
@@ -263,8 +268,8 @@ pub struct Appearance {
     pub stroke_width: f64,
     pub opacity: f64,
     pub fill_rule: FillRule,
-    pub start_marker: crate::planar::stroke::ArrowMarker,
-    pub end_marker: crate::planar::stroke::ArrowMarker,
+    pub start_marker: planar_geometry::stroke::ArrowMarker,
+    pub end_marker: planar_geometry::stroke::ArrowMarker,
     pub shadows: Vec<DropShadow>,
     pub inner_shadows: Vec<InnerShadow>,
 }
@@ -277,8 +282,8 @@ impl Default for Appearance {
             stroke_width: 0.0,
             opacity: 1.0,
             fill_rule: FillRule::Nonzero,
-            start_marker: crate::planar::stroke::ArrowMarker::None,
-            end_marker: crate::planar::stroke::ArrowMarker::None,
+            start_marker: planar_geometry::stroke::ArrowMarker::None,
+            end_marker: planar_geometry::stroke::ArrowMarker::None,
             shadows: Vec::new(),
             inner_shadows: Vec::new(),
         }
@@ -382,13 +387,25 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64, alpha: u8) -> Color {
 
 /// Validate a style snapshot (finite widths / offsets, opacity in range).
 pub fn validate_appearance(a: &Appearance) -> Result<()> {
-    check(a.stroke_width.is_finite() && a.stroke_width >= 0.0, "Invalid stroke width")?;
-    check(a.opacity.is_finite() && (0.0..=1.0).contains(&a.opacity), "Invalid opacity")?;
+    check(
+        a.stroke_width.is_finite() && a.stroke_width >= 0.0,
+        "Invalid stroke width",
+    )?;
+    check(
+        a.opacity.is_finite() && (0.0..=1.0).contains(&a.opacity),
+        "Invalid opacity",
+    )?;
     for s in &a.shadows {
-        check(s.dx.is_finite() && s.dy.is_finite(), "Invalid shadow offset")?;
+        check(
+            s.dx.is_finite() && s.dy.is_finite(),
+            "Invalid shadow offset",
+        )?;
     }
     for s in &a.inner_shadows {
-        check(s.dx.is_finite() && s.dy.is_finite(), "Invalid inner-shadow offset")?;
+        check(
+            s.dx.is_finite() && s.dy.is_finite(),
+            "Invalid inner-shadow offset",
+        )?;
     }
     Ok(())
 }

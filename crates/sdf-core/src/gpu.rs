@@ -43,14 +43,20 @@ impl GpuSdf {
             compilation_options: Default::default(),
             cache: None,
         });
-        Self { device: device.clone(), queue: context.queue.clone(), layout, pipeline }
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+        }
     }
 
     fn run(&self, flat: &FlatField, grid: &Grid) -> Vec<f32> {
         let [nx, ny, nz] = grid.cells;
         let total = (nx + 1) * (ny + 1) * (nz + 1);
         let device = &self.device;
-        let mut params = gpu_compute::pack_u32(&[nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32]);
+        let mut params =
+            gpu_compute::pack_u32(&[nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32]);
         for i in 0..3 {
             params.extend_from_slice(&(grid.min[i] as f32).to_le_bytes());
         }
@@ -72,8 +78,16 @@ impl GpuSdf {
         let params_buf = mk("params", &params, wgpu::BufferUsages::UNIFORM);
         let kinds_buf = mk("kinds", &kinds, wgpu::BufferUsages::STORAGE);
         let node_buf = mk("nodes", &node_params, wgpu::BufferUsages::STORAGE);
-        let aux_buf = mk("aux", if aux.is_empty() { &[0u8; 4] } else { &aux }, wgpu::BufferUsages::STORAGE);
-        let tris_buf = mk("tris", if tris.is_empty() { &[0u8; 4] } else { &tris }, wgpu::BufferUsages::STORAGE);
+        let aux_buf = mk(
+            "aux",
+            if aux.is_empty() { &[0u8; 4] } else { &aux },
+            wgpu::BufferUsages::STORAGE,
+        );
+        let tris_buf = mk(
+            "tris",
+            if tris.is_empty() { &[0u8; 4] } else { &tris },
+            wgpu::BufferUsages::STORAGE,
+        );
         let value_bytes = (total * 4) as u64;
         let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("values"),
@@ -91,12 +105,30 @@ impl GpuSdf {
             label: Some("sdf_grid"),
             layout: &self.layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: params_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: kinds_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: node_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: aux_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: tris_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: out_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: kinds_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: node_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: aux_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: tris_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: out_buf.as_entire_binding(),
+                },
             ],
         });
         let mut encoder =

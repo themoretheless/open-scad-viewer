@@ -14,8 +14,8 @@
 //! arrangement or printable regions. Intersections, shell containment and
 //! material classification still require a subsequent validation stage.
 
-use crate::planar::rings::{area, planar, Rings};
 use crate::{check, cross, sub, Error, Mesh, Result};
+use planar_geometry::rings::{area, planar, Rings};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 #[derive(Debug, Clone)]
@@ -288,7 +288,7 @@ pub fn project(mesh: &Mesh) -> Result<Rings> {
         }
         triangles.push(r)
     }
-    planar(&triangles, &vec![], "union")
+    Ok(planar(&triangles, &vec![], "union")?)
 }
 
 pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
@@ -352,5 +352,5 @@ pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {
             rings.push(ring)
         }
     }
-    planar(&rings, &vec![], "union")
+    Ok(planar(&rings, &vec![], "union")?)
 }

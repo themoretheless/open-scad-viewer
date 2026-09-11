@@ -490,3 +490,116 @@ impl Region2 {
         self.outer.len() + self.holes.iter().map(Vec::len).sum::<usize>()
     }
 }
+
+/// Neutral triangle buffer. Not a mesh kernel: no validate/inspect/boolean.
+#[derive(Clone, Debug, Default)]
+pub struct Triangles {
+    pub positions: Vec<f64>,
+    pub indices: Vec<usize>,
+}
+impl value_codec::Serialize for Triangles {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "positions".into(),
+            value_codec::Serialize::to_value(&self.positions),
+        );
+        object.insert(
+            "indices".into(),
+            value_codec::Serialize::to_value(&self.indices),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for Triangles {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let positions = value_codec::Deserialize::from_value(
+            object
+                .remove("positions")
+                .ok_or_else(|| value_codec::error("Missing field positions"))?,
+        )?;
+        let indices = value_codec::Deserialize::from_value(
+            object
+                .remove("indices")
+                .ok_or_else(|| value_codec::error("Missing field indices"))?,
+        )?;
+        Ok(Self { positions, indices })
+    }
+}
+
+fn vsub(a: Point, b: Point) -> Point {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+fn vdot(a: Point, b: Point) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+fn vcross(a: Point, b: Point) -> Point {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+fn vnorm(a: Point) -> f64 {
+    vdot(a, a).sqrt()
+}
+fn vunit(a: Point) -> Result<Point> {
+    let n = vnorm(a);
+    if n <= 1e-12 {
+        return Err("Direction is zero or numerically singular".into());
+    }
+    Ok([a[0] / n, a[1] / n, a[2] / n])
+}
+
+/// Rotation-minimizing frames on a polyline; 180-degree reversals are rejected.
+pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result<Vec<Vec<Point>>> {
+    if !(2..=64).contains(&path.len()) || path.iter().flatten().any(|v| !v.is_finite()) {
+        return Err("Sweep requires 2..64 finite path points".into());
+    }
+    let tangents: Vec<Point> = path
+        .windows(2)
+        .map(|w| vunit(vsub(w[1], w[0])))
+        .collect::<Result<_>>()?;
+    let mut normal = vunit(vsub(up, tangents[0].map(|v| v * vdot(up, tangents[0]))))?;
+    let mut previous = tangents[0];
+    let mut sections = Vec::new();
+    for i in 0..path.len() {
+        let tangent = if i == 0 {
+            tangents[0]
+        } else if i == path.len() - 1 {
+            *tangents.last().unwrap()
+        } else {
+            vunit(std::array::from_fn(|k| tangents[i - 1][k] + tangents[i][k]))?
+        };
+        let axis = vcross(previous, tangent);
+        let sine = vnorm(axis);
+        let cosine = vdot(previous, tangent).clamp(-1., 1.);
+        if cosine <= -1. + 1e-9 {
+            return Err("Sweep path reverses direction".into());
+        }
+        if sine > 1e-12 {
+            let axis = axis.map(|v| v / sine);
+            let b = vcross(axis, normal);
+            let d = vdot(axis, normal);
+            normal = std::array::from_fn(|k| {
+                normal[k] * cosine + b[k] * sine + axis[k] * d * (1. - cosine)
+            });
+        }
+        normal = vunit(vsub(normal, tangent.map(|v| v * vdot(normal, tangent))))?;
+        let binormal = vcross(tangent, normal);
+        sections.push(
+            profile
+                .iter()
+                .map(|p| {
+                    std::array::from_fn(|k| path[i][k] + p[0] * normal[k] + p[1] * binormal[k])
+                })
+                .collect(),
+        );
+        previous = tangent;
+    }
+    Ok(sections)
+}

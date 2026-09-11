@@ -1,7 +1,7 @@
 //! Mesh primitives: cube / cylinder / sphere, join, hull, clean.
-//! Closed-ring boolean lives in `crate::planar::rings`.
-use crate::planar::rings::{area, cross2, inside, planar, sub2, Rings};
+//! Closed-ring boolean lives in `planar_geometry::rings`.
 use crate::{check, cross, norm, sub, Mesh, Result};
+use planar_geometry::rings::{area, cross2, inside, planar, sub2, Rings};
 use std::collections::{BTreeSet, HashMap};
 
 pub fn empty() -> Mesh {

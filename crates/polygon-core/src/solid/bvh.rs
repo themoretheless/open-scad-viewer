@@ -61,7 +61,8 @@ impl Builder<'_> {
             return difference;
         }
         // Original triangle number is a stable, deterministic tiebreaker.
-        (self.source_triangles[left as usize] as f64) - (self.source_triangles[right as usize] as f64)
+        (self.source_triangles[left as usize] as f64)
+            - (self.source_triangles[right as usize] as f64)
     }
 
     /// In-place deterministic quickselect with a three-way partition.
@@ -211,7 +212,10 @@ pub fn build_mesh_bvh(
         let cx = vertices[c] as f64;
         let cy = vertices[c + 1] as f64;
         let cz = vertices[c + 2] as f64;
-        if ![ax, ay, az, bx, by, bz, cx, cy, cz].iter().all(|v| v.is_finite()) {
+        if ![ax, ay, az, bx, by, bz, cx, cy, cz]
+            .iter()
+            .all(|v| v.is_finite())
+        {
             continue;
         }
 

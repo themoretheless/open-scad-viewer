@@ -1,8 +1,8 @@
 //! Illustrator-style Pathfinder ops on planar CAD rings.
 //!
-//! Built on [`crate::planar::rings::planar`] (union / intersection / difference / xor).
+//! Built on [`crate::rings::planar`] (union / intersection / difference / xor).
 //! Inputs are closed rings in document z-order: index 0 = back, last = front.
-use crate::planar::rings::{area, contains_point, planar, Rings};
+use crate::rings::{area, contains_point, planar, Rings};
 use crate::{check, Result};
 
 /// Max shapes for exponential arrangement walks (Divide / Shape Builder).
@@ -41,10 +41,7 @@ fn ring_contains_ring(outer: &[[f64; 2]], inner: &[[f64; 2]]) -> bool {
     if inner.is_empty() {
         return false;
     }
-    let hits = inner
-        .iter()
-        .filter(|p| contains_point(**p, outer))
-        .count();
+    let hits = inner.iter().filter(|p| contains_point(**p, outer)).count();
     hits * 2 > inner.len()
 }
 
@@ -362,7 +359,7 @@ pub fn merge_by_color(shapes: &[ColoredRegion]) -> Result<Vec<ColoredRegion>> {
     for s in shapes {
         validate_closed(&s.rings)?;
     }
-    let mut buckets: Vec<( [u8; 4], Vec<Rings> )> = Vec::new();
+    let mut buckets: Vec<([u8; 4], Vec<Rings>)> = Vec::new();
     for s in shapes {
         if let Some((_, rings)) = buckets.iter_mut().find(|(c, _)| *c == s.color) {
             rings.push(s.rings.clone());

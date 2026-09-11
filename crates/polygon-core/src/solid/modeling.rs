@@ -1,7 +1,7 @@
 //! Native polygon construction. No spline or external CAD backend is used.
-use crate::planar::rings::{area, inside, Rings};
 use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
 use crate::{check, cross, norm, sub, BuiltMesh, Mesh, Result};
+use planar_geometry::rings::{area, inside, Rings};
 pub type Point = [f64; 3];
 fn dot(a: Point, b: Point) -> f64 {
     a.iter().zip(b).map(|(a, b)| a * b).sum()
@@ -256,50 +256,7 @@ pub fn loft(sections: &[Vec<Point>], caps: bool) -> Result<BuiltMesh> {
 }
 /// Rotation-minimizing frames on a polyline; 180-degree reversals are rejected.
 pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result<Vec<Vec<Point>>> {
-    check(
-        (2..=64).contains(&path.len()) && path.iter().flatten().all(|v| v.is_finite()),
-        "Sweep requires 2..64 finite path points",
-    )?;
-    let tangents: Vec<_> = path
-        .windows(2)
-        .map(|w| unit(sub(w[1], w[0])))
-        .collect::<Result<_>>()?;
-    let mut normal = unit(sub(up, tangents[0].map(|v| v * dot(up, tangents[0]))))?;
-    let mut previous = tangents[0];
-    let mut sections = Vec::new();
-    for i in 0..path.len() {
-        let tangent = if i == 0 {
-            tangents[0]
-        } else if i == path.len() - 1 {
-            *tangents.last().unwrap()
-        } else {
-            unit(std::array::from_fn(|k| tangents[i - 1][k] + tangents[i][k]))?
-        };
-        let axis = cross(previous, tangent);
-        let sine = norm(&axis);
-        let cosine = dot(previous, tangent).clamp(-1., 1.);
-        check(cosine > -1. + 1e-9, "Sweep path reverses direction")?;
-        if sine > 1e-12 {
-            let axis = axis.map(|v| v / sine);
-            let b = cross(axis, normal);
-            let d = dot(axis, normal);
-            normal = std::array::from_fn(|k| {
-                normal[k] * cosine + b[k] * sine + axis[k] * d * (1. - cosine)
-            });
-        }
-        normal = unit(sub(normal, tangent.map(|v| v * dot(normal, tangent))))?;
-        let binormal = cross(tangent, normal);
-        sections.push(
-            profile
-                .iter()
-                .map(|p| {
-                    std::array::from_fn(|k| path[i][k] + p[0] * normal[k] + p[1] * binormal[k])
-                })
-                .collect(),
-        );
-        previous = tangent;
-    }
-    Ok(sections)
+    geometry_ops::sweep_sections(profile, path, up).map_err(crate::Error::new)
 }
 pub fn sweep(profile: &[[f64; 2]], path: &[Point], up: Point, caps: bool) -> Result<BuiltMesh> {
     loft(&sweep_sections(profile, path, up)?, caps)
@@ -508,6 +465,14 @@ mod tests {
             .report
             .closed
         );
+    }
+    #[test]
+    fn extrude_rings_difference_volume() {
+        let a = vec![vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]]];
+        let b = vec![vec![[1., 1.], [3., 1.], [3., 3.], [1., 3.]]];
+        let r = planar_geometry::rings::planar(&a, &b, "difference").unwrap();
+        let m = extrude_rings(&r, 2., 1, 0., [1., 1.], false).unwrap();
+        assert!((m.inspect().unwrap().signed_volume_mm3 - 24.).abs() < 1e-8);
     }
     #[test]
     fn revolve_full_and_partial() {

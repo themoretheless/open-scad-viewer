@@ -3,7 +3,7 @@ use sdf_core::{polygonize, polygonize_accelerated, Acceleration, Field, Grid};
 use std::time::Instant;
 
 /// Outward UV-sphere mesh with a controlled triangle count.
-fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> polygon_core::Mesh {
+fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> geometry_ops::Triangles {
     let mut positions = Vec::new();
     for r in 0..=rings {
         let phi = std::f64::consts::PI * r as f64 / rings as f64;
@@ -29,7 +29,7 @@ fn uv_sphere(center: [f64; 3], radius: f64, rings: usize, sectors: usize) -> pol
             }
         }
     }
-    polygon_core::Mesh { positions, indices, uv: None }
+    geometry_ops::Triangles { positions, indices }
 }
 
 fn main() {
@@ -59,8 +59,8 @@ fn main() {
 
     // Mesh-distance field (the dominant production case; budget-capped grid).
     let mesh = uv_sphere([0., 0., 0.], 10., 17, 34);
-    let field = Field::from_mesh(&mesh, false).unwrap();
     let triangles = mesh.indices.len() / 3;
+    let field = Field::from_triangles(mesh, false).unwrap();
     let grid = Grid { min: [-12., -12., -12.], max: [12., 12., 12.], cells: [16, 16, 16] };
     let mut cpu_times = Vec::new();
     let mut gpu_times = Vec::new();

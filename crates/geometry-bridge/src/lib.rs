@@ -2,15 +2,15 @@
 //! Owns the NURBS-to-polygon sampler and the WASM/JSON transport, not a third
 //! geometry representation. Native clients can use the same typed adapters.
 pub mod brep;
-mod mesh;
-pub mod openscad;
-pub mod reconstruction;
-pub mod mesh_analysis;
-pub mod mesh_shell;
-mod path2d;
-mod sdf_gpu;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
+mod mesh;
+pub mod mesh_analysis;
+pub mod mesh_shell;
+pub mod openscad;
+mod path2d;
+pub mod reconstruction;
+mod sdf_gpu;
 use nurbs_core::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -53,6 +53,43 @@ impl From<polygon_core::Error> for Error {
             code: e.code,
             message: e.message,
         }
+    }
+}
+impl From<planar_geometry::Error> for Error {
+    fn from(e: planar_geometry::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+        }
+    }
+}
+impl From<sdf_core::Error> for Error {
+    fn from(e: sdf_core::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+        }
+    }
+}
+impl From<subdivision_core::Error> for Error {
+    fn from(e: subdivision_core::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+        }
+    }
+}
+pub(crate) fn mesh_from_triangles(t: geometry_ops::Triangles) -> Mesh {
+    Mesh {
+        positions: t.positions,
+        indices: t.indices,
+        uv: None,
+    }
+}
+pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
+    geometry_ops::Triangles {
+        positions: m.positions.clone(),
+        indices: m.indices.clone(),
     }
 }
 fn input(message: impl Into<String>) -> Error {
@@ -205,9 +242,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field::<Vec<usize>>(&v, "triangles")?,
             field(&v, "vector")?,
         )?),
-        "subdivision_deform" => encode(
-            field::<subdivision_core::Cage>(&v, "cage")?.deform(&field(&v, "deformation")?)?,
-        ),
+        "subdivision_deform" => {
+            encode(field::<subdivision_core::Cage>(&v, "cage")?.deform(&field(&v, "deformation")?)?)
+        }
         "subdivision_brush" => {
             encode(field::<subdivision_core::Cage>(&v, "cage")?.brush(&field(&v, "brush")?)?)
         }
@@ -240,11 +277,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "caps")?,
         )?),
         "mesh_to_nurbs_brep" => encode(reconstruction::nurbs_brep_from_mesh(&field(&v, "mesh")?)?),
-        "mesh_to_sdf" => encode(sdf_core::Field::from_mesh(
-            &field(&v, "mesh")?,
+        "mesh_to_sdf" => encode(sdf_core::Field::from_triangles(
+            triangles_from_mesh(&polygon_core::solid::proximity::valid_source(
+                &field(&v, "mesh")?,
+                4096,
+            )?),
             field(&v, "signed")?,
         )?),
-        "mesh_to_subdivision" => encode(subdivision_core::reconstruct(
+        "mesh_to_subdivision" => encode(reconstruction::mesh_to_subdivision(
             &field(&v, "mesh")?,
             field(&v, "iterations")?,
         )?),
@@ -263,7 +303,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "subdivision_tessellate" => {
             let refined =
                 field::<subdivision_core::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?;
-            let (mesh, face_ids) = refined.triangulate()?;
+            let (triangles, face_ids) = refined.triangulate()?;
+            let mesh = mesh_from_triangles(triangles);
             let report = mesh.inspect()?;
             let mut value = encode(BuiltMesh { mesh, report })?;
             value["faceIds"] = json!(face_ids);
@@ -272,11 +313,36 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "sdf_evaluate" => {
             encode(field::<sdf_core::Field>(&v, "field")?.evaluate(field(&v, "point")?)?)
         }
-        "mesh_spatial_lattice" => encode(mesh_shell::lattice(&field(&v,"mesh")?,field(&v,"nodes")?,field(&v,"edges")?,field(&v,"radius")?,field(&v,"skin")?,field(&v,"step")?,field(&v,"organic")?,field(&v,"openTop")?,v.get("wallDepth").and_then(|x|x.as_f64()).unwrap_or(0.),v.get("keepCore").and_then(|x|x.as_bool()).unwrap_or(false))?),
-        "mesh_shell_adaptive" => encode(mesh_shell::shell_options(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?, true)?),
-        "mesh_shell_sampled" => encode(mesh_shell::shell(&field(&v,"mesh")?, &field::<Vec<usize>>(&v,"openings")?, field(&v,"thickness")?, field(&v,"step")?)?),
+        "mesh_spatial_lattice" => encode(mesh_shell::lattice(
+            &field(&v, "mesh")?,
+            field(&v, "nodes")?,
+            field(&v, "edges")?,
+            field(&v, "radius")?,
+            field(&v, "skin")?,
+            field(&v, "step")?,
+            field(&v, "organic")?,
+            field(&v, "openTop")?,
+            v.get("wallDepth").and_then(|x| x.as_f64()).unwrap_or(0.),
+            v.get("keepCore").and_then(|x| x.as_bool()).unwrap_or(false),
+        )?),
+        "mesh_shell_adaptive" => encode(mesh_shell::shell_options(
+            &field(&v, "mesh")?,
+            &field::<Vec<usize>>(&v, "openings")?,
+            field(&v, "thickness")?,
+            field(&v, "step")?,
+            true,
+        )?),
+        "mesh_shell_sampled" => encode(mesh_shell::shell(
+            &field(&v, "mesh")?,
+            &field::<Vec<usize>>(&v, "openings")?,
+            field(&v, "thickness")?,
+            field(&v, "step")?,
+        )?),
         "sdf_tessellate" => {
-            let mesh = sdf_core::polygonize(&field(&v, "field")?, &field(&v, "grid")?)?;
+            let mesh = mesh_from_triangles(sdf_core::polygonize(
+                &field(&v, "field")?,
+                &field(&v, "grid")?,
+            )?);
             let report = mesh.inspect()?;
             encode(BuiltMesh { mesh, report })
         }
@@ -297,13 +363,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 None => polygon_core::solid::boolean::Options::default(),
             },
         )?),
-        "brep_nurbs_box" => encode(nurbs_core::brep::cuboid(
-            field(&v, "min")?,
-            field(&v, "max")?,
-        )?),
-        "brep_nurbs_inspect" => {
-            encode(field::<nurbs_core::brep::Model>(&v, "model")?.validate()?)
-        }
+        "brep_nurbs_box" => encode(brep_kernel::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_inspect" => encode(field::<brep_kernel::Model>(&v, "model")?.validate()?),
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }

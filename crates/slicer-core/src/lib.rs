@@ -5,7 +5,7 @@
 //! hatches infill, and can encode the plan through `gcode-core`. Coordinates
 //! are millimeters.
 
-use polygon_core::planar::rings::{self as rings, Rings};
+use planar_geometry::rings::{self as rings, Rings};
 
 pub use gcode_core::{GcodeMove, GcodePreview};
 
@@ -144,7 +144,10 @@ fn winding(point: [f64; 2], source: &Rings) -> i32 {
         for i in 0..ring.len() {
             let a = ring[i];
             let b = ring[(i + 1) % ring.len()];
-            let c = cross2([b[0] - a[0], b[1] - a[1]], [point[0] - a[0], point[1] - a[1]]);
+            let c = cross2(
+                [b[0] - a[0], b[1] - a[1]],
+                [point[0] - a[0], point[1] - a[1]],
+            );
             if a[1] <= point[1] && b[1] > point[1] && c > 0.0 {
                 winding += 1;
             }

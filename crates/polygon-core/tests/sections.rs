@@ -1,5 +1,5 @@
+use planar_geometry::rings as cad;
 use polygon_core::{
-    planar::rings as cad,
     solid::{
         modeling, primitives as mesh,
         section::{MeshSection, MeshSectionIndex},

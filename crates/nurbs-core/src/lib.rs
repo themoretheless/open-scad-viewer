@@ -1,6 +1,6 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
 //! No polygon-core, WASM, browser or application dependency.
-pub mod brep;
+//! CAD B-rep over these curves/surfaces lives in `brep-kernel`.
 pub mod curve;
 pub mod edit;
 pub mod surface;

@@ -1,6 +1,6 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
 use crate::{encode, field, input, Result};
-use polygon_core::planar::rings::{self as planar, Rings};
+use planar_geometry::rings::{self as planar, Rings};
 use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use polygon_core::Mesh;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
@@ -223,7 +223,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             .iter()
             .map(|s| profile(s).cloned())
             .collect::<Result<_>>()?;
-        use polygon_core::planar::pathfinder;
+        use planar_geometry::pathfinder;
         return match action {
             "divide" => put(Shape::Profile(pathfinder::divide(&rings)?)),
             "crop" => {

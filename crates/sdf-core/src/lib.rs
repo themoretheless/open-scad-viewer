@@ -1,7 +1,28 @@
 //! Negative-inside implicit fields and bounded marching-tetrahedra extraction.
 //! CSG fields preserve the zero set but are not generally exact signed distances.
-use polygon_core::{Error, Mesh, Result};
+//! Extraction yields a neutral triangle buffer; mesh inspect lives in the bridge.
+use geometry_ops::Triangles;
 use std::collections::BTreeMap;
+pub type Result<T> = std::result::Result<T, Error>;
+#[derive(Debug, Clone)]
+pub struct Error {
+    pub code: &'static str,
+    pub message: String,
+}
+impl Error {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            code: "SDF_INVALID_INPUT",
+            message: message.into(),
+        }
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+impl std::error::Error for Error {}
 pub mod flat;
 #[cfg(feature = "gpu")]
 mod gpu;
@@ -192,7 +213,7 @@ pub enum Field {
         deformation: geometry_ops::Deformation,
     },
     MeshDistance {
-        mesh: Mesh,
+        mesh: Triangles,
         signed: bool,
     },
     Sphere {
@@ -429,7 +450,7 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                     .as_object()
                     .ok_or_else(|| value_codec::error("Expected object"))?
                     .clone();
-                let mesh: Mesh = value_codec::Deserialize::from_value(
+                let mesh: Triangles = value_codec::Deserialize::from_value(
                     object
                         .remove("mesh")
                         .ok_or_else(|| value_codec::error("Missing field mesh"))?,
@@ -618,6 +639,122 @@ fn finite(p: Point) -> bool {
 fn positive(x: f64) -> bool {
     x.is_finite() && x > 0. && x <= 1e6
 }
+fn point(mesh: &Triangles, i: usize) -> Point {
+    [
+        mesh.positions[3 * i],
+        mesh.positions[3 * i + 1],
+        mesh.positions[3 * i + 2],
+    ]
+}
+fn triangles_ok(mesh: &Triangles) -> bool {
+    let n = mesh.indices.len() / 3;
+    n > 0
+        && n <= 4096
+        && mesh.indices.len() % 3 == 0
+        && mesh.positions.len() % 3 == 0
+        && mesh.indices.iter().all(|&i| {
+            i.checked_mul(3)
+                .is_some_and(|o| o + 2 < mesh.positions.len())
+        })
+        && mesh
+            .positions
+            .iter()
+            .all(|x| x.is_finite() && x.abs() <= 1e6)
+        && mesh.indices.chunks_exact(3).all(|t| {
+            length(cross(
+                sub(point(mesh, t[1]), point(mesh, t[0])),
+                sub(point(mesh, t[2]), point(mesh, t[0])),
+            )) > 0.
+        })
+}
+fn triangles_closed(mesh: &Triangles) -> bool {
+    let mut edges = BTreeMap::new();
+    for t in mesh.indices.chunks_exact(3) {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            *edges.entry((a.min(b), a.max(b))).or_insert(0) += 1;
+        }
+    }
+    !edges.is_empty() && edges.values().all(|&n| n == 2)
+}
+fn finish_triangles(mesh: Triangles) -> Result<Triangles> {
+    if mesh.indices.len() % 3 != 0
+        || mesh
+            .indices
+            .iter()
+            .any(|&i| i.checked_mul(3).map(|o| o + 2 >= mesh.positions.len()) != Some(false))
+    {
+        return Err(Error::new("Implicit mesh has invalid indices"));
+    }
+    Ok(mesh)
+}
+fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
+    let ab = sub(b, a);
+    let ac = sub(c, a);
+    let n = cross(ab, ac);
+    let nn = dot(n, n);
+    if nn > 0. {
+        let q = std::array::from_fn(|k| p[k] - n[k] * dot(sub(p, a), n) / nn);
+        let aq = sub(q, a);
+        let v = dot(cross(aq, ac), n) / nn;
+        let w = dot(cross(ab, aq), n) / nn;
+        if v >= 0. && w >= 0. && v + w <= 1. {
+            return q;
+        }
+    }
+    let mut best = a;
+    let mut distance = f64::INFINITY;
+    for (a, b) in [(a, b), (b, c), (c, a)] {
+        let d = sub(b, a);
+        let t = if dot(d, d) > 0. {
+            (dot(sub(p, a), d) / dot(d, d)).clamp(0., 1.)
+        } else {
+            0.
+        };
+        let q = std::array::from_fn(|i| a[i] + t * d[i]);
+        let dist = length(sub(p, q));
+        if dist < distance {
+            best = q;
+            distance = dist;
+        }
+    }
+    best
+}
+fn closest_point(mesh: &Triangles, p: Point) -> (Point, f64) {
+    let mut best = p;
+    let mut distance = f64::INFINITY;
+    for t in mesh.indices.chunks_exact(3) {
+        let q = closest_triangle(p, point(mesh, t[0]), point(mesh, t[1]), point(mesh, t[2]));
+        let d = length(sub(p, q));
+        if d < distance {
+            best = q;
+            distance = d;
+        }
+    }
+    (best, distance)
+}
+fn signed_distance(mesh: &Triangles, p: Point) -> f64 {
+    let (_, d) = closest_point(mesh, p);
+    if d == 0. {
+        return 0.;
+    }
+    let mut angle = 0.;
+    for t in mesh.indices.chunks_exact(3) {
+        let a = sub(point(mesh, t[0]), p);
+        let b = sub(point(mesh, t[1]), p);
+        let c = sub(point(mesh, t[2]), p);
+        let la = length(a);
+        let lb = length(b);
+        let lc = length(c);
+        angle += 2.
+            * dot(a, cross(b, c))
+                .atan2(la * lb * lc + dot(a, b) * lc + dot(b, c) * la + dot(c, a) * lb);
+    }
+    if angle.abs() > 2. * std::f64::consts::PI {
+        -d
+    } else {
+        d
+    }
+}
 impl Field {
     pub fn validate(&self) -> Result<()> {
         fn walk(f: &Field, depth: usize, budget: &mut usize) -> bool {
@@ -644,12 +781,7 @@ impl Field {
                         && walk(input, depth + 1, budget)
                 }
                 Field::MeshDistance { mesh, signed } => {
-                    mesh.indices.len() / 3 <= 4096
-                        && mesh.inspect().is_ok_and(|r| {
-                            r.triangle_count > 0
-                                && r.degenerate_triangles == 0
-                                && (!signed || r.closed)
-                        })
+                    triangles_ok(mesh) && (!*signed || triangles_closed(mesh))
                 }
                 Field::Sphere { center, radius } => finite(*center) && positive(*radius),
                 Field::Box { center, half_size } => {
@@ -704,9 +836,9 @@ impl Field {
             },
             Self::MeshDistance { mesh, signed } => {
                 if *signed {
-                    polygon_core::solid::proximity::signed_distance(mesh, p)
+                    signed_distance(mesh, p)
                 } else {
-                    polygon_core::solid::proximity::closest_point(mesh, p).1
+                    closest_point(mesh, p).1
                 }
             }
             Self::Sphere { center, radius } => length(sub(p, *center)) - radius,
@@ -735,11 +867,8 @@ impl Field {
             Self::Translate { input, vector } => input.sample(sub(p, *vector)),
         }
     }
-    pub fn from_mesh(mesh: &Mesh, signed: bool) -> Result<Self> {
-        let field = Self::MeshDistance {
-            mesh: polygon_core::solid::proximity::valid_source(mesh, 4096)?,
-            signed,
-        };
+    pub fn from_triangles(mesh: Triangles, signed: bool) -> Result<Self> {
+        let field = Self::MeshDistance { mesh, signed };
         field.validate()?;
         Ok(field)
     }
@@ -814,11 +943,15 @@ impl<'de> value_codec::Deserialize<'de> for Grid {
 }
 /// Also accepts user-defined scalar fields. Sampling is bounded; sub-cell features
 /// can be missed. A negative boundary sample is rejected rather than capped.
-pub fn polygonize_with(field: impl Fn(Point) -> f64, grid: &Grid) -> Result<Mesh> {
+pub fn polygonize_with(field: impl Fn(Point) -> f64, grid: &Grid) -> Result<Triangles> {
     polygonize_tile(field, grid, true)
 }
 /// Extract an open tile for a caller that welds and validates the complete surface.
-pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed_bounds: bool) -> Result<Mesh> {
+pub fn polygonize_tile(
+    field: impl Fn(Point) -> f64,
+    grid: &Grid,
+    require_closed_bounds: bool,
+) -> Result<Triangles> {
     if !finite(grid.min)
         || !finite(grid.max)
         || grid.cells.iter().any(|&n| n == 0 || n > 64)
@@ -852,7 +985,10 @@ pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed
                 if !v.is_finite() {
                     return Err(Error::new("Field returned a non-finite value"));
                 }
-                if require_closed_bounds && (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz) && v <= 0. {
+                if require_closed_bounds
+                    && (x == 0 || y == 0 || z == 0 || x == nx || y == ny || z == nz)
+                    && v <= 0.
+                {
                     return Err(Error::new("Surface touches grid boundary; enlarge bounds"));
                 }
                 points.push(p);
@@ -860,10 +996,9 @@ pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed
             }
         }
     }
-    let mut mesh = Mesh {
+    let mut mesh = Triangles {
         positions: Vec::new(),
         indices: Vec::new(),
-        uv: None,
     };
     let mut cache = BTreeMap::new();
     for z in 0..nz {
@@ -986,8 +1121,7 @@ pub fn polygonize_tile(field: impl Fn(Point) -> f64, grid: &Grid, require_closed
             }
         }
     }
-    mesh.validate()?;
-    Ok(mesh)
+    finish_triangles(mesh)
 }
 /// Budget and field validation shared by every extraction path.
 pub fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
@@ -1007,7 +1141,7 @@ pub fn check_grid_budget(field: &Field, grid: &Grid) -> Result<()> {
     }
     Ok(())
 }
-pub fn polygonize(field: &Field, grid: &Grid) -> Result<Mesh> {
+pub fn polygonize(field: &Field, grid: &Grid) -> Result<Triangles> {
     check_grid_budget(field, grid)?;
     polygonize_with(|p| field.sample(p), grid)
 }
@@ -1015,7 +1149,7 @@ pub fn polygonize(field: &Field, grid: &Grid) -> Result<Mesh> {
 /// browser WebGPU host path). The snap-to-zero, boundary validation and
 /// marching-tetrahedra extraction run here on the CPU, exactly as in
 /// `polygonize`; only the raw field values arrive precomputed (f32).
-pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Result<Mesh> {
+pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Result<Triangles> {
     check_grid_budget(field, grid)?;
     let expected = grid.cells.iter().map(|n| n + 1).product::<usize>();
     if values.len() != expected {
@@ -1038,7 +1172,11 @@ pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Res
 /// and CSG trees) sample the grid on the GPU in f32; the snap-to-zero, boundary
 /// validation and marching-tetrahedra extraction stay on the CPU. Everything
 /// else — and any failure — falls back to the CPU reference.
-pub fn polygonize_accelerated(field: &Field, grid: &Grid, #[allow(unused_variables)] acceleration: Acceleration) -> Result<Mesh> {
+pub fn polygonize_accelerated(
+    field: &Field,
+    grid: &Grid,
+    #[allow(unused_variables)] acceleration: Acceleration,
+) -> Result<Triangles> {
     #[cfg(feature = "gpu")]
     if acceleration == Acceleration::Gpu {
         check_grid_budget(field, grid)?;
@@ -1088,14 +1226,26 @@ mod tests {
     fn gpu_sampling_matches_cpu_field_within_tolerance() {
         let field = Field::Translate {
             input: Box::new(Field::SmoothUnion {
-                a: Box::new(Field::Sphere { center: [0., 0., 0.], radius: 10. }),
-                b: Box::new(Field::Box { center: [8., 0., 0.], half_size: [6., 6., 6.] }),
+                a: Box::new(Field::Sphere {
+                    center: [0., 0., 0.],
+                    radius: 10.,
+                }),
+                b: Box::new(Field::Box {
+                    center: [8., 0., 0.],
+                    half_size: [6., 6., 6.],
+                }),
                 radius: 3.,
             }),
             vector: [1., -2., 0.5],
         };
-        let Some(flat) = field.to_flat() else { panic!("CSG tree should flatten") };
-        let grid = Grid { min: [-12., -12., -12.], max: [16., 12., 12.], cells: [24, 16, 16] };
+        let Some(flat) = field.to_flat() else {
+            panic!("CSG tree should flatten")
+        };
+        let grid = Grid {
+            min: [-12., -12., -12.],
+            max: [16., 12., 12.],
+            cells: [24, 16, 16],
+        };
         let Some(values) = gpu::sample_grid_gpu(&flat, &grid) else {
             eprintln!("no GPU adapter; skipping");
             return;
@@ -1106,8 +1256,9 @@ mod tests {
             for y in 0..=ny {
                 for x in 0..=nx {
                     let p = std::array::from_fn(|i| {
-                        grid.min[i] + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
-                            / grid.cells[i] as f64
+                        grid.min[i]
+                            + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
+                                / grid.cells[i] as f64
                     });
                     let gpu = values[(z * (ny + 1) + y) * (nx + 1) + x] as f64;
                     max_diff = max_diff.max((gpu - field.sample(p)).abs());
@@ -1130,19 +1281,23 @@ mod tests {
     #[test]
     fn gpu_mesh_distance_matches_cpu_signed_and_unsigned() {
         // Closed outward tetrahedron around the origin-ish region.
-        let mesh = polygon_core::Mesh {
+        let mesh = Triangles {
             positions: vec![
                 10., 10., 10., //
                 30., 10., 10., 10., 30., 10., 10., 10., 30.,
             ],
             indices: vec![0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3],
-            uv: None,
         };
-        mesh.validate().unwrap();
-        let field = Field::from_mesh(&mesh, true).unwrap();
-        let Some(flat) = field.to_flat() else { panic!("mesh field should flatten") };
+        let field = Field::from_triangles(mesh, true).unwrap();
+        let Some(flat) = field.to_flat() else {
+            panic!("mesh field should flatten")
+        };
         assert_eq!(flat.triangles.len(), 4 * 9);
-        let grid = Grid { min: [0., 0., 0.], max: [40., 40., 40.], cells: [8, 8, 8] };
+        let grid = Grid {
+            min: [0., 0., 0.],
+            max: [40., 40., 40.],
+            cells: [8, 8, 8],
+        };
         let Some(values) = gpu::sample_grid_gpu(&flat, &grid) else {
             eprintln!("no GPU adapter; skipping");
             return;
@@ -1155,19 +1310,27 @@ mod tests {
             for y in 0..=ny {
                 for x in 0..=nx {
                     let p = std::array::from_fn(|i| {
-                        grid.min[i] + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
-                            / grid.cells[i] as f64
+                        grid.min[i]
+                            + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
+                                / grid.cells[i] as f64
                     });
                     let cpu = field.sample(p);
                     let gpu = values[(z * (ny + 1) + y) * (nx + 1) + x] as f64;
                     max_diff = max_diff.max((gpu - cpu).abs());
-                    if cpu < 0. { inside_cpu += 1; }
-                    if gpu < 0. { inside_gpu += 1; }
+                    if cpu < 0. {
+                        inside_cpu += 1;
+                    }
+                    if gpu < 0. {
+                        inside_gpu += 1;
+                    }
                 }
             }
         }
         assert!(inside_cpu > 0, "tetrahedron should contain grid points");
-        assert_eq!(inside_cpu, inside_gpu, "inside/outside classification diverges");
+        assert_eq!(
+            inside_cpu, inside_gpu,
+            "inside/outside classification diverges"
+        );
         assert!(max_diff < 0.01, "signed distance diverges: {max_diff}");
     }
 
@@ -1198,23 +1361,33 @@ mod tests {
         assert_eq!(f.evaluate([0.; 3]).unwrap(), 0.5);
         assert!(f.evaluate([0.75, 0., 0.]).unwrap() < 0.);
     }
+    fn signed_volume(mesh: &Triangles) -> f64 {
+        mesh.indices
+            .chunks_exact(3)
+            .map(|t| {
+                let a = point(mesh, t[0]);
+                let b = point(mesh, t[1]);
+                let c = point(mesh, t[2]);
+                dot(a, cross(b, c)) / 6.
+            })
+            .sum()
+    }
     #[test]
     fn closed_outward_sphere_and_convergence() {
-        let coarse = polygonize(&sphere(), &grid(8)).unwrap().inspect().unwrap();
-        let fine = polygonize(&sphere(), &grid(16)).unwrap().inspect().unwrap();
-        assert!(fine.closed);
-        assert_eq!(fine.orientation_conflicts, 0);
-        assert_eq!(fine.degenerate_triangles, 0);
+        let coarse = polygonize(&sphere(), &grid(8)).unwrap();
+        let fine = polygonize(&sphere(), &grid(16)).unwrap();
+        assert!(triangles_closed(&fine));
+        assert!(triangles_ok(&fine));
         let exact = 4. * std::f64::consts::PI / 3.;
-        assert!((fine.signed_volume_mm3 - exact).abs() < (coarse.signed_volume_mm3 - exact).abs());
-        assert!((fine.signed_volume_mm3 - exact).abs() < 0.1);
+        assert!((signed_volume(&fine) - exact).abs() < (signed_volume(&coarse) - exact).abs());
+        assert!((signed_volume(&fine) - exact).abs() < 0.1);
     }
     #[test]
     fn exact_grid_vertices_and_empty() {
         let mut g = grid(12);
         g.min = [-2.; 3];
         g.max = [2.; 3];
-        assert!(polygonize(&sphere(), &g).unwrap().inspect().unwrap().closed);
+        assert!(triangles_closed(&polygonize(&sphere(), &g).unwrap()));
         assert!(polygonize_with(|_| 1., &g).unwrap().indices.is_empty());
         assert!(polygonize_with(|_| f64::NAN, &g).is_err());
         assert!(polygonize_with(|_| -1., &g).is_err());

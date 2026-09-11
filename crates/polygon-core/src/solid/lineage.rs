@@ -184,6 +184,9 @@ mod tests {
         let snapshot = lineage.snapshot(Some(d)).unwrap();
         let restored = TopologyLineage::restore(&snapshot).unwrap();
         assert_eq!(restored.transfer(d), SelectionTransfer::Persistent(d));
-        assert_eq!(restored.transfer(TopoId::from_parts(9, 9)), SelectionTransfer::Lost);
+        assert_eq!(
+            restored.transfer(TopoId::from_parts(9, 9)),
+            SelectionTransfer::Lost
+        );
     }
 }

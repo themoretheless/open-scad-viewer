@@ -11,7 +11,9 @@ pub fn scad_compile(value: &Value) -> Value {
     let Some(source) = value["source"].as_str() else {
         return input_error("Expected source string");
     };
-    let profile_name = value["profile"].as_str().unwrap_or("openscad-viewer-subset@1");
+    let profile_name = value["profile"]
+        .as_str()
+        .unwrap_or("openscad-viewer-subset@1");
     let Some(profile) = LanguageProfile::parse(profile_name) else {
         return input_error(format!("Unknown OpenSCAD language profile {profile_name}"));
     };
@@ -23,7 +25,9 @@ pub fn scad_compile(value: &Value) -> Value {
         return json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]});
     }
     match openscad_core::compile_units(&units, profile) {
-        Ok(statements) => json!({"ok": true, "ast": openscad_core::serialize::program(&statements)}),
+        Ok(statements) => {
+            json!({"ok": true, "ast": openscad_core::serialize::program(&statements)})
+        }
         Err(diagnostic) => {
             json!({"ok": false, "diagnostics": [openscad_core::serialize::diagnostic(&diagnostic)]})
         }
@@ -44,7 +48,9 @@ pub fn scad_eval(value: &Value) -> Value {
     let Some(source) = value["source"].as_str() else {
         return input_error("Expected source string");
     };
-    let profile_name = value["profile"].as_str().unwrap_or("openscad-viewer-subset@1");
+    let profile_name = value["profile"]
+        .as_str()
+        .unwrap_or("openscad-viewer-subset@1");
     let Some(profile) = LanguageProfile::parse(profile_name) else {
         return input_error(format!("Unknown OpenSCAD language profile {profile_name}"));
     };

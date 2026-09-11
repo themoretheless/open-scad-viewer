@@ -1,8 +1,8 @@
 //! JSON transport for planar path / effects / editor helpers.
 use crate::{encode, field, input, Result};
-use polygon_core::planar::edit;
-use polygon_core::planar::effects::{self, ArcMode, StippleKind};
-use polygon_core::planar::path::{BezierPath, PathSegment};
+use planar_geometry::edit;
+use planar_geometry::effects::{self, ArcMode, StippleKind};
+use planar_geometry::path::{BezierPath, PathSegment};
 use value_codec::{json, Value};
 
 fn encode_path(path: &BezierPath) -> Value {
@@ -67,24 +67,27 @@ fn decode_boxes(v: &Value) -> Result<Vec<edit::BBox>> {
 pub fn dispatch(v: Value) -> Result<Value> {
     let action = v["action"].as_str().unwrap_or("");
     Ok(match action {
-        "from_rect" => encode_path(&BezierPath::from_rect(field(&v, "min")?, field(&v, "max")?)?),
-        "from_circle" => {
-            encode_path(&BezierPath::from_circle(field(&v, "center")?, field(&v, "radius")?)?)
-        }
+        "from_rect" => encode_path(&BezierPath::from_rect(
+            field(&v, "min")?,
+            field(&v, "max")?,
+        )?),
+        "from_circle" => encode_path(&BezierPath::from_circle(
+            field(&v, "center")?,
+            field(&v, "radius")?,
+        )?),
         "from_polygon" => encode_path(&BezierPath::from_polygon(
             &field::<Vec<[f64; 2]>>(&v, "points")?,
             field(&v, "closed")?,
         )?),
-        "flatten" => encode(decode_path(&v["path"])?.flatten_tol(
-            v["tolerance"].as_f64().unwrap_or(0.25),
-        )?)?,
-        "to_ring" => encode(
-            decode_path(&v["path"])?.to_ring(v["tolerance"].as_f64().unwrap_or(0.25))?,
-        )?,
-        "insert_anchor" => encode_path(&decode_path(&v["path"])?.insert_anchor(
-            field(&v, "index")?,
-            field(&v, "t")?,
-        )?),
+        "flatten" => {
+            encode(decode_path(&v["path"])?.flatten_tol(v["tolerance"].as_f64().unwrap_or(0.25))?)?
+        }
+        "to_ring" => {
+            encode(decode_path(&v["path"])?.to_ring(v["tolerance"].as_f64().unwrap_or(0.25))?)?
+        }
+        "insert_anchor" => encode_path(
+            &decode_path(&v["path"])?.insert_anchor(field(&v, "index")?, field(&v, "t")?)?,
+        ),
         "delete_anchor" => {
             encode_path(&decode_path(&v["path"])?.delete_anchor(field(&v, "node")?)?)
         }
@@ -94,7 +97,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             encode_path(&decode_path(&v["path"])?.outline_stroke(field(&v, "width")?)?)
         }
         "outline_stroke_styled" => {
-            use polygon_core::planar::stroke::{LineCap, LineJoin, StrokeOptions};
+            use planar_geometry::stroke::{LineCap, LineJoin, StrokeOptions};
             let cap = match v["cap"].as_str().unwrap_or("butt") {
                 "round" => LineCap::Round,
                 "square" => LineCap::Square,
@@ -105,9 +108,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 "bevel" => LineJoin::Bevel,
                 _ => LineJoin::Miter,
             };
-            let dash = v["dash"].as_array().map(|a| {
-                a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>()
-            });
+            let dash = v["dash"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>());
             let opts = StrokeOptions {
                 width: field(&v, "width")?,
                 cap,
@@ -119,19 +122,19 @@ pub fn dispatch(v: Value) -> Result<Value> {
             encode_paths(&decode_path(&v["path"])?.outline_stroke_with(&opts)?)
         }
         "average_anchors" => {
-            use polygon_core::planar::path::AverageAxis;
+            use planar_geometry::path::AverageAxis;
             let axis = match v["axis"].as_str().unwrap_or("both") {
                 "horizontal" => AverageAxis::Horizontal,
                 "vertical" => AverageAxis::Vertical,
                 _ => AverageAxis::Both,
             };
-            encode_path(&decode_path(&v["path"])?.average_anchors(
-                &field::<Vec<usize>>(&v, "nodes")?,
-                axis,
-            )?)
+            encode_path(
+                &decode_path(&v["path"])?
+                    .average_anchors(&field::<Vec<usize>>(&v, "nodes")?, axis)?,
+            )
         }
         "set_anchor_handle" => {
-            use polygon_core::planar::path::HandleSide;
+            use planar_geometry::path::HandleSide;
             let side = match v["side"].as_str().unwrap_or("out") {
                 "in" => HandleSide::In,
                 _ => HandleSide::Out,
@@ -143,7 +146,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             )?)
         }
         "apply_handle_link" => {
-            use polygon_core::planar::path::{HandleLink, HandleSide};
+            use planar_geometry::path::{HandleLink, HandleSide};
             let moved = match v["moved"].as_str().unwrap_or("out") {
                 "in" => HandleSide::In,
                 _ => HandleSide::Out,
@@ -159,12 +162,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 mode,
             )?)
         }
-        "round_corners" => encode_path(&polygon_core::planar::corners::round_corners(
+        "round_corners" => encode_path(&planar_geometry::corners::round_corners(
             &decode_path(&v["path"])?,
             field(&v, "radius")?,
         )?),
         "rounded_rect" => {
-            use polygon_core::planar::corners::CornerStyle;
+            use planar_geometry::corners::CornerStyle;
             let styles: Vec<CornerStyle> = v["styles"]
                 .as_array()
                 .map(|a| {
@@ -178,7 +181,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                         .collect()
                 })
                 .unwrap_or_default();
-            encode_path(&polygon_core::planar::corners::rounded_rect(
+            encode_path(&planar_geometry::corners::rounded_rect(
                 field(&v, "min")?,
                 field(&v, "max")?,
                 &field::<Vec<f64>>(&v, "radii")?,
@@ -186,7 +189,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             )?)
         }
         "rounded_polygon" => {
-            use polygon_core::planar::corners::CornerStyle;
+            use planar_geometry::corners::CornerStyle;
             let styles: Vec<CornerStyle> = v["styles"]
                 .as_array()
                 .map(|a| {
@@ -200,7 +203,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                         .collect()
                 })
                 .unwrap_or_default();
-            encode_path(&polygon_core::planar::corners::rounded_polygon(
+            encode_path(&planar_geometry::corners::rounded_polygon(
                 &field::<Vec<[f64; 2]>>(&v, "points")?,
                 &field::<Vec<f64>>(&v, "radii")?,
                 &styles,
@@ -213,7 +216,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             v["join"].as_str().unwrap_or("Miter"),
             v["segments"].as_u64().unwrap_or(8) as usize,
         )?)?,
-        "join" => encode_path(&polygon_core::planar::path::join_paths(
+        "join" => encode_path(&planar_geometry::path::join_paths(
             &decode_path(&v["head"])?,
             field(&v, "reverseHead")?,
             &decode_path(&v["tail"])?,
@@ -276,9 +279,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "amplitude")?,
             field(&v, "wavelength")?,
         )?),
-        "pucker_bloat" => {
-            encode_path(&effects::pucker_bloat(&decode_path(&v["path"])?, field(&v, "amount")?)?)
-        }
+        "pucker_bloat" => encode_path(&effects::pucker_bloat(
+            &decode_path(&v["path"])?,
+            field(&v, "amount")?,
+        )?),
         "roughen" => encode_path(&effects::roughen(
             &decode_path(&v["path"])?,
             field(&v, "amount")?,
@@ -327,8 +331,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let paths_v = v["paths"]
                 .as_array()
                 .ok_or_else(|| input("paths must be an array"))?;
-            let paths: Vec<BezierPath> =
-                paths_v.iter().map(decode_path).collect::<Result<_>>()?;
+            let paths: Vec<BezierPath> = paths_v.iter().map(decode_path).collect::<Result<_>>()?;
             match edit::find_snap(
                 field(&v, "cursor")?,
                 field(&v, "threshold")?,
@@ -386,21 +389,23 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?),
         "smooth" => encode_path(&decode_path(&v["path"])?.smooth()?),
         "open_path" => encode_path(&decode_path(&v["path"])?.open_path()?),
-        "delete_segments" => encode_paths(
-            &decode_path(&v["path"])?.delete_segments(&field::<Vec<usize>>(&v, "nodes")?)?,
-        ),
+        "delete_segments" => {
+            encode_paths(
+                &decode_path(&v["path"])?.delete_segments(&field::<Vec<usize>>(&v, "nodes")?)?,
+            )
+        }
         "merge_by_color" => {
             let raw = v["shapes"]
                 .as_array()
                 .ok_or_else(|| input("shapes must be an array"))?;
             let mut shapes = Vec::with_capacity(raw.len());
             for s in raw {
-                shapes.push(polygon_core::planar::pathfinder::ColoredRegion {
+                shapes.push(planar_geometry::pathfinder::ColoredRegion {
                     rings: field(s, "rings")?,
                     color: field(s, "color")?,
                 });
             }
-            let out = polygon_core::planar::pathfinder::merge_by_color(&shapes)?;
+            let out = planar_geometry::pathfinder::merge_by_color(&shapes)?;
             encode(
                 out.into_iter()
                     .map(|s| json!({"rings":s.rings,"color":s.color}))
@@ -480,7 +485,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "gap")?,
         )?)?,
         "arrow_markers" => {
-            use polygon_core::planar::stroke::{path_arrow_markers, ArrowMarker};
+            use planar_geometry::stroke::{path_arrow_markers, ArrowMarker};
             let parse = |s: &str| match s {
                 "arrow" => ArrowMarker::Arrow,
                 "dot" => ArrowMarker::Dot,
@@ -506,7 +511,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
             encode(out.to_rgba())?
         }
         "sample_gradient" => {
-            use polygon_core::appearance::{Gradient, GradientKind, GradientSpread, GradientStop, Color};
+            use polygon_core::appearance::{
+                Color, Gradient, GradientKind, GradientSpread, GradientStop,
+            };
             let kind = match v["kind"].as_str().unwrap_or("linear") {
                 "radial" => GradientKind::Radial {
                     center: field(&v, "center")?,
@@ -536,7 +543,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     color: Color::from_rgba(field(s, "color")?),
                 });
             }
-            let g = Gradient { kind, stops, spread };
+            let g = Gradient {
+                kind,
+                stops,
+                spread,
+            };
             encode(g.sample_at(field(&v, "point")?).to_rgba())?
         }
         _ => return Err(input(format!("Unknown path2d action '{action}'"))),

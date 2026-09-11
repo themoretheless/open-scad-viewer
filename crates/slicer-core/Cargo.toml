@@ -6,4 +6,7 @@ publish = false
 
 [dependencies]
 gcode-core = { path = "../gcode-core" }
+planar-geometry = { path = "../planar-geometry" }
+
+[dev-dependencies]
 polygon-core = { path = "../polygon-core" }

@@ -22,7 +22,10 @@ thread_local! {
 pub fn store(result: AnalysisBuffers) -> usize {
     RESULTS.with(|results| {
         let mut results = results.borrow_mut();
-        let slot = results.iter().position(Option::is_none).unwrap_or(results.len());
+        let slot = results
+            .iter()
+            .position(Option::is_none)
+            .unwrap_or(results.len());
         if slot == results.len() {
             results.push(Some(result));
         } else {

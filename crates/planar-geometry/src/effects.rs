@@ -1,7 +1,7 @@
 //! Generators and planar distortions for Bézier / polyline paths.
 //!
 //! Ported from Curvex path effects (MIT OR Apache-2.0), binary64 for polygon-core.
-use crate::planar::path::{BezierPath, PathSegment};
+use crate::path::{BezierPath, PathSegment};
 use crate::{check, Result};
 
 const TAU: f64 = std::f64::consts::TAU;
@@ -91,18 +91,21 @@ fn deterministic_noise(seed: u64, i: usize) -> f64 {
 
 /// Nested offsets of a closed region: distances `step, 2*step, …, count*step`.
 pub fn concentric_offset(
-    rings: &crate::planar::rings::Rings,
+    rings: &crate::rings::Rings,
     count: usize,
     step: f64,
     join: &str,
     segments: usize,
-) -> Result<Vec<crate::planar::rings::Rings>> {
+) -> Result<Vec<crate::rings::Rings>> {
     check((1..=64).contains(&count), "Concentric count must be 1..=64")?;
-    check(step.is_finite() && step.abs() > 1e-9, "Invalid concentric step")?;
+    check(
+        step.is_finite() && step.abs() > 1e-9,
+        "Invalid concentric step",
+    )?;
     let mut out = Vec::with_capacity(count);
     for k in 1..=count {
         let d = step * k as f64;
-        match crate::planar::rings::offset_join(rings, d, join, segments) {
+        match crate::rings::offset_join(rings, d, join, segments) {
             Ok(r) if !r.is_empty() => out.push(r),
             Ok(_) => {}
             Err(_) => {} // collapsed inset — skip this ring
@@ -209,7 +212,11 @@ pub fn polar_grid(
     Ok(out)
 }
 
-pub fn step_and_repeat(path: &BezierPath, count: usize, delta: [f64; 2]) -> Result<Vec<BezierPath>> {
+pub fn step_and_repeat(
+    path: &BezierPath,
+    count: usize,
+    delta: [f64; 2],
+) -> Result<Vec<BezierPath>> {
     check((1..=MAX_COPIES).contains(&count), "Invalid repeat count")?;
     check(delta.iter().all(|x| x.is_finite()), "Invalid delta")?;
     Ok((0..count)
@@ -217,11 +224,7 @@ pub fn step_and_repeat(path: &BezierPath, count: usize, delta: [f64; 2]) -> Resu
         .collect())
 }
 
-pub fn radial_repeat(
-    path: &BezierPath,
-    count: usize,
-    center: [f64; 2],
-) -> Result<Vec<BezierPath>> {
+pub fn radial_repeat(path: &BezierPath, count: usize, center: [f64; 2]) -> Result<Vec<BezierPath>> {
     check((1..=MAX_COPIES).contains(&count), "Invalid radial count")?;
     check(center.iter().all(|x| x.is_finite()), "Invalid center")?;
     Ok((0..count)
@@ -263,7 +266,10 @@ pub fn hatch(
     cross: bool,
 ) -> Result<Vec<BezierPath>> {
     check(ring.len() >= 3, "Hatch needs a closed ring")?;
-    check(spacing > 1e-6 && spacing.is_finite(), "Invalid hatch spacing")?;
+    check(
+        spacing > 1e-6 && spacing.is_finite(),
+        "Invalid hatch spacing",
+    )?;
     let mut lines = hatch_dir(ring, spacing, angle_rad)?;
     if cross {
         lines.extend(hatch_dir(ring, spacing, angle_rad + PI * 0.5)?);
@@ -318,7 +324,7 @@ fn hatch_dir(ring: &[[f64; 2]], spacing: f64, angle: f64) -> Result<Vec<BezierPa
 }
 
 fn clip_segment_to_ring(a: [f64; 2], b: [f64; 2], ring: &[[f64; 2]]) -> Vec<f64> {
-    use crate::planar::rings::contains_point;
+    use crate::rings::contains_point;
     let mut ts = vec![0.0, 1.0];
     for i in 0..ring.len() {
         let c = ring[i];
@@ -375,7 +381,7 @@ pub fn stipple(
     size: f64,
     kind: StippleKind,
 ) -> Result<Vec<BezierPath>> {
-    use crate::planar::rings::contains_point;
+    use crate::rings::contains_point;
     check(spacing > 1e-6 && size > 1e-6, "Invalid stipple params")?;
     let (min, max) = bbox_of(ring)?;
     let mut out = Vec::new();
@@ -478,12 +484,7 @@ pub fn twist(path: &BezierPath, radians: f64) -> Result<BezierPath> {
     }))
 }
 
-pub fn scatter(
-    path: &BezierPath,
-    count: usize,
-    radius: f64,
-    seed: u64,
-) -> Result<Vec<BezierPath>> {
+pub fn scatter(path: &BezierPath, count: usize, radius: f64, seed: u64) -> Result<Vec<BezierPath>> {
     check((1..=MAX_COPIES).contains(&count), "Invalid scatter count")?;
     check(radius >= 0. && radius.is_finite(), "Invalid scatter radius")?;
     let (min, max) = path_bbox(path)?;
@@ -547,7 +548,10 @@ fn to_cubics(path: &BezierPath) -> Vec<Cubic4> {
     out
 }
 
-fn resample_to_same_len(mut a: Vec<Cubic4>, mut b: Vec<Cubic4>) -> Result<(Vec<Cubic4>, Vec<Cubic4>)> {
+fn resample_to_same_len(
+    mut a: Vec<Cubic4>,
+    mut b: Vec<Cubic4>,
+) -> Result<(Vec<Cubic4>, Vec<Cubic4>)> {
     check(!a.is_empty() && !b.is_empty(), "Empty blend path")?;
     while a.len() < b.len() {
         let i = (0..a.len())
@@ -631,9 +635,7 @@ pub fn arc_path(
     let steps = ((sweep.abs() / (PI * 0.5)).ceil() as usize).clamp(1, 8);
     let mut pts = Vec::new();
     let mut segs = Vec::new();
-    let point = |ang: f64| -> [f64; 2] {
-        [center[0] + rx * ang.cos(), center[1] + ry * ang.sin()]
-    };
+    let point = |ang: f64| -> [f64; 2] { [center[0] + rx * ang.cos(), center[1] + ry * ang.sin()] };
     let p0 = point(start);
     pts.push(p0);
     let mut cur = p0;
@@ -666,12 +668,7 @@ pub fn arc_path(
 }
 
 /// Star polygon inscribed in bbox (`points` tips, `inner_ratio` valley radius).
-pub fn star(
-    min: [f64; 2],
-    max: [f64; 2],
-    points: usize,
-    inner_ratio: f64,
-) -> Result<BezierPath> {
+pub fn star(min: [f64; 2], max: [f64; 2], points: usize, inner_ratio: f64) -> Result<BezierPath> {
     check((3..=64).contains(&points), "Star points must be 3..=64")?;
     let inner = inner_ratio.clamp(0.05, 0.95);
     let center = [(min[0] + max[0]) * 0.5, (min[1] + max[1]) * 0.5];
@@ -682,7 +679,10 @@ pub fn star(
     for i in 0..n {
         let ang = -PI * 0.5 + TAU * (i as f64) / (n as f64);
         let r = if i % 2 == 0 { 1.0 } else { inner };
-        pts.push([center[0] + rx * r * ang.cos(), center[1] + ry * r * ang.sin()]);
+        pts.push([
+            center[0] + rx * r * ang.cos(),
+            center[1] + ry * r * ang.sin(),
+        ]);
     }
     BezierPath::from_polyline(&pts, true)
 }
@@ -724,11 +724,7 @@ mod tests {
         let q = BezierPath::from_circle([2., 1.], 1.).unwrap();
         let b = blend(&p, &q, 3).unwrap();
         assert_eq!(b.len(), 3);
-        let d = free_distort(
-            &p,
-            [[0., 0.], [5., -1.], [6., 3.], [-1., 4.]],
-        )
-        .unwrap();
+        let d = free_distort(&p, [[0., 0.], [5., -1.], [6., 3.], [-1., 4.]]).unwrap();
         assert!(d.closed);
     }
 

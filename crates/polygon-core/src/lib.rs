@@ -3,13 +3,11 @@
 //! Coordinates in this host contract are millimeters; algorithms use binary64.
 //!
 //! Public layout:
-//! - [`planar`] — 2D paths, rings, Pathfinder, edit
 //! - [`solid`] — triangle meshes
 //! - [`appearance`] — paint / style (not shape)
 //!
-//! Print planning lives in `slicer-core`; this crate only cuts mesh sections.
+//! 2D paths/rings live in `planar-geometry`. Print planning lives in `slicer-core`.
 pub mod appearance;
-pub mod planar;
 pub mod solid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
@@ -38,6 +36,14 @@ impl Error {
         Self {
             code: "POLYGON_INVALID_INPUT",
             message: message.into(),
+        }
+    }
+}
+impl From<planar_geometry::Error> for Error {
+    fn from(e: planar_geometry::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
         }
     }
 }
@@ -278,11 +284,12 @@ impl<'de> value_codec::Deserialize<'de> for Report {
             .as_object()
             .ok_or_else(|| value_codec::error("Expected object"))?
             .clone();
-        let boolean: Option<solid::boolean::BooleanReport> = if let Some(v) = object.remove("boolean") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            Default::default()
-        };
+        let boolean: Option<solid::boolean::BooleanReport> =
+            if let Some(v) = object.remove("boolean") {
+                value_codec::Deserialize::from_value(v)?
+            } else {
+                Default::default()
+            };
         let triangle_count: usize = value_codec::Deserialize::from_value(
             object
                 .remove("triangleCount")

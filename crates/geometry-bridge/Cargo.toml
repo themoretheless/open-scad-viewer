@@ -14,10 +14,13 @@ gpu = ["dep:gpu-compute"]
 math-core = { path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
+geometry-ops = { path = "../geometry-ops" }
 modelgraph-runtime = { path = "../modelgraph-runtime" }
 modelgraph-text = { path = "../modelgraph-text" }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
+brep-kernel = { path = "../brep-kernel" }
+planar-geometry = { path = "../planar-geometry" }
 subdivision-core = { path = "../subdivision-core" }
 sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }

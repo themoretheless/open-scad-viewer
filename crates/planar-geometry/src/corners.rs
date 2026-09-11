@@ -1,5 +1,5 @@
 //! Corner styles and rounded primitive → Bézier conversion.
-use crate::planar::path::{BezierPath, PathSegment};
+use crate::path::{BezierPath, PathSegment};
 use crate::{check, Result};
 
 const KAPPA: f64 = 0.552_285;
@@ -35,7 +35,13 @@ fn resolve_corner(radii: &[f64], styles: &[CornerStyle], i: usize) -> (CornerSty
     }
 }
 
-fn push_corner(segments: &mut Vec<PathSegment>, a: [f64; 2], b: [f64; 2], v: [f64; 2], style: CornerStyle) {
+fn push_corner(
+    segments: &mut Vec<PathSegment>,
+    a: [f64; 2],
+    b: [f64; 2],
+    v: [f64; 2],
+    style: CornerStyle,
+) {
     match style {
         CornerStyle::Round => segments.push(PathSegment::Cubic {
             c1: lerp(a, v, KAPPA),
@@ -224,7 +230,10 @@ pub fn rounded_polygon(
 
 /// Fillet interior corners of a path to radius `r` (anchor polyline).
 pub fn round_corners(path: &BezierPath, radius: f64) -> Result<BezierPath> {
-    check(radius >= 0. && radius.is_finite(), "Invalid round-corners radius")?;
+    check(
+        radius >= 0. && radius.is_finite(),
+        "Invalid round-corners radius",
+    )?;
     let pts = path.flatten()?;
     let mut ring = pts;
     if path.closed && ring.len() >= 2 && dist(ring[0], *ring.last().unwrap()) <= 1e-9 {
@@ -296,6 +305,9 @@ mod tests {
         let sq = BezierPath::from_rect([0., 0.], [4., 4.]).unwrap();
         let r = round_corners(&sq, 0.5).unwrap();
         assert!(r.closed);
-        assert!(r.segments.iter().any(|s| matches!(s, PathSegment::Cubic { .. })));
+        assert!(r
+            .segments
+            .iter()
+            .any(|s| matches!(s, PathSegment::Cubic { .. })));
     }
 }

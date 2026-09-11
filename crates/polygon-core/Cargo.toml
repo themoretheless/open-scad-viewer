@@ -8,4 +8,5 @@ publish = false
 math-core = { path = "../math-core" }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
+planar-geometry = { path = "../planar-geometry" }
 brep-topology = { path = "../brep-topology" }

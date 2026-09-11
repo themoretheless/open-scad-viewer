@@ -31,7 +31,12 @@ impl Field {
     /// Flattens the tree for the GPU interpreter; None marks node kinds the
     /// shader does not implement (the caller then uses the CPU sampler).
     pub fn to_flat(&self) -> Option<FlatField> {
-        let mut flat = FlatField { kinds: Vec::new(), params: Vec::new(), aux: Vec::new(), triangles: Vec::new() };
+        let mut flat = FlatField {
+            kinds: Vec::new(),
+            params: Vec::new(),
+            aux: Vec::new(),
+            triangles: Vec::new(),
+        };
         fn leaf(flat: &mut FlatField, kind: u32, params: [f32; 8]) {
             flat.kinds.push(kind);
             flat.params.extend_from_slice(&params);
@@ -55,16 +60,26 @@ impl Field {
                     KIND_BOX,
                     *center,
                     offset,
-                    &[half_size[0] as f32, half_size[1] as f32, half_size[2] as f32],
+                    &[
+                        half_size[0] as f32,
+                        half_size[1] as f32,
+                        half_size[2] as f32,
+                    ],
                 ),
-                Field::Torus { center, major_radius, minor_radius } => centered(
+                Field::Torus {
+                    center,
+                    major_radius,
+                    minor_radius,
+                } => centered(
                     flat,
                     KIND_TORUS,
                     *center,
                     offset,
                     &[*major_radius as f32, *minor_radius as f32],
                 ),
-                Field::Union { a, b } | Field::Intersection { a, b } | Field::Difference { a, b } => {
+                Field::Union { a, b }
+                | Field::Intersection { a, b }
+                | Field::Difference { a, b } => {
                     walk(a, offset, flat)?;
                     walk(b, offset, flat)?;
                     let kind = match field {
@@ -99,9 +114,14 @@ impl Field {
                             }
                         }
                     }
-                    flat.kinds.push(if *signed { KIND_MESH_SIGNED } else { KIND_MESH_UNSIGNED });
+                    flat.kinds.push(if *signed {
+                        KIND_MESH_SIGNED
+                    } else {
+                        KIND_MESH_UNSIGNED
+                    });
                     flat.params.extend_from_slice(&[0.; 8]);
-                    flat.aux.extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
+                    flat.aux
+                        .extend_from_slice(&[start, (mesh.indices.len() / 3) as u32]);
                 }
                 Field::Extrude { .. } | Field::Revolve { .. } | Field::Deform { .. } => {
                     return None

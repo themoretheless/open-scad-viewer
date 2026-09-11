@@ -319,7 +319,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
 
 /// Exact planar, trimmed NURBS B-rep of the source triangle boundary. Topology
 /// budgets (notably 256 faces) apply. No smooth-face recognition is implied.
-pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_core::brep::Model> {
+pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_kernel::Model> {
     let source = valid_source(mesh, 256)?;
     let polygon = polygon_core::solid::brep::from_mesh(&source, None)?;
     let mut faces = Vec::new();
@@ -398,7 +398,7 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_core::brep::Model> {
             ),
         })
         .collect();
-    let model = nurbs_core::brep::Model(brep_topology::Model {
+    let model = brep_kernel::Model(brep_topology::Model {
         vertices: polygon.vertices,
         edges,
         loops,
@@ -411,11 +411,74 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<nurbs_core::brep::Model> {
     Ok(model)
 }
 
+#[derive(Clone, Debug)]
+pub struct SubdivisionFit {
+    pub cage: subdivision_core::Cage,
+    pub iterations: usize,
+    pub vertex_residual_before_mm: f64,
+    pub vertex_residual_after_mm: f64,
+    pub deviation: polygon_core::solid::proximity::Deviation,
+    pub correspondence: &'static str,
+}
+impl value_codec::Serialize for SubdivisionFit {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("cage".into(), value_codec::Serialize::to_value(&self.cage));
+        object.insert(
+            "iterations".into(),
+            value_codec::Serialize::to_value(&self.iterations),
+        );
+        object.insert(
+            "vertexResidualBeforeMm".into(),
+            value_codec::Serialize::to_value(&self.vertex_residual_before_mm),
+        );
+        object.insert(
+            "vertexResidualAfterMm".into(),
+            value_codec::Serialize::to_value(&self.vertex_residual_after_mm),
+        );
+        object.insert(
+            "deviation".into(),
+            value_codec::Serialize::to_value(&self.deviation),
+        );
+        object.insert(
+            "correspondence".into(),
+            value_codec::Serialize::to_value(&self.correspondence),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+
+/// Mesh inspect/fit stays here. The cage kernel only sees faces and residuals.
+pub fn mesh_to_subdivision(mesh: &Mesh, iterations: usize) -> Result<SubdivisionFit> {
+    let source = valid_source(mesh, 2048)?;
+    let cage = subdivision_core::Cage::from_faces(
+        source
+            .positions
+            .chunks_exact(3)
+            .map(|p| [p[0], p[1], p[2]])
+            .collect(),
+        source.indices.chunks_exact(3).map(|t| t.to_vec()).collect(),
+    )?;
+    let preview = crate::mesh_from_triangles(cage.subdivide(1)?.triangulate()?.0);
+    polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
+    let fit = subdivision_core::fit(&cage, iterations)?;
+    let output = crate::mesh_from_triangles(fit.cage.subdivide(1)?.triangulate()?.0);
+    let deviation = polygon_core::solid::proximity::sample_deviation(&source, &output)?;
+    Ok(SubdivisionFit {
+        cage: fit.cage,
+        iterations: fit.iterations,
+        vertex_residual_before_mm: fit.vertex_residual_before_mm,
+        vertex_residual_after_mm: fit.vertex_residual_after_mm,
+        deviation,
+        correspondence: fit.correspondence,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     fn cube() -> Mesh {
-        let m = nurbs_core::brep::cuboid([-1.; 3], [1.; 3]).unwrap();
+        let m = brep_kernel::cuboid([-1.; 3], [1.; 3]).unwrap();
         brep::nurbs(&m, 1).unwrap().built.mesh
     }
     #[test]
@@ -447,7 +510,7 @@ mod tests {
     #[test]
     fn mesh_sdf_sign_and_hollow_orientation() {
         let m = cube();
-        let field = sdf_core::Field::from_mesh(&m, true).unwrap();
+        let field = sdf_core::Field::from_triangles(crate::triangles_from_mesh(&m), true).unwrap();
         assert!((field.evaluate([0.; 3]).unwrap() + 1.).abs() < 1e-12);
         assert!((field.evaluate([2., 0., 0.]).unwrap() - 1.).abs() < 1e-12);
         assert_eq!(field.evaluate([1., 0., 0.]).unwrap(), 0.);
@@ -459,7 +522,7 @@ mod tests {
                 .indices
                 .extend([offset + t[0], offset + t[2], offset + t[1]]);
         }
-        let f = sdf_core::Field::from_mesh(&hollow, true).unwrap();
+        let f = sdf_core::Field::from_triangles(crate::triangles_from_mesh(&hollow), true).unwrap();
         assert!((f.evaluate([0.; 3]).unwrap() - 0.5).abs() < 1e-12);
         assert!(f.evaluate([0.75, 0., 0.]).unwrap() < 0.);
         let open = Mesh {
@@ -467,9 +530,9 @@ mod tests {
             indices: vec![0, 1, 2],
             uv: None,
         };
-        assert!(sdf_core::Field::from_mesh(&open, true).is_err());
+        assert!(sdf_core::Field::from_triangles(crate::triangles_from_mesh(&open), true).is_err());
         assert_eq!(
-            sdf_core::Field::from_mesh(&open, false)
+            sdf_core::Field::from_triangles(crate::triangles_from_mesh(&open), false)
                 .unwrap()
                 .evaluate([0., 0., 2.])
                 .unwrap(),
@@ -479,7 +542,7 @@ mod tests {
     #[test]
     fn subdivision_fit_reduces_interpolation_residual() {
         let m = cube();
-        let r = subdivision_core::reconstruct(&m, 16).unwrap();
+        let r = mesh_to_subdivision(&m, 16).unwrap();
         assert!(r.vertex_residual_after_mm < r.vertex_residual_before_mm * 0.05);
         assert_eq!(r.cage.faces.len(), m.indices.len() / 3);
         assert!(r.deviation.sampled_max_mm.is_finite());

@@ -1,6 +1,6 @@
 //! Editor-precision helpers: snap, align/distribute, cut, measure.
 //! Pure geometry — no UI / document layer.
-use crate::planar::path::BezierPath;
+use crate::path::BezierPath;
 use crate::{check, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +97,10 @@ fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 // ----- Snap -----
 
 pub fn snap_to_grid(p: [f64; 2], spacing: f64) -> Result<[f64; 2]> {
-    check(spacing > 1e-12 && spacing.is_finite(), "Invalid grid spacing")?;
+    check(
+        spacing > 1e-12 && spacing.is_finite(),
+        "Invalid grid spacing",
+    )?;
     check(p.iter().all(|x| x.is_finite()), "Non-finite point")?;
     Ok([
         (p[0] / spacing).round() * spacing,
@@ -112,7 +115,10 @@ pub fn find_snap(
     grid: Option<f64>,
     paths: &[BezierPath],
 ) -> Result<Option<SnapHit>> {
-    check(threshold > 0. && threshold.is_finite(), "Invalid snap threshold")?;
+    check(
+        threshold > 0. && threshold.is_finite(),
+        "Invalid snap threshold",
+    )?;
     check(cursor.iter().all(|x| x.is_finite()), "Non-finite cursor")?;
     let mut best: Option<SnapHit> = None;
     let priority = |k: SnapKind| -> u8 {
@@ -163,7 +169,8 @@ pub fn find_snap(
     check(segments.len() <= 4096, "Snap segment budget exceeded")?;
     for i in 0..segments.len() {
         for j in i + 1..segments.len() {
-            if let Some(p) = segment_intersection(segments[i].0, segments[i].1, segments[j].0, segments[j].1)
+            if let Some(p) =
+                segment_intersection(segments[i].0, segments[i].1, segments[j].0, segments[j].1)
             {
                 consider(p, SnapKind::Intersection);
             }
@@ -178,7 +185,10 @@ pub fn snap_to_angle(start: [f64; 2], end: [f64; 2], step_deg: f64) -> Result<[f
         start.iter().chain(end.iter()).all(|x| x.is_finite()),
         "Non-finite angle-snap points",
     )?;
-    check(step_deg > 0. && step_deg.is_finite() && step_deg <= 180., "Invalid angle step")?;
+    check(
+        step_deg > 0. && step_deg.is_finite() && step_deg <= 180.,
+        "Invalid angle step",
+    )?;
     let dx = end[0] - start[0];
     let dy = end[1] - start[1];
     if dx.abs() < 1e-12 && dy.abs() < 1e-12 {
@@ -187,7 +197,10 @@ pub fn snap_to_angle(start: [f64; 2], end: [f64; 2], step_deg: f64) -> Result<[f
     let step = step_deg.to_radians();
     let snapped = (dy.atan2(dx) / step).round() * step;
     let len = dx.hypot(dy);
-    Ok([start[0] + snapped.cos() * len, start[1] + snapped.sin() * len])
+    Ok([
+        start[0] + snapped.cos() * len,
+        start[1] + snapped.sin() * len,
+    ])
 }
 
 /// 45° constraint (Shift-drag).
@@ -210,7 +223,10 @@ pub struct DragAlign {
 
 /// Live align-guides: snap a moving bbox to left/center/right and top/mid/bottom of targets.
 pub fn drag_align_guides(moving: BBox, targets: &[BBox], threshold: f64) -> Result<DragAlign> {
-    check(threshold > 0. && threshold.is_finite(), "Invalid guide threshold")?;
+    check(
+        threshold > 0. && threshold.is_finite(),
+        "Invalid guide threshold",
+    )?;
     let mut dx = 0.0_f64;
     let mut dy = 0.0_f64;
     let mut best_x = threshold;
@@ -231,7 +247,10 @@ pub fn drag_align_guides(moving: BBox, targets: &[BBox], threshold: f64) -> Resu
                     }
                     best_x = ad;
                     dx = d;
-                    if !guides.iter().any(|g| g.vertical && (g.position - target).abs() < 1e-12) {
+                    if !guides
+                        .iter()
+                        .any(|g| g.vertical && (g.position - target).abs() < 1e-12)
+                    {
                         guides.push(GuideLine {
                             vertical: true,
                             position: target,
@@ -250,7 +269,10 @@ pub fn drag_align_guides(moving: BBox, targets: &[BBox], threshold: f64) -> Resu
                     }
                     best_y = ad;
                     dy = d;
-                    if !guides.iter().any(|g| !g.vertical && (g.position - target).abs() < 1e-12) {
+                    if !guides
+                        .iter()
+                        .any(|g| !g.vertical && (g.position - target).abs() < 1e-12)
+                    {
                         guides.push(GuideLine {
                             vertical: false,
                             position: target,
@@ -272,12 +294,7 @@ pub fn drag_align_guides(moving: BBox, targets: &[BBox], threshold: f64) -> Resu
     })
 }
 
-fn segment_intersection(
-    a: [f64; 2],
-    b: [f64; 2],
-    c: [f64; 2],
-    d: [f64; 2],
-) -> Option<[f64; 2]> {
+fn segment_intersection(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<[f64; 2]> {
     let r = [b[0] - a[0], b[1] - a[1]];
     let s = [d[0] - c[0], d[1] - c[1]];
     let den = r[0] * s[1] - r[1] * s[0];
@@ -297,7 +314,12 @@ fn segment_intersection(
 // ----- Align / distribute -----
 
 /// Per-box translation `(dx, dy)` to align against a reference bbox.
-pub fn align_boxes(boxes: &[BBox], reference: BBox, h: Option<HAlign>, v: Option<VAlign>) -> Vec<[f64; 2]> {
+pub fn align_boxes(
+    boxes: &[BBox],
+    reference: BBox,
+    h: Option<HAlign>,
+    v: Option<VAlign>,
+) -> Vec<[f64; 2]> {
     boxes
         .iter()
         .map(|b| {
@@ -349,7 +371,9 @@ pub fn resolve_align_reference(
     let union = boxes.iter().copied().reduce(BBox::union).unwrap();
     match relative {
         RelativeTo::Selection => Ok(union),
-        RelativeTo::Page => page.ok_or_else(|| crate::Error::new("Align to page needs a page bbox")),
+        RelativeTo::Page => {
+            page.ok_or_else(|| crate::Error::new("Align to page needs a page bbox"))
+        }
         RelativeTo::KeyObject => match key.filter(|&i| i < boxes.len()) {
             Some(i) => Ok(boxes[i]),
             None => Ok(union),
@@ -424,7 +448,8 @@ pub fn distribute_objects(
     check(boxes.len() >= 3, "Distribute needs at least 3 boxes")?;
     let mut order: Vec<usize> = (0..boxes.len()).collect();
     order.sort_by(|&i, &j| {
-        sample_box(boxes[i], horizontal, anchor).total_cmp(&sample_box(boxes[j], horizontal, anchor))
+        sample_box(boxes[i], horizontal, anchor)
+            .total_cmp(&sample_box(boxes[j], horizontal, anchor))
     });
     let first = sample_box(boxes[order[0]], horizontal, anchor);
     let last = sample_box(boxes[order[order.len() - 1]], horizontal, anchor);
@@ -440,8 +465,14 @@ pub fn distribute_objects(
 
 /// Pack boxes so consecutive gaps equal `gap`. First (lowest) box stays put.
 pub fn distribute_spacing(boxes: &[BBox], horizontal: bool, gap: f64) -> Result<Vec<[f64; 2]>> {
-    check(boxes.len() >= 2, "Distribute spacing needs at least 2 boxes")?;
-    check(gap.is_finite() && gap.abs() <= 1e6, "Invalid distribute gap")?;
+    check(
+        boxes.len() >= 2,
+        "Distribute spacing needs at least 2 boxes",
+    )?;
+    check(
+        gap.is_finite() && gap.abs() <= 1e6,
+        "Invalid distribute gap",
+    )?;
     let lo = |b: BBox| if horizontal { b.left() } else { b.top() };
     let size = |b: BBox| if horizontal { b.width() } else { b.height() };
     let mut order: Vec<usize> = (0..boxes.len()).collect();
@@ -475,7 +506,11 @@ pub fn hit_test_path(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Resul
         return Ok(None);
     }
     let mut best: Option<PathHit> = None;
-    let edges = if path.closed { pts.len() } else { pts.len() - 1 };
+    let edges = if path.closed {
+        pts.len()
+    } else {
+        pts.len() - 1
+    };
     for i in 0..edges {
         let a = pts[i];
         let b = pts[(i + 1) % pts.len()];
@@ -552,7 +587,11 @@ pub fn knife_cut(path: &BezierPath, a: [f64; 2], b: [f64; 2]) -> Result<Vec<Bezi
     let pts = path.flatten()?;
     check(pts.len() >= 2, "Path too short to knife")?;
     let mut cuts: Vec<(usize, f64, [f64; 2])> = Vec::new();
-    let edges = if path.closed { pts.len() } else { pts.len() - 1 };
+    let edges = if path.closed {
+        pts.len()
+    } else {
+        pts.len() - 1
+    };
     for i in 0..edges {
         let p0 = pts[i];
         let p1 = pts[(i + 1) % pts.len()];
@@ -655,9 +694,7 @@ mod tests {
         assert_eq!(g, [1., 4.]);
         let a = BezierPath::from_polyline(&[[0., 0.], [4., 4.]], false).unwrap();
         let b = BezierPath::from_polyline(&[[0., 4.], [4., 0.]], false).unwrap();
-        let hit = find_snap([2.05, 2.0], 0.5, None, &[a, b])
-            .unwrap()
-            .unwrap();
+        let hit = find_snap([2.05, 2.0], 0.5, None, &[a, b]).unwrap().unwrap();
         assert_eq!(hit.kind, SnapKind::Intersection);
         assert!(dist(hit.point, [2., 2.]) < 1e-6);
     }
@@ -678,11 +715,7 @@ mod tests {
                 max: [3., 5.],
             },
         ];
-        let ref_bb = boxes
-            .iter()
-            .copied()
-            .reduce(BBox::union)
-            .unwrap();
+        let ref_bb = boxes.iter().copied().reduce(BBox::union).unwrap();
         let d = align_boxes(&boxes, ref_bb, Some(HAlign::Left), None);
         assert!((boxes[0].min[0] + d[0][0] - ref_bb.min[0]).abs() < 1e-9);
         let dist = distribute_centers(&boxes, true).unwrap();

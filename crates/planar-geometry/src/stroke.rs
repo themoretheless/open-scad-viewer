@@ -1,5 +1,5 @@
 //! Polyline stroke expansion: caps, joins, optional dash → filled outline paths.
-use crate::planar::path::BezierPath;
+use crate::path::BezierPath;
 use crate::{check, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -74,8 +74,14 @@ fn perp(v: [f64; 2]) -> [f64; 2] {
 
 /// Stroke a path into one or more closed outline paths.
 pub fn outline_stroke(path: &BezierPath, opts: &StrokeOptions) -> Result<Vec<BezierPath>> {
-    check(opts.width > 0. && opts.width.is_finite(), "Invalid stroke width")?;
-    check(opts.miter_limit >= 1. && opts.miter_limit.is_finite(), "Invalid miter limit")?;
+    check(
+        opts.width > 0. && opts.width.is_finite(),
+        "Invalid stroke width",
+    )?;
+    check(
+        opts.miter_limit >= 1. && opts.miter_limit.is_finite(),
+        "Invalid miter limit",
+    )?;
     let pts = path.flatten()?;
     check(pts.len() >= 2, "Path too short to outline")?;
     let mut polylines = if let Some(dash) = &opts.dash {
@@ -113,7 +119,10 @@ pub fn arrow_marker_path(
     outward: [f64; 2],
     stroke_width: f64,
 ) -> Result<Option<BezierPath>> {
-    check(stroke_width > 0. && stroke_width.is_finite(), "Invalid marker stroke width")?;
+    check(
+        stroke_width > 0. && stroke_width.is_finite(),
+        "Invalid marker stroke width",
+    )?;
     check(
         endpoint.iter().chain(outward.iter()).all(|x| x.is_finite()),
         "Non-finite marker geometry",
@@ -200,7 +209,11 @@ fn dash_polylines(
     pattern: &[f64],
     offset: f64,
 ) -> Result<Vec<(Vec<[f64; 2]>, bool)>> {
-    let mut pattern: Vec<f64> = pattern.iter().copied().filter(|d| d.is_finite() && *d > 0.).collect();
+    let mut pattern: Vec<f64> = pattern
+        .iter()
+        .copied()
+        .filter(|d| d.is_finite() && *d > 0.)
+        .collect();
     check(!pattern.is_empty(), "Empty dash pattern")?;
     if pattern.len() % 2 == 1 {
         pattern.push(pattern[pattern.len() - 1]);
@@ -384,18 +397,8 @@ fn join_offsets(
     let right0 = sub(p, n0);
     let right1 = sub(p, n1);
 
-    let miter_left = line_intersect(
-        left0,
-        add(left0, d0),
-        left1,
-        add(left1, d1),
-    );
-    let miter_right = line_intersect(
-        right0,
-        add(right0, d0),
-        right1,
-        add(right1, d1),
-    );
+    let miter_left = line_intersect(left0, add(left0, d0), left1, add(left1, d1));
+    let miter_right = line_intersect(right0, add(right0, d0), right1, add(right1, d1));
 
     match opts.join {
         LineJoin::Bevel => Ok((left1, right1)), // simplified: use outgoing offset
@@ -443,7 +446,14 @@ fn line_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<
     Some([a[0] + t * r[0], a[1] + t * r[1]])
 }
 
-fn append_arc(out: &mut Vec<[f64; 2]>, center: [f64; 2], from: [f64; 2], to: [f64; 2], radius: f64, ccw: bool) {
+fn append_arc(
+    out: &mut Vec<[f64; 2]>,
+    center: [f64; 2],
+    from: [f64; 2],
+    to: [f64; 2],
+    radius: f64,
+    ccw: bool,
+) {
     let a0 = (from[1] - center[1]).atan2(from[0] - center[0]);
     let a1 = (to[1] - center[1]).atan2(to[0] - center[0]);
     let mut delta = a1 - a0;
@@ -464,7 +474,7 @@ fn append_arc(out: &mut Vec<[f64; 2]>, center: [f64; 2], from: [f64; 2], to: [f6
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::planar::rings::area;
+    use crate::rings::area;
 
     #[test]
     fn solid_rect_stroke_area() {
