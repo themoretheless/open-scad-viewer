@@ -1,0 +1,19 @@
+{
+  "schema": "open-scad-viewer/geometry-scene-v2",
+  "schemaVersion": 1,
+  "protocolVersion": 6,
+  "workerEpoch": 1,
+  "kernelKey": "own-rust-cad-v1",
+  "kernelFingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "capabilityManifestVersion": 1,
+  "topologySnapshotId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "meshAssetIds": [
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "fullEquivalent": true,
+  "reduced": true,
+  "representation": "mesh",
+  "occurrences": [],
+  "assets": [],
+  "diagnostics": []
+}

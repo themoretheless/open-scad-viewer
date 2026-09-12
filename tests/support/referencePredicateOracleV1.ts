@@ -1,40 +1,36 @@
 /**
- * Independent G0.7 / G2a predicate oracle.
- * BigRational exact-sign arithmetic only. Imports no production predicate module.
+ * Independent G0.7 predicate oracle.
+ * BigRational-style exact signs + outward interval filter.
+ * Imports no production geometry/predicate modules.
  */
 
-export type Sign = 'Negative' | 'Zero' | 'Positive' | 'Indeterminate'
-export type ModelClass = 'Coincident' | 'Separate' | 'Indeterminate'
+export type Sign = -1 | 0 | 1
 
-export type Rational = { readonly n: bigint; readonly d: bigint }
+/** Exact rational as reduced bigint numerator/denominator (denominator > 0). */
+export type BigRational = {
+  readonly n: bigint
+  readonly d: bigint
+}
 
-export type ToleranceContext = {
-  readonly linear_abs: number
-  readonly linear_rel: number
-  readonly on_tol: number
-  readonly clear_tol: number
-  readonly angular: number
-  readonly param_floor: number
-  readonly ulp_guard: number
-  readonly max_entity_error: number
-  readonly policy: string
+function absBig(n: bigint): bigint {
+  return n < 0n ? -n : n
 }
 
 function gcd(a: bigint, b: bigint): bigint {
-  let x = a < 0n ? -a : a
-  let y = b < 0n ? -b : b
+  let x = absBig(a)
+  let y = absBig(b)
   while (y !== 0n) {
-    const t = x % y
-    x = y
-    y = t
+    const t = y
+    y = x % y
+    x = t
   }
-  return x === 0n ? 1n : x
+  return x
 }
 
-export function rat(n: bigint | number, d: bigint | number = 1n): Rational {
+export function rational(n: bigint | number, d: bigint | number = 1n): BigRational {
   let nn = typeof n === 'number' ? BigInt(n) : n
   let dd = typeof d === 'number' ? BigInt(d) : d
-  if (dd === 0n) throw new Error('zero denominator')
+  if (dd === 0n) throw new Error('denominator must be non-zero')
   if (dd < 0n) {
     nn = -nn
     dd = -dd
@@ -43,164 +39,138 @@ export function rat(n: bigint | number, d: bigint | number = 1n): Rational {
   return { n: nn / g, d: dd / g }
 }
 
-/** Exact binary64 bit pattern as a rational via mantissa/exponent (finite only). */
-export function ratFromBinary64(value: number): Rational | null {
-  if (!Number.isFinite(value)) return null
-  if (Object.is(value, -0) || value === 0) return rat(0n)
-  const buf = new ArrayBuffer(8)
-  new DataView(buf).setFloat64(0, value, false)
-  const hi = BigInt(new DataView(buf).getUint32(0, false))
-  const lo = BigInt(new DataView(buf).getUint32(4, false))
-  const bits = (hi << 32n) | lo
-  const sign = bits >> 63n === 0n ? 1n : -1n
-  const expBits = (bits >> 52n) & 0x7ffn
-  const frac = bits & ((1n << 52n) - 1n)
-  if (expBits === 0x7ffn) return null
-  if (expBits === 0n) {
+/** Exact binary64 bit pattern → rational (finite only). */
+export function rationalFromBinary64(bits: bigint): BigRational {
+  const u = bits & 0xffffffffffffffffn
+  const sign = u >> 63n === 0n ? 1n : -1n
+  const exp = Number((u >> 52n) & 0x7ffn)
+  const frac = u & 0xfffffffffffffn
+  if (exp === 0x7ff) throw new Error('NaN/Inf are not ExactInputLeaf values')
+  if (exp === 0) {
     // subnormal: (-1)^s * frac * 2^(1-1023-52)
-    return rat(sign * frac, 1n << 1074n)
+    if (frac === 0n) return rational(0n)
+    return rational(sign * frac, 2n ** 1074n)
   }
-  const mant = (1n << 52n) | frac
-  const exp = expBits - 1023n - 52n
-  if (exp >= 0n) return rat(sign * mant * (1n << exp))
-  return rat(sign * mant, 1n << -exp)
+  // normal: (-1)^s * (1+frac/2^52) * 2^(exp-1023)
+  const mantissa = (1n << 52n) + frac
+  const power = exp - 1023 - 52
+  if (power >= 0) return rational(sign * mantissa * 2n ** BigInt(power))
+  return rational(sign * mantissa, 2n ** BigInt(-power))
 }
 
-function mul(a: Rational, b: Rational): Rational {
-  return rat(a.n * b.n, a.d * b.d)
+export function rationalFromNumber(value: number): BigRational {
+  if (!Number.isFinite(value)) throw new Error('non-finite number')
+  const buf = new ArrayBuffer(8)
+  new Float64Array(buf)[0] = value
+  return rationalFromBinary64(new DataView(buf).getBigUint64(0, true))
 }
 
-function sub(a: Rational, b: Rational): Rational {
-  return rat(a.n * b.d - b.n * a.d, a.d * b.d)
+function mul(a: BigRational, b: BigRational): BigRational {
+  return rational(a.n * b.n, a.d * b.d)
 }
 
-function add(a: Rational, b: Rational): Rational {
-  return rat(a.n * b.d + b.n * a.d, a.d * b.d)
+function sub(a: BigRational, b: BigRational): BigRational {
+  return rational(a.n * b.d - b.n * a.d, a.d * b.d)
 }
 
-function signOf(a: Rational): Sign {
-  if (a.n === 0n) return 'Zero'
-  return a.n > 0n ? 'Positive' : 'Negative'
+function add(a: BigRational, b: BigRational): BigRational {
+  return rational(a.n * b.d + b.n * a.d, a.d * b.d)
 }
 
-function asLeaf(p: readonly [Rational, Rational] | readonly [number, number]): readonly [Rational, Rational] | null {
-  if (typeof p[0] === 'number') {
-    const x = ratFromBinary64(p[0])
-    const y = ratFromBinary64(p[1] as number)
-    if (!x || !y) return null
-    return [x, y]
-  }
-  return p as readonly [Rational, Rational]
+export function cmpRational(a: BigRational, b: BigRational): Sign {
+  const v = a.n * b.d - b.n * a.d
+  return v === 0n ? 0 : v > 0n ? 1 : -1
 }
 
-function asLeaf3(
-  p: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-): readonly [Rational, Rational, Rational] | null {
-  if (typeof p[0] === 'number') {
-    const x = ratFromBinary64(p[0])
-    const y = ratFromBinary64(p[1] as number)
-    const z = ratFromBinary64(p[2] as number)
-    if (!x || !y || !z) return null
-    return [x, y, z]
-  }
-  return p as readonly [Rational, Rational, Rational]
+export function signRational(a: BigRational): Sign {
+  return a.n === 0n ? 0 : a.n > 0n ? 1 : -1
 }
 
-/** sign((b-a)×(c-a)) in 2D. */
-export function orient2d(
-  a: readonly [Rational, Rational] | readonly [number, number],
-  b: readonly [Rational, Rational] | readonly [number, number],
-  c: readonly [Rational, Rational] | readonly [number, number],
+/** Exact orient2d = sign((bx-ax)*(cy-ay) - (by-ay)*(cx-ax)). */
+export function orient2dExact(
+  ax: BigRational,
+  ay: BigRational,
+  bx: BigRational,
+  by: BigRational,
+  cx: BigRational,
+  cy: BigRational,
 ): Sign {
-  const A = asLeaf(a)
-  const B = asLeaf(b)
-  const C = asLeaf(c)
-  if (!A || !B || !C) return 'Indeterminate'
-  const abx = sub(B[0], A[0])
-  const aby = sub(B[1], A[1])
-  const acx = sub(C[0], A[0])
-  const acy = sub(C[1], A[1])
-  return signOf(sub(mul(abx, acy), mul(aby, acx)))
+  const left = mul(sub(bx, ax), sub(cy, ay))
+  const right = mul(sub(by, ay), sub(cx, ax))
+  return signRational(sub(left, right))
 }
 
-/** sign(scalar_triple(b-a, c-a, d-a)). */
-export function orient3d(
-  a: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-  b: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-  c: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-  d: readonly [Rational, Rational, Rational] | readonly [number, number, number],
+/** Exact orient3d scalar triple (b-a, c-a, d-a). */
+export function orient3dExact(
+  a: readonly [BigRational, BigRational, BigRational],
+  b: readonly [BigRational, BigRational, BigRational],
+  c: readonly [BigRational, BigRational, BigRational],
+  d: readonly [BigRational, BigRational, BigRational],
 ): Sign {
-  const A = asLeaf3(a)
-  const B = asLeaf3(b)
-  const C = asLeaf3(c)
-  const D = asLeaf3(d)
-  if (!A || !B || !C || !D) return 'Indeterminate'
-  const ab = [sub(B[0], A[0]), sub(B[1], A[1]), sub(B[2], A[2])] as const
-  const ac = [sub(C[0], A[0]), sub(C[1], A[1]), sub(C[2], A[2])] as const
-  const ad = [sub(D[0], A[0]), sub(D[1], A[1]), sub(D[2], A[2])] as const
-  const cx = sub(mul(ac[1], ad[2]), mul(ac[2], ad[1]))
-  const cy = sub(mul(ac[2], ad[0]), mul(ac[0], ad[2]))
-  const cz = sub(mul(ac[0], ad[1]), mul(ac[1], ad[0]))
-  return signOf(add(add(mul(ab[0], cx), mul(ab[1], cy)), mul(ab[2], cz)))
+  const ab = [sub(b[0], a[0]), sub(b[1], a[1]), sub(b[2], a[2])] as const
+  const ac = [sub(c[0], a[0]), sub(c[1], a[1]), sub(c[2], a[2])] as const
+  const ad = [sub(d[0], a[0]), sub(d[1], a[1]), sub(d[2], a[2])] as const
+  const cx0 = sub(mul(ac[1], ad[2]), mul(ac[2], ad[1]))
+  const cx1 = sub(mul(ac[2], ad[0]), mul(ac[0], ad[2]))
+  const cx2 = sub(mul(ac[0], ad[1]), mul(ac[1], ad[0]))
+  const det = add(add(mul(ab[0], cx0), mul(ab[1], cx1)), mul(ab[2], cx2))
+  return signRational(det)
 }
 
-/** sign(||p-q||² − r²) with exact leaves only. */
-export function compareSquaredDistance(
-  p: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-  q: readonly [Rational, Rational, Rational] | readonly [number, number, number],
-  rSquared: Rational | number,
-): Sign {
-  const P = asLeaf3(p)
-  const Q = asLeaf3(q)
-  const R = typeof rSquared === 'number' ? ratFromBinary64(rSquared) : rSquared
-  if (!P || !Q || !R) return 'Indeterminate'
-  const dx = sub(P[0], Q[0])
-  const dy = sub(P[1], Q[1])
-  const dz = sub(P[2], Q[2])
-  const dist2 = add(add(mul(dx, dx), mul(dy, dy)), mul(dz, dz))
-  return signOf(sub(dist2, R))
+/** Outward interval enclosure of a binary64 value (one ulp pad). */
+export type Interval = { readonly lo: number; readonly hi: number }
+
+export function outwardInterval(value: number): Interval {
+  if (!Number.isFinite(value)) throw new Error('non-finite')
+  if (value === 0) return { lo: -Number.MIN_VALUE, hi: Number.MIN_VALUE }
+  const ulp = Number.EPSILON * Math.max(Math.abs(value), Number.MIN_VALUE)
+  return { lo: value - ulp, hi: value + ulp }
 }
 
-export function validateToleranceContext(ctx: ToleranceContext): string | null {
-  if (!(ctx.on_tol > 0) || !(ctx.clear_tol > ctx.on_tol)) return 'on_tol_clear_tol'
-  if (!(ctx.max_entity_error >= 0) || !Number.isFinite(ctx.max_entity_error)) {
-    return 'max_entity_error'
-  }
-  for (const key of [
-    'linear_abs',
-    'linear_rel',
-    'angular',
-    'param_floor',
-    'ulp_guard',
-  ] as const) {
-    if (!(ctx[key] >= 0) || !Number.isFinite(ctx[key])) return key
-  }
-  return null
+function mulInterval(a: Interval, b: Interval): Interval {
+  const products = [a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi]
+  return { lo: Math.min(...products), hi: Math.max(...products) }
 }
 
-/**
- * Model classifier with proven residual/enclosure bounds.
- * Gray band or missing proof → Indeterminate. Never coerces to false.
- */
-export function classifyModel(
+function subInterval(a: Interval, b: Interval): Interval {
+  return { lo: a.lo - b.hi, hi: a.hi - b.lo }
+}
+
+export type FilterSign = Sign | 'indeterminate'
+
+export function orient2dFilter(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+): FilterSign {
+  const Ax = outwardInterval(ax)
+  const Ay = outwardInterval(ay)
+  const Bx = outwardInterval(bx)
+  const By = outwardInterval(by)
+  const Cx = outwardInterval(cx)
+  const Cy = outwardInterval(cy)
+  const left = mulInterval(subInterval(Bx, Ax), subInterval(Cy, Ay))
+  const right = mulInterval(subInterval(By, Ay), subInterval(Cx, Ax))
+  const det = subInterval(left, right)
+  if (det.hi < 0) return -1
+  if (det.lo > 0) return 1
+  if (det.lo === 0 && det.hi === 0) return 0
+  return 'indeterminate'
+}
+
+export type ModelClass = 'Coincident' | 'Separate' | 'Indeterminate'
+
+export function classifyResidual(
   residual: number,
-  provenBound: number | null,
-  ctx: ToleranceContext,
+  onTol: number,
+  clearTol: number,
 ): ModelClass {
-  if (validateToleranceContext(ctx)) return 'Indeterminate'
-  if (provenBound === null || !Number.isFinite(residual) || !Number.isFinite(provenBound)) {
-    return 'Indeterminate'
-  }
-  const hi = residual + provenBound
-  const lo = residual - provenBound
-  if (hi < ctx.on_tol) return 'Coincident'
-  if (lo > ctx.clear_tol) return 'Separate'
+  if (!(onTol > 0) || !(clearTol > onTol)) throw new Error('invalid tolerance profile')
+  if (!Number.isFinite(residual) || residual < 0) return 'Indeterminate'
+  if (residual < onTol) return 'Coincident'
+  if (residual > clearTol) return 'Separate'
   return 'Indeterminate'
-}
-
-/** Kill: Indeterminate must not become boolean success/false. */
-export function coerceIndeterminateForbidden(value: Sign | ModelClass): never | void {
-  if (value === 'Indeterminate') {
-    throw new Error('Indeterminate must not coerce to false or WithinTolerance success')
-  }
 }

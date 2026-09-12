@@ -1,0 +1,31 @@
+# Example PROVENANCE record (G0.13 skeleton)
+# Copy to a module-specific file before production qualification.
+# This example is not an approval and does not authorize shipping.
+
+schema_version: 1
+algorithm_id: g2a-orient2d
+algorithm_version: 0
+contract: tolerance-predicates-evidence-v1
+risk_tier: foundational
+code_paths: []
+commits: []
+source_artifacts:
+  - url: https://www.cs.cmu.edu/~quake/robust.html
+    version: paper
+    sha256: unresolved
+    material_kind: publication
+    redistributed: false
+    rights_status: publication-ideas-only
+    use_basis: ideas_only
+    usage_mode: original_from_paper
+implementer: unassigned
+reviewer: unassigned
+contributors: []
+exposure_attestations: []
+review_approval: null
+tests:
+  - tests/predicateOracleV1.test.ts
+release_artifacts: []
+legal_review_required: true
+approval_or_rationale: draft-only-not-approved
+legal_review_id: null

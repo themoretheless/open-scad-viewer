@@ -28,4 +28,5 @@ subdivision-core = { path = "../subdivision-core" }
 sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }
 polygon-core = { path = "../polygon-core" }
+slicer-core = { path = "../slicer-core" }
 openscad-core = { path = "../openscad-core", optional = true }

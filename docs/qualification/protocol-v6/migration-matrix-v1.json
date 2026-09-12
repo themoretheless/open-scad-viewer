@@ -1,0 +1,80 @@
+{
+  "schema": "open-scad-viewer/protocol-v6-migration-matrix",
+  "schemaVersion": 1,
+  "matrixId": "protocol-v6-migration-matrix-v1",
+  "recordedAt": "2026-09-12",
+  "rules": [
+    "Migration is one atomic bump after G4a qualification",
+    "full never downgrades to preview",
+    "export only from current full snapshot",
+    "fullEquivalent must equal !reduced in temporary adapters",
+    "SnapshotHandle never serializes; TopologySnapshotId does"
+  ],
+  "rows": [
+    {
+      "message": "build request",
+      "designV5Name": "build",
+      "currentWorkerV6": "GeometryBuildRequest",
+      "geometrySceneV2": "InteractiveBuild | ExportCurrentSnapshot discriminant on build family"
+    },
+    {
+      "message": "cancel request",
+      "designV5Name": "cancel",
+      "currentWorkerV6": "GeometryCancelRequest",
+      "geometrySceneV2": "unchanged cancel; lease release remains Worker-internal"
+    },
+    {
+      "message": "accepted",
+      "designV5Name": "accepted",
+      "currentWorkerV6": "GeometryBuildAccepted",
+      "geometrySceneV2": "+ workerEpoch"
+    },
+    {
+      "message": "started",
+      "designV5Name": "started",
+      "currentWorkerV6": "GeometryBuildStarted",
+      "geometrySceneV2": "+ workerEpoch + kernelKey"
+    },
+    {
+      "message": "progress",
+      "designV5Name": "progress",
+      "currentWorkerV6": "GeometryBuildProgress",
+      "geometrySceneV2": "+ workerEpoch"
+    },
+    {
+      "message": "succeeded",
+      "designV5Name": "succeeded + MeshData[]",
+      "currentWorkerV6": "GeometryBuildSuccess.meshes",
+      "geometrySceneV2": "GeometrySceneV2 occurrences/assets + TopologySnapshotId + MeshAssetId + fullEquivalent"
+    },
+    {
+      "message": "failed",
+      "designV5Name": "failed",
+      "currentWorkerV6": "GeometryBuildFailure",
+      "geometrySceneV2": "structured diagnostics/error codes retained"
+    },
+    {
+      "message": "cancelled",
+      "designV5Name": "cancelled",
+      "currentWorkerV6": "GeometryBuildCancelled",
+      "geometrySceneV2": "unchanged semantics"
+    },
+    {
+      "message": "stale",
+      "designV5Name": "stale",
+      "currentWorkerV6": "GeometryBuildStale",
+      "geometrySceneV2": "unchanged supersession semantics"
+    }
+  ],
+  "newSceneV2Fields": [
+    "workerEpoch",
+    "kernelKey",
+    "kernelFingerprint",
+    "capabilityManifestVersion",
+    "topologySnapshotId",
+    "meshAssetIds",
+    "fullEquivalent",
+    "packetTopoTokens",
+    "typed evidence/certificates"
+  ]
+}

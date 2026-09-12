@@ -61,6 +61,19 @@ by the qualification matrix. Persisted diagnostics retain a stable public
 code, retry class and bounded details. A late `AbortSignal` does not rewrite an
 unrelated failure as cancellation.
 
+## Appendix: consolidated refusal matrix (G0.3)
+
+The machine-readable consolidation of Worker / MCP / cancel / stale / queue
+refusal precedence lives in:
+
+[`docs/qualification/g0-refusal-precedence-matrix-v1.json`](../qualification/g0-refusal-precedence-matrix-v1.json)
+
+It copies the nine `errorPrecedence` stages from
+`geometry-routing-contract-v1.json`, lifts every `surfaceCases` row, and adds
+supervisor fixtures from `resource-security-supervisor-v1.json`. This appendix
+does **not** invent a new order: ADR text above remains normative; the JSON is
+the reviewable cross-surface index for G0.3.
+
 ## Provider admission and identity
 
 Changing `availability` is insufficient to make a provider executable.

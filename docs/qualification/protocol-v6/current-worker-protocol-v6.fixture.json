@@ -1,0 +1,31 @@
+{
+  "schema": "open-scad-viewer/worker-protocol-fixture",
+  "schemaVersion": 1,
+  "fixtureId": "current-worker-protocol-v6-success",
+  "protocolVersion": 6,
+  "status": "succeeded",
+  "documentRevision": 1,
+  "jobId": 1,
+  "quality": "full",
+  "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "phase": "complete",
+  "execution": {
+    "engineClass": "own-rust",
+    "implementationKey": "own-rust-cad-v1",
+    "languageContract": "openscad-viewer-subset@1",
+    "automaticFallback": false
+  },
+  "meshes": [],
+  "warnings": [],
+  "volume": 0,
+  "surfaceArea": 0,
+  "reduced": false,
+  "timings": {
+    "parseMs": 0,
+    "bindMs": 0,
+    "initializeMs": 0,
+    "evaluateMs": 0,
+    "analyzeMs": 0
+  },
+  "durationMs": 0
+}

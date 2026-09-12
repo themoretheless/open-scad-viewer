@@ -114,3 +114,38 @@ fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
         assert!((back.built.report.signed_volume_mm3 - 24.).abs() < 1e-8);
     }
 }
+
+#[test]
+fn mesh_section_and_toolpath_ops_cut_a_box() {
+    let mesh = polygon_core::solid::primitives::cube([10., 10., 10.], false).unwrap();
+    let mesh_value = value_codec::to_value(&mesh).unwrap();
+    let section = dispatch(json!({
+        "op": "mesh_section",
+        "mesh": mesh_value,
+        "z": 1.0,
+    }))
+    .unwrap();
+    assert!(section["contours"].as_array().unwrap().len() >= 1);
+
+    let toolpaths = dispatch(json!({
+        "op": "mesh_toolpaths",
+        "mesh": mesh_value,
+        "zMin": 0.0,
+        "zMax": 2.0,
+        "layerHeightMm": 0.5,
+        "wallCount": 1,
+    }))
+    .unwrap();
+    assert!(toolpaths["layers"].as_array().unwrap().len() >= 1);
+
+    let gcode = dispatch(json!({
+        "op": "mesh_gcode",
+        "mesh": mesh_value,
+        "zMin": 0.0,
+        "zMax": 1.0,
+        "layerHeightMm": 0.5,
+        "wallCount": 1,
+    }))
+    .unwrap();
+    assert!(gcode["gcode"].as_str().unwrap().contains("G1"));
+}

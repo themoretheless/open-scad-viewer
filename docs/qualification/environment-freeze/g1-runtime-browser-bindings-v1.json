@@ -1,0 +1,154 @@
+{
+  "schema": "open-scad-viewer/g1-environment-freeze",
+  "schemaVersion": 1,
+  "freezeId": "g1-runtime-browser-bindings-v1",
+  "recordedAt": "2026-09-12",
+  "claimBoundary": {
+    "includes": [
+      "Official Node.js release artifact digests from nodejs.org SHASUMS256.txt",
+      "npm@10.9.8 registry dist integrity",
+      "playwright@1.62.1 and playwright-core@1.62.1 registry dist integrity",
+      "Local Playwright browser tree digests where present on the recording host",
+      "Lockfile integrities for DuckDB/esbuild native packages"
+    ],
+    "excludes": [
+      "Proof that Ubuntu/Windows OS images were provisioned on this host",
+      "Clean-run qualification evidence (u07)",
+      "Organizationally independent review (u08)"
+    ]
+  },
+  "hostRecorder": {
+    "os": "macOS",
+    "productVersion": "26.7",
+    "buildVersion": "25G227",
+    "architecture": "aarch64",
+    "localNode": {
+      "path": "/opt/homebrew/opt/node@22/bin/node",
+      "sha256": "0143ba3f1c2d9e586115f17d1adcf454079ff28ddc7d684339b43e7dbacc1a1e",
+      "byteLength": 67024,
+      "version": "22.23.2"
+    }
+  },
+  "nodeArtifacts": {
+    "ubuntu-node20": {
+      "nodeVersion": "20.19.0",
+      "artifact": "node-v20.19.0-linux-x64.tar.xz",
+      "sha256": "b4e336584d62abefad31baecff7af167268be9bb7dd11f1297112e6eed3ca0d5",
+      "source": "https://nodejs.org/dist/v20.19.0/SHASUMS256.txt"
+    },
+    "ubuntu-node22": {
+      "nodeVersion": "22.23.2",
+      "artifact": "node-v22.23.2-linux-x64.tar.xz",
+      "sha256": "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307",
+      "source": "https://nodejs.org/dist/v22.23.2/SHASUMS256.txt"
+    },
+    "macos-node20": {
+      "nodeVersion": "20.19.0",
+      "artifact": "node-v20.19.0-darwin-arm64.tar.gz",
+      "sha256": "c016cd1975a264a29dc1b07c6fbe60d5df0a0c2beb4113c0450e3d998d1a0d9c",
+      "source": "https://nodejs.org/dist/v20.19.0/SHASUMS256.txt"
+    },
+    "windows-node20": {
+      "nodeVersion": "20.19.0",
+      "artifact": "node-v20.19.0-win-x64.zip",
+      "sha256": "be72284c7bc62de07d5a9fd0ae196879842c085f11f7f2b60bf8864c0c9d6a4f",
+      "source": "https://nodejs.org/dist/v20.19.0/SHASUMS256.txt"
+    },
+    "vite-host-node22": {
+      "nodeVersion": "22.23.2",
+      "artifact": "node-v22.23.2-linux-x64.tar.xz",
+      "sha256": "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307",
+      "source": "https://nodejs.org/dist/v22.23.2/SHASUMS256.txt"
+    }
+  },
+  "npm": {
+    "version": "10.9.8",
+    "integrity": "sha512-fYwb6ODSmHkqrJQQaCxY3M2lPf/mpgC7ik0HSzzIwG5CGtabRp4bNqikatvCoT42b5INQSqudVH0R7yVmC9hVg==",
+    "shasum": "61c71897ecbee5bb1ee17e2fe50ebff07828fa9a",
+    "tarball": "https://registry.npmjs.org/npm/-/npm-10.9.8.tgz"
+  },
+  "playwrightPackages": {
+    "playwright": {
+      "version": "1.62.1",
+      "integrity": "sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==",
+      "tarball": "https://registry.npmjs.org/playwright/-/playwright-1.62.1.tgz"
+    },
+    "playwright-core": {
+      "version": "1.62.1",
+      "integrity": "sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==",
+      "tarball": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.62.1.tgz"
+    }
+  },
+  "playwrightBrowserTrees": {
+    "chromium-1228": {
+      "status": "frozen-local-tree",
+      "revisionDir": "chromium-1228",
+      "treeSha256": "15a11dff20a20853374fd8012ee037c2a12f344ad8389a4e8551578411f676ea",
+      "manifestByteLength": 74191,
+      "fileCount": 334
+    },
+    "webkit-2311": {
+      "status": "frozen-local-tree",
+      "revisionDir": "webkit-2311",
+      "treeSha256": "b9f9924373c8431744550a4f5f5b4680d07f018c5a04ec0243b4c0ee3d1cf643",
+      "manifestByteLength": 913094,
+      "fileCount": 6847
+    },
+    "ffmpeg-1011": {
+      "status": "frozen-local-tree",
+      "revisionDir": "ffmpeg-1011",
+      "treeSha256": "8383a0c8d12bf3ad9d10f4fd810948d18df4863c419f33d918eb6fb6740cccb0",
+      "manifestByteLength": 333,
+      "fileCount": 4
+    },
+    "firefox-1538": {
+      "status": "deferred-scope-out",
+      "reason": "Playwright Firefox archive CDN returned 403 in this environment; G1 v18 removes vite-firefox from the admitted environment set and retargets browser-memory-slope to chromium+webkit."
+    }
+  },
+  "nativePackages": {
+    "node_modules/@duckdb/node-bindings-darwin-arm64": {
+      "version": "1.5.5-r.4",
+      "integrity": "sha512-4OdO3pkoJzAZDnZ2iyehi67XL4+WqHPCGYWbyAsYyhGJS+WscGrAnFhMhHudMM2XF8pIEM2tuOKMmwWnTNN2wQ==",
+      "resolved": "https://registry.npmjs.org/@duckdb/node-bindings-darwin-arm64/-/node-bindings-darwin-arm64-1.5.5-r.4.tgz"
+    },
+    "node_modules/@duckdb/node-bindings-linux-x64": {
+      "version": "1.5.5-r.4",
+      "integrity": "sha512-EY+CL/4h8MQZd9MxTBq+98m3U9osmvHBwhE9b5fMWQGt2I6p1j8fvX0SXiwy9KBfQIbjVUOf5XvGdXncI54KSg==",
+      "resolved": "https://registry.npmjs.org/@duckdb/node-bindings-linux-x64/-/node-bindings-linux-x64-1.5.5-r.4.tgz"
+    },
+    "node_modules/@duckdb/node-bindings-linux-x64-musl": {
+      "version": "1.5.5-r.4",
+      "integrity": "sha512-h0ixrgGHtHh+C/Fu1eAL9hX4iCf8yuyJN6Y24Gh8axXXP8UuSh0rQRAQUQTYarQ8pm2qSG/67ZYjyYYydD+J/w==",
+      "resolved": "https://registry.npmjs.org/@duckdb/node-bindings-linux-x64-musl/-/node-bindings-linux-x64-musl-1.5.5-r.4.tgz"
+    },
+    "node_modules/@esbuild/darwin-arm64": {
+      "version": "0.28.1",
+      "integrity": "sha512-TZbWkQY7kvTAXbXUT7uVACR5cMHsDiSz9z7ZKAX/RTq/WJEk3QyRr0wZpNhBDX+/0CtdqUIJlOiodQcta6tY3Q==",
+      "resolved": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.1.tgz"
+    },
+    "node_modules/@esbuild/linux-x64": {
+      "version": "0.28.1",
+      "integrity": "sha512-u/anNYF2mmVOEDwLtnQ1wOr3EZ9sTNGLWrsYGYwHWzGA3Si84IOkHXlbWTD1NB+9/1lcnweYKO54uhxZydNzfA==",
+      "resolved": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.1.tgz"
+    }
+  },
+  "githubRunnerImages": {
+    "ubuntu-24.04": {
+      "label": "ubuntu-24.04",
+      "source": "https://github.com/actions/runner-images",
+      "note": "Label-bound; exact image digest must match the Actions run that executes the clean suite"
+    },
+    "macos-15": {
+      "label": "macos-15",
+      "source": "https://github.com/actions/runner-images",
+      "note": "Label-bound; recording host is macOS 26.7 / Darwin 25 and is discovery-only for this label"
+    },
+    "windows-2025": {
+      "label": "windows-2025",
+      "source": "https://github.com/actions/runner-images",
+      "note": "Label-bound; exact image digest must match the Actions run that executes the clean suite"
+    }
+  },
+  "scopeNote": "G1 plan v18 admits Node artifacts from official SHASUMS plus Chromium/WebKit local trees; Firefox is deferred."
+}

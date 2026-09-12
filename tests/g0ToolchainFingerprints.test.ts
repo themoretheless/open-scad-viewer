@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest'
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const fingerprintPath = resolve(
   repositoryRoot,
+  'docs/qualification/g0-toolchain-fingerprints-v2.json',
+)
+const fingerprintV1Path = resolve(
+  repositoryRoot,
   'docs/qualification/g0-toolchain-fingerprints-v1.json',
 )
 const statusPath = resolve(
@@ -46,7 +50,13 @@ describe('G0 toolchain fingerprints', () => {
 
   it('uses the frozen G0.2 schema id', () => {
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v1')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v2')
+  })
+
+  it('keeps fingerprints v1 as immutable historical evidence', () => {
+    const v1 = JSON.parse(readFileSync(fingerprintV1Path, 'utf8')) as FingerprintDoc
+    expect(v1.fingerprintId).toBe('g0-toolchain-fingerprints-v1')
+    expect(v1.artifacts.length).toBeGreaterThan(0)
   })
 
   it('matches exact bytes for every listed artifact', () => {

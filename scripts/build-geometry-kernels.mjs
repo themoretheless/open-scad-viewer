@@ -4,13 +4,15 @@ import {mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/geometry-kernels')
+const cargoTarget=resolve(root,'crates/target')
 // Debug symbol names are not used by the browser bridge. Keep the existing
 // optimization profile while omitting them from the downloadable payload.
-const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"','--target','wasm32-unknown-unknown','--manifest-path','crates/geometry-wasm/Cargo.toml'],{cwd:root,stdio:'inherit'})
+// Pin CARGO_TARGET_DIR so an inherited sandbox/cache target cannot pack a stale wasm.
+const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"','--target','wasm32-unknown-unknown','--manifest-path','crates/geometry-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,CARGO_TARGET_DIR:cargoTarget}})
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
-const wasm=readFileSync(resolve(root,'crates/target/wasm32-unknown-unknown/release/geometry_wasm.wasm'))
+const wasm=readFileSync(resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm'))
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Geometry WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)

@@ -48,6 +48,58 @@ export function booleanPolygonMeshes(a: PolygonMesh, b: PolygonMesh, operation: 
   return callGeometryRust('mesh_boolean', { a, b, operation, options })
 }
 
+/** Horizontal mesh section at z (mm). Contours are not yet printable regions. */
+export interface MeshSectionContour {
+  points: number[][]
+  sourceTriangles: number[]
+}
+export interface MeshSectionResult {
+  z_mm: number
+  candidateTriangles: number
+  contours: MeshSectionContour[]
+}
+export function sectionPolygonMesh(mesh: PolygonMesh, z: number): MeshSectionResult {
+  return callGeometryRust('mesh_section', { mesh, z })
+}
+
+export interface ToolpathSettingsInput {
+  layerHeightMm?: number
+  lineWidthMm?: number
+  wallCount?: number
+  infillSpacingMm?: number
+  feedrateMmS?: number
+  travelFeedrateMmS?: number
+  filamentDiameterMm?: number
+}
+export interface ToolpathPath {
+  role: 'outline' | 'inset' | 'hatch'
+  closed: boolean
+  points: number[][]
+}
+export interface ToolpathLayerResult {
+  z_mm: number
+  paths: ToolpathPath[]
+}
+export interface ToolpathPlanResult {
+  layers: ToolpathLayerResult[]
+}
+export function planPolygonMeshToolpaths(
+  mesh: PolygonMesh,
+  zMin: number,
+  zMax: number,
+  settings: ToolpathSettingsInput = {},
+): ToolpathPlanResult {
+  return callGeometryRust('mesh_toolpaths', { mesh, zMin, zMax, ...settings })
+}
+export function emitPolygonMeshGcode(
+  mesh: PolygonMesh,
+  zMin: number,
+  zMax: number,
+  settings: ToolpathSettingsInput = {},
+): { gcode: string; layerCount: number } {
+  return callGeometryRust('mesh_gcode', { mesh, zMin, zMax, ...settings })
+}
+
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}
 export const extrudePolygonProfile=(profile:PolygonProfile,vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude',{profile,vector})
 export const revolvePolygonProfile=(profile:number[][],angle=360,segments=32,caps=true):PolygonBuild=>callGeometryRust('polygon_revolve',{profile,angle,segments,caps})

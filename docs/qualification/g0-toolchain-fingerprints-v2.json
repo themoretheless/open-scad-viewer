@@ -1,0 +1,81 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v2",
+  "recordedAt": "2026-09-12",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v1",
+  "purpose": "G0.2 re-freeze after geometry-bridge gained slicer-core dependency (Cargo.lock drift).",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Silent rewrite of v1 bytes"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "ce596b60da9dbf325530e5e2381098f5e6b214e92b74f968e7e72e1c48783206",
+      "byteLength": 2441
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "39217033e038e7f6b6c9e2de50691ad6c7aef394361cd5cb2bfad81ffa7b0b06",
+      "byteLength": 3489
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "c61099f1c55baf3d0175a6347f1823a3fb228da4bbaf0c8331775ff09c174561",
+      "byteLength": 1284
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "22bb564e5e169403624b70327036529c06af9eb0822ff28225cd832528152ce0",
+      "byteLength": 31154
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v1.json",
+      "bindingId": "crates-lockfile",
+      "note": "v1 frozen Cargo.lock before slicer-core bridge dependency; v2 supersedes for ongoing G0 work."
+    },
+    {
+      "relativeTo": "docs/qualification/semantic-manifold-g1-plan-v16.json",
+      "bindingId": "root-package-manifest",
+      "note": "G1 plan may still freeze older package.json; resolving requires a new G1 plan version."
+    }
+  ]
+}

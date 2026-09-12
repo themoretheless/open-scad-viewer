@@ -68,6 +68,82 @@ fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
 fn encode(v: impl Serialize) -> Result<Value> {
     value_codec::to_value(v).map_err(|e| input(e.to_string()))
 }
+
+fn toolpath_settings(v: &Value) -> Result<slicer_core::ToolpathSettings> {
+    let mut settings = slicer_core::ToolpathSettings::default();
+    if let Some(value) = v.get("layerHeightMm").and_then(|x| x.as_f64()) {
+        settings.layer_height_mm = value;
+    }
+    if let Some(value) = v.get("lineWidthMm").and_then(|x| x.as_f64()) {
+        settings.line_width_mm = value;
+    }
+    if let Some(value) = v.get("wallCount").and_then(|x| x.as_u64()) {
+        settings.wall_count = value as usize;
+    }
+    if let Some(value) = v.get("infillSpacingMm").and_then(|x| x.as_f64()) {
+        settings.infill_spacing_mm = value;
+    }
+    if let Some(value) = v.get("feedrateMmS").and_then(|x| x.as_f64()) {
+        settings.feedrate_mm_s = value;
+    }
+    if let Some(value) = v.get("travelFeedrateMmS").and_then(|x| x.as_f64()) {
+        settings.travel_feedrate_mm_s = value;
+    }
+    if let Some(value) = v.get("filamentDiameterMm").and_then(|x| x.as_f64()) {
+        settings.filament_diameter_mm = value;
+    }
+    Ok(settings)
+}
+
+fn layer_from_mesh_section(
+    section: polygon_core::solid::section::MeshSection,
+) -> planar_geometry::LayerSection {
+    planar_geometry::LayerSection {
+        z_mm: section.z_mm,
+        contours: section
+            .contours
+            .into_iter()
+            .map(|contour| contour.points)
+            .collect(),
+    }
+}
+
+fn mesh_toolpaths(v: &Value) -> Result<Value> {
+    let mesh: Mesh = field(v, "mesh")?;
+    let z_min: f64 = field(v, "zMin")?;
+    let z_max: f64 = field(v, "zMax")?;
+    let settings = toolpath_settings(v)?;
+    let index = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?;
+    let layers = slicer_core::schedule_layers(
+        |z| {
+            index
+                .section(z)
+                .map(layer_from_mesh_section)
+                .map_err(|error| slicer_core::Error {
+                    code: error.code,
+                    message: error.message,
+                })
+        },
+        z_min,
+        z_max,
+        &settings,
+    )?;
+    Ok(json!({
+        "layers": layers.iter().map(|layer| json!({
+            "z_mm": layer.z_mm,
+            "paths": layer.paths.iter().map(|path| json!({
+                "role": match path.role {
+                    slicer_core::PathRole::Outline => "outline",
+                    slicer_core::PathRole::Inset => "inset",
+                    slicer_core::PathRole::Hatch => "hatch",
+                },
+                "closed": path.closed,
+                "points": path.points,
+            })).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
+    }))
+}
+
 fn response(result: Result<Value>) -> String {
     match result {
         Ok(value) => json!({"ok":true,"value":value}),
@@ -322,6 +398,47 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 None => polygon_core::solid::boolean::Options::default(),
             },
         )?),
+        // P2 print path: section → toolpaths → optional G-code (crates already existed).
+        "mesh_section" => {
+            let mesh: Mesh = field(&v, "mesh")?;
+            let z_mm: f64 = field(&v, "z")?;
+            let section = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?.section(z_mm)?;
+            Ok(json!({
+                "z_mm": section.z_mm,
+                "candidateTriangles": section.candidate_triangles,
+                "contours": section.contours.iter().map(|contour| json!({
+                    "points": contour.points,
+                    "sourceTriangles": contour.source_triangles,
+                })).collect::<Vec<_>>(),
+            }))
+        }
+        "mesh_toolpaths" => mesh_toolpaths(&v),
+        "mesh_gcode" => {
+            let mesh: Mesh = field(&v, "mesh")?;
+            let z_min: f64 = field(&v, "zMin")?;
+            let z_max: f64 = field(&v, "zMax")?;
+            let settings = toolpath_settings(&v)?;
+            let index = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?;
+            let layers = slicer_core::schedule_layers(
+                |z| {
+                    index
+                        .section(z)
+                        .map(layer_from_mesh_section)
+                        .map_err(|error| slicer_core::Error {
+                            code: error.code,
+                            message: error.message,
+                        })
+                },
+                z_min,
+                z_max,
+                &settings,
+            )?;
+            let gcode = slicer_core::emit_gcode(&layers, &settings)?;
+            Ok(json!({
+                "gcode": gcode,
+                "layerCount": layers.len(),
+            }))
+        }
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
         "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
         "brep_nurbs_tessellate" => {

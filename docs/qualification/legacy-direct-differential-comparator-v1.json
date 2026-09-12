@@ -1,0 +1,155 @@
+{
+  "schema": "open-scad-viewer/legacy-direct-differential-comparator",
+  "schemaVersion": 1,
+  "comparatorId": "legacy-direct-differential-v1",
+  "recordedAt": "2026-09-12",
+  "gate": "G0.10",
+  "extractedFrom": {
+    "planId": "semantic-manifold-g1-plan-v16",
+    "note": "G0-owned freeze of comparator rules previously embedded only in the G1 plan. Changing this file requires a new comparator version; it does not silently rewrite G1 plan v16."
+  },
+  "exactFields": [
+    "terminal outcome tag",
+    "error name, message, code, line, column, start, and end",
+    "warning sequence and text",
+    "quality and reduced flag",
+    "LME1 bytes and digest including identities and provenance",
+    "LSE1 bytes and digest including scene identities and inspection payload",
+    "mesh/scene counts and byte lengths",
+    "color, transforms, spans, topology counters, and first-seen identity partition"
+  ],
+  "normalizedFields": [
+    "process-local original IDs normalized only by first-seen equality partition"
+  ],
+  "validateOnlyFields": [
+    "finite non-negative timing values",
+    "structural mesh and scene schema validity"
+  ],
+  "metricTolerance": {
+    "volume": {
+      "absolute": 1e-09,
+      "relative": 1e-09
+    },
+    "surfaceArea": {
+      "absolute": 1e-09,
+      "relative": 1e-09
+    }
+  },
+  "mutations": [
+    {
+      "id": "outcome-tag",
+      "target": "$.tag",
+      "operation": "replace cancelled with error",
+      "expectedDetection": "outcome mismatch at $.tag"
+    },
+    {
+      "id": "warning-order-text",
+      "target": "$.success.warnings",
+      "operation": "append one forged warning",
+      "expectedDetection": "warnings mismatch at $.success.warnings"
+    },
+    {
+      "id": "quality",
+      "target": "$.success.quality",
+      "operation": "replace full with preview",
+      "expectedDetection": "quality mismatch at $.success.quality"
+    },
+    {
+      "id": "reduced-bit",
+      "target": "$.success.reduced",
+      "operation": "flip false to true",
+      "expectedDetection": "quality mismatch at $.success.reduced"
+    },
+    {
+      "id": "mesh-byte",
+      "target": "$.success.meshes[0].vertices.bytes[0]",
+      "operation": "xor one byte with 1",
+      "expectedDetection": "mesh-bytes mismatch"
+    },
+    {
+      "id": "scene-byte",
+      "target": "$.success.scene.assets[0].vertices.bytes[0]",
+      "operation": "xor one byte with 1",
+      "expectedDetection": "scene-bytes mismatch"
+    },
+    {
+      "id": "color-component",
+      "target": "$.success.meshes[0].color[0]",
+      "operation": "replace component with 0.75",
+      "expectedDetection": "color mismatch"
+    },
+    {
+      "id": "entity-identity",
+      "target": "$.success.meshes[0].entityId",
+      "operation": "replace with entity:forged",
+      "expectedDetection": "identity mismatch"
+    },
+    {
+      "id": "provenance-start",
+      "target": "$.success.meshes[0].provenance[0].source.start",
+      "operation": "increment by one",
+      "expectedDetection": "provenance mismatch"
+    },
+    {
+      "id": "volume-outside-tolerance",
+      "target": "$.success.volume",
+      "operation": "add 0.0001",
+      "expectedDetection": "metrics mismatch at $.success.volume"
+    },
+    {
+      "id": "surface-area-outside-tolerance",
+      "target": "$.success.surfaceArea",
+      "operation": "add 0.0001",
+      "expectedDetection": "metrics mismatch at $.success.surfaceArea"
+    },
+    {
+      "id": "error-message",
+      "target": "$.error.message",
+      "operation": "replace with forged",
+      "expectedDetection": "error mismatch at $.error.message"
+    },
+    {
+      "id": "error-start",
+      "target": "$.error.start",
+      "operation": "increment by one",
+      "expectedDetection": "error mismatch at $.error.start"
+    },
+    {
+      "id": "error-end",
+      "target": "$.error.end",
+      "operation": "increment by one",
+      "expectedDetection": "error mismatch at $.error.end"
+    },
+    {
+      "id": "negative-timing",
+      "target": "$.success.timings.analyzeMs",
+      "operation": "replace with -1",
+      "expectedDetection": "validate-only schema rejection"
+    },
+    {
+      "id": "missing-geometry-asset-id",
+      "target": "$.success.meshes[0].geometryAssetId",
+      "operation": "delete required field",
+      "expectedDetection": "validate-only schema rejection"
+    },
+    {
+      "id": "original-id-partition-collapse",
+      "target": "first-seen originalId equality partition",
+      "operation": "collapse two distinct producer IDs",
+      "expectedDetection": "identity mismatch in normalized partition"
+    },
+    {
+      "id": "manifest-case-digest",
+      "target": "$.cases[first-success].expected.lme1Sha256",
+      "operation": "replace digest with 64 zeroes",
+      "expectedDetection": "oracle manifest corpusSha256 mismatch before candidate execution"
+    }
+  ],
+  "harness": {
+    "tests": [
+      "tests/legacyDirectEvaluatorOracle.test.ts",
+      "tests/support/referenceFrozenLegacyOutcome.ts"
+    ],
+    "isolation": "independent clone per mutation; candidate evaluator is not imported"
+  }
+}

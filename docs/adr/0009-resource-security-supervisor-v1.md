@@ -1,88 +1,84 @@
-# ADR 0009: Resource, security, and supervisor policy
+# ADR 0009: Resource, security, and supervisor policy (G0.12)
 
 - Status: accepted
 - Date: 2026-09-12
 - Accepted-by: repository-owner (human authorization in session)
-- Reviewer: repository-owner (solo dual-role attestation; not organizationally independent)
 - Contract: `resource-security-supervisor-v1`
-- Machine policy: `docs/qualification/resource-security-supervisor-v1.json`
+- Reference implementation (qualification-only): `src/mcp/manifoldPlanQualificationSupervisor.ts`
 
 ## Context
 
-Design §§16.4 / 19 require measurable HardLimits / RequestedLimits /
-EffectiveLimits, cancel/watchdog, panic containment, and a future MCP
-supervisor that keeps stdio admission in the main process while geometry runs
-in isolated workers/subprocesses. Qualification supervisors already exist as
-test harnesses; they do **not** close G0.12 without this ADR.
+Geometry work runs in browser Workers and MCP child workers. G0 requires a
+normative end-to-end memory, hard-kill, and queue policy before claiming
+supervisor rows in any QualificationPlan. Existing code is discovery evidence
+until this ADR is accepted and re-run under a frozen plan.
 
 ## Decision
 
-### Limit lattice
+### Queue
 
-```text
-HardLimits (host-trusted)
-RequestedLimits (document/request; may only shrink)
-EffectiveLimits = fieldwise min(Hard, Requested)
-```
+- At most **one active geometry job** per supervisor instance.
+- Additional requests fail fast with a typed busy error
+  (`E_MCP_MANIFOLD_PLAN_BUSY` or browser equivalent).
+- Silent unbounded queues are forbidden.
 
-`EffectiveLimits` enter execution cache keys and reports. Payloads cannot raise
-a hard cap.
+### Cancellation vs hard-kill
 
-Required dimensions (machine inventory):
-
-- input / decoded bytes and compression ratio
-- arena entities, topology incidence, history size
-- BVH / candidate / intersection queue sizes
-- subdivision depth, solver iterations
-- generated faces / edges / triangles
-- diagnostics / witness bytes
-- scratch / committed / WASM high-water memory
-- queue depth and in-flight jobs per engine class
-
-### Cancel and hard-kill
-
-| Signal | Effect |
+| Mode | Meaning |
 | --- | --- |
-| cooperative cancel | observed at `JobMachine::step` boundaries; terminal `Cancelled` |
-| watchdog deadline | terminal `DeadlineExceeded`; no late success publication |
-| hard-kill / trap | replace Worker/subprocess; Coordinator synthesizes `KernelFault` |
-| superseded | terminal cancel reason `superseded`; latest-only publication |
+| Cooperative cancel | Requested; Worker may finish cleanup and emit `cancelled` |
+| Hard-kill | Process/Worker termination after grace; no partial success publication |
 
-A hard-killed child never mutates App state after replacement begins. Same-
-engine retry may reuse fingerprint/policy; cross-engine recovery is forbidden
-(ADR 0002).
+Hard-kill is **not** proof that OS-level OOM or native crashes are contained in
+the parent process failure domain. Qualification claims must not reinterpret
+Worker termination as process isolation.
 
-### Supervisor deployment (target)
+### Deadlines
 
-Main process owns: stdio protocol, admission, DuckDB, quota tables.
-Geometry child owns: evaluation only. Child has no network, no arbitrary
-filesystem, no secrets. N-API requires a separate isolation review before use.
+Every supervised run binds finite:
 
-Queue policy: bounded per engine class; overload returns typed
-`ResourceLimit` without starting work. Fairness is FIFO within a document
-revision; cross-document starvation is mitigated by per-session caps in the
-machine policy.
+- startup timeout;
+- wall deadline;
+- cancellation grace;
+- join timeout.
 
-### Diagnostics hygiene
+Missing any bound is invalid configuration and must refuse before work.
 
-Release diagnostics must not include source text, control nets, backtraces, or
-internal filesystem paths.
+### Memory admission (end-to-end)
 
-### Non-goals
+Admission counts peak of:
 
-- Shipping the MCP supervisor under this ADR
-- Changing current in-process Manifold MCP behavior
-- Performance budget numbers as product promises (remain G0 hypotheses)
+- WASM committed + scratch + packed output + chunk scratch;
+- JS destination / decoded buffers;
+- retained previous scene;
+- GPU old+new replacement assets simultaneously.
 
-## Consequences
+Descriptor lengths validate before JS allocation. A “128 MiB payload” limit is
+not a “128 MiB peak” claim.
 
-- G0.12 becomes reviewable without pretending harness supervisors are the ADR
-- G3/G7 supervisor rollout cites this policy verbatim
+### Quarantine
+
+Indeterminate ownership after cleanup failure, protocol violation, or
+supervisor fault quarantines the instance: future begins refuse until explicit
+reset. Quarantine cannot be cleared by retrying the same poisoned session.
+
+### Browser vs MCP
+
+Same policy semantics; different deployment backends. Browser and MCP must not
+diverge on busy/cancel/deadline/quarantine meaning. Isolation strength differs
+and must be stated in each QualificationPlan environment row.
+
+### Explicit non-goals
+
+- Claiming process-level OOM / hostile sandbox containment from Worker kill.
+- Automatic cross-engine fallback on timeout.
+- Product behavior change under this ADR alone.
 
 ## Acceptance gates
 
-1. this ADR is human-accepted;
-2. `resource-security-supervisor-v1.json` is immutable except via version bump;
-3. cancel / deadline / hard-kill / superseded rows exist as fail-closed fixtures
-   in that JSON;
-4. no production path maps hard-kill into a success terminal.
+G0.12 completes only when:
+
+1. this ADR is accepted;
+2. matrix rows exist for busy, cancel, deadline, hard-kill, quarantine;
+3. end-to-end memory formula is cited by package/budget ADRs;
+4. organizational reviewer signs the supervisor claim boundary.

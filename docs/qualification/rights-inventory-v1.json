@@ -31,8 +31,11 @@
     {
       "id": "project-primary",
       "role": "primary-rights-holder",
-      "status": "unassigned-public-placeholder",
-      "note": "Named human/legal entities required before outbound license activation"
+      "displayName": "themoretheless",
+      "gitHubLogin": "themoretheless",
+      "status": "assigned-named-solo",
+      "organizationalIndependence": false,
+      "note": "Named solo repository owner; dual-role owner/reviewer. Outbound license text remains proposed-not-activated until LICENSE/NOTICE/CONTRIBUTING acceptance."
     }
   ]
 }

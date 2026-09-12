@@ -29,7 +29,8 @@
   "knownDrift": [
     {
       "relativeTo": "docs/qualification/semantic-manifold-g1-plan-v16.json",
-      "note": "G1 plan package.json binding remains older; resolving requires a new G1 plan version, not rewriting v16 or toolchain fingerprints v1."
+      "note": "Historical drift relative to v16. Resolved for active admission bindings by semantic-manifold-g1-plan-v17.json root artifact rebinds; v16 remains immutable.",
+      "resolvedBy": "semantic-manifold-g1-plan-v17"
     }
   ]
 }

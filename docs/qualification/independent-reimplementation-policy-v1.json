@@ -1,0 +1,87 @@
+{
+  "schema": "open-scad-viewer/independent-reimplementation-policy",
+  "schemaVersion": 1,
+  "policyId": "independent-reimplementation-policy-v1",
+  "recordedAt": "2026-09-12",
+  "gate": "G0.13",
+  "status": "draft",
+  "claimBoundary": {
+    "includes": [
+      "Allowlisted idea sources for foundational geometry algorithms",
+      "Forbidden source classes",
+      "Required PROVENANCE.yml fields before production qualification"
+    ],
+    "excludes": [
+      "Formal clean-room certification without separate protocol",
+      "Legal advice",
+      "Permission to vendor proprietary kernels (Parasolid/XT/ACIS)"
+    ]
+  },
+  "allowlistedSources": [
+    {
+      "id": "cox-bspline-eval",
+      "citation": "Cox, numerical evaluation of B-splines",
+      "useBasis": "ideas_only",
+      "materialKind": "publication"
+    },
+    {
+      "id": "boehm-knot-insertion",
+      "citation": "Boehm, knot insertion",
+      "useBasis": "ideas_only",
+      "materialKind": "publication"
+    },
+    {
+      "id": "piegl-tiller-nurbs-book",
+      "citation": "Piegl–Tiller, The NURBS Book",
+      "useBasis": "ideas_only",
+      "materialKind": "publication",
+      "forbidden": "copying listings, variable names, or comments"
+    },
+    {
+      "id": "shewchuk-predicates",
+      "citation": "Shewchuk adaptive robust predicates",
+      "useBasis": "ideas_only",
+      "selectedMode": "original_from_paper",
+      "forbiddenWithoutAdr": ["derived_port", "vendored"]
+    },
+    {
+      "id": "sederberg-nishita-bezier-clipping",
+      "citation": "Sederberg–Nishita Bézier clipping",
+      "useBasis": "ideas_only",
+      "materialKind": "publication"
+    },
+    {
+      "id": "requicha-solids",
+      "citation": "Requicha solid representations / boundary evaluation",
+      "useBasis": "ideas_only",
+      "materialKind": "publication"
+    }
+  ],
+  "forbiddenSources": [
+    "proprietary kernel source",
+    "decompilation",
+    "debug traces of closed SDKs",
+    "NDA documentation",
+    "private commercial fixtures",
+    "redistributing publisher PDFs"
+  ],
+  "requiredProvenanceFields": [
+    "schema_version",
+    "algorithm_id",
+    "algorithm_version",
+    "contract",
+    "risk_tier",
+    "code_paths",
+    "source_artifacts",
+    "implementer",
+    "reviewer",
+    "usage_mode",
+    "tests"
+  ],
+  "exampleProvenancePath": "docs/provenance/PROVENANCE.example.yml",
+  "missingForAcceptance": [
+    "Accepted ADR covering this policy",
+    "Named legal/compliance owner",
+    "First production algorithm PROVENANCE.yml filled for a shipped module"
+  ]
+}

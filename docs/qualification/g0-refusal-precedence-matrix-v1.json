@@ -1,0 +1,244 @@
+{
+  "schema": "open-scad-viewer/g0-refusal-precedence-matrix",
+  "schemaVersion": 1,
+  "matrixId": "g0-refusal-precedence-matrix-v1",
+  "recordedAt": "2026-09-12",
+  "normativeSources": [
+    "docs/adr/0002-permanent-geometry-engine-routing.md#Refusal precedence",
+    "docs/qualification/geometry-routing-contract-v1.json",
+    "docs/adr/0009-resource-security-supervisor-v1.md",
+    "docs/qualification/resource-security-supervisor-v1.json"
+  ],
+  "stages": [
+    "source-envelope-and-digest",
+    "leading-routing-header",
+    "cancellation-staleness-and-queue",
+    "static-capability-admission",
+    "manifest-revocation",
+    "deployment-and-provider-presence",
+    "provider-readiness",
+    "selected-provider-execution",
+    "serialization-export-and-persistence"
+  ],
+  "surfaces": [
+    "browser-export",
+    "duckdb",
+    "facade",
+    "mcp",
+    "mcp-duckdb",
+    "mcp-transport",
+    "worker",
+    "worker-coordinator"
+  ],
+  "rows": [
+    {
+      "id": "worker-envelope-source-digest-replay",
+      "stage": "source-envelope-and-digest",
+      "surface": "worker-coordinator",
+      "expectedTerminal": "ProtocolError/no-publication",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/buildCoordinator.test.ts",
+      "evidenceTest": "rejects a same-route terminal replayed for different exact source bytes",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "malformed-header-before-stale",
+      "stage": "leading-routing-header",
+      "surface": "worker",
+      "expectedTerminal": "LANGUAGE_CONTRACT_UNSUPPORTED/no-warm",
+      "lateSuccess": false,
+      "warmAllowed": false,
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "does not let a malformed newer revision supersede valid running work",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "cancelled-request-remains-queue-admitted",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp-transport",
+      "expectedTerminal": "server_busy/single-settlement",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/mcpBoundedTransport.test.ts",
+      "evidenceTest": "keeps a cancelled request admitted until its handler actually settles",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "capability-before-readiness",
+      "stage": "static-capability-admission",
+      "surface": "facade",
+      "expectedTerminal": "capability_unavailable/no-warm",
+      "lateSuccess": false,
+      "warmAllowed": false,
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "unsupported-capability-before-readiness",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "revocation-before-provider",
+      "stage": "manifest-revocation",
+      "surface": "facade",
+      "expectedTerminal": "engine_unavailable:revoked/no-warm",
+      "lateSuccess": false,
+      "warmAllowed": false,
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "revocation-before-provider-missing",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "undeployed-brep-no-manifold",
+      "stage": "deployment-and-provider-presence",
+      "surface": "worker",
+      "expectedTerminal": "engine_unavailable:not-deployed/no-manifold",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "refuses an unavailable B-rep source without invoking the mesh parser",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "readiness-no-retry",
+      "stage": "provider-readiness",
+      "surface": "facade",
+      "expectedTerminal": "engine_unavailable:readiness-failed/one-warm",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "readiness-failure-is-not-retried",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "provider-execution-no-retry",
+      "stage": "selected-provider-execution",
+      "surface": "facade",
+      "expectedTerminal": "original-error/one-build",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/geometryRoutingContract.test.ts",
+      "evidenceTest": "provider-failure-has-no-retry",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "serialization-retains-runtime-provenance",
+      "stage": "serialization-export-and-persistence",
+      "surface": "worker",
+      "expectedTerminal": "failed/runtime-provenance",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/geometryWorker.test.ts",
+      "evidenceTest": "keeps runtime provenance when success serialization fails after the build",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "failed-current-source-is-not-exportable",
+      "stage": "serialization-export-and-persistence",
+      "surface": "browser-export",
+      "expectedTerminal": "read-only-last-known-good",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/buildPromotionPolicy.test.ts",
+      "evidenceTest": "exports only a current error-free full result",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "persistence-failure-retains-runtime-provenance",
+      "stage": "serialization-export-and-persistence",
+      "surface": "mcp-duckdb",
+      "expectedTerminal": "internal_error/runtime-provenance",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/mcpServer.test.ts",
+      "evidenceTest": "keeps runtime provenance when persistence fails after geometry completed",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "late-abort-preserves-original-cause",
+      "stage": "serialization-export-and-persistence",
+      "surface": "mcp",
+      "expectedTerminal": "original-failure-not-cancelled",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/mcpServer.test.ts",
+      "evidenceTest": "does not rewrite an unrelated late failure as cancellation after the request signal aborts",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "persisted-diagnostic-v1",
+      "stage": "serialization-export-and-persistence",
+      "surface": "duckdb",
+      "expectedTerminal": "frozen-code-retry-policy",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "tests/duckdbModelStore.test.ts",
+      "evidenceTest": "requires versioned diagnostics from new writes and enforces the frozen retry policy",
+      "source": "geometry-routing-contract-v1.surfaceCases"
+    },
+    {
+      "id": "supervisor-cooperative-cancel",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp",
+      "signal": "cancel",
+      "expectedTerminal": "Cancelled",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "docs/qualification/resource-security-supervisor-v1.json",
+      "source": "resource-security-supervisor-v1.fixtures"
+    },
+    {
+      "id": "supervisor-watchdog-deadline",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp",
+      "signal": "deadline",
+      "expectedTerminal": "DeadlineExceeded",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "docs/qualification/resource-security-supervisor-v1.json",
+      "source": "resource-security-supervisor-v1.fixtures"
+    },
+    {
+      "id": "supervisor-hard-kill-replace-worker",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp",
+      "signal": "hard-kill",
+      "expectedTerminal": "KernelFault",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "docs/qualification/resource-security-supervisor-v1.json",
+      "source": "resource-security-supervisor-v1.fixtures"
+    },
+    {
+      "id": "supervisor-superseded-latest-only",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp",
+      "signal": "superseded",
+      "expectedTerminal": "Cancelled",
+      "lateSuccess": false,
+      "warmAllowed": true,
+      "evidenceFile": "docs/qualification/resource-security-supervisor-v1.json",
+      "source": "resource-security-supervisor-v1.fixtures"
+    },
+    {
+      "id": "supervisor-queue-overload",
+      "stage": "cancellation-staleness-and-queue",
+      "surface": "mcp",
+      "signal": "queue-full",
+      "expectedTerminal": "ResourceLimit",
+      "lateSuccess": false,
+      "warmAllowed": false,
+      "evidenceFile": "docs/qualification/resource-security-supervisor-v1.json",
+      "source": "resource-security-supervisor-v1.fixtures"
+    }
+  ],
+  "invariants": [
+    "Routing/capability/revocation refusals invoke neither warm() nor build()",
+    "A late AbortSignal does not rewrite an unrelated failure as cancellation",
+    "Cross-engine automatic fallback never occurs",
+    "Exactly one terminal per job; late success after cancel/hard-kill is forbidden"
+  ],
+  "nonClaims": [
+    "Hard-kill is not process isolation proof",
+    "Worker terminate is not join/reclaim proof",
+    "Role-separated agents are not organizationally independent reviewers"
+  ]
+}

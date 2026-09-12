@@ -261,6 +261,7 @@ dependencies = [
  "polygon-core",
  "sdf-core",
  "sketch-core",
+ "slicer-core",
  "subdivision-core",
  "value-codec",
 ]

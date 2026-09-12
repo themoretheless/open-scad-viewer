@@ -1,24 +1,21 @@
-# ADR 0008: Protocol v6 wire IDL and GeometrySceneV2 publication payload
+# ADR 0008: Protocol v6 / GeometrySceneV2 IDL freeze (G0.8)
 
 - Status: accepted
 - Date: 2026-09-12
 - Accepted-by: repository-owner (human authorization in session)
-- Reviewer: repository-owner (solo dual-role attestation; not organizationally independent)
 - Contract: `protocol-v6-geometry-scene-v2`
-- Artifacts: `docs/qualification/geometry-scene-v2/`
+- Fixtures: `docs/qualification/protocol-v6/`
 
 ## Context
 
-Design §15.2 requires a checked-in discriminated IDL for request / accepted /
-started / progress / terminals and a publication payload named
-`GeometrySceneV2` before G4a product activation.
+Design prose historically called the current Worker wire “v5” and the B-rep
+migration target “v6”. The shipped TypeScript constant
+`GEOMETRY_WORKER_PROTOCOL_VERSION` is already **6**. G0 must freeze both:
 
-The live Worker already uses `GEOMETRY_WORKER_PROTOCOL_VERSION = 6` with
-`MeshData[]` success payloads and `GeometryScene` **version 1** in
-`src/core/scene.ts`. That integer bump is **not** GeometrySceneV2. This ADR
-freezes the *target* discriminated contract and the migration matrix from the
-current MeshData / GeometryScene v1 envelopes. Product routing and publication
-behavior must not change under this ADR alone.
+1. the **current** Worker message IDL (as shipped today);
+2. the **future** `GeometrySceneV2` publication envelope required before G4a.
+
+G0.8 is contract-only. It must not change runtime routing or geometry results.
 
 ## Decision
 
@@ -26,70 +23,66 @@ behavior must not change under this ADR alone.
 
 | Name | Meaning |
 | --- | --- |
-| Live wire integer `6` | Current Worker envelope with MeshData success (transitional) |
-| `GeometryScene` v1 | Current App scene: assets + entities + inspection |
-| `GeometrySceneV2` | Future publication payload: occurrences, assets, mesh buffers, topology/provenance tables, diagnostics |
-| `MeshDataV2` | Internal geometry-asset packet inside GeometrySceneV2; not a competing App root type |
+| `worker-protocol-current-v6` | Exact shipped Worker request/event shapes today |
+| `geometry-scene-v2-idl` | Future publication payload for B-rep/Manifold-on-v6 migration |
+| Design doc “v5” | Historical name for the pre-scene-v2 wire; maps to current-v6 |
 
-### Envelope invariants (preserved from current protocol)
+### Current Worker protocol (frozen snapshot)
 
-- `protocolVersion`, `documentRevision`, `jobId`, `quality`
-- `accepted` / `started` / `progress`
-- exactly one terminal per job
-- latest-only publication
-- full never demotes to preview
-- export only from current full
+Normative fields already required on every job envelope:
 
-### Required GeometrySceneV2 additions
+`protocolVersion` (=6), `documentRevision`, `jobId`, `quality`, `sourceSha256`
+(except cancel omits quality/sourceSha256).
 
-Every terminal success must carry:
+Events: `accepted` | `started` | `progress` | exactly one terminal
+(`succeeded` | `failed` | `cancelled` | `stale`).
 
-- `workerEpoch`
-- `kernelKey` + kernel fingerprint
-- capability manifest/version
-- representation + typed evidence/certificates
-- kernel / tessellation / packing timings
-- `TopologySnapshotId`, `MeshAssetId`, packet-local `PacketTopoToken` tables
-- structured diagnostics
-- backend-computed `fullEquivalent` (adapter may only *check*
-  `fullEquivalent === !reduced`, never store two independent truths)
+Invariants preserved:
 
-### Request family
+- latest-only publication;
+- full never downgrades to preview;
+- export only from current full;
+- payload limits in `GEOMETRY_WORKER_PAYLOAD_LIMITS`.
 
-Coordinator continues to see one atomic `build` family with discriminant
-`InteractiveBuild | ExportCurrentSnapshot`. Export carries value
-`TopologySnapshotId` and policy, never a serializable capability handle.
-Reusable handles stay Worker-local.
+Checked-in fixture:
+`docs/qualification/protocol-v6/current-worker-protocol-v6.fixture.json`.
 
-### Migration
+### Future GeometrySceneV2 (IDL only)
 
-Atomic protocol bump only. Checked-in matrix:
-`docs/qualification/geometry-scene-v2/v5-migration-matrix-v1.json`.
+Publication payload is `GeometrySceneV2`, not a competing root `MeshData`.
+Required future fields (G4a implementation):
 
-Transitional adapters may project GeometrySceneV2 → GeometryScene v1 for
-renderer compatibility during G4a qualification. Reverse silent widening of
-v1 scenes into claimed TopologySnapshotId evidence is forbidden.
+- `workerEpoch`, `kernelKey`, `kernelFingerprint`;
+- capability manifest/version;
+- representation + typed evidence/certificates;
+- `topologySnapshotId`, `meshAssetId`, packet-local `PacketTopoToken` tables;
+- backend-computed `fullEquivalent`;
+- occurrences, geometry assets, mesh buffer refs, diagnostics.
 
-### Non-goals
+Schema:
+`docs/qualification/protocol-v6/geometry-scene-v2.schema.json`.
 
-- Activating GeometrySceneV2 in production Worker/MCP under this ADR
-- Creating `cad-*` crates
-- Changing engine routing (ADR 0002)
+Coordinator still sees one atomic request family with discriminant
+`InteractiveBuild | ExportCurrentSnapshot`. Snapshot handles remain Worker-local.
 
-## Consequences
+### Migration matrix
 
-- G0.8 can advance to partial with IDL + fixtures + independent checker
-- G4a remains the activation gate
-- ADR 0005 shadow-adapter / Worker identity boundary work must cite this
-  contract, not the live MeshData integer alone
+`docs/qualification/protocol-v6/migration-matrix-v1.json` freezes field mapping
+from design-v5 naming → current-v6 → scene-v2. Migration is one atomic protocol
+bump after G4a qualification. Temporary adapters must **check**
+`fullEquivalent === !reduced`, not store two independent truths.
+
+### Explicit non-goals
+
+- Changing `GEOMETRY_WORKER_PROTOCOL_VERSION` or runtime validators in this ADR.
+- Shipping B-rep UI or SceneV2 publication.
+- Claiming G1 qualifies protocol-v6 / scene-v2 (forbidden by G1 plan).
 
 ## Acceptance gates
 
-G0.8 engineering-complete when:
+G0.8 completes only when:
 
-1. this ADR is human-accepted;
-2. schema + wire fixtures + migration matrix validate under
-   `tests/support/referenceGeometrySceneV2.ts`;
-3. every migration row states source shape, target shape, and fail-closed
-   negatives;
-4. no production path claims GeometrySceneV2 publication before G4a.
+1. this ADR is accepted;
+2. current-v6 fixture validates against the independent checker;
+3. GeometrySceneV2 schema + one positive + one negative fixture exist;
+4. migration matrix covers every current message type and every new SceneV2 field.
