@@ -133,6 +133,13 @@ fn brep_operations_dispatch_to_closed_tessellated_solids() {
         assert!(tessellation.built.report.closed);
         assert_eq!(tessellation.built.report.orientation_conflicts, 0);
     }
+
+    let separated = brep_core::cuboid([4., 0., 0.], [5., 1., 1.]).unwrap();
+    let multi_body = brep_core::boolean(&a, &separated, "union").unwrap();
+    assert_eq!(multi_body.bodies.len(), 2);
+    let tessellation = crate::brep::nurbs(&multi_body, 2).unwrap();
+    assert!(tessellation.built.report.closed);
+    assert!((tessellation.built.report.signed_volume_mm3 - 9.).abs() < 1e-8);
 }
 
 #[test]

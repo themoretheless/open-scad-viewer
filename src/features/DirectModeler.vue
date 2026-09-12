@@ -70,6 +70,7 @@ const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'>('body'
 const workplaneOutline=ref<Point2[][]>([])
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|null>(null)
 const advanced=ref({distance:2,radius:2,axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
+const brepSegments=ref(4),filletSegments=ref(12)
 const boxSelect=ref(false),selectionBox=ref<{start:Point2;end:Point2;pane:Pane}|null>(null),gizmoMode=ref<'move'|'rotate'|'scale'>('move')
 let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2}|null=null
 
@@ -140,9 +141,16 @@ function faceSketch() {run(()=>{
  activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='2d';centers.value['2d']=[0,0];views.value['2d']=100;advancedOp.value=null
 })}
 function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep) {
- const built=tessellateNurbsBrep(brep,2)
+ const built=tessellateNurbsBrep(brep,brepSegments.value)
  return {...body,brep,mesh:{positions:[...built.positions],indices:[...built.indices]}}
 }
+function retessellateSelectedBrep() { run(() => {
+ const body=history.document.bodies.find(body=>body.id===selection.value)
+ if(!body?.brep)throw Error('Select an authored B-rep body.')
+ const built=tessellateNurbsBrep(body.brep,brepSegments.value)
+ body.mesh={positions:[...built.positions],indices:[...built.indices]}
+ commit(history.document)
+}) }
 function selectedBrepEdge(body:NonNullable<typeof selectedBody.value>,index:number) {
  const edge=solidTopology(body.mesh).edges[index];if(!body.brep||!edge)throw Error('Select an edge on a B-rep body.')
  const points=bodyPoints(body),a=points[edge.a],b=points[edge.b],same=(p:number[],q:number[])=>Math.hypot(...p.map((v,i)=>v-q[i]))<1e-6
@@ -162,7 +170,7 @@ function resultAdvanced():DirectDocument {
  switch(advancedOp.value){
   case 'push': if(b)replace(pushPullFace(b,faceIndex.value,p.distance));break
   case 'chamfer': case 'edge-fillet': if(b)replace(b.brep
-   ? bodyFromBrep(b,advancedOp.value==='chamfer'?chamferNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius):filletNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius,12))
+   ? bodyFromBrep(b,advancedOp.value==='chamfer'?chamferNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius):filletNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius,filletSegments.value))
    : bevelSolidEdge(b,edgeIndex.value,p.radius,advancedOp.value==='chamfer'?'chamfer':'fillet'));break
   case 'shell': if(b)replace(shellSolid(b,openingFaces.value.length?openingFaces.value:[faceIndex.value],p.distance));break
   case 'split': if(b){const pair=splitSolid(b,axisVector(p.axis),p.distance);pair[1].id='preview-split';replace(pair[0]);d.bodies.push(pair[1])}break
@@ -758,10 +766,11 @@ function bakeNurbs() { run(() => {
             </svg>
             <div v-if="advancedOp && pane === (['offset','extend','curve'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
               <strong>{{ ({push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
-              <small v-if="['chamfer','edge-fillet'].includes(advancedOp) && selectedBody?.brep">{{ label('B-rep: выпуклое тело с плоскими гранями. Скругление — 12 касательных граней; криволинейные и вогнутые случаи отклоняются.', 'B-rep: convex body with planar faces. Fillet uses 12 tangent facets; curved and concave cases are rejected.') }}</small>
+              <small v-if="['chamfer','edge-fillet'].includes(advancedOp) && selectedBody?.brep">{{ label('B-rep: выпуклое тело с плоскими гранями. Скругление использует управляемые касательные грани; криволинейные и вогнутые случаи отклоняются.', 'B-rep: convex body with planar faces. Fillet uses a controllable set of tangent facets; curved and concave cases are rejected.') }}</small>
               <small v-else-if="['push','chamfer','edge-fillet','shell'].includes(advancedOp)">{{ label('Mesh-операция для выпуклых тел с плоскими гранями.', 'Mesh operation for convex solids with planar faces.') }}</small>
               <label v-if="['push','shell','split','offset'].includes(advancedOp)">{{ advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm') }}<input v-model.number="advanced.distance" type="number" step=".5"></label>
               <label v-if="['edge-fillet','chamfer','curve'].includes(advancedOp)">{{ label('Радиус / размер, мм','Radius / size, mm') }}<input v-model.number="advanced.radius" type="number" min=".01" step=".5"></label>
+              <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep">{{ label('Грани скругления','Fillet segments') }}<input v-model.number="filletSegments" type="number" min="2" max="32" step="1"></label>
               <label v-if="advancedOp==='split'||advancedOp==='transform'">{{ label('Ось','Axis') }}<select v-model="advanced.axis"><option>x</option><option>y</option><option>z</option></select></label>
               <small v-if="advancedOp==='split'">{{ label('Обе части сохраняются отдельными телами. Пунктир — плоскость разреза.', 'Both halves remain separate bodies. The dashed outline is the cutting plane.') }}</small>
               <small v-if="advancedOp==='shell'">{{ label('Открытые грани:','Open faces:') }} {{ openingFaces.map(i=>i+1).join(', ') }}</small>
@@ -861,6 +870,10 @@ function bakeNurbs() { run(() => {
         <button v-if="selectedBody && edgeIndex>=0" @click="beginAdvanced('chamfer')">{{ label('Фаска 3D','Chamfer 3D') }}</button>
         <button v-if="selectedBody && edgeIndex>=0" @click="beginAdvanced('edge-fillet')">{{ label('Скруглить 3D','Fillet 3D') }}</button>
         <button v-if="selectedBody" @click="beginAdvanced('split')">{{ label('Разрезать','Split') }}</button>
+        <template v-if="selectedBody?.brep">
+          <label>{{ label('Детализация B-rep','B-rep detail') }}<input v-model.number="brepSegments" type="number" min="1" max="32" step="1"></label>
+          <button @click="retessellateSelectedBrep">{{ label('Перестроить mesh','Retessellate') }}</button>
+        </template>
         <button v-if="selectedSketch?.analytic" @click="beginAdvanced('curve')">{{ label('Параметры кривой','Curve parameters') }}</button>
         <button v-if="selectedSketch && (selectedSketch.closed||selectedSketch.analytic)" @click="beginAdvanced('offset')">Offset</button>
         <button v-if="selectedSketch && !selectedSketch.closed && !selectedSketch.analytic" @click="beginAdvanced('extend')">{{ label('Продлить','Extend') }}</button>

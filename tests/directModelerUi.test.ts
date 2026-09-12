@@ -60,8 +60,12 @@ it('runs authored B-rep fillet and boolean paths from Solid controls',async()=>{
  await ui.click('B-rep Union')
  expect(ui.doc().bodies.filter(b=>b.brep)).toHaveLength(1)
  await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!
- await ui.pointer(edge);await ui.click('Fillet 3D');await ui.click('Apply · Enter')
- expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces.length).toBeGreaterThan(6)
+ await ui.pointer(edge);await ui.click('Fillet 3D')
+ const segments=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('Fillet segments'))!
+ segments.props['onUpdate:modelValue'](6);await nextTick();await ui.click('Apply · Enter')
+ expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces).toHaveLength(11)
+ const before=ui.doc().bodies.find(b=>b.brep)?.mesh.indices
+ await ui.click('Retessellate');expect(ui.doc().bodies.find(b=>b.brep)?.mesh.indices).toEqual(before)
 })
 it('binds splitting and Shift selection to shared transforms',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(2)
