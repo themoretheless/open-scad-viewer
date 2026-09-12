@@ -7,6 +7,9 @@ import { validateNurbsSurface } from './nurbsSurface'
 import { tessellateNurbsSurface } from './geometry/tessellation'
 import type { PolygonMesh } from './geometry/polygon'
 
+export type NurbsCurveEnd = 'start' | 'end'
+export type NurbsSurfaceBoundary = 'uMin' | 'uMax' | 'vMin' | 'vMax'
+
 export interface SolidNurbsCurve {
   id: string
   name: string
@@ -151,6 +154,145 @@ export function updateSolidNurbsControlPoint(
     if (weight !== undefined) surface.surface.weights[u][v] = weight
   } else {
     throw new Error('NURBS object was not found.')
+  }
+  validateSolidNurbs(next)
+  return next
+}
+
+function requireClamped(knots: number[], degree: number, controlCount: number, end: NurbsCurveEnd, label: string): void {
+  const value = end === 'start' ? knots[degree] : knots[controlCount]
+  const from = end === 'start' ? 0 : knots.length - degree - 1
+  for (let i = from; i < from + degree + 1; i++) {
+    if (Math.abs(knots[i] - value) > 1e-10) throw new Error(`${label} must be clamped at the joined boundary.`)
+  }
+}
+
+function distance(a: number[], b: number[]): number {
+  return Math.hypot(...a.map((value, axis) => value - b[axis]))
+}
+
+/**
+ * Joins the edited curve to the reference curve with exact endpoint contact
+ * and a parallel endpoint tangent. The edited curve remains a native NURBS.
+ */
+export function matchSolidNurbsCurvesG1(
+  document: DirectDocument,
+  referenceId: string,
+  editedId: string,
+  referenceEnd: NurbsCurveEnd = 'end',
+  editedEnd: NurbsCurveEnd = 'start',
+): DirectDocument {
+  if (referenceId === editedId) throw new Error('Select two different NURBS curves.')
+  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const reference = next.curves?.find(item => item.id === referenceId)?.curve
+  const edited = next.curves?.find(item => item.id === editedId)?.curve
+  if (!reference || !edited) throw new Error('G1 matching requires two NURBS curves.')
+  if (reference.periodic || edited.periodic) throw new Error('G1 endpoint matching does not support periodic curves.')
+  requireClamped(reference.knots, reference.degree, reference.controlPoints.length, referenceEnd, 'Reference curve')
+  requireClamped(edited.knots, edited.degree, edited.controlPoints.length, editedEnd, 'Edited curve')
+  const ri = referenceEnd === 'start' ? 0 : reference.controlPoints.length - 1
+  const rai = referenceEnd === 'start' ? 1 : ri - 1
+  const ei = editedEnd === 'start' ? 0 : edited.controlPoints.length - 1
+  const eai = editedEnd === 'start' ? 1 : ei - 1
+  const joint = reference.controlPoints[ri]
+  const direction = joint.map((value, axis) => value - reference.controlPoints[rai][axis])
+  const sourceLength = Math.hypot(...direction)
+  if (sourceLength <= 1e-10) throw new Error('Reference curve has a degenerate endpoint tangent.')
+  const handleLength = distance(edited.controlPoints[ei], edited.controlPoints[eai])
+  const length = handleLength > 1e-10 ? handleLength : sourceLength
+  edited.controlPoints[ei] = [...joint]
+  edited.controlPoints[eai] = joint.map((value, axis) => value + direction[axis] * length / sourceLength)
+  validateSolidNurbs(next)
+  return next
+}
+
+type BoundaryAccess = {
+  count: number
+  point(index: number, adjacent?: boolean): number[]
+  weight(index: number, adjacent?: boolean): number
+  setPoint(index: number, point: number[], adjacent?: boolean): void
+  setWeight(index: number, weight: number, adjacent?: boolean): void
+  seamDegree: number
+  seamKnots: number[]
+  crossDegree: number
+  crossKnots: number[]
+  crossCount: number
+  end: NurbsCurveEnd
+}
+
+function surfaceBoundary(surface: NurbsSurface, boundary: NurbsSurfaceBoundary): BoundaryAccess {
+  const alongU = boundary === 'vMin' || boundary === 'vMax'
+  const atMax = boundary === 'uMax' || boundary === 'vMax'
+  const crossCount = alongU ? surface.controlPoints[0].length : surface.controlPoints.length
+  const boundaryIndex = atMax ? crossCount - 1 : 0
+  const adjacentIndex = atMax ? boundaryIndex - 1 : 1
+  const uv = (index: number, adjacent = false): [number, number] =>
+    alongU ? [index, adjacent ? adjacentIndex : boundaryIndex] : [adjacent ? adjacentIndex : boundaryIndex, index]
+  return {
+    count: alongU ? surface.controlPoints.length : surface.controlPoints[0].length,
+    point(index, adjacent = false) { const [u, v] = uv(index, adjacent); return surface.controlPoints[u][v] },
+    weight(index, adjacent = false) { const [u, v] = uv(index, adjacent); return surface.weights[u][v] },
+    setPoint(index, point, adjacent = false) { const [u, v] = uv(index, adjacent); surface.controlPoints[u][v] = point },
+    setWeight(index, weight, adjacent = false) { const [u, v] = uv(index, adjacent); surface.weights[u][v] = weight },
+    seamDegree: alongU ? surface.degreeU : surface.degreeV,
+    seamKnots: alongU ? surface.knotsU : surface.knotsV,
+    crossDegree: alongU ? surface.degreeV : surface.degreeU,
+    crossKnots: alongU ? surface.knotsV : surface.knotsU,
+    crossCount,
+    end: atMax ? 'end' : 'start',
+  }
+}
+
+function normalizedKnots(knots: number[], degree: number, count: number): number[] {
+  const min = knots[degree], span = knots[count] - min
+  return knots.map(value => (value - min) / span)
+}
+
+/**
+ * Exact G1 matching for compatible, non-rational surface boundaries. Restricting
+ * this operation to constant boundary-strip weights avoids claiming rational
+ * continuity that a control-net-only edit cannot generally guarantee.
+ */
+export function matchSolidNurbsSurfacesG1(
+  document: DirectDocument,
+  referenceId: string,
+  editedId: string,
+  referenceBoundary: NurbsSurfaceBoundary = 'uMax',
+  editedBoundary: NurbsSurfaceBoundary = 'uMin',
+): DirectDocument {
+  if (referenceId === editedId) throw new Error('Select two different NURBS surfaces.')
+  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const reference = next.surfaces?.find(item => item.id === referenceId)?.surface
+  const edited = next.surfaces?.find(item => item.id === editedId)?.surface
+  if (!reference || !edited) throw new Error('G1 matching requires two NURBS surfaces.')
+  const r = surfaceBoundary(reference, referenceBoundary), e = surfaceBoundary(edited, editedBoundary)
+  requireClamped(r.crossKnots, r.crossDegree, r.crossCount, r.end, 'Reference surface')
+  requireClamped(e.crossKnots, e.crossDegree, e.crossCount, e.end, 'Edited surface')
+  if (r.count !== e.count || r.seamDegree !== e.seamDegree) throw new Error('Surface boundaries need compatible control counts and degrees.')
+  const rk = normalizedKnots(r.seamKnots, r.seamDegree, r.count)
+  const ek = normalizedKnots(e.seamKnots, e.seamDegree, e.count)
+  if (rk.length !== ek.length || rk.some((value, index) => Math.abs(value - ek[index]) > 1e-9)) {
+    throw new Error('Surface boundaries need matching knot parameterization.')
+  }
+  const stripWeights = Array.from({ length: r.count }, (_, i) =>
+    [r.weight(i), r.weight(i, true), e.weight(i), e.weight(i, true)]).flat()
+  if (stripWeights.some(weight => Math.abs(weight - stripWeights[0]) > 1e-10)) {
+    throw new Error('Exact surface G1 matching currently requires constant boundary-strip weights.')
+  }
+  const sourceLengths = Array.from({ length: r.count }, (_, i) => distance(r.point(i), r.point(i, true)))
+  if (sourceLengths.some(length => length <= 1e-10)) throw new Error('Reference surface has a degenerate boundary tangent.')
+  const editedLengths = Array.from({ length: e.count }, (_, i) => distance(e.point(i), e.point(i, true)))
+  const editedLength = editedLengths.reduce((sum, value) => sum + value, 0)
+  const scale = editedLength > 1e-10
+    ? editedLength / sourceLengths.reduce((sum, value) => sum + value, 0)
+    : 1
+  for (let i = 0; i < r.count; i++) {
+    const joint = [...r.point(i)]
+    const tangent = joint.map((value, axis) => value - r.point(i, true)[axis])
+    e.setPoint(i, joint)
+    e.setPoint(i, joint.map((value, axis) => value + tangent[axis] * scale), true)
+    e.setWeight(i, stripWeights[0])
+    e.setWeight(i, stripWeights[0], true)
   }
   validateSolidNurbs(next)
   return next

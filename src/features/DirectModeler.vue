@@ -9,7 +9,7 @@ import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '.
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
 import { stlBufferToPolygonMesh } from '../services/meshEditing'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
+import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, matchSolidNurbsCurvesG1, matchSolidNurbsSurfacesG1, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
@@ -112,6 +112,8 @@ watch(selectedCvPoint, point => {
   }
 }, { immediate: true })
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
+const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
+const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
 const topology = computed(() => selectedBody.value ? solidTopology(selectedBody.value.mesh) : {faces:[],edges:[]})
 const selectedFace = computed(() => topology.value.faces[faceIndex.value])
 const selectedFaceTriangles=computed(()=>new Set((openingFaces.value.length?openingFaces.value:[faceIndex.value]).flatMap(i=>topology.value.faces[i]?.triangles??[])))
@@ -592,6 +594,14 @@ function trimNativeSurface() { run(() => {
   source.surface=trimNurbsSurface(source.surface,trimBounds.value)
   cvU.value=cvV.value=0;commit(d)
 }) }
+function matchSelectedG1() { run(() => {
+  const pair = selectedCurvePair.value ?? selectedSurfacePair.value
+  if (!pair) throw new Error('Select exactly two curves or two surfaces.')
+  commit(selectedCurvePair.value
+    ? matchSolidNurbsCurvesG1(history.document, pair[0], pair[1])
+    : matchSolidNurbsSurfacesG1(history.document, pair[0], pair[1]))
+  selection.value = pair[1]; extraSelection.value = []
+}) }
 function bakeNurbs() { run(() => {
   const d = history.document
   if (selectedNurbsSurface.value) {
@@ -749,6 +759,7 @@ function bakeNurbs() { run(() => {
             <div v-if="pane==='3d' && selectedNurbs" class="operation-card nurbs-card">
               <strong>{{ selectedNurbsCurve ? label('NURBS-кривая · CV','NURBS curve · CV') : label('NURBS-поверхность · CV','NURBS surface · CV') }}</strong>
               <small>{{ label('Тяните жёлтые CV прямо в 3D-виде. Перетаскивание идёт в плоскости экрана; точные XYZ и вес — ниже.','Drag yellow CVs directly in the 3D view. Dragging follows the screen plane; exact XYZ and weight are below.') }}</small>
+              <button v-if="selectedCurvePair || selectedSurfacePair" class="primary" @click="matchSelectedG1">{{ label('G1: вторую к первой','G1: match second to first') }}</button>
               <label>U / CV <select v-model.number="cvU"><option v-for="(_,i) in (selectedNurbsCurve?.curve.controlPoints ?? selectedNurbsSurface?.surface.controlPoints ?? [])" :key="i" :value="i">{{ i }}</option></select></label>
               <label v-if="selectedNurbsSurface">V / CV <select v-model.number="cvV"><option v-for="(_,i) in selectedNurbsSurface.surface.controlPoints[cvU] ?? []" :key="i" :value="i">{{ i }}</option></select></label>
               <label>X <input v-model.number="cvX" type="number" step=".5"></label>
