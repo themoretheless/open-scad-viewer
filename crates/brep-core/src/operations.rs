@@ -487,6 +487,195 @@ pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<M
     model_from_polygons(polygons, tolerance)
 }
 
+fn validate_convex_profile(profile: &[[f64; 2]], name: &str) -> Result<()> {
+    if profile.len() < 3 || profile.len() > 128 {
+        return Err(unsupported(format!(
+            "{name} profile must have 3..128 vertices"
+        )));
+    }
+    if profile
+        .iter()
+        .flatten()
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            format!("{name} coordinates must be finite and within 1000000 mm"),
+        ));
+    }
+    let tolerance = 1e-7;
+    let turns = (0..profile.len()).map(|i| {
+        let a = profile[i];
+        let b = profile[(i + 1) % profile.len()];
+        let c = profile[(i + 2) % profile.len()];
+        (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+    });
+    if turns.into_iter().any(|turn| turn <= tolerance) {
+        return Err(unsupported(format!(
+            "{name} currently requires a strictly convex CCW profile"
+        )));
+    }
+    Ok(())
+}
+
+fn triangulated_strip(sections: &[Vec<[f64; 3]>]) -> Vec<Vec<[f64; 3]>> {
+    let count = sections[0].len();
+    let mut polygons = vec![
+        sections[0].iter().rev().copied().collect(),
+        sections.last().unwrap().clone(),
+    ];
+    for pair in sections.windows(2) {
+        for i in 0..count {
+            let next = (i + 1) % count;
+            polygons.push(vec![pair[0][i], pair[0][next], pair[1][next]]);
+            polygons.push(vec![pair[0][i], pair[1][next], pair[1][i]]);
+        }
+    }
+    polygons
+}
+
+/// Loft strictly convex CCW horizontal sections into an honest faceted B-rep.
+///
+/// Side quads are triangulated because arbitrary corresponding section edges
+/// need not be coplanar. This is planar construction, not a smooth NURBS loft.
+pub fn faceted_loft(sections: &[Vec<[f64; 3]>]) -> Result<Model> {
+    if sections.len() < 2 || sections.len() > 64 {
+        return Err(unsupported("Loft requires 2..64 sections"));
+    }
+    let count = sections[0].len();
+    if count < 3 || count > 128 || sections.iter().any(|section| section.len() != count) {
+        return Err(unsupported(
+            "Loft sections must have the same 3..128 vertex count",
+        ));
+    }
+    let mut previous_z = f64::NEG_INFINITY;
+    for section in sections {
+        if section
+            .iter()
+            .flatten()
+            .any(|value| !value.is_finite() || value.abs() > 1e6)
+        {
+            return Err(Error::new(
+                "BREP_INVALID_SIZE",
+                "Loft coordinates must be finite and within 1000000 mm",
+            ));
+        }
+        let z = section[0][2];
+        if section.iter().any(|point| (point[2] - z).abs() > 1e-7) || z <= previous_z + 1e-7 {
+            return Err(unsupported(
+                "Loft sections must be horizontal and strictly increasing in Z",
+            ));
+        }
+        let profile: Vec<_> = section.iter().map(|point| [point[0], point[1]]).collect();
+        validate_convex_profile(&profile, "Loft")?;
+        previous_z = z;
+    }
+    model_from_polygons(triangulated_strip(sections), 1e-7)
+}
+
+/// Sweep a strictly convex CCW profile along a polyline with transported frames.
+///
+/// Every side patch is triangulated and planar. The path is sampled exactly as
+/// authored; no analytic pipe or smooth transition is claimed.
+pub fn faceted_sweep(profile: &[[f64; 2]], path: &[[f64; 3]], up: [f64; 3]) -> Result<Model> {
+    validate_convex_profile(profile, "Sweep")?;
+    if path.len() < 2 || path.len() > 64 {
+        return Err(unsupported("Sweep path must have 2..64 points"));
+    }
+    if path
+        .iter()
+        .flatten()
+        .chain(up.iter())
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Sweep coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let tolerance = 1e-7;
+    let segments: Vec<_> = path
+        .windows(2)
+        .map(|pair| unit(sub(pair[1], pair[0])))
+        .collect::<Result<_>>()?;
+    let mut sections = Vec::with_capacity(path.len());
+    let mut previous_u: Option<[f64; 3]> = None;
+    for i in 0..path.len() {
+        let tangent = if i == 0 {
+            segments[0]
+        } else if i + 1 == path.len() {
+            segments[i - 1]
+        } else {
+            unit(add(segments[i - 1], segments[i]))
+                .map_err(|_| unsupported("Sweep path contains a 180 degree reversal"))?
+        };
+        let projected_up = sub(up, mul(tangent, dot(up, tangent)));
+        let mut v = unit(projected_up)
+            .map_err(|_| unsupported("Sweep up vector must not be parallel to the path"))?;
+        let mut u = unit(cross(v, tangent))?;
+        if let Some(previous) = previous_u
+            && dot(previous, u) < 0.
+        {
+            u = mul(u, -1.);
+            v = mul(v, -1.);
+        }
+        previous_u = Some(u);
+        sections.push(
+            profile
+                .iter()
+                .map(|point| add(path[i], add(mul(u, point[0]), mul(v, point[1]))))
+                .collect(),
+        );
+    }
+    model_from_polygons(triangulated_strip(&sections), tolerance)
+}
+
+/// Revolve a closed `(radius, z)` profile around Z as a faceted planar B-rep.
+///
+/// A full turn is required. Radius-zero profile vertices are supported as
+/// poles; negative radii and analytic cylindrical/spherical claims are not.
+pub fn faceted_revolve(profile: &[[f64; 2]], segments: usize) -> Result<Model> {
+    validate_convex_profile(profile, "Revolve")?;
+    if !(3..=128).contains(&segments) {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Faceted revolve segments must be 3..128",
+        ));
+    }
+    if profile.iter().any(|point| point[0] < 0.) || profile.iter().all(|point| point[0] <= 1e-7) {
+        return Err(unsupported(
+            "Revolve profile radii must be nonnegative with positive extent",
+        ));
+    }
+    let rings: Vec<Vec<_>> = (0..segments)
+        .map(|segment| {
+            let angle = std::f64::consts::TAU * segment as f64 / segments as f64;
+            profile
+                .iter()
+                .map(|point| [point[0] * angle.cos(), point[0] * angle.sin(), point[1]])
+                .collect()
+        })
+        .collect();
+    let mut polygons = vec![];
+    for segment in 0..segments {
+        let next_segment = (segment + 1) % segments;
+        for i in 0..profile.len() {
+            let next = (i + 1) % profile.len();
+            let a = rings[segment][i];
+            let b = rings[next_segment][i];
+            let c = rings[next_segment][next];
+            let d = rings[segment][next];
+            if !close(a, b, 1e-7) && !close(b, c, 1e-7) {
+                polygons.push(vec![a, b, c]);
+            }
+            if !close(a, c, 1e-7) && !close(c, d, 1e-7) {
+                polygons.push(vec![a, c, d]);
+            }
+        }
+    }
+    model_from_polygons(polygons, 1e-7)
+}
+
 /// Construct a declared faceted cylindrical B-rep with planar side faces.
 pub fn faceted_cylinder(radius: f64, height: f64, segments: usize) -> Result<Model> {
     if !radius.is_finite() || !height.is_finite() || radius < 0.01 || height < 0.01 {
@@ -1257,6 +1446,30 @@ mod tests {
         let sphere = faceted_sphere(2., 16, 8).unwrap();
         assert_eq!((sphere.faces.len(), sphere.bodies.len()), (224, 1));
         assert_eq!(sphere.validate().unwrap().boundary_edge_count, 0);
+    }
+
+    #[test]
+    fn faceted_loft_sweep_and_revolve_are_closed_planar_breps() {
+        let loft = faceted_loft(&[
+            vec![[-2., -2., 0.], [2., -2., 0.], [2., 2., 0.], [-2., 2., 0.]],
+            vec![[-1., -1., 3.], [1., -1., 3.], [1., 1., 3.], [-1., 1., 3.]],
+        ])
+        .unwrap();
+        assert_eq!((loft.faces.len(), loft.bodies.len()), (10, 1));
+        assert_eq!(loft.validate().unwrap().boundary_edge_count, 0);
+
+        let sweep = faceted_sweep(
+            &[[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]],
+            &[[0., 0., 0.], [0., 0., 3.], [2., 0., 5.]],
+            [0., 1., 0.],
+        )
+        .unwrap();
+        assert_eq!((sweep.faces.len(), sweep.bodies.len()), (18, 1));
+        assert_eq!(sweep.validate().unwrap().boundary_edge_count, 0);
+
+        let revolve = faceted_revolve(&[[0., -2.], [2., -2.], [2., 2.], [0., 2.]], 16).unwrap();
+        assert_eq!(revolve.bodies.len(), 1);
+        assert_eq!(revolve.validate().unwrap().boundary_edge_count, 0);
     }
 
     #[test]

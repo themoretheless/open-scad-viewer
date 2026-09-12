@@ -446,6 +446,18 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "zMin")?,
             field(&v, "zMax")?,
         )?),
+        "brep_nurbs_faceted_loft" => encode(brep_core::faceted_loft(
+            &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
+        )?),
+        "brep_nurbs_faceted_sweep" => encode(brep_core::faceted_sweep(
+            &field::<Vec<[f64; 2]>>(&v, "profile")?,
+            &field::<Vec<[f64; 3]>>(&v, "path")?,
+            field(&v, "up")?,
+        )?),
+        "brep_nurbs_faceted_revolve" => encode(brep_core::faceted_revolve(
+            &field::<Vec<[f64; 2]>>(&v, "profile")?,
+            field(&v, "segments")?,
+        )?),
         "brep_nurbs_faceted_cylinder" => encode(brep_core::faceted_cylinder(
             field(&v, "radius")?,
             field(&v, "height")?,

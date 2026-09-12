@@ -13,7 +13,7 @@ import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, 
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
-import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, createFacetedBrepCylinder, createFacetedBrepSphere, extrudeBrepPolygon, filletNurbsBrepEdges, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
+import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, createFacetedBrepCylinder, createFacetedBrepRevolve, createFacetedBrepSphere, extrudeBrepPolygon, filletNurbsBrepEdges, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
 const ru = computed(() => props.locale === 'ru')
@@ -144,6 +144,24 @@ function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep
  const built=tessellateNurbsBrep(brep,brepSegments.value)
  return {...body,brep,mesh:{positions:[...built.positions],indices:[...built.indices]}}
 }
+function facetedRevolveBrep() {
+ const sketch=selectedSketch.value!
+ const axis=revolveAxis.value,offset=revolveOffset.value
+ const signed=sketch.points.map(point=>axis==='y'?point[0]-offset:point[1]-offset)
+ if(signed.some(value=>Math.abs(value)>1e-7&&Math.sign(value)!==Math.sign(signed.find(v=>Math.abs(v)>1e-7)!)))throw Error('The revolve profile must stay on one side of its axis.')
+ const sign=Math.sign(signed.find(value=>Math.abs(value)>1e-7)??1)
+ let profile=sketch.points.map(point=>[Math.abs(axis==='y'?point[0]-offset:point[1]-offset),axis==='y'?point[1]:point[0]] as [number,number])
+ const area=profile.reduce((sum,p,i)=>{const q=profile[(i+1)%profile.length];return sum+p[0]*q[1]-q[0]*p[1]},0)
+ if(area<0)profile=profile.reverse()
+ const brep=structuredClone(createFacetedBrepRevolve(profile,revolveSegments.value)),plane=sketch.plane??xyPlane(),normal=cross3(plane.u,plane.v)
+ const apply=(point:number[])=>axis==='y'
+  ? plane.origin.map((value,i)=>value+plane.u[i]*(offset+sign*point[0])+plane.v[i]*point[2]+normal[i]*sign*point[1])
+  : plane.origin.map((value,i)=>value+plane.u[i]*point[2]+plane.v[i]*(offset+sign*point[0])+normal[i]*sign*point[1])
+ for(const vertex of brep.vertices)vertex.point=apply(vertex.point) as Vec3
+ for(const edge of brep.edges)edge.curve.controlPoints=edge.curve.controlPoints.map(apply)
+ for(const face of brep.faces)face.surface.controlPoints=face.surface.controlPoints.map(row=>row.map(apply))
+ return brep
+}
 function retessellateSelectedBrep() { run(() => {
  const body=history.document.bodies.find(body=>body.id===selection.value)
  if(!body?.brep)throw Error('Select an authored B-rep body.')
@@ -273,9 +291,15 @@ function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
 function extrude() { run(() => {
   if (!selectedSketch.value || previewError.value || !previewBody.value) return
   const id = crypto.randomUUID()
-  commit(operation.value === 'revolve'
+  const next=operation.value === 'revolve'
     ? applyDirectRevolve(history.document, selectedSketch.value.id, revolveOptions(), extrusionMode.value, targetBody.value, id)
-    : applyDirectExtrusion(history.document, selectedSketch.value.id, height.value, baseZ.value, extrusionMode.value, targetBody.value, id))
+    : applyDirectExtrusion(history.document, selectedSketch.value.id, height.value, baseZ.value, extrusionMode.value, targetBody.value, id)
+  if(operation.value==='revolve'&&extrusionMode.value==='new'&&Math.abs(revolveAngle.value)===360){
+    const body=next.bodies.find(body=>body.id===id)!
+    Object.assign(body,bodyFromBrep(body,facetedRevolveBrep()))
+    body.name+=` · ${label('гранёный B-rep','faceted B-rep')}`
+  }
+  commit(next)
   operation.value = null; mode.value = '3d'; selection.value = extrusionMode.value === 'new' ? id : targetBody.value; fit('3d')
 }) }
 const copyPreview = computed(() => {

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepSphere,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
+import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepLoft,createFacetedBrepRevolve,createFacetedBrepSphere,createFacetedBrepSweep,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 import {transformSelection} from '../src/services/directSolidTools'
@@ -62,4 +62,15 @@ it('constructs explicitly faceted round primitives as manifold B-reps',()=>{
  expect(cylinder.faces).toHaveLength(18);expect(sphere.faces).toHaveLength(224)
  expect(tessellateNurbsBrep(cylinder,1).report.closed).toBe(true)
  expect(tessellateNurbsBrep(sphere,1).report.closed).toBe(true)
+})
+it('constructs loft, polyline sweep and full revolve as honest faceted B-reps',()=>{
+ const loft=createFacetedBrepLoft([[[-2,-2,0],[2,-2,0],[2,2,0],[-2,2,0]],[[-1,-1,3],[1,-1,3],[1,1,3],[-1,1,3]]])
+ const sweep=createFacetedBrepSweep([[-1,-1],[1,-1],[1,1],[-1,1]],[[0,0,0],[0,0,3],[2,0,5]],[0,1,0])
+ const revolve=createFacetedBrepRevolve([[0,-2],[2,-2],[2,2],[0,2]],16)
+ for(const model of [loft,sweep,revolve]){
+  expect(inspectNurbsBrep(model).topologyValid).toBe(true)
+  expect(tessellateNurbsBrep(model,1).report.closed).toBe(true)
+ }
+ expect(loft.faces).toHaveLength(10);expect(sweep.faces).toHaveLength(18)
+ expect(()=>createFacetedBrepLoft([[[-1,-1,0],[1,-1,0],[0,0,0],[-1,1,0]],[[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]]])).toThrow(/convex/i)
 })

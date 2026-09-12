@@ -14,8 +14,8 @@ use std::collections::BTreeMap;
 
 pub mod operations;
 pub use operations::{
-    boolean, chamfer, chamfer_edges, extrude_polygon, faceted_cylinder, faceted_sphere, fillet,
-    fillet_edges,
+    boolean, chamfer, chamfer_edges, extrude_polygon, faceted_cylinder, faceted_loft,
+    faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
 };
 
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};

@@ -68,6 +68,15 @@ it('runs authored B-rep fillet and boolean paths from Solid controls',async()=>{
  const before=ui.doc().bodies.find(b=>b.brep)?.mesh.indices
  await ui.click('Retessellate');expect(ui.doc().bodies.find(b=>b.brep)?.mesh.indices).toEqual(before)
 })
+it('authors a full sketch revolve as an explicitly faceted B-rep',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Revolve')
+ await new Promise(resolve=>setTimeout(resolve,80));await nextTick();await ui.click('Apply · Enter')
+ const body=ui.doc().bodies.at(-1)!
+ expect(body.name).toMatch(/faceted B-rep/)
+ expect(body.brep).toBeDefined()
+ expect(body.brep?.faces.length).toBeGreaterThan(6)
+ expect(inspectPolygonMesh(body.mesh).closed).toBe(true)
+})
 it('binds splitting and Shift selection to shared transforms',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(2)
  const names=ui.doc().bodies.map(b=>b.name);await ui.click(names[0]);await ui.click(names[1],true);await ui.click('Transform selection');await ui.click('Esc');expect(ui.doc().bodies).toHaveLength(2)

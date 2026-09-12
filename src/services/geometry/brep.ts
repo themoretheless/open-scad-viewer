@@ -17,6 +17,12 @@ export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_cert
 export interface BrepMesh extends PolygonBuild {faceIds:number[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,zMin,zMax})
+/** Planar-triangulated construction, not a smooth NURBS loft. */
+export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
+/** Planar-triangulated polyline sweep, not an analytic pipe. */
+export const createFacetedBrepSweep=(profile:[number,number][],path:[number,number,number][],up:[number,number,number]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_sweep',{profile,path,up})
+/** Full planar-faceted revolve around local Z, not an analytic surface of revolution. */
+export const createFacetedBrepRevolve=(profile:[number,number][],segments=48):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_revolve',{profile,segments})
 /** Planar-faced B-rep approximation, not an analytic cylinder. */
 export const createFacetedBrepCylinder=(radius:number,height:number,segments=48):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_cylinder',{radius,height,segments})
 /** Planar-faced B-rep approximation, not an analytic sphere. */
