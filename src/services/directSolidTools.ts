@@ -6,6 +6,7 @@ export interface SolidEdge { a:number; b:number; faces:[number,number] }
 const sub=(a:number[],b:number[])=>a.map((v,i)=>v-b[i]) as Vec3
 const add=(a:number[],b:number[])=>a.map((v,i)=>v+b[i]) as Vec3
 const mul=(a:number[],s:number)=>a.map(v=>v*s) as Vec3
+const polygonBody=(body:DirectBody,mesh:PolygonMesh):DirectBody=>{const next={...body,mesh};delete next.brep;return next}
 export function solidTopology(mesh:PolygonMesh):{faces:SolidFace[];edges:SolidEdge[]} {
  const p=Array.from({length:mesh.positions.length/3},(_,i)=>mesh.positions.slice(i*3,i*3+3) as Vec3),faces:SolidFace[]=[],triangleFace:number[]=[]
  for(let i=0;i<mesh.indices.length;i+=3){const ids=mesh.indices.slice(i,i+3),[a,b,c]=ids.map(i=>p[i]),raw=cross3(sub(b,a),sub(c,a));if(Math.hypot(...raw)<1e-9)continue
@@ -56,7 +57,7 @@ function fromPlanes(planes:Halfspace[]):PolygonMesh {
 export function pushPullFace(body:DirectBody,faceIndex:number,distance:number):DirectBody {
  if(!Number.isFinite(distance))throw Error('Enter a finite distance.')
  const planes=convexPlanes(body);if(!planes[faceIndex])throw Error('Select a face.')
- planes[faceIndex].offset+=distance;return {...body,mesh:fromPlanes(planes)}
+ planes[faceIndex].offset+=distance;return polygonBody(body,fromPlanes(planes))
 }
 export function bevelSolidEdge(body:DirectBody,edgeIndex:number,size:number,kind:'chamfer'|'fillet'):DirectBody {
  if(!Number.isFinite(size)||size<.01)throw Error('Size must be at least 0.01 mm.')
@@ -74,7 +75,7 @@ export function bevelSolidEdge(body:DirectBody,edgeIndex:number,size:number,kind
  // Both adjacent support faces must survive; otherwise the chosen size consumed the feature.
  const result=solidTopology(mesh)
  if([a,b].some(f=>!result.faces.some(g=>dot3(g.normal,f.normal)>1-1e-6&&Math.abs(g.offset-f.offset)<1e-5)))throw Error('Size consumes an adjacent face. Use a smaller value.')
- return {...body,mesh}
+ return polygonBody(body,mesh)
 }
 export function shellSolid(body:DirectBody,openingFaces:number[],thickness:number):DirectBody {
  if(!Number.isFinite(thickness)||thickness<.01||!openingFaces.length)throw Error('Select at least one opening and a positive wall thickness.')
@@ -85,7 +86,7 @@ export function shellSolid(body:DirectBody,openingFaces:number[],thickness:numbe
  fromPlanes(planes.map((f,i)=>({...f,offset:f.offset-(open.has(i)?0:thickness)})))
  const cutter=fromPlanes(inner),mesh=booleanPolygonMeshes(body.mesh,cutter,'difference')
  if(!mesh.report.closed||!mesh.indices.length)throw Error('The wall thickness collapses the body.')
- return {...body,mesh:{positions:mesh.positions,indices:mesh.indices}}
+ return polygonBody(body,{positions:mesh.positions,indices:mesh.indices})
 }
 export function splitSolid(body:DirectBody,normal:Vec3,offset:number):[DirectBody,DirectBody] {
  if(!Number.isFinite(offset))throw Error('Enter a finite plane offset.')
@@ -98,13 +99,13 @@ export function splitSolid(body:DirectBody,normal:Vec3,offset:number):[DirectBod
  const cutter={positions:Array.from({length:box.positions.length/3},(_,i)=>worldPoint(box.positions.slice(i*3,i*3+3),{origin,u,v})).flat(),indices:box.indices}
  const a=booleanPolygonMeshes(body.mesh,cutter,'intersection'),b=booleanPolygonMeshes(body.mesh,cutter,'difference')
  if(!a.report.closed||!b.report.closed||!a.indices.length||!b.indices.length)throw Error('Could not create two closed halves.')
- return [{...body,name:(body.name+' · +').slice(0,100),mesh:{positions:a.positions,indices:a.indices}},{...body,id:body.id+'-split',name:(body.name+' · −').slice(0,100),mesh:{positions:b.positions,indices:b.indices}}]
+ return [polygonBody({...body,name:(body.name+' · +').slice(0,100)},{positions:a.positions,indices:a.indices}),polygonBody({...body,id:body.id+'-split',name:(body.name+' · −').slice(0,100)},{positions:b.positions,indices:b.indices})]
 }
 export function transformBodies(bodies:DirectBody[],delta:Vec3,axis:Vec3,angle:number,scale:number):DirectBody[] {
  if(![...delta,...axis,angle,scale].every(Number.isFinite)||scale<=0)throw Error('Invalid transform.')
  const points=bodies.flatMap(bodyPoints);if(!points.length)return []
  const center=[0,1,2].map(k=>(Math.min(...points.map(p=>p[k]))+Math.max(...points.map(p=>p[k])))/2),n=unit3(axis),a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a)
- return bodies.map(b=>({...b,mesh:{...b.mesh,positions:bodyPoints(b).map(p=>{const q=mul(sub(p,center),scale),rot=add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)));return add(add(rot,center),delta)}).flat()}}))
+ return bodies.map(b=>polygonBody(b,{...b.mesh,positions:bodyPoints(b).map(p=>{const q=mul(sub(p,center),scale),rot=add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)));return add(add(rot,center),delta)}).flat()}))
 }
 
 /** Transform the entire selection around one world-space pivot, preserving analytic sketches. */
@@ -115,7 +116,7 @@ export function transformSelection(document: import('./directModeling').DirectDo
  const center=[0,1,2].map(k=>(Math.min(...points.map(p=>p[k]))+Math.max(...points.map(p=>p[k])))/2),n=unit3(axis),a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a)
  const rotate=(q:number[])=>add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)))
  const apply=(p:number[])=>add(add(rotate(mul(sub(p,center),scale)),center),delta)
- for(const b of next.bodies)if(selected.has(b.id))b.mesh.positions=bodyPoints(b).map(apply).flat()
+ for(const b of next.bodies)if(selected.has(b.id)){b.mesh.positions=bodyPoints(b).map(apply).flat();delete b.brep}
  for(const sketch of next.sketches)if(selected.has(sketch.id)){
   const plane=sketch.plane??{origin:[0,0,0] as Vec3,u:[1,0,0] as Vec3,v:[0,1,0] as Vec3}
   const movedPlane={origin:apply(plane.origin),u:rotate(plane.u),v:rotate(plane.v)},normal=cross3(plane.u,plane.v)

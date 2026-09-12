@@ -96,6 +96,36 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
     for shell in &model.shells {
         for u in &shell.faces {
             let f = &model.faces[u.face];
+            // Planar polygon faces produced by brep-core operations should not
+            // be resampled through a rectangular UV grid. Triangulating their
+            // authored boundary directly preserves every shared topological
+            // edge (including short chamfer/fillet facets) before welding.
+            if f.surface.degree_u == 1
+                && f.surface.degree_v == 1
+                && f.holes.is_empty()
+                && model.loops[f.outer]
+                    .coedges
+                    .iter()
+                    .all(|c| model.edges[c.edge].curve.degree == 1)
+            {
+                let coedges = &model.loops[f.outer].coedges;
+                let base = mesh.positions.len() / 3;
+                for coedge in coedges {
+                    let edge = &model.edges[coedge.edge];
+                    let vertex = edge.vertices[usize::from(coedge.reversed)];
+                    mesh.positions.extend(model.vertices[vertex].point);
+                }
+                for i in 1..coedges.len() - 1 {
+                    let triangle = if u.reversed {
+                        [base, base + i + 1, base + i]
+                    } else {
+                        [base, base + i, base + i + 1]
+                    };
+                    mesh.indices.extend(triangle);
+                    face_ids.push(u.face);
+                }
+                continue;
+            }
             let trim = tessellation::Trim {
                 outer: model.loop_uv(f.outer, segments)?,
                 holes: f

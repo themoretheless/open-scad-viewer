@@ -440,6 +440,24 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_boolean" => encode(brep_core::boolean(
+            &field(&v, "a")?,
+            &field(&v, "b")?,
+            v.get("operation")
+                .and_then(|value| value.as_str())
+                .ok_or_else(|| input("Invalid operation"))?,
+        )?),
+        "brep_nurbs_chamfer" => encode(brep_core::chamfer(
+            &field(&v, "model")?,
+            field(&v, "edge")?,
+            field(&v, "size")?,
+        )?),
+        "brep_nurbs_fillet" => encode(brep_core::fillet(
+            &field(&v, "model")?,
+            field(&v, "edge")?,
+            field(&v, "radius")?,
+            field(&v, "segments")?,
+        )?),
         "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)

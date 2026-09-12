@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createBrepBox,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
+import {booleanNurbsBrep,chamferNurbsBrep,createBrepBox,filletNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{
@@ -15,4 +15,16 @@ it('publishes authored B-rep identities through the compact viewer path',async()
  const scene=await parseOpenSCAD('// @modelgraph-text/1\nbody=brep_box([0,0,0],[2mm,3mm,4mm])\nshow body.brep_tessellate(3)')
  const mesh=scene.meshes[0];expect(mesh.faceIdsAuthoritative).toBe(true);expect(new Set(mesh.faceIds).size).toBe(6)
  expect(withSelectionSurfaces(mesh)).toBe(mesh)
+})
+it('runs fail-closed booleans and edge treatments on manifold NURBS B-reps',()=>{
+ const a=createBrepBox([0,0,0],[2,2,2]),b=createBrepBox([1,1,0],[3,3,2])
+ for(const operation of ['union','difference','intersection'] as const){
+  const result=booleanNurbsBrep(a,b,operation),mesh=tessellateNurbsBrep(result,2)
+  expect(inspectNurbsBrep(result).topologyValid).toBe(true);expect(mesh.report.closed).toBe(true)
+ }
+ const chamfer=chamferNurbsBrep(a,0,.25),fillet=filletNurbsBrep(a,0,.25,8)
+ expect(chamfer.faces).toHaveLength(7);expect(fillet.faces).toHaveLength(13)
+ expect(tessellateNurbsBrep(fillet,2).report.closed).toBe(true)
+ expect(()=>booleanNurbsBrep(a,createBrepBox([4,0,0],[5,1,1]),'union')).toThrow(/disconnected/i)
+ expect(()=>filletNurbsBrep(a,0,2,8)).toThrow(/smaller|consumes/i)
 })

@@ -116,6 +116,26 @@ fn brep_tessellation_preserves_faces_and_interchanges_both_kernels() {
 }
 
 #[test]
+fn brep_operations_dispatch_to_closed_tessellated_solids() {
+    let a = brep_core::cuboid([0.; 3], [2., 2., 2.]).unwrap();
+    let b = brep_core::cuboid([1., 1., 0.], [3., 3., 2.]).unwrap();
+    for operation in ["union", "difference", "intersection"] {
+        let result = brep_core::boolean(&a, &b, operation).unwrap();
+        let tessellation = crate::brep::nurbs(&result, 2).unwrap();
+        assert!(tessellation.built.report.closed);
+        assert_eq!(tessellation.built.report.non_manifold_edges, 0);
+    }
+    for result in [
+        brep_core::chamfer(&a, 0, 0.25).unwrap(),
+        brep_core::fillet(&a, 0, 0.25, 8).unwrap(),
+    ] {
+        let tessellation = crate::brep::nurbs(&result, 2).unwrap();
+        assert!(tessellation.built.report.closed);
+        assert_eq!(tessellation.built.report.orientation_conflicts, 0);
+    }
+}
+
+#[test]
 fn mesh_section_and_toolpath_ops_cut_a_box() {
     let mesh = polygon_core::solid::primitives::cube([10., 10., 10.], false).unwrap();
     let mesh_value = value_codec::to_value(&mesh).unwrap();

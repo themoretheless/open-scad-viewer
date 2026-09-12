@@ -53,6 +53,16 @@ it('binds an edge selection to chamfer and creates a shell with the selected ope
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Shell');await ui.click('Apply · Enter')
  expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1000-6*6*8)
 })
+it('runs authored B-rep fillet and boolean paths from Solid controls',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Box')
+ const objectBoxes=ui.all().filter(n=>n.tag==='button'&&ui.text(n).startsWith('Box · 3D'))
+ objectBoxes[0].props.onClick({shiftKey:false});await nextTick();objectBoxes[1].props.onClick({shiftKey:true});await nextTick()
+ await ui.click('B-rep Union')
+ expect(ui.doc().bodies.filter(b=>b.brep)).toHaveLength(1)
+ await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!
+ await ui.pointer(edge);await ui.click('Fillet 3D');await ui.click('Apply · Enter')
+ expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces.length).toBeGreaterThan(6)
+})
 it('binds splitting and Shift selection to shared transforms',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(2)
  const names=ui.doc().bodies.map(b=>b.name);await ui.click(names[0]);await ui.click(names[1],true);await ui.click('Transform selection');await ui.click('Esc');expect(ui.doc().bodies).toHaveLength(2)

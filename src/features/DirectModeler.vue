@@ -13,6 +13,7 @@ import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, 
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
+import { booleanNurbsBrep, chamferNurbsBrep, createBrepBox, filletNurbsBrep, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
 const ru = computed(() => props.locale === 'ru')
@@ -112,6 +113,7 @@ watch(selectedCvPoint, point => {
   }
 }, { immediate: true })
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
+const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.value.bodies.find(b=>b.id===id)).filter(b=>b?.brep))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
 const topology = computed(() => selectedBody.value ? solidTopology(selectedBody.value.mesh) : {faces:[],edges:[]})
@@ -137,12 +139,31 @@ function faceSketch() {run(()=>{
  workplaneOutline.value=polygonBoundaryLoops({positions:b.mesh.positions,indices:f.triangles.flatMap(t=>b.mesh.indices.slice(t*3,t*3+3))}).map(loop=>loop.map(i=>{const q=points[i].map((v,k)=>v-plane.origin[k]);return [q.reduce((s,v,k)=>s+v*plane.u[k],0),q.reduce((s,v,k)=>s+v*plane.v[k],0)] as Point2}))
  activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='2d';centers.value['2d']=[0,0];views.value['2d']=100;advancedOp.value=null
 })}
+function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep) {
+ const built=tessellateNurbsBrep(brep,2)
+ return {...body,brep,mesh:{positions:[...built.positions],indices:[...built.indices]}}
+}
+function selectedBrepEdge(body:NonNullable<typeof selectedBody.value>,index:number) {
+ const edge=solidTopology(body.mesh).edges[index];if(!body.brep||!edge)throw Error('Select an edge on a B-rep body.')
+ const points=bodyPoints(body),a=points[edge.a],b=points[edge.b],same=(p:number[],q:number[])=>Math.hypot(...p.map((v,i)=>v-q[i]))<1e-6
+ const found=body.brep.edges.findIndex(e=>{const p=body.brep!.vertices[e.vertices[0]].point,q=body.brep!.vertices[e.vertices[1]].point;return same(a,p)&&same(b,q)||same(a,q)&&same(b,p)})
+ if(found<0)throw Error('The displayed edge is a tessellation edge, not an authored B-rep edge.')
+ return found
+}
+function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
+ const bodies=selectedIds.value.map(id=>history.document.bodies.find(b=>b.id===id)).filter((b):b is NonNullable<typeof b>=>!!b)
+ if(bodies.length!==2||!bodies[0].brep||!bodies[1].brep)throw Error('Select exactly two B-rep bodies; the first selected body is A.')
+ const d=history.document,result=bodyFromBrep(bodies[0],booleanNurbsBrep(bodies[0].brep,bodies[1].brep,operation))
+ d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).map(b=>b.id===bodies[0].id?result:b);commit(d);selection.value=result.id;extraSelection.value=[]
+})}
 function resultAdvanced():DirectDocument {
  const d=history.document,p=advanced.value,id=selection.value,b=d.bodies.find(b=>b.id===id),s=d.sketches.find(s=>s.id===id)
  const replace=(body:typeof b)=>{if(body)d.bodies[d.bodies.findIndex(b=>b.id===id)]=body}
  switch(advancedOp.value){
   case 'push': if(b)replace(pushPullFace(b,faceIndex.value,p.distance));break
-  case 'chamfer': case 'edge-fillet': if(b)replace(bevelSolidEdge(b,edgeIndex.value,p.radius,advancedOp.value==='chamfer'?'chamfer':'fillet'));break
+  case 'chamfer': case 'edge-fillet': if(b)replace(b.brep
+   ? bodyFromBrep(b,advancedOp.value==='chamfer'?chamferNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius):filletNurbsBrep(b.brep,selectedBrepEdge(b,edgeIndex.value),p.radius,12))
+   : bevelSolidEdge(b,edgeIndex.value,p.radius,advancedOp.value==='chamfer'?'chamfer':'fillet'));break
   case 'shell': if(b)replace(shellSolid(b,openingFaces.value.length?openingFaces.value:[faceIndex.value],p.distance));break
   case 'split': if(b){const pair=splitSolid(b,axisVector(p.axis),p.distance);pair[1].id='preview-split';replace(pair[0]);d.bodies.push(pair[1])}break
   case 'offset': if(s)d.sketches[d.sketches.findIndex(s=>s.id===id)]=offsetSketch(s,p.distance);break
@@ -482,7 +503,7 @@ function move(e: PointerEvent) {
   const sketch = d.sketches.find(s => s.id === gesture!.id), body = d.bodies.find(b => b.id === gesture!.id)
   if (sketch) { if (gesture.vertex !== null) {delete sketch.analytic; sketch.points[gesture.vertex] = p} else { const moved=transformSketch(sketch,[delta[0],delta[1]],0,1);Object.assign(sketch,moved) } }
   if(selectedIds.value.length>1){const plane=gesture.pane==='2d'?activePlane.value:xyPlane(),worldDelta=worldPoint(delta,{...plane,origin:[0,0,0]});document.value=transformSelection(gesture.document,selectedIds.value,worldDelta,[0,0,1],0,1);return}
-  if (body) body.mesh.positions = transformDirectPoints(bodyPoints(body), delta, 0, 1).flat()
+  if (body) { body.mesh.positions = transformDirectPoints(bodyPoints(body), delta, 0, 1).flat(); delete body.brep }
   document.value = d
 }
 function up(e: PointerEvent) {
@@ -542,6 +563,7 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
  if(kind==='box'||kind==='cylinder') {
   const points:Point2[]=kind==='box'?[[-r,-r],[r,-r],[r,r],[-r,r]]:Array.from({length:48},(_,i)=>[r*Math.cos(i*Math.PI/24),r*Math.sin(i*Math.PI/24)] as Point2)
   body=extrudeDirectSketch({id:crypto.randomUUID(),name,points,closed:true},size,id)
+  if(kind==='box'){const brep=createBrepBox([-r,-r,0],[r,r,size]);body=bodyFromBrep(body,brep)}
  } else {
   const profile=kind==='cone'?[[0,0],[r,0],[0,size]]:Array.from({length:25},(_,i)=>i===0?[0,-r]:i===24?[0,r]:[r*Math.sin(i*Math.PI/24),-r*Math.cos(i*Math.PI/24)])
   const mesh=revolvePolygonProfile(profile,360,48,true)
@@ -736,7 +758,8 @@ function bakeNurbs() { run(() => {
             </svg>
             <div v-if="advancedOp && pane === (['offset','extend','curve'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
               <strong>{{ ({push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
-              <small v-if="['push','chamfer','edge-fillet','shell'].includes(advancedOp)">{{ label('Для выпуклых тел с плоскими гранями.', 'For convex solids with planar faces.') }}</small>
+              <small v-if="['chamfer','edge-fillet'].includes(advancedOp) && selectedBody?.brep">{{ label('B-rep: выпуклое тело с плоскими гранями. Скругление — 12 касательных граней; криволинейные и вогнутые случаи отклоняются.', 'B-rep: convex body with planar faces. Fillet uses 12 tangent facets; curved and concave cases are rejected.') }}</small>
+              <small v-else-if="['push','chamfer','edge-fillet','shell'].includes(advancedOp)">{{ label('Mesh-операция для выпуклых тел с плоскими гранями.', 'Mesh operation for convex solids with planar faces.') }}</small>
               <label v-if="['push','shell','split','offset'].includes(advancedOp)">{{ advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm') }}<input v-model.number="advanced.distance" type="number" step=".5"></label>
               <label v-if="['edge-fillet','chamfer','curve'].includes(advancedOp)">{{ label('Радиус / размер, мм','Radius / size, mm') }}<input v-model.number="advanced.radius" type="number" min=".01" step=".5"></label>
               <label v-if="advancedOp==='split'||advancedOp==='transform'">{{ label('Ось','Axis') }}<select v-model="advanced.axis"><option>x</option><option>y</option><option>z</option></select></label>
@@ -827,6 +850,11 @@ function bakeNurbs() { run(() => {
       <template v-if="tool === 'polyline' && draft.length"><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
       <template v-else-if="selectedSketch || selectedBody || selectedNurbs">
         <strong>{{ selectedIds.length>1 ? label('Выбрано: ','Selected: ')+selectedIds.length : selectedSketch?.name || selectedBody?.name || selectedNurbs?.name }}</strong>
+        <template v-if="selectedBrepBodies.length===2 && selectedIds.length===2">
+          <button @click="applyBrepBoolean('union')">{{ label('B-rep объединить','B-rep Union') }}</button>
+          <button @click="applyBrepBoolean('difference')">{{ label('B-rep A − B','B-rep A − B') }}</button>
+          <button @click="applyBrepBoolean('intersection')">{{ label('B-rep пересечение','B-rep Intersection') }}</button>
+        </template>
         <button v-if="selectedBody && selectedFace" @click="beginAdvanced('push')">Push / Pull</button>
         <button v-if="selectedBody && selectedFace" @click="faceSketch">{{ label('Эскиз на грани','Sketch on face') }}</button>
         <button v-if="selectedBody && selectedFace" @click="beginAdvanced('shell')">Shell</button>

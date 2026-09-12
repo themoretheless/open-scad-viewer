@@ -3,10 +3,11 @@ import { extrudePolygonProfile, type PolygonMesh } from './geometry/polygon'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
+import { inspectNurbsBrep, type NurbsBrep } from './geometry/brep'
 
 export type Point2 = [number, number]
 export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh }
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep }
 export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[] }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
@@ -35,6 +36,7 @@ export function parseDirectDocument(text: string): DirectDocument {
   for (const b of d.bodies) {
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
+    if (b.brep) inspectNurbsBrep(b.brep)
   }
   for (const item of d.curves) validateNurbsCurve(item.curve)
   for (const item of d.surfaces) {

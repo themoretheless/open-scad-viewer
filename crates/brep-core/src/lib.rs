@@ -12,6 +12,9 @@
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::BTreeMap;
 
+pub mod operations;
+pub use operations::{boolean, chamfer, fillet};
+
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};
 pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
