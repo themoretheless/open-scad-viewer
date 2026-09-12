@@ -1,9 +1,19 @@
 [package]
-name = "math-core"
+name = "osv-math"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
-publish.workspace = true
+description = "Shared f64 vector helpers and typed geometry Error for open-scad-viewer kernels"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
+documentation = "https://docs.rs/osv-math"
+keywords = ["geometry", "math", "vector", "linear-algebra"]
+categories = ["mathematics", "science"]
+publish = true
+
+[lib]
+name = "math_core"
+path = "src/lib.rs"
 
 [dev-dependencies]
 rbench = { workspace = true }

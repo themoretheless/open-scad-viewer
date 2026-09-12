@@ -25,6 +25,8 @@ pub enum ArrowMarker {
     #[default]
     None,
     Arrow,
+    /// Open chevron (two strokes as a filled V).
+    Chevron,
     Dot,
     Bar,
 }
@@ -129,6 +131,19 @@ pub fn arrow_marker_path(
             let b2 = [base[0] - perp[0] * s * 0.5, base[1] - perp[1] * s * 0.5];
             BezierPath::from_polyline(&[tip, b1, b2], true)?
         }
+        ArrowMarker::Chevron => {
+            let perp = [-dir[1], dir[0]];
+            let tip = endpoint;
+            let base = [endpoint[0] - dir[0] * s, endpoint[1] - dir[1] * s];
+            let b1 = [base[0] + perp[0] * s * 0.55, base[1] + perp[1] * s * 0.55];
+            let b2 = [base[0] - perp[0] * s * 0.55, base[1] - perp[1] * s * 0.55];
+            // Thin filled chevron (V pointing along dir).
+            let inset = [
+                tip[0] - dir[0] * s * 0.35,
+                tip[1] - dir[1] * s * 0.35,
+            ];
+            BezierPath::from_polyline(&[tip, b1, inset, b2], true)?
+        }
         ArrowMarker::Dot => BezierPath::from_circle(endpoint, s * 0.5)?,
         ArrowMarker::Bar => {
             let perp = [-dir[1], dir[0]];
@@ -189,6 +204,31 @@ pub fn path_arrow_markers(
         }
     }
     Ok(out)
+}
+
+/// Dash a flattened polyline into open spans `(points, closed=false)`.
+pub fn dash_spans(
+    pts: &[[f64; 2]],
+    closed: bool,
+    pattern: &[f64],
+    offset: f64,
+) -> Result<Vec<Vec<[f64; 2]>>> {
+    Ok(dash_polylines(pts, closed, pattern, offset)?
+        .into_iter()
+        .map(|(p, _)| p)
+        .collect())
+}
+
+/// Dash a Bézier path (flattened) into open polylines suitable for UI stroking.
+pub fn path_dash_spans(
+    path: &BezierPath,
+    pattern: &[f64],
+    offset: f64,
+    tolerance: f64,
+) -> Result<Vec<Vec<[f64; 2]>>> {
+    let pts = path.flatten_tol(tolerance)?;
+    check(pts.len() >= 2, "Path too short to dash")?;
+    dash_spans(&pts, path.closed, pattern, offset)
 }
 
 fn dash_polylines(
@@ -452,13 +492,11 @@ fn append_arc(
         delta -= std::f64::consts::TAU;
     }
     let steps = ((delta.abs() / (std::f64::consts::PI * 0.25)).ceil() as usize).clamp(2, 16);
-    out.extend(gen {
-        for i in 1..=steps {
-            let t = i as f64 / steps as f64;
-            let a = a0 + delta * t;
-            yield [center[0] + radius * a.cos(), center[1] + radius * a.sin()];
-        }
-    });
+    for i in 1..=steps {
+        let t = i as f64 / steps as f64;
+        let a = a0 + delta * t;
+        out.push([center[0] + radius * a.cos(), center[1] + radius * a.sin()]);
+    }
 }
 
 #[cfg(test)]
@@ -523,5 +561,23 @@ mod tests {
         let marks = path_arrow_markers(&line, ArrowMarker::Arrow, ArrowMarker::Bar, 1.).unwrap();
         assert_eq!(marks.len(), 2);
         assert!(marks.iter().all(|p| p.closed));
+    }
+
+    #[test]
+    fn chevron_marker_is_closed() {
+        let line = BezierPath::from_polyline(&[[0., 0.], [10., 0.]], false).unwrap();
+        let marks =
+            path_arrow_markers(&line, ArrowMarker::None, ArrowMarker::Chevron, 1.).unwrap();
+        assert_eq!(marks.len(), 1);
+        assert!(marks[0].closed);
+        assert!(marks[0].segments.len() >= 3);
+    }
+
+    #[test]
+    fn dash_spans_alternate_on_line() {
+        let line = BezierPath::from_polyline(&[[0., 0.], [20., 0.]], false).unwrap();
+        let spans = path_dash_spans(&line, &[4., 4.], 0., 0.25).unwrap();
+        assert!(spans.len() >= 2, "spans={}", spans.len());
+        assert!(spans.iter().all(|s| s.len() >= 2));
     }
 }

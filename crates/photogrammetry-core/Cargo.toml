@@ -9,5 +9,5 @@ publish.workspace = true
 gpu = ["dep:gpu-compute"]
 
 [dependencies]
-math-core = { path = "../math-core" }
+math-core = { package = "osv-math", path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }

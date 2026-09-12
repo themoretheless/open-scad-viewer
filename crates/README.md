@@ -4,11 +4,11 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 
 | Crate | Owns |
 | --- | --- |
-| `math-core` | `V2`/`V3`, vector helpers, shared `Error` / `ensure` |
+| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, shared `Error` / `ensure` |
 | `value-codec` | JSON/binary value transport |
 | `gpu-compute` | Optional WGSL compute host |
 | `geometry-ops` | Deformations, `Triangles`, sweep frames |
-| `planar-geometry` | 2D paths, rings, Pathfinder |
+| `planar-geometry` | 2D paths, rings, Pathfinder (**crates.io**) |
 | `brep-topology` | Indexed B-rep incidence only |
 | `nurbs-core` | Rational curves/surfaces |
 | `brep-core` | CAD B-rep over NURBS |

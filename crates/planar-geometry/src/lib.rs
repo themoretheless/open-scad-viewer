@@ -4,22 +4,19 @@
 //! [`rings`] is the boolean/offset engine on closed polylines.
 //! [`pathfinder`] is the z-order scenario layer (divide / crop / trim / merge)
 //! built on `rings::planar`.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+//!
+//! Coordinates are millimeters; algorithms use binary64. Builds on stable Rust
+//! (no `#![feature]`).
 pub mod corners;
 pub mod edit;
 pub mod effects;
 pub mod path;
+pub mod path_offset;
 pub mod pathfinder;
 pub mod rings;
+pub mod scissors;
 pub mod stroke;
+pub mod tessellation;
 
 pub use math_core::{Error, Result};
 

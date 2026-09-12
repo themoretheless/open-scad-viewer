@@ -14,7 +14,7 @@ languages = ["dep:openscad-core", "dep:modelgraph-runtime", "dep:modelgraph-text
 gpu = ["dep:gpu-compute"]
 
 [dependencies]
-math-core = { path = "../math-core" }
+math-core = { package = "osv-math", path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }

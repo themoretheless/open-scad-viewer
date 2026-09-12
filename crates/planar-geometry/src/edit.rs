@@ -486,8 +486,14 @@ pub fn distribute_spacing(boxes: &[BBox], horizontal: bool, gap: f64) -> Result<
     Ok(deltas)
 }
 
-// ----- Scissors / knife -----
+// ----- Scissors / knife (cubic-aware; see scissors.rs) -----
 
+pub use crate::scissors::{
+    CutHit, cut_at, hit_test as hit_test_cut, knife_cut, knife_hits, knife_split, scissors_cut,
+    split_segment_at,
+};
+
+/// Closest hit for snap/hover: prefers cubic-aware scissors hit, falls back to polyline.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PathHit {
     pub segment: usize,
@@ -496,162 +502,13 @@ pub struct PathHit {
     pub distance: f64,
 }
 
-/// Closest hit on a flattened path within `max_dist`.
 pub fn hit_test_path(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Result<Option<PathHit>> {
-    check(max_dist > 0., "Invalid hit distance")?;
-    let pts = path.flatten()?;
-    if pts.len() < 2 {
-        return Ok(None);
-    }
-    let mut best: Option<PathHit> = None;
-    let edges = if path.closed {
-        pts.len()
-    } else {
-        pts.len() - 1
-    };
-    for i in 0..edges {
-        let a = pts[i];
-        let b = pts[(i + 1) % pts.len()];
-        let (t, p, d) = closest_on_segment(a, b, click);
-        if d <= max_dist && best.as_ref().is_none_or(|h| d < h.distance) {
-            best = Some(PathHit {
-                segment: i,
-                t,
-                point: p,
-                distance: d,
-            });
-        }
-    }
-    Ok(best)
-}
-
-fn closest_on_segment(a: [f64; 2], b: [f64; 2], p: [f64; 2]) -> (f64, [f64; 2], f64) {
-    let ab = [b[0] - a[0], b[1] - a[1]];
-    let ap = [p[0] - a[0], p[1] - a[1]];
-    let l2 = ab[0] * ab[0] + ab[1] * ab[1];
-    let t = if l2 < 1e-18 {
-        0.0
-    } else {
-        ((ap[0] * ab[0] + ap[1] * ab[1]) / l2).clamp(0.0, 1.0)
-    };
-    let q = lerp(a, b, t);
-    (t, q, dist(p, q))
-}
-
-/// Scissors: cut path at click (insert split on nearest flattened edge, then split).
-pub fn scissors_cut(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Result<Vec<BezierPath>> {
-    let Some(hit) = hit_test_path(path, click, max_dist)? else {
-        return Err(crate::error("Scissors: no path under cursor"));
-    };
-    // Work on polyline approximation so cut is exact at hit point.
-    let pts = path.flatten()?;
-    let mut left = pts[..=hit.segment].to_vec();
-    left.push(hit.point);
-    let mut right = vec![hit.point];
-    let end = if path.closed { pts.len() } else { pts.len() };
-    for p in &pts[hit.segment + 1..end] {
-        right.push(*p);
-    }
-    if path.closed {
-        right.extend_from_slice(&pts[..=hit.segment.min(pts.len() - 1)]);
-        // closed cut → one open path from hit around to hit
-        let mut loop_pts = vec![hit.point];
-        for i in hit.segment + 1..pts.len() {
-            loop_pts.push(pts[i]);
-        }
-        for i in 0..=hit.segment {
-            loop_pts.push(pts[i]);
-        }
-        loop_pts.push(hit.point);
-        return Ok(vec![BezierPath::from_polyline(&loop_pts, false)?]);
-    }
-    let mut out = Vec::new();
-    if left.len() >= 2 {
-        out.push(BezierPath::from_polyline(&left, false)?);
-    }
-    if right.len() >= 2 {
-        out.push(BezierPath::from_polyline(&right, false)?);
-    }
-    check(!out.is_empty(), "Scissors: cut produced nothing")?;
-    Ok(out)
-}
-
-/// Knife: split path by a cutting segment `a→b`.
-pub fn knife_cut(path: &BezierPath, a: [f64; 2], b: [f64; 2]) -> Result<Vec<BezierPath>> {
-    check(
-        a.iter().chain(b.iter()).all(|x| x.is_finite()),
-        "Invalid knife segment",
-    )?;
-    let pts = path.flatten()?;
-    check(pts.len() >= 2, "Path too short to knife")?;
-    let mut cuts: Vec<(usize, f64, [f64; 2])> = Vec::new();
-    let edges = if path.closed {
-        pts.len()
-    } else {
-        pts.len() - 1
-    };
-    for i in 0..edges {
-        let p0 = pts[i];
-        let p1 = pts[(i + 1) % pts.len()];
-        if let Some(hit) = segment_intersection(p0, p1, a, b) {
-            let ab = [p1[0] - p0[0], p1[1] - p0[1]];
-            let l2 = ab[0] * ab[0] + ab[1] * ab[1];
-            let t = if l2 < 1e-18 {
-                0.0
-            } else {
-                ((hit[0] - p0[0]) * ab[0] + (hit[1] - p0[1]) * ab[1]) / l2
-            };
-            if t > 1e-8 && t < 1.0 - 1e-8 {
-                cuts.push((i, t, hit));
-            }
-        }
-    }
-    check(!cuts.is_empty(), "Knife: no intersection")?;
-    cuts.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.total_cmp(&y.1)));
-    // Build polyline pieces between successive cut points (open result).
-    let mut pieces: Vec<Vec<[f64; 2]>> = Vec::new();
-    let mut cur = vec![pts[0]];
-    for i in 0..edges {
-        let p0 = pts[i];
-        let p1 = pts[(i + 1) % pts.len()];
-        let mut local: Vec<(f64, [f64; 2])> = cuts
-            .iter()
-            .filter(|(seg, _, _)| *seg == i)
-            .map(|(_, t, hit)| (*t, *hit))
-            .collect();
-        local.sort_by(|a, b| a.0.total_cmp(&b.0));
-        let mut prev = p0;
-        for (_, hit) in local {
-            if dist(prev, hit) > 1e-9 {
-                cur.push(hit);
-            }
-            if cur.len() >= 2 {
-                pieces.push(std::mem::take(&mut cur));
-            }
-            cur = vec![hit];
-            prev = hit;
-        }
-        if (i + 1 < pts.len() || path.closed) && dist(prev, p1) > 1e-9 {
-            cur.push(p1);
-        }
-    }
-    if path.closed {
-        if pieces.len() >= 2 {
-            let mut last = pieces.pop().unwrap();
-            last.extend_from_slice(&pieces[0][1..]);
-            pieces[0] = last;
-        }
-    } else if cur.len() >= 2 {
-        pieces.push(cur);
-    }
-    let mut out = Vec::new();
-    for piece in pieces {
-        if piece.len() >= 2 {
-            out.push(BezierPath::from_polyline(&piece, false)?);
-        }
-    }
-    check(!out.is_empty(), "Knife: cut produced nothing")?;
-    Ok(out)
+    Ok(crate::scissors::hit_test(path, click, max_dist)?.map(|h| PathHit {
+        segment: h.segment_index,
+        t: h.t,
+        point: h.point,
+        distance: h.distance,
+    }))
 }
 
 // ----- Measure -----

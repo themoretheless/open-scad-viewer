@@ -50,6 +50,39 @@ fn encode_paths(paths: &[BezierPath]) -> Value {
     Value::Array(paths.iter().map(encode_path).collect())
 }
 
+fn decode_point(v: &Value) -> Result<[f64; 2]> {
+    if let Some(arr) = v.as_array() {
+        if arr.len() == 2 {
+            let x = arr[0]
+                .as_f64()
+                .ok_or_else(|| input("point[0] must be a number"))?;
+            let y = arr[1]
+                .as_f64()
+                .ok_or_else(|| input("point[1] must be a number"))?;
+            return Ok([x, y]);
+        }
+    }
+    field(v, "xy").or_else(|_| Ok([field(v, "x")?, field(v, "y")?]))
+}
+
+fn decode_rings(v: &Value) -> Result<planar_geometry::rings::Rings> {
+    let raw = v
+        .as_array()
+        .ok_or_else(|| input("rings must be an array"))?;
+    let mut rings = Vec::with_capacity(raw.len());
+    for r in raw {
+        let pts = r
+            .as_array()
+            .ok_or_else(|| input("ring must be an array of points"))?;
+        let mut ring = Vec::with_capacity(pts.len());
+        for p in pts {
+            ring.push(decode_point(p)?);
+        }
+        rings.push(ring);
+    }
+    Ok(rings)
+}
+
 fn decode_boxes(v: &Value) -> Result<Vec<edit::BBox>> {
     let raw = v
         .as_array()
@@ -62,6 +95,55 @@ fn decode_boxes(v: &Value) -> Result<Vec<edit::BBox>> {
         });
     }
     Ok(boxes)
+}
+
+fn decode_gradient(v: &Value) -> Result<polygon_core::appearance::Gradient> {
+    use polygon_core::appearance::{
+        Color, Gradient, GradientKind, GradientSpread, GradientStop,
+    };
+    let kind = match v["kind"].as_str().unwrap_or("linear") {
+        "radial" => GradientKind::Radial {
+            center: field(v, "center")?,
+            radius: field(v, "radius")?,
+        },
+        "conic" => GradientKind::Conic {
+            center: field(v, "center")?,
+            angle: v["angle"].as_f64().unwrap_or(0.0),
+        },
+        _ => GradientKind::Linear {
+            p1: field(v, "p1")?,
+            p2: field(v, "p2")?,
+        },
+    };
+    let spread = match v["spread"].as_str().unwrap_or("pad") {
+        "repeat" => GradientSpread::Repeat,
+        "reflect" => GradientSpread::Reflect,
+        _ => GradientSpread::Pad,
+    };
+    let raw = v["stops"]
+        .as_array()
+        .ok_or_else(|| input("stops must be an array"))?;
+    let mut stops = Vec::with_capacity(raw.len());
+    for s in raw {
+        stops.push(GradientStop {
+            offset: field(s, "offset")?,
+            color: Color::from_rgba(field(s, "color")?),
+        });
+    }
+    Ok(Gradient {
+        kind,
+        stops,
+        spread,
+    })
+}
+
+fn encode_colored_mesh(mesh: &polygon_core::gradient_mesh::ColoredMesh) -> Value {
+    json!({
+        "positions": mesh.positions,
+        "colors": mesh.colors,
+        "indices": mesh.indices,
+        "triangleCount": mesh.triangle_count()
+    })
 }
 
 pub fn dispatch(v: Value) -> Result<Value> {
@@ -120,6 +202,20 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 dash_offset: v["dashOffset"].as_f64().unwrap_or(0.0),
             };
             encode_paths(&decode_path(&v["path"])?.outline_stroke_with(&opts)?)
+        }
+        "dash_spans" => {
+            use planar_geometry::stroke::path_dash_spans;
+            let pattern = v["dash"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>())
+                .ok_or_else(|| input("dash must be an array"))?;
+            let spans = path_dash_spans(
+                &decode_path(&v["path"])?,
+                &pattern,
+                v["dashOffset"].as_f64().unwrap_or(0.0),
+                v["tolerance"].as_f64().unwrap_or(0.25),
+            )?;
+            encode(spans)?
         }
         "average_anchors" => {
             use planar_geometry::path::AverageAxis;
@@ -254,25 +350,98 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "cols")?,
             field(&v, "spacing")?,
         )?),
-        "hatch" => encode_paths(&effects::hatch(
-            &field::<Vec<[f64; 2]>>(&v, "ring")?,
-            field(&v, "spacing")?,
-            v["angle"].as_f64().unwrap_or(0.0),
-            v["cross"].as_bool().unwrap_or(false),
-        )?),
+        "hatch" => {
+            use planar_geometry::tessellation::FillRule;
+            let rule = match v["fillRule"].as_str().unwrap_or("nonzero") {
+                "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
+                _ => FillRule::NonZero,
+            };
+            let spacing = field(&v, "spacing")?;
+            let angle = v["angle"].as_f64().unwrap_or(0.0);
+            let cross = v["cross"].as_bool().unwrap_or(false);
+            if v.get("path").is_some_and(|p| !p.is_null()) {
+                let holes = match v.get("holes").and_then(|h| h.as_array()) {
+                    Some(arr) => {
+                        let mut out = Vec::with_capacity(arr.len());
+                        for h in arr {
+                            out.push(decode_path(h)?);
+                        }
+                        out
+                    }
+                    None => Vec::new(),
+                };
+                encode_paths(&effects::hatch_path(
+                    &decode_path(&v["path"])?,
+                    &holes,
+                    rule,
+                    spacing,
+                    angle,
+                    cross,
+                    v["tolerance"].as_f64().unwrap_or(0.25),
+                )?)
+            } else if v.get("rings").is_some_and(|r| !r.is_null()) {
+                encode_paths(&effects::hatch_rings(
+                    &decode_rings(&v["rings"])?,
+                    rule,
+                    spacing,
+                    angle,
+                    cross,
+                )?)
+            } else {
+                encode_paths(&effects::hatch(
+                    &field::<Vec<[f64; 2]>>(&v, "ring")?,
+                    spacing,
+                    angle,
+                    cross,
+                )?)
+            }
+        }
         "stipple" => {
+            use planar_geometry::tessellation::FillRule;
             let kind = match v["kind"].as_str().unwrap_or("dot") {
                 "ring" => StippleKind::Ring,
                 "cross" => StippleKind::Cross,
                 "square" => StippleKind::Square,
                 _ => StippleKind::Dot,
             };
-            encode_paths(&effects::stipple(
-                &field::<Vec<[f64; 2]>>(&v, "ring")?,
-                field(&v, "spacing")?,
-                field(&v, "size")?,
+            let opts = effects::StippleOptions {
+                spacing: field(&v, "spacing")?,
+                size: field(&v, "size")?,
                 kind,
-            )?)
+                jitter: v["jitter"].as_f64().unwrap_or(0.0),
+                seed: v["seed"].as_u64().unwrap_or(1),
+                fill_rule: match v["fillRule"].as_str().unwrap_or("nonzero") {
+                    "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
+                    _ => FillRule::NonZero,
+                },
+            };
+            if v.get("path").is_some_and(|p| !p.is_null()) {
+                let holes = match v.get("holes").and_then(|h| h.as_array()) {
+                    Some(arr) => {
+                        let mut out = Vec::with_capacity(arr.len());
+                        for h in arr {
+                            out.push(decode_path(h)?);
+                        }
+                        out
+                    }
+                    None => Vec::new(),
+                };
+                encode_paths(&effects::stipple_path(
+                    &decode_path(&v["path"])?,
+                    &holes,
+                    &opts,
+                    v["tolerance"].as_f64().unwrap_or(0.25),
+                )?)
+            } else if v.get("rings").is_some_and(|r| !r.is_null()) {
+                encode_paths(&effects::stipple_rings(&decode_rings(&v["rings"])?, &opts)?)
+            } else {
+                encode_paths(&effects::stipple(
+                    &field::<Vec<[f64; 2]>>(&v, "ring")?,
+                    opts.spacing,
+                    opts.size,
+                    opts.kind,
+                )?)
+            }
         }
         "zig_zag" => encode_path(&effects::zig_zag(
             &decode_path(&v["path"])?,
@@ -378,15 +547,88 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "a")?,
             field(&v, "b")?,
         )?),
+        "knife_split" => encode_paths(&edit::knife_split(
+            &decode_path(&v["path"])?,
+            field(&v, "a")?,
+            field(&v, "b")?,
+        )?),
+        "tessellate" => {
+            use planar_geometry::tessellation::{FillRule, tessellate_path, tessellate_rings};
+            let rule = match v["fillRule"].as_str().unwrap_or("nonzero") {
+                "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
+                _ => FillRule::NonZero,
+            };
+            let mesh = if v.get("rings").is_some_and(|r| !r.is_null()) {
+                tessellate_rings(&decode_rings(&v["rings"])?, rule)?
+            } else {
+                tessellate_path(
+                    &decode_path(&v["path"])?,
+                    v["tolerance"].as_f64().unwrap_or(0.25),
+                    rule,
+                )?
+            };
+            json!({
+                "positions": mesh.positions,
+                "indices": mesh.indices,
+                "triangleCount": mesh.triangle_count()
+            })
+        },
         "measure" => {
             let m = edit::measure(field(&v, "a")?, field(&v, "b")?)?;
             json!({"a":m.a,"b":m.b,"distance":m.distance,"angleDeg":m.angle_deg,"delta":m.delta})
         }
-        "offset" => encode_paths(&decode_path(&v["path"])?.offset(
-            field(&v, "distance")?,
-            v["join"].as_str().unwrap_or("Miter"),
-            v["segments"].as_u64().unwrap_or(8) as usize,
-        )?),
+        "offset" => {
+            use planar_geometry::path_offset::{OffsetOptions, offset_closed_path, parse_join};
+            use planar_geometry::tessellation::FillRule;
+            let distance = field(&v, "distance")?;
+            let join_name = v["join"].as_str().unwrap_or("Miter");
+            let opts = OffsetOptions {
+                distance,
+                join: parse_join(join_name),
+                miter_limit: v["miterLimit"].as_f64().unwrap_or(4.0),
+                fill_rule: match v["fillRule"].as_str().unwrap_or("nonzero") {
+                    "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
+                    _ => FillRule::NonZero,
+                },
+                tolerance: v["tolerance"].as_f64().unwrap_or(0.25),
+                segments: v["segments"].as_u64().unwrap_or(8) as usize,
+            };
+            if v.get("rings").is_some_and(|r| !r.is_null()) {
+                let rings = planar_geometry::path_offset::offset_closed_rings(
+                    &decode_rings(&v["rings"])?,
+                    &opts,
+                )?;
+                let mut paths = Vec::with_capacity(rings.len());
+                for r in rings {
+                    paths.push(BezierPath::from_polyline(&r, true)?);
+                }
+                encode_paths(&paths)
+            } else if v.get("holes").is_some_and(|h| !h.is_null())
+                || v.get("region").is_some_and(|r| r.as_bool() == Some(true))
+            {
+                let holes = match v.get("holes").and_then(|h| h.as_array()) {
+                    Some(arr) => {
+                        let mut out = Vec::with_capacity(arr.len());
+                        for h in arr {
+                            out.push(decode_path(h)?);
+                        }
+                        out
+                    }
+                    None => Vec::new(),
+                };
+                encode_paths(&offset_closed_path(
+                    &decode_path(&v["path"])?,
+                    &holes,
+                    &opts,
+                )?)
+            } else {
+                encode_paths(&decode_path(&v["path"])?.offset(
+                    distance,
+                    join_name,
+                    v["segments"].as_u64().unwrap_or(8) as usize,
+                )?)
+            }
+        }
         "smooth" => encode_path(&decode_path(&v["path"])?.smooth()?),
         "open_path" => encode_path(&decode_path(&v["path"])?.open_path()?),
         "delete_segments" => {
@@ -488,6 +730,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             use planar_geometry::stroke::{ArrowMarker, path_arrow_markers};
             let parse = |s: &str| match s {
                 "arrow" => ArrowMarker::Arrow,
+                "chevron" => ArrowMarker::Chevron,
                 "dot" => ArrowMarker::Dot,
                 "bar" => ArrowMarker::Bar,
                 _ => ArrowMarker::None,
@@ -511,44 +754,55 @@ pub fn dispatch(v: Value) -> Result<Value> {
             encode(out.to_rgba())?
         }
         "sample_gradient" => {
-            use polygon_core::appearance::{
-                Color, Gradient, GradientKind, GradientSpread, GradientStop,
+            encode(decode_gradient(&v)?.sample_at(field(&v, "point")?).to_rgba())?
+        }
+        "gradient_fill_mesh" => {
+            use polygon_core::gradient_mesh::gradient_fill_mesh;
+            let mesh = gradient_fill_mesh(
+                &decode_path(&v["path"])?,
+                &decode_gradient(&v)?,
+                v["tolerance"].as_f64().unwrap_or(0.25),
+                matches!(
+                    v["fillRule"].as_str().unwrap_or("nonzero"),
+                    "evenodd" | "evenOdd" | "EvenOdd"
+                ),
+            )?;
+            encode_colored_mesh(&mesh)
+        }
+        "gradient_stroke_mesh" => {
+            use planar_geometry::stroke::{LineCap, LineJoin, StrokeOptions};
+            use polygon_core::gradient_mesh::{GradientSampleMode, gradient_stroke_mesh};
+            let cap = match v["cap"].as_str().unwrap_or("butt") {
+                "round" => LineCap::Round,
+                "square" => LineCap::Square,
+                _ => LineCap::Butt,
             };
-            let kind = match v["kind"].as_str().unwrap_or("linear") {
-                "radial" => GradientKind::Radial {
-                    center: field(&v, "center")?,
-                    radius: field(&v, "radius")?,
-                },
-                "conic" => GradientKind::Conic {
-                    center: field(&v, "center")?,
-                    angle: v["angle"].as_f64().unwrap_or(0.0),
-                },
-                _ => GradientKind::Linear {
-                    p1: field(&v, "p1")?,
-                    p2: field(&v, "p2")?,
-                },
+            let join = match v["join"].as_str().unwrap_or("miter") {
+                "round" => LineJoin::Round,
+                "bevel" => LineJoin::Bevel,
+                _ => LineJoin::Miter,
             };
-            let spread = match v["spread"].as_str().unwrap_or("pad") {
-                "repeat" => GradientSpread::Repeat,
-                "reflect" => GradientSpread::Reflect,
-                _ => GradientSpread::Pad,
-            };
-            let raw = v["stops"]
+            let dash = v["dash"]
                 .as_array()
-                .ok_or_else(|| input("stops must be an array"))?;
-            let mut stops = Vec::with_capacity(raw.len());
-            for s in raw {
-                stops.push(GradientStop {
-                    offset: field(s, "offset")?,
-                    color: Color::from_rgba(field(s, "color")?),
-                });
-            }
-            let g = Gradient {
-                kind,
-                stops,
-                spread,
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>());
+            let opts = StrokeOptions {
+                width: field(&v, "width")?,
+                cap,
+                join,
+                miter_limit: v["miterLimit"].as_f64().unwrap_or(4.0),
+                dash,
+                dash_offset: v["dashOffset"].as_f64().unwrap_or(0.0),
             };
-            encode(g.sample_at(field(&v, "point")?).to_rgba())?
+            let mode = match v["mode"].as_str().unwrap_or("spatial") {
+                "along" | "alongPath" | "AlongPath" => GradientSampleMode::AlongPath,
+                _ => GradientSampleMode::Spatial,
+            };
+            encode_colored_mesh(&gradient_stroke_mesh(
+                &decode_path(&v["path"])?,
+                &opts,
+                &decode_gradient(&v)?,
+                mode,
+            )?)
         }
         _ => return Err(input(format!("Unknown path2d action '{action}'"))),
     })

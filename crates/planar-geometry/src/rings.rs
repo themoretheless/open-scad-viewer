@@ -278,14 +278,21 @@ pub fn offset_join(rings: &Rings, distance: f64, join: &str, segments: usize) ->
                         q[1] + distance.abs() * t.sin(),
                     ])
                 }
-            } else if join == "Square" && den * distance > 1e-12 {
-                let bis = [na[0] + nb[0], na[1] + nb[1]];
-                let len = bis[0].hypot(bis[1]);
-                let bis = bis.map(|x| x / len);
-                for (p, d) in [(u, a), (v, b)] {
-                    let t = (distance - (p[0] - q[0]) * bis[0] - (p[1] - q[1]) * bis[1])
-                        / (d[0] * bis[0] + d[1] * bis[1]);
-                    out.push([p[0] + t * d[0], p[1] + t * d[1]]);
+            } else if (join == "Bevel" || join == "Square") && den * distance > 1e-12 {
+                // Bevel: keep both offset endpoints (flat cut). Square extends
+                // further along the bisector like SVG stroke-linejoin:square.
+                if join == "Square" {
+                    let bis = [na[0] + nb[0], na[1] + nb[1]];
+                    let len = bis[0].hypot(bis[1]);
+                    let bis = bis.map(|x| x / len);
+                    for (p, d) in [(u, a), (v, b)] {
+                        let t = (distance - (p[0] - q[0]) * bis[0] - (p[1] - q[1]) * bis[1])
+                            / (d[0] * bis[0] + d[1] * bis[1]);
+                        out.push([p[0] + t * d[0], p[1] + t * d[1]]);
+                    }
+                } else {
+                    out.push(u);
+                    out.push(v);
                 }
             } else if den.abs() > 1e-12 {
                 let t = cross2(sub2(v, u), b) / den;

@@ -165,10 +165,8 @@ pub fn minus_by_zorder(shapes: &[Rings], keep_back: bool) -> Result<Rings> {
         let (last, rest) = shapes.split_last().unwrap();
         (last, rest.iter().collect())
     };
-    let cut = {
-        super let cutter_rings: Vec<Rings> = cutters.iter().map(|c| (*c).clone()).collect();
-        union_all(&cutter_rings)?
-    };
+    let cutter_rings: Vec<Rings> = cutters.iter().map(|c| (*c).clone()).collect();
+    let cut = union_all(&cutter_rings)?;
     planar(survivor, &cut, "difference")
 }
 

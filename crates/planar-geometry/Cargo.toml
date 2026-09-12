@@ -3,7 +3,13 @@ name = "planar-geometry"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
-publish.workspace = true
+description = "Planar 2D kernel: cubic Bézier paths, ring boolean/offset, Pathfinder, stroke, tessellation"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
+documentation = "https://docs.rs/planar-geometry"
+keywords = ["geometry", "bezier", "boolean", "2d", "cad"]
+categories = ["graphics", "mathematics", "science"]
+publish = true
 
 [dependencies]
-math-core = { path = "../math-core" }
+math-core = { package = "osv-math", path = "../math-core", version = "0.1.0" }

@@ -17,6 +17,7 @@
 )]
 #![allow(unused_features)]
 pub mod appearance;
+pub mod gradient_mesh;
 pub mod solid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;

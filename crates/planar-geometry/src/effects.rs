@@ -247,178 +247,459 @@ pub fn grid_array(
     Ok(out)
 }
 
-/// Scanline hatch segments clipped to a closed ring (even-odd).
+/// Scanline hatch segments clipped to a closed ring (nonzero winding).
 pub fn hatch(
     ring: &[[f64; 2]],
     spacing: f64,
     angle_rad: f64,
     cross: bool,
 ) -> Result<Vec<BezierPath>> {
-    check(ring.len() >= 3, "Hatch needs a closed ring")?;
-    check(
-        spacing > 1e-6 && spacing.is_finite(),
-        "Invalid hatch spacing",
-    )?;
-    let mut lines = hatch_dir(ring, spacing, angle_rad)?;
-    if cross {
-        lines.extend(hatch_dir(ring, spacing, angle_rad + PI * 0.5)?);
-    }
-    Ok(lines)
+    hatch_rings(
+        &[ring.to_vec()],
+        crate::tessellation::FillRule::NonZero,
+        spacing,
+        angle_rad,
+        cross,
+    )
 }
 
-fn hatch_dir(ring: &[[f64; 2]], spacing: f64, angle: f64) -> Result<Vec<BezierPath>> {
-    let (min, max) = bbox_of(ring)?;
-    let c = angle.cos();
-    let s = angle.sin();
-    // Local frame: x' along hatch, y' across.
-    let corners = [
-        [min[0], min[1]],
-        [max[0], min[1]],
-        [max[0], max[1]],
-        [min[0], max[1]],
-    ];
-    let mut y_min = f64::INFINITY;
-    let mut y_max = f64::NEG_INFINITY;
-    let mut x_min = f64::INFINITY;
-    let mut x_max = f64::NEG_INFINITY;
-    for p in corners {
-        let x = p[0] * c + p[1] * s;
-        let y = -p[0] * s + p[1] * c;
-        x_min = x_min.min(x);
-        x_max = x_max.max(x);
-        y_min = y_min.min(y);
-        y_max = y_max.max(y);
-    }
+/// Hatch clipped to multi-contour `rings` under `fill_rule` (holes / compound).
+pub fn hatch_rings(
+    rings: &[Vec<[f64; 2]>],
+    fill_rule: crate::tessellation::FillRule,
+    spacing: f64,
+    angle_rad: f64,
+    cross: bool,
+) -> Result<Vec<BezierPath>> {
+    check(!rings.is_empty(), "Hatch needs at least one ring")?;
+    check(
+        rings.iter().all(|r| r.len() >= 3),
+        "Hatch ring needs ≥3 vertices",
+    )?;
+    check(
+        spacing > 1e-6 && spacing.is_finite() && angle_rad.is_finite(),
+        "Invalid hatch params",
+    )?;
+    let (min, max) = rings_bbox(rings)?;
+    let width = max[0] - min[0];
+    let height = max[1] - min[1];
+    check(width > 1e-9 && height > 1e-9, "Degenerate hatch bbox")?;
+    let half_diag = width.hypot(height) * 0.5 + spacing;
+    let lines_per = ((2.0 * half_diag) / spacing).ceil() as usize + 1;
+    let families = if cross { 2 } else { 1 };
+    check(
+        lines_per.saturating_mul(families) <= HATCH_MAX_LINES,
+        "Hatch line budget exceeded",
+    )?;
+    let edge_count: usize = rings.iter().map(|r| r.len()).sum();
+    check(edge_count <= HATCH_MAX_EDGES, "Hatch edge budget exceeded")?;
+    check(
+        lines_per
+            .saturating_mul(families)
+            .saturating_mul(edge_count)
+            <= HATCH_MAX_LINE_EDGE_TESTS,
+        "Hatch work budget exceeded",
+    )?;
+
     let mut out = Vec::new();
-    let mut y = y_min;
-    let mut guard = 0;
-    while y <= y_max + 1e-9 {
-        check(guard < MAX_SAMPLES, "Hatch line budget exceeded")?;
-        guard += 1;
-        // Ray across bbox in world space.
-        let a = [x_min * c - y * s, x_min * s + y * c];
-        let b = [x_max * c - y * s, x_max * s + y * c];
-        let mut ts = clip_segment_to_ring(a, b, ring);
-        ts.sort_by(f64::total_cmp);
-        for pair in ts.as_chunks::<2>().0 {
-            let p0 = lerp(a, b, pair[0]);
-            let p1 = lerp(a, b, pair[1]);
-            if (p0[0] - p1[0]).hypot(p0[1] - p1[1]) > 1e-9 {
-                out.push(BezierPath::from_polyline(&[p0, p1], false)?);
-            }
-        }
-        y += spacing;
+    let mut span_count = 0usize;
+    emit_hatch_family(
+        rings,
+        fill_rule,
+        spacing,
+        angle_rad,
+        min,
+        max,
+        half_diag,
+        lines_per,
+        &mut out,
+        &mut span_count,
+    )?;
+    if cross {
+        emit_hatch_family(
+            rings,
+            fill_rule,
+            spacing,
+            angle_rad + PI * 0.5,
+            min,
+            max,
+            half_diag,
+            lines_per,
+            &mut out,
+            &mut span_count,
+        )?;
     }
     Ok(out)
 }
 
-fn clip_segment_to_ring(a: [f64; 2], b: [f64; 2], ring: &[[f64; 2]]) -> Vec<f64> {
-    use crate::rings::contains_point;
-    let mut ts = vec![0.0, 1.0];
+/// Flatten a closed path (and optional hole paths) then hatch.
+pub fn hatch_path(
+    outer: &BezierPath,
+    holes: &[BezierPath],
+    fill_rule: crate::tessellation::FillRule,
+    spacing: f64,
+    angle_rad: f64,
+    cross: bool,
+    tolerance: f64,
+) -> Result<Vec<BezierPath>> {
+    check(outer.closed, "Hatch path must be closed")?;
+    let mut rings = vec![outer.to_ring(tolerance)?];
+    for h in holes {
+        check(h.closed, "Hatch hole path must be closed")?;
+        rings.push(h.to_ring(tolerance)?);
+    }
+    hatch_rings(&rings, fill_rule, spacing, angle_rad, cross)
+}
+
+fn emit_hatch_family(
+    rings: &[Vec<[f64; 2]>],
+    fill_rule: crate::tessellation::FillRule,
+    spacing: f64,
+    angle: f64,
+    min: [f64; 2],
+    max: [f64; 2],
+    half_diag: f64,
+    lines_per: usize,
+    out: &mut Vec<BezierPath>,
+    span_count: &mut usize,
+) -> Result<()> {
+    let (s, c) = angle.sin_cos();
+    let dir = [c, s];
+    let normal = [-s, c];
+    let center = [(min[0] + max[0]) * 0.5, (min[1] + max[1]) * 0.5];
+    for line_index in 1..lines_per {
+        let offset = -half_diag + spacing * line_index as f64;
+        if offset >= half_diag - 1e-9 {
+            break;
+        }
+        let origin = [
+            center[0] + normal[0] * offset,
+            center[1] + normal[1] * offset,
+        ];
+        let spans = hatch_clip_line(rings, origin, dir, fill_rule)?;
+        for (p0, p1) in spans {
+            check(*span_count < HATCH_MAX_SPANS, "Hatch span budget exceeded")?;
+            *span_count += 1;
+            if (p0[0] - p1[0]).hypot(p0[1] - p1[1]) > 1e-9 {
+                out.push(BezierPath::from_polyline(&[p0, p1], false)?);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Clip infinite line `origin + t·dir` (|dir|≈1) to interior spans under fill rule.
+fn hatch_clip_line(
+    rings: &[Vec<[f64; 2]>],
+    origin: [f64; 2],
+    dir: [f64; 2],
+    fill_rule: crate::tessellation::FillRule,
+) -> Result<Vec<([f64; 2], [f64; 2])>> {
+    let mut crossings: Vec<(f64, i32)> = Vec::new();
+    for ring in rings {
+        let n = ring.len();
+        for i in 0..n {
+            let a = ring[i];
+            let b = ring[(i + 1) % n];
+            let perp = |p: [f64; 2]| {
+                let dx = p[0] - origin[0];
+                let dy = p[1] - origin[1];
+                dir[0] * dy - dir[1] * dx
+            };
+            let fa = perp(a);
+            let fb = perp(b);
+            // Half-open: Negative|Zero → Positive adds +1 winding.
+            let side = |f: f64| -> i8 {
+                if f > 1e-15 {
+                    1
+                } else if f < -1e-15 {
+                    -1
+                } else {
+                    0
+                }
+            };
+            let sa = side(fa);
+            let sb = side(fb);
+            let winding_delta = if (sa == -1 || sa == 0) && sb == 1 {
+                1
+            } else if (sb == -1 || sb == 0) && sa == 1 {
+                -1
+            } else {
+                continue;
+            };
+            let denom = fa - fb;
+            if denom.abs() < 1e-18 {
+                continue;
+            }
+            let u = fa / denom;
+            if !(0.0..=1.0).contains(&u) {
+                continue;
+            }
+            let hit = lerp(a, b, u);
+            let t = dir[0] * (hit[0] - origin[0]) + dir[1] * (hit[1] - origin[1]);
+            check(t.is_finite(), "Non-finite hatch crossing")?;
+            crossings.push((t, winding_delta));
+        }
+    }
+    if crossings.len() < 2 {
+        return Ok(Vec::new());
+    }
+    crossings.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    let mut spans = Vec::new();
+    let mut parity = false;
+    let mut winding = 0_i32;
+    let mut span_start: Option<f64> = None;
+    let mut index = 0;
+    while index < crossings.len() {
+        let t = crossings[index].0;
+        let mut count = 0usize;
+        let mut delta = 0_i32;
+        while index < crossings.len() && (crossings[index].0 - t).abs() <= 1e-9 {
+            count += 1;
+            delta += crossings[index].1;
+            index += 1;
+        }
+        let was_inside = match fill_rule {
+            crate::tessellation::FillRule::EvenOdd => parity,
+            crate::tessellation::FillRule::NonZero => winding != 0,
+        };
+        parity ^= count % 2 == 1;
+        winding += delta;
+        let is_inside = match fill_rule {
+            crate::tessellation::FillRule::EvenOdd => parity,
+            crate::tessellation::FillRule::NonZero => winding != 0,
+        };
+        match (was_inside, is_inside, span_start) {
+            (false, true, _) => span_start = Some(t),
+            (true, false, Some(start)) if (t - start).abs() > 1e-9 => {
+                let p0 = [
+                    origin[0] + dir[0] * start,
+                    origin[1] + dir[1] * start,
+                ];
+                let p1 = [origin[0] + dir[0] * t, origin[1] + dir[1] * t];
+                spans.push((p0, p1));
+                span_start = None;
+            }
+            (true, false, _) => span_start = None,
+            _ => {}
+        }
+    }
+    Ok(spans)
+}
+
+fn rings_bbox(rings: &[Vec<[f64; 2]>]) -> Result<([f64; 2], [f64; 2])> {
+    let mut pts = Vec::new();
+    for r in rings {
+        pts.extend_from_slice(r);
+    }
+    bbox_of(&pts)
+}
+
+fn point_in_rings(
+    p: [f64; 2],
+    rings: &[Vec<[f64; 2]>],
+    fill_rule: crate::tessellation::FillRule,
+) -> bool {
+    match fill_rule {
+        crate::tessellation::FillRule::NonZero => {
+            let mut winding = 0_i32;
+            for r in rings {
+                for i in 0..r.len() {
+                    let a = r[i];
+                    let b = r[(i + 1) % r.len()];
+                    let c = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+                    if a[1] <= p[1] && b[1] > p[1] && c > 0. {
+                        winding += 1;
+                    }
+                    if a[1] > p[1] && b[1] <= p[1] && c < 0. {
+                        winding -= 1;
+                    }
+                }
+            }
+            winding != 0
+        }
+        crate::tessellation::FillRule::EvenOdd => {
+            let mut parity = false;
+            for ring in rings {
+                if even_odd_ring(p, ring) {
+                    parity = !parity;
+                }
+            }
+            parity
+        }
+    }
+}
+
+fn even_odd_ring(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
+    let mut inside = false;
     for i in 0..ring.len() {
-        let c = ring[i];
-        let d = ring[(i + 1) % ring.len()];
-        if let Some(t) = seg_intersect_t(a, b, c, d)
-            && t > 1e-9
-            && t < 1.0 - 1e-9
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        if (a[1] > p[1]) != (b[1] > p[1])
+            && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1] + 0.0) + a[0]
         {
-            ts.push(t);
+            inside = !inside;
         }
     }
-    ts.sort_by(f64::total_cmp);
-    ts.dedup_by(|x, y| (*x - *y).abs() < 1e-10);
-    let mut keep = Vec::new();
-    for [t0, t1] in ts.array_windows() {
-        let mid = (t0 + t1) * 0.5;
-        let p = lerp(a, b, mid);
-        if contains_point(p, ring) {
-            keep.push(*t0);
-            keep.push(*t1);
-        }
-    }
-    keep
+    inside
 }
 
-fn seg_intersect_t(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<f64> {
-    let r = sub2(b, a);
-    let s = sub2(d, c);
-    let den = r[0] * s[1] - r[1] * s[0];
-    if den.abs() < 1e-15 {
-        return None;
-    }
-    let qp = sub2(c, a);
-    let t = (qp[0] * s[1] - qp[1] * s[0]) / den;
-    let u = (qp[0] * r[1] - qp[1] * r[0]) / den;
-    if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
-        Some(t)
-    } else {
-        None
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StippleKind {
+    #[default]
     Dot,
+    /// Hollow circle outline (closed polyline), not a filled disk.
     Ring,
     Cross,
     Square,
 }
 
-/// Regular stipple marks over a closed ring's bbox, kept if center is inside.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StippleOptions {
+    pub spacing: f64,
+    pub size: f64,
+    pub kind: StippleKind,
+    /// Max random offset per mark (mm); 0 = exact lattice.
+    pub jitter: f64,
+    pub seed: u64,
+    pub fill_rule: crate::tessellation::FillRule,
+}
+
+impl Default for StippleOptions {
+    fn default() -> Self {
+        Self {
+            spacing: 3.0,
+            size: 0.6,
+            kind: StippleKind::Dot,
+            jitter: 0.0,
+            seed: 1,
+            fill_rule: crate::tessellation::FillRule::NonZero,
+        }
+    }
+}
+
+/// Regular stipple marks over a closed ring's bbox (nonzero, no jitter).
 pub fn stipple(
     ring: &[[f64; 2]],
     spacing: f64,
     size: f64,
     kind: StippleKind,
 ) -> Result<Vec<BezierPath>> {
-    use crate::rings::contains_point;
-    check(spacing > 1e-6 && size > 1e-6, "Invalid stipple params")?;
-    let (min, max) = bbox_of(ring)?;
+    stipple_rings(
+        &[ring.to_vec()],
+        &StippleOptions {
+            spacing,
+            size,
+            kind,
+            ..Default::default()
+        },
+    )
+}
+
+/// Stipple over multi-contour rings (holes / compound) with optional jitter.
+pub fn stipple_rings(rings: &[Vec<[f64; 2]>], opts: &StippleOptions) -> Result<Vec<BezierPath>> {
+    check(!rings.is_empty(), "Stipple needs at least one ring")?;
+    check(
+        opts.spacing > 1e-6
+            && opts.size > 1e-6
+            && opts.jitter >= 0.
+            && opts.jitter.is_finite()
+            && opts.spacing.is_finite()
+            && opts.size.is_finite(),
+        "Invalid stipple params",
+    )?;
+    let (min, max) = rings_bbox(rings)?;
     let mut out = Vec::new();
     let mut y = min[1];
-    let mut guard = 0;
+    let mut row = 0usize;
     while y <= max[1] + 1e-9 {
         let mut x = min[0];
+        let mut col = 0usize;
         while x <= max[0] + 1e-9 {
-            check(guard < MAX_SAMPLES, "Stipple budget exceeded")?;
-            guard += 1;
-            let p = [x, y];
-            if contains_point(p, ring) {
-                out.push(stipple_mark(p, size, kind)?);
+            check(out.len() < STIPPLE_MAX_MARKS, "Stipple budget exceeded")?;
+            let cell = (opts.seed)
+                .wrapping_add((row as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+                .wrapping_add(col as u64);
+            let jx = if opts.jitter > 0. {
+                deterministic_noise(cell ^ 0x1111_1111_1111_1111, 0) * opts.jitter
+            } else {
+                0.0
+            };
+            let jy = if opts.jitter > 0. {
+                deterministic_noise(cell ^ 0x2222_2222_2222_2222, 0) * opts.jitter
+            } else {
+                0.0
+            };
+            let p = [x + jx, y + jy];
+            if point_in_rings(p, rings, opts.fill_rule) {
+                out.push(stipple_mark(p, opts.size, opts.kind)?);
             }
-            x += spacing;
+            x += opts.spacing;
+            col += 1;
         }
-        y += spacing;
+        y += opts.spacing;
+        row += 1;
     }
     Ok(out)
+}
+
+/// Flatten closed path (+ holes) then stipple.
+pub fn stipple_path(
+    outer: &BezierPath,
+    holes: &[BezierPath],
+    opts: &StippleOptions,
+    tolerance: f64,
+) -> Result<Vec<BezierPath>> {
+    check(outer.closed, "Stipple path must be closed")?;
+    let mut rings = vec![outer.to_ring(tolerance)?];
+    for h in holes {
+        check(h.closed, "Stipple hole path must be closed")?;
+        rings.push(h.to_ring(tolerance)?);
+    }
+    stipple_rings(&rings, opts)
 }
 
 fn stipple_mark(center: [f64; 2], size: f64, kind: StippleKind) -> Result<BezierPath> {
     let h = size * 0.5;
     match kind {
-        StippleKind::Dot | StippleKind::Ring => BezierPath::from_circle(center, h),
+        StippleKind::Dot => BezierPath::from_circle(center, h),
+        StippleKind::Ring => {
+            // Closed outline circle (same radius); consumers stroke it, not fill.
+            // Use a regular polygon so it stays a thin ring under stroke, distinct
+            // from the filled Dot disk when both are tessellated as fills.
+            const N: usize = 24;
+            let mut pts = Vec::with_capacity(N);
+            for i in 0..N {
+                let a = TAU * (i as f64) / (N as f64);
+                pts.push([center[0] + h * a.cos(), center[1] + h * a.sin()]);
+            }
+            BezierPath::from_polyline(&pts, true)
+        }
         StippleKind::Square => BezierPath::from_rect(
             [center[0] - h, center[1] - h],
             [center[0] + h, center[1] + h],
         ),
-        StippleKind::Cross => {
-            // Represent as a plus of two short open segments joined by a tiny compound polyline.
-            BezierPath::from_polyline(
-                &[
-                    [center[0] - h, center[1]],
-                    [center[0] + h, center[1]],
-                    [center[0], center[1]],
-                    [center[0], center[1] - h],
-                    [center[0], center[1] + h],
-                ],
-                false,
-            )
-        }
+        StippleKind::Cross => BezierPath::from_polyline(
+            &[
+                [center[0] - h, center[1]],
+                [center[0] + h, center[1]],
+                [center[0], center[1]],
+                [center[0], center[1] - h],
+                [center[0], center[1] + h],
+            ],
+            false,
+        ),
     }
 }
 
-// ----- Distortions -----
+const HATCH_MAX_LINES: usize = 4_000;
+const HATCH_MAX_EDGES: usize = 100_000;
+const HATCH_MAX_LINE_EDGE_TESTS: usize = 8_000_000;
+const HATCH_MAX_SPANS: usize = 100_000;
+const STIPPLE_MAX_MARKS: usize = 50_000;
 
+// ----- Distortions -----
 pub fn zig_zag(path: &BezierPath, amplitude: f64, wavelength: f64) -> Result<BezierPath> {
     check(
         amplitude.is_finite() && wavelength > 1e-6,
@@ -701,6 +982,81 @@ mod tests {
         assert!(!h.is_empty());
         let st = stipple(&ring, 3., 0.5, StippleKind::Dot).unwrap();
         assert!(!st.is_empty());
+    }
+
+    #[test]
+    fn hatch_skips_donut_hole() {
+        use crate::tessellation::FillRule;
+        let outer = vec![[0., 0.], [20., 0.], [20., 20.], [0., 20.]];
+        let hole = vec![[6., 6.], [14., 6.], [14., 14.], [6., 14.]];
+        // Opposite winding so nonzero treats hole as empty.
+        let hole_cw: Vec<[f64; 2]> = hole.into_iter().rev().collect();
+        let rings = vec![outer, hole_cw];
+        let lines = hatch_rings(&rings, FillRule::NonZero, 2., 0., false).unwrap();
+        assert!(!lines.is_empty());
+        for line in &lines {
+            let pts = line.flatten().unwrap();
+            for p in pts {
+                // No hatch geometry should sit deep inside the hole.
+                assert!(
+                    !(p[0] > 7. && p[0] < 13. && p[1] > 7. && p[1] < 13.),
+                    "hatch point in hole {p:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn stipple_jitter_is_deterministic() {
+        use crate::tessellation::FillRule;
+        let ring = vec![vec![[0., 0.], [12., 0.], [12., 12.], [0., 12.]]];
+        let opts = StippleOptions {
+            spacing: 4.,
+            size: 0.4,
+            kind: StippleKind::Ring,
+            jitter: 0.8,
+            seed: 42,
+            fill_rule: FillRule::NonZero,
+        };
+        let a = stipple_rings(&ring, &opts).unwrap();
+        let b = stipple_rings(&ring, &opts).unwrap();
+        assert_eq!(a.len(), b.len());
+        assert!(!a.is_empty());
+        assert!(a.iter().all(|m| m.closed));
+        let starts: Vec<_> = a.iter().map(|m| m.start).collect();
+        let starts_b: Vec<_> = b.iter().map(|m| m.start).collect();
+        assert_eq!(starts, starts_b);
+        let no_jitter = stipple_rings(
+            &ring,
+            &StippleOptions {
+                jitter: 0.,
+                kind: StippleKind::Dot,
+                ..opts
+            },
+        )
+        .unwrap();
+        assert_ne!(
+            a.iter().map(|m| m.start).collect::<Vec<_>>(),
+            no_jitter.iter().map(|m| m.start).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn hatch_path_and_cross() {
+        use crate::tessellation::FillRule;
+        let outer = BezierPath::from_rect([0., 0.], [10., 8.]).unwrap();
+        let hole = BezierPath::from_rect([3., 2.], [7., 6.]).unwrap().reverse();
+        let lines = hatch_path(
+            &outer,
+            &[hole],
+            FillRule::NonZero,
+            1.5,
+            PI * 0.25,
+            true,
+            0.25,
+        )
+        .unwrap();
+        assert!(lines.len() >= 4);
     }
 
     #[test]

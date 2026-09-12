@@ -90,7 +90,7 @@ dependencies = [
 name = "brep-topology"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 
@@ -241,7 +241,7 @@ dependencies = [
 name = "gcode-core"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
 ]
 
 [[package]]
@@ -252,11 +252,11 @@ dependencies = [
  "brep-topology",
  "geometry-ops",
  "gpu-compute",
- "math-core",
  "modelgraph-runtime",
  "modelgraph-text",
  "nurbs-core",
  "openscad-core",
+ "osv-math",
  "planar-geometry",
  "polygon-core",
  "sdf-core",
@@ -270,7 +270,7 @@ dependencies = [
 name = "geometry-ops"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 
@@ -413,17 +413,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
-name = "math-core"
-version = "0.1.0"
-dependencies = [
- "rbench",
-]
-
-[[package]]
 name = "mechanics-core"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
  "planar-geometry",
 ]
 
@@ -444,7 +437,7 @@ dependencies = [
 name = "modelgraph-text"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 
@@ -501,7 +494,7 @@ name = "nurbs-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 
@@ -614,6 +607,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "osv-math"
+version = "0.1.0"
+dependencies = [
+ "rbench",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -641,7 +641,7 @@ name = "photogrammetry-core"
 version = "0.1.0"
 dependencies = [
  "gpu-compute",
- "math-core",
+ "osv-math",
 ]
 
 [[package]]
@@ -669,7 +669,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 name = "planar-geometry"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
 ]
 
 [[package]]
@@ -678,7 +678,7 @@ version = "0.1.0"
 dependencies = [
  "brep-topology",
  "geometry-ops",
- "math-core",
+ "osv-math",
  "planar-geometry",
  "value-codec",
 ]
@@ -795,7 +795,7 @@ version = "0.1.0"
 dependencies = [
  "geometry-ops",
  "gpu-compute",
- "math-core",
+ "osv-math",
  "planar-geometry",
  "value-codec",
 ]
@@ -858,7 +858,7 @@ dependencies = [
 name = "sketch-core"
 version = "0.1.0"
 dependencies = [
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 
@@ -873,7 +873,7 @@ name = "slicer-core"
 version = "0.1.0"
 dependencies = [
  "gcode-core",
- "math-core",
+ "osv-math",
  "planar-geometry",
  "polygon-core",
 ]
@@ -904,7 +904,7 @@ name = "subdivision-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "math-core",
+ "osv-math",
  "value-codec",
 ]
 

@@ -599,9 +599,13 @@ impl BezierPath {
         Ok(path)
     }
 
-    /// Offset a closed path via planar CAD (result is a Bézier polyline path).
+    /// Offset a closed path via stroke-ring + boolean (kurbo/curvex parity).
     /// Open paths get a parallel curve of the flattened polyline.
+    ///
+    /// `segments` is accepted for API compatibility with the older polyline
+    /// offset; the stroke-ring path uses flatten tolerance instead.
     pub fn offset(&self, distance: f64, join: &str, segments: usize) -> Result<Vec<Self>> {
+        let _ = segments;
         check(
             distance.is_finite() && distance.abs() <= 1e6,
             "Invalid offset",
@@ -610,15 +614,27 @@ impl BezierPath {
             return Ok(vec![self.clone()]);
         }
         if self.closed {
-            let ring = self.to_ring(FLATTEN_TOLERANCE)?;
-            let out = crate::rings::offset_join(&vec![ring], distance, join, segments)?;
-            check(!out.is_empty(), "Offset collapsed the path")?;
-            return out
-                .into_iter()
-                .map(|r| Self::from_polyline(&r, true))
-                .collect();
+            return crate::path_offset::offset_closed_path(
+                self,
+                &[],
+                &crate::path_offset::OffsetOptions {
+                    distance,
+                    join: crate::path_offset::parse_join(join),
+                    segments: segments.max(1),
+                    ..Default::default()
+                },
+            );
         }
         Ok(vec![offset_open_polyline(self, distance)?])
+    }
+
+    /// Closed multi-contour offset (outer + holes) with full [`path_offset`] options.
+    pub fn offset_region(
+        &self,
+        holes: &[Self],
+        opts: &crate::path_offset::OffsetOptions,
+    ) -> Result<Vec<Self>> {
+        crate::path_offset::offset_closed_path(self, holes, opts)
     }
 
     /// Rebuild cubics through the current anchors with uniform Catmull–Rom.
@@ -941,7 +957,7 @@ fn flatten_cubic(
     Ok(())
 }
 
-fn segment_from(start: [f64; 2], segments: &[PathSegment], idx: usize) -> [f64; 2] {
+pub(crate) fn segment_from(start: [f64; 2], segments: &[PathSegment], idx: usize) -> [f64; 2] {
     let mut from = start;
     for seg in &segments[..idx] {
         from = seg.end();

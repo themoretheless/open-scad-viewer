@@ -1,13 +1,4 @@
 //! Small dense linear algebra shared by the geometry and photogrammetry cores. No external runtime.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 pub type V2 = [f64; 2];
 pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
