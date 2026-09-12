@@ -8,6 +8,10 @@ edition = "2024"
 rust-version = "1.98"
 publish = false
 
+[workspace.dependencies]
+# Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
+rbench = { git = "https://github.com/themoretheless/rbench", branch = "release" }
+
 [profile.release]
 opt-level = "s"
 lto = true
