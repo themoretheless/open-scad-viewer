@@ -19,16 +19,20 @@ Do not import pre-freeze greens. Do not flip `qualificationApproval` while only 
 ## Current local posture (2026-09-12)
 
 - Frozen plan artifact/bundle digests still match the tree (validator green).
-- macOS `macos-node20` MCP rows executed as **discovery-only** (Node 20.19.0 archive verified; npm pinned 10.9.8; full OS-job wipe / sanitized allowlist not claimed).
-- Ubuntu fragments via Colima qemu use `node:*-bookworm` linux/amd64 — also **discovery-only** until frozen Ubuntu 24.04 image digests and wipe protocol are proven.
-- Early Ubuntu attempts failed (apt/dpkg under qemu; cargo missing on pretest). Later discovery retries passed for some rows. **Retries inside the same candidate-run id are forbidden for clean-post-freeze** — a future clean run must use a fresh candidateRunId / plan amendment and never reuse these discovery fragments.
-- Browser Chromium/WebKit actual+memory rows still unexecuted (linux supervisor + Playwright trees).
-- `completedWorkUnits` for clean-post-freeze remains **0** while only discovery-only fragments exist.
+- Harness + discovery trail committed (`d31a269` and follow-ons).
+- macOS `macos-node20` MCP rows: all required discovery fragments passed (supervisor ×5, stdio ×10).
+- Ubuntu via Colima qemu `node:*-bookworm` linux/amd64: **discovery-only**.
+  - Fixed-runner batch run-1 finished: `oracle-differential` + `comparator-mutations` passed on node20/22; failed run-1: `semantic-special-terminals`, `node-worker-identifiers`, `dependency-and-cutover-audit`, `mcp-supervisor-hard-kill`, `mcp-stdio-store-isolation` (qemu timeouts / pin drift / missing browser Worker surface).
+  - Parallel ubuntu queue may still append more discovery fragments.
+- **Retries inside the same candidate-run id are forbidden for clean-post-freeze.** Discovery retries already happened after infra failures → a future clean run needs a fresh `candidateRunId` / plan amendment.
+- Browser Chromium/WebKit actual+memory and Windows rows not closed.
+- `completedWorkUnits` for clean-post-freeze remains **0**.
 
 ## Closing G0.14
 
 1. Fresh OS jobs per clean run on ubuntu-24.04 / macos-15 / windows-2025 as listed.
 2. Exact Node archive digests + npm 10.9.8 + sanitized env allowlist.
-3. Wipe caches / `npm ci` per protocol; no result reuse; no retries.
-4. Publish append-only `result.json` with `classification: clean-post-freeze` for all 4740 units.
-5. Then solo dual-role may flip `qualificationApproval` (org-independent seat remains recorded-nonapproval).
+3. Wipe caches / `npm ci` per protocol; build geometry kernels **inside** the target OS; no result reuse; no retries.
+4. Prefer native Ubuntu runners (GH `workflow_dispatch`) over Colima qemu for timeout-sensitive rows.
+5. Publish append-only `result.json` with `classification: clean-post-freeze` for all 4740 units.
+6. Then solo dual-role may flip `qualificationApproval` (org-independent seat remains recorded-nonapproval).
