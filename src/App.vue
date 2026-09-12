@@ -397,6 +397,13 @@ function meshToSolid(doc: MeshWorkspaceDocument) {
   meshModelerOpen.value = false
   directModelerOpen.value = true
 }
+
+function continueMainEditInSolid(document: DirectDocument) {
+  solidSeedDocument.value = document
+  storageSet('scad-solid-modeler-v1', JSON.stringify(document))
+  meshModelerOpen.value = false
+  directModelerOpen.value = true
+}
 const sourceHistoryKey=()=> 'scad-source-history-v1:'+fileName.value
 const restoredMainHistory=restoreSourceHistory(storageGet(sourceHistoryKey()),code.value)
 const mainEditPast = ref(restoredMainHistory.past)
@@ -2538,7 +2545,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       ><span /></div>
 
       <section class="canvas-panel" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
-        <MainModelingTools :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
+        <MainModelingTools :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @solid="continueMainEditInSolid" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
         <div class="viewer-toolbar">
           <button class="view-btn" type="button" :title="t('fit')" @click="fitView">⌗ <span>{{ t('fit') }}</span></button>
           <button class="view-btn icon-only" type="button" :title="t('reset')" @click="resetView">↺</button>

@@ -14,13 +14,13 @@ import MainSketchTools from './MainSketchTools.vue'
 import {facePlane} from '../services/directSolidTools'
 import {booleanPolygonMeshes} from '../services/geometry/polygon'
 import {xyPlane,type SketchPlane} from '../services/directSketchGeometry'
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody,DirectDocument} from '../services/directModeling'
 import type {Ray3} from '../services/math3d'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../services/rendererContracts'
 import {previewMeshes,primitiveSource,sceneFace,sceneBody,type MainOperation,type MainParameters} from '../services/mainModeling'
 const props=defineProps<{meshes:MeshData[];selected:number|null;hit:PickHit|null;source:string;ready:boolean;locale:string;canUndo:boolean;canRedo:boolean;selectedIndices:number[];project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;cameraRevision:number}>()
-const emit=defineEmits<{append:[source:string];apply:[source:string];preview:[meshes:MeshData[]|null];undo:[];redo:[];selectMany:[indices:number[]]}>()
+const emit=defineEmits<{append:[source:string];apply:[source:string];solid:[document:DirectDocument];preview:[meshes:MeshData[]|null];undo:[];redo:[];selectMany:[indices:number[]]}>()
 const ru=computed(()=>props.locale==='ru'),l=(a:string,b:string)=>ru.value?a:b
 const sketchAnchor=ref<{entity:string;face:number}|null>(null)
 const snapPoints=computed(()=>sceneSnapPoints(props.meshes))
@@ -70,6 +70,7 @@ async function result(){
 }
 function preview(){run(async()=>{const d=await result();emit('preview',previewMeshes(d));previewing.value=true})}
 function apply(){run(async()=>{const source=patchMainSource(props.source,props.meshes,await result());emit('preview',null);emit('apply',source);op.value=null;previewing.value=false})}
+function continueInSolid(){run(async()=>{const document=await result();emit('preview',null);emit('solid',document);op.value=null;previewing.value=false})}
 
 watch(()=>props.meshes,()=>{
  for(const key of storageKeys('scad-main-sketches-v1:')){try{const anchor=JSON.parse(key.slice('scad-main-sketches-v1:'.length));if(!anchor.entity||!Number.isInteger(anchor.face))continue;const plane=resolveSketchSupport(props.meshes,anchor),d=parseDirectDocument(storageGet(key)??'');d.sketches=d.sketches.map(s=>({...s,plane}));storageSet(key,JSON.stringify(d))}catch{/* Missing supports remain stored for explicit reattachment. */}}
@@ -93,16 +94,16 @@ function applySketch(body:DirectBody,cut:boolean){run(()=>{if(!props.ready)throw
    <template v-if="op==='split'"><label v-for="(axis,i) in ['Nx','Ny','Nz']" :key="axis">{{ axis }} <input type="number" step="0.1" :value="(p.normal??[0,0,1])[i]" @input="p.normal=[...(p.normal??[0,0,1])] as [number,number,number];p.normal[i]=Number(($event.target as HTMLInputElement).value)"></label></template>
    <label v-if="['fillet','chamfer'].includes(op)">{{ l('Ребро','Edge') }} <select v-model.number="p.edge"><option v-for="(_e,i) in topology?.topology.edges" :key="i" :value="i">{{ edgeLabel(i) }}</option></select></label>
    <template v-if="op==='profile'"><select v-model="p.shape"><option value="rectangle">{{ l('Прямоугольник','Rectangle') }}</option><option value="circle">{{ l('Круг','Circle') }}</option></select><label>{{ l('Ширина / диаметр','Width / diameter') }} <input v-model.number="p.width" type="number" min="0.1"></label><label v-if="p.shape==='rectangle'">{{ l('Высота','Height') }} <input v-model.number="p.height" type="number" min="0.1"></label><label><input v-model="p.cut" type="checkbox">{{ l('Вырезать','Cut') }}</label></template>
-   <button @click="preview">{{ l('Предпросмотр','Preview') }}</button><button :disabled="working" @click="apply">{{ l('Применить','Apply') }}</button><button @click="cancel">{{ l('Отмена','Cancel') }}</button>
+   <button @click="preview">{{ l('Предпросмотр','Preview') }}</button><button class="primary" :disabled="working" @click="continueInSolid">{{ l('Продолжить в Solid','Continue in Solid') }}</button><button :disabled="working" @click="apply">{{ l('Bake mesh в Code','Bake mesh to Code') }}</button><button @click="cancel">{{ l('Отмена','Cancel') }}</button>
    <label v-if="op==='fillet'">{{ l('Конечный радиус','End radius') }} <input v-model.number="p.endRadius" type="number" min="0.01" :placeholder="String(p.amount)"></label><small v-if="op==='fillet'||op==='chamfer'">Shift + {{ l('клик — цепочка рёбер','click — edge chain') }}</small>
    <label v-if="op==='move'"><input type="checkbox" :checked="p.snap!==false" @change="p.snap=($event.target as HTMLInputElement).checked">Snap 3D · Alt {{ l('временно отключает','temporarily disables') }}</label><label v-if="op==='shell'">{{ l('Шаг сетки, мм (0 — авто)','Grid step, mm (0 — auto)') }} <input v-model.number="p.step" type="number" min="0" step="0.1"></label>
    <label v-if="op==='shell'"><input v-model="p.adaptive" type="checkbox">{{ l('Адаптивные блоки (до 256 ячеек/ось)','Adaptive tiles (up to 256 cells/axis)') }}</label><small v-if="op==='shell'||op==='fillet'||op==='chamfer'">{{ l('Сеточная аппроксимация. Для общего Shell шаг ≤ толщины/3; 64 ячейки/ось, адаптивный режим — 256.','Mesh approximation. General Shell: step ≤ thickness/3; 64 cells/axis, adaptive mode — 256.') }}</small>
    <span v-if="working" role="status">{{ l('Расчёт геометрии… Можно отменить.','Computing geometry… Cancel is available.') }}</span>
-   <small>{{ l('Изменяются только связанные выражения; остальной код сохраняется. ↶ — отмена.','Only owning expressions are updated; other source is preserved. ↶ undoes the edit.') }}</small>
+   <small>{{ l('Solid сохраняет документ редактируемым. Bake mesh в Code явно заменяет связанные выражения полигональной геометрией; остальной код сохраняется.','Solid keeps the document editable. Bake mesh to Code explicitly replaces owning expressions with polygon geometry; other source is preserved.') }}</small>
   </div>
   <p v-if="error" role="alert">{{ error }}</p>
  </div>
 </template>
 <style scoped>
-.main-model-tools{position:absolute;left:8px;right:8px;bottom:35px;z-index:5;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;max-height:40%;overflow:auto;font-size:12px}.primitives,.operations,.parameters{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.operations,.parameters{margin-top:6px}button,input,select{font:inherit;color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:4px;padding:5px}button{cursor:pointer}button:disabled{opacity:.4}button[aria-pressed=true]{border-color:var(--accent)}input[type=number]{width:64px}label{display:flex;align-items:center;gap:3px}small{width:100%;color:var(--text-dim)}p{color:var(--danger);margin:6px 0}
+.main-model-tools{position:absolute;left:8px;right:8px;bottom:35px;z-index:5;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;max-height:40%;overflow:auto;font-size:12px}.primitives,.operations,.parameters{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.operations,.parameters{margin-top:6px}button,input,select{font:inherit;color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:4px;padding:5px}button{cursor:pointer}button:disabled{opacity:.4}button[aria-pressed=true]{border-color:var(--accent)}button.primary{background:var(--accent);color:var(--bg);font-weight:600}input[type=number]{width:64px}label{display:flex;align-items:center;gap:3px}small{width:100%;color:var(--text-dim)}p{color:var(--danger);margin:6px 0}
 </style>
