@@ -6,10 +6,14 @@ agreement; it does not claim general solid-geometric certification.
 
 ## Solid operations
 
-- `extrude_polygon(profile, z_min, z_max)` constructs an exact planar B-rep
-  from a strictly convex counter-clockwise XY profile. Solid mode exposes this
-  path as the authored B-rep Wedge primitive. Concave, collinear, and invalid
-  profiles fail closed.
+- `extrude_polygon(profile, z_min, z_max)` and
+  `extrude_polygon_with_holes(outer, holes, z_min, z_max)` construct exact
+  planar B-reps from simple counter-clockwise XY outlines. Concave outlines
+  are supported without holes. Hole rings on a strictly convex outer profile
+  are clockwise and become true inner loops on the two cap faces, with shared
+  side-wall edges; combining holes with a concave outer profile, or supplying
+  invalid/intersecting trims, fails closed. Solid mode exposes the no-hole path
+  as the authored B-rep Wedge primitive.
 - `faceted_cylinder` and `faceted_sphere` construct manifold planar-faced
   B-reps. They are explicitly labeled as faceted approximations in Solid mode;
   they do not claim analytic cylindrical or spherical NURBS surfaces.
@@ -54,9 +58,12 @@ Every NURBS B-rep serializes `topologyIds` for vertices, edges, loops, faces,
 shells, and bodies. IDs are independent of compact array order. Constructors
 derive deterministic IDs; transforms preserve them; booleans and edge
 operations inherit IDs for geometrically unchanged vertices/edges/faces and
-assign deterministic IDs to generated or split entities. This is deliberately
-conservative lineage: a split face receives new IDs, and ambiguous geometric
-matches are not claimed as preservation. Tessellation publishes
+assign deterministic IDs to generated or split entities. Serialized
+`topologyIds.lineage` records explicit `persist`, one-to-many `split`, and
+many-to-one `merge` parent/child relations for geometric Boolean entities.
+Blend records also relate each selected authored edge to its generated
+parallel replacement rails. A split remains intentionally ambiguous rather
+than selecting one child by proximity. Tessellation publishes
 `topologyFaceIds` alongside compact numeric `faceIds`, so display LOD does not
 change authored face identity.
 

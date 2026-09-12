@@ -163,34 +163,58 @@ fn point_on_segment(point: [f64; 3], a: [f64; 3], b: [f64; 3], tolerance: f64) -
 
 /// Split polygon edges at every collinear result vertex. Face clipping creates
 /// T-junctions unless neighboring polygons agree on these authored edge spans.
-fn normalize_polygon_edges(polygons: &mut [Vec<[f64; 3]>], tolerance: f64) {
-    let points: Vec<_> = polygons.iter().flatten().copied().collect();
-    for polygon in polygons {
-        let mut normalized = vec![];
-        for i in 0..polygon.len() {
-            let a = polygon[i];
-            let b = polygon[(i + 1) % polygon.len()];
-            normalized.push(a);
-            let mut splits: Vec<_> = points
-                .iter()
-                .copied()
-                .filter_map(|point| {
-                    point_on_segment(point, a, b, tolerance * 4.).map(|t| (t, point))
-                })
-                .collect();
-            splits.sort_by(|left, right| left.0.total_cmp(&right.0));
-            for (_, point) in splits {
-                if !close(*normalized.last().unwrap(), point, tolerance * 4.) {
-                    normalized.push(point);
-                }
+fn normalize_ring_edges(polygon: &mut Vec<[f64; 3]>, points: &[[f64; 3]], tolerance: f64) {
+    let mut normalized = vec![];
+    for i in 0..polygon.len() {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % polygon.len()];
+        normalized.push(a);
+        let mut splits: Vec<_> = points
+            .iter()
+            .copied()
+            .filter_map(|point| point_on_segment(point, a, b, tolerance * 4.).map(|t| (t, point)))
+            .collect();
+        splits.sort_by(|left, right| left.0.total_cmp(&right.0));
+        for (_, point) in splits {
+            if !close(*normalized.last().unwrap(), point, tolerance * 4.) {
+                normalized.push(point);
             }
         }
-        *polygon = normalized;
     }
+    *polygon = normalized;
 }
 
-fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<Model> {
-    normalize_polygon_edges(&mut polygons, tolerance);
+struct PlanarBoundary {
+    outer: Vec<[f64; 3]>,
+    holes: Vec<Vec<[f64; 3]>>,
+}
+
+fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<Model> {
+    model_from_trimmed_polygons(
+        polygons
+            .into_iter()
+            .map(|outer| PlanarBoundary {
+                outer,
+                holes: vec![],
+            })
+            .collect(),
+        tolerance,
+    )
+}
+
+fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64) -> Result<Model> {
+    let points: Vec<_> = polygons
+        .iter()
+        .flat_map(|face| std::iter::once(&face.outer).chain(&face.holes))
+        .flatten()
+        .copied()
+        .collect();
+    for face in &mut polygons {
+        normalize_ring_edges(&mut face.outer, &points, tolerance);
+        for hole in &mut face.holes {
+            normalize_ring_edges(hole, &points, tolerance);
+        }
+    }
     if polygons.len() > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
@@ -210,22 +234,10 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
         TopologyIds::default(),
     );
     let mut edge_map = BTreeMap::<(usize, usize), usize>::new();
-    for polygon in polygons {
-        if polygon.len() < 3 {
+    for boundary in polygons {
+        let polygon = boundary.outer;
+        if polygon.len() < 3 || boundary.holes.iter().any(|hole| hole.len() < 3) {
             return Err(failed("Operation produced a degenerate face"));
-        }
-        let mut ids = Vec::with_capacity(polygon.len());
-        for point in &polygon {
-            let id = model
-                .vertices
-                .iter()
-                .position(|v| close(v.point, *point, tolerance * 4.))
-                .unwrap_or_else(|| {
-                    let id = model.vertices.len();
-                    model.vertices.push(Vertex { point: *point });
-                    id
-                });
-            ids.push(id);
         }
         let normal = unit(cross(
             sub(polygon[1], polygon[0]),
@@ -233,7 +245,12 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
         ))?;
         let (u, v) = plane_basis(normal)?;
         let origin = polygon[0];
-        let coordinates: Vec<_> = polygon
+        let all_points: Vec<_> = polygon
+            .iter()
+            .chain(boundary.holes.iter().flatten())
+            .copied()
+            .collect();
+        let coordinates: Vec<_> = all_points
             .iter()
             .map(|&p| {
                 let d = sub(p, origin);
@@ -262,38 +279,52 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
         let surface_origin = add(origin, add(mul(u, min_u), mul(v, min_v)));
         let du = mul(u, max_u - min_u);
         let dv = mul(v, max_v - min_v);
-        let uv: Vec<_> = coordinates
-            .iter()
-            .map(|p| {
-                [
-                    (p[0] - min_u) / (max_u - min_u),
-                    (p[1] - min_v) / (max_v - min_v),
-                ]
-            })
-            .collect();
-        let mut coedges = Vec::with_capacity(ids.len());
-        for i in 0..ids.len() {
-            let a = ids[i];
-            let b = ids[(i + 1) % ids.len()];
-            let key = (a.min(b), a.max(b));
-            let edge = *edge_map.entry(key).or_insert_with(|| {
-                let id = model.edges.len();
-                let start = model.vertices[key.0].point.to_vec();
-                let end = model.vertices[key.1].point.to_vec();
-                model.edges.push(Edge {
-                    vertices: [key.0, key.1],
-                    curve: line(start, end),
+        let mut loop_ids = vec![];
+        for ring in std::iter::once(&polygon).chain(&boundary.holes) {
+            let mut ids = Vec::with_capacity(ring.len());
+            let mut uv = Vec::with_capacity(ring.len());
+            for point in ring {
+                let id = model
+                    .vertices
+                    .iter()
+                    .position(|v| close(v.point, *point, tolerance * 4.))
+                    .unwrap_or_else(|| {
+                        let id = model.vertices.len();
+                        model.vertices.push(Vertex { point: *point });
+                        id
+                    });
+                ids.push(id);
+                let d = sub(*point, origin);
+                uv.push([
+                    (dot(d, u) - min_u) / (max_u - min_u),
+                    (dot(d, v) - min_v) / (max_v - min_v),
+                ]);
+            }
+            let mut coedges = Vec::with_capacity(ids.len());
+            for i in 0..ids.len() {
+                let a = ids[i];
+                let b = ids[(i + 1) % ids.len()];
+                let key = (a.min(b), a.max(b));
+                let edge = *edge_map.entry(key).or_insert_with(|| {
+                    let id = model.edges.len();
+                    let start = model.vertices[key.0].point.to_vec();
+                    let end = model.vertices[key.1].point.to_vec();
+                    model.edges.push(Edge {
+                        vertices: [key.0, key.1],
+                        curve: line(start, end),
+                    });
+                    id
                 });
-                id
-            });
-            coedges.push(Coedge {
-                edge,
-                reversed: a > b,
-                pcurve: line(uv[i].to_vec(), uv[(i + 1) % ids.len()].to_vec()),
-            });
+                coedges.push(Coedge {
+                    edge,
+                    reversed: a > b,
+                    pcurve: line(uv[i].to_vec(), uv[(i + 1) % ids.len()].to_vec()),
+                });
+            }
+            loop_ids.push(model.loops.len());
+            model.loops.push(Loop { coedges });
         }
-        let outer = model.loops.len();
-        model.loops.push(Loop { coedges });
+        let outer = loop_ids[0];
         model.faces.push(Face {
             surface: Surface {
                 degree_u: 1,
@@ -312,7 +343,7 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
                 periodic_v: false,
             },
             outer,
-            holes: vec![],
+            holes: loop_ids[1..].to_vec(),
         });
     }
     // Each edge-connected boundary component is an independent solid body.
@@ -320,8 +351,10 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
     // contract and made useful results such as a split difference fail closed.
     let mut edge_faces = vec![Vec::<usize>::new(); model.edges.len()];
     for (face_id, face) in model.faces.iter().enumerate() {
-        for coedge in &model.loops[face.outer].coedges {
-            edge_faces[coedge.edge].push(face_id);
+        for &loop_id in std::iter::once(&face.outer).chain(&face.holes) {
+            for coedge in &model.loops[loop_id].coedges {
+                edge_faces[coedge.edge].push(face_id);
+            }
         }
     }
     let mut adjacency = vec![Vec::<usize>::new(); model.faces.len()];
@@ -345,7 +378,10 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
         }
         let signed_volume = component
             .iter()
-            .map(|&face| loop_vertices(&model, model.faces[face].outer))
+            .flat_map(|&face| {
+                std::iter::once(&model.faces[face].outer).chain(&model.faces[face].holes)
+            })
+            .map(|&loop_id| loop_vertices(&model, loop_id))
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .map(|vertices| {
@@ -428,14 +464,144 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
     Ok(model)
 }
 
-/// Extrude a simple convex CCW XY profile into an exact planar NURBS B-rep.
-///
-/// This intentionally rejects concave and collinear profiles: the current
-/// direct face tessellator uses a fan, so accepting those profiles would
-/// publish invalid display geometry despite valid-looking topology.
 pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<Model> {
-    if profile.len() < 3 || profile.len() > 128 {
-        return Err(unsupported("Extrusion profile must have 3..128 vertices"));
+    extrude_polygon_with_holes(profile, &[], z_min, z_max)
+}
+
+fn ring_area(ring: &[[f64; 2]]) -> f64 {
+    (0..ring.len())
+        .map(|i| {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            a[0] * b[1] - b[0] * a[1]
+        })
+        .sum::<f64>()
+        / 2.
+}
+
+fn planar_segments_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
+    let orient = |p: [f64; 2], q: [f64; 2], r: [f64; 2]| {
+        (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+    };
+    let boxes_overlap = a[0].min(b[0]) <= c[0].max(d[0]) + 1e-7
+        && c[0].min(d[0]) <= a[0].max(b[0]) + 1e-7
+        && a[1].min(b[1]) <= c[1].max(d[1]) + 1e-7
+        && c[1].min(d[1]) <= a[1].max(b[1]) + 1e-7;
+    boxes_overlap
+        && orient(a, b, c) * orient(a, b, d) <= 1e-14
+        && orient(c, d, a) * orient(c, d, b) <= 1e-14
+}
+
+fn point_in_ring(point: [f64; 2], ring: &[[f64; 2]]) -> bool {
+    let mut inside = false;
+    for i in 0..ring.len() {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        if (a[1] > point[1]) != (b[1] > point[1])
+            && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]
+        {
+            inside = !inside;
+        }
+    }
+    inside
+}
+
+fn rings_intersect(a: &[[f64; 2]], b: &[[f64; 2]]) -> bool {
+    (0..a.len()).any(|i| {
+        (0..b.len()).any(|j| {
+            planar_segments_intersect(a[i], a[(i + 1) % a.len()], b[j], b[(j + 1) % b.len()])
+        })
+    })
+}
+
+fn validate_extrusion_ring(ring: &[[f64; 2]], ccw: bool, name: &str) -> Result<()> {
+    if ring.len() < 3 || ring.len() > 128 {
+        return Err(unsupported(format!("{name} must have 3..128 vertices")));
+    }
+    if ring
+        .iter()
+        .flatten()
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Extrusion coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let area = ring_area(ring);
+    if area.abs() <= 1e-12 || area.is_sign_positive() != ccw {
+        return Err(unsupported(format!(
+            "{name} must be {}",
+            if ccw {
+                "counter-clockwise"
+            } else {
+                "clockwise"
+            }
+        )));
+    }
+    for i in 0..ring.len() {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        if (a[0] - b[0]).hypot(a[1] - b[1]) <= 1e-7 {
+            return Err(unsupported(format!(
+                "{name} has duplicate consecutive vertices"
+            )));
+        }
+        for j in i + 1..ring.len() {
+            if j == i || j == (i + 1) % ring.len() || i == (j + 1) % ring.len() {
+                continue;
+            }
+            let c = ring[j];
+            let d = ring[(j + 1) % ring.len()];
+            if planar_segments_intersect(a, b, c, d) {
+                return Err(unsupported(format!("{name} must be simple")));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Extrude a simple, possibly concave planar profile with optional clockwise
+/// holes into a manifold B-rep with two genuinely trimmed cap faces.
+pub fn extrude_polygon_with_holes(
+    profile: &[[f64; 2]],
+    holes: &[Vec<[f64; 2]>],
+    z_min: f64,
+    z_max: f64,
+) -> Result<Model> {
+    validate_extrusion_ring(profile, true, "Extrusion outer profile")?;
+    if holes.len() > 16 || profile.len() + holes.iter().map(Vec::len).sum::<usize>() > 512 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Extrusion supports at most 16 holes and 512 boundary vertices",
+        ));
+    }
+    if !holes.is_empty()
+        && (0..profile.len()).any(|index| {
+            let a = profile[index];
+            let b = profile[(index + 1) % profile.len()];
+            let c = profile[(index + 2) % profile.len()];
+            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <= 1e-12
+        })
+    {
+        return Err(unsupported(
+            "Extrusion holes currently require a strictly convex outer profile",
+        ));
+    }
+    for (index, hole) in holes.iter().enumerate() {
+        validate_extrusion_ring(hole, false, "Extrusion hole")?;
+        if !point_in_ring(hole[0], profile)
+            || rings_intersect(profile, hole)
+            || holes[..index].iter().any(|other| {
+                rings_intersect(other, hole)
+                    || point_in_ring(hole[0], other)
+                    || point_in_ring(other[0], hole)
+            })
+        {
+            return Err(unsupported(
+                "Extrusion holes must be disjoint and strictly inside the outer profile",
+            ));
+        }
     }
     if !z_min.is_finite() || !z_max.is_finite() || z_max <= z_min {
         return Err(Error::new(
@@ -443,55 +609,49 @@ pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<M
             "Extrusion requires finite zMax greater than zMin",
         ));
     }
-    if profile
-        .iter()
-        .flatten()
-        .any(|value| !value.is_finite() || value.abs() > 1e6)
-        || z_min.abs() > 1e6
-        || z_max.abs() > 1e6
-    {
+    if z_min.abs() > 1e6 || z_max.abs() > 1e6 {
         return Err(Error::new(
             "BREP_INVALID_SIZE",
             "Extrusion coordinates must be finite and within 1000000 mm",
         ));
     }
     let tolerance = 1e-7;
-    if (0..profile.len()).any(|i| {
-        let a = profile[i];
-        let b = profile[(i + 1) % profile.len()];
-        (a[0] - b[0]).hypot(a[1] - b[1]) <= tolerance
-    }) {
-        return Err(unsupported(
-            "Extrusion profile has duplicate consecutive vertices",
-        ));
-    }
-    let turns: Vec<_> = (0..profile.len())
-        .map(|i| {
-            let a = profile[i];
-            let b = profile[(i + 1) % profile.len()];
-            let c = profile[(i + 2) % profile.len()];
-            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
-        })
-        .collect();
-    if turns.iter().any(|turn| *turn <= tolerance) {
-        return Err(unsupported(
-            "Extrusion currently requires a strictly convex CCW profile",
-        ));
-    }
     let lower: Vec<_> = profile.iter().rev().map(|p| [p[0], p[1], z_min]).collect();
     let upper: Vec<_> = profile.iter().map(|p| [p[0], p[1], z_max]).collect();
-    let mut polygons = vec![lower, upper];
-    for i in 0..profile.len() {
-        let a = profile[i];
-        let b = profile[(i + 1) % profile.len()];
-        polygons.push(vec![
-            [a[0], a[1], z_min],
-            [b[0], b[1], z_min],
-            [b[0], b[1], z_max],
-            [a[0], a[1], z_max],
-        ]);
+    let lower_holes: Vec<_> = holes
+        .iter()
+        .map(|hole| hole.iter().rev().map(|p| [p[0], p[1], z_min]).collect())
+        .collect();
+    let upper_holes: Vec<_> = holes
+        .iter()
+        .map(|hole| hole.iter().map(|p| [p[0], p[1], z_max]).collect())
+        .collect();
+    let mut polygons = vec![
+        PlanarBoundary {
+            outer: lower,
+            holes: lower_holes,
+        },
+        PlanarBoundary {
+            outer: upper,
+            holes: upper_holes,
+        },
+    ];
+    for ring in std::iter::once(profile).chain(holes.iter().map(Vec::as_slice)) {
+        for i in 0..ring.len() {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            polygons.push(PlanarBoundary {
+                outer: vec![
+                    [a[0], a[1], z_min],
+                    [b[0], b[1], z_min],
+                    [b[0], b[1], z_max],
+                    [a[0], a[1], z_max],
+                ],
+                holes: vec![],
+            });
+        }
     }
-    model_from_polygons(polygons, tolerance)
+    model_from_trimmed_polygons(polygons, tolerance)
 }
 
 fn validate_convex_profile(profile: &[[f64; 2]], name: &str) -> Result<()> {
@@ -1208,19 +1368,23 @@ fn contains_faces(model: &Model, faces: &[usize], point: [f64; 3]) -> Result<boo
     let direction = unit([1., 0.371_390_7, 0.217_113_9])?;
     let mut hits = vec![];
     for &face in faces {
-        let ids = loop_vertices(model, model.faces[face].outer)?;
-        for i in 1..ids.len() - 1 {
-            if let Some(t) = ray_triangle(
-                point,
-                direction,
-                model.vertices[ids[0]].point,
-                model.vertices[ids[i]].point,
-                model.vertices[ids[i + 1]].point,
-            ) {
-                if !hits.iter().any(|x: &f64| (*x - t).abs() <= 1e-7) {
-                    hits.push(t);
+        for &loop_id in std::iter::once(&model.faces[face].outer).chain(&model.faces[face].holes) {
+            let ids = loop_vertices(model, loop_id)?;
+            let mut loop_hits = vec![];
+            for i in 1..ids.len() - 1 {
+                if let Some(t) = ray_triangle(
+                    point,
+                    direction,
+                    model.vertices[ids[0]].point,
+                    model.vertices[ids[i]].point,
+                    model.vertices[ids[i + 1]].point,
+                ) {
+                    if !loop_hits.iter().any(|x: &f64| (*x - t).abs() <= 1e-7) {
+                        loop_hits.push(t);
+                    }
                 }
             }
+            hits.extend(loop_hits);
         }
     }
     Ok(hits.len() % 2 == 1)
@@ -1524,6 +1688,38 @@ fn edge_operation(
         }
     }
     result.inherit_topology_ids(&[model]);
+    for &edge_id in edge_ids {
+        let original = &model.edges[edge_id];
+        let [a, b] = original.vertices.map(|vertex| model.vertices[vertex].point);
+        let direction = unit(sub(b, a))?;
+        let children: Vec<_> = result
+            .edges
+            .iter()
+            .enumerate()
+            .filter(|(index, edge)| {
+                result.1.edges[*index] != model.1.edges[edge_id] && {
+                    let [c, d] = edge.vertices.map(|vertex| result.vertices[vertex].point);
+                    unit(sub(d, c))
+                        .map(|candidate| dot(direction, candidate).abs() > 1. - 1e-8)
+                        .unwrap_or(false)
+                }
+            })
+            .map(|(index, _)| result.1.edges[index].clone())
+            .collect();
+        if !children.is_empty() {
+            result.1.lineage.push(TopologyLineageRecord {
+                operation: if children.len() > 1 {
+                    "split"
+                } else {
+                    "persist"
+                }
+                .into(),
+                entity_kind: "edge".into(),
+                parents: vec![model.1.edges[edge_id].clone()],
+                children,
+            });
+        }
+    }
     Ok(result)
 }
 
@@ -1683,6 +1879,76 @@ mod tests {
         assert_eq!(restored.1.vertices, result.1.vertices);
         assert_eq!(restored.1.edges, result.1.edges);
         assert_eq!(restored.1.faces, result.1.faces);
+        let split = boolean(
+            &stock,
+            &cuboid([1., -1., -1.], [2., 3., 3.]).unwrap(),
+            "difference",
+        )
+        .unwrap();
+        assert!(split.1.lineage.iter().any(|record| {
+            record.operation == "split"
+                && matches!(record.entity_kind.as_str(), "edge" | "face")
+                && record.children.len() > 1
+        }));
+        let merged = boolean(
+            &cuboid([0., 0., 0.], [2., 2., 2.]).unwrap(),
+            &cuboid([1., 0., 0.], [3., 2., 2.]).unwrap(),
+            "union",
+        )
+        .unwrap();
+        assert!(merged.1.lineage.iter().any(|record| {
+            record.operation == "merge"
+                && matches!(record.entity_kind.as_str(), "edge" | "face")
+                && record.parents.len() > 1
+        }));
+        assert_eq!(restored.1.lineage, result.1.lineage);
+    }
+
+    #[test]
+    fn concave_and_holed_extrusions_use_planar_face_loops() {
+        let concave = extrude_polygon(
+            &[[0., 0.], [5., 0.], [5., 2.], [3., 2.], [3., 5.], [0., 5.]],
+            0.,
+            2.,
+        )
+        .unwrap();
+        assert_eq!(concave.validate().unwrap().boundary_edge_count, 0);
+        let result = extrude_polygon_with_holes(
+            &[[0., 0.], [5., 0.], [5., 5.], [0., 5.]],
+            &[vec![[1., 1.], [1., 2.], [2., 2.], [2., 1.]]],
+            0.,
+            2.,
+        )
+        .unwrap();
+        assert_eq!(
+            result
+                .faces
+                .iter()
+                .filter(|face| !face.holes.is_empty())
+                .count(),
+            2
+        );
+        assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+        assert!(
+            extrude_polygon_with_holes(
+                &[[0., 0.], [5., 0.], [5., 2.], [3., 2.], [3., 5.], [0., 5.]],
+                &[vec![[1., 1.], [1., 2.], [2., 2.], [2., 1.]]],
+                0.,
+                2.,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn blend_records_selected_edge_replacement_lineage() {
+        let source = cuboid([0.; 3], [4.; 3]).unwrap();
+        let result = fillet(&source, 0, 0.5, 4).unwrap();
+        assert!(result.1.lineage.iter().any(|record| {
+            record.entity_kind == "edge"
+                && record.parents == [source.1.edges[0].clone()]
+                && !record.children.is_empty()
+        }));
     }
 
     #[test]

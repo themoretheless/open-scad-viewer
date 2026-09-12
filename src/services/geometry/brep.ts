@@ -19,13 +19,20 @@ export interface BrepTopologyIds {
  faces:string[]
  shells:string[]
  bodies:string[]
+ lineage?:BrepTopologyLineageRecord[]
+}
+export interface BrepTopologyLineageRecord {
+ operation:'persist'|'split'|'merge'
+ entityKind:'vertex'|'edge'|'face'|'loop'|'shell'|'body'
+ parents:string[]
+ children:string[]
 }
 export type NurbsBrep=BrepModel<NurbsCurve,NurbsSurface,NurbsCurve>
 export type PolygonBrep=BrepModel<null,{mesh:PolygonMesh;sourceFaceId:number},null>
 export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_certified'}
 export interface BrepMesh extends PolygonBuild {faceIds:number[];topologyFaceIds?:string[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
-export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,zMin,zMax})
+export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number,holes:[number,number][][]=[]):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,holes,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */
 export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
 /** Planar-triangulated polyline sweep, not an analytic pipe. */

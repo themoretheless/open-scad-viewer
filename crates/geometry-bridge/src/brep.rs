@@ -116,24 +116,33 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
             // edge (including short chamfer/fillet facets) before welding.
             if f.surface.degree_u == 1
                 && f.surface.degree_v == 1
-                && f.holes.is_empty()
-                && model.loops[f.outer]
-                    .coedges
-                    .iter()
-                    .all(|c| model.edges[c.edge].curve.degree == 1)
+                && std::iter::once(&f.outer).chain(&f.holes).all(|&loop_id| {
+                    model.loops[loop_id]
+                        .coedges
+                        .iter()
+                        .all(|c| model.edges[c.edge].curve.degree == 1)
+                })
             {
-                let coedges = &model.loops[f.outer].coedges;
                 let base = mesh.positions.len() / 3;
-                for coedge in coedges {
-                    let edge = &model.edges[coedge.edge];
-                    let vertex = edge.vertices[usize::from(coedge.reversed)];
-                    mesh.positions.extend(model.vertices[vertex].point);
+                let triangulated = polygon_core::solid::primitives::triangulate(
+                    &polygon_core::solid::modeling::Profile {
+                        outer: model.loop_uv(f.outer, 1)?,
+                        holes: f
+                            .holes
+                            .iter()
+                            .map(|&loop_id| model.loop_uv(loop_id, 1))
+                            .collect::<nurbs_core::Result<_>>()?,
+                    },
+                )?;
+                for point in triangulated.positions.as_chunks::<3>().0 {
+                    mesh.positions
+                        .extend(f.surface.evaluate(point[0], point[1])?.point);
                 }
-                for i in 1..coedges.len() - 1 {
+                for authored in triangulated.indices.as_chunks::<3>().0 {
                     let triangle = if u.reversed {
-                        [base, base + i + 1, base + i]
+                        [base + authored[0], base + authored[2], base + authored[1]]
                     } else {
-                        [base, base + i, base + i + 1]
+                        authored.map(|index| base + index)
                     };
                     mesh.indices.extend(triangle);
                     face_ids.push(u.face);

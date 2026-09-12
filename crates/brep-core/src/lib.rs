@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub mod operations;
 pub use operations::{
-    boolean, chamfer, chamfer_edges, extrude_polygon, faceted_cylinder, faceted_loft,
-    faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
+    boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
+    faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
 };
 
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};
@@ -31,6 +31,55 @@ pub struct TopologyIds {
     pub faces: Vec<String>,
     pub shells: Vec<String>,
     pub bodies: Vec<String>,
+    pub lineage: Vec<TopologyLineageRecord>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TopologyLineageRecord {
+    pub operation: String,
+    pub entity_kind: String,
+    pub parents: Vec<String>,
+    pub children: Vec<String>,
+}
+impl value_codec::Serialize for TopologyLineageRecord {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "operation".into(),
+            value_codec::Serialize::to_value(&self.operation),
+        );
+        object.insert(
+            "entityKind".into(),
+            value_codec::Serialize::to_value(&self.entity_kind),
+        );
+        object.insert(
+            "parents".into(),
+            value_codec::Serialize::to_value(&self.parents),
+        );
+        object.insert(
+            "children".into(),
+            value_codec::Serialize::to_value(&self.children),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for TopologyLineageRecord {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected topology lineage record"))?;
+        let field = |key: &str| {
+            object
+                .get(key)
+                .cloned()
+                .ok_or_else(|| value_codec::error(format!("Missing field {key}")))
+        };
+        Ok(Self {
+            operation: value_codec::Deserialize::from_value(field("operation")?)?,
+            entity_kind: value_codec::Deserialize::from_value(field("entityKind")?)?,
+            parents: value_codec::Deserialize::from_value(field("parents")?)?,
+            children: value_codec::Deserialize::from_value(field("children")?)?,
+        })
+    }
 }
 impl value_codec::Serialize for TopologyIds {
     fn to_value(&self) -> value_codec::Value {
@@ -59,6 +108,10 @@ impl value_codec::Serialize for TopologyIds {
             "bodies".into(),
             value_codec::Serialize::to_value(&self.bodies),
         );
+        object.insert(
+            "lineage".into(),
+            value_codec::Serialize::to_value(&self.lineage),
+        );
         value_codec::Value::Object(object)
     }
 }
@@ -82,6 +135,12 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
             faces: read("faces")?,
             shells: read("shells")?,
             bodies: read("bodies")?,
+            lineage: object
+                .get("lineage")
+                .cloned()
+                .map(value_codec::Deserialize::from_value)
+                .transpose()?
+                .unwrap_or_default(),
         })
     }
 }
@@ -305,10 +364,183 @@ impl Model {
             faces,
             shells,
             bodies,
+            lineage: vec![],
         };
     }
+    fn edge_overlap(&self, target: &Edge, source: &Model, candidate: &Edge) -> bool {
+        let [a, b] = target.vertices.map(|vertex| self.0.vertices[vertex].point);
+        let [c, d] = candidate
+            .vertices
+            .map(|vertex| source.0.vertices[vertex].point);
+        let ab = std::array::from_fn::<_, 3, _>(|axis| b[axis] - a[axis]);
+        let cd = std::array::from_fn::<_, 3, _>(|axis| d[axis] - c[axis]);
+        let cross = [
+            ab[1] * cd[2] - ab[2] * cd[1],
+            ab[2] * cd[0] - ab[0] * cd[2],
+            ab[0] * cd[1] - ab[1] * cd[0],
+        ];
+        let length = distance(&a, &b);
+        if length <= self.tolerance_mm
+            || distance(&[0., 0., 0.], &cross) > length * distance(&c, &d) * 1e-8
+        {
+            return false;
+        }
+        let ac = std::array::from_fn::<_, 3, _>(|axis| c[axis] - a[axis]);
+        let line_cross = [
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        ];
+        if distance(&[0., 0., 0.], &line_cross) > length * self.tolerance_mm * 8. {
+            return false;
+        }
+        let axis = (0..3)
+            .max_by(|left, right| ab[*left].abs().total_cmp(&ab[*right].abs()))
+            .unwrap();
+        let (a0, a1) = if a[axis] < b[axis] {
+            (a[axis], b[axis])
+        } else {
+            (b[axis], a[axis])
+        };
+        let (b0, b1) = if c[axis] < d[axis] {
+            (c[axis], d[axis])
+        } else {
+            (d[axis], c[axis])
+        };
+        a1.min(b1) - a0.max(b0) > self.tolerance_mm * 4.
+    }
+    fn face_relation(&self, target: &Face, source: &Model, candidate: &Face) -> bool {
+        let target_points: Vec<_> = self.0.loops[target.outer]
+            .coedges
+            .iter()
+            .map(|coedge| {
+                self.0.vertices[self.0.edges[coedge.edge].vertices[usize::from(coedge.reversed)]]
+                    .point
+            })
+            .collect();
+        let source_points: Vec<_> = source.0.loops[candidate.outer]
+            .coedges
+            .iter()
+            .map(|coedge| {
+                source.0.vertices
+                    [source.0.edges[coedge.edge].vertices[usize::from(coedge.reversed)]]
+                .point
+            })
+            .collect();
+        if target_points.len() < 3 || source_points.len() < 3 {
+            return false;
+        }
+        let ab = std::array::from_fn::<_, 3, _>(|i| source_points[1][i] - source_points[0][i]);
+        let ac = std::array::from_fn::<_, 3, _>(|i| source_points[2][i] - source_points[0][i]);
+        let normal = [
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        ];
+        let length = distance(&normal, &[0., 0., 0.]);
+        if length <= self.tolerance_mm
+            || !target_points.iter().all(|point| {
+                let delta = std::array::from_fn::<_, 3, _>(|i| point[i] - source_points[0][i]);
+                (normal.iter().zip(delta).map(|(a, b)| a * b).sum::<f64>() / length).abs()
+                    <= self.tolerance_mm * 8.
+            })
+        {
+            return false;
+        }
+        let drop_axis = (0..3)
+            .max_by(|left, right| normal[*left].abs().total_cmp(&normal[*right].abs()))
+            .unwrap();
+        let project = |point: [f64; 3]| {
+            let kept: Vec<_> = (0..3)
+                .filter(|axis| *axis != drop_axis)
+                .map(|axis| point[axis])
+                .collect();
+            [kept[0], kept[1]]
+        };
+        let center = target_points
+            .iter()
+            .copied()
+            .fold([0.; 3], |sum, point| {
+                std::array::from_fn(|axis| sum[axis] + point[axis])
+            })
+            .map(|coordinate| coordinate / target_points.len() as f64);
+        std::iter::once(center).any(|point| {
+            let point = project(point);
+            let polygon: Vec<_> = source_points.iter().copied().map(project).collect();
+            let mut inside = false;
+            for i in 0..polygon.len() {
+                let a = polygon[i];
+                let b = polygon[(i + 1) % polygon.len()];
+                let cross = (b[0] - a[0]) * (point[1] - a[1]) - (b[1] - a[1]) * (point[0] - a[0]);
+                if cross.abs() <= self.tolerance_mm * 8.
+                    && point[0] >= a[0].min(b[0]) - self.tolerance_mm
+                    && point[0] <= a[0].max(b[0]) + self.tolerance_mm
+                    && point[1] >= a[1].min(b[1]) - self.tolerance_mm
+                    && point[1] <= a[1].max(b[1]) + self.tolerance_mm
+                {
+                    return true;
+                }
+                if (a[1] > point[1]) != (b[1] > point[1])
+                    && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]
+                {
+                    inside = !inside;
+                }
+            }
+            inside
+        })
+    }
+    fn record_relations(
+        records: &mut Vec<TopologyLineageRecord>,
+        entity_kind: &str,
+        source_ids: &[String],
+        target_ids: &[String],
+        relations: &[Vec<usize>],
+    ) {
+        for (parent_index, parent) in source_ids.iter().enumerate() {
+            let children: Vec<_> = relations
+                .iter()
+                .enumerate()
+                .filter(|(_, parents)| parents.contains(&parent_index))
+                .map(|(child, _)| target_ids[child].clone())
+                .collect();
+            if children.len() > 1 {
+                records.push(TopologyLineageRecord {
+                    operation: "split".into(),
+                    entity_kind: entity_kind.into(),
+                    parents: vec![parent.clone()],
+                    children,
+                });
+            }
+        }
+        for (child_index, parents) in relations.iter().enumerate() {
+            let parent_ids: Vec<_> = parents
+                .iter()
+                .map(|&parent| source_ids[parent].clone())
+                .collect();
+            if parent_ids.len() > 1 {
+                records.push(TopologyLineageRecord {
+                    operation: "merge".into(),
+                    entity_kind: entity_kind.into(),
+                    parents: parent_ids,
+                    children: vec![target_ids[child_index].clone()],
+                });
+            } else if parent_ids.len() == 1 && parent_ids[0] != target_ids[child_index] {
+                records.push(TopologyLineageRecord {
+                    operation: "persist".into(),
+                    entity_kind: entity_kind.into(),
+                    parents: parent_ids,
+                    children: vec![target_ids[child_index].clone()],
+                });
+            }
+        }
+    }
     pub fn inherit_topology_ids(&mut self, sources: &[&Model]) {
+        let inherited_lineage: Vec<_> = sources
+            .iter()
+            .flat_map(|source| source.1.lineage.iter().cloned())
+            .collect();
         self.rebuild_topology_ids();
+        self.1.lineage = inherited_lineage;
         for source in sources {
             for (target, vertex) in self.0.vertices.iter().enumerate() {
                 if let Some(source_index) = source.0.vertices.iter().position(|candidate| {
@@ -399,7 +631,155 @@ impl Model {
                     self.1.bodies[target] = source.1.bodies[source_index].clone();
                 }
             }
+            let vertex_relations: Vec<Vec<usize>> = self
+                .vertices
+                .iter()
+                .map(|vertex| {
+                    source
+                        .vertices
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| {
+                            close_points(candidate.point, vertex.point, self.tolerance_mm * 4.)
+                        })
+                        .map(|(index, _)| index)
+                        .collect()
+                })
+                .collect();
+            let edge_relations: Vec<Vec<usize>> = self
+                .edges
+                .iter()
+                .map(|edge| {
+                    source
+                        .edges
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| self.edge_overlap(edge, source, candidate))
+                        .map(|(index, _)| index)
+                        .collect()
+                })
+                .collect();
+            let face_relations: Vec<Vec<usize>> = self
+                .faces
+                .iter()
+                .map(|face| {
+                    source
+                        .faces
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| {
+                            self.face_relation(face, source, candidate)
+                                || source.face_relation(candidate, self, face)
+                        })
+                        .map(|(index, _)| index)
+                        .collect()
+                })
+                .collect();
+            Self::record_relations(
+                &mut self.1.lineage,
+                "vertex",
+                &source.1.vertices,
+                &self.1.vertices,
+                &vertex_relations,
+            );
+            Self::record_relations(
+                &mut self.1.lineage,
+                "edge",
+                &source.1.edges,
+                &self.1.edges,
+                &edge_relations,
+            );
+            Self::record_relations(
+                &mut self.1.lineage,
+                "face",
+                &source.1.faces,
+                &self.1.faces,
+                &face_relations,
+            );
         }
+        let mut cross_source_merges = vec![];
+        for (target_index, target) in self.vertices.iter().enumerate() {
+            let parents: Vec<_> = sources
+                .iter()
+                .flat_map(|source| {
+                    source
+                        .vertices
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| {
+                            close_points(candidate.point, target.point, self.tolerance_mm * 4.)
+                        })
+                        .map(|(index, _)| source.1.vertices[index].clone())
+                })
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            if parents.len() > 1 {
+                cross_source_merges.push(TopologyLineageRecord {
+                    operation: "merge".into(),
+                    entity_kind: "vertex".into(),
+                    parents,
+                    children: vec![self.1.vertices[target_index].clone()],
+                });
+            }
+        }
+        for (target_index, target) in self.edges.iter().enumerate() {
+            let parents: Vec<_> = sources
+                .iter()
+                .flat_map(|source| {
+                    source
+                        .edges
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| self.edge_overlap(target, source, candidate))
+                        .map(|(index, _)| source.1.edges[index].clone())
+                })
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            if parents.len() > 1 {
+                cross_source_merges.push(TopologyLineageRecord {
+                    operation: "merge".into(),
+                    entity_kind: "edge".into(),
+                    parents,
+                    children: vec![self.1.edges[target_index].clone()],
+                });
+            }
+        }
+        for (target_index, target) in self.faces.iter().enumerate() {
+            let parents: Vec<_> = sources
+                .iter()
+                .flat_map(|source| {
+                    source
+                        .faces
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, candidate)| {
+                            self.face_relation(target, source, candidate)
+                                || source.face_relation(candidate, self, target)
+                        })
+                        .map(|(index, _)| source.1.faces[index].clone())
+                })
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            if parents.len() > 1 {
+                cross_source_merges.push(TopologyLineageRecord {
+                    operation: "merge".into(),
+                    entity_kind: "face".into(),
+                    parents,
+                    children: vec![self.1.faces[target_index].clone()],
+                });
+            }
+        }
+        self.1.lineage.extend(cross_source_merges);
+        let mut unique = Vec::new();
+        for record in self.1.lineage.drain(..) {
+            if !unique.contains(&record) {
+                unique.push(record);
+            }
+        }
+        self.1.lineage = unique;
     }
     pub fn loop_uv(&self, id: usize, segments: usize) -> Result<Vec<[f64; 2]>> {
         require((1..=64).contains(&segments), "Edge sampling must be 1..64")?;

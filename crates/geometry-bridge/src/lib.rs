@@ -441,11 +441,19 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
-        "brep_nurbs_extrude_polygon" => encode(brep_core::extrude_polygon(
-            &field::<Vec<[f64; 2]>>(&v, "profile")?,
-            field(&v, "zMin")?,
-            field(&v, "zMax")?,
-        )?),
+        "brep_nurbs_extrude_polygon" => {
+            let holes = v
+                .get("holes")
+                .map(|_| field::<Vec<Vec<[f64; 2]>>>(&v, "holes"))
+                .transpose()?
+                .unwrap_or_default();
+            encode(brep_core::extrude_polygon_with_holes(
+                &field::<Vec<[f64; 2]>>(&v, "profile")?,
+                &holes,
+                field(&v, "zMin")?,
+                field(&v, "zMax")?,
+            )?)
+        }
         "brep_nurbs_faceted_loft" => encode(brep_core::faceted_loft(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
         )?),
