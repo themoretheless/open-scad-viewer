@@ -1,0 +1,43 @@
+{
+  "generated_utc": "2026-09-12T20:35:07.291152+00:00",
+  "status": "Final frozen kernel after Divide regression fix",
+  "build_command": [
+    "node",
+    "scripts/build-geometry-kernels.mjs"
+  ],
+  "build_exit_code": 0,
+  "build_release_seconds": 67,
+  "test_command": [
+    "node_modules/.bin/vitest",
+    "run",
+    "tests/path2dCurvex.test.ts"
+  ],
+  "test_exit_code": 0,
+  "test_seconds": 1.452,
+  "test_log": {
+    "path": "/private/tmp/osv-curvex-qualification/wasm-final-tests.log",
+    "sha256": "94edcdfdefe2b981466b3df391d0a2a18fa0b95cc1b1f9d74fd413e6ed7ccb77"
+  },
+  "files": {
+    "src/generated/geometry-kernels/kernel_bg.wasm": {
+      "sha256": "0b6f0b584c3072f52c2b6748cee77ec9d049ab17e9a1319370ef94896d29781f",
+      "bytes": 3680422
+    },
+    "src/generated/geometry-kernels/bytes.ts": {
+      "sha256": "8c051c5eacdf9a509633ac4b4d61f9f52ed5b38d6d2e9059c48a364f4fb9e438",
+      "bytes": 1122491
+    },
+    "crates/planar-geometry/src/curve_boolean.rs": {
+      "sha256": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+      "bytes": 45331
+    },
+    "scripts/build-geometry-kernels.mjs": {
+      "sha256": "36eae0f71a202f0e1400451d7300177b55cdfdc33d923eed1317fdecefcd46a9",
+      "bytes": 2160
+    },
+    "scripts/build-wasm-brotli.mjs": {
+      "sha256": "45dabec9274581d66fbe835d9e4d01a42311b0175eecc2392e0f25fd43a05e9b",
+      "bytes": 1464
+    }
+  }
+}

@@ -1,0 +1,26 @@
+Resolved dependency chains from captured final-01 native-filtered Cargo metadata
+This graph includes inactive optional branches. Active native chains are in dependency-kurbo-cargo-tree.txt.
+
+curvex@0.1.0 -> eframe@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-wgpu@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-winit@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-winit@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui-winit@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui_glow@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui_glow@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> eframe@0.35.0 -> egui_glow@0.35.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> glifo@0.1.1 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> egui@0.35.0 -> epaint@0.35.0 -> vello_cpu@0.0.9 -> vello_common@0.0.9 -> peniko@0.6.1 -> kurbo@0.13.1
+curvex@0.1.0 -> usvg@0.47.0 -> kurbo@0.13.1
+curvex@0.1.0 -> usvg@0.47.0 -> svgtypes@0.16.1 -> kurbo@0.13.1
+
+Kernel closure: planar-geometry@0.1.0 -> osv-math@0.1.0
+No linesweeper, lyon_path or lyon_tessellation package in this filtered metadata.

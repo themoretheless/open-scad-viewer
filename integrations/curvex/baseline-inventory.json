@@ -1,0 +1,3502 @@
+{
+  "schema_version": 1,
+  "source_root": "/Users/themoretheless/Documents/Sources/curvex",
+  "source_commit": "bf6967e4df618815e05eefc987947ca6b1c22461",
+  "source_status": "",
+  "scope": "Every Rust file under src/tests/benches/examples and root Cargo.toml",
+  "limitations": "Lexical inventory; aliases/method calls require manual contract review and compilation.",
+  "dependencies": [
+    "kurbo",
+    "linesweeper",
+    "lyon_path",
+    "lyon_tessellation"
+  ],
+  "files": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "85d538444a45541c5e4046c011c2dfbf2b03363c6b4eaeba44a21dc438165eb7"
+    },
+    {
+      "path": "src/actions/appearance.rs",
+      "sha256": "324162c08408ee6eca31b3e08fff8c71fad1f2047a325146f2b6aadc0b4ce6b8"
+    },
+    {
+      "path": "src/actions/arrange.rs",
+      "sha256": "fde6429c76bf26b9d4e0bdee96a48cca814e522921fa2abaf44224a47fb0c197"
+    },
+    {
+      "path": "src/actions/clipboard.rs",
+      "sha256": "6a51e45c3e1d38b77ccae1b80ab84c275df327f9e97c2eebdccd11b494677418"
+    },
+    {
+      "path": "src/actions/compound.rs",
+      "sha256": "8810738f5fb22dd86501aec9a3a9dba938b2658f73eced12f973bf6fcf6a30f1"
+    },
+    {
+      "path": "src/actions/dialogs.rs",
+      "sha256": "b92e15756e18be1cd3917269305c2ab328863be8b143d65e7eefdb02dbed874a"
+    },
+    {
+      "path": "src/actions/file.rs",
+      "sha256": "2d140bbf120e924ad0cc0609f30ac5f8b209a592c97f5d1b0ae929e043c37187"
+    },
+    {
+      "path": "src/actions/graphic_styles.rs",
+      "sha256": "15e52958de007f3ac856816e69a8db652080871c88507ab9a44f13900e0a7cfe"
+    },
+    {
+      "path": "src/actions/history.rs",
+      "sha256": "c9adbf359dfd5b8203850181404a5b675615fa63ec632474bbe724b6e8080fb1"
+    },
+    {
+      "path": "src/actions/menu.rs",
+      "sha256": "c024082b12e4d0cb94cc8d20a057d1edde062e4e57e78aea6e9ebdaf4a5899ac"
+    },
+    {
+      "path": "src/actions/mod.rs",
+      "sha256": "ff8ccd015adba0d6384cafdff2e439c51239a57aaa8347f9da30dd70e09fd9d2"
+    },
+    {
+      "path": "src/actions/path_nodes.rs",
+      "sha256": "4d71c2ebba01f9e3a164f8b9c0e00225c80d1a929e2aeb64b08a5e72b044965c"
+    },
+    {
+      "path": "src/actions/persistence.rs",
+      "sha256": "35cd719e795fe825f1467d07c5a21f20ca26b66bbf695ab2bacc3ef4593f44be"
+    },
+    {
+      "path": "src/actions/recovery.rs",
+      "sha256": "1c3f2c2815241362140b60a90739037c0eea5f501bda989c7d29c14f900b3a48"
+    },
+    {
+      "path": "src/actions/transform/direct_commands.rs",
+      "sha256": "ac72abbd99634afbd24bcdf410c6eef71ca4f781cb0372a508763462092f3a9b"
+    },
+    {
+      "path": "src/actions/transform/distortions.rs",
+      "sha256": "2fee5255dc6a9b29955fc5e5b063eda4f4a7ea7f7072be314531090942602375"
+    },
+    {
+      "path": "src/actions/transform/effect_commands.rs",
+      "sha256": "13cb7c26706cbac50b9b8ef9ebdcf5eb85974a58d555aae8573f3cd94dee8372"
+    },
+    {
+      "path": "src/actions/transform/generators.rs",
+      "sha256": "97ee4d4eb9bc9b333440d332efbe3c7178e1042b608ee72cb081f1691ed09d3f"
+    },
+    {
+      "path": "src/actions/transform/math.rs",
+      "sha256": "71cf5b13f0ab331d27803785e21a745c28972f31d033152b32416300c830e67b"
+    },
+    {
+      "path": "src/actions/transform/numeric_commands.rs",
+      "sha256": "78c0d5348450791614694e554910e3b6670054a9994dae74364de4c0dd14cf97"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "sha256": "ecc70acb7580bc789f3c20c1072e14a181be3485f3b8877ce72ccd5ec04b391a"
+    },
+    {
+      "path": "src/actions/transform/path_effects/arc.rs",
+      "sha256": "aba02feab5d0f0c8329dd528140cbbfcb5aec0e521cb98a28f0facbce4db7302"
+    },
+    {
+      "path": "src/actions/transform/path_effects/convert.rs",
+      "sha256": "7756c7af2aaf4481874225a65345bc86815924f51046b7bb757638cf0abcc674"
+    },
+    {
+      "path": "src/actions/transform/path_effects/corners.rs",
+      "sha256": "5b30f6e060e3080e936ce58301a739bf7f6bf1bce0a488bde769a2f010c8c90c"
+    },
+    {
+      "path": "src/actions/transform/path_effects/join.rs",
+      "sha256": "3cc2d1adb0d14ff599ea73f84115e2e8f0122308679ec81f68f3f6801b048e1f"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "sha256": "88f2113cd5fb78058cf18f73ab29a1ebb10891a33b299d0f1b0b670b718c88a0"
+    },
+    {
+      "path": "src/actions/transform/path_effects.rs",
+      "sha256": "e797f560e30b08ab266113aae34833283d90412b3a87396b280607ac31a4771a"
+    },
+    {
+      "path": "src/actions/transform.rs",
+      "sha256": "1fd9ae75ba1da007dd7e1d7374be9911cfb999e2b63a95fed8459690cd515732"
+    },
+    {
+      "path": "src/actions/view.rs",
+      "sha256": "0d5eb4f9c14c3f78dbeb33964a1391a88b66de7553363168eebcd15ad5a19d51"
+    },
+    {
+      "path": "src/align.rs",
+      "sha256": "0527ba4769beb8f5c93d20191881a4dd746b4a694045c3270567511381074409"
+    },
+    {
+      "path": "src/app.rs",
+      "sha256": "7dc2532199ae569c7921aa9bbcf91e32f76690347ae443eaedcf7fd3f60406c1"
+    },
+    {
+      "path": "src/app_state.rs",
+      "sha256": "fa112c68b7d405ff337e42531dd7d260840747e5c8aa636a353b9526994ea82b"
+    },
+    {
+      "path": "src/blend.rs",
+      "sha256": "1a2437517c42e47b2c3e2221f7d2309823228fe65652565b34777dd88515159c"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "sha256": "8276dff3e236831a6af2e28b41bd3c912578abd183d0eef5415124f890d5098d"
+    },
+    {
+      "path": "src/commands/catalog/editor.rs",
+      "sha256": "e0f6f7509886a074ba67c2222e980f2b586d7bb6cf2a501b4eb4a6ce9ad2430c"
+    },
+    {
+      "path": "src/commands/catalog/file_view.rs",
+      "sha256": "07351502f8d25964670e682e6fe4e79ab283fb7edeb9b29fab394bca3d93dc51"
+    },
+    {
+      "path": "src/commands/catalog/workflow.rs",
+      "sha256": "493225a1fc0d676fc2defe14beb0267835020e047cc7714077d339e154f092fc"
+    },
+    {
+      "path": "src/commands/catalog.rs",
+      "sha256": "85567fc93e16621cf1c32bf80dbb3ee28e4f0f900d6ef3cf0ffc83241d17c3d7"
+    },
+    {
+      "path": "src/commands/context.rs",
+      "sha256": "c9f9eca2f462eaba5786fcecfeeec43d0145e3e760bf0fb0396470e480071718"
+    },
+    {
+      "path": "src/commands/ranking.rs",
+      "sha256": "df44ecde2b66522d2274b6530448b354b3763ae442fd44aa3ad522d1dcbc7fc5"
+    },
+    {
+      "path": "src/commands.rs",
+      "sha256": "e842669e3fdf9aa7260d83d60b31af64b1c4c49714d7afba58a8e9688e88c7a0"
+    },
+    {
+      "path": "src/document/cache.rs",
+      "sha256": "e1bc2ed985a5ea1933115229a6550dfb7321e02b9cc239e78f7b383f5614af20"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "sha256": "e851c5022e504ecea990c3e5c3904d9bd1acafd5f13094d2c6b20765f3a1532e"
+    },
+    {
+      "path": "src/document/queries.rs",
+      "sha256": "37434ef9567a012c10fc69bb03a0845922b45d7c353066b809d85e9de4bc3a14"
+    },
+    {
+      "path": "src/document.rs",
+      "sha256": "fbfcbe54996d3f7b7a343269ccb5b11bb0132fe1cae2e0957660cc77d2b981a7"
+    },
+    {
+      "path": "src/document_health.rs",
+      "sha256": "0d2e1fd467f627cc62144d3ae5a5d1c5458a99085b15a06e9a8cf88b4d25446a"
+    },
+    {
+      "path": "src/history.rs",
+      "sha256": "e980cb25363be15bcfb92e7ef7de06243e4d846e0a36aceecdcca44e7676387e"
+    },
+    {
+      "path": "src/hit_test.rs",
+      "sha256": "204aaf27e9d302e746332bb4fed09450e73c2ffc1bbc6334afb5475fb09fde48"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "08992f8258581dfec980e7205ab2f0171093007c0d6db1f63f805d4786f133e0"
+    },
+    {
+      "path": "src/main.rs",
+      "sha256": "f4f8c0adbd15d2175d0905b34fc6e10701b52d1a7e20b7006539030364dab8a1"
+    },
+    {
+      "path": "src/menu_action.rs",
+      "sha256": "65a39471f81720f52b8505d1af81cc741dc308db64f86b2906bcdd5d02000f5d"
+    },
+    {
+      "path": "src/path.rs",
+      "sha256": "255a29d16cbc4c3472accaf2e17fc1af65af90d679957104339eb6e1756c2894"
+    },
+    {
+      "path": "src/path_join.rs",
+      "sha256": "0652b9d84fb39d5749e08e32d6935ec2411234eb9a27643150cbf0fefc8b2828"
+    },
+    {
+      "path": "src/recolor.rs",
+      "sha256": "9b984b754464b4ccf89236a06ae8be111416c3d3df874ea438cfba87b30e596d"
+    },
+    {
+      "path": "src/scissors.rs",
+      "sha256": "6c8a4b4e68300276b41f53f74adbce2321bc3510e066e6f059e4753963bf4d5c"
+    },
+    {
+      "path": "src/scissors_line.rs",
+      "sha256": "773ef36330f9877787c1ed630ddf501075286ef9fd9d92c83e7ee9bfe99b577e"
+    },
+    {
+      "path": "src/selection.rs",
+      "sha256": "a910510948343969053ebf889d7c73bcb26288b181a14950235fd1429e52fe94"
+    },
+    {
+      "path": "src/shape.rs",
+      "sha256": "c395613dbfdb3afd1fa6c620ffdac7621ad4b57b54b175dbe27d510883f6ea71"
+    },
+    {
+      "path": "src/snap.rs",
+      "sha256": "81c9b0f7ede6dc21f1aa0a7327621a897d322697f73b039b224c100e040c6696"
+    },
+    {
+      "path": "src/style.rs",
+      "sha256": "254da93b7f88c44267dbc8f6358353ee51d67a28f1f0994fece49956b61097e2"
+    },
+    {
+      "path": "src/svg_export.rs",
+      "sha256": "6042125ed40b1a899b17b6be78841b41afac3016aadb3e1ef3137788d1f698ef"
+    },
+    {
+      "path": "src/svg_import.rs",
+      "sha256": "7f6667cffe9139db9f08c3ea5098b8f1d82d7b489ab2f3435ae9650aebbf0590"
+    },
+    {
+      "path": "src/tools/ellipse.rs",
+      "sha256": "3280f882245ce827469e3507f2c1c959fc6f496f639c1ebd209dd46f1f7fe247"
+    },
+    {
+      "path": "src/tools/eyedropper.rs",
+      "sha256": "b65c2a78a5b74730a798e2c1b2fb8b40b753d8928b8026a1f837f971b62c7d3f"
+    },
+    {
+      "path": "src/tools/join.rs",
+      "sha256": "cf94645a2a4f1d33eac3b74a8c9e153c3994a4cbd631f59390dcd3d3d749478f"
+    },
+    {
+      "path": "src/tools/knife.rs",
+      "sha256": "7e5941e006ada528c996026b5586b50a95f356b030c6b06e1efa6f41e2386c19"
+    },
+    {
+      "path": "src/tools/line.rs",
+      "sha256": "35d52e21be0d81f28b011c3b598454899236afef700f906045582f2837f1bdea"
+    },
+    {
+      "path": "src/tools/measure.rs",
+      "sha256": "8974376ca6610b7fc50a1ff9bc955eccc3d51d885068635d6b43f48624378eba"
+    },
+    {
+      "path": "src/tools/mod.rs",
+      "sha256": "40da2144687018e956a41497729f17807aded0f98103613a297289c5abdd4d49"
+    },
+    {
+      "path": "src/tools/pen.rs",
+      "sha256": "29efc783dade495366d9f4e2a948df3c1e56d1c3685ed1281b4b3c000252f143"
+    },
+    {
+      "path": "src/tools/pencil.rs",
+      "sha256": "f9e4b2136d078be96875dabb199cfac80413c84224af5434f58f2f011477ee9c"
+    },
+    {
+      "path": "src/tools/polygon.rs",
+      "sha256": "5c04836bf9fa85facbb571672ba2d233da58602082622bb7246ea3921dd3f773"
+    },
+    {
+      "path": "src/tools/rectangle.rs",
+      "sha256": "d4be5a0c108fedce1d9334ac52283857bb9c858705aaa8e57e96200b868c3ca3"
+    },
+    {
+      "path": "src/tools/scissors.rs",
+      "sha256": "d95f742a51b263d61bdbdab67587c6df261e6e01ea46ac58250c80057902e405"
+    },
+    {
+      "path": "src/tools/select/dragger.rs",
+      "sha256": "2d65257d7588c31674195cd8991f64fe15aa1c94bad9f09ed6df01d8667a1d1a"
+    },
+    {
+      "path": "src/tools/select/marquee.rs",
+      "sha256": "d4e8e68eb04a72430d49197e5293bdd1aa8ddfcf5d0d34637d84295821a05b34"
+    },
+    {
+      "path": "src/tools/select/path_edit.rs",
+      "sha256": "a8d3a9e512474b3284c992ba05bea1ec287f11f4bf9510457980ed93c4d111d9"
+    },
+    {
+      "path": "src/tools/select/picker.rs",
+      "sha256": "ffb614d4d84d5fad7cb8954b8eeafcb5e71365dd91a3de56418f4708838d385c"
+    },
+    {
+      "path": "src/tools/select/transactions.rs",
+      "sha256": "74c651fb59afe4f18ad5fcba35c9d97611d1d3a6e322898d4ed441f00c1afe21"
+    },
+    {
+      "path": "src/tools/select/transform_handles.rs",
+      "sha256": "9600e98b9d2556c6e880cdda16e952ffadabb38b809f69adda7a366dc03bbf56"
+    },
+    {
+      "path": "src/tools/select.rs",
+      "sha256": "726c053e6f4c6efdc9febde5d65fc490e898bde39d560abbd28bc6228815ff2e"
+    },
+    {
+      "path": "src/tools/shape_builder.rs",
+      "sha256": "0524bb31c7746769797a9b23519afb4837c1419d544763704a18bba754ed58b1"
+    },
+    {
+      "path": "src/transaction.rs",
+      "sha256": "b1f5cfd75aeaff747cf4252752632ab80a108144bcd73526539e51cd2c298761"
+    },
+    {
+      "path": "src/ui/canvas.rs",
+      "sha256": "2343ec5ed5d1f61597aa721106390cf660f57b74847e26140a84bcbad6084a71"
+    },
+    {
+      "path": "src/ui/canvas_input.rs",
+      "sha256": "587a763892e1919d391a31d8954a5f593bc6ca05e3558698acc0cb0c3c865cdf"
+    },
+    {
+      "path": "src/ui/canvas_overlays/gradient_handles.rs",
+      "sha256": "bffb6ccc75c07bc152d7338319f25a8e7206332412684e53f850383aac8cd184"
+    },
+    {
+      "path": "src/ui/canvas_overlays/helpers.rs",
+      "sha256": "f7593fe105e8c0456c5aa3d7f61c9bb02f7c5f9d97d15dfcaffd39a1f422c35b"
+    },
+    {
+      "path": "src/ui/canvas_overlays/line_tool.rs",
+      "sha256": "bb976c54526335953b19c41baf971da242336754efed9d54a258abbb8c8093ca"
+    },
+    {
+      "path": "src/ui/canvas_overlays/measure.rs",
+      "sha256": "a7273275d8458be706c380d4d4d64be8b36b920282d1b6beffdcb08cff420d34"
+    },
+    {
+      "path": "src/ui/canvas_overlays/mod.rs",
+      "sha256": "d5686c396bbe5858c13714041c20037c033ccb9ca4b8c505c417f56c20802977"
+    },
+    {
+      "path": "src/ui/canvas_overlays/nodes.rs",
+      "sha256": "d9e93538e78427d5884c20af0a8593b6a9cdedd235e0e1c9c4eada62046d8f31"
+    },
+    {
+      "path": "src/ui/canvas_overlays/pivot.rs",
+      "sha256": "bec22e84bde911406dd87032efc82db84996fd0f96db6df1381df8843266f613"
+    },
+    {
+      "path": "src/ui/canvas_overlays/scissors.rs",
+      "sha256": "c2602a749bfe029b6a115e926129250f9321a62207a61985e8f8ef418328f4e0"
+    },
+    {
+      "path": "src/ui/canvas_overlays/selection.rs",
+      "sha256": "7ea904cd43a156ba5d018de45dca548763750a5f69da9b7bc963857c120ef9b8"
+    },
+    {
+      "path": "src/ui/canvas_overlays/shape_builder.rs",
+      "sha256": "0c8c7854f0aba5ba45a0aa5967533e5115f7398f1b937abc8995f29f22a7728d"
+    },
+    {
+      "path": "src/ui/canvas_overlays/shape_preview.rs",
+      "sha256": "2144682eb3648685d95ddf410aa7dbf7aae494d3dd1d276b4bcdf5443188b8b6"
+    },
+    {
+      "path": "src/ui/contextbar.rs",
+      "sha256": "ebcbbb4091f1e4348898b1b0b9b9a7a46e3e38ee4745b363e52bf7bdf3c5499f"
+    },
+    {
+      "path": "src/ui/dnd_reorder.rs",
+      "sha256": "ac04972c5a16df780c16b0af6007d7e5b9b2b629362961d585a4e5f472da66ca"
+    },
+    {
+      "path": "src/ui/json_highlight.rs",
+      "sha256": "8ff2ae45b3bf56078728139ab12fc348ed641d8d34b53df614bfb0ced5697108"
+    },
+    {
+      "path": "src/ui/menu_mac.rs",
+      "sha256": "010910256b593a5bca338aa8631dcc3a8ccba597fe3b3a7f6af5fb1aa3a23eaf"
+    },
+    {
+      "path": "src/ui/menu_model.rs",
+      "sha256": "b4cf557f93d1c6753240bfc4ef77f91c6ae8433c8e7090cffc18b4ebc72552fe"
+    },
+    {
+      "path": "src/ui/mod.rs",
+      "sha256": "bb0b42fec6b06e5362617af169a5acd5b9e16eccf914b0ac21dc1e81d5f9e278"
+    },
+    {
+      "path": "src/ui/panels.rs",
+      "sha256": "39405a9d0d5f997de150a0ab0bbade940ddab0bd73f9b58713de9e8c8eabcbbf"
+    },
+    {
+      "path": "src/ui/properties/align_section.rs",
+      "sha256": "15734dc831437949ae8ff2d773ab1879507652091e2b79eff00d2f254a410312"
+    },
+    {
+      "path": "src/ui/properties/appearance.rs",
+      "sha256": "cfc62e2fe5225b263585d8fbc911dc8a1e30a7a8b69c521f34c5191124b3068b"
+    },
+    {
+      "path": "src/ui/properties/boolean.rs",
+      "sha256": "b068b8502fb714f6b552c878ba2383984a4c6f0dc67c2c7e72bb20bc2a3b51db"
+    },
+    {
+      "path": "src/ui/properties/graphic_styles_section.rs",
+      "sha256": "2fac2b4e76d4b803163176e74a713f7a1dd261709a578e05380b86d75856db61"
+    },
+    {
+      "path": "src/ui/properties/groups.rs",
+      "sha256": "b9d716bafc16b248766f6efda2fe7c197d2563914d09e81aa4dd6fcb57cb11f3"
+    },
+    {
+      "path": "src/ui/properties/helpers.rs",
+      "sha256": "1d7c09ffb40fc71aa04d890ea6574784907b1f34c621301db0003401680fb2ed"
+    },
+    {
+      "path": "src/ui/properties/history_panel.rs",
+      "sha256": "e115d8cc80dc034e67eeab8930880796609302f2fe1795388e7218785c881cc6"
+    },
+    {
+      "path": "src/ui/properties/json.rs",
+      "sha256": "a068ab3c8d78a47f7f02aa83dd0bcea1afd87fff0a12696b500d8b9fe148690e"
+    },
+    {
+      "path": "src/ui/properties/mod.rs",
+      "sha256": "f4b233ac4106eab84daac17dcf6c02f3096c6ab5d8cf18aab02da82befcdee10"
+    },
+    {
+      "path": "src/ui/properties/path.rs",
+      "sha256": "99f69b30ac4ebb44f5b7cdc005be7d316f83db0bf7000055ee89413d120ff529"
+    },
+    {
+      "path": "src/ui/properties/polygon_params.rs",
+      "sha256": "7e1aec99267b9fee9fbff76de090f58e85a964bea5e1d1a1d3cd7ab4fada8b58"
+    },
+    {
+      "path": "src/ui/properties/scenes_panel.rs",
+      "sha256": "242db2786acfabc35fbaf4b025b841522dc4087eb67972fcda99b2d1cc55c185"
+    },
+    {
+      "path": "src/ui/properties/transform.rs",
+      "sha256": "38983c586c008dc01281fa11ea8a38e39f2fe6189bcca57526944239389d37f3"
+    },
+    {
+      "path": "src/ui/rulers.rs",
+      "sha256": "7b622d0e97cd1a8464e1b2570432d59a2c49dd728ecbb4c0245a5dd4b2ab065e"
+    },
+    {
+      "path": "src/ui/shape_egui.rs",
+      "sha256": "dda1820f718ea812972cbdadb1ca613cb056f99462bf103018753079effbdb6b"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "sha256": "4ccab2a61014b0a2b51303ab55612ba5b1f342c4d46a5de7f440ee933122a732"
+    },
+    {
+      "path": "src/ui/status_bar.rs",
+      "sha256": "23da3a6721eae97d51d08c525bed570b023b5e5616b25521a4993f986a285ef9"
+    },
+    {
+      "path": "src/ui/theme.rs",
+      "sha256": "a88be8f6ecfed89418ab3bd0dbc287fa7cb50e4927738a1213932cc62f5101cd"
+    },
+    {
+      "path": "src/ui/title_bar.rs",
+      "sha256": "10143c4d69a9308750fa5c7926b2628bb1619402c397a235ec85c8a9fe8fe2aa"
+    },
+    {
+      "path": "src/ui/title_chrome.rs",
+      "sha256": "fd498feb68444c0cd416a29e3a61c4d25f1419012520981dbce45efe1582d19f"
+    },
+    {
+      "path": "src/ui/toolbar.rs",
+      "sha256": "4f8cb45c7337f63a2e8aebda36ad35467ad38a630ec76070cc8d4993318107f1"
+    },
+    {
+      "path": "src/ui/tree_snapshot.rs",
+      "sha256": "4f906378570394e329446101f04f2313fb20f2a1166698497f79d448169781e7"
+    },
+    {
+      "path": "src/ui/vb.rs",
+      "sha256": "44b3630ed263f2350ec58144bbd074b3895552d41fd1e12bad7baad829eaa6b4"
+    },
+    {
+      "path": "src/ui/visual_test.rs",
+      "sha256": "1b6da45be9c4136dc58727301c6874ec369842cf0042dafb94cd17d6f5474b98"
+    },
+    {
+      "path": "src/ui/widgets.rs",
+      "sha256": "760f366bceb5f10188381c16717c95dd26c7667cc3f29c60950dc521c46a758f"
+    },
+    {
+      "path": "src/ui/workflow.rs",
+      "sha256": "417c9cd47417ea815739ad2dc7944b44ff5cd2582d4f335a800d903c5104827f"
+    },
+    {
+      "path": "src/viewport.rs",
+      "sha256": "bca0c25857f1485b8701c5fe334aaaf9500f5a9814e16987ce21df5c0dc21295"
+    },
+    {
+      "path": "tests/architecture_boundaries.rs",
+      "sha256": "bbea53a49a24149381c1038baf27fc084ded01068c98411c6aecd229258f2679"
+    },
+    {
+      "path": "tests/cache_fixes.rs",
+      "sha256": "c9a917d2abb803b1ec9ed0b1e1e43c5c27bca452b0ca6da8ba1e653ba3e5faca"
+    },
+    {
+      "path": "tests/perf_claims.rs",
+      "sha256": "f9b1ba32560113e062f1a26b4c0821e2dd337102c05eb5dcd84d59190ffb81d6"
+    },
+    {
+      "path": "tests/unit/add_anchors_tests.rs",
+      "sha256": "2c7c751ea2af280188a286de713798e0135206d38c632b0096ff4bc87ff2f9d4"
+    },
+    {
+      "path": "tests/unit/align_tests.rs",
+      "sha256": "ea09bdabf4ead471554614293fbab8781c8cb32dd0f8b855af58bf07b4738114"
+    },
+    {
+      "path": "tests/unit/anchor_xy_tests.rs",
+      "sha256": "d35ff9bcee31abb35eb300bb502b2dcd75c76da5ff2d76f594af30695a854dd2"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "sha256": "134e1211f301fffff0e5af24908418466c9254208be8d4f360914774df0d0737"
+    },
+    {
+      "path": "tests/unit/appearance_clipboard_tests.rs",
+      "sha256": "7b9379247c672437447f22ef35e483ca1e27de0e88ca86208a7a7e6f427d20d8"
+    },
+    {
+      "path": "tests/unit/arc_tests.rs",
+      "sha256": "0e29b203eb4d47bda964d07c11b99489d88c7c93aecde68cd009f379c46417fa"
+    },
+    {
+      "path": "tests/unit/arrowheads_tests.rs",
+      "sha256": "229f8a745407e40dfefb48838082c55f857e87132b16feb1363ab5e1cec49ce7"
+    },
+    {
+      "path": "tests/unit/average_anchors_tests.rs",
+      "sha256": "2f42f0d37a4dea1c7dfe165c1c037ea45e5c1b8f35fece6df12cf8b5ad5e4f7c"
+    },
+    {
+      "path": "tests/unit/blend_tests.rs",
+      "sha256": "2b5e7cab557ef6aee268634fd1d96a23ed4ad82925f7f93f6c79e8867c4bebbe"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "sha256": "3e8a762d867bd9ec40ea21a3020ef7d520a9d9dee1d75a937731bc7c00ab9341"
+    },
+    {
+      "path": "tests/unit/canvas_input_tests.rs",
+      "sha256": "4afc3a96dfa65e803fbd0ee938f6f5ebe8cb0b3a5629c76e2d7e0e70a2dad3c3"
+    },
+    {
+      "path": "tests/unit/canvas_tests.rs",
+      "sha256": "bcba39aaefdb8d86e677413e6d1a9e7b5c19bc8cf1073e0fc9d514b9b6dfec0f"
+    },
+    {
+      "path": "tests/unit/center_on_page_tests.rs",
+      "sha256": "12158a02a10cafa3be3a6759a317619046d2eaa9fbda852f17800640a7c0ee73"
+    },
+    {
+      "path": "tests/unit/clipboard_tests.rs",
+      "sha256": "d46794a6f144826c26c493078e42943820fc81bfa751555892da5c6bcf3a5dd3"
+    },
+    {
+      "path": "tests/unit/compound_ops_tests.rs",
+      "sha256": "970c85ddf5c60d0b5e251fcf6b6d16029c24b00804b7cc25d4c60dff5682257d"
+    },
+    {
+      "path": "tests/unit/compound_tests.rs",
+      "sha256": "d378f8e03f27086b650b2fee50cdd2b41e7e7af9111266f34cd8cb8e154fde35"
+    },
+    {
+      "path": "tests/unit/concentric_offset_tests.rs",
+      "sha256": "0b9cac009e2afc2aa67f9d8f2d89346702e7d3df1f0ed6bfe06ba728a7e6360e"
+    },
+    {
+      "path": "tests/unit/convert_to_path_tests.rs",
+      "sha256": "1338d7cdd33ba38936f230b3223ba95f06df3d24999f1ff0ee044cfe1122d06d"
+    },
+    {
+      "path": "tests/unit/convert_to_star_tests.rs",
+      "sha256": "4e9e29a4d275ab8426c25fc3a15de501e8108a3d2f31e8fd985221278a39b87d"
+    },
+    {
+      "path": "tests/unit/corner_style_tests.rs",
+      "sha256": "73b9ffd9432e2112d032419bf8c0a29d59093b62c71785036938fe9d5bd60499"
+    },
+    {
+      "path": "tests/unit/delete_segment_tests.rs",
+      "sha256": "afd3c05222d6a58867705b1c0538a811ba59875951c1aef1ed03399a6f25f4d9"
+    },
+    {
+      "path": "tests/unit/document_tests.rs",
+      "sha256": "ab4c8780c07f407d1cd9552a9d2e10d8d636a73d5c2db951d10ef813986afeeb"
+    },
+    {
+      "path": "tests/unit/eyedropper_tests.rs",
+      "sha256": "ae05abfeb1116462fb9dcf6f4eff8517111b9b05fb58b05a6f613fdb0aa79047"
+    },
+    {
+      "path": "tests/unit/fill_rule_tests.rs",
+      "sha256": "7deb8fff65299961a073d6d4bfe067331a7e13b079f73315eca5f45fb3a2f0e6"
+    },
+    {
+      "path": "tests/unit/flip_tests.rs",
+      "sha256": "f380c55e14e672c0bddd741a4f10d8cadfb2a73b32d0ee9b6b0032f77d657a7d"
+    },
+    {
+      "path": "tests/unit/free_distort_tests.rs",
+      "sha256": "0b410083b962c2a51e8fd40abbc6b0dd89c2885cd6d61856b0239002ca9080d3"
+    },
+    {
+      "path": "tests/unit/gradient_handles_tests.rs",
+      "sha256": "3b5a0ba4d25c3d55b96e51c04771e45d735c76fc640d00e756252d15f2afb227"
+    },
+    {
+      "path": "tests/unit/gradient_stroke_tests.rs",
+      "sha256": "501afe01436fa16f6fdd0051a413fb3118f72fc58a21b5fb9290d9598001db46"
+    },
+    {
+      "path": "tests/unit/graphic_styles_tests.rs",
+      "sha256": "394df6e9ef9cc659d71bbcb080a4fe6f3aa4010290ec52840b0d285eac91e5f2"
+    },
+    {
+      "path": "tests/unit/grid_array_tests.rs",
+      "sha256": "8ad00a1a6d8c79d9a42a9cc36713eecfa96b97aaf2dae74697b1673b54b2ae1c"
+    },
+    {
+      "path": "tests/unit/group_tests.rs",
+      "sha256": "cb6f71e41a5d568c5cf51130ca7a2b4bb9eca9f671148c8b595a84ac27bb02dc"
+    },
+    {
+      "path": "tests/unit/hatch_tests.rs",
+      "sha256": "1a432682985a3d32338c385dea469735dfda0ca7144e1c1250b07cb5fdb462d9"
+    },
+    {
+      "path": "tests/unit/history_tests.rs",
+      "sha256": "e7388da8150934ac6a995f4c3e6c653f49dc890019c8d6512fb7783c5285e2c5"
+    },
+    {
+      "path": "tests/unit/hit_test_tests.rs",
+      "sha256": "2bfae2c64bd9e7aaacb141322283318865ab271e07cd36e8234645be444b5391"
+    },
+    {
+      "path": "tests/unit/join_paths_tests.rs",
+      "sha256": "63bd3434cc0073a6dd065753bd11efb57a672f525904b37c0dc0218cd7d8004b"
+    },
+    {
+      "path": "tests/unit/join_tests.rs",
+      "sha256": "4ede40e23abdb0ffdf37b8e7c5ef5cd1cedc4f523701c9fb287bc57ed9497042"
+    },
+    {
+      "path": "tests/unit/knife_tests.rs",
+      "sha256": "667497985b6ecf5890c00e0381aa3b5253635fd8326523260ff856137dcc4413"
+    },
+    {
+      "path": "tests/unit/lasso_tests.rs",
+      "sha256": "726bf87db97a377ef3e7444b0b29ffa9cfcb3316e5558196c67cce61de164d84"
+    },
+    {
+      "path": "tests/unit/line_tests.rs",
+      "sha256": "c17df4db9f651e66da1c5868cb9bb26a287d6e57a9df88685d400839ddbbe4a3"
+    },
+    {
+      "path": "tests/unit/lock_tests.rs",
+      "sha256": "4bd9bcfdca8dce1ded3684abf041dee7ce1f35937ffe22ba29415d77d3ffb701"
+    },
+    {
+      "path": "tests/unit/make_same_size_tests.rs",
+      "sha256": "51a3f28500001428a2cfb057f11cc2d9e89764d213a3953862f799b3043ceadc"
+    },
+    {
+      "path": "tests/unit/measure_tests.rs",
+      "sha256": "fcf21bf17b17f593294de158760a609e536c76e34e992afb0db57ce9001ddf2c"
+    },
+    {
+      "path": "tests/unit/menu_action_tests.rs",
+      "sha256": "cd6dec9e3f13e2b791526de585e73a9ac8b277cee30c8d99bfcdd349a3b2ff87"
+    },
+    {
+      "path": "tests/unit/merge_tests.rs",
+      "sha256": "ee3aed3c3a18129dfa9505918ba3c70e9750b25eb2d98869c743145dc57f881a"
+    },
+    {
+      "path": "tests/unit/move_tests.rs",
+      "sha256": "4d07da23b9d8b2edc395ebd97421f3957feb10797a57d3df7e0c7aea5da20ab4"
+    },
+    {
+      "path": "tests/unit/node_handle_tests.rs",
+      "sha256": "660e5bcd7abc02f9e8d8b191f60d2e62c521c20c475866efbbca8c47ad27e3bc"
+    },
+    {
+      "path": "tests/unit/offset_path_tests.rs",
+      "sha256": "7b001ee0eaf6e6d0a901d48e04e31dbdf3719a9ad425b79acf07e373f79cc904"
+    },
+    {
+      "path": "tests/unit/open_path_tests.rs",
+      "sha256": "33cf95355afa11edc272601ad68517acc45a44acaab49ce16d66648eee5fdabf"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "sha256": "4f4a3eaba10ddfb54585e0f38321f74c80d36fd1cfb2a87cfa3f903c6127e8a0"
+    },
+    {
+      "path": "tests/unit/path_tests.rs",
+      "sha256": "a4e481a482c69280e92b146b7535e7975e347d93846751f3039769f3ed60efdf"
+    },
+    {
+      "path": "tests/unit/pen_tests.rs",
+      "sha256": "712086be205868c7d88c546e9426698056a0d4e1a1c6e00dfdbec04344e469af"
+    },
+    {
+      "path": "tests/unit/pencil_tests.rs",
+      "sha256": "3326826ed2acf1d3f21efc2b113cae52554dd041e6f34f8c54f3cf350dc6e2fa"
+    },
+    {
+      "path": "tests/unit/persistence_tests.rs",
+      "sha256": "06255a43e2e7a8fede498253462a127482e9cf5f8f468a843e89435ffde8474b"
+    },
+    {
+      "path": "tests/unit/polar_grid_action_tests.rs",
+      "sha256": "b247cf98ebc91a78b19f88b72e20af046baf7c4280553fe2100c104c4da93bda"
+    },
+    {
+      "path": "tests/unit/polar_grid_tests.rs",
+      "sha256": "7c78312a52e8e7efa9e87016851647a79f9df7f81005ca57d51b9bb583aedc04"
+    },
+    {
+      "path": "tests/unit/polygon_tests.rs",
+      "sha256": "20113783570f81151006257850f32538f707d3779e0f1016617ab2b2a2f2dadb"
+    },
+    {
+      "path": "tests/unit/pucker_bloat_tests.rs",
+      "sha256": "222d351c2819460fac679db143ca6e385cdf6f5e57db304d282c725e2af71cac"
+    },
+    {
+      "path": "tests/unit/radial_repeat_tests.rs",
+      "sha256": "11e8a7d12818dfba2a580fa708ab5426dc19820f0c9a070600d16123848e8c4a"
+    },
+    {
+      "path": "tests/unit/recolor_tests.rs",
+      "sha256": "670fdac3f24aa062a075848609380c0e99ada818c649b772ab964d24e41c53b5"
+    },
+    {
+      "path": "tests/unit/recovery_tests.rs",
+      "sha256": "56519c0d266d28bb386eb977e4c20ef15fbf52838b5abe0ce9bb05c4c2e1d8ec"
+    },
+    {
+      "path": "tests/unit/reflect_tests.rs",
+      "sha256": "ca22affe1be6088629dc533bf69b5164db59954157c6b609ac617ff9206447a6"
+    },
+    {
+      "path": "tests/unit/render_cache_tests.rs",
+      "sha256": "557641236b9aa284cb24f39ffef13eba1ae7c55dca24479ac7f41a85ddf06b67"
+    },
+    {
+      "path": "tests/unit/resize_constrain_tests.rs",
+      "sha256": "40f51a55a9ce5eb5a33ccb0de36efb90634a91e0b307c36a9d2538e23b0f8655"
+    },
+    {
+      "path": "tests/unit/reverse_path_tests.rs",
+      "sha256": "aa256b90e6ac1be811517969df6cb4a743697a28416d1ae4acc48652de02ba4b"
+    },
+    {
+      "path": "tests/unit/rotate_action_tests.rs",
+      "sha256": "fa6436de26dfd361811c7e468613bc0b399e0b04b2f446a9f0ceb5a2154a1251"
+    },
+    {
+      "path": "tests/unit/rotate_handle_tests.rs",
+      "sha256": "cc790f2fcfb9444d0c4e1bbcc267d3f71d8033d5bec1f29f151c8eb59aa77086"
+    },
+    {
+      "path": "tests/unit/rotate_tests.rs",
+      "sha256": "d5cb05c22b34094f6fc77a3f7c5c60ffb31800b6d3283955f00aaa09ce727d09"
+    },
+    {
+      "path": "tests/unit/roughen_tests.rs",
+      "sha256": "ef994f8843c6c8b86bf28ef056e830780caf21d14803e119d69b54b5b19c3c4f"
+    },
+    {
+      "path": "tests/unit/round_corners_tests.rs",
+      "sha256": "03cf715484111da01b440cb00468067d958b7578fe2deb1d3516055738630767"
+    },
+    {
+      "path": "tests/unit/scale_tests.rs",
+      "sha256": "43b87e66c1c498817c5885eca13048139ba3a54c2499399a1b582a0d549b4ca2"
+    },
+    {
+      "path": "tests/unit/scatter_tests.rs",
+      "sha256": "8902e46497a5bf4fdf6d97432dcaa1282690e829444feb7663a53037a4a7b5b3"
+    },
+    {
+      "path": "tests/unit/scissors_tests.rs",
+      "sha256": "bc412a2a0f8126a73781307bbd5aedd0033702656e428ebef843734ba220fb66"
+    },
+    {
+      "path": "tests/unit/select_drag_guard_tests.rs",
+      "sha256": "28bb87e7ecb8602659363cf6f01f25d63ae888dc772b799a12789953da4ec9a8"
+    },
+    {
+      "path": "tests/unit/select_same_fill_tests.rs",
+      "sha256": "5005f993283254aff64fc38189cc3e899afb8e1fdb8274e03498f6047015a1fc"
+    },
+    {
+      "path": "tests/unit/select_transaction_tests.rs",
+      "sha256": "01db93993807b92dd870ae56f78d3f720166c1941949e67ba3f9ccbb71ce6d87"
+    },
+    {
+      "path": "tests/unit/selection_tests.rs",
+      "sha256": "bea0ba729aef29da405c9daac4fb7629a3bd128af9b8f8ff71db2eb31d663983"
+    },
+    {
+      "path": "tests/unit/shadow_tests.rs",
+      "sha256": "c46aa83afa150c365f0dff2c418341ba2c82fba1df82046664ef7e346c09148b"
+    },
+    {
+      "path": "tests/unit/shape_builder_cache_tests.rs",
+      "sha256": "4c52e58017c964ce2902f87201602df7b02bae077583f5846593ffc5ae1a8687"
+    },
+    {
+      "path": "tests/unit/shape_builder_tests.rs",
+      "sha256": "19b22f3d0f8e7a619f90435778ac121bc94aa0955bc0769d5807940210748fbd"
+    },
+    {
+      "path": "tests/unit/shape_tests.rs",
+      "sha256": "fcbc55eebf48536877a2d8f5c1fe298cf7b96ed8952813cc5489f8007d6365d0"
+    },
+    {
+      "path": "tests/unit/shear_tests.rs",
+      "sha256": "e3ff650be20fffa0678bc58ea82b3d593f2c1edb6dfc3da2d8c2d31489138459"
+    },
+    {
+      "path": "tests/unit/simplify_path_tests.rs",
+      "sha256": "a7557cfda7ec4c2077939f1c8810cd2b47a422682045cd16a1a17b5bebc49cfb"
+    },
+    {
+      "path": "tests/unit/smooth_path_tests.rs",
+      "sha256": "a0a2e61a08a3fa102f2ec9fcf5f09b1b852e4083d2cdeed26673b47b784aa848"
+    },
+    {
+      "path": "tests/unit/snap_degenerate_tests.rs",
+      "sha256": "010de2ad1110c1422b1c0d576154570dfe9f2bce2e030fec5dfac30c4329b19c"
+    },
+    {
+      "path": "tests/unit/snap_perf_tests.rs",
+      "sha256": "5c3a93abf9d30b3b6417d55a1bc1a357a4792852656ad69916b598d7ccd18266"
+    },
+    {
+      "path": "tests/unit/spiral_action_tests.rs",
+      "sha256": "1611a0c6fe5281b2a9739c38ad36bf77f03f26637b3729124467a51f8b863cd9"
+    },
+    {
+      "path": "tests/unit/spiral_tests.rs",
+      "sha256": "1b870e8dfc126807fb7db50445d341acf0489d88c3ac0b8cf9e631db8502516c"
+    },
+    {
+      "path": "tests/unit/split_path_tests.rs",
+      "sha256": "b4428608b74755f142ba18ed70553f18845a817a8984c14a214d05327767e06e"
+    },
+    {
+      "path": "tests/unit/step_and_repeat_tests.rs",
+      "sha256": "a81dae7ece8a4440307c4c53e548c05fff8f752389e406fb925795c396258c1f"
+    },
+    {
+      "path": "tests/unit/stipple_tests.rs",
+      "sha256": "44638eb2579fd4d62821d3e18701f59eff569a3370989fee6d4819030e328816"
+    },
+    {
+      "path": "tests/unit/subdivide_tests.rs",
+      "sha256": "3d5da87db64e20c9809aae3aadbc39b9d6bf00f2eaa0fd611071c50403baebde"
+    },
+    {
+      "path": "tests/unit/svg_import_tests.rs",
+      "sha256": "4c45367b85f5c553471d122c8fe5defb0eb6856bc59bb125a1693cf2d60fe23c"
+    },
+    {
+      "path": "tests/unit/transaction_tests.rs",
+      "sha256": "be506fd7fdd50d72f7a1d977434d3ae0ab1bf4a18de0ab301e2ff3ed046034d0"
+    },
+    {
+      "path": "tests/unit/transform_again_tests.rs",
+      "sha256": "85cf47d8df7682de442223067e95349e40b571573b532c8accf5f20d5cf6795e"
+    },
+    {
+      "path": "tests/unit/transform_each_tests.rs",
+      "sha256": "6c26c3ecdfba450f757565732ac0f26ca9e7fbc04892a818d1e7f6f3db62b6ff"
+    },
+    {
+      "path": "tests/unit/transform_pivot_tests.rs",
+      "sha256": "2c5c13e4dee9e54734f710f842ac613b63312cbcaadf95acc24b998d8e6607c7"
+    },
+    {
+      "path": "tests/unit/trim_tests.rs",
+      "sha256": "f9b90a487e649f9958a47bef5a1fd7b78991fd4522ebe9cd7c9b3735b0f72462"
+    },
+    {
+      "path": "tests/unit/twist_tests.rs",
+      "sha256": "6debbb8b4fa0ea4eacb1532f4d2742a76795fec535b4b23262ed35df79304a29"
+    },
+    {
+      "path": "tests/unit/zig_zag_tests.rs",
+      "sha256": "65cc46bde5ecad5c6632e5b03b2834cdee9c153567fe196f0a136676e1e3ba8b"
+    },
+    {
+      "path": "tests/unit/zorder_tests.rs",
+      "sha256": "43d88876883b2a7bf7fbaca57bcd365444df7463c362a71dab9f6c640abb68f9"
+    },
+    {
+      "path": "tests/unit_test_files_wired.rs",
+      "sha256": "d4645e1ada0213bf87ea98022612432a71a741f49fdeff5e75ef076964ac720a"
+    },
+    {
+      "path": "benches/drag_loop.rs",
+      "sha256": "cc1269d0d353fdceeeedf9913f715c6021208f1bfabfd911ae38b3ff78f951c8"
+    },
+    {
+      "path": "benches/perf_batch2.rs",
+      "sha256": "044c8266b14fb3a1d5979770394cbdc102f544691eab18959593a47cfb199232"
+    },
+    {
+      "path": "benches/perf_batch3.rs",
+      "sha256": "28c1bc02ad99fa3bfc08a447f49a939186479901df7fe1915af353ec5940fc68"
+    },
+    {
+      "path": "benches/perf_batch4.rs",
+      "sha256": "bbc18aaf7c4516d21be5486054491d0c91ef6c4f4dcf6648d32d69ae7f21e2cc"
+    },
+    {
+      "path": "benches/perf_batch5.rs",
+      "sha256": "7ea54b7fbcdf7342afaf06b187829c9a32559176158047452f75fb1333bc77a5"
+    },
+    {
+      "path": "benches/perf_batch6.rs",
+      "sha256": "c0cc448521098acb5deaaaad9b08cea372ab0271cdc64aae3c5ff03fef02832f"
+    },
+    {
+      "path": "benches/perf_cache_fixes.rs",
+      "sha256": "0dffc1933b89b6d8c5cb29f6809fd5dd0569d5bc38275f5276b65c148d458453"
+    },
+    {
+      "path": "benches/perf_cache_round2.rs",
+      "sha256": "a8f073e5ad760b3a1fa5860f2b224217543d89aebcc4689863cb8599eed5b481"
+    },
+    {
+      "path": "benches/perf_stress.rs",
+      "sha256": "a75ed671b003dc20390a4bebeed95dca65de8673986f32540564e4fc2f5db254"
+    },
+    {
+      "path": "benches/perf_top10.rs",
+      "sha256": "598e16c91f8ff4a682460ec1d16ba57f3f13a98b4066c356c01577e93968afaa"
+    },
+    {
+      "path": "benches/perf_top12_verify.rs",
+      "sha256": "c317d89b718ab9f2fd3f2eb80d5a906ee1092516cf0de3c893f607c7268c5fce"
+    },
+    {
+      "path": "examples/visual_test.rs",
+      "sha256": "7fa0de1ad209673114d33760e1882c954f2b8d6a61fa5d76815f80877ad68194"
+    }
+  ],
+  "counts": [
+    {
+      "category": "benches",
+      "dependency": "linesweeper",
+      "kind": "code_candidate",
+      "lines": 2
+    },
+    {
+      "category": "manifest",
+      "dependency": "kurbo",
+      "kind": "code_candidate",
+      "lines": 1
+    },
+    {
+      "category": "manifest",
+      "dependency": "linesweeper",
+      "kind": "code_candidate",
+      "lines": 1
+    },
+    {
+      "category": "manifest",
+      "dependency": "lyon_path",
+      "kind": "code_candidate",
+      "lines": 1
+    },
+    {
+      "category": "manifest",
+      "dependency": "lyon_tessellation",
+      "kind": "code_candidate",
+      "lines": 1
+    },
+    {
+      "category": "src",
+      "dependency": "kurbo",
+      "kind": "code_candidate",
+      "lines": 79
+    },
+    {
+      "category": "src",
+      "dependency": "kurbo",
+      "kind": "other_reference",
+      "lines": 33
+    },
+    {
+      "category": "src",
+      "dependency": "linesweeper",
+      "kind": "code_candidate",
+      "lines": 26
+    },
+    {
+      "category": "src",
+      "dependency": "linesweeper",
+      "kind": "other_reference",
+      "lines": 19
+    },
+    {
+      "category": "src",
+      "dependency": "lyon_path",
+      "kind": "code_candidate",
+      "lines": 12
+    },
+    {
+      "category": "src",
+      "dependency": "lyon_tessellation",
+      "kind": "code_candidate",
+      "lines": 13
+    },
+    {
+      "category": "src",
+      "dependency": "lyon_tessellation",
+      "kind": "other_reference",
+      "lines": 1
+    },
+    {
+      "category": "tests",
+      "dependency": "kurbo",
+      "kind": "code_candidate",
+      "lines": 42
+    },
+    {
+      "category": "tests",
+      "dependency": "kurbo",
+      "kind": "other_reference",
+      "lines": 13
+    },
+    {
+      "category": "tests",
+      "dependency": "linesweeper",
+      "kind": "code_candidate",
+      "lines": 12
+    },
+    {
+      "category": "tests",
+      "dependency": "linesweeper",
+      "kind": "other_reference",
+      "lines": 8
+    },
+    {
+      "category": "tests",
+      "dependency": "lyon_tessellation",
+      "kind": "code_candidate",
+      "lines": 1
+    }
+  ],
+  "lockfile_direct_consumers": {
+    "kurbo": [
+      "curvex",
+      "linesweeper",
+      "peniko",
+      "svgtypes",
+      "usvg"
+    ],
+    "linesweeper": [
+      "curvex"
+    ],
+    "lyon_path": [
+      "curvex",
+      "lyon_tessellation"
+    ],
+    "lyon_tessellation": [
+      "curvex"
+    ]
+  },
+  "references": [
+    {
+      "path": "Cargo.toml",
+      "line": 21,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "lyon_tessellation = \"1.0\""
+    },
+    {
+      "path": "Cargo.toml",
+      "line": 22,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "lyon_path = \"1.0\""
+    },
+    {
+      "path": "Cargo.toml",
+      "line": 23,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper = \"0.4\""
+    },
+    {
+      "path": "Cargo.toml",
+      "line": 24,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "kurbo = \"0.13\""
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 249,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// edge is a true parallel offset with correct joins. kurbo handles the"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 251,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// reuses the stroke-ring trick rather than `kurbo::offset`, whose"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 252,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// kurbo-0.13 implementation is single-cubic and join-unaware."
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 979,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// For each id in `ids`, stroke the source's kurbo path with its own stroke"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1029,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// Build the kurbo stroke from the source style (geometry in mm)."
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1031,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Butt => kurbo::Cap::Butt,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1032,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Round => kurbo::Cap::Round,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1033,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Square => kurbo::Cap::Square,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1036,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Miter => kurbo::Join::Miter,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1037,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Round => kurbo::Join::Round,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1038,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Bevel => kurbo::Join::Bevel,"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1040,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut stroke = kurbo::Stroke::new(src.stroke.width as f64)"
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1054,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let outline = kurbo::stroke("
+    },
+    {
+      "path": "src/actions/transform/path_commands.rs",
+      "line": 1057,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "&kurbo::StrokeOpts::default(),"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 111,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// outset and the smaller-area contour is the inset. kurbo's raw stroke output"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 113,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// bowtie), so the ring is first normalized through linesweeper's NonZero"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 116,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// area pick. This is why kurbo's single-cubic, join-unaware `offset` is not"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 123,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// an INSET is `source − ring`, both via the same linesweeper NonZero solver,"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 136,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 152,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Miter => kurbo::Join::Miter,"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 153,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Round => kurbo::Join::Round,"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 154,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineJoin::Bevel => kurbo::Join::Bevel,"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 158,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let stroke = kurbo::Stroke::new(2.0 * f64::from(d.abs()))"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 161,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let ring = kurbo::stroke("
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 164,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "&kurbo::StrokeOpts::default(),"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 172,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let empty = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 184,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut ring_path = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 200,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut out = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 217,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut best: Option<(kurbo::BezPath, f64)> = None;"
+    },
+    {
+      "path": "src/actions/transform/path_effects/offset.rs",
+      "line": 219,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut path = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "//! selected shapes, implemented via the `linesweeper` crate."
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 7,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "self.apply_boolean_op_to_selection(linesweeper::BinaryOp::Union, \"Merged\", \"Merged shapes\");"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 12,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper::BinaryOp::Intersection,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 20,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper::BinaryOp::Xor,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 89,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// converts the selection to kurbo paths (the same conversion"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 100,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// the closed kurbo path of every usable source, in selection order."
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 107,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut paths: Vec<kurbo::BezPath> = Vec::new();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 249,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// into buckets keyed by representative FILL color, run linesweeper Union"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 319,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "op: linesweeper::BinaryOp,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 328,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// (`Nonzero`) fill_rule renders the linesweeper-wound holes correctly,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 704,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// Collect each cutter's closed kurbo path together with its id; cutters"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 710,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let cutter_paths: Vec<kurbo::BezPath> = cutters"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 728,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut paths: Vec<&kurbo::BezPath> = vec![&survivor_path];"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 730,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&paths, linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 836,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_paths_pure(&[sp, cp], linesweeper::BinaryOp::Difference)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 894,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// (front-most last), returning each shape together with its closed kurbo path."
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 906,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Vec<(Shape, kurbo::BezPath)> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 920,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// Compound. `contours` is the flat list from [`boolean_paths_pure`] (linesweeper"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1047,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "op: linesweeper::BinaryOp,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1065,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// op). `consumed` records the ids of the shapes whose closed kurbo path"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1072,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = shapes"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1080,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = paths.iter().collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1147,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = closed.into_iter().map(|(_, p)| p).collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1197,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// it to a kurbo path, then replace every selected shape with (shape MINUS cell)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1220,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = closed.iter().map(|(_, p)| p.clone()).collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1244,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&[sp, &cell_path], linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1367,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&[&sp, &frame_path], linesweeper::BinaryOp::Intersection);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1441,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// (`path_segments` -> kurbo returns `None`). The front-most shape has no"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1480,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// Pre-convert every shape's closed kurbo path once (None for open paths), so"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1482,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let closed_paths: Vec<Option<kurbo::BezPath>> ="
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1523,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let cutter_paths: Vec<&kurbo::BezPath> = closed_paths[i + 1..]"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1540,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut paths: Vec<&kurbo::BezPath> = vec![subject_path];"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1542,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&paths, linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1552,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// Relative tolerance: linesweeper's eps re-tessellation can perturb the"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1632,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// `None` bucket. Within each bucket the closed kurbo paths are folded through"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1633,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// linesweeper Union ([`boolean_paths_pure`]), so same-color shapes that overlap,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1686,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// One color bucket: every same-color closed shape's kurbo path, plus the"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1694,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "paths: Vec<kurbo::BezPath>,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1777,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = b.paths.iter().collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1778,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&refs, linesweeper::BinaryOp::Union);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1864,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Each subset runs through the SAME [`boolean_paths_pure`] over kurbo paths,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1870,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub fn divide_paths_pure(paths: &[kurbo::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1900,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "paths: &[kurbo::BezPath],"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1908,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// and converted back to a single kurbo path. `None` when the subset is"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1910,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let union_of = |indices: &[usize]| -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1915,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = indices.iter().map(|&k| &paths[k]).collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1916,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let contours = boolean_paths_pure(&refs, linesweeper::BinaryOp::Union);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1920,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// Rebuild a closed kurbo path from the union contours so it can"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1944,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = in_s.iter().map(|&i| &paths[i]).collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1945,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_paths_pure(&refs, linesweeper::BinaryOp::Intersection)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1964,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_paths_pure(&[&inter_path, &rest], linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1979,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn split_kurbo_sub_paths(path: &kurbo::BezPath) -> Vec<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1980,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, PathEl};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1995,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn canonical_boolean_contours(path: &kurbo::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 1996,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2002,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut canonical = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2009,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn boolean_contours_above_noise(path: &kurbo::BezPath, eps: f64) -> Vec<(Vec2, Vec<PathSegment>)> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2013,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut combined = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2021,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// are normalized to NonZero at the document boundary and linesweeper keeps"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2027,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2029,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": ".is_some_and(|path| path.winding(kurbo::Point::new(f64::from(p.x), f64::from(p.y))) != 0)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2032,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Rebuild a single closed kurbo path from `(start, segments)` contours so a"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2036,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn contours_to_kurbo_path(contours: &[(Vec2, Vec<PathSegment>)]) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2037,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, Point};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2064,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// each input shape to a kurbo path once, then folds via"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2068,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "op: linesweeper::BinaryOp,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2073,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = shapes"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2077,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = paths.iter().collect();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2081,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Pure boolean op over pre-converted kurbo paths. Lets callers that apply"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2085,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "paths: &[&kurbo::BezPath],"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2086,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "op: linesweeper::BinaryOp,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2088,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::BezPath;"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2089,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::{binary_op_with_eps, FillRule};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2094,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// Apply op pairwise via linesweeper. eps small enough to preserve real"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2121,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Split a kurbo path into per-subpath `(start, segments)` contours, mapping"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2129,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// degenerate transform fed through `kurbo::stroke`) cannot inject invalid"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2131,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn bez_path_to_contours(path: &kurbo::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2132,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, PathEl, Point};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2291,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn shape_to_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2293,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut path = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2304,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// through a linesweeper self-union under the shape's OWN `fill_rule`"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2317,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn shape_to_region_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2326,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn append_contour_to_kurbo(path: &mut kurbo::BezPath, start: Vec2, segments: &[PathSegment]) {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2327,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Point;"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2351,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn shape_to_kurbo_path_any(shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2352,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, Point};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2383,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Build a closed kurbo path from an already-converted `(start, segments,"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2390,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2391,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, Point};"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2429,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_shapes_pure(shapes, linesweeper::BinaryOp::Union)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2435,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_shapes_pure(shapes, linesweeper::BinaryOp::Difference)"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2438,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Bench-only hook: convert one shape to its (closed) kurbo path."
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2440,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub fn shape_to_kurbo_path_for_bench(shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2668,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn bez_path_bbox_area(p: &kurbo::BezPath) -> f64 {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2669,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::PathEl;"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2674,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut include = |pt: kurbo::Point| {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2709,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Unsigned enclosed area of a (closed) kurbo path, via kurbo's analytic"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2716,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn bez_path_area(p: &kurbo::BezPath) -> f64 {"
+    },
+    {
+      "path": "src/boolean_ops.rs",
+      "line": 2719,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "kurbo::Shape::area(p).abs()"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 17,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Append one ring to `path` as a CLOSED subpath (kurbo geometry is f64)."
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 18,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn append_ring(path: &mut kurbo::BezPath, start: Vec2, segments: &[PathSegment]) {"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 19,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Point;"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 38,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Build a closed kurbo path from an already-converted `(start, segments,"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 44,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 48,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut path = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 53,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// The FULL region of a Compound as closed kurbo subpaths: every ring, then"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 54,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// winding-normalized through a linesweeper self-union under the shape's OWN"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 65,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub(crate) fn compound_region_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 69,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut raw = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 77,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "crate::shape::FillRule::EvenOdd => linesweeper::FillRule::EvenOdd,"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 78,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "crate::shape::FillRule::Nonzero => linesweeper::FillRule::NonZero,"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 80,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let empty = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 81,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let Ok(normalized) = linesweeper::binary_op_with_eps("
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 85,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper::BinaryOp::Union,"
+    },
+    {
+      "path": "src/document/kurbo_convert.rs",
+      "line": 90,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut combined = kurbo::BezPath::new();"
+    },
+    {
+      "path": "src/document.rs",
+      "line": 373,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Closed kurbo path of `shape` for boolean-style consumers (Divide,"
+    },
+    {
+      "path": "src/document.rs",
+      "line": 384,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "pub fn closed_kurbo_path(&self, shape: &Shape) -> Option<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/menu_action.rs",
+      "line": 89,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// by representative fill color, run linesweeper Union WITHIN each bucket, and"
+    },
+    {
+      "path": "src/tools/shape_builder.rs",
+      "line": 55,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Collect the selection's CLOSED shapes as kurbo paths, in document-visual"
+    },
+    {
+      "path": "src/tools/shape_builder.rs",
+      "line": 71,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Vec<kurbo::BezPath> {"
+    },
+    {
+      "path": "src/ui/menu_model.rs",
+      "line": 511,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// engine (no new linesweeper op): for every input the part covered by"
+    },
+    {
+      "path": "src/ui/menu_model.rs",
+      "line": 532,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// the shipped linesweeper Intersection per subject (no new boolean"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 97,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "Mesh(Rc<lyon_tessellation::VertexBuffers<Pos2, u32>>),"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 164,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "static FILL_TESS: RefCell<lyon_tessellation::FillTessellator> ="
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 165,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "RefCell::new(lyon_tessellation::FillTessellator::new());"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 166,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "static STROKE_TESS: RefCell<lyon_tessellation::StrokeTessellator> ="
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 167,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "RefCell::new(lyon_tessellation::StrokeTessellator::new());"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 192,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "other_reference",
+      "text": "/// thread-local [`lyon_tessellation::FillTessellator`]. Returns `None` on"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 195,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "path: &lyon_path::Path,"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 198,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Option<lyon_tessellation::VertexBuffers<Pos2, u32>> {"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 199,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_tessellation::{"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 231,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "geometry: &lyon_tessellation::VertexBuffers<Pos2, u32>,"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 278,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "build_path: &dyn Fn() -> lyon_path::Path,"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 351,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::math::point;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 352,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::Path as LyonPath;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 419,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// Pure (no egui / GPU), built on the same `linesweeper` boolean Difference the"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 448,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper::BinaryOp::Difference,"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 467,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// `Nonzero`, which is correct for a `linesweeper` Difference result (its"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 524,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// behind it (linesweeper over both silhouettes) is the most expensive per-frame"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1094,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::math::point;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1095,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::Path as LyonPath;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1155,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::math::point;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1156,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::Path as LyonPath;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1237,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// matching the SVG export order. Ghosts (including the expensive linesweeper"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1342,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": ") -> Option<lyon_tessellation::VertexBuffers<Pos2, u32>> {"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1343,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::math::point;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1344,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::Path as LyonPath;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1345,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_tessellation::{BuffersBuilder, StrokeOptions, StrokeVertex, VertexBuffers};"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1543,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "geometry: lyon_tessellation::VertexBuffers<Pos2, u32>,"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1548,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::math::point;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1549,
+      "dependencies": [
+        "lyon_path"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_path::Path as LyonPath;"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1550,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "use lyon_tessellation::{"
+    },
+    {
+      "path": "src/ui/shape_render.rs",
+      "line": 1761,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "fn mesh_covers(mesh: &lyon_tessellation::VertexBuffers<Pos2, u32>, p: Pos2) -> bool {"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 8,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, PathEl, Point};"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 9,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 13,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "boolean_shapes_pure(&refs, linesweeper::BinaryOp::Union)"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 552,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 608,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "let p1 = shape_to_kurbo_path(&sharp).expect(\"sharp polygon -> kurbo path\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 609,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "let p2 = shape_to_kurbo_path(&rounded).expect(\"rounded polygon -> kurbo path\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 612,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": ".expect(\"linesweeper union\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 666,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": ".expect(\"linesweeper union\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 710,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 758,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 786,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 819,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 831,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 835,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 852,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 860,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 862,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 877,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 889,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Xor);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 893,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1194,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1207,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Xor);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1210,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1242,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1247,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1286,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "let path = shape_to_kurbo_path(&r).expect(\"rect should convert to kurbo path\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1300,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "let path = shape_to_kurbo_path(&el).expect(\"ellipse should convert to kurbo path\");"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1364,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);"
+    },
+    {
+      "path": "tests/unit/app_tests.rs",
+      "line": 1432,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 3,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::BinaryOp;"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 48,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "const TOL: f32 = 0.2; // linesweeper runs with eps = 0.05"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 59,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn cell_from_paths(paths: &[kurbo::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 102,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::Shape as _;"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 104,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "(kurbo::Point::new(10.0, 50.0), true),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 105,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "(kurbo::Point::new(30.0, 50.0), false),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 106,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "(kurbo::Point::new(50.0, 50.0), true),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 124,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// A Line is an open path; it cannot be converted to a closed kurbo path,"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 280,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = shapes"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 284,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = paths.iter().collect();"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 299,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let paths: Vec<kurbo::BezPath> = [&a, &open]"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 303,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let refs: Vec<&kurbo::BezPath> = paths.iter().collect();"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 330,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// union must cover the full 0..20 span; whether linesweeper fuses the"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 691,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// These drive the pure free fn `divide_paths_pure` over kurbo paths, exactly"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 698,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Closed kurbo path for a shape (panics if the shape has no closed form, which"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 700,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn kurbo_of(shape: &Shape) -> kurbo::BezPath {"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 705,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// into a kurbo path and reusing the production `bez_path_bbox_area`. For"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 712,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut p = kurbo::BezPath::new();"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 713,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "p.move_to(kurbo::Point::new(f64::from(start.x), f64::from(start.y)));"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 717,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "p.line_to(kurbo::Point::new(f64::from(to.x), f64::from(to.y)));"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 721,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "kurbo::Point::new(f64::from(c1.x), f64::from(c1.y)),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 722,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "kurbo::Point::new(f64::from(c2.x), f64::from(c2.y)),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 723,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "kurbo::Point::new(f64::from(to.x), f64::from(to.y)),"
+    },
+    {
+      "path": "tests/unit/boolean_ops_tests.rs",
+      "line": 1128,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "/// matches the Nonzero classification linesweeper winds the output for."
+    },
+    {
+      "path": "tests/unit/compound_ops_tests.rs",
+      "line": 322,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "linesweeper::BinaryOp::Union,"
+    },
+    {
+      "path": "tests/unit/concentric_offset_tests.rs",
+      "line": 282,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "//    with a NaN width and panic inside linesweeper. NaN is caught at the action"
+    },
+    {
+      "path": "tests/unit/offset_path_tests.rs",
+      "line": 20,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Stroke tessellation tolerance budget for bbox assertions (kurbo stroke at"
+    },
+    {
+      "path": "tests/unit/offset_path_tests.rs",
+      "line": 264,
+      "dependencies": [
+        "kurbo",
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// kurbo's raw stroke output; the linesweeper normalization must collapse it"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 7,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "//! The heavy logic - `kurbo::stroke` plus `bez_path_to_contours` - is pure and"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 62,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "/// Outline a shape's stroke the same way `action_outline_stroke` does (kurbo"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 67,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Butt => kurbo::Cap::Butt,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 68,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Round => kurbo::Cap::Round,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 69,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "LineCap::Square => kurbo::Cap::Square,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 72,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "crate::shape::LineJoin::Miter => kurbo::Join::Miter,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 73,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "crate::shape::LineJoin::Round => kurbo::Join::Round,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 74,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "crate::shape::LineJoin::Bevel => kurbo::Join::Bevel,"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 76,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let mut stroke = kurbo::Stroke::new(shape.stroke.width as f64)"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 88,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "let outline = kurbo::stroke("
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 91,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "&kurbo::StrokeOpts::default(),"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 249,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, Point};"
+    },
+    {
+      "path": "tests/unit/outline_stroke_tests.rs",
+      "line": 297,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "use kurbo::{BezPath, Point};"
+    },
+    {
+      "path": "tests/unit/render_cache_tests.rs",
+      "line": 132,
+      "dependencies": [
+        "lyon_tessellation"
+      ],
+      "kind": "code_candidate",
+      "text": "CacheEntry::Mesh(Rc::new(lyon_tessellation::VertexBuffers::new()))"
+    },
+    {
+      "path": "tests/unit/shape_builder_tests.rs",
+      "line": 35,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn kurbo_of(shape: &Shape) -> kurbo::BezPath {"
+    },
+    {
+      "path": "tests/unit/shape_builder_tests.rs",
+      "line": 95,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "code_candidate",
+      "text": "fn overlap_cell_index(paths: &[kurbo::BezPath]) -> usize {"
+    },
+    {
+      "path": "tests/unit/shape_builder_tests.rs",
+      "line": 303,
+      "dependencies": [
+        "kurbo"
+      ],
+      "kind": "other_reference",
+      "text": "// each piece's closed kurbo path and even-odd test the overlap centre."
+    },
+    {
+      "path": "tests/unit/trim_tests.rs",
+      "line": 111,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "other_reference",
+      "text": "// bbox is now ~ (0,0)-(10,20). Tolerance covers linesweeper's eps = 0.05."
+    },
+    {
+      "path": "benches/perf_cache_round2.rs",
+      "line": 230,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::BinaryOp;"
+    },
+    {
+      "path": "benches/perf_top12_verify.rs",
+      "line": 452,
+      "dependencies": [
+        "linesweeper"
+      ],
+      "kind": "code_candidate",
+      "text": "use linesweeper::BinaryOp;"
+    }
+  ]
+}

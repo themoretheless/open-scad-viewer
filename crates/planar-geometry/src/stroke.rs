@@ -62,8 +62,18 @@ fn perp(v: [f64; 2]) -> [f64; 2] {
     [-v[1], v[0]]
 }
 
-/// Stroke a path into one or more closed outline paths.
+/// Stroke a path into oriented region boundaries, including clockwise holes.
+/// The contours must be filled together under the NonZero rule.
 pub fn outline_stroke(path: &BezierPath, opts: &StrokeOptions) -> Result<Vec<BezierPath>> {
+    outline_stroke_tol(path, opts, crate::path::FLATTEN_TOLERANCE)
+}
+
+/// Stroke with a maximum chord error in document units for curves and round joins.
+pub fn outline_stroke_tol(
+    path: &BezierPath,
+    opts: &StrokeOptions,
+    tolerance: f64,
+) -> Result<Vec<BezierPath>> {
     check(
         opts.width > 0. && opts.width.is_finite(),
         "Invalid stroke width",
@@ -72,33 +82,141 @@ pub fn outline_stroke(path: &BezierPath, opts: &StrokeOptions) -> Result<Vec<Bez
         opts.miter_limit >= 1. && opts.miter_limit.is_finite(),
         "Invalid miter limit",
     )?;
-    let pts = path.flatten()?;
+    check(
+        tolerance > 0. && tolerance.is_finite(),
+        "Invalid stroke tolerance",
+    )?;
+    check(opts.dash_offset.is_finite(), "Invalid dash offset")?;
+    let mut pts = path.flatten_tol(tolerance)?;
+    pts.dedup_by(|a, b| dist(*a, *b) <= 1e-12);
+    if path.closed && pts.len() > 1 && dist(pts[0], *pts.last().unwrap()) <= 1e-12 {
+        pts.pop();
+    }
     check(pts.len() >= 2, "Path too short to outline")?;
-    let mut polylines = if let Some(dash) = &opts.dash {
-        if dash.iter().any(|d| *d > 0. && d.is_finite()) {
-            dash_polylines(&pts, path.closed, dash, opts.dash_offset)?
-        } else {
-            vec![(pts, path.closed)]
-        }
-    } else {
-        vec![(pts, path.closed)]
-    };
-    // Dashed closed path yields open spans.
-    for (_, closed) in &mut polylines {
-        if opts.dash.is_some() {
-            *closed = false;
+    if path.closed && opts.dash.as_ref().is_none_or(Vec::is_empty) {
+        if let Some(rings) = convex_closed_stroke(&pts, opts, tolerance)? {
+            return rings
+                .iter()
+                .map(|r| BezierPath::from_polyline(r, true))
+                .collect();
         }
     }
-    let half = opts.width * 0.5;
-    let mut out = Vec::new();
+    let polylines = match &opts.dash {
+        Some(dash) if !dash.is_empty() => {
+            dash_polylines(&pts, path.closed, dash, opts.dash_offset)?
+        }
+        _ => vec![(pts, path.closed)],
+    };
+    let mut pieces = Vec::new();
     for (poly, closed) in polylines {
-        if poly.len() < 2 {
+        stroke_pieces(&poly, closed, opts, tolerance, &mut pieces)?;
+    }
+    let contours = crate::rings::nonzero(&pieces)?;
+    check(!contours.is_empty(), "Stroke produced no outline")?;
+    contours
+        .iter()
+        .map(|ring| BezierPath::from_polyline(ring, true))
+        .collect()
+}
+
+/// A simple convex ring has two offset boundaries, with no arrangement to
+/// solve. Certify convexity and a noncollapsed inset before using this route;
+/// concave rings, stars with winding >1, and consumed insets use the union path.
+fn convex_closed_stroke(
+    input: &[[f64; 2]],
+    opts: &StrokeOptions,
+    tolerance: f64,
+) -> Result<Option<crate::rings::Rings>> {
+    if input.len() < 3 {
+        return Ok(None);
+    }
+    let mut pts = input.to_vec();
+    if crate::rings::area(&pts) < 0. {
+        pts.reverse();
+    }
+    let n = pts.len();
+    let half = opts.width * 0.5;
+    let mut directions = Vec::with_capacity(n);
+    for i in 0..n {
+        let d = sub2(pts[(i + 1) % n], pts[i]);
+        if norm2(d) <= 1e-12 {
+            return Ok(None);
+        }
+        directions.push(unit2(d));
+    }
+    let mut turn = 0.;
+    for i in 0..n {
+        let a = directions[(i + n - 1) % n];
+        let b = directions[i];
+        let cross = crate::rings::cross2(a, b);
+        let dot = a[0] * b[0] + a[1] * b[1];
+        if cross < -1e-12 || (cross.abs() <= 1e-12 && dot < 0.) {
+            return Ok(None);
+        }
+        turn += cross.atan2(dot);
+    }
+    if (turn - std::f64::consts::TAU).abs() > 1e-7 {
+        return Ok(None);
+    }
+    let mut outer = Vec::with_capacity(n * 2);
+    let mut inner = Vec::with_capacity(n);
+    for i in 0..n {
+        let p = pts[i];
+        let d0 = directions[(i + n - 1) % n];
+        let d1 = directions[i];
+        let normal0 = scale2(perp(d0), half);
+        let normal1 = scale2(perp(d1), half);
+        let l0 = add2(p, normal0);
+        let l1 = add2(p, normal1);
+        let r0 = sub2(p, normal0);
+        let r1 = sub2(p, normal1);
+        let cross = crate::rings::cross2(d0, d1);
+        let dot = d0[0] * d1[0] + d0[1] * d1[1];
+        if cross.abs() < 1e-12 {
+            outer.push(r1);
+            inner.push(l1);
             continue;
         }
-        out.push(stroke_polyline(&poly, closed, half, opts)?);
+        let Some(inside) = line_intersect(l0, add2(l0, d0), l1, add2(l1, d1)) else {
+            return Ok(None);
+        };
+        inner.push(inside);
+        match opts.join {
+            LineJoin::Miter => {
+                if let Some(m) = line_intersect(r0, add2(r0, d0), r1, add2(r1, d1)) {
+                    if dist(m, p) <= half * opts.miter_limit {
+                        outer.push(m);
+                        continue;
+                    }
+                }
+                outer.extend([r0, r1]);
+            }
+            LineJoin::Bevel => outer.extend([r0, r1]),
+            LineJoin::Round => {
+                let angle = (r0[1] - p[1]).atan2(r0[0] - p[0]);
+                outer.extend(
+                    arc_sector(p, half, angle, cross.atan2(dot), tolerance)?
+                        .into_iter()
+                        .skip(1),
+                );
+            }
+        }
     }
-    check(!out.is_empty(), "Stroke produced no outline")?;
-    Ok(out)
+    // Every inset edge must still advance along its corresponding support.
+    // Together with the certified convex turn this proves all half-planes are
+    // retained. Redundant/consumed edges are left to the general arrangement.
+    for i in 0..n {
+        let edge = sub2(inner[(i + 1) % n], inner[i]);
+        let d = directions[i];
+        if edge[0] * d[0] + edge[1] * d[1] <= 1e-12 {
+            return Ok(None);
+        }
+    }
+    if !outer.iter().chain(&inner).flatten().all(|v| v.is_finite()) {
+        return Err(crate::error("Non-finite stroke boundary"));
+    }
+    inner.reverse();
+    Ok(Some(vec![outer, inner]))
 }
 
 /// Closed marker path at `endpoint`, oriented along unit `outward` tangent.
@@ -138,10 +256,7 @@ pub fn arrow_marker_path(
             let b1 = [base[0] + perp[0] * s * 0.55, base[1] + perp[1] * s * 0.55];
             let b2 = [base[0] - perp[0] * s * 0.55, base[1] - perp[1] * s * 0.55];
             // Thin filled chevron (V pointing along dir).
-            let inset = [
-                tip[0] - dir[0] * s * 0.35,
-                tip[1] - dir[1] * s * 0.35,
-            ];
+            let inset = [tip[0] - dir[0] * s * 0.35, tip[1] - dir[1] * s * 0.35];
             BezierPath::from_polyline(&[tip, b1, inset, b2], true)?
         }
         ArrowMarker::Dot => BezierPath::from_circle(endpoint, s * 0.5)?,
@@ -237,229 +352,235 @@ fn dash_polylines(
     pattern: &[f64],
     offset: f64,
 ) -> Result<Vec<(Vec<[f64; 2]>, bool)>> {
-    let mut pattern: Vec<f64> = pattern
-        .iter()
-        .copied()
-        .filter(|d| d.is_finite() && *d > 0.)
-        .collect();
-    check(!pattern.is_empty(), "Empty dash pattern")?;
+    check(
+        pts.len() >= 2 && pts.iter().flatten().all(|x| x.is_finite()),
+        "Invalid dash path",
+    )?;
+    check(offset.is_finite(), "Invalid dash offset")?;
+    check(
+        !pattern.is_empty()
+            && pattern.len() <= 4096
+            && pattern.iter().all(|d| d.is_finite() && *d >= 0.),
+        "Invalid dash pattern",
+    )?;
+    let mut pattern = pattern.to_vec();
+    // SVG repeats the entire odd-length pattern, preserving on/off alternation.
     if pattern.len() % 2 == 1 {
-        pattern.push(pattern[pattern.len() - 1]);
+        pattern.extend_from_within(..);
     }
     let period: f64 = pattern.iter().sum();
-    check(period > 0., "Degenerate dash period")?;
-    let mut edges = Vec::new();
-    let n = if closed { pts.len() } else { pts.len() - 1 };
-    for i in 0..n {
+    check(
+        period.is_finite() && period > 1e-12,
+        "Degenerate dash period",
+    )?;
+    let mut phase = 0usize;
+    let mut consumed = offset.rem_euclid(period);
+    while consumed >= pattern[phase] {
+        consumed -= pattern[phase];
+        phase = (phase + 1) % pattern.len();
+    }
+    let mut remain = pattern[phase] - consumed;
+    let mut current = Vec::new();
+    let mut out: Vec<(Vec<[f64; 2]>, bool)> = Vec::new();
+    let edge_count = if closed { pts.len() } else { pts.len() - 1 };
+    let mut steps = 0usize;
+    for i in 0..edge_count {
         let a = pts[i];
         let b = pts[(i + 1) % pts.len()];
-        let len = dist(a, b);
-        if len > 1e-12 {
-            edges.push((a, b, len));
+        let length = dist(a, b);
+        if length <= 1e-12 {
+            continue;
         }
-    }
-    check(!edges.is_empty(), "No edges to dash")?;
-    let total: f64 = edges.iter().map(|e| e.2).sum();
-    let off = offset.rem_euclid(period);
-    let mut phase_idx = 0usize;
-    let mut t = 0.0;
-    for (i, d) in pattern.iter().enumerate() {
-        if off < t + *d {
-            phase_idx = i;
-            break;
-        }
-        t += *d;
-    }
-    let mut remain = pattern[phase_idx] - (off - t);
-    let mut drawing = phase_idx.is_multiple_of(2);
-    let mut out = Vec::new();
-    let mut cur: Vec<[f64; 2]> = Vec::new();
-
-    let sample = |dist_along: f64| -> [f64; 2] {
-        let mut d = dist_along.clamp(0.0, total);
-        for &(a, b, len) in &edges {
-            if d <= len {
-                let t = d / len;
-                return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        let mut walked = 0.;
+        while walked < length {
+            steps += 1;
+            check(steps <= 100_000, "Dash sampling budget exceeded")?;
+            let step = remain.min(length - walked);
+            let point = |d: f64| {
+                [
+                    a[0] + (b[0] - a[0]) * d / length,
+                    a[1] + (b[1] - a[1]) * d / length,
+                ]
+            };
+            if phase.is_multiple_of(2) {
+                if current.is_empty() {
+                    current.push(point(walked));
+                }
+                let end = point(walked + step);
+                if dist(*current.last().unwrap(), end) > 1e-12 {
+                    current.push(end);
+                }
             }
-            d -= len;
-        }
-        edges.last().map_or(pts[0], |e| e.1)
-    };
-
-    let mut walk = 0.0_f64;
-    while walk < total - 1e-12 {
-        let step = remain.min(total - walk);
-        let a = sample(walk);
-        let b = sample(walk + step);
-        if drawing {
-            if cur.is_empty() {
-                cur.push(a);
-            }
-            if dist(*cur.last().unwrap(), b) > 1e-12 {
-                cur.push(b);
-            }
-        } else if cur.len() >= 2 {
-            out.push((std::mem::take(&mut cur), false));
-        } else {
-            cur.clear();
-        }
-        walk += step;
-        remain -= step;
-        if remain <= 1e-12 {
-            phase_idx = (phase_idx + 1) % pattern.len();
-            remain = pattern[phase_idx];
-            drawing = phase_idx.is_multiple_of(2);
-            if !drawing && cur.len() >= 2 {
-                out.push((std::mem::take(&mut cur), false));
+            walked += step;
+            remain -= step;
+            if remain <= period * 1e-14 {
+                if phase.is_multiple_of(2) && current.len() >= 2 {
+                    out.push((std::mem::take(&mut current), false));
+                    check(out.len() <= 4096, "Dash produced too many spans")?;
+                }
+                loop {
+                    phase = (phase + 1) % pattern.len();
+                    remain = pattern[phase];
+                    if remain > 0. {
+                        break;
+                    }
+                }
             }
         }
     }
-    if cur.len() >= 2 {
-        out.push((cur, false));
+    if current.len() >= 2 {
+        out.push((current, false));
     }
-    check(out.len() <= 4096, "Dash produced too many spans")?;
+    // A dash crossing the closed seam is a single joined stroke, without caps there.
+    if closed && !out.is_empty() {
+        let first_at_seam = dist(out[0].0[0], pts[0]) <= 1e-12;
+        let last_at_seam = dist(*out.last().unwrap().0.last().unwrap(), pts[0]) <= 1e-12;
+        if first_at_seam && last_at_seam {
+            if out.len() == 1 {
+                out[0].0.pop();
+                out[0].1 = true;
+            } else {
+                let mut last = out.pop().unwrap().0;
+                last.extend(out[0].0.iter().skip(1));
+                out[0].0 = last;
+            }
+        }
+    }
     Ok(out)
 }
 
-fn stroke_polyline(
+/// Union edge strips and outside join sectors instead of stitching two offset
+/// chains across their seams. This also handles concavity and collapsed inner loops.
+fn stroke_pieces(
     pts: &[[f64; 2]],
     closed: bool,
-    half: f64,
     opts: &StrokeOptions,
-) -> Result<BezierPath> {
+    tolerance: f64,
+    pieces: &mut crate::rings::Rings,
+) -> Result<()> {
     let n = pts.len();
     check(n >= 2, "Polyline too short")?;
-    let mut left = Vec::with_capacity(n + 8);
-    let mut right = Vec::with_capacity(n + 8);
-    let dir = |i: usize, j: usize| unit2(sub2(pts[j % n], pts[i % n]));
-
-    for i in 0..n {
-        if !closed && (i == 0 || i == n - 1) {
-            let (a, b) = if i == 0 {
-                (pts[0], pts[1])
-            } else {
-                (pts[n - 2], pts[n - 1])
-            };
-            let d = unit2(sub2(b, a));
-            let nr = scale2(perp(d), half);
-            left.push(add2(pts[i], nr));
-            right.push(sub2(pts[i], nr));
+    let half = opts.width * 0.5;
+    let edge_count = if closed { n } else { n - 1 };
+    for i in 0..edge_count {
+        let mut a = pts[i];
+        let mut b = pts[(i + 1) % n];
+        let d = unit2(sub2(b, a));
+        if dist(a, b) <= 1e-12 {
             continue;
         }
-        let prev = if i == 0 { n - 1 } else { i - 1 };
-        let next = (i + 1) % n;
-        let d0 = dir(prev, i);
-        let d1 = dir(i, next);
-        let n0 = scale2(perp(d0), half);
-        let n1 = scale2(perp(d1), half);
-        let (l, r) = join_offsets(pts[i], d0, d1, n0, n1, opts)?;
-        left.push(l);
-        right.push(r);
-    }
-
-    let mut outline = Vec::new();
-    if closed {
-        outline.extend(left);
-        outline.extend(right.iter().rev().copied());
-        return BezierPath::from_polyline(&outline, true);
-    }
-
-    // Start cap
-    match opts.cap {
-        LineCap::Butt => {}
-        LineCap::Square => {
-            let d = unit2(sub2(pts[1], pts[0]));
-            let ext = scale2(d, -half);
-            left[0] = add2(left[0], ext);
-            right[0] = add2(right[0], ext);
-        }
-        LineCap::Round => {
-            // semicircle from right[0] to left[0] around pts[0]
-            let c = pts[0];
-            let a = right[0];
-            let b = left[0];
-            outline.push(a);
-            append_arc(&mut outline, c, a, b, half, true);
-            // then walk left, end cap, reverse right
-            outline.extend_from_slice(&left);
-            let a2 = *left.last().unwrap();
-            let b2 = *right.last().unwrap();
-            append_arc(&mut outline, pts[n - 1], a2, b2, half, true);
-            for p in right.iter().rev().skip(1) {
-                outline.push(*p);
+        if !closed && opts.cap == LineCap::Square {
+            if i == 0 {
+                a = sub2(a, scale2(d, half));
             }
-            return BezierPath::from_polyline(&outline, true);
+            if i == edge_count - 1 {
+                b = add2(b, scale2(d, half));
+            }
+        }
+        let normal = scale2(perp(d), half);
+        push_piece(
+            pieces,
+            vec![
+                add2(a, normal),
+                sub2(a, normal),
+                sub2(b, normal),
+                add2(b, normal),
+            ],
+        );
+    }
+    let joints = if closed { 0..n } else { 1..n - 1 };
+    for i in joints {
+        let p = pts[i];
+        let d0 = unit2(sub2(p, pts[(i + n - 1) % n]));
+        let d1 = unit2(sub2(pts[(i + 1) % n], p));
+        let cross = crate::rings::cross2(d0, d1);
+        let dot = d0[0] * d1[0] + d0[1] * d1[1];
+        if cross.abs() < 1e-12 {
+            if dot < 0. && opts.join == LineJoin::Round {
+                push_piece(
+                    pieces,
+                    arc_sector(p, half, 0., std::f64::consts::TAU, tolerance)?,
+                );
+            }
+            continue;
+        }
+        let side = if cross > 0. { -half } else { half };
+        let q0 = add2(p, scale2(perp(d0), side));
+        let q1 = add2(p, scale2(perp(d1), side));
+        let mut wedge = vec![p, q0];
+        match opts.join {
+            LineJoin::Round => {
+                let angle = (q0[1] - p[1]).atan2(q0[0] - p[0]);
+                wedge = arc_sector(p, half, angle, cross.atan2(dot), tolerance)?;
+            }
+            LineJoin::Miter => {
+                if let Some(m) = line_intersect(q0, add2(q0, d0), q1, add2(q1, d1)) {
+                    if dist(p, m) <= half * opts.miter_limit {
+                        wedge.push(m);
+                    }
+                }
+                wedge.push(q1);
+            }
+            LineJoin::Bevel => wedge.push(q1),
+        }
+        push_piece(pieces, wedge);
+    }
+    if !closed && opts.cap == LineCap::Round {
+        let d0 = sub2(pts[1], pts[0]);
+        let d1 = sub2(pts[n - 1], pts[n - 2]);
+        // Outside semicircles; their diameter is covered by the edge strip.
+        for (p, angle) in [
+            (pts[0], d0[1].atan2(d0[0]) + std::f64::consts::FRAC_PI_2),
+            (pts[n - 1], d1[1].atan2(d1[0]) - std::f64::consts::FRAC_PI_2),
+        ] {
+            push_piece(
+                pieces,
+                arc_sector(p, half, angle, std::f64::consts::PI, tolerance)?,
+            );
         }
     }
-    // End square cap adjustment
-    if opts.cap == LineCap::Square {
-        let d = unit2(sub2(pts[n - 1], pts[n - 2]));
-        let ext = scale2(d, half);
-        let li = left.len() - 1;
-        let ri = right.len() - 1;
-        left[li] = add2(left[li], ext);
-        right[ri] = add2(right[ri], ext);
-    }
-    outline.extend(left);
-    outline.extend(right.iter().rev().copied());
-    BezierPath::from_polyline(&outline, true)
+    check(
+        pieces.iter().map(Vec::len).sum::<usize>() <= 100_000,
+        "Stroke vertex budget exceeded",
+    )?;
+    Ok(())
 }
 
-fn join_offsets(
-    p: [f64; 2],
-    d0: [f64; 2],
-    d1: [f64; 2],
-    n0: [f64; 2],
-    n1: [f64; 2],
-    opts: &StrokeOptions,
-) -> Result<([f64; 2], [f64; 2])> {
-    let cross = d0[0] * d1[1] - d0[1] * d1[0];
-    let dot = d0[0] * d1[0] + d0[1] * d1[1];
-    // Nearly straight
-    if cross.abs() < 1e-10 && dot > 0. {
-        return Ok((add2(p, n0), sub2(p, n0)));
+fn push_piece(pieces: &mut crate::rings::Rings, mut ring: Vec<[f64; 2]>) {
+    let area = crate::rings::area(&ring);
+    if area.abs() <= 1e-24 {
+        return;
     }
-    let left0 = add2(p, n0);
-    let left1 = add2(p, n1);
-    let right0 = sub2(p, n0);
-    let right1 = sub2(p, n1);
-
-    let miter_left = line_intersect(left0, add2(left0, d0), left1, add2(left1, d1));
-    let miter_right = line_intersect(right0, add2(right0, d0), right1, add2(right1, d1));
-
-    match opts.join {
-        LineJoin::Bevel => Ok((left1, right1)), // simplified: use outgoing offset
-        LineJoin::Round => {
-            // Approximate round join with miter clipped toward bevel
-            let l = miter_left.unwrap_or(left1);
-            let r = miter_right.unwrap_or(right1);
-            let half = n0[0].hypot(n0[1]);
-            let l = if dist(p, l) > half * opts.miter_limit {
-                left1
-            } else {
-                l
-            };
-            let r = if dist(p, r) > half * opts.miter_limit {
-                right1
-            } else {
-                r
-            };
-            Ok((l, r))
-        }
-        LineJoin::Miter => {
-            let half = n0[0].hypot(n0[1]);
-            let l = match miter_left {
-                Some(q) if dist(p, q) <= half * opts.miter_limit => q,
-                _ => left1,
-            };
-            let r = match miter_right {
-                Some(q) if dist(p, q) <= half * opts.miter_limit => q,
-                _ => right1,
-            };
-            Ok((l, r))
-        }
+    if area < 0. {
+        ring.reverse();
     }
+    pieces.push(ring);
+}
+
+fn arc_sector(
+    center: [f64; 2],
+    radius: f64,
+    start: f64,
+    sweep: f64,
+    tolerance: f64,
+) -> Result<Vec<[f64; 2]>> {
+    let step = (2. * (1. - (tolerance / radius).min(1.)).acos()).min(std::f64::consts::FRAC_PI_4);
+    check(
+        step > 0.,
+        "Stroke tolerance below floating point resolution",
+    )?;
+    let count = (sweep.abs() / step).ceil().max(1.) as usize;
+    check(count <= 4096, "Round stroke vertex budget exceeded")?;
+    let mut ring = Vec::with_capacity(count + 2);
+    ring.push(center);
+    for i in 0..=count {
+        let angle = start + sweep * i as f64 / count as f64;
+        ring.push([
+            center[0] + radius * angle.cos(),
+            center[1] + radius * angle.sin(),
+        ]);
+    }
+    Ok(ring)
 }
 
 fn line_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<[f64; 2]> {
@@ -472,31 +593,6 @@ fn line_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Option<
     let qp = sub2(c, a);
     let t = (qp[0] * s[1] - qp[1] * s[0]) / den;
     Some([a[0] + t * r[0], a[1] + t * r[1]])
-}
-
-fn append_arc(
-    out: &mut Vec<[f64; 2]>,
-    center: [f64; 2],
-    from: [f64; 2],
-    to: [f64; 2],
-    radius: f64,
-    ccw: bool,
-) {
-    let a0 = (from[1] - center[1]).atan2(from[0] - center[0]);
-    let a1 = (to[1] - center[1]).atan2(to[0] - center[0]);
-    let mut delta = a1 - a0;
-    if ccw && delta <= 0. {
-        delta += std::f64::consts::TAU;
-    }
-    if !ccw && delta >= 0. {
-        delta -= std::f64::consts::TAU;
-    }
-    let steps = ((delta.abs() / (std::f64::consts::PI * 0.25)).ceil() as usize).clamp(2, 16);
-    for i in 1..=steps {
-        let t = i as f64 / steps as f64;
-        let a = a0 + delta * t;
-        out.push([center[0] + radius * a.cos(), center[1] + radius * a.sin()]);
-    }
 }
 
 #[cfg(test)]
@@ -566,8 +662,7 @@ mod tests {
     #[test]
     fn chevron_marker_is_closed() {
         let line = BezierPath::from_polyline(&[[0., 0.], [10., 0.]], false).unwrap();
-        let marks =
-            path_arrow_markers(&line, ArrowMarker::None, ArrowMarker::Chevron, 1.).unwrap();
+        let marks = path_arrow_markers(&line, ArrowMarker::None, ArrowMarker::Chevron, 1.).unwrap();
         assert_eq!(marks.len(), 1);
         assert!(marks[0].closed);
         assert!(marks[0].segments.len() >= 3);
@@ -579,5 +674,200 @@ mod tests {
         let spans = path_dash_spans(&line, &[4., 4.], 0., 0.25).unwrap();
         assert!(spans.len() >= 2, "spans={}", spans.len());
         assert!(spans.iter().all(|s| s.len() >= 2));
+    }
+    fn region_area(paths: &[BezierPath]) -> f64 {
+        paths.iter().map(|p| area(&p.to_ring(0.001).unwrap())).sum()
+    }
+
+    #[test]
+    fn closed_stroke_keeps_hole_and_has_no_seam_gap() {
+        let rect = BezierPath::from_rect([0., 0.], [10., 10.]).unwrap();
+        let out = outline_stroke(
+            &rect,
+            &StrokeOptions {
+                width: 2.,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(out.len(), 2);
+        assert!((region_area(&out) - 80.).abs() < 1e-8);
+        let rings = out.iter().map(|p| p.to_ring(0.01).unwrap()).collect();
+        assert!(!crate::rings::inside([5., 5.], &rings));
+        for p in [[0., 5.], [5., 0.], [10., 5.], [5., 10.], [-0.5, -0.5]] {
+            assert!(crate::rings::inside(p, &rings), "seam/join gap at {p:?}");
+        }
+    }
+
+    #[test]
+    fn caps_have_correct_area_and_round_chord_accuracy() {
+        let line = BezierPath::from_polyline(&[[0., 0.], [10., 0.]], false).unwrap();
+        for (cap, expected) in [
+            (LineCap::Butt, 20.),
+            (LineCap::Square, 24.),
+            (LineCap::Round, 20. + std::f64::consts::PI),
+        ] {
+            let out = outline_stroke_tol(
+                &line,
+                &StrokeOptions {
+                    width: 2.,
+                    cap,
+                    ..Default::default()
+                },
+                0.0001,
+            )
+            .unwrap();
+            assert!(
+                (region_area(&out) - expected).abs() < 0.001,
+                "{cap:?}: {}",
+                region_area(&out)
+            );
+        }
+    }
+
+    #[test]
+    fn joins_distinguish_bevel_round_and_miter() {
+        let line = BezierPath::from_polyline(&[[0., 0.], [10., 0.], [10., 10.]], false).unwrap();
+        for (join, expected) in [
+            (LineJoin::Bevel, 39.5),
+            (LineJoin::Round, 39. + std::f64::consts::FRAC_PI_4),
+            (LineJoin::Miter, 40.),
+        ] {
+            let out = outline_stroke_tol(
+                &line,
+                &StrokeOptions {
+                    width: 2.,
+                    join,
+                    ..Default::default()
+                },
+                0.0001,
+            )
+            .unwrap();
+            assert!(
+                (region_area(&out) - expected).abs() < 0.001,
+                "{join:?}: {}",
+                region_area(&out)
+            );
+        }
+    }
+
+    #[test]
+    fn acute_miter_is_clipped_to_bevel_at_limit() {
+        let line = BezierPath::from_polyline(&[[0., 0.], [10., 0.], [0., 1.]], false).unwrap();
+        let outline = |limit| {
+            outline_stroke(
+                &line,
+                &StrokeOptions {
+                    width: 2.,
+                    miter_limit: limit,
+                    ..Default::default()
+                },
+            )
+            .unwrap()
+        };
+        let short = outline(2.);
+        let long = outline(100.);
+        assert!(region_area(&long) > region_area(&short) + 10.);
+        let rightmost = |paths: &[BezierPath]| {
+            paths
+                .iter()
+                .flat_map(|p| p.anchors())
+                .map(|p| p[0])
+                .fold(f64::NEG_INFINITY, f64::max)
+        };
+        assert!(rightmost(&short) < 11.);
+        assert!(rightmost(&long) > 25.);
+    }
+
+    #[test]
+    fn dash_keeps_intermediate_corners_and_repeats_odd_pattern() {
+        let spans = dash_spans(&[[0., 0.], [3., 0.], [3., 4.]], false, &[5., 1.], 0.).unwrap();
+        assert_eq!(spans[0], vec![[0., 0.], [3., 0.], [3., 2.]]);
+        let spans = dash_spans(&[[0., 0.], [12., 0.]], false, &[1., 2., 3.], 0.).unwrap();
+        assert_eq!(
+            spans,
+            vec![
+                vec![[0., 0.], [1., 0.]],
+                vec![[3., 0.], [6., 0.]],
+                vec![[7., 0.], [9., 0.]]
+            ]
+        );
+    }
+
+    #[test]
+    fn dash_closed_seam_joins_without_extra_caps() {
+        let spans = dash_polylines(
+            &[[0., 0.], [2., 0.], [2., 2.], [0., 2.]],
+            true,
+            &[3., 2.],
+            0.,
+        )
+        .unwrap();
+        assert_eq!(spans.len(), 1);
+        assert!(spans[0].0.windows(3).any(|p| p[1] == [0., 0.]));
+        let solid = dash_polylines(
+            &[[0., 0.], [2., 0.], [2., 2.], [0., 2.]],
+            true,
+            &[100., 2.],
+            0.,
+        )
+        .unwrap();
+        assert!(solid[0].1);
+        assert_eq!(solid[0].0.len(), 4);
+    }
+
+    #[test]
+    fn invalid_dash_options_fail_before_sampling() {
+        let points = [[0., 0.], [1., 0.]];
+        for pattern in [&[-1., 2.][..], &[f64::NAN, 2.], &[0., 0.]] {
+            assert!(dash_spans(&points, false, pattern, 0.).is_err());
+        }
+        assert!(dash_spans(&points, false, &[1., 1.], f64::INFINITY).is_err());
+    }
+    #[test]
+    fn convex_route_matches_general_union_for_all_join_styles() {
+        let polygon = [[0., 0.], [7., 0.], [10., 4.], [6., 9.], [1., 8.]];
+        let path = BezierPath::from_polyline(&polygon, true).unwrap();
+        for join in [LineJoin::Miter, LineJoin::Bevel, LineJoin::Round] {
+            for width in [0.2, 2., 12.] {
+                let options = StrokeOptions {
+                    width,
+                    join,
+                    ..Default::default()
+                };
+                let actual = outline_stroke_tol(&path, &options, 0.002).unwrap();
+                let mut pieces = vec![];
+                stroke_pieces(&polygon, true, &options, 0.002, &mut pieces).unwrap();
+                let expected = crate::rings::nonzero(&pieces).unwrap();
+                let actual: crate::rings::Rings =
+                    actual.iter().map(|p| p.to_ring(0.002).unwrap()).collect();
+                let area =
+                    |r: &crate::rings::Rings| r.iter().map(|r| crate::rings::area(r)).sum::<f64>();
+                assert!(
+                    (area(&actual) - area(&expected)).abs() < 1e-7,
+                    "{join:?}, width={width}"
+                );
+                for x in -4..16 {
+                    for y in -4..16 {
+                        let p = [x as f64 + 0.237, y as f64 + 0.419];
+                        assert_eq!(
+                            crate::rings::inside(p, &actual),
+                            crate::rings::inside(p, &expected)
+                        );
+                    }
+                }
+            }
+        }
+        let star: Vec<_> = (0..5)
+            .map(|i| {
+                let a = i as f64 * std::f64::consts::TAU * 2. / 5.;
+                [a.cos() * 10., a.sin() * 10.]
+            })
+            .collect();
+        assert!(
+            convex_closed_stroke(&star, &StrokeOptions::default(), 0.01)
+                .unwrap()
+                .is_none()
+        );
     }
 }

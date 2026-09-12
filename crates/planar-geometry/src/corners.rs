@@ -235,8 +235,8 @@ pub fn round_corners(path: &BezierPath, radius: f64) -> Result<BezierPath> {
         radius >= 0. && radius.is_finite(),
         "Invalid round-corners radius",
     )?;
-    let pts = path.flatten()?;
-    let mut ring = pts;
+    let mut ring = vec![path.start];
+    ring.extend(path.segments.iter().map(PathSegment::end));
     if path.closed && ring.len() >= 2 && dist(ring[0], *ring.last().unwrap()) <= 1e-9 {
         ring.pop();
     }
@@ -247,12 +247,19 @@ pub fn round_corners(path: &BezierPath, radius: f64) -> Result<BezierPath> {
         rounded_polygon(&ring, &radii, &styles)
     } else {
         check(ring.len() >= 3, "Open path needs ≥3 anchors to round")?;
-        round_open_polyline(&ring, radius)
+        rounded_open_polyline(&ring, &vec![radius; ring.len()], &[])
     }
 }
 
-fn round_open_polyline(points: &[[f64; 2]], radius: f64) -> Result<BezierPath> {
+/// Open polyline with per-anchor corner radii/styles; endpoints remain pinned.
+/// Negative radii without explicit styles select chamfers, as on closed rings.
+pub fn rounded_open_polyline(
+    points: &[[f64; 2]],
+    radii: &[f64],
+    styles: &[CornerStyle],
+) -> Result<BezierPath> {
     let n = points.len();
+    check(n >= 2, "Rounded open polyline needs ≥2 points")?;
     let start = points[0];
     if n == 2 {
         return BezierPath::from_polyline(points, false);
@@ -260,6 +267,7 @@ fn round_open_polyline(points: &[[f64; 2]], radius: f64) -> Result<BezierPath> {
     let edge_len: Vec<f64> = (0..n - 1).map(|i| dist(points[i], points[i + 1])).collect();
     let mut segments = Vec::new();
     for i in 1..n - 1 {
+        let (style, radius) = resolve_corner(radii, styles, i);
         let prev = points[i - 1];
         let curr = points[i];
         let next = points[i + 1];
@@ -273,7 +281,20 @@ fn round_open_polyline(points: &[[f64; 2]], radius: f64) -> Result<BezierPath> {
         let a = lerp(curr, prev, r / d_prev);
         let b = lerp(curr, next, r / d_next);
         segments.push(PathSegment::Line { to: a });
-        push_quad_corner(&mut segments, a, b, curr);
+        match style {
+            CornerStyle::Round => push_quad_corner(&mut segments, a, b, curr),
+            CornerStyle::Inverted => push_quad_corner(
+                &mut segments,
+                a,
+                b,
+                [a[0] + b[0] - curr[0], a[1] + b[1] - curr[1]],
+            ),
+            CornerStyle::Chamfer => segments.push(PathSegment::Line { to: b }),
+            CornerStyle::Notch => {
+                segments.push(PathSegment::Line { to: curr });
+                segments.push(PathSegment::Line { to: b });
+            }
+        }
     }
     segments.push(PathSegment::Line { to: points[n - 1] });
     BezierPath::open(start, segments)

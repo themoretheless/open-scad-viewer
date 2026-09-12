@@ -1,0 +1,6 @@
+claim1_drag_tick_bumping/complex500
+                        time:   [196.19 µs 197.47 µs 199.07 µs]
+Found 2 outliers among 20 measurements (10.00%)
+  1 (5.00%) low mild
+  1 (5.00%) high mild
+

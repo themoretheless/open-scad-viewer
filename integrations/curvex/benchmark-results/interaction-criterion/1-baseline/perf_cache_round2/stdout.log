@@ -1,0 +1,9 @@
+r2_scissors_hover_warm/complex500
+                        time:   [495.01 µs 496.31 µs 497.44 µs]
+
+r2_find_shape_at_100picks_warm/complex500
+                        time:   [923.92 µs 926.52 µs 929.77 µs]
+Found 2 outliers among 20 measurements (10.00%)
+  1 (5.00%) low mild
+  1 (5.00%) high severe
+

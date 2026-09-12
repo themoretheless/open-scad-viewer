@@ -1,0 +1,8 @@
+Benchmarking r2_scissors_hover_warm/complex500
+Benchmarking r2_scissors_hover_warm/complex500: Warming up for 300.00 ms
+Benchmarking r2_scissors_hover_warm/complex500: Collecting 20 samples in estimated 1.0538 s (2100 iterations)
+Benchmarking r2_scissors_hover_warm/complex500: Analyzing
+Benchmarking r2_find_shape_at_100picks_warm/complex500
+Benchmarking r2_find_shape_at_100picks_warm/complex500: Warming up for 300.00 ms
+Benchmarking r2_find_shape_at_100picks_warm/complex500: Collecting 20 samples in estimated 1.1720 s (1260 iterations)
+Benchmarking r2_find_shape_at_100picks_warm/complex500: Analyzing

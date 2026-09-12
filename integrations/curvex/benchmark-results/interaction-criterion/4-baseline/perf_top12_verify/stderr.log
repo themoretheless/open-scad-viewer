@@ -1,0 +1,7 @@
+Benchmarking claim1_drag_tick_bumping/complex500
+Benchmarking claim1_drag_tick_bumping/complex500: Warming up for 300.00 ms
+Benchmarking claim1_drag_tick_bumping/complex500: Collecting 20 samples in estimated 1.0090 s (5040 iterations)
+Benchmarking claim1_drag_tick_bumping/complex500: Analyzing
+claim6: doc complex10k structural estimate = 36.7 MB (36719465 bytes), x100 history ceiling = 3.67 GB; compact JSON = 139.7 MB; size_of PathSegment = 28 B, size_of Shape = 304 B
+claim8: subtract_50 output contours = 51
+claim8: union_50_ellipses output contours = 2, total segments = 141

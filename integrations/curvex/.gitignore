@@ -1,0 +1,4 @@
+__pycache__/
+render-benchmark/target/
+!qualification-results/logs/*.log
+!benchmark-results/interaction-criterion/**/*.log

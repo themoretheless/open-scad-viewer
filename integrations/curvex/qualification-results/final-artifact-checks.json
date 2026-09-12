@@ -1,0 +1,63 @@
+{
+  "verified_utc": "2026-09-12T21:02:00.777129+00:00",
+  "source_groups": {
+    "qualification_sources": {
+      "checked": 30,
+      "mismatches": []
+    },
+    "wasm_and_build_files": {
+      "checked": 5,
+      "mismatches": []
+    },
+    "boolean_kernel_sources": {
+      "checked": 17,
+      "mismatches": []
+    },
+    "render_benchmark_sources": {
+      "checked": 22,
+      "mismatches": []
+    },
+    "interaction_benchmark_sources": {
+      "checked": 22,
+      "mismatches": []
+    }
+  },
+  "patch_application_check": {
+    "command": [
+      "git",
+      "apply",
+      "--check",
+      "/Users/themoretheless/Documents/Sources/open-scad-viewer/integrations/curvex/qualification-results/curvex-migration.patch"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/curvex",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "original_status": {
+    "command": [
+      "git",
+      "status",
+      "--porcelain"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/curvex",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "original_head": {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "/Users/themoretheless/Documents/Sources/curvex",
+    "exit_code": 0,
+    "stdout": "bf6967e4df618815e05eefc987947ca6b1c22461\n",
+    "stderr": ""
+  },
+  "patch_matches_qualification_hash": true,
+  "qualification_log_hashes_match": true,
+  "interaction_commands_passed": 8,
+  "interaction_raw_files_present": 64
+}

@@ -1,0 +1,1160 @@
+{
+  "schema_version": 1,
+  "created_unix": 1789245457.976091,
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "benchmark_source_sha256": "c6f42946e779d5a70008a887631a724c70544b2891266446a2917b4cd8d9165a",
+  "measurement": "Actual Curvex release application functions; 7 calibrated samples per workload, A/B/B/A order; operation and result drop timed; fixture and metadata work excluded.",
+  "cargo_target_dir": "/private/tmp/osv-curvex-qualification/migrated-01/target",
+  "builds": {
+    "baseline": {
+      "checkout": "/private/tmp/osv-curvex-qualification/baseline",
+      "command": [
+        "cargo",
+        "+stable",
+        "build",
+        "--offline",
+        "--release",
+        "--example",
+        "osv_boolean_benchmark",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/baseline/Cargo.toml"
+      ],
+      "manifest_sha256": "85d538444a45541c5e4046c011c2dfbf2b03363c6b4eaeba44a21dc438165eb7",
+      "lockfile_sha256": "0a98fff70bea90a3f973a5e0d6646ba09ad596a03b49d841c6fe26447ebf0646",
+      "example_sha256": "c6f42946e779d5a70008a887631a724c70544b2891266446a2917b4cd8d9165a",
+      "executable_sha256": "e5054680db07684601d53522fd4c1b4afb0b032826e942f7d060440555aa9f5e",
+      "source_sha256": {
+        "src/actions/appearance.rs": "324162c08408ee6eca31b3e08fff8c71fad1f2047a325146f2b6aadc0b4ce6b8",
+        "src/actions/arrange.rs": "fde6429c76bf26b9d4e0bdee96a48cca814e522921fa2abaf44224a47fb0c197",
+        "src/actions/clipboard.rs": "6a51e45c3e1d38b77ccae1b80ab84c275df327f9e97c2eebdccd11b494677418",
+        "src/actions/compound.rs": "8810738f5fb22dd86501aec9a3a9dba938b2658f73eced12f973bf6fcf6a30f1",
+        "src/actions/dialogs.rs": "b92e15756e18be1cd3917269305c2ab328863be8b143d65e7eefdb02dbed874a",
+        "src/actions/file.rs": "2d140bbf120e924ad0cc0609f30ac5f8b209a592c97f5d1b0ae929e043c37187",
+        "src/actions/graphic_styles.rs": "15e52958de007f3ac856816e69a8db652080871c88507ab9a44f13900e0a7cfe",
+        "src/actions/history.rs": "c9adbf359dfd5b8203850181404a5b675615fa63ec632474bbe724b6e8080fb1",
+        "src/actions/menu.rs": "c024082b12e4d0cb94cc8d20a057d1edde062e4e57e78aea6e9ebdaf4a5899ac",
+        "src/actions/mod.rs": "ff8ccd015adba0d6384cafdff2e439c51239a57aaa8347f9da30dd70e09fd9d2",
+        "src/actions/path_nodes.rs": "4d71c2ebba01f9e3a164f8b9c0e00225c80d1a929e2aeb64b08a5e72b044965c",
+        "src/actions/persistence.rs": "35cd719e795fe825f1467d07c5a21f20ca26b66bbf695ab2bacc3ef4593f44be",
+        "src/actions/recovery.rs": "1c3f2c2815241362140b60a90739037c0eea5f501bda989c7d29c14f900b3a48",
+        "src/actions/transform/direct_commands.rs": "ac72abbd99634afbd24bcdf410c6eef71ca4f781cb0372a508763462092f3a9b",
+        "src/actions/transform/distortions.rs": "2fee5255dc6a9b29955fc5e5b063eda4f4a7ea7f7072be314531090942602375",
+        "src/actions/transform/effect_commands.rs": "13cb7c26706cbac50b9b8ef9ebdcf5eb85974a58d555aae8573f3cd94dee8372",
+        "src/actions/transform/generators.rs": "97ee4d4eb9bc9b333440d332efbe3c7178e1042b608ee72cb081f1691ed09d3f",
+        "src/actions/transform/math.rs": "71cf5b13f0ab331d27803785e21a745c28972f31d033152b32416300c830e67b",
+        "src/actions/transform/numeric_commands.rs": "78c0d5348450791614694e554910e3b6670054a9994dae74364de4c0dd14cf97",
+        "src/actions/transform/path_commands.rs": "ecc70acb7580bc789f3c20c1072e14a181be3485f3b8877ce72ccd5ec04b391a",
+        "src/actions/transform/path_effects/arc.rs": "aba02feab5d0f0c8329dd528140cbbfcb5aec0e521cb98a28f0facbce4db7302",
+        "src/actions/transform/path_effects/convert.rs": "7756c7af2aaf4481874225a65345bc86815924f51046b7bb757638cf0abcc674",
+        "src/actions/transform/path_effects/corners.rs": "5b30f6e060e3080e936ce58301a739bf7f6bf1bce0a488bde769a2f010c8c90c",
+        "src/actions/transform/path_effects/join.rs": "3cc2d1adb0d14ff599ea73f84115e2e8f0122308679ec81f68f3f6801b048e1f",
+        "src/actions/transform/path_effects/offset.rs": "88f2113cd5fb78058cf18f73ab29a1ebb10891a33b299d0f1b0b670b718c88a0",
+        "src/actions/transform/path_effects.rs": "e797f560e30b08ab266113aae34833283d90412b3a87396b280607ac31a4771a",
+        "src/actions/transform.rs": "1fd9ae75ba1da007dd7e1d7374be9911cfb999e2b63a95fed8459690cd515732",
+        "src/actions/view.rs": "0d5eb4f9c14c3f78dbeb33964a1391a88b66de7553363168eebcd15ad5a19d51",
+        "src/align.rs": "0527ba4769beb8f5c93d20191881a4dd746b4a694045c3270567511381074409",
+        "src/app.rs": "7dc2532199ae569c7921aa9bbcf91e32f76690347ae443eaedcf7fd3f60406c1",
+        "src/app_state.rs": "fa112c68b7d405ff337e42531dd7d260840747e5c8aa636a353b9526994ea82b",
+        "src/blend.rs": "1a2437517c42e47b2c3e2221f7d2309823228fe65652565b34777dd88515159c",
+        "src/boolean_ops.rs": "8276dff3e236831a6af2e28b41bd3c912578abd183d0eef5415124f890d5098d",
+        "src/commands/catalog/editor.rs": "e0f6f7509886a074ba67c2222e980f2b586d7bb6cf2a501b4eb4a6ce9ad2430c",
+        "src/commands/catalog/file_view.rs": "07351502f8d25964670e682e6fe4e79ab283fb7edeb9b29fab394bca3d93dc51",
+        "src/commands/catalog/workflow.rs": "493225a1fc0d676fc2defe14beb0267835020e047cc7714077d339e154f092fc",
+        "src/commands/catalog.rs": "85567fc93e16621cf1c32bf80dbb3ee28e4f0f900d6ef3cf0ffc83241d17c3d7",
+        "src/commands/context.rs": "c9f9eca2f462eaba5786fcecfeeec43d0145e3e760bf0fb0396470e480071718",
+        "src/commands/ranking.rs": "df44ecde2b66522d2274b6530448b354b3763ae442fd44aa3ad522d1dcbc7fc5",
+        "src/commands.rs": "e842669e3fdf9aa7260d83d60b31af64b1c4c49714d7afba58a8e9688e88c7a0",
+        "src/document/cache.rs": "e1bc2ed985a5ea1933115229a6550dfb7321e02b9cc239e78f7b383f5614af20",
+        "src/document/kurbo_convert.rs": "e851c5022e504ecea990c3e5c3904d9bd1acafd5f13094d2c6b20765f3a1532e",
+        "src/document/queries.rs": "37434ef9567a012c10fc69bb03a0845922b45d7c353066b809d85e9de4bc3a14",
+        "src/document.rs": "fbfcbe54996d3f7b7a343269ccb5b11bb0132fe1cae2e0957660cc77d2b981a7",
+        "src/document_health.rs": "0d2e1fd467f627cc62144d3ae5a5d1c5458a99085b15a06e9a8cf88b4d25446a",
+        "src/history.rs": "e980cb25363be15bcfb92e7ef7de06243e4d846e0a36aceecdcca44e7676387e",
+        "src/hit_test.rs": "204aaf27e9d302e746332bb4fed09450e73c2ffc1bbc6334afb5475fb09fde48",
+        "src/lib.rs": "08992f8258581dfec980e7205ab2f0171093007c0d6db1f63f805d4786f133e0",
+        "src/main.rs": "f4f8c0adbd15d2175d0905b34fc6e10701b52d1a7e20b7006539030364dab8a1",
+        "src/menu_action.rs": "65a39471f81720f52b8505d1af81cc741dc308db64f86b2906bcdd5d02000f5d",
+        "src/path.rs": "255a29d16cbc4c3472accaf2e17fc1af65af90d679957104339eb6e1756c2894",
+        "src/path_join.rs": "0652b9d84fb39d5749e08e32d6935ec2411234eb9a27643150cbf0fefc8b2828",
+        "src/recolor.rs": "9b984b754464b4ccf89236a06ae8be111416c3d3df874ea438cfba87b30e596d",
+        "src/scissors.rs": "6c8a4b4e68300276b41f53f74adbce2321bc3510e066e6f059e4753963bf4d5c",
+        "src/scissors_line.rs": "773ef36330f9877787c1ed630ddf501075286ef9fd9d92c83e7ee9bfe99b577e",
+        "src/selection.rs": "a910510948343969053ebf889d7c73bcb26288b181a14950235fd1429e52fe94",
+        "src/shape.rs": "c395613dbfdb3afd1fa6c620ffdac7621ad4b57b54b175dbe27d510883f6ea71",
+        "src/snap.rs": "81c9b0f7ede6dc21f1aa0a7327621a897d322697f73b039b224c100e040c6696",
+        "src/style.rs": "254da93b7f88c44267dbc8f6358353ee51d67a28f1f0994fece49956b61097e2",
+        "src/svg_export.rs": "6042125ed40b1a899b17b6be78841b41afac3016aadb3e1ef3137788d1f698ef",
+        "src/svg_import.rs": "7f6667cffe9139db9f08c3ea5098b8f1d82d7b489ab2f3435ae9650aebbf0590",
+        "src/tools/ellipse.rs": "3280f882245ce827469e3507f2c1c959fc6f496f639c1ebd209dd46f1f7fe247",
+        "src/tools/eyedropper.rs": "b65c2a78a5b74730a798e2c1b2fb8b40b753d8928b8026a1f837f971b62c7d3f",
+        "src/tools/join.rs": "cf94645a2a4f1d33eac3b74a8c9e153c3994a4cbd631f59390dcd3d3d749478f",
+        "src/tools/knife.rs": "7e5941e006ada528c996026b5586b50a95f356b030c6b06e1efa6f41e2386c19",
+        "src/tools/line.rs": "35d52e21be0d81f28b011c3b598454899236afef700f906045582f2837f1bdea",
+        "src/tools/measure.rs": "8974376ca6610b7fc50a1ff9bc955eccc3d51d885068635d6b43f48624378eba",
+        "src/tools/mod.rs": "40da2144687018e956a41497729f17807aded0f98103613a297289c5abdd4d49",
+        "src/tools/pen.rs": "29efc783dade495366d9f4e2a948df3c1e56d1c3685ed1281b4b3c000252f143",
+        "src/tools/pencil.rs": "f9e4b2136d078be96875dabb199cfac80413c84224af5434f58f2f011477ee9c",
+        "src/tools/polygon.rs": "5c04836bf9fa85facbb571672ba2d233da58602082622bb7246ea3921dd3f773",
+        "src/tools/rectangle.rs": "d4be5a0c108fedce1d9334ac52283857bb9c858705aaa8e57e96200b868c3ca3",
+        "src/tools/scissors.rs": "d95f742a51b263d61bdbdab67587c6df261e6e01ea46ac58250c80057902e405",
+        "src/tools/select/dragger.rs": "2d65257d7588c31674195cd8991f64fe15aa1c94bad9f09ed6df01d8667a1d1a",
+        "src/tools/select/marquee.rs": "d4e8e68eb04a72430d49197e5293bdd1aa8ddfcf5d0d34637d84295821a05b34",
+        "src/tools/select/path_edit.rs": "a8d3a9e512474b3284c992ba05bea1ec287f11f4bf9510457980ed93c4d111d9",
+        "src/tools/select/picker.rs": "ffb614d4d84d5fad7cb8954b8eeafcb5e71365dd91a3de56418f4708838d385c",
+        "src/tools/select/transactions.rs": "74c651fb59afe4f18ad5fcba35c9d97611d1d3a6e322898d4ed441f00c1afe21",
+        "src/tools/select/transform_handles.rs": "9600e98b9d2556c6e880cdda16e952ffadabb38b809f69adda7a366dc03bbf56",
+        "src/tools/select.rs": "726c053e6f4c6efdc9febde5d65fc490e898bde39d560abbd28bc6228815ff2e",
+        "src/tools/shape_builder.rs": "0524bb31c7746769797a9b23519afb4837c1419d544763704a18bba754ed58b1",
+        "src/transaction.rs": "b1f5cfd75aeaff747cf4252752632ab80a108144bcd73526539e51cd2c298761",
+        "src/ui/canvas.rs": "2343ec5ed5d1f61597aa721106390cf660f57b74847e26140a84bcbad6084a71",
+        "src/ui/canvas_input.rs": "587a763892e1919d391a31d8954a5f593bc6ca05e3558698acc0cb0c3c865cdf",
+        "src/ui/canvas_overlays/gradient_handles.rs": "bffb6ccc75c07bc152d7338319f25a8e7206332412684e53f850383aac8cd184",
+        "src/ui/canvas_overlays/helpers.rs": "f7593fe105e8c0456c5aa3d7f61c9bb02f7c5f9d97d15dfcaffd39a1f422c35b",
+        "src/ui/canvas_overlays/line_tool.rs": "bb976c54526335953b19c41baf971da242336754efed9d54a258abbb8c8093ca",
+        "src/ui/canvas_overlays/measure.rs": "a7273275d8458be706c380d4d4d64be8b36b920282d1b6beffdcb08cff420d34",
+        "src/ui/canvas_overlays/mod.rs": "d5686c396bbe5858c13714041c20037c033ccb9ca4b8c505c417f56c20802977",
+        "src/ui/canvas_overlays/nodes.rs": "d9e93538e78427d5884c20af0a8593b6a9cdedd235e0e1c9c4eada62046d8f31",
+        "src/ui/canvas_overlays/pivot.rs": "bec22e84bde911406dd87032efc82db84996fd0f96db6df1381df8843266f613",
+        "src/ui/canvas_overlays/scissors.rs": "c2602a749bfe029b6a115e926129250f9321a62207a61985e8f8ef418328f4e0",
+        "src/ui/canvas_overlays/selection.rs": "7ea904cd43a156ba5d018de45dca548763750a5f69da9b7bc963857c120ef9b8",
+        "src/ui/canvas_overlays/shape_builder.rs": "0c8c7854f0aba5ba45a0aa5967533e5115f7398f1b937abc8995f29f22a7728d",
+        "src/ui/canvas_overlays/shape_preview.rs": "2144682eb3648685d95ddf410aa7dbf7aae494d3dd1d276b4bcdf5443188b8b6",
+        "src/ui/contextbar.rs": "ebcbbb4091f1e4348898b1b0b9b9a7a46e3e38ee4745b363e52bf7bdf3c5499f",
+        "src/ui/dnd_reorder.rs": "ac04972c5a16df780c16b0af6007d7e5b9b2b629362961d585a4e5f472da66ca",
+        "src/ui/json_highlight.rs": "8ff2ae45b3bf56078728139ab12fc348ed641d8d34b53df614bfb0ced5697108",
+        "src/ui/menu_mac.rs": "010910256b593a5bca338aa8631dcc3a8ccba597fe3b3a7f6af5fb1aa3a23eaf",
+        "src/ui/menu_model.rs": "b4cf557f93d1c6753240bfc4ef77f91c6ae8433c8e7090cffc18b4ebc72552fe",
+        "src/ui/mod.rs": "bb0b42fec6b06e5362617af169a5acd5b9e16eccf914b0ac21dc1e81d5f9e278",
+        "src/ui/panels.rs": "39405a9d0d5f997de150a0ab0bbade940ddab0bd73f9b58713de9e8c8eabcbbf",
+        "src/ui/properties/align_section.rs": "15734dc831437949ae8ff2d773ab1879507652091e2b79eff00d2f254a410312",
+        "src/ui/properties/appearance.rs": "cfc62e2fe5225b263585d8fbc911dc8a1e30a7a8b69c521f34c5191124b3068b",
+        "src/ui/properties/boolean.rs": "b068b8502fb714f6b552c878ba2383984a4c6f0dc67c2c7e72bb20bc2a3b51db",
+        "src/ui/properties/graphic_styles_section.rs": "2fac2b4e76d4b803163176e74a713f7a1dd261709a578e05380b86d75856db61",
+        "src/ui/properties/groups.rs": "b9d716bafc16b248766f6efda2fe7c197d2563914d09e81aa4dd6fcb57cb11f3",
+        "src/ui/properties/helpers.rs": "1d7c09ffb40fc71aa04d890ea6574784907b1f34c621301db0003401680fb2ed",
+        "src/ui/properties/history_panel.rs": "e115d8cc80dc034e67eeab8930880796609302f2fe1795388e7218785c881cc6",
+        "src/ui/properties/json.rs": "a068ab3c8d78a47f7f02aa83dd0bcea1afd87fff0a12696b500d8b9fe148690e",
+        "src/ui/properties/mod.rs": "f4b233ac4106eab84daac17dcf6c02f3096c6ab5d8cf18aab02da82befcdee10",
+        "src/ui/properties/path.rs": "99f69b30ac4ebb44f5b7cdc005be7d316f83db0bf7000055ee89413d120ff529",
+        "src/ui/properties/polygon_params.rs": "7e1aec99267b9fee9fbff76de090f58e85a964bea5e1d1a1d3cd7ab4fada8b58",
+        "src/ui/properties/scenes_panel.rs": "242db2786acfabc35fbaf4b025b841522dc4087eb67972fcda99b2d1cc55c185",
+        "src/ui/properties/transform.rs": "38983c586c008dc01281fa11ea8a38e39f2fe6189bcca57526944239389d37f3",
+        "src/ui/rulers.rs": "7b622d0e97cd1a8464e1b2570432d59a2c49dd728ecbb4c0245a5dd4b2ab065e",
+        "src/ui/shape_egui.rs": "dda1820f718ea812972cbdadb1ca613cb056f99462bf103018753079effbdb6b",
+        "src/ui/shape_render.rs": "4ccab2a61014b0a2b51303ab55612ba5b1f342c4d46a5de7f440ee933122a732",
+        "src/ui/status_bar.rs": "23da3a6721eae97d51d08c525bed570b023b5e5616b25521a4993f986a285ef9",
+        "src/ui/theme.rs": "a88be8f6ecfed89418ab3bd0dbc287fa7cb50e4927738a1213932cc62f5101cd",
+        "src/ui/title_bar.rs": "10143c4d69a9308750fa5c7926b2628bb1619402c397a235ec85c8a9fe8fe2aa",
+        "src/ui/title_chrome.rs": "fd498feb68444c0cd416a29e3a61c4d25f1419012520981dbce45efe1582d19f",
+        "src/ui/toolbar.rs": "4f8cb45c7337f63a2e8aebda36ad35467ad38a630ec76070cc8d4993318107f1",
+        "src/ui/tree_snapshot.rs": "4f906378570394e329446101f04f2313fb20f2a1166698497f79d448169781e7",
+        "src/ui/vb.rs": "44b3630ed263f2350ec58144bbd074b3895552d41fd1e12bad7baad829eaa6b4",
+        "src/ui/visual_test.rs": "1b6da45be9c4136dc58727301c6874ec369842cf0042dafb94cd17d6f5474b98",
+        "src/ui/widgets.rs": "760f366bceb5f10188381c16717c95dd26c7667cc3f29c60950dc521c46a758f",
+        "src/ui/workflow.rs": "417c9cd47417ea815739ad2dc7944b44ff5cd2582d4f335a800d903c5104827f",
+        "src/viewport.rs": "bca0c25857f1485b8701c5fe334aaaf9500f5a9814e16987ce21df5c0dc21295"
+      },
+      "kernel_source_sha256_before_build": null,
+      "kernel_source_unchanged_during_build": null
+    },
+    "migrated": {
+      "checkout": "/private/tmp/osv-curvex-qualification/final-01",
+      "command": [
+        "cargo",
+        "+stable",
+        "build",
+        "--offline",
+        "--release",
+        "--example",
+        "osv_boolean_benchmark",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/final-01/Cargo.toml"
+      ],
+      "manifest_sha256": "7e3738a217a583243b9c9e6642c82e26cc9b2be7a5b581e39e543c36916276e9",
+      "lockfile_sha256": "c83130157ead9979c9ccc5125f00140d7adaa6f87c5453ed16903a5cd0cd5352",
+      "example_sha256": "c6f42946e779d5a70008a887631a724c70544b2891266446a2917b4cd8d9165a",
+      "executable_sha256": "807bcedf0b20bd9ba64d5df15158d5c05325bf58ad0b508212291eedf1b1b42b",
+      "source_sha256": {
+        "src/actions/appearance.rs": "324162c08408ee6eca31b3e08fff8c71fad1f2047a325146f2b6aadc0b4ce6b8",
+        "src/actions/arrange.rs": "fde6429c76bf26b9d4e0bdee96a48cca814e522921fa2abaf44224a47fb0c197",
+        "src/actions/clipboard.rs": "6a51e45c3e1d38b77ccae1b80ab84c275df327f9e97c2eebdccd11b494677418",
+        "src/actions/compound.rs": "8810738f5fb22dd86501aec9a3a9dba938b2658f73eced12f973bf6fcf6a30f1",
+        "src/actions/dialogs.rs": "b92e15756e18be1cd3917269305c2ab328863be8b143d65e7eefdb02dbed874a",
+        "src/actions/file.rs": "2d140bbf120e924ad0cc0609f30ac5f8b209a592c97f5d1b0ae929e043c37187",
+        "src/actions/graphic_styles.rs": "15e52958de007f3ac856816e69a8db652080871c88507ab9a44f13900e0a7cfe",
+        "src/actions/history.rs": "c9adbf359dfd5b8203850181404a5b675615fa63ec632474bbe724b6e8080fb1",
+        "src/actions/menu.rs": "c024082b12e4d0cb94cc8d20a057d1edde062e4e57e78aea6e9ebdaf4a5899ac",
+        "src/actions/mod.rs": "ff8ccd015adba0d6384cafdff2e439c51239a57aaa8347f9da30dd70e09fd9d2",
+        "src/actions/path_nodes.rs": "4d71c2ebba01f9e3a164f8b9c0e00225c80d1a929e2aeb64b08a5e72b044965c",
+        "src/actions/persistence.rs": "35cd719e795fe825f1467d07c5a21f20ca26b66bbf695ab2bacc3ef4593f44be",
+        "src/actions/recovery.rs": "1c3f2c2815241362140b60a90739037c0eea5f501bda989c7d29c14f900b3a48",
+        "src/actions/transform/direct_commands.rs": "ac72abbd99634afbd24bcdf410c6eef71ca4f781cb0372a508763462092f3a9b",
+        "src/actions/transform/distortions.rs": "2fee5255dc6a9b29955fc5e5b063eda4f4a7ea7f7072be314531090942602375",
+        "src/actions/transform/effect_commands.rs": "13cb7c26706cbac50b9b8ef9ebdcf5eb85974a58d555aae8573f3cd94dee8372",
+        "src/actions/transform/generators.rs": "97ee4d4eb9bc9b333440d332efbe3c7178e1042b608ee72cb081f1691ed09d3f",
+        "src/actions/transform/math.rs": "71cf5b13f0ab331d27803785e21a745c28972f31d033152b32416300c830e67b",
+        "src/actions/transform/numeric_commands.rs": "78c0d5348450791614694e554910e3b6670054a9994dae74364de4c0dd14cf97",
+        "src/actions/transform/path_commands.rs": "285e498b5271b05b4beec08e118354caf27562bab82c40d3f2771b19543d10e6",
+        "src/actions/transform/path_effects/arc.rs": "aba02feab5d0f0c8329dd528140cbbfcb5aec0e521cb98a28f0facbce4db7302",
+        "src/actions/transform/path_effects/convert.rs": "7756c7af2aaf4481874225a65345bc86815924f51046b7bb757638cf0abcc674",
+        "src/actions/transform/path_effects/corners.rs": "5b30f6e060e3080e936ce58301a739bf7f6bf1bce0a488bde769a2f010c8c90c",
+        "src/actions/transform/path_effects/join.rs": "3cc2d1adb0d14ff599ea73f84115e2e8f0122308679ec81f68f3f6801b048e1f",
+        "src/actions/transform/path_effects/offset.rs": "1e6285dfe0b853c537644aec920381d0497c5ba2773c85450c83698acaf13774",
+        "src/actions/transform/path_effects.rs": "e797f560e30b08ab266113aae34833283d90412b3a87396b280607ac31a4771a",
+        "src/actions/transform.rs": "1fd9ae75ba1da007dd7e1d7374be9911cfb999e2b63a95fed8459690cd515732",
+        "src/actions/view.rs": "0d5eb4f9c14c3f78dbeb33964a1391a88b66de7553363168eebcd15ad5a19d51",
+        "src/align.rs": "0527ba4769beb8f5c93d20191881a4dd746b4a694045c3270567511381074409",
+        "src/app.rs": "7dc2532199ae569c7921aa9bbcf91e32f76690347ae443eaedcf7fd3f60406c1",
+        "src/app_state.rs": "fa112c68b7d405ff337e42531dd7d260840747e5c8aa636a353b9526994ea82b",
+        "src/blend.rs": "1a2437517c42e47b2c3e2221f7d2309823228fe65652565b34777dd88515159c",
+        "src/boolean_ops.rs": "854cf964242f396c989a9bfed2b7bfa433d031670aa7830ac076c2a8a0f87451",
+        "src/commands/catalog/editor.rs": "e0f6f7509886a074ba67c2222e980f2b586d7bb6cf2a501b4eb4a6ce9ad2430c",
+        "src/commands/catalog/file_view.rs": "07351502f8d25964670e682e6fe4e79ab283fb7edeb9b29fab394bca3d93dc51",
+        "src/commands/catalog/workflow.rs": "493225a1fc0d676fc2defe14beb0267835020e047cc7714077d339e154f092fc",
+        "src/commands/catalog.rs": "85567fc93e16621cf1c32bf80dbb3ee28e4f0f900d6ef3cf0ffc83241d17c3d7",
+        "src/commands/context.rs": "c9f9eca2f462eaba5786fcecfeeec43d0145e3e760bf0fb0396470e480071718",
+        "src/commands/ranking.rs": "df44ecde2b66522d2274b6530448b354b3763ae442fd44aa3ad522d1dcbc7fc5",
+        "src/commands.rs": "e842669e3fdf9aa7260d83d60b31af64b1c4c49714d7afba58a8e9688e88c7a0",
+        "src/document/cache.rs": "e1bc2ed985a5ea1933115229a6550dfb7321e02b9cc239e78f7b383f5614af20",
+        "src/document/kurbo_convert.rs": "b8a868ded159af542137f414ddfce883ad128df4da70e66a3e290e996204fe39",
+        "src/document/queries.rs": "37434ef9567a012c10fc69bb03a0845922b45d7c353066b809d85e9de4bc3a14",
+        "src/document.rs": "522b2fa7983bb7035043e7455974fca0726eb42dbc49184aa3e9ba6a7a875f16",
+        "src/document_health.rs": "0d2e1fd467f627cc62144d3ae5a5d1c5458a99085b15a06e9a8cf88b4d25446a",
+        "src/history.rs": "e980cb25363be15bcfb92e7ef7de06243e4d846e0a36aceecdcca44e7676387e",
+        "src/hit_test.rs": "204aaf27e9d302e746332bb4fed09450e73c2ffc1bbc6334afb5475fb09fde48",
+        "src/lib.rs": "08992f8258581dfec980e7205ab2f0171093007c0d6db1f63f805d4786f133e0",
+        "src/main.rs": "f4f8c0adbd15d2175d0905b34fc6e10701b52d1a7e20b7006539030364dab8a1",
+        "src/menu_action.rs": "65a39471f81720f52b8505d1af81cc741dc308db64f86b2906bcdd5d02000f5d",
+        "src/path.rs": "255a29d16cbc4c3472accaf2e17fc1af65af90d679957104339eb6e1756c2894",
+        "src/path_join.rs": "0652b9d84fb39d5749e08e32d6935ec2411234eb9a27643150cbf0fefc8b2828",
+        "src/recolor.rs": "9b984b754464b4ccf89236a06ae8be111416c3d3df874ea438cfba87b30e596d",
+        "src/scissors.rs": "6c8a4b4e68300276b41f53f74adbce2321bc3510e066e6f059e4753963bf4d5c",
+        "src/scissors_line.rs": "773ef36330f9877787c1ed630ddf501075286ef9fd9d92c83e7ee9bfe99b577e",
+        "src/selection.rs": "a910510948343969053ebf889d7c73bcb26288b181a14950235fd1429e52fe94",
+        "src/shape.rs": "c395613dbfdb3afd1fa6c620ffdac7621ad4b57b54b175dbe27d510883f6ea71",
+        "src/snap.rs": "81c9b0f7ede6dc21f1aa0a7327621a897d322697f73b039b224c100e040c6696",
+        "src/style.rs": "254da93b7f88c44267dbc8f6358353ee51d67a28f1f0994fece49956b61097e2",
+        "src/svg_export.rs": "6042125ed40b1a899b17b6be78841b41afac3016aadb3e1ef3137788d1f698ef",
+        "src/svg_import.rs": "7f6667cffe9139db9f08c3ea5098b8f1d82d7b489ab2f3435ae9650aebbf0590",
+        "src/tools/ellipse.rs": "3280f882245ce827469e3507f2c1c959fc6f496f639c1ebd209dd46f1f7fe247",
+        "src/tools/eyedropper.rs": "b65c2a78a5b74730a798e2c1b2fb8b40b753d8928b8026a1f837f971b62c7d3f",
+        "src/tools/join.rs": "cf94645a2a4f1d33eac3b74a8c9e153c3994a4cbd631f59390dcd3d3d749478f",
+        "src/tools/knife.rs": "7e5941e006ada528c996026b5586b50a95f356b030c6b06e1efa6f41e2386c19",
+        "src/tools/line.rs": "35d52e21be0d81f28b011c3b598454899236afef700f906045582f2837f1bdea",
+        "src/tools/measure.rs": "8974376ca6610b7fc50a1ff9bc955eccc3d51d885068635d6b43f48624378eba",
+        "src/tools/mod.rs": "40da2144687018e956a41497729f17807aded0f98103613a297289c5abdd4d49",
+        "src/tools/pen.rs": "29efc783dade495366d9f4e2a948df3c1e56d1c3685ed1281b4b3c000252f143",
+        "src/tools/pencil.rs": "f9e4b2136d078be96875dabb199cfac80413c84224af5434f58f2f011477ee9c",
+        "src/tools/polygon.rs": "5c04836bf9fa85facbb571672ba2d233da58602082622bb7246ea3921dd3f773",
+        "src/tools/rectangle.rs": "d4be5a0c108fedce1d9334ac52283857bb9c858705aaa8e57e96200b868c3ca3",
+        "src/tools/scissors.rs": "d95f742a51b263d61bdbdab67587c6df261e6e01ea46ac58250c80057902e405",
+        "src/tools/select/dragger.rs": "2d65257d7588c31674195cd8991f64fe15aa1c94bad9f09ed6df01d8667a1d1a",
+        "src/tools/select/marquee.rs": "d4e8e68eb04a72430d49197e5293bdd1aa8ddfcf5d0d34637d84295821a05b34",
+        "src/tools/select/path_edit.rs": "a8d3a9e512474b3284c992ba05bea1ec287f11f4bf9510457980ed93c4d111d9",
+        "src/tools/select/picker.rs": "ffb614d4d84d5fad7cb8954b8eeafcb5e71365dd91a3de56418f4708838d385c",
+        "src/tools/select/transactions.rs": "74c651fb59afe4f18ad5fcba35c9d97611d1d3a6e322898d4ed441f00c1afe21",
+        "src/tools/select/transform_handles.rs": "9600e98b9d2556c6e880cdda16e952ffadabb38b809f69adda7a366dc03bbf56",
+        "src/tools/select.rs": "726c053e6f4c6efdc9febde5d65fc490e898bde39d560abbd28bc6228815ff2e",
+        "src/tools/shape_builder.rs": "5b6f364d58b2aabdb310470fddc17dfd47b3bc33d6f049ae4028e6c770cf977c",
+        "src/transaction.rs": "b1f5cfd75aeaff747cf4252752632ab80a108144bcd73526539e51cd2c298761",
+        "src/ui/canvas.rs": "2343ec5ed5d1f61597aa721106390cf660f57b74847e26140a84bcbad6084a71",
+        "src/ui/canvas_input.rs": "587a763892e1919d391a31d8954a5f593bc6ca05e3558698acc0cb0c3c865cdf",
+        "src/ui/canvas_overlays/gradient_handles.rs": "bffb6ccc75c07bc152d7338319f25a8e7206332412684e53f850383aac8cd184",
+        "src/ui/canvas_overlays/helpers.rs": "f7593fe105e8c0456c5aa3d7f61c9bb02f7c5f9d97d15dfcaffd39a1f422c35b",
+        "src/ui/canvas_overlays/line_tool.rs": "bb976c54526335953b19c41baf971da242336754efed9d54a258abbb8c8093ca",
+        "src/ui/canvas_overlays/measure.rs": "a7273275d8458be706c380d4d4d64be8b36b920282d1b6beffdcb08cff420d34",
+        "src/ui/canvas_overlays/mod.rs": "d5686c396bbe5858c13714041c20037c033ccb9ca4b8c505c417f56c20802977",
+        "src/ui/canvas_overlays/nodes.rs": "d9e93538e78427d5884c20af0a8593b6a9cdedd235e0e1c9c4eada62046d8f31",
+        "src/ui/canvas_overlays/pivot.rs": "bec22e84bde911406dd87032efc82db84996fd0f96db6df1381df8843266f613",
+        "src/ui/canvas_overlays/scissors.rs": "c2602a749bfe029b6a115e926129250f9321a62207a61985e8f8ef418328f4e0",
+        "src/ui/canvas_overlays/selection.rs": "7ea904cd43a156ba5d018de45dca548763750a5f69da9b7bc963857c120ef9b8",
+        "src/ui/canvas_overlays/shape_builder.rs": "0c8c7854f0aba5ba45a0aa5967533e5115f7398f1b937abc8995f29f22a7728d",
+        "src/ui/canvas_overlays/shape_preview.rs": "2144682eb3648685d95ddf410aa7dbf7aae494d3dd1d276b4bcdf5443188b8b6",
+        "src/ui/contextbar.rs": "ebcbbb4091f1e4348898b1b0b9b9a7a46e3e38ee4745b363e52bf7bdf3c5499f",
+        "src/ui/dnd_reorder.rs": "ac04972c5a16df780c16b0af6007d7e5b9b2b629362961d585a4e5f472da66ca",
+        "src/ui/json_highlight.rs": "8ff2ae45b3bf56078728139ab12fc348ed641d8d34b53df614bfb0ced5697108",
+        "src/ui/menu_mac.rs": "010910256b593a5bca338aa8631dcc3a8ccba597fe3b3a7f6af5fb1aa3a23eaf",
+        "src/ui/menu_model.rs": "b4cf557f93d1c6753240bfc4ef77f91c6ae8433c8e7090cffc18b4ebc72552fe",
+        "src/ui/mod.rs": "bb0b42fec6b06e5362617af169a5acd5b9e16eccf914b0ac21dc1e81d5f9e278",
+        "src/ui/osv_gradient_sampling.rs": "1a6c7ea472376960126be0db8231c96ffac2518efc86a7fa836c4d52d92cdc67",
+        "src/ui/panels.rs": "39405a9d0d5f997de150a0ab0bbade940ddab0bd73f9b58713de9e8c8eabcbbf",
+        "src/ui/properties/align_section.rs": "15734dc831437949ae8ff2d773ab1879507652091e2b79eff00d2f254a410312",
+        "src/ui/properties/appearance.rs": "cfc62e2fe5225b263585d8fbc911dc8a1e30a7a8b69c521f34c5191124b3068b",
+        "src/ui/properties/boolean.rs": "b068b8502fb714f6b552c878ba2383984a4c6f0dc67c2c7e72bb20bc2a3b51db",
+        "src/ui/properties/graphic_styles_section.rs": "2fac2b4e76d4b803163176e74a713f7a1dd261709a578e05380b86d75856db61",
+        "src/ui/properties/groups.rs": "b9d716bafc16b248766f6efda2fe7c197d2563914d09e81aa4dd6fcb57cb11f3",
+        "src/ui/properties/helpers.rs": "1d7c09ffb40fc71aa04d890ea6574784907b1f34c621301db0003401680fb2ed",
+        "src/ui/properties/history_panel.rs": "e115d8cc80dc034e67eeab8930880796609302f2fe1795388e7218785c881cc6",
+        "src/ui/properties/json.rs": "a068ab3c8d78a47f7f02aa83dd0bcea1afd87fff0a12696b500d8b9fe148690e",
+        "src/ui/properties/mod.rs": "f4b233ac4106eab84daac17dcf6c02f3096c6ab5d8cf18aab02da82befcdee10",
+        "src/ui/properties/path.rs": "99f69b30ac4ebb44f5b7cdc005be7d316f83db0bf7000055ee89413d120ff529",
+        "src/ui/properties/polygon_params.rs": "7e1aec99267b9fee9fbff76de090f58e85a964bea5e1d1a1d3cd7ab4fada8b58",
+        "src/ui/properties/scenes_panel.rs": "242db2786acfabc35fbaf4b025b841522dc4087eb67972fcda99b2d1cc55c185",
+        "src/ui/properties/transform.rs": "38983c586c008dc01281fa11ea8a38e39f2fe6189bcca57526944239389d37f3",
+        "src/ui/rulers.rs": "7b622d0e97cd1a8464e1b2570432d59a2c49dd728ecbb4c0245a5dd4b2ab065e",
+        "src/ui/shape_egui.rs": "dda1820f718ea812972cbdadb1ca613cb056f99462bf103018753079effbdb6b",
+        "src/ui/shape_render.rs": "a6047a0216285e23b1c047e7b44aaa71c4d9b4057c6ccab940c6a48f89dc7e71",
+        "src/ui/status_bar.rs": "23da3a6721eae97d51d08c525bed570b023b5e5616b25521a4993f986a285ef9",
+        "src/ui/theme.rs": "a88be8f6ecfed89418ab3bd0dbc287fa7cb50e4927738a1213932cc62f5101cd",
+        "src/ui/title_bar.rs": "10143c4d69a9308750fa5c7926b2628bb1619402c397a235ec85c8a9fe8fe2aa",
+        "src/ui/title_chrome.rs": "fd498feb68444c0cd416a29e3a61c4d25f1419012520981dbce45efe1582d19f",
+        "src/ui/toolbar.rs": "4f8cb45c7337f63a2e8aebda36ad35467ad38a630ec76070cc8d4993318107f1",
+        "src/ui/tree_snapshot.rs": "4f906378570394e329446101f04f2313fb20f2a1166698497f79d448169781e7",
+        "src/ui/vb.rs": "44b3630ed263f2350ec58144bbd074b3895552d41fd1e12bad7baad829eaa6b4",
+        "src/ui/visual_test.rs": "1b6da45be9c4136dc58727301c6874ec369842cf0042dafb94cd17d6f5474b98",
+        "src/ui/widgets.rs": "760f366bceb5f10188381c16717c95dd26c7667cc3f29c60950dc521c46a758f",
+        "src/ui/workflow.rs": "417c9cd47417ea815739ad2dc7944b44ff5cd2582d4f335a800d903c5104827f",
+        "src/viewport.rs": "bca0c25857f1485b8701c5fe334aaaf9500f5a9814e16987ce21df5c0dc21295"
+      },
+      "kernel_source_sha256_before_build": {
+        "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+        "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+        "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+        "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+        "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+        "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+        "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+        "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+        "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+        "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+        "crates/planar-geometry/src/render.rs": "17c0c48c95723199555fc0cc9414bb01c1f6a2548f2c8a06e7f3b4fe7b78c746",
+        "crates/planar-geometry/src/rings.rs": "878c098e1e7d61700e98d9ab306081212eebcfe9b9976a53dc9f0b92fae9025f",
+        "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+        "crates/planar-geometry/src/stroke.rs": "aebbe4d7d922fddcc36eb8970fe2f848ca56020b4c00c055cc85e7c297170dff",
+        "crates/planar-geometry/src/tessellation.rs": "a8ce82eae986e2a64bf5324b28775479a4494f66bc006613554487372e5969cc",
+        "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+        "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c"
+      },
+      "kernel_source_unchanged_during_build": true
+    }
+  },
+  "runs": [
+    {
+      "order": 1,
+      "engine": "baseline",
+      "measurements": [
+        {
+          "iterations_per_sample": 863,
+          "max_us": 51.86099884125145,
+          "median_us": 51.517042873696404,
+          "min_us": 51.429316338354575,
+          "output": {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          },
+          "samples_us": [
+            51.86099884125145,
+            51.48112282734647,
+            51.642139049826184,
+            51.46586558516802,
+            51.64460254924681,
+            51.517042873696404,
+            51.429316338354575
+          ],
+          "workload": "ellipse_union_2"
+        },
+        {
+          "iterations_per_sample": 53,
+          "max_us": 1359.6713773584906,
+          "median_us": 1332.1533018867924,
+          "min_us": 1322.62420754717,
+          "output": {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          },
+          "samples_us": [
+            1354.7940188679245,
+            1322.62420754717,
+            1325.4119433962264,
+            1332.1533018867924,
+            1325.882075471698,
+            1346.4787735849056,
+            1359.6713773584906
+          ],
+          "workload": "ellipse_union_12"
+        },
+        {
+          "iterations_per_sample": 1382,
+          "max_us": 51.16404341534009,
+          "median_us": 50.22675470332851,
+          "min_us": 49.67556078147612,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          "samples_us": [
+            51.16404341534009,
+            50.38603473227207,
+            50.22675470332851,
+            49.67556078147612,
+            50.04380752532562,
+            50.146074529667146,
+            50.71502677279305
+          ],
+          "workload": "rounded_rectangle_difference"
+        },
+        {
+          "iterations_per_sample": 4,
+          "max_us": 17693.91675,
+          "median_us": 17344.32275,
+          "min_us": 17039.448,
+          "output": {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          "samples_us": [
+            17170.95825,
+            17344.32275,
+            17039.448,
+            17457.073,
+            17693.91675,
+            17274.79175,
+            17351.3335
+          ],
+          "workload": "rectangle_minus_50_ellipses"
+        },
+        {
+          "iterations_per_sample": 97,
+          "max_us": 755.7319587628866,
+          "median_us": 747.8114226804125,
+          "min_us": 745.1761134020618,
+          "output": {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          },
+          "samples_us": [
+            755.7319587628866,
+            747.8114226804125,
+            748.6426082474227,
+            745.1761134020618,
+            751.4845360824743,
+            747.1748350515464,
+            745.5691546391753
+          ],
+          "workload": "three_circle_arrangement_divide"
+        },
+        {
+          "iterations_per_sample": 1402,
+          "max_us": 49.66208987161198,
+          "median_us": 49.21406918687589,
+          "min_us": 48.94186875891583,
+          "output": {
+            "path_elements": 18,
+            "present": true
+          },
+          "samples_us": [
+            49.25267475035663,
+            49.66208987161198,
+            48.94186875891583,
+            49.147735378031385,
+            49.13664978601997,
+            49.274548502139794,
+            49.21406918687589
+          ],
+          "workload": "compound_evenodd_normalization"
+        },
+        {
+          "iterations_per_sample": 4262,
+          "max_us": 15.997164946034726,
+          "median_us": 15.9438840919756,
+          "min_us": 15.887630924448615,
+          "output": {
+            "path_elements": 9,
+            "present": true
+          },
+          "samples_us": [
+            15.997164946034726,
+            15.941488737681839,
+            15.9438840919756,
+            15.887630924448615,
+            15.892939465039888,
+            15.97155091506335,
+            15.955947911778507
+          ],
+          "workload": "cubic_self_intersection_normalization"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "engine": "migrated",
+      "measurements": [
+        {
+          "iterations_per_sample": 790,
+          "max_us": 63.436760759493666,
+          "median_us": 62.89525316455696,
+          "min_us": 62.65954683544304,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          },
+          "samples_us": [
+            63.436760759493666,
+            62.65954683544304,
+            62.82737341772152,
+            62.987816455696205,
+            63.008754430379746,
+            62.747679746835445,
+            62.89525316455696
+          ],
+          "workload": "ellipse_union_2"
+        },
+        {
+          "iterations_per_sample": 92,
+          "max_us": 764.5466413043478,
+          "median_us": 752.6875,
+          "min_us": 743.6440217391304,
+          "output": {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          },
+          "samples_us": [
+            752.6875,
+            743.6440217391304,
+            749.3700217391305,
+            764.5466413043478,
+            764.0538913043478,
+            756.0625,
+            744.4723695652174
+          ],
+          "workload": "ellipse_union_12"
+        },
+        {
+          "iterations_per_sample": 1912,
+          "max_us": 38.309993723849374,
+          "median_us": 37.49287395397489,
+          "min_us": 37.31210774058577,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          "samples_us": [
+            37.35662918410042,
+            37.45966265690377,
+            38.309993723849374,
+            37.826185146443514,
+            37.75514278242679,
+            37.31210774058577,
+            37.49287395397489
+          ],
+          "workload": "rounded_rectangle_difference"
+        },
+        {
+          "iterations_per_sample": 8,
+          "max_us": 8574.265625,
+          "median_us": 8376.171875,
+          "min_us": 8322.552,
+          "output": {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          "samples_us": [
+            8548.760375,
+            8574.265625,
+            8414.890625,
+            8355.072875,
+            8322.552,
+            8376.171875,
+            8348.104125
+          ],
+          "workload": "rectangle_minus_50_ellipses"
+        },
+        {
+          "iterations_per_sample": 78,
+          "max_us": 948.5742564102565,
+          "median_us": 939.5870769230769,
+          "min_us": 936.2291666666666,
+          "output": {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          },
+          "samples_us": [
+            940.4807692307693,
+            948.5742564102565,
+            936.2291666666666,
+            936.474358974359,
+            939.2820512820513,
+            940.7788461538462,
+            939.5870769230769
+          ],
+          "workload": "three_circle_arrangement_divide"
+        },
+        {
+          "iterations_per_sample": 880,
+          "max_us": 151.81368409090908,
+          "median_us": 84.27050227272726,
+          "min_us": 83.80142045454545,
+          "output": {
+            "path_elements": 18,
+            "present": true
+          },
+          "samples_us": [
+            84.00577613636364,
+            84.05118409090909,
+            83.80142045454545,
+            84.40501931818181,
+            84.27050227272726,
+            105.03484886363637,
+            151.81368409090908
+          ],
+          "workload": "compound_evenodd_normalization"
+        },
+        {
+          "iterations_per_sample": 1496,
+          "max_us": 33.89441310160428,
+          "median_us": 21.20409959893048,
+          "min_us": 18.371295454545454,
+          "output": {
+            "path_elements": 8,
+            "present": true
+          },
+          "samples_us": [
+            33.89441310160428,
+            30.37898262032086,
+            23.773339572192516,
+            21.20409959893048,
+            19.386001336898396,
+            18.68117713903743,
+            18.371295454545454
+          ],
+          "workload": "cubic_self_intersection_normalization"
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "engine": "migrated",
+      "measurements": [
+        {
+          "iterations_per_sample": 952,
+          "max_us": 64.20391281512605,
+          "median_us": 63.68982037815126,
+          "min_us": 62.5844275210084,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          },
+          "samples_us": [
+            62.99544747899159,
+            62.5844275210084,
+            62.997024159663866,
+            63.78663340336134,
+            63.88891806722689,
+            64.20391281512605,
+            63.68982037815126
+          ],
+          "workload": "ellipse_union_2"
+        },
+        {
+          "iterations_per_sample": 86,
+          "max_us": 755.764534883721,
+          "median_us": 742.3309069767442,
+          "min_us": 738.3749999999999,
+          "output": {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          },
+          "samples_us": [
+            755.764534883721,
+            742.3309069767442,
+            740.781488372093,
+            743.5809069767441,
+            740.5227674418604,
+            744.2456395348836,
+            738.3749999999999
+          ],
+          "workload": "ellipse_union_12"
+        },
+        {
+          "iterations_per_sample": 1934,
+          "max_us": 38.574069286452946,
+          "median_us": 37.160741985522236,
+          "min_us": 37.00754033092037,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          "samples_us": [
+            37.09220941054809,
+            37.69320889348501,
+            37.00754033092037,
+            38.574069286452946,
+            37.160741985522236,
+            37.05969906928645,
+            38.32831385729059
+          ],
+          "workload": "rounded_rectangle_difference"
+        },
+        {
+          "iterations_per_sample": 8,
+          "max_us": 8442.80725,
+          "median_us": 8342.20825,
+          "min_us": 8321.5,
+          "output": {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          "samples_us": [
+            8368.572875,
+            8442.80725,
+            8325.25,
+            8360.2865,
+            8321.5,
+            8342.20825,
+            8331.974
+          ],
+          "workload": "rectangle_minus_50_ellipses"
+        },
+        {
+          "iterations_per_sample": 75,
+          "max_us": 949.4944399999999,
+          "median_us": 941.47556,
+          "min_us": 940.1922266666667,
+          "output": {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          },
+          "samples_us": [
+            949.4944399999999,
+            943.1044533333331,
+            940.4816666666667,
+            940.1922266666667,
+            941.47556,
+            943.7477733333333,
+            941.07056
+          ],
+          "workload": "three_circle_arrangement_divide"
+        },
+        {
+          "iterations_per_sample": 878,
+          "max_us": 84.44798861047835,
+          "median_us": 83.62481093394078,
+          "min_us": 83.35587471526196,
+          "output": {
+            "path_elements": 18,
+            "present": true
+          },
+          "samples_us": [
+            84.14279612756265,
+            83.67397494305239,
+            83.58024829157175,
+            84.44798861047835,
+            83.62481093394078,
+            83.56852733485194,
+            83.35587471526196
+          ],
+          "workload": "compound_evenodd_normalization"
+        },
+        {
+          "iterations_per_sample": 3724,
+          "max_us": 18.525834586466164,
+          "median_us": 18.442691460794844,
+          "min_us": 18.39276745435016,
+          "output": {
+            "path_elements": 8,
+            "present": true
+          },
+          "samples_us": [
+            18.525834586466164,
+            18.45080343716434,
+            18.442691460794844,
+            18.39276745435016,
+            18.406730934479057,
+            18.430988184747584,
+            18.454831364124594
+          ],
+          "workload": "cubic_self_intersection_normalization"
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "engine": "baseline",
+      "measurements": [
+        {
+          "iterations_per_sample": 1017,
+          "max_us": 51.935021632251726,
+          "median_us": 51.45481022615536,
+          "min_us": 51.159906588003935,
+          "output": {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          },
+          "samples_us": [
+            51.732013765978365,
+            51.45481022615536,
+            51.935021632251726,
+            51.28384070796461,
+            51.159906588003935,
+            51.27032153392331,
+            51.690921337266474
+          ],
+          "workload": "ellipse_union_2"
+        },
+        {
+          "iterations_per_sample": 53,
+          "max_us": 1351.8152641509434,
+          "median_us": 1328.5966981132076,
+          "min_us": 1324.5927735849057,
+          "output": {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          },
+          "samples_us": [
+            1351.8152641509434,
+            1331.2963773584906,
+            1330.7531509433963,
+            1324.5927735849057,
+            1328.5966981132076,
+            1328.0228113207547,
+            1325.9756226415095
+          ],
+          "workload": "ellipse_union_12"
+        },
+        {
+          "iterations_per_sample": 1245,
+          "max_us": 50.022991967871484,
+          "median_us": 49.66432449799197,
+          "min_us": 49.3353751004016,
+          "output": {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          "samples_us": [
+            49.75927068273092,
+            49.62821285140562,
+            50.022991967871484,
+            49.359705220883534,
+            49.3353751004016,
+            49.66432449799197,
+            49.70224176706828
+          ],
+          "workload": "rounded_rectangle_difference"
+        },
+        {
+          "iterations_per_sample": 4,
+          "max_us": 17116.125,
+          "median_us": 17026.510250000003,
+          "min_us": 16928.65625,
+          "output": {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          "samples_us": [
+            17067.666749999997,
+            17006.2915,
+            17026.510250000003,
+            17116.125,
+            16985.54175,
+            17068.38525,
+            16928.65625
+          ],
+          "workload": "rectangle_minus_50_ellipses"
+        },
+        {
+          "iterations_per_sample": 94,
+          "max_us": 746.5882021276597,
+          "median_us": 746.001329787234,
+          "min_us": 744.729170212766,
+          "output": {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          },
+          "samples_us": [
+            744.8395319148935,
+            746.5882021276597,
+            744.729170212766,
+            746.3244680851063,
+            746.4184361702128,
+            745.1436170212766,
+            746.001329787234
+          ],
+          "workload": "three_circle_arrangement_divide"
+        },
+        {
+          "iterations_per_sample": 1446,
+          "max_us": 49.22942600276625,
+          "median_us": 49.00507123098202,
+          "min_us": 48.788871369294604,
+          "output": {
+            "path_elements": 18,
+            "present": true
+          },
+          "samples_us": [
+            49.22942600276625,
+            49.030976486860304,
+            48.95801590594744,
+            49.00507123098202,
+            48.802904564315355,
+            48.788871369294604,
+            49.02982365145228
+          ],
+          "workload": "compound_evenodd_normalization"
+        },
+        {
+          "iterations_per_sample": 4255,
+          "max_us": 15.949089306698003,
+          "median_us": 15.927252173913043,
+          "min_us": 15.864551586368979,
+          "output": {
+            "path_elements": 9,
+            "present": true
+          },
+          "samples_us": [
+            15.949089306698003,
+            15.87001551116334,
+            15.927252173913043,
+            15.918292126909519,
+            15.864551586368979,
+            15.948570152761457,
+            15.945260399529964
+          ],
+          "workload": "cubic_self_intersection_normalization"
+        }
+      ]
+    }
+  ],
+  "replay_of": {
+    "path": "/private/tmp/osv-curvex-qualification/boolean-benchmark-fixed-build/comparison.json",
+    "sha256": "38984d14997aea5577667d1905ca2641ee08dd9e7cd2ab59994b584b15a8c81a"
+  },
+  "comparison": [
+    {
+      "workload": "ellipse_union_2",
+      "baseline_median_us": 51.49908285052143,
+      "migrated_median_us": 62.99623581932773,
+      "migrated_over_baseline": 1.2232496645071784,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          },
+          {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          }
+        ]
+      }
+    },
+    {
+      "workload": "ellipse_union_12",
+      "baseline_median_us": 1329.674924528302,
+      "migrated_median_us": 744.3590045500505,
+      "migrated_over_baseline": 0.5598052507563903,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          },
+          {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          },
+          {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          }
+        ]
+      }
+    },
+    {
+      "workload": "rounded_rectangle_difference",
+      "baseline_median_us": 49.8911313253012,
+      "migrated_median_us": 37.47626830543933,
+      "migrated_over_baseline": 0.7511609239944026,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          }
+        ]
+      }
+    },
+    {
+      "workload": "rectangle_minus_50_ellipses",
+      "baseline_median_us": 17092.255125,
+      "migrated_median_us": 8357.6796875,
+      "migrated_over_baseline": 0.4889746628738085,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          }
+        ]
+      }
+    },
+    {
+      "workload": "three_circle_arrangement_divide",
+      "baseline_median_us": 746.3714521276595,
+      "migrated_median_us": 940.6302564102564,
+      "migrated_over_baseline": 1.2602709464956476,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          },
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          },
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          }
+        ]
+      }
+    },
+    {
+      "workload": "compound_evenodd_normalization",
+      "baseline_median_us": 49.08381313644014,
+      "migrated_median_us": 84.02848011363636,
+      "migrated_over_baseline": 1.7119387175576437,
+      "outputs": {
+        "baseline": [
+          {
+            "path_elements": 18,
+            "present": true
+          },
+          {
+            "path_elements": 18,
+            "present": true
+          }
+        ],
+        "migrated": [
+          {
+            "path_elements": 18,
+            "present": true
+          },
+          {
+            "path_elements": 18,
+            "present": true
+          }
+        ]
+      }
+    },
+    {
+      "workload": "cubic_self_intersection_normalization",
+      "baseline_median_us": 15.942686414828719,
+      "migrated_median_us": 18.49033297529538,
+      "migrated_over_baseline": 1.1598003306454694,
+      "outputs": {
+        "baseline": [
+          {
+            "path_elements": 9,
+            "present": true
+          },
+          {
+            "path_elements": 9,
+            "present": true
+          }
+        ],
+        "migrated": [
+          {
+            "path_elements": 8,
+            "present": true
+          },
+          {
+            "path_elements": 8,
+            "present": true
+          }
+        ]
+      }
+    }
+  ]
+}

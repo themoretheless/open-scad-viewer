@@ -1,0 +1,8 @@
+[package]
+name = "curvex-render-comparison"
+version = "0.0.0"
+edition = "2024"
+[dependencies]
+planar-geometry = { path = "../../../crates/planar-geometry" }
+lyon_path = "=1.0.19"
+lyon_tessellation = "=1.0.20"

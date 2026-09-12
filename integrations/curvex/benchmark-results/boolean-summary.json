@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "evidence": "boolean-final.json",
+  "evidence_sha256": "ae665eda72811df9da3fa84c3e5357c8b78293ba190970a8f58edd2ffa41f051",
+  "created_unix": 1789245457.976091,
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "measurement": "Actual Curvex release application functions; 7 calibrated samples per workload, A/B/B/A order; operation and result drop timed; fixture and metadata work excluded.",
+  "no_team_compilers_or_other_benchmarks_during_final_replay": true,
+  "benchmark_source_sha256": "c6f42946e779d5a70008a887631a724c70544b2891266446a2917b4cd8d9165a",
+  "kernel_source_snapshot_sha256": "911236d53bd13ce6b224a0445c49b924b30e71e334feb977d7a19e9a418519d4",
+  "kernel_changed_since_recorded_build": [],
+  "binaries": {
+    "baseline": "e5054680db07684601d53522fd4c1b4afb0b032826e942f7d060440555aa9f5e",
+    "migrated": "807bcedf0b20bd9ba64d5df15158d5c05325bf58ad0b508212291eedf1b1b42b"
+  },
+  "comparison": [
+    {
+      "workload": "ellipse_union_2",
+      "baseline_median_us": 51.49908285052143,
+      "migrated_median_us": 62.99623581932773,
+      "migrated_over_baseline": 1.2232496645071784,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          },
+          {
+            "contours": 1,
+            "cubics": 9,
+            "segments": 9
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 8
+          }
+        ]
+      }
+    },
+    {
+      "workload": "ellipse_union_12",
+      "baseline_median_us": 1329.674924528302,
+      "migrated_median_us": 744.3590045500505,
+      "migrated_over_baseline": 0.5598052507563903,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          },
+          {
+            "contours": 1,
+            "cubics": 37,
+            "segments": 38
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          },
+          {
+            "contours": 1,
+            "cubics": 36,
+            "segments": 36
+          }
+        ]
+      }
+    },
+    {
+      "workload": "rounded_rectangle_difference",
+      "baseline_median_us": 49.8911313253012,
+      "migrated_median_us": 37.47626830543933,
+      "migrated_over_baseline": 0.7511609239944026,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          },
+          {
+            "contours": 1,
+            "cubics": 8,
+            "segments": 12
+          }
+        ]
+      }
+    },
+    {
+      "workload": "rectangle_minus_50_ellipses",
+      "baseline_median_us": 17092.255125,
+      "migrated_median_us": 8357.6796875,
+      "migrated_over_baseline": 0.4889746628738085,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          },
+          {
+            "contours": 51,
+            "cubics": 200,
+            "segments": 204
+          }
+        ]
+      }
+    },
+    {
+      "workload": "three_circle_arrangement_divide",
+      "baseline_median_us": 746.3714521276595,
+      "migrated_median_us": 940.6302564102564,
+      "migrated_over_baseline": 1.2602709464956476,
+      "outputs": {
+        "baseline": [
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          },
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 41
+          }
+        ],
+        "migrated": [
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          },
+          {
+            "contours": 7,
+            "cubics": 40,
+            "segments": 40
+          }
+        ]
+      }
+    },
+    {
+      "workload": "compound_evenodd_normalization",
+      "baseline_median_us": 49.08381313644014,
+      "migrated_median_us": 84.02848011363636,
+      "migrated_over_baseline": 1.7119387175576437,
+      "outputs": {
+        "baseline": [
+          {
+            "path_elements": 18,
+            "present": true
+          },
+          {
+            "path_elements": 18,
+            "present": true
+          }
+        ],
+        "migrated": [
+          {
+            "path_elements": 18,
+            "present": true
+          },
+          {
+            "path_elements": 18,
+            "present": true
+          }
+        ]
+      }
+    },
+    {
+      "workload": "cubic_self_intersection_normalization",
+      "baseline_median_us": 15.942686414828719,
+      "migrated_median_us": 18.49033297529538,
+      "migrated_over_baseline": 1.1598003306454694,
+      "outputs": {
+        "baseline": [
+          {
+            "path_elements": 9,
+            "present": true
+          },
+          {
+            "path_elements": 9,
+            "present": true
+          }
+        ],
+        "migrated": [
+          {
+            "path_elements": 8,
+            "present": true
+          },
+          {
+            "path_elements": 8,
+            "present": true
+          }
+        ]
+      }
+    }
+  ],
+  "test_evidence": {
+    "native": {
+      "command": "cargo test --offline -p planar-geometry --manifest-path crates/Cargo.toml",
+      "unit_passed": 142,
+      "curvex_parity_passed": 18,
+      "failures": 0,
+      "log": "/private/tmp/osv-curvex-qualification/boolean-final-tests-04.log"
+    },
+    "migrated_legacy_application": {
+      "command": "CARGO_TARGET_DIR=/private/tmp/osv-curvex-qualification/migrated-01/target cargo +stable test --offline --manifest-path /private/tmp/osv-curvex-qualification/migrated-02/Cargo.toml --lib --bins --tests",
+      "passed": 1490,
+      "ignored": 1,
+      "failures": 0,
+      "log": "/private/tmp/osv-curvex-qualification/boolean-actual-full-tests-04.log"
+    }
+  }
+}

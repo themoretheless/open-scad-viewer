@@ -38,10 +38,9 @@ pub struct BezierPath {
 
 /// Default flatten tolerance in mm (chord deviation).
 pub const FLATTEN_TOLERANCE: f64 = 0.25;
-const FLATTEN_MAX_STEPS: usize = 256;
 const ELLIPSE_KAPPA: f64 = 0.552_285;
-const MAX_SEGMENTS: usize = 4096;
-const MAX_FLATTEN_POINTS: usize = 32_768;
+const MAX_SEGMENTS: usize = 65_536;
+const MAX_FLATTEN_POINTS: usize = 65_537;
 
 fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
@@ -64,6 +63,7 @@ fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
 impl BezierPath {
     pub fn open(start: [f64; 2], segments: Vec<PathSegment>) -> Result<Self> {
         validate_segments(&segments)?;
+        check(start.iter().all(|x| x.is_finite()), "Non-finite path start")?;
         Ok(Self {
             start,
             segments,
@@ -73,6 +73,7 @@ impl BezierPath {
 
     pub fn closed(start: [f64; 2], segments: Vec<PathSegment>) -> Result<Self> {
         validate_segments(&segments)?;
+        check(start.iter().all(|x| x.is_finite()), "Non-finite path start")?;
         check(
             !segments.is_empty(),
             "Closed path needs at least one segment",
@@ -122,7 +123,7 @@ impl BezierPath {
 
     pub fn from_ellipse(center: [f64; 2], rx: f64, ry: f64) -> Result<Self> {
         check(
-            rx > 0. && ry > 0. && rx.is_finite() && ry.is_finite(),
+            rx >= 0. && ry >= 0. && rx.is_finite() && ry.is_finite(),
             "Invalid ellipse radii",
         )?;
         let (cx, cy) = (center[0], center[1]);
@@ -196,7 +197,16 @@ impl BezierPath {
     }
 
     pub fn flatten_tol(&self, tolerance: f64) -> Result<Vec<[f64; 2]>> {
-        let tol = tolerance.max(1e-9);
+        check(
+            tolerance.is_finite() && tolerance > 0.,
+            "Invalid flatten tolerance",
+        )?;
+        check(
+            self.start.iter().all(|x| x.is_finite()),
+            "Non-finite path start",
+        )?;
+        validate_segments(&self.segments)?;
+        let tol = tolerance;
         let mut out = Vec::with_capacity(self.segments.len() * 8 + 1);
         out.push(self.start);
         let mut current = self.start;
@@ -483,19 +493,36 @@ impl BezierPath {
 
     /// Simplify by flattening then Ramer–Douglas–Peucker; result is a polyline path.
     pub fn simplify(&self, tolerance: f64) -> Result<Self> {
-        let pts = self.flatten_tol(tolerance.max(1e-9))?;
-        let kept = rdp_keep(&pts, tolerance.max(0.0));
-        let simplified: Vec<[f64; 2]> = pts
-            .iter()
-            .zip(kept.iter())
-            .filter_map(|(p, keep)| keep.then_some(*p))
-            .collect();
-        // Closed flatten may repeat start at end; drop duplicate for from_polyline.
-        let mut ring = simplified;
-        if self.closed && ring.len() >= 2 && dist(ring[0], *ring.last().unwrap()) <= 1e-9 {
-            ring.pop();
+        check(tolerance.is_finite(), "Invalid simplify tolerance")?;
+        let mut pts = self.flatten()?;
+        if self.closed && pts.len() >= 2 && dist(pts[0], *pts.last().unwrap()) <= 1e-9 {
+            pts.pop();
         }
-        Self::from_polyline(&ring, self.closed)
+        let minimum = if self.closed { 3 } else { 2 };
+        check(pts.len() >= minimum, "Path too short to simplify")?;
+        let reduce = |points: &[[f64; 2]]| -> Vec<[f64; 2]> {
+            points
+                .iter()
+                .zip(rdp_keep(points, tolerance.max(0.0)))
+                .filter_map(|(p, keep)| keep.then_some(*p))
+                .collect()
+        };
+        let reduced = if self.closed {
+            // Pin the diameter endpoints rather than the arbitrary path seam.
+            let (i, j) = farthest_pair(&pts);
+            let mut first = reduce(&pts[i..=j]);
+            let mut second = pts[j..].to_vec();
+            second.extend_from_slice(&pts[..=i]);
+            let second = reduce(&second);
+            if second.len() > 2 {
+                first.extend_from_slice(&second[1..second.len() - 1]);
+            }
+            first
+        } else {
+            reduce(&pts)
+        };
+        check(reduced.len() >= minimum, "Simplify would collapse the path")?;
+        Self::from_polyline(&reduced, self.closed)
     }
 
     /// Stroke → filled outline via flattened parallel ribbons (butt caps, miter joins).
@@ -504,10 +531,22 @@ impl BezierPath {
             width,
             ..Default::default()
         };
-        let mut outlines = crate::stroke::outline_stroke(self, &opts)?;
-        outlines
-            .pop()
-            .ok_or_else(|| crate::error("Stroke produced no outline"))
+        let outlines = crate::stroke::outline_stroke(self, &opts)?;
+        // This legacy single-contour API encodes all boundaries with retraced
+        // connectors. Their two opposite directions cancel under NonZero fill;
+        // callers that support compounds should use `outline_stroke_with`.
+        let first = outlines
+            .first()
+            .ok_or_else(|| crate::error("Stroke produced no outline"))?;
+        let mut points = first.to_ring(FLATTEN_TOLERANCE)?;
+        points.push(points[0]);
+        for outline in outlines.iter().skip(1) {
+            let ring = outline.to_ring(FLATTEN_TOLERANCE)?;
+            points.extend_from_slice(&ring);
+            points.push(ring[0]);
+            points.push(first.start);
+        }
+        Self::from_polyline(&points, true)
     }
 
     pub fn outline_stroke_with(&self, opts: &crate::stroke::StrokeOptions) -> Result<Vec<Self>> {
@@ -735,6 +774,7 @@ impl BezierPath {
         moved: HandleSide,
         mode: HandleLink,
     ) -> Result<Self> {
+        check(node < self.anchor_count(), "Anchor index out of range")?;
         if mode == HandleLink::Free {
             return Ok(self.clone());
         }
@@ -744,11 +784,18 @@ impl BezierPath {
             self.segments[node - 1].end()
         };
         let (incoming, outgoing) = self.anchor_handles(node)?;
-        let moved_pos = match moved {
+        let Some(moved_pos) = (match moved {
             HandleSide::In => incoming,
             HandleSide::Out => outgoing,
+        }) else {
+            return Ok(self.clone());
+        };
+        if !self.closed
+            && ((node == 0 && moved == HandleSide::Out)
+                || (node + 1 == self.anchor_count() && moved == HandleSide::In))
+        {
+            return Ok(self.clone());
         }
-        .ok_or_else(|| crate::error("Moved handle does not exist"))?;
         let reflected = [
             2.0 * anchor[0] - moved_pos[0],
             2.0 * anchor[1] - moved_pos[1],
@@ -847,8 +894,8 @@ fn offset_open_polyline(path: &BezierPath, distance: f64) -> Result<BezierPath> 
             let plen = prev[0].hypot(prev[1]).max(1e-12);
             let n0 = [-prev[1] / plen * distance, prev[0] / plen * distance];
             out.push([
-                (pts[i][0] + n0[0] + n[0]) * 0.5,
-                (pts[i][1] + n0[1] + n[1]) * 0.5,
+                pts[i][0] + (n0[0] + n[0]) * 0.5,
+                pts[i][1] + (n0[1] + n[1]) * 0.5,
             ]);
         } else {
             out.push([pts[i][0] + n[0], pts[i][1] + n[1]]);
@@ -865,6 +912,129 @@ pub fn join_paths(
     reverse_tail: bool,
     weld_eps: f64,
 ) -> Result<BezierPath> {
+    join_paths_with_bridge(head, reverse_head, tail, reverse_tail, &[], weld_eps)
+}
+
+/// Forward tangent at an endpoint, with a chord fallback for a collapsed handle.
+pub fn endpoint_tangent(path: &BezierPath, at_end: bool) -> Option<[f64; 2]> {
+    let (primary, fallback) = if at_end {
+        let segment = path.segments.last()?;
+        let previous = if path.segments.len() > 1 {
+            path.segments[path.segments.len() - 2].end()
+        } else {
+            path.start
+        };
+        let from = match *segment {
+            PathSegment::Line { .. } => previous,
+            PathSegment::Cubic { c2, .. } => c2,
+        };
+        (sub2(segment.end(), from), sub2(segment.end(), previous))
+    } else {
+        let segment = path.segments.first()?;
+        let to = match *segment {
+            PathSegment::Line { to } => to,
+            PathSegment::Cubic { c1, .. } => c1,
+        };
+        (sub2(to, path.start), sub2(segment.end(), path.start))
+    };
+    let nonzero = |d: [f64; 2]| d[0].abs() > 1e-6 || d[1].abs() > 1e-6;
+    if nonzero(primary) {
+        Some(primary)
+    } else if nonzero(fallback) {
+        Some(fallback)
+    } else {
+        None
+    }
+}
+
+fn tangent_bridge(head: &BezierPath, tail: &BezierPath) -> Vec<PathSegment> {
+    let (Some(da), Some(dt)) = (endpoint_tangent(head, true), endpoint_tangent(tail, false)) else {
+        return Vec::new();
+    };
+    let db = [-dt[0], -dt[1]];
+    let a = head.segments.last().map_or(head.start, PathSegment::end);
+    let b = tail.start;
+    let denominator = cross2(da, db);
+    if denominator.abs() < 1e-9 {
+        return Vec::new();
+    }
+    let ab = sub2(b, a);
+    let ta = cross2(ab, db) / denominator;
+    let tb = cross2(ab, da) / denominator;
+    if ta <= 0.0 || tb <= 0.0 {
+        return Vec::new();
+    }
+    let intersection = [a[0] + ta * da[0], a[1] + ta * da[1]];
+    let reach = (dist(a, b) * 3.0).max(1.0);
+    if dist(a, intersection) > reach || dist(b, intersection) > reach {
+        return Vec::new();
+    }
+    let straight_cubic = |from, to| PathSegment::Cubic {
+        c1: lerp(from, to, 1.0 / 3.0),
+        c2: lerp(from, to, 2.0 / 3.0),
+        to,
+    };
+    vec![
+        straight_cubic(a, intersection),
+        straight_cubic(intersection, b),
+    ]
+}
+
+/// Curvex endpoint Join: continue both tangents through a nearby forward-ray
+/// intersection. Parallel, backward or distant intersections use a straight join.
+pub fn join_paths_at_tangents(
+    head: &BezierPath,
+    reverse_head: bool,
+    tail: &BezierPath,
+    reverse_tail: bool,
+    weld_eps: f64,
+) -> Result<BezierPath> {
+    let a = if reverse_head {
+        head.reverse()
+    } else {
+        head.clone()
+    };
+    let b = if reverse_tail {
+        tail.reverse()
+    } else {
+        tail.clone()
+    };
+    join_paths_with_bridge(&a, false, &b, false, &tangent_bridge(&a, &b), weld_eps)
+}
+
+/// Close an open path using the same bounded tangent continuation as endpoint Join.
+pub fn close_path_at_tangents(path: &BezierPath, weld_eps: f64) -> Result<BezierPath> {
+    check(
+        !path.closed && !path.segments.is_empty(),
+        "Close requires a nonempty open path",
+    )?;
+    let empty_tail = BezierPath::open(path.start, Vec::new())?;
+    let joined = join_paths_with_bridge(
+        path,
+        false,
+        &empty_tail,
+        false,
+        &tangent_bridge(path, path),
+        weld_eps,
+    )?;
+    BezierPath::closed(joined.start, joined.segments)
+}
+
+/// Join open paths using an optional line/cubic connector. A connector that
+/// misses the tail is completed with a line; a welded join ignores it.
+pub fn join_paths_with_bridge(
+    head: &BezierPath,
+    reverse_head: bool,
+    tail: &BezierPath,
+    reverse_tail: bool,
+    bridge: &[PathSegment],
+    weld_eps: f64,
+) -> Result<BezierPath> {
+    check(
+        weld_eps >= 0.0 && weld_eps.is_finite(),
+        "Invalid join weld tolerance",
+    )?;
+    validate_segments(bridge)?;
     check(
         !head.closed && !tail.closed,
         "join_paths requires open paths",
@@ -879,15 +1049,17 @@ pub fn join_paths(
     } else {
         tail.clone()
     };
-    check(
-        a.segments.len() + b.segments.len() < MAX_SEGMENTS,
-        "Joined path exceeds segment budget",
-    )?;
     let head_end = a.segments.last().map_or(a.start, |s| s.end());
     let mut segments = a.segments;
-    let coincide = dist(head_end, b.start) <= weld_eps;
+    let within_weld = |a: [f64; 2], b: [f64; 2]| {
+        (a[0] - b[0]).abs() <= weld_eps && (a[1] - b[1]).abs() <= weld_eps
+    };
+    let coincide = within_weld(head_end, b.start);
     if !coincide {
-        segments.push(PathSegment::Line { to: b.start });
+        segments.extend_from_slice(bridge);
+        if !within_weld(segments.last().map_or(head_end, PathSegment::end), b.start) {
+            segments.push(PathSegment::Line { to: b.start });
+        }
     }
     segments.extend(b.segments);
     BezierPath::open(a.start, segments)
@@ -927,32 +1099,43 @@ fn flatten_cubic(
     tolerance: f64,
     out: &mut Vec<[f64; 2]>,
 ) -> Result<()> {
-    let d1 = [p0[0] - 2.0 * c1[0] + c2[0], p0[1] - 2.0 * c1[1] + c2[1]];
-    let d2 = [c1[0] - 2.0 * c2[0] + p3[0], c1[1] - 2.0 * c2[1] + p3[1]];
-    let l_sq = (d1[0] * d1[0] + d1[1] * d1[1]).max(d2[0] * d2[0] + d2[1] * d2[1]);
-    let l = l_sq.sqrt();
-    let n_f = (3.0 * l / (4.0 * tolerance)).sqrt();
-    let steps = if n_f.is_finite() {
-        (n_f.ceil() as usize).clamp(1, FLATTEN_MAX_STEPS)
-    } else {
-        FLATTEN_MAX_STEPS
-    };
-    let inv = 1.0 / steps as f64;
-    for i in 1..=steps {
-        let t = i as f64 * inv;
-        let mt = 1.0 - t;
-        let b0 = mt * mt * mt;
-        let b1 = 3.0 * mt * mt * t;
-        let b2 = 3.0 * mt * t * t;
-        let b3 = t * t * t;
-        out.push([
-            b0 * p0[0] + b1 * c1[0] + b2 * c2[0] + b3 * p3[0],
-            b0 * p0[1] + b1 * c1[1] + b2 * c2[1] + b3 * p3[1],
-        ]);
+    let mut stack = vec![([p0, c1, c2, p3], 0usize)];
+    while let Some(([a, b, c, d], depth)) = stack.pop() {
+        let direction = sub2(d, a);
+        let length = direction[0].hypot(direction[1]);
+        let distance_to_chord = |p: [f64; 2]| {
+            if length == 0. {
+                return dist(p, a);
+            }
+            let v = sub2(p, a);
+            let t = ((v[0] / length) * (direction[0] / length)
+                + (v[1] / length) * (direction[1] / length))
+                .clamp(0., 1.);
+            dist(p, lerp(a, d, t))
+        };
+        // The Bézier convex hull lies in this capsule around the chord. Use
+        // distance to the finite segment, not its supporting line: collinear
+        // overshoots and loops must be subdivided too.
+        if distance_to_chord(b).max(distance_to_chord(c)) <= tolerance {
+            out.push(d);
+            check(
+                out.len() <= MAX_FLATTEN_POINTS,
+                "Flatten exceeded point budget",
+            )?;
+            continue;
+        }
         check(
-            out.len() <= MAX_FLATTEN_POINTS,
-            "Flatten exceeded point budget",
+            depth < 32,
+            "Flatten cannot meet tolerance within subdivision budget",
         )?;
+        let ab = lerp(a, b, 0.5);
+        let bc = lerp(b, c, 0.5);
+        let cd = lerp(c, d, 0.5);
+        let abc = lerp(ab, bc, 0.5);
+        let bcd = lerp(bc, cd, 0.5);
+        let middle = lerp(abc, bcd, 0.5);
+        stack.push(([middle, bcd, cd, d], depth + 1));
+        stack.push(([a, ab, abc, middle], depth + 1));
     }
     Ok(())
 }
@@ -1022,6 +1205,65 @@ fn ensure_cubic(segments: &mut [PathSegment], idx: usize, from: [f64; 2]) {
             to,
         };
     }
+}
+
+// Convex hull + rotating calipers avoids quadratic diameter search on dense
+// curves. Ties retain the first original-index pair, as Curvex's pair scan does.
+fn farthest_pair(points: &[[f64; 2]]) -> (usize, usize) {
+    let mut order: Vec<usize> = (0..points.len()).collect();
+    order.sort_by(|&a, &b| points[a].partial_cmp(&points[b]).unwrap().then(a.cmp(&b)));
+    order.dedup_by(|a, b| points[*a] == points[*b]);
+    if order.len() < 2 {
+        return (0, 1);
+    }
+    let turn = |a: usize, b: usize, c: usize| {
+        cross2(sub2(points[b], points[a]), sub2(points[c], points[a]))
+    };
+    let mut hull = Vec::new();
+    for &i in &order {
+        while hull.len() >= 2 && turn(hull[hull.len() - 2], hull[hull.len() - 1], i) <= 0.0 {
+            hull.pop();
+        }
+        hull.push(i);
+    }
+    let lower = hull.len();
+    for &i in order.iter().rev().skip(1) {
+        while hull.len() > lower && turn(hull[hull.len() - 2], hull[hull.len() - 1], i) <= 0.0 {
+            hull.pop();
+        }
+        hull.push(i);
+    }
+    hull.pop();
+    let n = hull.len();
+    let mut best = (0, 1);
+    let mut best_distance = -1.0;
+    let mut consider = |a: usize, b: usize| {
+        let pair = (a.min(b), a.max(b));
+        let d = sub2(points[a], points[b]);
+        let d = d[0] * d[0] + d[1] * d[1];
+        if d > best_distance || (d == best_distance && pair < best) {
+            best_distance = d;
+            best = pair;
+        }
+    };
+    let mut j = 1;
+    for i in 0..n {
+        let next = (i + 1) % n;
+        while turn(hull[i], hull[next], hull[(j + 1) % n]).abs()
+            > turn(hull[i], hull[next], hull[j]).abs()
+        {
+            j = (j + 1) % n;
+        }
+        consider(hull[i], hull[j]);
+        consider(hull[next], hull[j]);
+        let j_next = (j + 1) % n;
+        if turn(hull[i], hull[next], hull[j_next]).abs() == turn(hull[i], hull[next], hull[j]).abs()
+        {
+            consider(hull[i], hull[j_next]);
+            consider(hull[next], hull[j_next]);
+        }
+    }
+    best
 }
 
 fn rdp_keep(points: &[[f64; 2]], eps: f64) -> Vec<bool> {
@@ -1217,5 +1459,54 @@ mod tests {
         let parts = path.delete_segments(&[1, 2]).unwrap();
         assert_eq!(parts.len(), 2);
         assert!(parts.iter().all(|p| !p.closed));
+    }
+    #[test]
+    fn flatten_meets_small_tolerance_beyond_old_sample_cap() {
+        let path = BezierPath::open(
+            [0., 0.],
+            vec![PathSegment::Cubic {
+                c1: [0., 100.],
+                c2: [100., 100.],
+                to: [100., 0.],
+            }],
+        )
+        .unwrap();
+        let tolerance = 0.00001;
+        let points = path.flatten_tol(tolerance).unwrap();
+        assert!(points.len() > 256);
+        for i in 0..=1000 {
+            let t = i as f64 / 1000.;
+            let u = 1. - t;
+            let p = [100. * (3. * u * t * t + t * t * t), 300. * u * t];
+            let nearest = points
+                .windows(2)
+                .map(|ab| {
+                    let v = sub2(ab[1], ab[0]);
+                    let q = sub2(p, ab[0]);
+                    let parameter =
+                        ((q[0] * v[0] + q[1] * v[1]) / (v[0] * v[0] + v[1] * v[1])).clamp(0., 1.);
+                    dist(p, lerp(ab[0], ab[1], parameter))
+                })
+                .fold(f64::INFINITY, f64::min);
+            assert!(nearest <= tolerance, "error {nearest} exceeds {tolerance}");
+        }
+    }
+    #[test]
+    fn flatten_preserves_collinear_overshoot_and_rejects_invalid_options() {
+        let path = BezierPath::open(
+            [0., 0.],
+            vec![PathSegment::Cubic {
+                c1: [10., 0.],
+                c2: [10., 0.],
+                to: [1., 0.],
+            }],
+        )
+        .unwrap();
+        let points = path.flatten_tol(0.01).unwrap();
+        assert!(points.iter().any(|p| p[0] > 7.));
+        for tolerance in [0., -1., f64::NAN, f64::INFINITY] {
+            assert!(path.flatten_tol(tolerance).is_err());
+        }
+        assert!(BezierPath::open([f64::NAN, 0.], vec![]).is_err());
     }
 }

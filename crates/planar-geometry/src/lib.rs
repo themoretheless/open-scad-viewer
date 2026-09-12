@@ -8,11 +8,15 @@
 //! Coordinates are millimeters; algorithms use binary64. Builds on stable Rust
 //! (no `#![feature]`).
 pub mod corners;
+pub mod curve;
+pub mod attribute_mesh;
+pub mod curve_boolean;
 pub mod edit;
 pub mod effects;
 pub mod path;
 pub mod path_offset;
 pub mod pathfinder;
+pub mod render;
 pub mod rings;
 pub mod scissors;
 pub mod stroke;

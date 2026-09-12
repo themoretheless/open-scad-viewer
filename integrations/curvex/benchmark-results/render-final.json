@@ -1,0 +1,119 @@
+{
+  "method": "Median of three sequential direct release-binary runs. Each has 3 warmups and 21 timed samples, reused tessellators, path construction excluded and output allocation included. Cargo, team compilers, other benchmarks, raster comparison all idle during measurement.",
+  "scope": "Uncached position-mesh construction only; not gradient sampling, cache-hit painting or frame time.",
+  "source": "integrations/curvex/render-benchmark",
+  "sources": "render-final-sources.json",
+  "rawRuns": "render-final-runs.json",
+  "rows": [
+    {
+      "case": "rectangle_fill",
+      "nativeMedianUs": 1.0,
+      "lyonMedianUs": 0.458,
+      "nativeToLyon": 2.18,
+      "nativeP95Us": 3.5,
+      "nativeArea": 8000.0,
+      "lyonArea": 8000.0,
+      "nativeTriangles": 2,
+      "lyonTriangles": 2
+    },
+    {
+      "case": "compound_16_holes_fill",
+      "nativeMedianUs": 77.375,
+      "lyonMedianUs": 8.375,
+      "nativeToLyon": 9.24,
+      "nativeP95Us": 88.916,
+      "nativeArea": 6400.0,
+      "lyonArea": 6400.0,
+      "nativeTriangles": 50,
+      "lyonTriangles": 98
+    },
+    {
+      "case": "cubic_circle_fill",
+      "nativeMedianUs": 12.0,
+      "lyonMedianUs": 5.333,
+      "nativeToLyon": 2.25,
+      "nativeP95Us": 15.417,
+      "nativeArea": 7853.021998,
+      "lyonArea": 7847.221857,
+      "nativeTriangles": 126,
+      "lyonTriangles": 74
+    },
+    {
+      "case": "cubic_circle_stroke",
+      "nativeMedianUs": 111.459,
+      "lyonMedianUs": 4.292,
+      "nativeToLyon": 25.97,
+      "nativeP95Us": 117.75,
+      "nativeArea": 628.343506,
+      "lyonArea": 628.227261,
+      "nativeTriangles": 506,
+      "lyonTriangles": 152
+    },
+    {
+      "case": "overlap_nonzero_fill",
+      "nativeMedianUs": 9.75,
+      "lyonMedianUs": 1.333,
+      "nativeToLyon": 7.31,
+      "nativeP95Us": 11.625,
+      "nativeArea": 5100.0,
+      "lyonArea": 5100.0,
+      "nativeTriangles": 6,
+      "lyonTriangles": 10
+    },
+    {
+      "case": "bowtie_evenodd_fill",
+      "nativeMedianUs": 5.709,
+      "lyonMedianUs": 0.583,
+      "nativeToLyon": 9.79,
+      "nativeP95Us": 7.625,
+      "nativeArea": 3200.0,
+      "lyonArea": 3200.0,
+      "nativeTriangles": 2,
+      "lyonTriangles": 2
+    },
+    {
+      "case": "open_cubic_stroke",
+      "nativeMedianUs": 652.167,
+      "lyonMedianUs": 3.75,
+      "nativeToLyon": 173.91,
+      "nativeP95Us": 817.417,
+      "nativeArea": 331.70028,
+      "lyonArea": 331.706768,
+      "nativeTriangles": 388,
+      "lyonTriangles": 136
+    },
+    {
+      "case": "curvex_sampled_gradient_stroke",
+      "nativeMedianUs": 335.208,
+      "lyonMedianUs": 2.084,
+      "nativeToLyon": 160.85,
+      "nativeP95Us": 477.625,
+      "nativeArea": 949.211462,
+      "lyonArea": 949.211445,
+      "nativeTriangles": 266,
+      "lyonTriangles": 56
+    },
+    {
+      "case": "polyline_1200_stroke",
+      "nativeMedianUs": 1741.333,
+      "lyonMedianUs": 80.417,
+      "nativeToLyon": 21.65,
+      "nativeP95Us": 1839.125,
+      "nativeArea": 1256.635635,
+      "lyonArea": 1256.635669,
+      "nativeTriangles": 9280,
+      "lyonTriangles": 2400
+    },
+    {
+      "case": "polyline_4096_fill",
+      "nativeMedianUs": 133.958,
+      "lyonMedianUs": 321.625,
+      "nativeToLyon": 0.42,
+      "nativeP95Us": 137.166,
+      "nativeArea": 31415.914207,
+      "lyonArea": 31415.913548,
+      "nativeTriangles": 4094,
+      "lyonTriangles": 4094
+    }
+  ]
+}

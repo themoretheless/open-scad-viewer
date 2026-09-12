@@ -17,6 +17,198 @@ pub struct CutHit {
     pub point: [f64; 2],
 }
 
+/// A hit retains the source contour index, including holes and islands.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CompoundCutHit {
+    pub ring: usize,
+    pub hit: CutHit,
+}
+
+/// Outer vector: separate output figures. Inner vector: the contours of ONE
+/// figure, retaining their fill relationship. Open pieces contain one path.
+pub type PathPieces = Vec<Vec<BezierPath>>;
+
+fn validate_compound(contours: &[BezierPath]) -> Result<()> {
+    check(
+        !contours.is_empty() && contours.len() <= 4096,
+        "Invalid compound contour count",
+    )?;
+    check(
+        contours.iter().all(|p| p.closed),
+        "Compound requires closed contours",
+    )
+}
+
+pub fn hit_test_compound(
+    contours: &[BezierPath],
+    click: [f64; 2],
+    max_dist: f64,
+) -> Result<Option<CompoundCutHit>> {
+    validate_compound(contours)?;
+    let mut best: Option<CompoundCutHit> = None;
+    for (ring, path) in contours.iter().enumerate() {
+        if let Some(hit) = hit_test(path, click, max_dist)?
+            && best.is_none_or(|b| hit.distance < b.hit.distance)
+        {
+            best = Some(CompoundCutHit { ring, hit });
+        }
+    }
+    Ok(best)
+}
+
+/// Open only the hit contour; all untouched rings remain one closed figure.
+pub fn cut_compound_at(contours: &[BezierPath], cut: CompoundCutHit) -> Result<PathPieces> {
+    validate_compound(contours)?;
+    check(cut.ring < contours.len(), "Cut ring index out of range")?;
+    let cut_paths = cut_at(&contours[cut.ring], cut.hit)?;
+    let survivors: Vec<_> = contours
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != cut.ring)
+        .map(|(_, p)| p.clone())
+        .collect();
+    let mut pieces = Vec::new();
+    if !survivors.is_empty() {
+        pieces.push(survivors);
+    }
+    pieces.extend(cut_paths.into_iter().map(|p| vec![p]));
+    Ok(pieces)
+}
+
+pub fn scissors_cut_compound(
+    contours: &[BezierPath],
+    click: [f64; 2],
+    max_dist: f64,
+) -> Result<PathPieces> {
+    let hit = hit_test_compound(contours, click, max_dist)?
+        .ok_or_else(|| crate::error("Scissors: no path under cursor"))?;
+    cut_compound_at(contours, hit)
+}
+
+pub fn knife_hits_compound(
+    contours: &[BezierPath],
+    k0: [f64; 2],
+    k1: [f64; 2],
+) -> Result<Vec<CompoundCutHit>> {
+    validate_compound(contours)?;
+    let mut hits = Vec::new();
+    for (ring, path) in contours.iter().enumerate() {
+        hits.extend(
+            knife_hits(path, k0, k1)?
+                .into_iter()
+                .map(|hit| CompoundCutHit { ring, hit }),
+        );
+    }
+    Ok(hits)
+}
+
+/// Multi-cut contours independently; preserve every uncut contour together.
+pub fn cut_compound_at_many(
+    contours: &[BezierPath],
+    hits: &[CompoundCutHit],
+) -> Result<PathPieces> {
+    validate_compound(contours)?;
+    check(!hits.is_empty(), "Knife: no hits")?;
+    let mut per_ring = vec![Vec::new(); contours.len()];
+    for cut in hits {
+        check(cut.ring < contours.len(), "Cut ring index out of range")?;
+        per_ring[cut.ring].push(cut.hit);
+    }
+    let mut survivors = Vec::new();
+    let mut pieces = Vec::new();
+    for (ring, path) in contours.iter().enumerate() {
+        if per_ring[ring].is_empty() {
+            survivors.push(path.clone());
+        } else {
+            pieces.extend(
+                cut_at_many(path, &per_ring[ring])?
+                    .into_iter()
+                    .map(|p| vec![p]),
+            );
+        }
+    }
+    if !survivors.is_empty() {
+        pieces.insert(0, survivors);
+    }
+    Ok(pieces)
+}
+
+pub fn knife_cut_compound(
+    contours: &[BezierPath],
+    k0: [f64; 2],
+    k1: [f64; 2],
+) -> Result<PathPieces> {
+    cut_compound_at_many(contours, &knife_hits_compound(contours, k0, k1)?)
+}
+
+/// Fillable compound knife with Curvex's even-odd regrouping policy. Whole
+/// holes stay with their containing half. If only a hole/disjoint component
+/// was sliced, all contours remain one figure. Original winding is preserved.
+pub fn knife_split_compound(
+    contours: &[BezierPath],
+    k0: [f64; 2],
+    k1: [f64; 2],
+) -> Result<PathPieces> {
+    validate_compound(contours)?;
+    let mut sides: [Vec<BezierPath>; 2] = [Vec::new(), Vec::new()];
+    let mut whole = Vec::new();
+    let mut any_split = false;
+    for path in contours {
+        let hits = knife_hits(path, k0, k1)?;
+        if hits.len() == 2 {
+            let pieces = split_closed_hits(path, &hits)?;
+            let arc = BezierPath::open(
+                pieces[0].start,
+                pieces[0].segments[..pieces[0].segments.len() - 1].to_vec(),
+            )?;
+            let flat = arc.flatten()?;
+            let p = flat[flat.len() / 2];
+            let side = usize::from(
+                (k1[0] - k0[0]) * (p[1] - k0[1]) - (k1[1] - k0[1]) * (p[0] - k0[0]) > 0.0,
+            );
+            let mut pieces = pieces.into_iter();
+            sides[side].push(pieces.next().unwrap());
+            sides[1 - side].push(pieces.next().unwrap());
+            any_split = true;
+        } else {
+            whole.push(path.clone());
+        }
+    }
+    check(any_split, "Knife split: no contour has two clean crossings")?;
+    let contains = |paths: &[BezierPath], p| -> Result<bool> {
+        let rings = paths
+            .iter()
+            .map(|path| path.flatten())
+            .collect::<Result<Vec<_>>>()?;
+        Ok(crate::rings::inside_with_rule(
+            p,
+            &rings,
+            crate::tessellation::FillRule::EvenOdd,
+        ))
+    };
+    let mut unassigned = Vec::new();
+    for path in whole {
+        match (
+            contains(&sides[0], path.start)?,
+            contains(&sides[1], path.start)?,
+        ) {
+            (true, false) => sides[0].push(path),
+            (false, true) => sides[1].push(path),
+            _ => unassigned.push(path),
+        }
+    }
+    if !unassigned.is_empty() {
+        unassigned.append(&mut sides[0]);
+        unassigned.append(&mut sides[1]);
+        return Ok(vec![unassigned]);
+    }
+    check(
+        !sides[0].is_empty() && !sides[1].is_empty(),
+        "Knife split: empty side",
+    )?;
+    Ok(sides.into_iter().collect())
+}
+
 const T_EPS: f64 = 1e-4;
 const DUP_T: f64 = 1e-3;
 const CUBIC_STEPS: usize = 48;
@@ -85,6 +277,7 @@ pub fn split_segment_at(
     t: f64,
 ) -> Result<(Option<PathSegment>, Option<PathSegment>, [f64; 2])> {
     check(idx < segments.len(), "Segment index out of range")?;
+    check(t.is_finite(), "Non-finite cut parameter")?;
     let t = t.clamp(T_EPS, 1.0 - T_EPS);
     let from = segment_from(start, segments, idx);
     Ok(match segments[idx] {
@@ -118,7 +311,11 @@ pub fn split_segment_at(
 
 /// Closest hit on real Line/Cubic segments within `max_dist` (mm).
 pub fn hit_test(path: &BezierPath, click: [f64; 2], max_dist: f64) -> Result<Option<CutHit>> {
-    check(max_dist > 0.0, "Invalid hit distance")?;
+    check(
+        max_dist >= 0.0 && max_dist.is_finite(),
+        "Invalid hit distance",
+    )?;
+    check(click.iter().all(|x| x.is_finite()), "Non-finite cut cursor")?;
     check(!path.segments.is_empty(), "Empty path")?;
     let mut best: Option<CutHit> = None;
     let mut current = path.start;
@@ -345,16 +542,24 @@ fn extract_subpath_open(
 ) -> Result<Option<([f64; 2], Vec<PathSegment>)>> {
     let (chunk_start, first_idx, first_override) = match start_hit {
         Some(h) => {
-            let (_, after, pt) =
-                split_segment_at(start, segments, h.segment_index, h.t.clamp(T_EPS, 1.0 - T_EPS))?;
+            let (_, after, pt) = split_segment_at(
+                start,
+                segments,
+                h.segment_index,
+                h.t.clamp(T_EPS, 1.0 - T_EPS),
+            )?;
             (pt, h.segment_index + 1, after)
         }
         None => (start, 0, None),
     };
     let (last_excl, last_override) = match end_hit {
         Some(h) => {
-            let (before, _, _) =
-                split_segment_at(start, segments, h.segment_index, h.t.clamp(T_EPS, 1.0 - T_EPS))?;
+            let (before, _, _) = split_segment_at(
+                start,
+                segments,
+                h.segment_index,
+                h.t.clamp(T_EPS, 1.0 - T_EPS),
+            )?;
             (h.segment_index, before)
         }
         None => (segments.len(), None),
@@ -424,12 +629,9 @@ fn cut_multi(path: &BezierPath, hits: &[CutHit]) -> Result<Vec<BezierPath>> {
                 pieces.push(mid);
             }
         }
-        if let Some(tail) = extract_subpath_open(
-            path.start,
-            &path.segments,
-            Some(hits[hits.len() - 1]),
-            None,
-        )? {
+        if let Some(tail) =
+            extract_subpath_open(path.start, &path.segments, Some(hits[hits.len() - 1]), None)?
+        {
             pieces.push(tail);
         }
     }
@@ -443,6 +645,29 @@ fn cut_multi(path: &BezierPath, hits: &[CutHit]) -> Result<Vec<BezierPath>> {
     Ok(out)
 }
 
+/// Cut at previously resolved hits, sorting them into path order. Cubic control
+/// points survive exact de Casteljau subdivision; duplicate hits are merged.
+pub fn cut_at_many(path: &BezierPath, hits: &[CutHit]) -> Result<Vec<BezierPath>> {
+    check(!hits.is_empty(), "Knife: no hits")?;
+    check(
+        hits.iter()
+            .all(|h| h.segment_index < path.segments.len() && h.t.is_finite()),
+        "Invalid path cut hit",
+    )?;
+    let mut hits = hits.to_vec();
+    hits.sort_by(|a, b| {
+        a.segment_index
+            .cmp(&b.segment_index)
+            .then(a.t.total_cmp(&b.t))
+    });
+    hits.dedup_by(|a, b| a.segment_index == b.segment_index && (a.t - b.t).abs() < DUP_T);
+    if path.closed && hits.len() == 1 {
+        cut_at(path, hits[0])
+    } else {
+        cut_multi(path, &hits)
+    }
+}
+
 /// Closed fillable knife: exactly two clean crossings → two closed pieces closed by the chord.
 pub fn knife_split(path: &BezierPath, k0: [f64; 2], k1: [f64; 2]) -> Result<Vec<BezierPath>> {
     check(path.closed, "Knife split requires a closed path")?;
@@ -451,12 +676,14 @@ pub fn knife_split(path: &BezierPath, k0: [f64; 2], k1: [f64; 2]) -> Result<Vec<
         hits.len() == 2,
         "Knife split needs exactly two outline crossings",
     )?;
-    let (pt_a, mut arc_ab) =
-        extract_subpath_closed(path.start, &path.segments, hits[0], hits[1])?
-            .ok_or_else(|| crate::error("Knife split: empty arc A→B"))?;
-    let (pt_b, mut arc_ba) =
-        extract_subpath_closed(path.start, &path.segments, hits[1], hits[0])?
-            .ok_or_else(|| crate::error("Knife split: empty arc B→A"))?;
+    split_closed_hits(path, &hits)
+}
+
+fn split_closed_hits(path: &BezierPath, hits: &[CutHit]) -> Result<Vec<BezierPath>> {
+    let (pt_a, mut arc_ab) = extract_subpath_closed(path.start, &path.segments, hits[0], hits[1])?
+        .ok_or_else(|| crate::error("Knife split: empty arc A→B"))?;
+    let (pt_b, mut arc_ba) = extract_subpath_closed(path.start, &path.segments, hits[1], hits[0])?
+        .ok_or_else(|| crate::error("Knife split: empty arc B→A"))?;
     arc_ab.push(PathSegment::Line { to: pt_a });
     arc_ba.push(PathSegment::Line { to: pt_b });
     check(

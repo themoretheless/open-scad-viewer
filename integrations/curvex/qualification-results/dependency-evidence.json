@@ -1,0 +1,880 @@
+{
+  "generated_utc": "2026-09-12T20:34:19.742946+00:00",
+  "scope": "Existing Cargo metadata filtered for aarch64-apple-darwin, plus fresh cargo tree normal/build evidence for active native features. The resolved metadata graph may include inactive optional branches (such as egui_glow and glifo); its enumerated paths are possibilities, not a claim that every branch is compiled. The complete kernel closure has no optional edges. This does not claim the GUI/SVG stack is free of Kurbo.",
+  "metadata": {
+    "path": "/private/tmp/osv-curvex-qualification/dependency-metadata-native.json",
+    "captured_from": "/private/tmp/osv-curvex-qualification/final-01/qualification/cargo-metadata-filtered.json",
+    "sha256": "92d1e04541f67cd1a835645b6e63160e1476466fe3977c44d9c7a09045ca5f0e"
+  },
+  "manifest": {
+    "path": "/private/tmp/osv-curvex-qualification/dependency-Cargo.toml",
+    "captured_from": "/private/tmp/osv-curvex-qualification/final-01/Cargo.toml",
+    "sha256": "7e3738a217a583243b9c9e6642c82e26cc9b2be7a5b581e39e543c36916276e9"
+  },
+  "direct_dependencies": [
+    {
+      "name": "arboard",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "eframe",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "egui",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "planar-geometry",
+      "rename": "osv_geometry",
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "rfd",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "serde",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "serde_json",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "usvg",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "uuid",
+      "rename": null,
+      "kind": null,
+      "target": null
+    },
+    {
+      "name": "criterion",
+      "rename": null,
+      "kind": "dev",
+      "target": null
+    },
+    {
+      "name": "objc2",
+      "rename": null,
+      "kind": null,
+      "target": "cfg(target_os = \"macos\")"
+    },
+    {
+      "name": "objc2-app-kit",
+      "rename": null,
+      "kind": null,
+      "target": "cfg(target_os = \"macos\")"
+    },
+    {
+      "name": "objc2-foundation",
+      "rename": null,
+      "kind": null,
+      "target": "cfg(target_os = \"macos\")"
+    }
+  ],
+  "replacement_dependency": {
+    "package": "planar-geometry",
+    "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry"
+  },
+  "removed_direct_dependencies": [
+    "kurbo",
+    "linesweeper",
+    "lyon_path",
+    "lyon_tessellation"
+  ],
+  "kernel_closure": [
+    {
+      "name": "osv-math",
+      "version": "0.1.0",
+      "manifest": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core/Cargo.toml",
+      "manifest_sha256": "901892676373afdefff22b2e51af3533ed58062e325130e9cbaf75c728cc100a",
+      "source": null
+    },
+    {
+      "name": "planar-geometry",
+      "version": "0.1.0",
+      "manifest": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/Cargo.toml",
+      "manifest_sha256": "3ddbf4480a9cb995292b4172b4a37cc321bd07896d8cc1ac8321006a8e10f91e",
+      "source": null
+    }
+  ],
+  "kernel_edges": [
+    {
+      "from": "planar-geometry@0.1.0",
+      "to": "osv-math@0.1.0",
+      "alias": "math_core",
+      "kinds": [
+        {
+          "kind": null,
+          "target": null
+        }
+      ]
+    }
+  ],
+  "forbidden_in_kernel_closure": [],
+  "remaining_application_packages": [
+    {
+      "package": "kurbo@0.13.1",
+      "direct_parents": [
+        "peniko@0.6.1",
+        "svgtypes@0.16.1",
+        "usvg@0.47.0"
+      ]
+    }
+  ],
+  "remaining_chains": [
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-wgpu@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-winit@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-winit@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui-winit@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui_glow@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui_glow@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "eframe@0.35.0",
+      "egui_glow@0.35.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "glifo@0.1.1",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "egui@0.35.0",
+      "epaint@0.35.0",
+      "vello_cpu@0.0.9",
+      "vello_common@0.0.9",
+      "peniko@0.6.1",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "usvg@0.47.0",
+      "kurbo@0.13.1"
+    ],
+    [
+      "curvex@0.1.0",
+      "usvg@0.47.0",
+      "svgtypes@0.16.1",
+      "kurbo@0.13.1"
+    ]
+  ],
+  "chain_semantics": "All non-dev paths in captured resolve.nodes. Prefer the captured cargo tree files for active native normal/build chains.",
+  "actual_native_cargo_trees": [
+    {
+      "path": "/private/tmp/osv-curvex-qualification/dependency-kurbo-cargo-tree.txt",
+      "sha256": "34c807a1ecf385bb4c6fe450fc12f64f9b8d56ee47fb418235006c09292e09d7",
+      "exit_code": 0,
+      "command": [
+        "cargo",
+        "+stable",
+        "tree",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/final-01/Cargo.toml",
+        "--target",
+        "aarch64-apple-darwin",
+        "--edges",
+        "normal,build",
+        "--invert",
+        "kurbo@0.13.1"
+      ]
+    },
+    {
+      "path": "/private/tmp/osv-curvex-qualification/dependency-kernel-cargo-tree.txt",
+      "sha256": "9563df78aaae400aaf5790b8277e719e664674c7aea4182e8e90f5365f6e0e88",
+      "exit_code": 0,
+      "command": [
+        "cargo",
+        "+stable",
+        "tree",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/final-01/Cargo.toml",
+        "--target",
+        "aarch64-apple-darwin",
+        "--edges",
+        "normal,build",
+        "--package",
+        "planar-geometry"
+      ]
+    }
+  ],
+  "absent_from_filtered_package_set": [
+    "linesweeper",
+    "lyon_path",
+    "lyon_tessellation"
+  ],
+  "source_audit": {
+    "rust_files_scanned": 265,
+    "unreplaced_legacy_namespace_references": [],
+    "kernel_public_reexports": [
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/curve.rs",
+        "line": 680,
+        "text": "pub use crate::stroke::{LineCap as Cap, LineJoin as Join};"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/curve_boolean.rs",
+        "line": 7,
+        "text": "pub use crate::tessellation::FillRule;"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/edit.rs",
+        "line": 975,
+        "text": "pub use crate::scissors::{"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/lib.rs",
+        "line": 26,
+        "text": "pub use math_core::{Error, Result};"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/render.rs",
+        "line": 146,
+        "text": "pub use crate::stroke::{LineCap, LineJoin};"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/render.rs",
+        "line": 147,
+        "text": "pub use crate::tessellation::FillRule;"
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/rings.rs",
+        "line": 7,
+        "text": "pub use math_core::{cross2, sub2};"
+      }
+    ],
+    "legacy_name_mentions": [
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_commands.rs",
+        "line": 249,
+        "kind": "comment",
+        "text": "/// edge is a true parallel offset with correct joins. kurbo handles the"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_commands.rs",
+        "line": 252,
+        "kind": "comment",
+        "text": "/// kurbo-0.13 implementation is single-cubic and join-unaware."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_commands.rs",
+        "line": 979,
+        "kind": "comment",
+        "text": "/// For each id in `ids`, stroke the source's kurbo path with its own stroke"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_commands.rs",
+        "line": 1029,
+        "kind": "comment",
+        "text": "// Build the kurbo stroke from the source style (geometry in mm)."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_effects/offset.rs",
+        "line": 111,
+        "kind": "comment",
+        "text": "/// outset and the smaller-area contour is the inset. kurbo's raw stroke output"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_effects/offset.rs",
+        "line": 113,
+        "kind": "comment",
+        "text": "/// bowtie), so the ring is first normalized through linesweeper's NonZero"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_effects/offset.rs",
+        "line": 116,
+        "kind": "comment",
+        "text": "/// area pick. This is why kurbo's single-cubic, join-unaware `offset` is not"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/actions/transform/path_effects/offset.rs",
+        "line": 123,
+        "kind": "comment",
+        "text": "/// an INSET is `source \u2212 ring`, both via the same linesweeper NonZero solver,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2,
+        "kind": "comment",
+        "text": "//! selected shapes, implemented via the `linesweeper` crate."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 89,
+        "kind": "comment",
+        "text": "/// converts the selection to kurbo paths (the same conversion"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 100,
+        "kind": "comment",
+        "text": "// the closed kurbo path of every usable source, in selection order."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 249,
+        "kind": "comment",
+        "text": "/// into buckets keyed by representative FILL color, run linesweeper Union"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 328,
+        "kind": "comment",
+        "text": "// (`Nonzero`) fill_rule renders the linesweeper-wound holes correctly,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 704,
+        "kind": "comment",
+        "text": "// Collect each cutter's closed kurbo path together with its id; cutters"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 894,
+        "kind": "comment",
+        "text": "/// (front-most last), returning each shape together with its closed kurbo path."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 920,
+        "kind": "comment",
+        "text": "/// Compound. `contours` is the flat list from [`boolean_paths_pure`] (linesweeper"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1065,
+        "kind": "comment",
+        "text": "// op). `consumed` records the ids of the shapes whose closed kurbo path"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1197,
+        "kind": "comment",
+        "text": "/// it to a kurbo path, then replace every selected shape with (shape MINUS cell)"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1441,
+        "kind": "comment",
+        "text": "/// (`path_segments` -> kurbo returns `None`). The front-most shape has no"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1480,
+        "kind": "comment",
+        "text": "// Pre-convert every shape's closed kurbo path once (None for open paths), so"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1552,
+        "kind": "comment",
+        "text": "// Relative tolerance: linesweeper's eps re-tessellation can perturb the"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1632,
+        "kind": "comment",
+        "text": "/// `None` bucket. Within each bucket the closed kurbo paths are folded through"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1633,
+        "kind": "comment",
+        "text": "/// linesweeper Union ([`boolean_paths_pure`]), so same-color shapes that overlap,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1686,
+        "kind": "comment",
+        "text": "// One color bucket: every same-color closed shape's kurbo path, plus the"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1864,
+        "kind": "comment",
+        "text": "/// Each subset runs through the SAME [`boolean_paths_pure`] over kurbo paths,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1908,
+        "kind": "comment",
+        "text": "// and converted back to a single kurbo path. `None` when the subset is"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 1920,
+        "kind": "comment",
+        "text": "// Rebuild a closed kurbo path from the union contours so it can"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2021,
+        "kind": "comment",
+        "text": "/// are normalized to NonZero at the document boundary and linesweeper keeps"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2032,
+        "kind": "comment",
+        "text": "/// Rebuild a single closed kurbo path from `(start, segments)` contours so a"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2064,
+        "kind": "comment",
+        "text": "/// each input shape to a kurbo path once, then folds via"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2081,
+        "kind": "comment",
+        "text": "/// Pure boolean op over pre-converted kurbo paths. Lets callers that apply"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2094,
+        "kind": "comment",
+        "text": "// Apply op pairwise via linesweeper. eps small enough to preserve real"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2121,
+        "kind": "comment",
+        "text": "/// Split a kurbo path into per-subpath `(start, segments)` contours, mapping"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2304,
+        "kind": "comment",
+        "text": "/// through a linesweeper self-union under the shape's OWN `fill_rule`"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2383,
+        "kind": "comment",
+        "text": "/// Build a closed kurbo path from an already-converted `(start, segments,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2438,
+        "kind": "comment",
+        "text": "/// Bench-only hook: convert one shape to its (closed) kurbo path."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/boolean_ops.rs",
+        "line": 2709,
+        "kind": "comment",
+        "text": "/// Unsigned enclosed area of a (closed) kurbo path, via kurbo's analytic"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/document/kurbo_convert.rs",
+        "line": 17,
+        "kind": "comment",
+        "text": "/// Append one ring to `path` as a CLOSED subpath (kurbo geometry is f64)."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/document/kurbo_convert.rs",
+        "line": 38,
+        "kind": "comment",
+        "text": "/// Build a closed kurbo path from an already-converted `(start, segments,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/document/kurbo_convert.rs",
+        "line": 53,
+        "kind": "comment",
+        "text": "/// The FULL region of a Compound as closed kurbo subpaths: every ring, then"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/document/kurbo_convert.rs",
+        "line": 54,
+        "kind": "comment",
+        "text": "/// winding-normalized through a linesweeper self-union under the shape's OWN"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/document.rs",
+        "line": 373,
+        "kind": "comment",
+        "text": "/// Closed kurbo path of `shape` for boolean-style consumers (Divide,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/menu_action.rs",
+        "line": 89,
+        "kind": "comment",
+        "text": "/// by representative fill color, run linesweeper Union WITHIN each bucket, and"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/tools/shape_builder.rs",
+        "line": 55,
+        "kind": "comment",
+        "text": "/// Collect the selection's CLOSED shapes as kurbo paths, in document-visual"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/menu_model.rs",
+        "line": 511,
+        "kind": "comment",
+        "text": "// engine (no new linesweeper op): for every input the part covered by"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/menu_model.rs",
+        "line": 532,
+        "kind": "comment",
+        "text": "// the shipped linesweeper Intersection per subject (no new boolean"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/shape_render.rs",
+        "line": 423,
+        "kind": "comment",
+        "text": "/// Pure (no egui / GPU), built on the same `linesweeper` boolean Difference the"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/shape_render.rs",
+        "line": 471,
+        "kind": "comment",
+        "text": "/// `Nonzero`, which is correct for a `linesweeper` Difference result (its"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/shape_render.rs",
+        "line": 528,
+        "kind": "comment",
+        "text": "/// behind it (linesweeper over both silhouettes) is the most expensive per-frame"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/src/ui/shape_render.rs",
+        "line": 1241,
+        "kind": "comment",
+        "text": "// matching the SVG export order. Ghosts (including the expensive linesweeper"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 608,
+        "kind": "string_or_code",
+        "text": "let p1 = shape_to_kurbo_path(&sharp).expect(\"sharp polygon -> kurbo path\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 609,
+        "kind": "string_or_code",
+        "text": "let p2 = shape_to_kurbo_path(&rounded).expect(\"rounded polygon -> kurbo path\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 612,
+        "kind": "string_or_code",
+        "text": ".expect(\"linesweeper union\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 666,
+        "kind": "string_or_code",
+        "text": ".expect(\"linesweeper union\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 1286,
+        "kind": "string_or_code",
+        "text": "let path = shape_to_kurbo_path(&r).expect(\"rect should convert to kurbo path\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/app_tests.rs",
+        "line": 1300,
+        "kind": "string_or_code",
+        "text": "let path = shape_to_kurbo_path(&el).expect(\"ellipse should convert to kurbo path\");"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 48,
+        "kind": "string_or_code",
+        "text": "const TOL: f32 = 0.2; // linesweeper runs with eps = 0.05"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 124,
+        "kind": "comment",
+        "text": "// A Line is an open path; it cannot be converted to a closed kurbo path,"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 330,
+        "kind": "comment",
+        "text": "// union must cover the full 0..20 span; whether linesweeper fuses the"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 691,
+        "kind": "comment",
+        "text": "// These drive the pure free fn `divide_paths_pure` over kurbo paths, exactly"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 698,
+        "kind": "comment",
+        "text": "/// Closed kurbo path for a shape (panics if the shape has no closed form, which"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 705,
+        "kind": "comment",
+        "text": "/// into a kurbo path and reusing the production `bez_path_bbox_area`. For"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/boolean_ops_tests.rs",
+        "line": 1128,
+        "kind": "comment",
+        "text": "/// matches the Nonzero classification linesweeper winds the output for."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/concentric_offset_tests.rs",
+        "line": 282,
+        "kind": "comment",
+        "text": "//    with a NaN width and panic inside linesweeper. NaN is caught at the action"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/offset_path_tests.rs",
+        "line": 20,
+        "kind": "comment",
+        "text": "/// Stroke tessellation tolerance budget for bbox assertions (kurbo stroke at"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/offset_path_tests.rs",
+        "line": 264,
+        "kind": "comment",
+        "text": "// kurbo's raw stroke output; the linesweeper normalization must collapse it"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/outline_stroke_tests.rs",
+        "line": 62,
+        "kind": "comment",
+        "text": "/// Outline a shape's stroke the same way `action_outline_stroke` does (kurbo"
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/shape_builder_tests.rs",
+        "line": 303,
+        "kind": "comment",
+        "text": "// each piece's closed kurbo path and even-odd test the overlap centre."
+      },
+      {
+        "path": "/private/tmp/osv-curvex-qualification/final-01/tests/unit/trim_tests.rs",
+        "line": 111,
+        "kind": "comment",
+        "text": "// bbox is now ~ (0,0)-(10,20). Tolerance covers linesweeper's eps = 0.05."
+      },
+      {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry/src/path.rs",
+        "line": 641,
+        "kind": "comment",
+        "text": "/// Offset a closed path via stroke-ring + boolean (kurbo/curvex parity)."
+      }
+    ]
+  },
+  "native_source_hashes": {
+    "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+    "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+    "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+    "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+    "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+    "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+    "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+    "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+    "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+    "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+    "crates/planar-geometry/src/render.rs": "17c0c48c95723199555fc0cc9414bb01c1f6a2548f2c8a06e7f3b4fe7b78c746",
+    "crates/planar-geometry/src/rings.rs": "878c098e1e7d61700e98d9ab306081212eebcfe9b9976a53dc9f0b92fae9025f",
+    "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+    "crates/planar-geometry/src/stroke.rs": "aebbe4d7d922fddcc36eb8970fe2f848ca56020b4c00c055cc85e7c297170dff",
+    "crates/planar-geometry/src/tessellation.rs": "a8ce82eae986e2a64bf5324b28775479a4494f66bc006613554487372e5969cc",
+    "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+    "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c"
+  },
+  "conclusion": "All four direct geometry dependencies are replaced by repository-owned planar-geometry; its resolved closure consists only of planar-geometry and osv-math. Kurbo remains in independent GUI/SVG transitive chains; linesweeper and both Lyon crates are absent from this native resolved metadata. Kernel reexports point only to crate-owned modules or math_core, not an external geometry engine."
+}

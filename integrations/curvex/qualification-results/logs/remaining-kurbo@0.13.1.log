@@ -1,0 +1,18 @@
+kurbo v0.13.1
+├── peniko v0.6.1
+│   └── vello_common v0.0.9
+│       └── vello_cpu v0.0.9
+│           └── epaint v0.35.0
+│               ├── egui v0.35.0
+│               │   ├── curvex v0.1.0 (/private/tmp/osv-curvex-qualification/final-01)
+│               │   ├── eframe v0.35.0
+│               │   │   └── curvex v0.1.0 (/private/tmp/osv-curvex-qualification/final-01)
+│               │   ├── egui-wgpu v0.35.0
+│               │   │   └── eframe v0.35.0 (*)
+│               │   └── egui-winit v0.35.0
+│               │       └── eframe v0.35.0 (*)
+│               └── egui-wgpu v0.35.0 (*)
+├── svgtypes v0.16.1
+│   └── usvg v0.47.0
+│       └── curvex v0.1.0 (/private/tmp/osv-curvex-qualification/final-01)
+└── usvg v0.47.0 (*)

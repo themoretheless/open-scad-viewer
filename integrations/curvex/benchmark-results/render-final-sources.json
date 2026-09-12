@@ -1,0 +1,29 @@
+{
+  "toolchain": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)\nbinary: rustc\ncommit-hash: a36d05efab632d1ddf902b6a5c33b6d5d3b64131\ncommit-date: 2026-09-09\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "binarySha256": "46d65f9c136484b71a830c4b8515f14eb83686ec5ba0146acac17596ba08206a",
+  "sourceHashes": {
+    "crates/math-core/Cargo.toml": "901892676373afdefff22b2e51af3533ed58062e325130e9cbaf75c728cc100a",
+    "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c",
+    "crates/planar-geometry/Cargo.toml": "3ddbf4480a9cb995292b4172b4a37cc321bd07896d8cc1ac8321006a8e10f91e",
+    "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+    "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+    "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+    "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+    "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+    "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+    "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+    "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+    "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+    "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+    "crates/planar-geometry/src/render.rs": "17c0c48c95723199555fc0cc9414bb01c1f6a2548f2c8a06e7f3b4fe7b78c746",
+    "crates/planar-geometry/src/rings.rs": "878c098e1e7d61700e98d9ab306081212eebcfe9b9976a53dc9f0b92fae9025f",
+    "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+    "crates/planar-geometry/src/stroke.rs": "aebbe4d7d922fddcc36eb8970fe2f848ca56020b4c00c055cc85e7c297170dff",
+    "crates/planar-geometry/src/tessellation.rs": "a8ce82eae986e2a64bf5324b28775479a4494f66bc006613554487372e5969cc",
+    "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+    "integrations/curvex/render-benchmark/Cargo.lock": "c8dd9f932bfd93d17800da8de47e2e8db9baec53f22c9da3e15c88d8ef6fe0cf",
+    "integrations/curvex/render-benchmark/Cargo.toml": "4c4bb8186060259d1e69acb9222972c606bf2f6ef5090880e80e26ba6c35ae93",
+    "integrations/curvex/render-benchmark/src/main.rs": "96369eac5b31649c344527cf218f5cffb54128a9e6d4df3bec9b65dac4590b68"
+  },
+  "unchangedDuringRuns": true
+}

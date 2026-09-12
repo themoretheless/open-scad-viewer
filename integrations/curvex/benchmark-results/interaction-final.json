@@ -1,0 +1,706 @@
+{
+  "method": "Unmodified existing Curvex Criterion workloads, namespace migration only. Ready release bench binaries executed sequentially A/B/B/A, no concurrent team build or benchmark. Each workload uses 20 samples, 0.3-second warmup and 1-second measurement; median of two per-version medians. Group fixture setup also executes outside measured iterations despite name filtering.",
+  "scope": "Drag tick with revision invalidation, document-cached scissors hover, and 100 document-cached hit-test queries. These are interaction/query costs, not paint or GPU frame time.",
+  "rows": [
+    {
+      "case": "claim1_drag_tick_bumping/complex500",
+      "baselineMedianUs": 195.908045770202,
+      "migratedMedianUs": 198.482784296875,
+      "migratedToBaseline": 1.0131425869547652,
+      "perRunMedianUs": {
+        "baseline": [
+          194.95513888888888,
+          196.86095265151513
+        ],
+        "migrated": [
+          200.71847526041665,
+          196.2470933333333
+        ]
+      },
+      "perRun95PercentMedianIntervalEnvelopeUs": {
+        "baseline": [
+          194.47045125,
+          197.711009837963
+        ],
+        "migrated": [
+          195.783102,
+          223.98639930555555
+        ]
+      },
+      "intervalEnvelopesOverlap": true
+    },
+    {
+      "case": "r2_find_shape_at_100picks_warm/complex500",
+      "baselineMedianUs": 925.30554481774,
+      "migratedMedianUs": 926.6738302827381,
+      "migratedToBaseline": 1.0014787390745266,
+      "perRunMedianUs": {
+        "baseline": [
+          924.5052334656084,
+          926.1058561698718
+        ],
+        "migrated": [
+          927.0366761904762,
+          926.310984375
+        ]
+      },
+      "perRun95PercentMedianIntervalEnvelopeUs": {
+        "baseline": [
+          922.5382013888889,
+          934.4012896825396
+        ],
+        "migrated": [
+          924.2227531746032,
+          929.1836785714287
+        ]
+      },
+      "intervalEnvelopesOverlap": true
+    },
+    {
+      "case": "r2_scissors_hover_warm/complex500",
+      "baselineMedianUs": 498.9348242507492,
+      "migratedMedianUs": 502.6001326388889,
+      "migratedToBaseline": 1.007346266906993,
+      "perRunMedianUs": {
+        "baseline": [
+          495.80798311688307,
+          502.06166538461537
+        ],
+        "migrated": [
+          503.4316569444444,
+          501.76860833333336
+        ]
+      },
+      "perRun95PercentMedianIntervalEnvelopeUs": {
+        "baseline": [
+          494.25963125,
+          507.86411861111105
+        ],
+        "migrated": [
+          500.0555412878788,
+          505.36823930921054
+        ]
+      },
+      "intervalEnvelopesOverlap": true
+    }
+  ],
+  "measurements": [
+    {
+      "order": 1,
+      "version": "baseline",
+      "target": "perf_top12_verify",
+      "case": "claim1_drag_tick_bumping/complex500",
+      "medianNs": 194955.13888888888,
+      "meanNs": 195405.6464367273,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 194470.45124999998,
+        "upper_bound": 195262.44533333334
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 194587.76121184012,
+          "upper_bound": 196170.49980036097
+        },
+        "point_estimate": 195197.88673170732,
+        "standard_error": 407.4207076926444
+      },
+      "estimatesFile": "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json"
+    },
+    {
+      "order": 1,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "case": "r2_find_shape_at_100picks_warm/complex500",
+      "medianNs": 924505.2334656084,
+      "meanNs": 924151.3288975435,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 922538.2013888889,
+        "upper_bound": 925762.159564394
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 923918.5018024568,
+          "upper_bound": 929767.571676268
+        },
+        "point_estimate": 926521.4967479674,
+        "standard_error": 1561.1971271086418
+      },
+      "estimatesFile": "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 1,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "case": "r2_scissors_hover_warm/complex500",
+      "medianNs": 495807.9831168831,
+      "meanNs": 495910.31172980845,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 494259.63125,
+        "upper_bound": 497776.8576923077
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 495010.38619752193,
+          "upper_bound": 497442.7631209413
+        },
+        "point_estimate": 496306.42059233447,
+        "standard_error": 623.4429845042763
+      },
+      "estimatesFile": "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 2,
+      "version": "migrated",
+      "target": "perf_top12_verify",
+      "case": "claim1_drag_tick_bumping/complex500",
+      "medianNs": 200718.47526041666,
+      "meanNs": 210787.42284510197,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 196238.06597222225,
+        "upper_bound": 223986.39930555556
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 204606.59362835225,
+          "upper_bound": 220407.7543592511
+        },
+        "point_estimate": 212123.15039198607,
+        "standard_error": 4038.196222939109
+      },
+      "estimatesFile": "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json"
+    },
+    {
+      "order": 2,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "case": "r2_find_shape_at_100picks_warm/complex500",
+      "medianNs": 927036.6761904762,
+      "meanNs": 927398.2937836904,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 925557.6930555555,
+        "upper_bound": 928416.8854166666
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 925950.6302866496,
+          "upper_bound": 932954.3889622384
+        },
+        "point_estimate": 928627.3332171893,
+        "standard_error": 1941.625068833694
+      },
+      "estimatesFile": "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 2,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "case": "r2_scissors_hover_warm/complex500",
+      "medianNs": 503431.6569444444,
+      "meanNs": 502920.1613436833,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 501212.4515224359,
+        "upper_bound": 505368.23930921056
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 502332.1842078626,
+          "upper_bound": 505140.70672737947
+        },
+        "point_estimate": 503790.1182926829,
+        "standard_error": 710.4555391830734
+      },
+      "estimatesFile": "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 3,
+      "version": "migrated",
+      "target": "perf_top12_verify",
+      "case": "claim1_drag_tick_bumping/complex500",
+      "medianNs": 196247.09333333332,
+      "meanNs": 202303.450168937,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 195783.102,
+        "upper_bound": 198876.68444444443
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 197344.3210904783,
+          "upper_bound": 230605.4437929436
+        },
+        "point_estimate": 208642.31970731707,
+        "standard_error": 9651.34010482054
+      },
+      "estimatesFile": "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json"
+    },
+    {
+      "order": 3,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "case": "r2_find_shape_at_100picks_warm/complex500",
+      "medianNs": 926310.984375,
+      "meanNs": 928363.7110682372,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 924222.7531746032,
+        "upper_bound": 929183.6785714286
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 925216.7423172655,
+          "upper_bound": 937342.9638899742
+        },
+        "point_estimate": 931918.949825784,
+        "standard_error": 3040.4876314631783
+      },
+      "estimatesFile": "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 3,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "case": "r2_scissors_hover_warm/complex500",
+      "medianNs": 501768.60833333334,
+      "meanNs": 502090.2233864801,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 500055.54128787876,
+        "upper_bound": 502863.67625
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 501470.95721502637,
+          "upper_bound": 503609.03258223616
+        },
+        "point_estimate": 502571.47296167247,
+        "standard_error": 547.1507877039717
+      },
+      "estimatesFile": "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 4,
+      "version": "baseline",
+      "target": "perf_top12_verify",
+      "case": "claim1_drag_tick_bumping/complex500",
+      "medianNs": 196860.95265151514,
+      "meanNs": 197108.03465673357,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 196070.09548611112,
+        "upper_bound": 197711.00983796298
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 196193.55301185555,
+          "upper_bound": 199065.39260342714
+        },
+        "point_estimate": 197473.112412892,
+        "standard_error": 744.123478666593
+      },
+      "estimatesFile": "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json"
+    },
+    {
+      "order": 4,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "case": "r2_find_shape_at_100picks_warm/complex500",
+      "medianNs": 926105.8561698718,
+      "meanNs": 930185.8559362215,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 923957.3921568627,
+        "upper_bound": 934401.2896825396
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 924303.8436071341,
+          "upper_bound": 929182.8726696693
+        },
+        "point_estimate": 926389.943321719,
+        "standard_error": 1247.2775424251522
+      },
+      "estimatesFile": "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json"
+    },
+    {
+      "order": 4,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "case": "r2_scissors_hover_warm/complex500",
+      "medianNs": 502061.66538461536,
+      "meanNs": 503296.9970279458,
+      "medianConfidenceInterval": {
+        "confidence_level": 0.95,
+        "lower_bound": 499581.50785714283,
+        "upper_bound": 507864.1186111111
+      },
+      "slope": {
+        "confidence_interval": {
+          "confidence_level": 0.95,
+          "lower_bound": 502066.2882618789,
+          "upper_bound": 507245.87565041997
+        },
+        "point_estimate": 505060.4796167247,
+        "standard_error": 1322.2978967786262
+      },
+      "estimatesFile": "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+      "sampleFile": "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json"
+    }
+  ],
+  "commands": [
+    {
+      "order": 1,
+      "version": "baseline",
+      "target": "perf_top12_verify",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/7edc148d0fc0fd2c/out/perf_top12_verify-7edc148d0fc0fd2c",
+        "^claim1_drag_tick_bumping/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/baseline",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/1-baseline/perf_top12_verify/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 2.7495391368865967
+    },
+    {
+      "order": 1,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/6b88971c58543d43/out/perf_cache_round2-6b88971c58543d43",
+        "^r2_(scissors_hover_warm|find_shape_at_100picks_warm)/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/baseline",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/1-baseline/perf_cache_round2/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 3.9938511848449707
+    },
+    {
+      "order": 2,
+      "version": "migrated",
+      "target": "perf_top12_verify",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/d615e54ea5da71d5/out/perf_top12_verify-d615e54ea5da71d5",
+        "^claim1_drag_tick_bumping/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/final-01",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/2-migrated/perf_top12_verify/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 2.8975679874420166
+    },
+    {
+      "order": 2,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/dd3897badd9fee04/out/perf_cache_round2-dd3897badd9fee04",
+        "^r2_(scissors_hover_warm|find_shape_at_100picks_warm)/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/final-01",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/2-migrated/perf_cache_round2/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 3.380424976348877
+    },
+    {
+      "order": 3,
+      "version": "migrated",
+      "target": "perf_top12_verify",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/d615e54ea5da71d5/out/perf_top12_verify-d615e54ea5da71d5",
+        "^claim1_drag_tick_bumping/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/final-01",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/3-migrated/perf_top12_verify/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 2.363347053527832
+    },
+    {
+      "order": 3,
+      "version": "migrated",
+      "target": "perf_cache_round2",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/dd3897badd9fee04/out/perf_cache_round2-dd3897badd9fee04",
+        "^r2_(scissors_hover_warm|find_shape_at_100picks_warm)/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/final-01",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/3-migrated/perf_cache_round2/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 3.5527310371398926
+    },
+    {
+      "order": 4,
+      "version": "baseline",
+      "target": "perf_top12_verify",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/7edc148d0fc0fd2c/out/perf_top12_verify-7edc148d0fc0fd2c",
+        "^claim1_drag_tick_bumping/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/baseline",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/4-baseline/perf_top12_verify/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 2.3204050064086914
+    },
+    {
+      "order": 4,
+      "version": "baseline",
+      "target": "perf_cache_round2",
+      "command": [
+        "/private/tmp/osv-curvex-qualification/migrated-01/target/release/build/curvex/6b88971c58543d43/out/perf_cache_round2-6b88971c58543d43",
+        "^r2_(scissors_hover_warm|find_shape_at_100picks_warm)/complex500$",
+        "--bench",
+        "--warm-up-time",
+        "0.3",
+        "--measurement-time",
+        "1",
+        "--sample-size",
+        "20",
+        "--noplot"
+      ],
+      "cwd": "/private/tmp/osv-curvex-qualification/baseline",
+      "criterionHome": "/private/tmp/osv-curvex-qualification/interaction-bench/4-baseline/perf_cache_round2/criterion",
+      "exitCode": 0,
+      "elapsedSeconds": 3.768944025039673
+    }
+  ],
+  "benchmarkSources": {
+    "sourceHashes": {
+      "baseline": {
+        "benches/perf_cache_round2.rs": "a8f073e5ad760b3a1fa5860f2b224217543d89aebcc4689863cb8599eed5b481",
+        "benches/perf_top12_verify.rs": "c317d89b718ab9f2fd3f2eb80d5a906ee1092516cf0de3c893f607c7268c5fce"
+      },
+      "migrated": {
+        "benches/perf_cache_round2.rs": "9b7dc5fab00cfd8916fd104d56851468d6290ddf0c86595cba93ab2ce02d8d18",
+        "benches/perf_top12_verify.rs": "9698355ff14e77322a6baf8ca2e6475b448fe3f88071b8d961dcf48895b32f01"
+      }
+    },
+    "onlyNamespaceMigrationChanges": true
+  },
+  "benchmarkBinaryHashes": {
+    "baseline": {
+      "perf_cache_round2": "4efe76124509d3bd948ca00806176aa191425efec3ae26a3f634b5f21d306789",
+      "perf_top12_verify": "2455adbc63d300a9a32137d16cc1c253ef82b59770f74e27ed67acf78c3fe647"
+    },
+    "migrated": {
+      "perf_cache_round2": "3afe71dd02b565714421c281cd79c595f86f08f238f26d188cd783f12e46cd1b",
+      "perf_top12_verify": "8dda2da050a9fa1301e4d6edff9f75ee2fc3400fd20b8751af8a4072e167b0dd"
+    }
+  },
+  "kernelSources": {
+    "toolchain": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)\nbinary: rustc\ncommit-hash: a36d05efab632d1ddf902b6a5c33b6d5d3b64131\ncommit-date: 2026-09-09\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+    "sourceHashes": {
+      "crates/math-core/Cargo.toml": "901892676373afdefff22b2e51af3533ed58062e325130e9cbaf75c728cc100a",
+      "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c",
+      "crates/planar-geometry/Cargo.toml": "3ddbf4480a9cb995292b4172b4a37cc321bd07896d8cc1ac8321006a8e10f91e",
+      "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+      "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+      "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+      "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+      "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+      "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+      "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+      "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+      "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+      "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+      "crates/planar-geometry/src/render.rs": "17c0c48c95723199555fc0cc9414bb01c1f6a2548f2c8a06e7f3b4fe7b78c746",
+      "crates/planar-geometry/src/rings.rs": "878c098e1e7d61700e98d9ab306081212eebcfe9b9976a53dc9f0b92fae9025f",
+      "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+      "crates/planar-geometry/src/stroke.rs": "aebbe4d7d922fddcc36eb8970fe2f848ca56020b4c00c055cc85e7c297170dff",
+      "crates/planar-geometry/src/tessellation.rs": "a8ce82eae986e2a64bf5324b28775479a4494f66bc006613554487372e5969cc",
+      "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+      "integrations/curvex/render-benchmark/Cargo.lock": "c8dd9f932bfd93d17800da8de47e2e8db9baec53f22c9da3e15c88d8ef6fe0cf",
+      "integrations/curvex/render-benchmark/Cargo.toml": "4c4bb8186060259d1e69acb9222972c606bf2f6ef5090880e80e26ba6c35ae93",
+      "integrations/curvex/render-benchmark/src/main.rs": "96369eac5b31649c344527cf218f5cffb54128a9e6d4df3bec9b65dac4590b68"
+    }
+  },
+  "sourceHashesUnchanged": true,
+  "rawEvidenceRoot": "interaction-criterion",
+  "rawEvidenceFiles": [
+    "interaction-criterion/1-baseline/perf_top12_verify/stderr.log",
+    "interaction-criterion/1-baseline/perf_top12_verify/stdout.log",
+    "interaction-criterion/1-baseline/perf_cache_round2/stderr.log",
+    "interaction-criterion/1-baseline/perf_cache_round2/stdout.log",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/tukey.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/benchmark.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/tukey.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/benchmark.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json",
+    "interaction-criterion/1-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+    "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/tukey.json",
+    "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/benchmark.json",
+    "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json",
+    "interaction-criterion/1-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+    "interaction-criterion/2-migrated/perf_top12_verify/stderr.log",
+    "interaction-criterion/2-migrated/perf_top12_verify/stdout.log",
+    "interaction-criterion/2-migrated/perf_cache_round2/stderr.log",
+    "interaction-criterion/2-migrated/perf_cache_round2/stdout.log",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/tukey.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/benchmark.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/tukey.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/benchmark.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json",
+    "interaction-criterion/2-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+    "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/tukey.json",
+    "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/benchmark.json",
+    "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json",
+    "interaction-criterion/2-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+    "interaction-criterion/3-migrated/perf_top12_verify/stderr.log",
+    "interaction-criterion/3-migrated/perf_top12_verify/stdout.log",
+    "interaction-criterion/3-migrated/perf_cache_round2/stderr.log",
+    "interaction-criterion/3-migrated/perf_cache_round2/stdout.log",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/tukey.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/benchmark.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/tukey.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/benchmark.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json",
+    "interaction-criterion/3-migrated/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+    "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/tukey.json",
+    "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/benchmark.json",
+    "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json",
+    "interaction-criterion/3-migrated/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json",
+    "interaction-criterion/4-baseline/perf_top12_verify/stderr.log",
+    "interaction-criterion/4-baseline/perf_top12_verify/stdout.log",
+    "interaction-criterion/4-baseline/perf_cache_round2/stderr.log",
+    "interaction-criterion/4-baseline/perf_cache_round2/stdout.log",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/tukey.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/benchmark.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/sample.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_scissors_hover_warm_complex500/new/estimates.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/tukey.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/benchmark.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/sample.json",
+    "interaction-criterion/4-baseline/perf_cache_round2/criterion/r2_find_shape_at_100picks_warm_complex500/new/estimates.json",
+    "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/tukey.json",
+    "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/benchmark.json",
+    "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/sample.json",
+    "interaction-criterion/4-baseline/perf_top12_verify/criterion/claim1_drag_tick_bumping_complex500/new/estimates.json"
+  ],
+  "intervalNote": "Interval envelopes span the two separate 95% median confidence intervals for each version; they are not a newly computed aggregate confidence interval. The envelopes overlap for all three workloads; these short runs do not establish a material performance regression.",
+  "buildCommands": [
+    {
+      "version": "baseline",
+      "command": [
+        "cargo",
+        "bench",
+        "--offline",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/baseline/Cargo.toml",
+        "--target-dir",
+        "/private/tmp/osv-curvex-qualification/migrated-01/target",
+        "--no-run",
+        "--bench",
+        "perf_top12_verify",
+        "--bench",
+        "perf_cache_round2",
+        "--message-format=json"
+      ],
+      "exitCode": 0
+    },
+    {
+      "version": "migrated",
+      "command": [
+        "cargo",
+        "bench",
+        "--offline",
+        "--manifest-path",
+        "/private/tmp/osv-curvex-qualification/final-01/Cargo.toml",
+        "--target-dir",
+        "/private/tmp/osv-curvex-qualification/migrated-01/target",
+        "--no-run",
+        "--bench",
+        "perf_top12_verify",
+        "--bench",
+        "perf_cache_round2",
+        "--message-format=json"
+      ],
+      "exitCode": 0
+    }
+  ]
+}

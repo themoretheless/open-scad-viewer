@@ -1,19 +1,8 @@
-//! Closed-region offset via stroke-band + boolean (kurbo/curvex parity).
-//!
-//! Algorithm (same geometry as curvex `path_offset` / `kurbo::stroke` width `2·|d|`):
-//! 1. Normalize source rings under nonzero union.
-//! 2. For each contour, build the centered stroke band =
-//!    `offset(+|d|) △ offset(-|d|)` (symmetric difference / outer−inner).
-//! 3. Union all stroke bands.
-//! 4. Outset = source ∪ band; inset = source − band.
-//!
-//! Nested holes automatically move opposite their parents. Open paths stay on
-//! [`crate::path::BezierPath::offset`]'s parallel-polyline branch.
-//!
-//! Polyline offset joins approximate kurbo's stroke joins (Miter/Round/Bevel);
-//! exact cubic stroke outlines remain on [`crate::stroke::outline_stroke`].
+//! Closed-region offset as source union/difference with a centered stroke band.
+//! Curves and round joins are flattened with the requested chord tolerance.
+//! Source winding is normalized under its explicit fill rule before offsetting.
 use crate::path::{BezierPath, FLATTEN_TOLERANCE};
-use crate::rings::{self, Rings, area};
+use crate::rings::{self, Rings};
 use crate::stroke::LineJoin;
 use crate::tessellation::FillRule;
 use crate::{Result, check};
@@ -27,10 +16,10 @@ pub struct OffsetOptions {
     pub distance: f64,
     pub join: LineJoin,
     pub miter_limit: f64,
-    /// Reserved for source normalization; currently rings are nonzero-unioned.
+    /// Winding rule of the source, before constructing the offset region.
     pub fill_rule: FillRule,
     pub tolerance: f64,
-    /// Arc segments for round joins (polyline offset).
+    /// Minimum full-circle sampling for round joins; tolerance can require more.
     pub segments: usize,
 }
 
@@ -65,14 +54,6 @@ pub fn parse_join(name: &str) -> LineJoin {
     }
 }
 
-fn join_name(join: LineJoin) -> &'static str {
-    match join {
-        LineJoin::Miter => "Miter",
-        LineJoin::Round => "Round",
-        LineJoin::Bevel => "Bevel",
-    }
-}
-
 /// Offset a filled multi-contour region (outer + holes) by signed `opts.distance`.
 ///
 /// Positive grows the filled area; negative shrinks it. Empty / collapsed
@@ -87,7 +68,10 @@ pub fn offset_closed_rings(rings: &Rings, opts: &OffsetOptions) -> Result<Rings>
         "Invalid miter limit",
     )?;
     check(!rings.is_empty(), "Empty offset source")?;
-    check(rings.len() <= MAX_CONTOURS, "Offset contour budget exceeded")?;
+    check(
+        rings.len() <= MAX_CONTOURS,
+        "Offset contour budget exceeded",
+    )?;
     let vertex_count: usize = rings.iter().map(|r| r.len()).sum();
     check(
         vertex_count <= MAX_VERTICES,
@@ -101,19 +85,38 @@ pub fn offset_closed_rings(rings: &Rings, opts: &OffsetOptions) -> Result<Rings>
         )?;
     }
 
-    let _ = (opts.fill_rule, opts.tolerance, opts.miter_limit);
-    let source = rings::planar(rings, &Vec::new(), "union")?;
+    check(
+        opts.tolerance > 0. && opts.tolerance.is_finite(),
+        "Invalid offset tolerance",
+    )?;
+    check(
+        opts.segments > 0 && opts.segments <= 4096,
+        "Invalid offset arc segments",
+    )?;
+    let source = rings::normalize(rings, opts.fill_rule)?;
     check(!source.is_empty(), "Offset source normalized empty")?;
 
     let half = opts.distance.abs();
-    let join = join_name(opts.join);
     let mut bands: Rings = Vec::new();
     for ring in &source {
-        let band = stroke_band_for_ring(ring, half, join, opts.segments)?;
-        bands.extend(band);
+        let path = BezierPath::from_polyline(ring, true)?;
+        let stroke = crate::stroke::StrokeOptions {
+            width: 2. * half,
+            join: opts.join,
+            miter_limit: opts.miter_limit,
+            ..Default::default()
+        };
+        let arc_tolerance = half * (1. - (std::f64::consts::PI / opts.segments as f64).cos());
+        let tolerance = opts.tolerance.min(arc_tolerance.max(f64::EPSILON * half));
+        for contour in crate::stroke::outline_stroke_tol(&path, &stroke, tolerance)? {
+            bands.push(contour.to_ring(tolerance)?);
+        }
     }
     check(!bands.is_empty(), "Offset stroke band empty")?;
-    check(bands.len() <= MAX_CONTOURS, "Offset band contour budget exceeded")?;
+    check(
+        bands.len() <= MAX_CONTOURS,
+        "Offset band contour budget exceeded",
+    )?;
 
     let stroke_region = if bands.len() == 1 {
         bands
@@ -133,50 +136,6 @@ pub fn offset_closed_rings(rings: &Rings, opts: &OffsetOptions) -> Result<Rings>
         "Offset result contour budget exceeded",
     )?;
     Ok(result)
-}
-
-/// Centered stroke band of width `2·half` around one closed polyline.
-fn stroke_band_for_ring(
-    ring: &[[f64; 2]],
-    half: f64,
-    join: &str,
-    segments: usize,
-) -> Result<Rings> {
-    // `offset_join` keeps rings whose signed area matches the source. Normalize
-    // to positive orientation so CW holes (compound) still get a stroke band.
-    let mut oriented = ring.to_vec();
-    if area(&oriented) < 0.0 {
-        oriented.reverse();
-    }
-    let src_area = area(&oriented).abs();
-    let src = vec![oriented];
-    let plus = rings::offset_join(&src, half, join, segments)?;
-    let mut minus = rings::offset_join(&src, -half, join, segments)?;
-    // Large insets can yield a bogus non-shrinking parallel (same/larger area).
-    // Treat that as collapsed so the band becomes the outer parallel only and
-    // inset boolean can fail closed.
-    let minus_area: f64 = minus.iter().map(|r| area(r).abs()).sum();
-    if !minus.is_empty() && minus_area + 1e-9 >= src_area {
-        minus.clear();
-    }
-    let plus_area: f64 = plus.iter().map(|r| area(r).abs()).sum();
-    if plus.is_empty() && minus.is_empty() {
-        return Err(crate::error("Offset parallels collapsed"));
-    }
-    if plus.is_empty() || minus.is_empty() {
-        return Ok(if plus.is_empty() { minus } else { plus });
-    }
-    if plus_area + 1e-9 < src_area {
-        return Err(crate::error("Offset outset parallel shrank"));
-    }
-    let (outer, inner) = if plus_area >= minus_area {
-        (plus, minus)
-    } else {
-        (minus, plus)
-    };
-    let band = rings::planar(&outer, &inner, "difference")?;
-    check(!band.is_empty(), "Stroke band collapsed")?;
-    Ok(band)
 }
 
 /// Offset a closed Bézier outer (+ optional holes) → closed polyline paths.
@@ -201,6 +160,7 @@ pub fn offset_closed_path(
 mod tests {
     use super::*;
     use crate::path::BezierPath;
+    use crate::rings::area;
 
     #[test]
     fn outset_square_grows() {
@@ -297,5 +257,86 @@ mod tests {
         assert_eq!(out.len(), 1);
         let a = area(&out[0].to_ring(0.05).unwrap()).abs();
         assert!(a > 25.0 + 10.0, "area={a}");
+    }
+    #[test]
+    fn offset_honors_fill_rule_and_reversed_sources() {
+        let outer = BezierPath::from_rect([0., 0.], [10., 10.]).unwrap();
+        let inner = BezierPath::from_rect([2., 2.], [4., 4.]).unwrap();
+        let rings = vec![outer.to_ring(0.01).unwrap(), inner.to_ring(0.01).unwrap()];
+        let options = OffsetOptions {
+            distance: 0.25,
+            ..Default::default()
+        };
+        let nz = offset_closed_rings(&rings, &options).unwrap();
+        let eo = offset_closed_rings(
+            &rings,
+            &OffsetOptions {
+                fill_rule: FillRule::EvenOdd,
+                ..options
+            },
+        )
+        .unwrap();
+        assert!(rings::inside([3., 3.], &nz));
+        assert!(!rings::inside([3., 3.], &eo));
+        let reversed = rings
+            .iter()
+            .map(|r| r.iter().rev().copied().collect())
+            .collect();
+        let rev = offset_closed_rings(&reversed, &options).unwrap();
+        assert!(
+            (nz.iter().map(|r| area(r)).sum::<f64>() - rev.iter().map(|r| area(r)).sum::<f64>())
+                .abs()
+                < 1e-8
+        );
+    }
+
+    #[test]
+    fn offset_miter_limit_changes_acute_corner() {
+        let triangle = vec![vec![[0., 0.], [10., 0.], [0., 1.]]];
+        let options = OffsetOptions {
+            distance: 1.,
+            miter_limit: 2.,
+            ..Default::default()
+        };
+        let small = offset_closed_rings(&triangle, &options).unwrap();
+        let large = offset_closed_rings(
+            &triangle,
+            &OffsetOptions {
+                miter_limit: 100.,
+                ..options
+            },
+        )
+        .unwrap();
+        assert!(
+            large.iter().map(|r| area(r)).sum::<f64>()
+                > small.iter().map(|r| area(r)).sum::<f64>() + 10.
+        );
+    }
+
+    #[test]
+    fn offset_rejects_invalid_tolerance_and_arc_budget() {
+        let ring = vec![vec![[0., 0.], [2., 0.], [2., 2.], [0., 2.]]];
+        for tolerance in [0., -1., f64::NAN, f64::INFINITY] {
+            assert!(
+                offset_closed_rings(
+                    &ring,
+                    &OffsetOptions {
+                        tolerance,
+                        ..Default::default()
+                    }
+                )
+                .is_err()
+            );
+        }
+        assert!(
+            offset_closed_rings(
+                &ring,
+                &OffsetOptions {
+                    segments: usize::MAX,
+                    ..Default::default()
+                }
+            )
+            .is_err()
+        );
     }
 }

@@ -3,6 +3,7 @@ use crate::{Result, encode, field, input};
 use planar_geometry::edit;
 use planar_geometry::effects::{self, ArcMode, StippleKind};
 use planar_geometry::path::{BezierPath, PathSegment};
+use planar_geometry::scissors;
 use value_codec::{Value, json};
 
 fn encode_path(path: &BezierPath) -> Value {
@@ -46,8 +47,115 @@ fn decode_path(v: &Value) -> Result<BezierPath> {
     }
 }
 
+fn decode_snap_geometry(v: &Value) -> Result<edit::SnapGeometry> {
+    use edit::SnapGeometry;
+    let outline = || {
+        if v["outline"].is_null() {
+            Ok(None)
+        } else {
+            decode_path(&v["outline"]).map(Some)
+        }
+    };
+    Ok(match v["type"].as_str().unwrap_or("") {
+        "line" => SnapGeometry::Line {
+            start: field(v, "start")?,
+            end: field(v, "end")?,
+        },
+        "rectangle" => SnapGeometry::Rectangle {
+            min: field(v, "min")?,
+            max: field(v, "max")?,
+            outline: outline()?,
+        },
+        "ellipse" => SnapGeometry::Ellipse {
+            center: field(v, "center")?,
+            radii: field(v, "radii")?,
+        },
+        "polygon" => SnapGeometry::Polygon {
+            points: field(v, "points")?,
+            closed: field(v, "closed")?,
+            outline: outline()?,
+        },
+        "polyline" => SnapGeometry::Polyline(field(v, "points")?),
+        "path" => SnapGeometry::Path(decode_path(&v["path"])?),
+        "compound" => SnapGeometry::Compound(decode_paths(&v["paths"])?),
+        _ => return Err(input("Unknown snap geometry type")),
+    })
+}
+
+fn encode_cut_hit(hit: scissors::CutHit) -> Value {
+    json!({"segmentIndex":hit.segment_index,"t":hit.t,"distance":hit.distance,"point":hit.point})
+}
+
+fn decode_cut_hit(v: &Value) -> Result<scissors::CutHit> {
+    Ok(scissors::CutHit {
+        segment_index: field(v, "segmentIndex")?,
+        t: field(v, "t")?,
+        distance: v["distance"].as_f64().unwrap_or(0.),
+        point: if v["point"].is_null() {
+            [0., 0.]
+        } else {
+            field(v, "point")?
+        },
+    })
+}
+
+fn encode_path_pieces(pieces: &[Vec<BezierPath>]) -> Value {
+    Value::Array(pieces.iter().map(|paths| encode_paths(paths)).collect())
+}
+
 fn encode_paths(paths: &[BezierPath]) -> Value {
     Value::Array(paths.iter().map(encode_path).collect())
+}
+
+fn decode_paths(value: &Value) -> Result<Vec<BezierPath>> {
+    value
+        .as_array()
+        .ok_or_else(|| input("paths must be an array"))?
+        .iter()
+        .map(decode_path)
+        .collect()
+}
+
+fn optional_holes(value: &Value) -> Result<Vec<BezierPath>> {
+    match value.get("holes") {
+        Some(holes) if !holes.is_null() => decode_paths(holes),
+        _ => Ok(Vec::new()),
+    }
+}
+
+fn fill_rule(value: &Value) -> Result<planar_geometry::tessellation::FillRule> {
+    use planar_geometry::tessellation::FillRule;
+    match value["fillRule"].as_str().unwrap_or("nonzero") {
+        "nonzero" | "nonZero" | "NonZero" => Ok(FillRule::NonZero),
+        "evenodd" | "evenOdd" | "EvenOdd" => Ok(FillRule::EvenOdd),
+        other => Err(input(format!("Unknown fill rule '{other}'"))),
+    }
+}
+
+fn offset_options(
+    value: &Value,
+    distance: f64,
+) -> Result<planar_geometry::path_offset::OffsetOptions> {
+    Ok(planar_geometry::path_offset::OffsetOptions {
+        distance,
+        join: planar_geometry::path_offset::parse_join(value["join"].as_str().unwrap_or("Miter")),
+        miter_limit: value["miterLimit"].as_f64().unwrap_or(4.),
+        fill_rule: fill_rule(value)?,
+        tolerance: value["tolerance"].as_f64().unwrap_or(0.25),
+        segments: value["segments"].as_u64().unwrap_or(8) as usize,
+    })
+}
+
+fn decode_region(value: &Value) -> Result<planar_geometry::rings::Rings> {
+    if value.get("rings").is_some_and(|r| !r.is_null()) {
+        return decode_rings(&value["rings"]);
+    }
+    let tolerance = value["tolerance"].as_f64().unwrap_or(0.25);
+    let mut rings = vec![decode_path(&value["path"])?.to_ring(tolerance)?];
+    for hole in optional_holes(value)? {
+        rings.push(hole.to_ring(tolerance)?);
+    }
+    Ok(rings)
 }
 
 fn decode_point(v: &Value) -> Result<[f64; 2]> {
@@ -98,9 +206,7 @@ fn decode_boxes(v: &Value) -> Result<Vec<edit::BBox>> {
 }
 
 fn decode_gradient(v: &Value) -> Result<polygon_core::appearance::Gradient> {
-    use polygon_core::appearance::{
-        Color, Gradient, GradientKind, GradientSpread, GradientStop,
-    };
+    use polygon_core::appearance::{Color, Gradient, GradientKind, GradientSpread, GradientStop};
     let kind = match v["kind"].as_str().unwrap_or("linear") {
         "radial" => GradientKind::Radial {
             center: field(v, "center")?,
@@ -157,6 +263,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "center")?,
             field(&v, "radius")?,
         )?),
+        "from_ellipse" => encode_path(&BezierPath::from_ellipse(
+            field(&v, "center")?,
+            field(&v, "radiusX")?,
+            field(&v, "radiusY")?,
+        )?),
         "from_polygon" => encode_path(&BezierPath::from_polygon(
             &field::<Vec<[f64; 2]>>(&v, "points")?,
             field(&v, "closed")?,
@@ -172,6 +283,26 @@ pub fn dispatch(v: Value) -> Result<Value> {
         ),
         "delete_anchor" => {
             encode_path(&decode_path(&v["path"])?.delete_anchor(field(&v, "node")?)?)
+        }
+        "split_at_anchor" => {
+            encode_paths(&decode_path(&v["path"])?.split_at_anchor(field(&v, "node")?)?)
+        }
+        "smooth_anchor" => {
+            encode_path(&decode_path(&v["path"])?.make_anchor_smooth(field(&v, "node")?)?)
+        }
+        "corner_anchor" => {
+            encode_path(&decode_path(&v["path"])?.make_anchor_corner(field(&v, "node")?)?)
+        }
+        "add_anchors" => encode_path(&decode_path(&v["path"])?.add_anchors()?),
+        "subdivide" => encode_path(&decode_path(&v["path"])?.subdivide(field(&v, "levels")?)?),
+        "set_anchor_position" => encode_path(
+            &decode_path(&v["path"])?
+                .set_anchor_position(field(&v, "node")?, field(&v, "position")?)?,
+        ),
+        "anchor_handles" => {
+            let (incoming, outgoing) =
+                decode_path(&v["path"])?.anchor_handles(field(&v, "node")?)?;
+            json!({"incoming": incoming, "outgoing": outgoing})
         }
         "reverse" => encode_path(&decode_path(&v["path"])?.reverse()),
         "simplify" => encode_path(&decode_path(&v["path"])?.simplify(field(&v, "tolerance")?)?),
@@ -190,9 +321,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 "bevel" => LineJoin::Bevel,
                 _ => LineJoin::Miter,
             };
-            let dash = v["dash"]
-                .as_array()
-                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>());
+            let dash = if v.get("dash").is_some_and(|d| !d.is_null()) {
+                Some(field::<Vec<f64>>(&v, "dash")?)
+            } else {
+                None
+            };
             let opts = StrokeOptions {
                 width: field(&v, "width")?,
                 cap,
@@ -201,14 +334,15 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 dash,
                 dash_offset: v["dashOffset"].as_f64().unwrap_or(0.0),
             };
-            encode_paths(&decode_path(&v["path"])?.outline_stroke_with(&opts)?)
+            encode_paths(&planar_geometry::stroke::outline_stroke_tol(
+                &decode_path(&v["path"])?,
+                &opts,
+                v["tolerance"].as_f64().unwrap_or(0.25),
+            )?)
         }
         "dash_spans" => {
             use planar_geometry::stroke::path_dash_spans;
-            let pattern = v["dash"]
-                .as_array()
-                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>())
-                .ok_or_else(|| input("dash must be an array"))?;
+            let pattern = field::<Vec<f64>>(&v, "dash")?;
             let spans = path_dash_spans(
                 &decode_path(&v["path"])?,
                 &pattern,
@@ -284,7 +418,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 &styles,
             )?)
         }
-        "rounded_polygon" => {
+        "rounded_polygon" | "rounded_open_polyline" => {
             use planar_geometry::corners::CornerStyle;
             let styles: Vec<CornerStyle> = v["styles"]
                 .as_array()
@@ -299,24 +433,49 @@ pub fn dispatch(v: Value) -> Result<Value> {
                         .collect()
                 })
                 .unwrap_or_default();
-            encode_path(&planar_geometry::corners::rounded_polygon(
+            let rounded = if action == "rounded_open_polyline" {
+                planar_geometry::corners::rounded_open_polyline
+            } else {
+                planar_geometry::corners::rounded_polygon
+            };
+            encode_path(&rounded(
                 &field::<Vec<[f64; 2]>>(&v, "points")?,
                 &field::<Vec<f64>>(&v, "radii")?,
                 &styles,
             )?)
         }
-        "concentric_offset" => encode(effects::concentric_offset(
+        "concentric_offset" => encode(effects::concentric_offset_with_options(
             &field(&v, "rings")?,
             field(&v, "count")?,
-            field(&v, "step")?,
-            v["join"].as_str().unwrap_or("Miter"),
-            v["segments"].as_u64().unwrap_or(8) as usize,
+            &offset_options(&v, field(&v, "step")?)?,
         )?)?,
-        "join" => encode_path(&planar_geometry::path::join_paths(
+        "join" => {
+            let bridge = if v["bridge"].is_null() {
+                Vec::new()
+            } else {
+                decode_path(
+                    &json!({"start":[0.,0.],"closed":false,"segments":v["bridge"].clone()}),
+                )?
+                .segments
+            };
+            encode_path(&planar_geometry::path::join_paths_with_bridge(
+                &decode_path(&v["head"])?,
+                field(&v, "reverseHead")?,
+                &decode_path(&v["tail"])?,
+                field(&v, "reverseTail")?,
+                &bridge,
+                v["weld"].as_f64().unwrap_or(1e-6),
+            )?)
+        }
+        "join_tangents" => encode_path(&planar_geometry::path::join_paths_at_tangents(
             &decode_path(&v["head"])?,
-            field(&v, "reverseHead")?,
+            v["reverseHead"].as_bool().unwrap_or(false),
             &decode_path(&v["tail"])?,
-            field(&v, "reverseTail")?,
+            v["reverseTail"].as_bool().unwrap_or(false),
+            v["weld"].as_f64().unwrap_or(1e-6),
+        )?),
+        "close_tangents" => encode_path(&planar_geometry::path::close_path_at_tangents(
+            &decode_path(&v["path"])?,
             v["weld"].as_f64().unwrap_or(1e-6),
         )?),
         "spiral" => encode_path(&effects::spiral(
@@ -350,26 +509,31 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "cols")?,
             field(&v, "spacing")?,
         )?),
+        "step_and_repeat_paths" => encode_paths(&effects::step_and_repeat_paths(
+            &decode_paths(&v["paths"])?,
+            field(&v, "count")?,
+            field(&v, "delta")?,
+        )?),
+        "radial_repeat_paths" => encode_paths(&effects::radial_repeat_paths(
+            &decode_paths(&v["paths"])?,
+            field(&v, "count")?,
+            field(&v, "center")?,
+            field(&v, "angleStep")?,
+            v["rotateCopies"].as_bool().unwrap_or(true),
+        )?),
+        "grid_array_paths" => encode_paths(&effects::grid_array_paths(
+            &decode_paths(&v["paths"])?,
+            field(&v, "rows")?,
+            field(&v, "cols")?,
+            field(&v, "spacing")?,
+        )?),
         "hatch" => {
-            use planar_geometry::tessellation::FillRule;
-            let rule = match v["fillRule"].as_str().unwrap_or("nonzero") {
-                "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
-                _ => FillRule::NonZero,
-            };
+            let rule = fill_rule(&v)?;
             let spacing = field(&v, "spacing")?;
             let angle = v["angle"].as_f64().unwrap_or(0.0);
             let cross = v["cross"].as_bool().unwrap_or(false);
             if v.get("path").is_some_and(|p| !p.is_null()) {
-                let holes = match v.get("holes").and_then(|h| h.as_array()) {
-                    Some(arr) => {
-                        let mut out = Vec::with_capacity(arr.len());
-                        for h in arr {
-                            out.push(decode_path(h)?);
-                        }
-                        out
-                    }
-                    None => Vec::new(),
-                };
+                let holes = optional_holes(&v)?;
                 encode_paths(&effects::hatch_path(
                     &decode_path(&v["path"])?,
                     &holes,
@@ -388,8 +552,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     cross,
                 )?)
             } else {
-                encode_paths(&effects::hatch(
-                    &field::<Vec<[f64; 2]>>(&v, "ring")?,
+                encode_paths(&effects::hatch_rings(
+                    &[field::<Vec<[f64; 2]>>(&v, "ring")?],
+                    rule,
                     spacing,
                     angle,
                     cross,
@@ -397,7 +562,6 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
         }
         "stipple" => {
-            use planar_geometry::tessellation::FillRule;
             let kind = match v["kind"].as_str().unwrap_or("dot") {
                 "ring" => StippleKind::Ring,
                 "cross" => StippleKind::Cross,
@@ -410,22 +574,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 kind,
                 jitter: v["jitter"].as_f64().unwrap_or(0.0),
                 seed: v["seed"].as_u64().unwrap_or(1),
-                fill_rule: match v["fillRule"].as_str().unwrap_or("nonzero") {
-                    "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
-                    _ => FillRule::NonZero,
-                },
+                fill_rule: fill_rule(&v)?,
             };
             if v.get("path").is_some_and(|p| !p.is_null()) {
-                let holes = match v.get("holes").and_then(|h| h.as_array()) {
-                    Some(arr) => {
-                        let mut out = Vec::with_capacity(arr.len());
-                        for h in arr {
-                            out.push(decode_path(h)?);
-                        }
-                        out
-                    }
-                    None => Vec::new(),
-                };
+                let holes = optional_holes(&v)?;
                 encode_paths(&effects::stipple_path(
                     &decode_path(&v["path"])?,
                     &holes,
@@ -435,27 +587,40 @@ pub fn dispatch(v: Value) -> Result<Value> {
             } else if v.get("rings").is_some_and(|r| !r.is_null()) {
                 encode_paths(&effects::stipple_rings(&decode_rings(&v["rings"])?, &opts)?)
             } else {
-                encode_paths(&effects::stipple(
-                    &field::<Vec<[f64; 2]>>(&v, "ring")?,
-                    opts.spacing,
-                    opts.size,
-                    opts.kind,
+                encode_paths(&effects::stipple_rings(
+                    &[field::<Vec<[f64; 2]>>(&v, "ring")?],
+                    &opts,
                 )?)
             }
         }
-        "zig_zag" => encode_path(&effects::zig_zag(
-            &decode_path(&v["path"])?,
-            field(&v, "amplitude")?,
-            field(&v, "wavelength")?,
-        )?),
+        "zig_zag" => {
+            let path = decode_path(&v["path"])?;
+            encode_path(&if v.get("ridges").is_some_and(|r| !r.is_null()) {
+                effects::zig_zag_with_options(
+                    &path,
+                    &effects::ZigZagOptions {
+                        amplitude: field(&v, "amplitude")?,
+                        ridges: field(&v, "ridges")?,
+                        smooth: v["smooth"].as_bool().unwrap_or(false),
+                        tolerance: v["tolerance"].as_f64().unwrap_or(0.25),
+                    },
+                )?
+            } else {
+                effects::zig_zag(&path, field(&v, "amplitude")?, field(&v, "wavelength")?)?
+            })
+        }
         "pucker_bloat" => encode_path(&effects::pucker_bloat(
             &decode_path(&v["path"])?,
             field(&v, "amount")?,
         )?),
-        "roughen" => encode_path(&effects::roughen(
+        "roughen" => encode_path(&effects::roughen_with_options(
             &decode_path(&v["path"])?,
-            field(&v, "amount")?,
-            v["seed"].as_u64().unwrap_or(1),
+            &effects::RoughenOptions {
+                amplitude: field(&v, "amount")?,
+                detail: v["detail"].as_u64().unwrap_or(4) as usize,
+                smooth: v["smooth"].as_bool().unwrap_or(false),
+                seed: v["seed"].as_u64().unwrap_or(1),
+            },
         )?),
         "twist" => encode_path(&effects::twist(
             &decode_path(&v["path"])?,
@@ -466,6 +631,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "count")?,
             field(&v, "radius")?,
             v["seed"].as_u64().unwrap_or(1),
+        )?),
+        "scatter_paths" => encode_paths(&effects::scatter_paths(
+            &decode_paths(&v["paths"])?,
+            &effects::ScatterOptions {
+                count: field(&v, "count")?,
+                position: v["position"].as_f64().unwrap_or(0.),
+                rotation_radians: v["rotationRadians"].as_f64().unwrap_or(0.),
+                scale_min: v["scaleMin"].as_f64().unwrap_or(1.),
+                scale_max: v["scaleMax"].as_f64().unwrap_or(1.),
+                seed: v["seed"].as_u64().unwrap_or(0),
+            },
         )?),
         "blend" => encode_paths(&effects::blend(
             &decode_path(&v["a"])?,
@@ -496,6 +672,75 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "points")?,
             v["innerRatio"].as_f64().unwrap_or(0.4),
         )?),
+        "snap_geometry" => {
+            let shapes = v["geometry"]
+                .as_array()
+                .ok_or_else(|| input("geometry must be an array"))?
+                .iter()
+                .map(decode_snap_geometry)
+                .collect::<Result<Vec<_>>>()?;
+            match edit::find_geometry_snap(
+                field(&v, "cursor")?,
+                field(&v, "threshold")?,
+                v["grid"].as_f64(),
+                &shapes,
+            )? {
+                Some(h) => {
+                    json!({"point":h.point,"kind":format!("{:?}",h.kind),"distance":h.distance})
+                }
+                None => Value::Null,
+            }
+        }
+        "drag_snap" => {
+            let moving = edit::BBox {
+                min: field(&v["moving"], "min")?,
+                max: field(&v["moving"], "max")?,
+            };
+            let result = edit::find_drag_snap(
+                moving,
+                &decode_boxes(&v["targets"])?,
+                field(&v, "threshold")?,
+            )?;
+            let guides: Vec<_> = result
+                .guides
+                .iter()
+                .map(|g| {
+                    json!({
+                        "vertical":g.vertical,"position":g.position,
+                        "moving":{"min":g.moving.min,"max":g.moving.max},
+                        "target":{"min":g.target.min,"max":g.target.max},
+                    })
+                })
+                .collect();
+            json!({"delta":result.delta,"guides":guides})
+        }
+        "distance_marks" => {
+            let moving = edit::BBox {
+                min: field(&v["moving"], "min")?,
+                max: field(&v["moving"], "max")?,
+            };
+            Value::Array(
+                edit::compute_distance_marks(moving, &decode_boxes(&v["targets"])?)
+                    .iter()
+                    .map(|m| json!({"from":m.from,"to":m.to,"distance":m.distance}))
+                    .collect(),
+            )
+        }
+        "intersecting_paths" => Value::Array(
+            edit::intersecting_paths(
+                &decode_paths(&v["paths"])?,
+                field(&v, "a")?,
+                field(&v, "b")?,
+            )?
+            .into_iter()
+            .map(|(angle, point)| json!({"angle":angle,"point":point}))
+            .collect(),
+        ),
+        "intersecting_directions" => encode(edit::intersecting_path_directions(
+            &decode_paths(&v["paths"])?,
+            field(&v, "a")?,
+            field(&v, "b")?,
+        )?)?,
         "snap" => {
             let paths_v = v["paths"]
                 .as_array()
@@ -537,6 +782,94 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &decode_boxes(&v["boxes"])?,
             v["horizontal"].as_bool().unwrap_or(true),
         )?)?,
+        "path_hit_test" => match scissors::hit_test(
+            &decode_path(&v["path"])?,
+            field(&v, "click")?,
+            field(&v, "maxDist")?,
+        )? {
+            Some(hit) => encode_cut_hit(hit),
+            None => Value::Null,
+        },
+        "path_cut_at" => encode_paths(&scissors::cut_at(
+            &decode_path(&v["path"])?,
+            decode_cut_hit(&v["hit"])?,
+        )?),
+        "path_cut_many" => {
+            let hits = v["hits"]
+                .as_array()
+                .ok_or_else(|| input("hits must be an array"))?
+                .iter()
+                .map(decode_cut_hit)
+                .collect::<Result<Vec<_>>>()?;
+            encode_paths(&scissors::cut_at_many(&decode_path(&v["path"])?, &hits)?)
+        }
+        "compound_hit_test" => match scissors::hit_test_compound(
+            &decode_paths(&v["paths"])?,
+            field(&v, "click")?,
+            field(&v, "maxDist")?,
+        )? {
+            Some(cut) => {
+                let mut hit = encode_cut_hit(cut.hit);
+                hit["ring"] = json!(cut.ring);
+                hit
+            }
+            None => Value::Null,
+        },
+        "compound_knife_hits" => {
+            let hits = scissors::knife_hits_compound(
+                &decode_paths(&v["paths"])?,
+                field(&v, "a")?,
+                field(&v, "b")?,
+            )?;
+            Value::Array(
+                hits.into_iter()
+                    .map(|cut| {
+                        let mut hit = encode_cut_hit(cut.hit);
+                        hit["ring"] = json!(cut.ring);
+                        hit
+                    })
+                    .collect(),
+            )
+        }
+        "compound_cut_at" => encode_path_pieces(&scissors::cut_compound_at(
+            &decode_paths(&v["paths"])?,
+            scissors::CompoundCutHit {
+                ring: field(&v["hit"], "ring")?,
+                hit: decode_cut_hit(&v["hit"])?,
+            },
+        )?),
+        "compound_cut_many" => {
+            let hits = v["hits"]
+                .as_array()
+                .ok_or_else(|| input("hits must be an array"))?
+                .iter()
+                .map(|hit| {
+                    Ok(scissors::CompoundCutHit {
+                        ring: field(hit, "ring")?,
+                        hit: decode_cut_hit(hit)?,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            encode_path_pieces(&scissors::cut_compound_at_many(
+                &decode_paths(&v["paths"])?,
+                &hits,
+            )?)
+        }
+        "compound_scissors" => encode_path_pieces(&scissors::scissors_cut_compound(
+            &decode_paths(&v["paths"])?,
+            field(&v, "click")?,
+            field(&v, "maxDist")?,
+        )?),
+        "compound_knife" => encode_path_pieces(&scissors::knife_cut_compound(
+            &decode_paths(&v["paths"])?,
+            field(&v, "a")?,
+            field(&v, "b")?,
+        )?),
+        "compound_knife_split" => encode_path_pieces(&scissors::knife_split_compound(
+            &decode_paths(&v["paths"])?,
+            field(&v, "a")?,
+            field(&v, "b")?,
+        )?),
         "scissors" => encode_paths(&edit::scissors_cut(
             &decode_path(&v["path"])?,
             field(&v, "click")?,
@@ -553,46 +886,25 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "b")?,
         )?),
         "tessellate" => {
-            use planar_geometry::tessellation::{FillRule, tessellate_path, tessellate_rings};
-            let rule = match v["fillRule"].as_str().unwrap_or("nonzero") {
-                "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
-                _ => FillRule::NonZero,
-            };
-            let mesh = if v.get("rings").is_some_and(|r| !r.is_null()) {
-                tessellate_rings(&decode_rings(&v["rings"])?, rule)?
-            } else {
-                tessellate_path(
-                    &decode_path(&v["path"])?,
-                    v["tolerance"].as_f64().unwrap_or(0.25),
-                    rule,
-                )?
-            };
+            let mesh = planar_geometry::tessellation::tessellate_rings(
+                &decode_region(&v)?,
+                fill_rule(&v)?,
+            )?;
             json!({
                 "positions": mesh.positions,
                 "indices": mesh.indices,
                 "triangleCount": mesh.triangle_count()
             })
-        },
+        }
         "measure" => {
             let m = edit::measure(field(&v, "a")?, field(&v, "b")?)?;
             json!({"a":m.a,"b":m.b,"distance":m.distance,"angleDeg":m.angle_deg,"delta":m.delta})
         }
         "offset" => {
-            use planar_geometry::path_offset::{OffsetOptions, offset_closed_path, parse_join};
-            use planar_geometry::tessellation::FillRule;
+            use planar_geometry::path_offset::offset_closed_path;
             let distance = field(&v, "distance")?;
             let join_name = v["join"].as_str().unwrap_or("Miter");
-            let opts = OffsetOptions {
-                distance,
-                join: parse_join(join_name),
-                miter_limit: v["miterLimit"].as_f64().unwrap_or(4.0),
-                fill_rule: match v["fillRule"].as_str().unwrap_or("nonzero") {
-                    "evenodd" | "evenOdd" | "EvenOdd" => FillRule::EvenOdd,
-                    _ => FillRule::NonZero,
-                },
-                tolerance: v["tolerance"].as_f64().unwrap_or(0.25),
-                segments: v["segments"].as_u64().unwrap_or(8) as usize,
-            };
+            let opts = offset_options(&v, distance)?;
             if v.get("rings").is_some_and(|r| !r.is_null()) {
                 let rings = planar_geometry::path_offset::offset_closed_rings(
                     &decode_rings(&v["rings"])?,
@@ -603,30 +915,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     paths.push(BezierPath::from_polyline(&r, true)?);
                 }
                 encode_paths(&paths)
-            } else if v.get("holes").is_some_and(|h| !h.is_null())
-                || v.get("region").is_some_and(|r| r.as_bool() == Some(true))
-            {
-                let holes = match v.get("holes").and_then(|h| h.as_array()) {
-                    Some(arr) => {
-                        let mut out = Vec::with_capacity(arr.len());
-                        for h in arr {
-                            out.push(decode_path(h)?);
-                        }
-                        out
-                    }
-                    None => Vec::new(),
-                };
-                encode_paths(&offset_closed_path(
-                    &decode_path(&v["path"])?,
-                    &holes,
-                    &opts,
-                )?)
             } else {
-                encode_paths(&decode_path(&v["path"])?.offset(
-                    distance,
-                    join_name,
-                    v["segments"].as_u64().unwrap_or(8) as usize,
-                )?)
+                let path = decode_path(&v["path"])?;
+                if path.closed
+                    || v.get("holes").is_some_and(|h| !h.is_null())
+                    || v["region"].as_bool() == Some(true)
+                {
+                    encode_paths(&offset_closed_path(&path, &optional_holes(&v)?, &opts)?)
+                } else {
+                    encode_paths(&path.offset(distance, join_name, opts.segments)?)
+                }
             }
         }
         "smooth" => encode_path(&decode_path(&v["path"])?.smooth()?),
@@ -654,6 +952,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     .collect::<Vec<_>>(),
             )?
         }
+        "snap_rays" => match edit::snap_to_rays(
+            field(&v, "start")?,
+            field(&v, "cursor")?,
+            v["base"].as_f64().unwrap_or(0.),
+            v["count"].as_u64().unwrap_or(8) as usize,
+            v["toleranceDegrees"].as_f64().unwrap_or(3.),
+        )? {
+            Some((point, angle)) => json!({"point":point,"angle":angle}),
+            None => Value::Null,
+        },
         "snap_angle" => encode(edit::snap_to_angle(
             field(&v, "start")?,
             field(&v, "end")?,
@@ -753,19 +1061,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
             );
             encode(out.to_rgba())?
         }
-        "sample_gradient" => {
-            encode(decode_gradient(&v)?.sample_at(field(&v, "point")?).to_rgba())?
-        }
+        "sample_gradient" => encode(
+            decode_gradient(&v)?
+                .sample_at(field(&v, "point")?)
+                .to_rgba(),
+        )?,
         "gradient_fill_mesh" => {
-            use polygon_core::gradient_mesh::gradient_fill_mesh;
-            let mesh = gradient_fill_mesh(
-                &decode_path(&v["path"])?,
+            let mesh = polygon_core::gradient_mesh::gradient_fill_rings(
+                &decode_region(&v)?,
                 &decode_gradient(&v)?,
-                v["tolerance"].as_f64().unwrap_or(0.25),
-                matches!(
-                    v["fillRule"].as_str().unwrap_or("nonzero"),
-                    "evenodd" | "evenOdd" | "EvenOdd"
-                ),
+                fill_rule(&v)? == planar_geometry::tessellation::FillRule::EvenOdd,
             )?;
             encode_colored_mesh(&mesh)
         }
@@ -782,9 +1087,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 "bevel" => LineJoin::Bevel,
                 _ => LineJoin::Miter,
             };
-            let dash = v["dash"]
-                .as_array()
-                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect::<Vec<_>>());
+            let dash = if v.get("dash").is_some_and(|d| !d.is_null()) {
+                Some(field::<Vec<f64>>(&v, "dash")?)
+            } else {
+                None
+            };
             let opts = StrokeOptions {
                 width: field(&v, "width")?,
                 cap,
@@ -806,4 +1113,199 @@ pub fn dispatch(v: Value) -> Result<Value> {
         }
         _ => return Err(input(format!("Unknown path2d action '{action}'"))),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect(min: [f64; 2], max: [f64; 2]) -> Value {
+        encode_path(&BezierPath::from_rect(min, max).unwrap())
+    }
+
+    fn mesh_area(mesh: &Value) -> f64 {
+        let points: Vec<[f64; 2]> = field(mesh, "positions").unwrap();
+        let indices: Vec<usize> = field(mesh, "indices").unwrap();
+        indices
+            .chunks_exact(3)
+            .map(|t| {
+                let [a, b, c] = [points[t[0]], points[t[1]], points[t[2]]];
+                ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs() * 0.5
+            })
+            .sum()
+    }
+
+    #[test]
+    fn dispatches_ridge_smoothing_and_keeps_legacy_repeat_defaults() {
+        let line = encode_path(&BezierPath::from_polyline(&[[0., 0.], [8., 0.]], false).unwrap());
+        let wave = decode_path(
+            &dispatch(
+                json!({"action":"zig_zag","path":line,"amplitude":1.,"ridges":3,"smooth":true}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            wave.anchors(),
+            vec![[0., 0.], [2., 1.], [4., -1.], [6., 1.], [8., 0.]]
+        );
+        assert!(
+            wave.segments
+                .iter()
+                .all(|s| matches!(s, PathSegment::Cubic { .. }))
+        );
+        let path = rect([0., 0.], [2., 1.]);
+        let legacy =
+            dispatch(json!({"action":"step_and_repeat","path":path,"count":2,"delta":[10.,0.]}))
+                .unwrap();
+        let copies = dispatch(
+            json!({"action":"step_and_repeat_paths","paths":[path],"count":2,"delta":[10.,0.]}),
+        )
+        .unwrap();
+        assert_eq!(decode_paths(&legacy).unwrap()[0].start, [0., 0.]);
+        assert_eq!(decode_paths(&copies).unwrap()[0].start, [10., 0.]);
+    }
+
+    #[test]
+    fn dispatches_single_ring_stipple_jitter_and_seed_without_dropping_options() {
+        let ring = json!([[0., 0.], [12., 0.], [12., 12.], [0., 12.]]);
+        let single = dispatch(json!({"action":"stipple","ring":ring,"spacing":4.,"size":0.2,"jitter":0.8,"seed":42,"fillRule":"evenodd"})).unwrap();
+        let multi = dispatch(json!({"action":"stipple","rings":[ring],"spacing":4.,"size":0.2,"jitter":0.8,"seed":42,"fillRule":"evenodd"})).unwrap();
+        assert_eq!(single, multi);
+        let other_seed = dispatch(json!({"action":"stipple","ring":ring,"spacing":4.,"size":0.2,"jitter":0.8,"seed":43,"fillRule":"evenodd"})).unwrap();
+        assert_ne!(single, other_seed);
+        assert!(!single.as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn dispatches_fill_rule_and_holes_for_mesh_offset_and_gradient() {
+        let outer = rect([0., 0.], [10., 10.]);
+        let hole = rect([4., 4.], [6., 6.]);
+        let evenodd = dispatch(
+            json!({"action":"tessellate","path":outer,"holes":[hole],"fillRule":"evenodd"}),
+        )
+        .unwrap();
+        let nonzero = dispatch(
+            json!({"action":"tessellate","path":outer,"holes":[hole],"fillRule":"nonzero"}),
+        )
+        .unwrap();
+        assert!((mesh_area(&evenodd) - 96.).abs() < 1e-8);
+        assert!((mesh_area(&nonzero) - 100.).abs() < 1e-8);
+        let offset = dispatch(json!({"action":"offset","path":outer,"holes":[hole],"distance":0.5,"fillRule":"evenodd","miterLimit":2.,"tolerance":0.01})).unwrap();
+        let offset_area: f64 = decode_paths(&offset)
+            .unwrap()
+            .iter()
+            .map(|p| planar_geometry::rings::area(&p.to_ring(0.01).unwrap()))
+            .sum();
+        assert!((offset_area - 120.).abs() < 1e-8);
+        let gradient = dispatch(json!({"action":"gradient_fill_mesh","path":outer,"holes":[hole],"fillRule":"evenodd","kind":"linear","p1":[0.,0.],"p2":[10.,0.],"stops":[{"offset":0.,"color":[255,0,0,255]},{"offset":1.,"color":[0,0,255,255]}]})).unwrap();
+        assert!((mesh_area(&gradient) - 96.).abs() < 1e-8);
+        assert_eq!(
+            gradient["positions"].as_array().unwrap().len(),
+            gradient["colors"].as_array().unwrap().len()
+        );
+    }
+
+    #[test]
+    fn dispatches_miter_limit_without_requiring_region_flag_and_preserves_concentric_nesting() {
+        let triangle = encode_path(
+            &BezierPath::from_polyline(&[[0., 0.], [10., 0.], [0.2, 0.2]], true).unwrap(),
+        );
+        let low =
+            dispatch(json!({"action":"offset","path":triangle,"distance":1.,"miterLimit":1.}))
+                .unwrap();
+        let high =
+            dispatch(json!({"action":"offset","path":triangle,"distance":1.,"miterLimit":100.}))
+                .unwrap();
+        assert_ne!(low, high);
+        let result = dispatch(json!({"action":"concentric_offset","rings":[[[0.,0.],[20.,0.],[20.,20.],[0.,20.]],[[6.,6.],[14.,6.],[14.,14.],[6.,14.]]],"count":2,"step":1.,"fillRule":"evenodd"})).unwrap();
+        let levels = result.as_array().unwrap();
+        assert_eq!(levels.len(), 2);
+        assert_eq!(levels[0].as_array().unwrap().len(), 2);
+        assert_eq!(levels[1].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn node_editing_and_missing_mesh_tools_are_reachable() {
+        let line = encode_path(&BezierPath::from_polyline(&[[0., 0.], [10., 0.]], false).unwrap());
+        let subdivided = dispatch(json!({"action":"subdivide","path":line,"levels":2})).unwrap();
+        assert_eq!(decode_path(&subdivided).unwrap().segments.len(), 4);
+        let split =
+            dispatch(json!({"action":"split_at_anchor","path":subdivided,"node":2})).unwrap();
+        let paths = decode_paths(&split).unwrap();
+        assert_eq!(paths.len(), 2);
+        assert_eq!(paths[0].segments.last().unwrap().end(), paths[1].start);
+        let dashes =
+            dispatch(json!({"action":"dash_spans","path":line,"dash":[2.,2.],"tolerance":0.01}))
+                .unwrap();
+        assert_eq!(dashes.as_array().unwrap().len(), 3);
+        let knife = dispatch(json!({"action":"knife_split","path":rect([0.,0.],[10.,10.]),"a":[5.,-1.],"b":[5.,11.]})).unwrap();
+        assert_eq!(decode_paths(&knife).unwrap().len(), 2);
+        let stroke = dispatch(json!({"action":"gradient_stroke_mesh","path":line,"width":1.,"cap":"square","kind":"linear","p1":[0.,0.],"p2":[10.,0.],"stops":[{"offset":0.,"color":[255,0,0,255]},{"offset":1.,"color":[0,0,255,255]}]})).unwrap();
+        assert!((mesh_area(&stroke) - 11.).abs() < 1e-7);
+    }
+
+    #[test]
+    fn rejects_invalid_holes_and_dash_values_instead_of_discarding_them() {
+        let path = rect([0., 0.], [10., 10.]);
+        assert!(dispatch(json!({"action":"hatch","path":path,"holes":42,"spacing":1.})).is_err());
+        assert!(dispatch(json!({"action":"outline_stroke_styled","path":path,"width":1.,"dash":[2.,"bad",2.]})).is_err());
+        assert!(dispatch(json!({"action":"tessellate","path":path,"fillRule":"bad"})).is_err());
+    }
+
+    #[test]
+    fn semantic_editor_options_survive_transport() {
+        let hit = dispatch(
+            json!({"action":"snap_geometry","cursor":[4.8,0.],"threshold":0.3,"geometry":[
+                {"type":"line","start":[0.,0.],"end":[10.,0.]},
+                {"type":"line","start":[4.8,0.],"end":[4.8,10.]}
+            ]}),
+        )
+        .unwrap();
+        assert_eq!(hit["kind"].as_str(), Some("Midpoint"));
+        assert_eq!(field::<[f64; 2]>(&hit, "point").unwrap(), [5., 0.]);
+        let rounded = dispatch(json!({"action":"rounded_open_polyline","points":[[0.,0.],[10.,0.],[10.,10.]],"radii":[0.,-2.,0.]})).unwrap();
+        assert_eq!(
+            decode_path(&rounded).unwrap().flatten().unwrap(),
+            vec![[0., 0.], [8., 0.], [10., 2.], [10., 10.]]
+        );
+        let ray =
+            dispatch(json!({"action":"snap_rays","start":[0.,0.],"cursor":[10.,0.1]})).unwrap();
+        assert_eq!(field::<[f64; 2]>(&ray, "point").unwrap(), [10., 0.]);
+        let head = encode_path(&BezierPath::from_polyline(&[[0., 0.], [2., 0.]], false).unwrap());
+        let tail = encode_path(&BezierPath::from_polyline(&[[4., 2.], [4., 4.]], false).unwrap());
+        let joined = dispatch(json!({"action":"join_tangents","head":head,"tail":tail})).unwrap();
+        assert_eq!(decode_path(&joined).unwrap().segments.len(), 4);
+        let snap = dispatch(json!({"action":"drag_snap","moving":{"min":[0.,0.],"max":[10.,10.]},"targets":[{"min":[1.,20.],"max":[11.,30.]}],"threshold":1.1})).unwrap();
+        assert_eq!(field::<[f64; 2]>(&snap, "delta").unwrap(), [1., 0.]);
+        let marks = dispatch(json!({"action":"distance_marks","moving":{"min":[0.,0.],"max":[10.,10.]},"targets":[{"min":[-3.,-4.],"max":[15.,16.]}]})).unwrap();
+        assert_eq!(marks.as_array().unwrap().len(), 4);
+    }
+
+    #[test]
+    fn compound_knife_and_scissors_transport_preserves_ring_grouping() {
+        let outer = rect([0., 0.], [20., 20.]);
+        let hole = rect([2., 2.], [8., 8.]);
+        let paths = json!([outer, hole]);
+        let hit = dispatch(
+            json!({"action":"compound_hit_test","paths":paths,"click":[2.,5.],"maxDist":0.1}),
+        )
+        .unwrap();
+        assert_eq!(hit["ring"].as_u64(), Some(1));
+        let pieces = dispatch(json!({"action":"compound_cut_at","paths":paths,"hit":hit})).unwrap();
+        let pieces = pieces.as_array().unwrap();
+        assert_eq!(pieces.len(), 2);
+        assert_eq!(
+            decode_paths(&pieces[0]).unwrap()[0],
+            decode_path(&outer).unwrap()
+        );
+        assert!(!decode_paths(&pieces[1]).unwrap()[0].closed);
+        let pieces = dispatch(
+            json!({"action":"compound_knife_split","paths":paths,"a":[1.,5.],"b":[9.,5.]}),
+        )
+        .unwrap();
+        let pieces = pieces.as_array().unwrap();
+        assert_eq!(pieces.len(), 1);
+        assert_eq!(decode_paths(&pieces[0]).unwrap().len(), 3);
+    }
 }

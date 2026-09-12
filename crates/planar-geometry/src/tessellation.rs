@@ -1,11 +1,13 @@
-//! Planar fill tessellation: flatten → ear-clip (with hole bridges).
+//! Fill tessellation for compound paths with explicit winding rules.
 //!
-//! Target surface for curvex/egui fill meshes without lyon. Stroke fills by
-//! expanding to an outline path first (`stroke`), then tessellating.
+//! Resolve the planar arrangement, then sweep horizontal bands into disjoint
+//! trapezoids. Holes need no artificial bridge and self intersections become
+//! ordinary vertices before triangulation.
 use crate::path::{BezierPath, FLATTEN_TOLERANCE};
-use crate::rings::{self, Rings, area};
+use crate::rings::{self, Rings};
 use crate::{Result, check};
 use math_core::{cross2, sub2};
+use std::collections::{BTreeSet, HashMap};
 
 const MAX_VERTICES: usize = 65_536;
 const MAX_TRIANGLES: usize = 131_072;
@@ -17,7 +19,7 @@ pub enum FillRule {
     EvenOdd,
 }
 
-/// Triangle mesh in document mm (XY). Indices are triangles (i0,i1,i2).
+/// Triangle mesh in document mm (XY). Indices are counterclockwise triangles.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FillMesh {
     pub positions: Vec<[f64; 2]>,
@@ -34,365 +36,186 @@ impl FillMesh {
     }
 }
 
-/// Tessellate closed polyline rings (outer + holes). Rings must be closed
-/// without repeating the first point at the end.
-pub fn tessellate_rings(rings: &Rings, rule: FillRule) -> Result<FillMesh> {
-    check(!rings.is_empty(), "No rings to tessellate")?;
-    let cleaned: Rings = rings
+/// Tessellate compound closed contours. Rings may overlap, self-intersect or
+/// have either winding; the fill rule applies to their combined winding.
+/// Repeating the first point is accepted. Empty or fully cancelled fills return
+/// an empty mesh, while malformed coordinates produce an error.
+pub fn tessellate_rings(input: &Rings, rule: FillRule) -> Result<FillMesh> {
+    check(
+        input.iter().map(Vec::len).sum::<usize>() <= MAX_VERTICES,
+        "Tessellation vertex budget exceeded",
+    )?;
+    rings::coordinate_metrics(input.iter().flatten())?;
+    let cleaned: Rings = input
         .iter()
-        .filter_map(|r| clean_ring(r))
+        .map(|ring| clean_ring(ring))
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|ring| ring.len() >= 3)
         .collect();
-    check(!cleaned.is_empty(), "No usable rings after cleanup")?;
-    let total: usize = cleaned.iter().map(|r| r.len()).sum();
-    check(total <= MAX_VERTICES, "Tessellation vertex budget exceeded")?;
-
-    // EvenOdd with multiple components: tessellate each ring independently and
-    // concatenate (overlapping areas remain overlapping triangles; callers that
-    // need exact even-odd coverage should pre-boolean). NonZero nests holes.
-    if matches!(rule, FillRule::EvenOdd) || cleaned.len() == 1 {
-        let mut mesh = FillMesh::default();
-        for ring in &cleaned {
-            let piece = earclip_simple(ring)?;
-            append_mesh(&mut mesh, piece)?;
+    if cleaned.len() == 1 {
+        if let Some(positions) = rings::convex_boundary(&cleaned[0]) {
+            let indices = (1..positions.len() - 1)
+                .flat_map(|i| [0, i as u32, i as u32 + 1])
+                .collect();
+            return Ok(FillMesh { positions, indices });
         }
-        return Ok(mesh);
     }
-
-    // NonZero: partition into outer rings and holes by nesting depth.
-    let groups = nest_groups(&cleaned)?;
-    let mut mesh = FillMesh::default();
-    for (outer, holes) in groups {
-        let combined = if holes.is_empty() {
-            outer
-        } else {
-            bridge_holes(outer, holes)?
-        };
-        let piece = earclip_simple(&combined)?;
-        append_mesh(&mut mesh, piece)?;
-    }
-    Ok(mesh)
+    let normalized = rings::normalize(&cleaned, rule)?;
+    sweep_region(&normalized)
 }
 
 /// Flatten a closed Bézier path and tessellate. Open paths error.
-pub fn tessellate_path(
-    path: &BezierPath,
-    tolerance: f64,
-    rule: FillRule,
-) -> Result<FillMesh> {
+pub fn tessellate_path(path: &BezierPath, tolerance: f64, rule: FillRule) -> Result<FillMesh> {
     check(path.closed, "Fill tessellation requires a closed path")?;
-    check(tolerance > 0.0, "Invalid flatten tolerance")?;
-    let ring = path_to_ring(path, tolerance)?;
-    tessellate_rings(&vec![ring], rule)
+    check(
+        tolerance.is_finite() && tolerance > 0.0,
+        "Invalid flatten tolerance",
+    )?;
+    tessellate_rings(&vec![path.flatten_tol(tolerance)?], rule)
 }
 
 pub fn tessellate_path_default(path: &BezierPath) -> Result<FillMesh> {
     tessellate_path(path, FLATTEN_TOLERANCE, FillRule::NonZero)
 }
 
-fn path_to_ring(path: &BezierPath, tolerance: f64) -> Result<Vec<[f64; 2]>> {
-    let pts = path.flatten_tol(tolerance)?;
-    check(pts.len() >= 3, "Closed path too short to fill")?;
-    // Closed flatten may repeat start at end — drop duplicate.
-    let mut ring = pts;
-    if ring.len() >= 2 && dist(ring[0], *ring.last().unwrap()) < 1e-9 {
-        ring.pop();
-    }
-    clean_ring(&ring).ok_or_else(|| crate::error("Degenerate fill ring"))
-}
-
-fn clean_ring(ring: &[[f64; 2]]) -> Option<Vec<[f64; 2]>> {
-    if ring.len() < 3 {
-        return None;
-    }
+fn clean_ring(ring: &[[f64; 2]]) -> Result<Vec<[f64; 2]>> {
     let mut out = Vec::with_capacity(ring.len());
     for &p in ring {
-        if !p[0].is_finite() || !p[1].is_finite() {
-            return None;
-        }
-        if out.last().is_none_or(|q| dist(*q, p) > 1e-12) {
+        if out.last() != Some(&p) {
             out.push(p);
         }
     }
-    if out.len() >= 2 && dist(out[0], *out.last().unwrap()) < 1e-12 {
+    if out.len() >= 2 && out.first() == out.last() {
         out.pop();
     }
-    if out.len() < 3 || area(&out).abs() < 1e-18 {
-        return None;
-    }
-    Some(out)
-}
-
-fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    let d = sub2(a, b);
-    (d[0] * d[0] + d[1] * d[1]).sqrt()
-}
-
-fn append_mesh(dst: &mut FillMesh, src: FillMesh) -> Result<()> {
-    let base = dst.positions.len() as u32;
-    check(
-        dst.triangle_count() + src.triangle_count() <= MAX_TRIANGLES,
-        "Tessellation triangle budget exceeded",
-    )?;
-    dst.positions.extend(src.positions);
-    dst.indices
-        .extend(src.indices.into_iter().map(|i| i + base));
-    Ok(())
-}
-
-/// Groups: each outer CCW ring with its CW holes (directly nested once).
-fn nest_groups(rings: &Rings) -> Result<Vec<(Vec<[f64; 2]>, Vec<Vec<[f64; 2]>>)>> {
-    let n = rings.len();
-    let mut depth = vec![0usize; n];
-    for i in 0..n {
-        let probe = rings[i][0];
-        for (j, other) in rings.iter().enumerate() {
-            if i == j {
-                continue;
-            }
-            if rings::contains_point(probe, other) {
-                depth[i] += 1;
-            }
-        }
-    }
-    let mut groups = Vec::new();
-    for i in 0..n {
-        if depth[i] % 2 != 0 {
-            continue; // hole relative to NonZero nesting
-        }
-        let mut outer = rings[i].clone();
-        if area(&outer) < 0.0 {
-            outer.reverse();
-        }
-        let mut holes = Vec::new();
-        for j in 0..n {
-            if depth[j] != depth[i] + 1 {
-                continue;
-            }
-            // Hole must lie inside this outer.
-            if !rings::contains_point(rings[j][0], &outer) {
-                continue;
-            }
-            // And not inside a deeper sibling outer at same depth as i.
-            let mut inside_sibling = false;
-            for k in 0..n {
-                if k == i || depth[k] != depth[i] {
-                    continue;
-                }
-                if rings::contains_point(rings[j][0], &rings[k]) {
-                    inside_sibling = true;
-                    break;
-                }
-            }
-            if inside_sibling {
-                continue;
-            }
-            let mut hole = rings[j].clone();
-            if area(&hole) > 0.0 {
-                hole.reverse(); // holes CW
-            }
-            holes.push(hole);
-        }
-        groups.push((outer, holes));
-    }
-    check(!groups.is_empty(), "No outer rings for NonZero fill")?;
-    Ok(groups)
-}
-
-/// Bridge each hole into the outer with a zero-area corridor, then ear-clip.
-fn bridge_holes(mut outer: Vec<[f64; 2]>, mut holes: Vec<Vec<[f64; 2]>>) -> Result<Vec<[f64; 2]>> {
-    // Process holes rightmost-first for stable bridges.
-    holes.sort_by(|a, b| {
-        let ax = a.iter().map(|p| p[0]).fold(f64::NEG_INFINITY, f64::max);
-        let bx = b.iter().map(|p| p[0]).fold(f64::NEG_INFINITY, f64::max);
-        bx.total_cmp(&ax)
-    });
-    for hole in holes {
-        outer = bridge_one(outer, hole)?;
-    }
-    Ok(outer)
-}
-
-fn bridge_one(outer: Vec<[f64; 2]>, hole: Vec<[f64; 2]>) -> Result<Vec<[f64; 2]>> {
-    check(hole.len() >= 3, "Degenerate hole")?;
-    let (hi, &hp) = hole
-        .iter()
-        .enumerate()
-        .max_by(|(_, a), (_, b)| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])))
-        .unwrap();
-    let mut best: Option<(usize, f64)> = None;
-    for (oi, &op) in outer.iter().enumerate() {
-        if op[0] + 1e-12 < hp[0] {
-            continue;
-        }
-        if bridge_crosses(&outer, &hole, oi, hi) {
-            continue;
-        }
-        let ang = (op[1] - hp[1]).atan2(op[0] - hp[0]);
-        if best.is_none_or(|(_, a)| ang < a) {
-            best = Some((oi, ang));
-        }
-    }
-    let oi = if let Some((i, _)) = best {
-        i
-    } else {
-        let mut nearest = None;
-        for (i, &op) in outer.iter().enumerate() {
-            if bridge_crosses(&outer, &hole, i, hi) {
-                continue;
-            }
-            let d = dist(op, hp);
-            if nearest.is_none_or(|(_, best_d)| d < best_d) {
-                nearest = Some((i, d));
-            }
-        }
-        nearest
-            .map(|(i, _)| i)
-            .ok_or_else(|| crate::error("No valid hole bridge"))?
-    };
-    let op = outer[oi];
-    // Hairline corridor: nudge the return path so consecutive vertices are not
-    // identical (exact duplicates collapse under cleanup and break earclip).
-    let bridge = sub2(op, hp);
-    let len = (bridge[0] * bridge[0] + bridge[1] * bridge[1]).sqrt().max(1e-12);
-    let n = [-bridge[1] / len * 1e-9, bridge[0] / len * 1e-9];
-    let hp_back = [hp[0] + n[0], hp[1] + n[1]];
-    let op_back = [op[0] + n[0], op[1] + n[1]];
-
-    let mut out = Vec::with_capacity(outer.len() + hole.len() + 4);
-    out.extend_from_slice(&outer[..=oi]);
-    for k in 0..hole.len() {
-        out.push(hole[(hi + k) % hole.len()]);
-    }
-    out.push(hp_back);
-    out.push(op_back);
-    if oi + 1 < outer.len() {
-        out.extend_from_slice(&outer[oi + 1..]);
-    }
-    check(out.len() >= 3, "Bridged ring degenerated")?;
+    // A self-intersecting contour can have zero signed area while enclosing
+    // material (e.g. a bowtie), so area is never a cleanup criterion.
     Ok(out)
 }
 
-fn bridge_crosses(outer: &[[f64; 2]], hole: &[[f64; 2]], oi: usize, hi: usize) -> bool {
-    let a = hole[hi];
-    let b = outer[oi];
-    // Skip edges incident to bridge endpoints.
-    for i in 0..outer.len() {
-        let j = (i + 1) % outer.len();
-        if i == oi || j == oi {
-            continue;
-        }
-        if segments_cross(a, b, outer[i], outer[j]) {
-            return true;
-        }
-    }
-    for i in 0..hole.len() {
-        let j = (i + 1) % hole.len();
-        if i == hi || j == hi {
-            continue;
-        }
-        if segments_cross(a, b, hole[i], hole[j]) {
-            return true;
-        }
-    }
-    false
-}
-
-fn segments_cross(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
-    let d1 = cross2(sub2(b, a), sub2(c, a));
-    let d2 = cross2(sub2(b, a), sub2(d, a));
-    let d3 = cross2(sub2(d, c), sub2(a, c));
-    let d4 = cross2(sub2(d, c), sub2(b, c));
-    ((d1 > 0.0) != (d2 > 0.0))
-        && ((d3 > 0.0) != (d4 > 0.0))
-        && d1.abs() > 1e-18
-        && d2.abs() > 1e-18
-        && d3.abs() > 1e-18
-        && d4.abs() > 1e-18
-}
-
-fn earclip_simple(ring: &[[f64; 2]]) -> Result<FillMesh> {
-    let mut poly: Vec<[f64; 2]> = ring.to_vec();
-    if area(&poly) < 0.0 {
-        poly.reverse();
-    }
-    let n0 = poly.len();
-    check(n0 >= 3, "Polygon needs ≥3 vertices")?;
-    check(n0 <= MAX_VERTICES, "Tessellation vertex budget exceeded")?;
-
-    // Map working indices → original positions after optional reverse.
-    let positions = poly.clone();
-    let mut idx: Vec<usize> = (0..n0).collect();
-    let mut indices = Vec::new();
-
-    let mut guard = 0;
-    while idx.len() > 3 {
-        guard += 1;
-        check(guard < n0 * n0 + 8, "Ear clipping failed to converge")?;
-        let mut clipped = false;
-        let m = idx.len();
-        for i in 0..m {
-            let i0 = idx[(i + m - 1) % m];
-            let i1 = idx[i];
-            let i2 = idx[(i + 1) % m];
-            let a = positions[i0];
-            let b = positions[i1];
-            let c = positions[i2];
-            if !is_convex(a, b, c) {
-                continue;
+fn sweep_region(rings: &Rings) -> Result<FillMesh> {
+    let mut levels: Vec<f64> = rings.iter().flatten().map(|p| p[1]).collect();
+    levels.sort_by(f64::total_cmp);
+    levels.dedup();
+    let edges: Vec<_> = rings
+        .iter()
+        .flat_map(|r| (0..r.len()).map(move |i| (r[i], r[(i + 1) % r.len()])))
+        .filter(|(a, b)| a[1] != b[1])
+        .collect();
+    let mut mesh = FillMesh::default();
+    let mut vertex_ids = HashMap::new();
+    let mut starts: Vec<_> = (0..edges.len()).collect();
+    let mut ends = starts.clone();
+    starts.sort_by(|&a, &b| {
+        edges[a].0[1]
+            .min(edges[a].1[1])
+            .total_cmp(&edges[b].0[1].min(edges[b].1[1]))
+    });
+    ends.sort_by(|&a, &b| {
+        edges[a].0[1]
+            .max(edges[a].1[1])
+            .total_cmp(&edges[b].0[1].max(edges[b].1[1]))
+    });
+    let (mut start_cursor, mut end_cursor) = (0, 0);
+    let mut active_ids = BTreeSet::new();
+    for band in levels.windows(2) {
+        let (bottom, top) = (band[0], band[1]);
+        while start_cursor < starts.len() {
+            let edge = edges[starts[start_cursor]];
+            if edge.0[1].min(edge.1[1]) > bottom {
+                break;
             }
-            if ear_contains_point(&positions, &idx, i0, i1, i2) {
-                continue;
+            active_ids.insert(starts[start_cursor]);
+            start_cursor += 1;
+        }
+        while end_cursor < ends.len() {
+            let edge = edges[ends[end_cursor]];
+            if edge.0[1].max(edge.1[1]) > bottom {
+                break;
             }
-            indices.extend([i0 as u32, i1 as u32, i2 as u32]);
-            idx.remove(i);
-            clipped = true;
-            break;
+            active_ids.remove(&ends[end_cursor]);
+            end_cursor += 1;
         }
-        check(clipped, "No ear found (self-intersecting or degenerate)")?;
-        check(
-            indices.len() / 3 <= MAX_TRIANGLES,
-            "Tessellation triangle budget exceeded",
-        )?;
-    }
-    indices.extend([idx[0] as u32, idx[1] as u32, idx[2] as u32]);
-    Ok(FillMesh {
-        positions,
-        indices,
-    })
-}
-
-fn is_convex(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> bool {
-    cross2(sub2(b, a), sub2(c, b)) > 1e-15
-}
-
-fn point_in_tri(p: [f64; 2], a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> bool {
-    let d1 = cross2(sub2(b, a), sub2(p, a));
-    let d2 = cross2(sub2(c, b), sub2(p, b));
-    let d3 = cross2(sub2(a, c), sub2(p, c));
-    let has_neg = d1 < -1e-15 || d2 < -1e-15 || d3 < -1e-15;
-    let has_pos = d1 > 1e-15 || d2 > 1e-15 || d3 > 1e-15;
-    !(has_neg && has_pos)
-}
-
-fn ear_contains_point(
-    positions: &[[f64; 2]],
-    idx: &[usize],
-    i0: usize,
-    i1: usize,
-    i2: usize,
-) -> bool {
-    let a = positions[i0];
-    let b = positions[i1];
-    let c = positions[i2];
-    for &j in idx {
-        if j == i0 || j == i1 || j == i2 {
-            continue;
-        }
-        if point_in_tri(positions[j], a, b, c) {
-            return true;
+        let middle = bottom + (top - bottom) * 0.5;
+        let x_at = |a: [f64; 2], b: [f64; 2], y: f64| {
+            if y == a[1] {
+                return a[0];
+            }
+            if y == b[1] {
+                return b[0];
+            }
+            a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])
+        };
+        // Normalization split every crossing; active edges cannot exchange
+        // order inside this open band. Outer and hole edges alternate here.
+        let mut active: Vec<_> = active_ids
+            .iter()
+            .map(|&index| {
+                let (a, b) = edges[index];
+                (x_at(a, b, middle), a, b)
+            })
+            .collect();
+        active.sort_by(|a, b| a.0.total_cmp(&b.0));
+        check(active.len() % 2 == 0, "Unbalanced fill boundary")?;
+        for pair in active.chunks_exact(2) {
+            let (_, a, b) = pair[0];
+            let (_, c, d) = pair[1];
+            let lb = [x_at(a, b, bottom), bottom];
+            let rb = [x_at(c, d, bottom), bottom];
+            let rt = [x_at(c, d, top), top];
+            let lt = [x_at(a, b, top), top];
+            append_triangle(&mut mesh, &mut vertex_ids, lb, rb, rt)?;
+            append_triangle(&mut mesh, &mut vertex_ids, lb, rt, lt)?;
         }
     }
-    false
+    Ok(mesh)
+}
+
+/// Internal fast route for a region just produced by the normalization/stroke
+/// kernel. Callers must not pass raw, overlapping or self-crossing contours.
+pub(crate) fn tessellate_normalized_rings(rings: &Rings) -> Result<FillMesh> {
+    rings::coordinate_metrics(rings.iter().flatten())?;
+    sweep_region(rings)
+}
+
+fn append_triangle(
+    mesh: &mut FillMesh,
+    vertex_ids: &mut HashMap<(u64, u64), u32>,
+    a: [f64; 2],
+    b: [f64; 2],
+    c: [f64; 2],
+) -> Result<()> {
+    let double_area = cross2(sub2(b, a), sub2(c, a));
+    if double_area == 0. {
+        return Ok(());
+    }
+    check(
+        double_area.is_finite() && double_area > 0.,
+        "Invalid fill triangle",
+    )?;
+    check(
+        mesh.triangle_count() < MAX_TRIANGLES,
+        "Tessellation triangle budget exceeded",
+    )?;
+    for p in [a, b, c] {
+        let bits = |v: f64| if v == 0. { 0_u64 } else { v.to_bits() };
+        let key = (bits(p[0]), bits(p[1]));
+        let index = if let Some(&index) = vertex_ids.get(&key) {
+            index
+        } else {
+            check(
+                mesh.positions.len() < MAX_VERTICES,
+                "Tessellation vertex budget exceeded",
+            )?;
+            let index = mesh.positions.len() as u32;
+            mesh.positions.push(p);
+            vertex_ids.insert(key, index);
+            index
+        };
+        mesh.indices.push(index);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -409,6 +232,135 @@ mod tests {
             a += cross2(sub2(p1, p0), sub2(p2, p0)) * 0.5;
         }
         a
+    }
+
+    fn rectangle(min: [f64; 2], max: [f64; 2]) -> Vec<[f64; 2]> {
+        vec![min, [max[0], min[1]], max, [min[0], max[1]]]
+    }
+
+    /// Probe interiors independently of the sweep: every filled sample must be
+    /// covered by exactly one triangle, and empty samples by none. Avoid edges
+    /// and diagonals where adjacent triangles legitimately share a sample.
+    fn assert_coverage(mesh: &FillMesh, input: &Rings, rule: FillRule) {
+        for iy in 0..41 {
+            for ix in 0..43 {
+                let p = [-1. + ix as f64 * 0.317, -1. + iy as f64 * 0.293];
+                let mut count = 0;
+                let mut boundary = false;
+                for tri in mesh.indices.chunks_exact(3) {
+                    let points: Vec<_> = tri.iter().map(|&i| mesh.positions[i as usize]).collect();
+                    let sides: Vec<_> = (0..3)
+                        .map(|i| cross2(sub2(points[(i + 1) % 3], points[i]), sub2(p, points[i])))
+                        .collect();
+                    if sides.iter().all(|s| *s >= -1e-9) {
+                        if sides.iter().any(|s| s.abs() <= 1e-9) {
+                            boundary = true;
+                        } else {
+                            count += 1;
+                        }
+                    }
+                }
+                if !boundary {
+                    assert_eq!(
+                        count,
+                        usize::from(rings::inside_with_rule(p, input, rule)),
+                        "coverage at {p:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    fn assert_fill(input: &Rings, rule: FillRule, expected_area: f64) {
+        let mesh = tessellate_rings(input, rule).unwrap();
+        assert!(
+            (signed_area_mesh(&mesh) - expected_area).abs() < 1e-8,
+            "area {}, expected {expected_area}",
+            signed_area_mesh(&mesh)
+        );
+        assert_coverage(&mesh, input, rule);
+    }
+
+    #[test]
+    fn same_winding_inner_ring_is_only_a_hole_under_evenodd() {
+        let input = vec![
+            rectangle([0., 0.], [10., 10.]),
+            rectangle([2., 2.], [8., 8.]),
+        ];
+        assert_fill(&input, FillRule::NonZero, 100.);
+        assert_fill(&input, FillRule::EvenOdd, 64.);
+    }
+
+    #[test]
+    fn holes_and_nested_islands_have_exactly_once_coverage() {
+        let input = vec![
+            rectangle([0., 0.], [10., 10.]),
+            rectangle([2., 2.], [8., 8.]).into_iter().rev().collect(),
+            rectangle([4., 4.], [6., 6.]),
+        ];
+        for rule in [FillRule::NonZero, FillRule::EvenOdd] {
+            assert_fill(&input, rule, 68.);
+        }
+    }
+
+    #[test]
+    fn overlapping_and_coincident_rings_apply_combined_winding() {
+        let a = rectangle([0., 0.], [4., 4.]);
+        let b = rectangle([2., 0.], [6., 4.]);
+        assert_fill(&vec![a.clone(), b.clone()], FillRule::NonZero, 24.);
+        assert_fill(&vec![a.clone(), b], FillRule::EvenOdd, 16.);
+        assert_fill(&vec![a.clone(), a.clone()], FillRule::NonZero, 16.);
+        assert_fill(&vec![a.clone(), a], FillRule::EvenOdd, 0.);
+    }
+
+    #[test]
+    fn bowtie_keeps_both_lobes_despite_zero_signed_area() {
+        let input = vec![vec![[0., 0.], [4., 4.], [0., 4.], [4., 0.]]];
+        for rule in [FillRule::NonZero, FillRule::EvenOdd] {
+            assert_fill(&input, rule, 8.);
+        }
+    }
+
+    #[test]
+    fn disjoint_and_point_touching_regions_do_not_overlap() {
+        let input = vec![
+            rectangle([0., 0.], [2., 2.]),
+            rectangle([2., 2.], [4., 4.]),
+            rectangle([6., 0.], [8., 2.]).into_iter().rev().collect(),
+        ];
+        for rule in [FillRule::NonZero, FillRule::EvenOdd] {
+            assert_fill(&input, rule, 12.);
+        }
+    }
+
+    #[test]
+    fn empty_and_degenerate_fills_are_empty_but_invalid_coordinates_fail() {
+        assert!(
+            tessellate_rings(&vec![], FillRule::NonZero)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            tessellate_rings(&vec![vec![[0., 0.], [1., 0.], [2., 0.]]], FillRule::NonZero)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            tessellate_rings(
+                &vec![rectangle([0., 0.], [f64::INFINITY, 1.])],
+                FillRule::NonZero
+            )
+            .is_err()
+        );
+        assert!(
+            tessellate_rings(
+                &vec![rectangle([0., 0.], [1e200, 1e200])],
+                FillRule::NonZero
+            )
+            .is_err()
+        );
+        let path = BezierPath::from_rect([0., 0.], [1., 1.]).unwrap();
+        assert!(tessellate_path(&path, f64::NAN, FillRule::NonZero).is_err());
     }
 
     #[test]
