@@ -9,9 +9,9 @@ import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '.
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
 import { stlBufferToPolygonMesh } from '../services/meshEditing'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface } from '../services/solidNurbs'
+import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
-import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve } from '../services/nurbsSurface'
+import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
@@ -73,6 +73,7 @@ const boxSelect=ref(false),selectionBox=ref<{start:Point2;end:Point2;pane:Pane}|
 let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2}|null=null
 
 let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocument;pointer:number}|null=null
+let cvDrag:{id:string;u:number;v:number;before:DirectDocument;point:number[];start:Point2;pointer:number;svg:SVGSVGElement}|null=null
 let previousFocus: HTMLElement | null = null
 watch(() => props.open, async open => {
   if (open) {
@@ -95,6 +96,12 @@ const selectedNurbsCurve = computed(() => document.value.curves?.find(s => s.id 
 const selectedNurbsSurface = computed(() => document.value.surfaces?.find(s => s.id === selection.value))
 const selectedNurbs = computed(() => selectedNurbsCurve.value ?? selectedNurbsSurface.value)
 const cvU = ref(0), cvV = ref(0), cvX = ref(0), cvY = ref(0), cvZ = ref(0), cvWeight = ref(1), knotValue = ref(.5)
+const trimBounds = ref<[number,number,number,number]>([0,1,0,1])
+watch(selectedNurbsSurface, item => {
+  if(!item)return
+  const s=item.surface
+  trimBounds.value=[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length],s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0].length]]
+})
 const selectedCvPoint = computed(() => selectedNurbsCurve.value?.curve.controlPoints[cvU.value] ??
   selectedNurbsSurface.value?.surface.controlPoints[cvU.value]?.[cvV.value])
 watch(selectedCvPoint, point => {
@@ -182,6 +189,12 @@ function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',a
 function startCurve(e:PointerEvent,kind:'center'|'radius'|'start'|'end'){
  if(!selectedSketch.value?.analytic)return
  e.preventDefault();e.stopPropagation();advancedOp.value=null;curveDrag={id:selection.value,kind,before:history.document,pointer:e.pointerId};canvasOf(e).setPointerCapture(e.pointerId)
+}
+function startCv(e:PointerEvent,u:number,v:number) {
+ const point=selectedNurbsCurve.value?.curve.controlPoints[u]??selectedNurbsSurface.value?.surface.controlPoints[u]?.[v]
+ if(!selectedNurbs.value||!point)return
+ e.preventDefault();e.stopPropagation();cvU.value=u;cvV.value=v
+ const svg=canvasOf(e);cvDrag={id:selectedNurbs.value.id,u,v,before:history.document,point:[...point],start:position(e),pointer:e.pointerId,svg};svg.setPointerCapture(e.pointerId)
 }
 function pickEdge(e:PointerEvent,index:number){extraSelection.value=[];e.stopPropagation();edgeIndex.value=index;faceIndex.value=-1;advancedOp.value=null}
 function trimAt(id:string,p:Point2){run(()=>{
@@ -388,7 +401,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null }
+function cancelGesture() { if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
   if (![0, 1, 2].includes(e.button) || gesture) return
   if(e.button===0&&id&&e.shiftKey&&pickMode.value==='body'){pickObject(id,pane,true);return}
@@ -424,6 +437,10 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
   svg.setPointerCapture(e.pointerId)
 }
 function move(e: PointerEvent) {
+  if(cvDrag&&cvDrag.pointer===e.pointerId){const g=cvDrag,p=position(e),sx=p[0]-g.start[0],sy=p[1]-g.start[1],cy=Math.cos(camera.value.yaw),sn=Math.sin(camera.value.yaw),sp=Math.sin(camera.value.pitch),cp=Math.cos(camera.value.pitch)
+    const horizontal=sy*sp,delta=[sx*cy+horizontal*sn,-sx*sn+horizontal*cy,-sy*cp]
+    run(()=>{document.value=updateSolidNurbsControlPoint(g.before,g.id,g.u,g.v,g.point.map((value,i)=>value+delta[i]));const edited=document.value.curves?.find(c=>c.id===g.id)?.curve.controlPoints[g.u]??document.value.surfaces?.find(s=>s.id===g.id)?.surface.controlPoints[g.u]?.[g.v];if(edited)[cvX.value,cvY.value,cvZ.value]=edited as [number,number,number]});return
+  }
   if(curveDrag){const g=curveDrag,p=plane(position(e),'2d'),d=JSON.parse(JSON.stringify(g.before)) as DirectDocument,s=d.sketches.find(s=>s.id===g.id)!,a=s.analytic!
     if(g.kind==='center')a.center=p
     else if(g.kind==='radius')a.radius=Math.max(.01,Math.hypot(p[0]-a.center[0],p[1]-a.center[1]))
@@ -467,6 +484,7 @@ function move(e: PointerEvent) {
   document.value = d
 }
 function up(e: PointerEvent) {
+  if(cvDrag&&cvDrag.pointer===e.pointerId){move(e);cvDrag=null;run(()=>commit(document.value));return}
   if(curveDrag){move(e);curveDrag=null;run(()=>commit(document.value));return}
   if(selectionBox.value){const box=selectionBox.value,min=[Math.min(box.start[0],box.end[0]),Math.min(box.start[1],box.end[1])],max=[Math.max(box.start[0],box.end[0]),Math.max(box.start[1],box.end[1])]
     const items=box.pane==='2d'?visibleSketches.value.map(s=>({id:s.id,points:s.points.map(p=>project(p,'2d'))})):document.value.bodies.map(b=>({id:b.id,points:bodyPoints(b).map(p=>project(p,'3d'))}))
@@ -536,18 +554,10 @@ function addNurbs(kind: 'curve'|'surface') { run(() => {
   commit(d); pickObject(item.id, '3d'); fit('3d')
 }) }
 function updateCv() { run(() => {
-  const d = history.document, point = [cvX.value, cvY.value, cvZ.value]
+  const point = [cvX.value, cvY.value, cvZ.value]
   if (!point.every(Number.isFinite)) throw new Error('CV coordinates must be finite.')
-  const curve = d.curves!.find(item => item.id === selection.value)
-  const surface = d.surfaces!.find(item => item.id === selection.value)
   if (!Number.isFinite(cvWeight.value) || cvWeight.value <= 0) throw new Error('CV weight must be positive.')
-  if (curve) { curve.curve.controlPoints[cvU.value] = point; curve.curve.weights[cvU.value] = cvWeight.value }
-  else if (surface?.surface.controlPoints[cvU.value]?.[cvV.value]) {
-    surface.surface.controlPoints[cvU.value][cvV.value] = point
-    surface.surface.weights[cvU.value][cvV.value] = cvWeight.value
-  }
-  else return
-  commit(d)
+  commit(updateSolidNurbsControlPoint(history.document,selection.value,cvU.value,cvV.value,point,cvWeight.value))
 }) }
 function insertNativeKnot(axis: 'curve'|'u'|'v') { run(() => {
   const d = history.document, curve = d.curves!.find(item => item.id === selection.value), surface = d.surfaces!.find(item => item.id === selection.value)
@@ -575,6 +585,12 @@ function extractIso(axis: 'u'|'v') { run(() => {
   const d = history.document, source = d.surfaces!.find(item => item.id === selection.value)!
   const item = { id: crypto.randomUUID(), name: `${source.name} · iso ${axis.toUpperCase()}`, curve: isoNurbsCurve(source.surface, axis, knotValue.value) }
   d.curves!.push(item); commit(d); pickObject(item.id, '3d')
+}) }
+function trimNativeSurface() { run(() => {
+  if(!selectedNurbsSurface.value)return
+  const d=history.document,source=d.surfaces!.find(item=>item.id===selection.value)!
+  source.surface=trimNurbsSurface(source.surface,trimBounds.value)
+  cvU.value=cvV.value=0;commit(d)
 }) }
 function bakeNurbs() { run(() => {
   const d = history.document
@@ -669,7 +685,11 @@ function bakeNurbs() { run(() => {
                 <polyline v-for="curve in nurbsCurvePaths" :key="'curve-'+curve.id" :points="curve.points" fill="none" :stroke="selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(curve.id,'3d')" />
                 <g v-if="selectedNurbs" class="nurbs-cage">
                   <polyline v-if="selectedNurbsCurve" :points="selectedNurbsCurve.curve.controlPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
-                  <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="cvU=cv.u;cvV=cv.v;pickObject(selection,'3d')" />
+                  <template v-if="selectedNurbsSurface">
+                    <polyline v-for="(_,u) in selectedNurbsSurface.surface.controlPoints" :key="'u-'+u" :points="selectedNurbsSurface.surface.controlPoints[u].map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+                    <polyline v-for="(_,v) in selectedNurbsSurface.surface.controlPoints[0]" :key="'v-'+v" :points="selectedNurbsSurface.surface.controlPoints.map(row=>project(row[v],'3d').join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+                  </template>
+                  <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="startCv($event,cv.u,cv.v)" />
                 </g>
               </g>
               <g v-if="pane === '3d' && solidActive" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
@@ -728,7 +748,7 @@ function bakeNurbs() { run(() => {
 
             <div v-if="pane==='3d' && selectedNurbs" class="operation-card nurbs-card">
               <strong>{{ selectedNurbsCurve ? label('NURBS-кривая · CV','NURBS curve · CV') : label('NURBS-поверхность · CV','NURBS surface · CV') }}</strong>
-              <small>{{ label('Жёлтые точки — рациональная контрольная клетка. Геометрия остаётся NURBS до явного bake.','Yellow points are the rational control cage. Geometry stays NURBS until explicit bake.') }}</small>
+              <small>{{ label('Тяните жёлтые CV прямо в 3D-виде. Перетаскивание идёт в плоскости экрана; точные XYZ и вес — ниже.','Drag yellow CVs directly in the 3D view. Dragging follows the screen plane; exact XYZ and weight are below.') }}</small>
               <label>U / CV <select v-model.number="cvU"><option v-for="(_,i) in (selectedNurbsCurve?.curve.controlPoints ?? selectedNurbsSurface?.surface.controlPoints ?? [])" :key="i" :value="i">{{ i }}</option></select></label>
               <label v-if="selectedNurbsSurface">V / CV <select v-model.number="cvV"><option v-for="(_,i) in selectedNurbsSurface.surface.controlPoints[cvU] ?? []" :key="i" :value="i">{{ i }}</option></select></label>
               <label>X <input v-model.number="cvX" type="number" step=".5"></label>
@@ -742,6 +762,9 @@ function bakeNurbs() { run(() => {
                 <div><button @click="insertNativeKnot('u')">Knot U</button><button @click="insertNativeKnot('v')">Knot V</button></div>
                 <div><button @click="elevateNative('u')">Degree U +1</button><button @click="elevateNative('v')">Degree V +1</button></div>
                 <div><button @click="extractIso('u')">Iso U</button><button @click="extractIso('v')">Iso V</button></div>
+                <small>{{ label('Прямоугольная обрезка сохраняет точную NURBS-поверхность в новом диапазоне параметров.','Rectangular parameter trim keeps an exact NURBS surface over the new domain.') }}</small>
+                <div class="trim-grid"><label>U min<input v-model.number="trimBounds[0]" type="number" step=".05"></label><label>U max<input v-model.number="trimBounds[1]" type="number" step=".05"></label><label>V min<input v-model.number="trimBounds[2]" type="number" step=".05"></label><label>V max<input v-model.number="trimBounds[3]" type="number" step=".05"></label></div>
+                <button @click="trimNativeSurface">{{ label('Обрезать диапазон UV','Trim UV domain') }}</button>
                 <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commit(document)"></label>
                 <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commit(document)"></label>
               </template>
@@ -822,7 +845,7 @@ function bakeNurbs() { run(() => {
 <style scoped>
 .direct-workspace{position:fixed;inset:44px 0 0;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;color:var(--text-dim);font-size:12px}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{width:100%;height:100%;display:block;touch-action:none;outline:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.object-strip{min-height:47px;max-height:90px;overflow:auto;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface)}.object-strip>span{font-size:11px;color:var(--text-dim);margin-right:5px}.object-strip button{font-size:12px;padding:4px 8px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}@media(max-width:750px){.direct-workspace{inset:0}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
 .hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
-.nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:pointer}
+.nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 </style>
 
 <style scoped>

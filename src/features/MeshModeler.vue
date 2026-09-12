@@ -15,6 +15,7 @@ import {
   flipFaces,
   insetSelectedFaces,
   joinMeshes,
+  knifeSplitEdges,
   mergeByDistance,
   meshObjectStats,
   moveVertices,
@@ -134,10 +135,14 @@ function transformSelected() {
     if (!selected.value) return
     const d = history.document
     const index = d.objects.findIndex(o => o.id === selection.value)
-    if (selectMode.value === 'vertex' && selectedVerts.value.length) {
+    if ((selectMode.value === 'vertex' && selectedVerts.value.length) ||
+        (selectMode.value === 'edge' && selectedEdges.value.length)) {
+      const vertexIds = selectMode.value === 'edge'
+        ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(d.objects[index].mesh)[edge] ?? []))]
+        : selectedVerts.value
       d.objects[index] = {
         ...d.objects[index],
-        mesh: moveVertices(d.objects[index].mesh, selectedVerts.value, [dx.value, dy.value, dz.value]),
+        mesh: moveVertices(d.objects[index].mesh, vertexIds, [dx.value, dy.value, dz.value]),
       }
     } else {
       d.objects[index] = {
@@ -185,6 +190,17 @@ function applySubdivide() {
     d.objects[index] = { ...d.objects[index], mesh: subdivideFaces(d.objects[index].mesh, faces) }
     commit(d)
     selectedFaces.value = []
+  })
+}
+
+function applyKnife() {
+  run(() => {
+    if (!selected.value || !selectedEdges.value.length) throw new Error(label('Выберите рёбра.', 'Select edges.'))
+    const d = history.document
+    const index = d.objects.findIndex(o => o.id === selection.value)
+    d.objects[index] = { ...d.objects[index], mesh: knifeSplitEdges(d.objects[index].mesh, selectedEdges.value) }
+    commit(d)
+    selectedEdges.value = []
   })
 }
 
@@ -386,7 +402,7 @@ function togglePick(kind: 'vertex' | 'face' | 'edge', id: number) {
 
 function projected(objectId: string) {
   const object = document.value.objects.find(o => o.id === objectId)
-  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number }>, verts: [] as Array<{ x: number; y: number; id: number }> }
+  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
   const cam = camera.value
   const tris: Array<{ points: string; face: number }> = []
   for (let f = 0; f < object.mesh.indices.length / 3; f++) {
@@ -403,7 +419,16 @@ function projected(objectId: string) {
       verts.push({ x: p[0], y: -p[1], id: i })
     }
   }
-  return { tris, verts }
+  const edges = selectMode.value === 'edge' ? buildEdgeList(object.mesh).map(([a, b], id) => {
+    const point = (vertex: number) => projectDirectPoint([
+      object.mesh.positions[vertex * 3],
+      object.mesh.positions[vertex * 3 + 1],
+      object.mesh.positions[vertex * 3 + 2],
+    ], cam)
+    const pa = point(a), pb = point(b)
+    return { id, x1: pa[0], y1: -pa[1], x2: pb[0], y2: -pb[1] }
+  }) : []
+  return { tris, verts, edges }
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -485,6 +510,12 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
           <button type="button" @click="applyFlip">Flip normals</button>
         </section>
 
+        <section v-if="selected && selectMode === 'edge'">
+          <h3>Edit · Edge</h3>
+          <p class="tool-hint">{{ label('Клик выбирает рёбра; Shift вращает вид.', 'Click edges to select; Shift orbits the view.') }}</p>
+          <button type="button" :disabled="!selectedEdges.length" @click="applyKnife">K · {{ label('Разрез по середине', 'Knife at midpoint') }}</button>
+        </section>
+
         <section v-if="selected">
           <h3>{{ label('Топология', 'Topology') }}</h3>
           <label>{{ label('Слияние', 'Merge by distance') }} <input v-model.number="mergeDistance" type="number" step="0.001" min="0.0001" /></label>
@@ -542,6 +573,16 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
               :points="tri.points"
               :class="{ face: true, selected: object.id === selection && selectedFaces.includes(tri.face) }"
               @click.stop="selection = object.id; selectMode === 'face' && togglePick('face', tri.face)"
+            />
+            <line
+              v-for="edge in object.edges"
+              :key="`${object.id}-e-${edge.id}`"
+              :x1="edge.x1"
+              :y1="edge.y1"
+              :x2="edge.x2"
+              :y2="edge.y2"
+              :class="{ edge: true, selected: object.id === selection && selectedEdges.includes(edge.id) }"
+              @click.stop="selection = object.id; togglePick('edge', edge.id)"
             />
             <circle
               v-for="vert in object.verts"
@@ -603,8 +644,11 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 .mesh-view { width: 100%; height: 100%; background: radial-gradient(circle at 30% 20%, #1b2433, #0d1016 70%); }
 .mesh-view .face { fill: #3d5a80; stroke: #0b1220; stroke-width: 0.15; cursor: pointer; }
 .mesh-view .face.selected { fill: #f4a261; }
+.mesh-view .edge { stroke: #8ecaff; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
+.mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
 .mesh-view .vert { fill: #eee; cursor: pointer; }
 .mesh-view .vert.selected { fill: #e76f51; }
+.tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; opacity: 0.72; }
 .stats { font-size: 0.8rem; opacity: 0.75; }
 .error { color: #f88; font-size: 0.85rem; }
 </style>

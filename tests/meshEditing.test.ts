@@ -6,6 +6,7 @@ import {
   deleteFaces,
   emptyMeshDocument,
   extrudeSelectedFaces,
+  knifeSplitEdges,
   mergeByDistance,
   moveVertices,
   parseMeshDocument,
@@ -87,5 +88,16 @@ describe('mesh editing', () => {
     expect(separated.indices.length).toBeGreaterThan(0)
     const sym = symmetrizeMesh(createBoxMesh([4, 4, 4]), 0)
     expect(sym.indices.length).toBeGreaterThan(createBoxMesh([4, 4, 4]).indices.length)
+  })
+
+  it('knife-splits selected edges with shared midpoint topology', () => {
+    const box = createBoxMesh([10, 10, 10])
+    const cut = knifeSplitEdges(box, [0])
+    expect(cut.positions.length / 3).toBe(box.positions.length / 3 + 1)
+    expect(cut.indices.length / 3).toBe(box.indices.length / 3 + 2)
+    const midpoint = cut.positions.slice(-3)
+    const edge = [box.indices[0], box.indices[1]]
+    expect(midpoint[0]).toBeCloseTo((box.positions[edge[0] * 3] + box.positions[edge[1] * 3]) / 2)
+    expect(() => knifeSplitEdges(box, [9999])).toThrow(/out of range/)
   })
 })

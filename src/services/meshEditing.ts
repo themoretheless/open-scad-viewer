@@ -333,6 +333,46 @@ export function buildEdgeList(mesh: PolygonMesh): Array<[number, number]> {
   return list
 }
 
+/** Insert a shared midpoint on every selected edge and split all adjacent triangles. */
+export function knifeSplitEdges(mesh: PolygonMesh, edgeIds: number[]): PolygonMesh {
+  if (!edgeIds.length) throw new Error('Select edges to cut.')
+  const sourceEdges = buildEdgeList(mesh)
+  const selected = [...new Set(edgeIds)].map(edgeId => {
+    const edge = sourceEdges[edgeId]
+    if (!edge) throw new Error('Selected edge is out of range.')
+    return edge
+  })
+  let positions = mesh.positions.slice()
+  let indices = mesh.indices.slice()
+  for (const [a, b] of selected) {
+    const midpoint = positions.length / 3
+    positions.push(
+      (positions[a * 3] + positions[b * 3]) / 2,
+      (positions[a * 3 + 1] + positions[b * 3 + 1]) / 2,
+      (positions[a * 3 + 2] + positions[b * 3 + 2]) / 2,
+    )
+    const next: number[] = []
+    let adjacent = 0
+    for (let face = 0; face < indices.length / 3; face++) {
+      const tri = indices.slice(face * 3, face * 3 + 3)
+      const ai = tri.indexOf(a), bi = tri.indexOf(b)
+      if (ai < 0 || bi < 0) {
+        next.push(...tri)
+        continue
+      }
+      adjacent++
+      const c = tri.find(vertex => vertex !== a && vertex !== b)!
+      // Preserve winding by replacing the directed edge in the triangle cycle.
+      if ((ai + 1) % 3 === bi) next.push(a, midpoint, c, midpoint, b, c)
+      else next.push(b, midpoint, c, midpoint, a, c)
+    }
+    if (!adjacent) throw new Error('Selected edge has no adjacent faces.')
+    indices = next
+  }
+  if (positions.length > 300_000 || indices.length > 300_000) throw new Error('Knife cut exceeds mesh budget.')
+  return { positions, indices }
+}
+
 function faceNormal(mesh: PolygonMesh, face: number): [number, number, number] {
   const a = mesh.indices[face * 3], b = mesh.indices[face * 3 + 1], c = mesh.indices[face * 3 + 2]
   const ax = mesh.positions[a * 3], ay = mesh.positions[a * 3 + 1], az = mesh.positions[a * 3 + 2]

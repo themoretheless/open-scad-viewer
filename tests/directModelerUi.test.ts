@@ -111,3 +111,16 @@ it('opens native NURBS CV tools without baking a body',async()=>{
  expect(ui.button('Apply CV')).toBeDefined()
  expect(ui.button('Bake surface to mesh body')).toBeDefined()
 })
+it('drags a native NURBS CV in the 3D viewport and commits one undo step',async()=>{
+ const ui=await mount()
+ await ui.click('+ NURBS surface')
+ const before=ui.doc().surfaces![0].surface.controlPoints[0][0].slice()
+ const svg=ui.svg(),cv=ui.all(svg).find(n=>n.tag==='circle'&&n.props.onPointerdown)!
+ await ui.pointer(cv,0,0)
+ svg.props.onPointermove(ui.event(svg,10,5))
+ svg.props.onPointerup(ui.event(svg,10,5))
+ await nextTick()
+ expect(ui.doc().surfaces![0].surface.controlPoints[0][0]).not.toEqual(before)
+ await ui.click('↶')
+ expect(ui.doc().surfaces![0].surface.controlPoints[0][0]).toEqual(before)
+})

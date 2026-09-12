@@ -124,3 +124,34 @@ export function createSolidNurbsSurface(id = crypto.randomUUID()): SolidNurbsSur
     segmentsV: 16,
   }
 }
+
+export function updateSolidNurbsControlPoint(
+  document: DirectDocument,
+  id: string,
+  u: number,
+  v: number,
+  point: number[],
+  weight?: number,
+): DirectDocument {
+  if (!Number.isInteger(u) || u < 0 || !Number.isInteger(v) || v < 0 ||
+      point.length !== 3 || !point.every(value => Number.isFinite(value) && Math.abs(value) <= 1e6) ||
+      (weight !== undefined && (!Number.isFinite(weight) || weight <= 0 || weight > 1e6))) {
+    throw new Error('Invalid NURBS control point edit.')
+  }
+  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const curve = next.curves?.find(item => item.id === id)
+  const surface = next.surfaces?.find(item => item.id === id)
+  if (curve) {
+    if (!curve.curve.controlPoints[u]) throw new Error('NURBS curve CV is out of range.')
+    curve.curve.controlPoints[u] = [...point]
+    if (weight !== undefined) curve.curve.weights[u] = weight
+  } else if (surface) {
+    if (!surface.surface.controlPoints[u]?.[v]) throw new Error('NURBS surface CV is out of range.')
+    surface.surface.controlPoints[u][v] = [...point]
+    if (weight !== undefined) surface.surface.weights[u][v] = weight
+  } else {
+    throw new Error('NURBS object was not found.')
+  }
+  validateSolidNurbs(next)
+  return next
+}
