@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {booleanNurbsBrep,chamferNurbsBrep,createBrepBox,filletNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
+import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{
@@ -30,4 +30,14 @@ it('runs fail-closed booleans and edge treatments on manifold NURBS B-reps',()=>
  expect(tessellateNurbsBrep(disconnected,2).report.closed).toBe(true)
  expect(booleanNurbsBrep(disconnected,createBrepBox([0,0,0],[1,1,1]),'intersection').bodies).toHaveLength(1)
  expect(()=>filletNurbsBrep(a,0,2,8)).toThrow(/smaller|consumes/i)
+})
+it('constructs exact planar-profile B-reps and blends connected edge chains',()=>{
+ const wedge=extrudeBrepPolygon([[0,0],[4,0],[0,3]],-1,2)
+ expect([wedge.vertices.length,wedge.edges.length,wedge.faces.length,wedge.bodies.length]).toEqual([6,9,5,1])
+ expect(tessellateNurbsBrep(wedge,2).report.signedVolumeMm3).toBeCloseTo(18,8)
+ const box=createBrepBox([0,0,0],[10,10,10]),first=box.edges[0],connected=box.edges.findIndex((edge,index)=>index>0&&edge.vertices.some(vertex=>first.vertices.includes(vertex)))
+ const chamfer=chamferNurbsBrepEdges(box,[0,connected],1),fillet=filletNurbsBrepEdges(box,[0,connected],1,4)
+ expect(chamfer.faces.length).toBeGreaterThan(7);expect(fillet.faces.length).toBeGreaterThan(chamfer.faces.length)
+ expect(tessellateNurbsBrep(fillet,2).report.closed).toBe(true)
+ expect(()=>extrudeBrepPolygon([[0,0],[2,0],[1,1],[2,2],[0,2]],0,1)).toThrow(/convex/i)
 })

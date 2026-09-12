@@ -344,6 +344,72 @@ fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<M
     Ok(model)
 }
 
+/// Extrude a simple convex CCW XY profile into an exact planar NURBS B-rep.
+///
+/// This intentionally rejects concave and collinear profiles: the current
+/// direct face tessellator uses a fan, so accepting those profiles would
+/// publish invalid display geometry despite valid-looking topology.
+pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<Model> {
+    if profile.len() < 3 || profile.len() > 128 {
+        return Err(unsupported("Extrusion profile must have 3..128 vertices"));
+    }
+    if !z_min.is_finite() || !z_max.is_finite() || z_max <= z_min {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Extrusion requires finite zMax greater than zMin",
+        ));
+    }
+    if profile
+        .iter()
+        .flatten()
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+        || z_min.abs() > 1e6
+        || z_max.abs() > 1e6
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Extrusion coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let tolerance = 1e-7;
+    if (0..profile.len()).any(|i| {
+        let a = profile[i];
+        let b = profile[(i + 1) % profile.len()];
+        (a[0] - b[0]).hypot(a[1] - b[1]) <= tolerance
+    }) {
+        return Err(unsupported(
+            "Extrusion profile has duplicate consecutive vertices",
+        ));
+    }
+    let turns: Vec<_> = (0..profile.len())
+        .map(|i| {
+            let a = profile[i];
+            let b = profile[(i + 1) % profile.len()];
+            let c = profile[(i + 2) % profile.len()];
+            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+        })
+        .collect();
+    if turns.iter().any(|turn| *turn <= tolerance) {
+        return Err(unsupported(
+            "Extrusion currently requires a strictly convex CCW profile",
+        ));
+    }
+    let lower: Vec<_> = profile.iter().rev().map(|p| [p[0], p[1], z_min]).collect();
+    let upper: Vec<_> = profile.iter().map(|p| [p[0], p[1], z_max]).collect();
+    let mut polygons = vec![lower, upper];
+    for i in 0..profile.len() {
+        let a = profile[i];
+        let b = profile[(i + 1) % profile.len()];
+        polygons.push(vec![
+            [a[0], a[1], z_min],
+            [b[0], b[1], z_min],
+            [b[0], b[1], z_max],
+            [a[0], a[1], z_max],
+        ]);
+    }
+    model_from_polygons(polygons, tolerance)
+}
+
 fn model_from_planes(planes: &[Plane], tolerance: f64) -> Result<Model> {
     let mut points = Vec::<[f64; 3]>::new();
     for i in 0..planes.len() {
@@ -618,7 +684,7 @@ fn edge_faces(model: &Model, edge_id: usize) -> Result<[usize; 2]> {
 
 fn edge_operation(
     model: &Model,
-    edge_id: usize,
+    edge_ids: &[usize],
     size: f64,
     segments: Option<usize>,
 ) -> Result<Model> {
@@ -637,54 +703,91 @@ fn edge_operation(
         ));
     }
     let mut planes = convex_planes(model)?;
-    let adjacent = edge_faces(model, edge_id)?;
-    let a = face_plane(model, adjacent[0])?;
-    let b = face_plane(model, adjacent[1])?;
-    let selected_vertices = model.edges[edge_id].vertices;
-    let available = adjacent
-        .iter()
-        .flat_map(|&face| loop_vertices(model, model.faces[face].outer).unwrap_or_default())
-        .filter(|vertex| !selected_vertices.contains(vertex))
-        .flat_map(|vertex| {
-            selected_vertices
-                .map(|end| norm(sub(model.vertices[vertex].point, model.vertices[end].point)))
-        })
-        .fold(f64::INFINITY, f64::min);
-    if size >= available - model.tolerance_mm * 8. {
-        return Err(unsupported(
-            "Edge size consumes an adjacent face; use a smaller value",
+    if edge_ids.is_empty() {
+        return Err(Error::new(
+            "BREP_INVALID_SELECTION",
+            "Select at least one edge",
         ));
     }
-    let cosine = dot(a.normal, b.normal).clamp(-1., 1.);
-    let alpha = cosine.acos();
-    if alpha <= 1e-4 || std::f64::consts::PI - alpha <= 1e-4 {
-        return Err(unsupported("Select a convex, non-tangent edge"));
+    let selected: BTreeSet<_> = edge_ids.iter().copied().collect();
+    if selected.len() != edge_ids.len() || selected.iter().any(|edge| *edge >= model.edges.len()) {
+        return Err(Error::new(
+            "BREP_INVALID_SELECTION",
+            "Selected edges must be unique authored edges",
+        ));
     }
-    let bisector = unit(add(a.normal, b.normal))?;
-    let point = model.vertices[model.edges[edge_id].vertices[0]].point;
-    if let Some(segments) = segments {
-        let center = sub(point, mul(bisector, size / (alpha / 2.).cos()));
-        for i in 1..segments {
-            let t = i as f64 / segments as f64;
-            let normal = unit(add(
-                mul(a.normal, ((1. - t) * alpha).sin()),
-                mul(b.normal, (t * alpha).sin()),
-            ))?;
+    let mut connected = BTreeSet::from([edge_ids[0]]);
+    loop {
+        let vertices: BTreeSet<_> = connected
+            .iter()
+            .flat_map(|edge| model.edges[*edge].vertices)
+            .collect();
+        let before = connected.len();
+        connected.extend(selected.iter().copied().filter(|edge| {
+            model.edges[*edge]
+                .vertices
+                .iter()
+                .any(|vertex| vertices.contains(vertex))
+        }));
+        if connected.len() == before {
+            break;
+        }
+    }
+    if connected.len() != selected.len() {
+        return Err(unsupported("Selected edges must form one connected chain"));
+    }
+    let mut supports = vec![];
+    for &edge_id in edge_ids {
+        let adjacent = edge_faces(model, edge_id)?;
+        let a = face_plane(model, adjacent[0])?;
+        let b = face_plane(model, adjacent[1])?;
+        let selected_vertices = model.edges[edge_id].vertices;
+        let available = adjacent
+            .iter()
+            .flat_map(|&face| loop_vertices(model, model.faces[face].outer).unwrap_or_default())
+            .filter(|vertex| !selected_vertices.contains(vertex))
+            .flat_map(|vertex| {
+                selected_vertices
+                    .map(|end| norm(sub(model.vertices[vertex].point, model.vertices[end].point)))
+            })
+            .fold(f64::INFINITY, f64::min);
+        if size >= available - model.tolerance_mm * 8. {
+            return Err(unsupported(
+                "Edge size consumes an adjacent face; use a smaller value",
+            ));
+        }
+        let cosine = dot(a.normal, b.normal).clamp(-1., 1.);
+        let alpha = cosine.acos();
+        if alpha <= 1e-4 || std::f64::consts::PI - alpha <= 1e-4 {
+            return Err(unsupported("Select convex, non-tangent edges"));
+        }
+        let bisector = unit(add(a.normal, b.normal))?;
+        let point = model.vertices[model.edges[edge_id].vertices[0]].point;
+        if let Some(segments) = segments {
+            let center = sub(point, mul(bisector, size / (alpha / 2.).cos()));
+            for i in 1..segments {
+                let t = i as f64 / segments as f64;
+                let normal = unit(add(
+                    mul(a.normal, ((1. - t) * alpha).sin()),
+                    mul(b.normal, (t * alpha).sin()),
+                ))?;
+                planes.push(Plane {
+                    normal,
+                    offset: dot(normal, center) + size,
+                });
+            }
+        } else {
             planes.push(Plane {
-                normal,
-                offset: dot(normal, center) + size,
+                normal: bisector,
+                offset: dot(bisector, point) - size * (alpha / 2.).sin(),
             });
         }
-    } else {
-        planes.push(Plane {
-            normal: bisector,
-            offset: dot(bisector, point) - size * (alpha / 2.).sin(),
-        });
+        supports.extend([a, b]);
     }
     let result = model_from_planes(&planes, model.tolerance_mm)?;
     // A consumed adjacent support face means the requested size crossed a
     // neighboring feature even if the half-space intersection stayed nonempty.
-    for original in [a, b] {
+    for original in supports {
         let survives = (0..result.faces.len()).any(|face| {
             face_plane(&result, face)
                 .map(|p| {
@@ -704,7 +807,12 @@ fn edge_operation(
 
 /// Chamfer one convex edge of a single convex planar body.
 pub fn chamfer(model: &Model, edge_id: usize, size: f64) -> Result<Model> {
-    edge_operation(model, edge_id, size, None)
+    chamfer_edges(model, &[edge_id], size)
+}
+
+/// Chamfer a connected chain of authored convex edges.
+pub fn chamfer_edges(model: &Model, edge_ids: &[usize], size: f64) -> Result<Model> {
+    edge_operation(model, edge_ids, size, None)
 }
 
 /// Apply a circular fillet approximation to one convex edge of a single convex
@@ -712,7 +820,17 @@ pub fn chamfer(model: &Model, edge_id: usize, size: f64) -> Result<Model> {
 /// the adjacent support planes; the round is represented by `segments - 1`
 /// planar tangent faces (2..32 segments).
 pub fn fillet(model: &Model, edge_id: usize, radius: f64, segments: usize) -> Result<Model> {
-    edge_operation(model, edge_id, radius, Some(segments))
+    fillet_edges(model, &[edge_id], radius, segments)
+}
+
+/// Apply the same faceted circular fillet to a connected edge chain.
+pub fn fillet_edges(
+    model: &Model,
+    edge_ids: &[usize],
+    radius: f64,
+    segments: usize,
+) -> Result<Model> {
+    edge_operation(model, edge_ids, radius, Some(segments))
 }
 
 #[cfg(test)]
@@ -813,6 +931,40 @@ mod tests {
         let filleted = fillet(&model, 0, 1., 8).unwrap();
         assert_eq!(filleted.faces.len(), 13);
         filleted.validate().unwrap();
+    }
+
+    #[test]
+    fn convex_profile_extrusion_and_connected_edge_chains_are_manifold() {
+        let wedge = extrude_polygon(&[[0., 0.], [4., 0.], [0., 3.]], -1., 2.).unwrap();
+        assert_eq!(
+            (
+                wedge.vertices.len(),
+                wedge.edges.len(),
+                wedge.faces.len(),
+                wedge.bodies.len()
+            ),
+            (6, 9, 5, 1)
+        );
+        wedge.validate().unwrap();
+
+        let model = cuboid([0.; 3], [10.; 3]).unwrap();
+        let connected = model.edges[0]
+            .vertices
+            .iter()
+            .find_map(|vertex| {
+                (1..model.edges.len()).find(|edge| model.edges[*edge].vertices.contains(vertex))
+            })
+            .unwrap();
+        let chamfered = chamfer_edges(&model, &[0, connected], 1.).unwrap();
+        let filleted = fillet_edges(&model, &[0, connected], 1., 4).unwrap();
+        assert!(chamfered.faces.len() > 7);
+        assert!(filleted.faces.len() > chamfered.faces.len());
+        chamfered.validate().unwrap();
+        filleted.validate().unwrap();
+        assert_eq!(
+            chamfer_edges(&model, &[0, 6], 1.).unwrap_err().code,
+            UNSUPPORTED
+        );
     }
 
     #[test]

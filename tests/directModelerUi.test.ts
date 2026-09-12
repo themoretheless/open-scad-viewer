@@ -108,14 +108,15 @@ it('box-selects multiple sketches and deletes the selection atomically',async()=
 it('creates closed primitives with undo in the embedded main scene editor',async()=>{
  const emitted:string[]=[]
  const ui=await mount({embedded:true,initialDocument:{version:1,sketches:[],bodies:[]},onAppend:(source:string)=>emitted.push(source)})
- for(const name of ['Box','Cylinder','Cone','Sphere']) {
+ for(const name of ['Box','Wedge','Cylinder','Cone','Sphere']) {
   await ui.click(name)
   const body=ui.doc().bodies.at(-1)!,report=inspectPolygonMesh(body.mesh)
   expect(report.closed).toBe(true);expect(report.signedVolumeMm3).toBeGreaterThan(0)
  }
- expect(ui.doc().bodies).toHaveLength(4)
- await ui.click('↶');expect(ui.doc().bodies).toHaveLength(3)
- await ui.click('Apply to code');expect(emitted).toHaveLength(1);expect(emitted[0].match(/polyhedron\(/g)).toHaveLength(3)
+ expect(ui.doc().bodies).toHaveLength(5)
+ expect(ui.doc().bodies.find(body=>body.name.startsWith('Wedge'))?.brep?.faces).toHaveLength(5)
+ await ui.click('↶');expect(ui.doc().bodies).toHaveLength(4)
+ await ui.click('Apply to code');expect(emitted).toHaveLength(1);expect(emitted[0].match(/polyhedron\(/g)).toHaveLength(4)
 })
 it('opens native NURBS CV tools without baking a body',async()=>{
  const ui=await mount()

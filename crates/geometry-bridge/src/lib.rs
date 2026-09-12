@@ -402,7 +402,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
-            let section = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?.section(z_mm)?;
+            let section =
+                polygon_core::solid::section::MeshSectionIndex::new(&mesh)?.section(z_mm)?;
             Ok(json!({
                 "z_mm": section.z_mm,
                 "candidateTriangles": section.candidate_triangles,
@@ -440,6 +441,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_extrude_polygon" => encode(brep_core::extrude_polygon(
+            &field::<Vec<[f64; 2]>>(&v, "profile")?,
+            field(&v, "zMin")?,
+            field(&v, "zMax")?,
+        )?),
         "brep_nurbs_boolean" => encode(brep_core::boolean(
             &field(&v, "a")?,
             &field(&v, "b")?,
@@ -452,9 +458,20 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "edge")?,
             field(&v, "size")?,
         )?),
+        "brep_nurbs_chamfer_edges" => encode(brep_core::chamfer_edges(
+            &field(&v, "model")?,
+            &field::<Vec<usize>>(&v, "edges")?,
+            field(&v, "size")?,
+        )?),
         "brep_nurbs_fillet" => encode(brep_core::fillet(
             &field(&v, "model")?,
             field(&v, "edge")?,
+            field(&v, "radius")?,
+            field(&v, "segments")?,
+        )?),
+        "brep_nurbs_fillet_edges" => encode(brep_core::fillet_edges(
+            &field(&v, "model")?,
+            &field::<Vec<usize>>(&v, "edges")?,
             field(&v, "radius")?,
             field(&v, "segments")?,
         )?),
