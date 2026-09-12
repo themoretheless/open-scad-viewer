@@ -59,11 +59,12 @@ it('runs authored B-rep fillet and boolean paths from Solid controls',async()=>{
  objectBoxes[0].props.onClick({shiftKey:false});await nextTick();objectBoxes[1].props.onClick({shiftKey:true});await nextTick()
  await ui.click('B-rep Union')
  expect(ui.doc().bodies.filter(b=>b.brep)).toHaveLength(1)
- await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!
- await ui.pointer(edge);await ui.click('Fillet 3D')
+ await ui.click('Edges');const edges=ui.all(ui.svg()).filter(n=>n.tag==='polyline'&&n.props.onPointerdown),edge=edges[0],ends=new Set(String(edge.props.points).split(' '))
+ await ui.pointer(edge);const connected=edges.slice(1).find(item=>String(item.props.points).split(' ').some(point=>ends.has(point)))!
+ connected.props.onPointerdown({...ui.event(connected),shiftKey:true});await nextTick();await ui.click('Fillet 3D')
  const segments=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('Fillet segments'))!
  segments.props['onUpdate:modelValue'](6);await nextTick();await ui.click('Apply · Enter')
- expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces).toHaveLength(11)
+ expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces.length).toBeGreaterThan(11)
  const before=ui.doc().bodies.find(b=>b.brep)?.mesh.indices
  await ui.click('Retessellate');expect(ui.doc().bodies.find(b=>b.brep)?.mesh.indices).toEqual(before)
 })

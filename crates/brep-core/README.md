@@ -12,10 +12,14 @@ agreement; it does not claim general solid-geometric certification.
   profiles fail closed.
 - `boolean(a, b, "union" | "difference" | "intersection")` supports one or
   more closed orthogonal planar bodies per operand. Faces must be axis-aligned.
+  Intersection additionally supports two convex planar single-body operands at
+  arbitrary orientation by intersecting their exact support half-spaces.
   The result may be concave or disconnected; disconnected components are
   represented as separate B-rep bodies and can be used by later booleans.
-  Empty, cavity, curved, rotated, and non-manifold cases return a typed error
-  instead of silently falling back to a mesh.
+  A fully enclosed orthogonal difference is represented as an inner shell.
+  Inner-shell operands remain unsupported and fail closed, as do empty, curved,
+  rotated union/difference, and non-manifold cases; no operation silently falls
+  back to a mesh.
 - `chamfer_edges(model, edges, size)` supports one convex planar body without
   cavities and one connected chain of authored convex edges. `chamfer` is the
   single-edge convenience form.

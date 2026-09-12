@@ -1,7 +1,7 @@
 //! Fail-closed solid operations for the planar subset of the NURBS B-rep.
 //!
 //! Booleans accept closed, orthogonal, planar solids and return one or more
-//! connected bodies (enclosed cavities are rejected).
+//! connected bodies, including enclosed orthogonal cavities as inner shells.
 //! Chamfers and fillets accept one convex planar body. Fillets are represented
 //! by planar tangent facets; `segments` controls that declared approximation.
 use super::*;
@@ -283,6 +283,7 @@ fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<M
         }
     }
     let mut unseen: BTreeSet<_> = (0..model.faces.len()).collect();
+    let mut components = vec![];
     while let Some(seed) = unseen.pop_first() {
         let mut stack = vec![seed];
         let mut component = vec![];
@@ -310,15 +311,16 @@ fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<M
                     .sum::<f64>()
             })
             .sum::<f64>();
-        if signed_volume <= tolerance.powi(3) {
+        if signed_volume.abs() <= tolerance.powi(3) {
             return Err(unsupported(
-                "Boolean result contains an enclosed cavity or inverted boundary",
+                "Boolean result contains a zero-volume boundary",
             ));
         }
         let shell = model.shells.len();
         model.shells.push(Shell {
             faces: component
-                .into_iter()
+                .iter()
+                .copied()
                 .map(|face| FaceUse {
                     face,
                     reversed: false,
@@ -326,10 +328,43 @@ fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<M
                 .collect(),
             closed: true,
         });
-        model.bodies.push(Body {
-            outer_shell: shell,
-            inner_shells: vec![],
-        });
+        components.push((shell, component, signed_volume));
+    }
+    for &(shell, _, volume) in &components {
+        if volume > 0. {
+            model.bodies.push(Body {
+                outer_shell: shell,
+                inner_shells: vec![],
+            });
+        }
+    }
+    for (shell, faces, volume) in &components {
+        if *volume > 0. {
+            continue;
+        }
+        let sample = model.vertices[loop_vertices(&model, model.faces[faces[0]].outer)?[0]].point;
+        let mut containers: Vec<_> = components
+            .iter()
+            .filter(|(_, _, candidate_volume)| *candidate_volume > 0.)
+            .filter_map(|(candidate_shell, candidate_faces, candidate_volume)| {
+                contains_faces(&model, candidate_faces, sample)
+                    .ok()
+                    .filter(|inside| *inside)
+                    .map(|_| (*candidate_shell, *candidate_volume))
+            })
+            .collect();
+        containers.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let outer = containers
+            .first()
+            .map(|entry| entry.0)
+            .ok_or_else(|| unsupported("Inverted boundary is not enclosed by an outer shell"))?;
+        model
+            .bodies
+            .iter_mut()
+            .find(|body| body.outer_shell == outer)
+            .ok_or_else(|| failed("Cavity outer body was not constructed"))?
+            .inner_shells
+            .push(*shell);
     }
     model.validate().map_err(|e| {
         if e.code == "BREP_RESOURCE_LIMIT" {
@@ -411,6 +446,19 @@ pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<M
 }
 
 fn model_from_planes(planes: &[Plane], tolerance: f64) -> Result<Model> {
+    let mut unique = Vec::<Plane>::new();
+    for &plane in planes {
+        if let Some(existing) = unique
+            .iter_mut()
+            .find(|candidate| dot(candidate.normal, plane.normal) > 1. - 1e-9)
+        {
+            // Equal-direction half-spaces collapse to the tighter support.
+            existing.offset = existing.offset.min(plane.offset);
+        } else {
+            unique.push(plane);
+        }
+    }
+    let planes = unique.as_slice();
     let mut points = Vec::<[f64; 3]>::new();
     for i in 0..planes.len() {
         for j in i + 1..planes.len() {
@@ -530,23 +578,21 @@ fn ray_triangle(
     (t > 1e-9).then_some(t)
 }
 
-fn contains(model: &Model, point: [f64; 3]) -> Result<bool> {
+fn contains_faces(model: &Model, faces: &[usize], point: [f64; 3]) -> Result<bool> {
     let direction = unit([1., 0.371_390_7, 0.217_113_9])?;
     let mut hits = vec![];
-    for body in &model.bodies {
-        for face_use in &model.shells[body.outer_shell].faces {
-            let ids = loop_vertices(model, model.faces[face_use.face].outer)?;
-            for i in 1..ids.len() - 1 {
-                if let Some(t) = ray_triangle(
-                    point,
-                    direction,
-                    model.vertices[ids[0]].point,
-                    model.vertices[ids[i]].point,
-                    model.vertices[ids[i + 1]].point,
-                ) {
-                    if !hits.iter().any(|x: &f64| (*x - t).abs() <= 1e-7) {
-                        hits.push(t);
-                    }
+    for &face in faces {
+        let ids = loop_vertices(model, model.faces[face].outer)?;
+        for i in 1..ids.len() - 1 {
+            if let Some(t) = ray_triangle(
+                point,
+                direction,
+                model.vertices[ids[0]].point,
+                model.vertices[ids[i]].point,
+                model.vertices[ids[i + 1]].point,
+            ) {
+                if !hits.iter().any(|x: &f64| (*x - t).abs() <= 1e-7) {
+                    hits.push(t);
                 }
             }
         }
@@ -554,19 +600,64 @@ fn contains(model: &Model, point: [f64; 3]) -> Result<bool> {
     Ok(hits.len() % 2 == 1)
 }
 
+fn contains(model: &Model, point: [f64; 3]) -> Result<bool> {
+    let mut inside = false;
+    for body in &model.bodies {
+        let outer: Vec<_> = model.shells[body.outer_shell]
+            .faces
+            .iter()
+            .map(|face| face.face)
+            .collect();
+        if !contains_faces(model, &outer, point)? {
+            continue;
+        }
+        let in_cavity = body.inner_shells.iter().try_fold(false, |inside, shell| {
+            let faces: Vec<_> = model.shells[*shell]
+                .faces
+                .iter()
+                .map(|face| face.face)
+                .collect();
+            Ok::<_, Error>(inside || contains_faces(model, &faces, point)?)
+        })?;
+        inside |= !in_cavity;
+    }
+    Ok(inside)
+}
+
 /// Supported exact-topology boolean envelope: axis-aligned, orthogonal, closed
 /// planar bodies. Disconnected results become multiple bodies; enclosed
-/// cavities remain unsupported. Coincident boundaries are resolved on the
-/// coordinate grid.
+/// enclosed orthogonal cavities become inner shells. Coincident boundaries are
+/// resolved on the coordinate grid.
 pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
-    orthogonal(a)?;
-    orthogonal(b)?;
+    a.validate()?;
+    b.validate()?;
     if !matches!(operation, "union" | "difference" | "intersection") {
         return Err(Error::new(
             "BREP_INVALID_OPERATION",
             "Boolean operation must be union, difference, or intersection",
         ));
     }
+    // Convex planar intersection is exactly the intersection of both sets of
+    // outward half-spaces, independent of face orientation in world axes.
+    if operation == "intersection"
+        && a.bodies.len() == 1
+        && b.bodies.len() == 1
+        && a.bodies[0].inner_shells.is_empty()
+        && b.bodies[0].inner_shells.is_empty()
+    {
+        if let (Ok(mut planes), Ok(other)) = (convex_planes(a), convex_planes(b)) {
+            planes.extend(other);
+            return model_from_planes(&planes, a.tolerance_mm.max(b.tolerance_mm)).map_err(|e| {
+                if e.code == OPERATION_FAILED {
+                    unsupported("Boolean result is empty or dimensionally collapsed")
+                } else {
+                    e
+                }
+            });
+        }
+    }
+    orthogonal(a)?;
+    orthogonal(b)?;
     let mut coordinates: [Vec<f64>; 3] = std::array::from_fn(|_| vec![]);
     for vertex in a.vertices.iter().chain(&b.vertices) {
         for axis in 0..3 {
@@ -856,6 +947,30 @@ mod tests {
         )
     }
 
+    fn rotate_z(model: &mut Model, angle: f64) {
+        let transform = |point: &mut Vec<f64>| {
+            let (sin, cos) = angle.sin_cos();
+            let [x, y] = [point[0], point[1]];
+            point[0] = x * cos - y * sin;
+            point[1] = x * sin + y * cos;
+        };
+        for vertex in &mut model.vertices {
+            let mut point = vertex.point.to_vec();
+            transform(&mut point);
+            vertex.point = point.try_into().unwrap();
+        }
+        for edge in &mut model.edges {
+            edge.curve.control_points.iter_mut().for_each(transform);
+        }
+        for face in &mut model.faces {
+            face.surface
+                .control_points
+                .iter_mut()
+                .flatten()
+                .for_each(transform);
+        }
+    }
+
     #[test]
     fn overlapping_box_booleans_are_closed_breps() {
         let a = cuboid([0.; 3], [2., 2., 2.]).unwrap();
@@ -889,6 +1004,19 @@ mod tests {
     }
 
     #[test]
+    fn rotated_convex_planar_intersection_uses_exact_halfspaces() {
+        let a = cuboid([-2., -2., -1.], [2., 2., 1.]).unwrap();
+        let mut b = cuboid([-2., -1., -1.], [2., 1., 1.]).unwrap();
+        rotate_z(&mut b, std::f64::consts::FRAC_PI_4);
+        b.validate().unwrap();
+        let result = boolean(&a, &b, "intersection").unwrap();
+        assert_eq!(result.bodies.len(), 1);
+        assert!(result.faces.len() >= 8);
+        result.validate().unwrap();
+        assert_eq!(boolean(&a, &b, "union").unwrap_err().code, UNSUPPORTED);
+    }
+
+    #[test]
     fn unsupported_boolean_results_fail_closed() {
         let a = cuboid([0.; 3], [1.; 3]).unwrap();
         let separated = cuboid([2., 0., 0.], [3., 1., 1.]).unwrap();
@@ -899,10 +1027,19 @@ mod tests {
             boolean(&a, &separated, "intersection").unwrap_err().code,
             UNSUPPORTED
         );
+    }
+
+    #[test]
+    fn enclosed_difference_builds_an_inner_shell_and_then_fails_closed_as_operand() {
         let outer = cuboid([0.; 3], [4.; 3]).unwrap();
         let inner = cuboid([1.; 3], [3.; 3]).unwrap();
+        let cavity = boolean(&outer, &inner, "difference").unwrap();
+        assert_eq!(cavity.bodies.len(), 1);
+        assert_eq!(cavity.shells.len(), 2);
+        assert_eq!(cavity.bodies[0].inner_shells.len(), 1);
+        cavity.validate().unwrap();
         assert_eq!(
-            boolean(&outer, &inner, "difference").unwrap_err().code,
+            boolean(&cavity, &inner, "union").unwrap_err().code,
             UNSUPPORTED
         );
     }

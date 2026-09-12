@@ -2,6 +2,7 @@ import {expect,it} from 'vitest'
 import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
+import {transformSelection} from '../src/services/directSolidTools'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{
  const model=createBrepBox([0,0,0],[2,3,4]);expect([model.vertices.length,model.edges.length,model.faces.length,model.bodies.length]).toEqual([8,12,6,1])
  expect(inspectNurbsBrep(model).topologyValid).toBe(true)
@@ -29,6 +30,10 @@ it('runs fail-closed booleans and edge treatments on manifold NURBS B-reps',()=>
  expect(disconnected.bodies).toHaveLength(2)
  expect(tessellateNurbsBrep(disconnected,2).report.closed).toBe(true)
  expect(booleanNurbsBrep(disconnected,createBrepBox([0,0,0],[1,1,1]),'intersection').bodies).toHaveLength(1)
+ const cavity=booleanNurbsBrep(createBrepBox([0,0,0],[4,4,4]),createBrepBox([1,1,1],[3,3,3]),'difference')
+ expect(cavity.bodies[0].innerShells).toHaveLength(1)
+ expect(tessellateNurbsBrep(cavity,2).report.signedVolumeMm3).toBeCloseTo(56,8)
+ expect(()=>booleanNurbsBrep(cavity,a,'union')).toThrow(/cavit/i)
  expect(()=>filletNurbsBrep(a,0,2,8)).toThrow(/smaller|consumes/i)
 })
 it('constructs exact planar-profile B-reps and blends connected edge chains',()=>{
@@ -40,4 +45,12 @@ it('constructs exact planar-profile B-reps and blends connected edge chains',()=
  expect(chamfer.faces.length).toBeGreaterThan(7);expect(fillet.faces.length).toBeGreaterThan(chamfer.faces.length)
  expect(tessellateNurbsBrep(fillet,2).report.closed).toBe(true)
  expect(()=>extrudeBrepPolygon([[0,0],[2,0],[1,1],[2,2],[0,2]],0,1)).toThrow(/convex/i)
+})
+it('preserves authored B-rep geometry through Solid transforms for rotated intersections',()=>{
+ const brep=createBrepBox([-2,-1,-1],[2,1,1]),built=tessellateNurbsBrep(brep,1)
+ const document=transformSelection({version:1,sketches:[],bodies:[{id:'b',name:'Box',brep,mesh:{positions:built.positions,indices:built.indices}}]},['b'],[0,0,0],[0,0,1],45,1)
+ const rotated=document.bodies[0].brep!;expect(inspectNurbsBrep(rotated).topologyValid).toBe(true)
+ const result=booleanNurbsBrep(createBrepBox([-2,-2,-1],[2,2,1]),rotated,'intersection')
+ expect(result.faces.length).toBeGreaterThanOrEqual(8);expect(tessellateNurbsBrep(result,1).report.closed).toBe(true)
+ expect(()=>booleanNurbsBrep(createBrepBox([-2,-2,-1],[2,2,1]),rotated,'union')).toThrow(/axis-aligned/i)
 })

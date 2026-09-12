@@ -101,11 +101,20 @@ export function splitSolid(body:DirectBody,normal:Vec3,offset:number):[DirectBod
  if(!a.report.closed||!b.report.closed||!a.indices.length||!b.indices.length)throw Error('Could not create two closed halves.')
  return [polygonBody({...body,name:(body.name+' · +').slice(0,100)},{positions:a.positions,indices:a.indices}),polygonBody({...body,id:body.id+'-split',name:(body.name+' · −').slice(0,100)},{positions:b.positions,indices:b.indices})]
 }
+function transformBrep(body:DirectBody,apply:(point:number[])=>Vec3):DirectBody {
+ const next={...body,mesh:{...body.mesh,positions:bodyPoints(body).map(apply).flat()}}
+ if(!body.brep)return next
+ const brep=structuredClone(body.brep)
+ for(const vertex of brep.vertices)vertex.point=apply(vertex.point)
+ for(const edge of brep.edges)edge.curve.controlPoints=edge.curve.controlPoints.map(apply)
+ for(const face of brep.faces)face.surface.controlPoints=face.surface.controlPoints.map(row=>row.map(apply))
+ return {...next,brep}
+}
 export function transformBodies(bodies:DirectBody[],delta:Vec3,axis:Vec3,angle:number,scale:number):DirectBody[] {
  if(![...delta,...axis,angle,scale].every(Number.isFinite)||scale<=0)throw Error('Invalid transform.')
  const points=bodies.flatMap(bodyPoints);if(!points.length)return []
  const center=[0,1,2].map(k=>(Math.min(...points.map(p=>p[k]))+Math.max(...points.map(p=>p[k])))/2),n=unit3(axis),a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a)
- return bodies.map(b=>polygonBody(b,{...b.mesh,positions:bodyPoints(b).map(p=>{const q=mul(sub(p,center),scale),rot=add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)));return add(add(rot,center),delta)}).flat()}))
+ return bodies.map(b=>transformBrep(b,p=>{const q=mul(sub(p,center),scale),rot=add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)));return add(add(rot,center),delta)}))
 }
 
 /** Transform the entire selection around one world-space pivot, preserving analytic sketches. */
@@ -116,7 +125,7 @@ export function transformSelection(document: import('./directModeling').DirectDo
  const center=[0,1,2].map(k=>(Math.min(...points.map(p=>p[k]))+Math.max(...points.map(p=>p[k])))/2),n=unit3(axis),a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a)
  const rotate=(q:number[])=>add(add(mul(q,c),mul(cross3(n,q),s)),mul(n,dot3(n,q)*(1-c)))
  const apply=(p:number[])=>add(add(rotate(mul(sub(p,center),scale)),center),delta)
- for(const b of next.bodies)if(selected.has(b.id)){b.mesh.positions=bodyPoints(b).map(apply).flat();delete b.brep}
+ for(let i=0;i<next.bodies.length;i++)if(selected.has(next.bodies[i].id))next.bodies[i]=transformBrep(next.bodies[i],apply)
  for(const sketch of next.sketches)if(selected.has(sketch.id)){
   const plane=sketch.plane??{origin:[0,0,0] as Vec3,u:[1,0,0] as Vec3,v:[0,1,0] as Vec3}
   const movedPlane={origin:apply(plane.origin),u:rotate(plane.u),v:rotate(plane.v)},normal=cross3(plane.u,plane.v)
