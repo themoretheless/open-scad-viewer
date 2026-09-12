@@ -103,3 +103,11 @@ it('creates closed primitives with undo in the embedded main scene editor',async
  await ui.click('↶');expect(ui.doc().bodies).toHaveLength(3)
  await ui.click('Apply to code');expect(emitted).toHaveLength(1);expect(emitted[0].match(/polyhedron\(/g)).toHaveLength(3)
 })
+it('opens native NURBS CV tools without baking a body',async()=>{
+ const ui=await mount()
+ await ui.click('+ NURBS surface')
+ expect(ui.doc().surfaces).toHaveLength(1)
+ expect(ui.doc().bodies).toHaveLength(1)
+ expect(ui.button('Apply CV')).toBeDefined()
+ expect(ui.button('Bake surface to mesh body')).toBeDefined()
+})

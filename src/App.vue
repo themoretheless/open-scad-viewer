@@ -10,7 +10,13 @@ import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
+import type { DirectDocument } from './services/directModeling'
+import type { WorkspaceMode } from './services/workspaceModes'
+import { workspaceModeHint } from './services/workspaceModes'
+import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument } from './services/solidBridge'
+import type { MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
+const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.vue'))
 const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.vue'))
 const ScanPlanePanel = defineAsyncComponent(() => import('./features/ScanPlanePanel.vue'))
 const SvgPanel = defineAsyncComponent(() => import('./features/SvgPanel.vue'))
@@ -347,6 +353,50 @@ const functionReferenceQuery = ref('')
 const functionReferenceButton = ref<HTMLButtonElement | null>(null)
 const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
+const meshModelerOpen = ref(false)
+const solidSeedDocument = ref<DirectDocument | null>(null)
+
+const workspaceMode = computed<WorkspaceMode>(() => {
+  if (meshModelerOpen.value) return 'mesh'
+  if (directModelerOpen.value) return 'solid'
+  return 'code'
+})
+
+function openWorkspaceMode(mode: WorkspaceMode) {
+  if (mode === 'code') {
+    directModelerOpen.value = false
+    meshModelerOpen.value = false
+    solidSeedDocument.value = null
+    return
+  }
+  if (mode === 'solid') {
+    meshModelerOpen.value = false
+    directModelerOpen.value = true
+    return
+  }
+  directModelerOpen.value = false
+  meshModelerOpen.value = true
+}
+
+function bringCodeToSolid() {
+  if (!sceneMeshes.value.length) return
+  solidSeedDocument.value = sceneMeshesToSolidDocument(sceneMeshes.value, lang.value === 'ru' ? 'Тело' : 'Body')
+  meshModelerOpen.value = false
+  directModelerOpen.value = true
+}
+
+function openMeshFromSolid() {
+  solidSeedDocument.value = null
+  directModelerOpen.value = false
+  meshModelerOpen.value = true
+}
+
+function meshToSolid(doc: MeshWorkspaceDocument) {
+  solidSeedDocument.value = meshDocumentToSolidDocument(doc)
+  storageSet('scad-solid-modeler-v1', JSON.stringify(solidSeedDocument.value))
+  meshModelerOpen.value = false
+  directModelerOpen.value = true
+}
 const sourceHistoryKey=()=> 'scad-source-history-v1:'+fileName.value
 const restoredMainHistory=restoreSourceHistory(storageGet(sourceHistoryKey()),code.value)
 const mainEditPast = ref(restoredMainHistory.past)
@@ -2314,7 +2364,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
     </nav>
 
-    <main ref="mainRef" class="main" :inert="directModelerOpen || functionReferenceOpen">
+    <main ref="mainRef" class="main" :inert="directModelerOpen || meshModelerOpen || functionReferenceOpen">
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
@@ -2322,7 +2372,25 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
           <span class="toolbar-divider" aria-hidden="true" />
-          <button class="btn" type="button" @click="directModelerOpen = true">{{ lang === 'ru' ? 'Прямое моделирование' : 'Direct modeling' }}</button>
+          <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
+            <button
+              v-for="mode in (['code', 'solid', 'mesh'] as const)"
+              :key="mode"
+              class="btn"
+              type="button"
+              :class="{ 'btn-primary': workspaceMode === mode }"
+              :aria-pressed="workspaceMode === mode"
+              :title="workspaceModeHint(mode, lang)"
+              @click="openWorkspaceMode(mode)"
+            >{{ mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh' }}</button>
+          </div>
+          <button
+            class="btn"
+            type="button"
+            :disabled="!sceneMeshes.length || rendering"
+            :title="lang === 'ru' ? 'Перенести текущую сцену Code → Solid' : 'Bring current Code scene into Solid'"
+            @click="bringCodeToSolid"
+          >{{ lang === 'ru' ? 'Code→Solid' : 'Code→Solid' }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">⚙ {{ lang === 'ru' ? 'Генераторы' : 'Generators' }}</button>
           <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
           <button
@@ -2675,7 +2743,22 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @close="paletteOpen = false"
       @execute="executeCommand"
     />
-    <DirectModeler :open="directModelerOpen" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @close="directModelerOpen = false" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
+    <DirectModeler
+      :open="directModelerOpen"
+      :locale="lang"
+      :can-append="!isModelGraphText(code)"
+      :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
+      :seed-document="solidSeedDocument"
+      @close="directModelerOpen = false; solidSeedDocument = null"
+      @to-mesh="openMeshFromSolid"
+      @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }"
+    />
+    <MeshModeler
+      :open="meshModelerOpen"
+      :locale="lang"
+      @close="meshModelerOpen = false"
+      @export-to-solid="meshToSolid"
+    />
     <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
     <ExampleGallery
       :open="exampleGalleryOpen"
@@ -2824,6 +2907,8 @@ button, select { color: inherit; }
 }
 .toolbar { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-bottom: 1px solid var(--border); }
 .editor-toolbar { flex-wrap: wrap; }
+.mode-switch { display: inline-flex; gap: 0.2rem; padding: 0.15rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-muted, transparent); }
+.mode-switch .btn { min-width: 4.2rem; }
 .file-toolbar { flex-wrap: wrap; padding-block: 5px; background: color-mix(in srgb, var(--surface-raised) 55%, var(--surface)); }
 .btn { padding: 4px 10px; font-size: .76rem; white-space: nowrap; }
 .btn:disabled { opacity: .55; cursor: progress; }

@@ -7,18 +7,25 @@ import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, shellSolid, spl
 import { storageGet, storageSet } from '../services/safeStorage'
 import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
-const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string }>()
-const emit = defineEmits<{ close: []; append: [source: string] }>()
+import { stlBufferToPolygonMesh } from '../services/meshEditing'
+import { solidDocumentToMeshDocument } from '../services/solidBridge'
+import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface } from '../services/solidNurbs'
+import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
+import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve } from '../services/nurbsSurface'
+import { extrudeNurbsCurve } from '../services/nurbsConstructors'
+const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
+const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
 const ru = computed(() => props.locale === 'ru')
 const label = (a: string, b: string) => ru.value ? a : b
-const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-direct-modeler-v1'
+const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref(''), saveError = ref(false)
-let stored = storageGet(key)
+let stored = storageGet(key) ?? storageGet(props.embedded ? 'scad-main-modeler-v1' : 'scad-direct-modeler-v1')
 let initial = emptyDirectDocument()
-try { if (stored) initial = parseDirectDocument(stored) } catch { error.value = 'Saved direct document is invalid. Import a backup to recover.' }
+try { if (stored) initial = parseDirectDocument(stored) } catch { error.value = 'Saved solid document is invalid. Import a backup to recover.' }
 if (props.initialDocument) initial = props.initialDocument
 const history = new DirectHistory(initial)
 const document = shallowRef(history.document)
+const stlInput = ref<HTMLInputElement>()
 const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim'>('select')
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
@@ -68,11 +75,35 @@ let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'mo
 let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocument;pointer:number}|null=null
 let previousFocus: HTMLElement | null = null
 watch(() => props.open, async open => {
-  if (open) { previousFocus = window.document.activeElement as HTMLElement; await nextTick(); workspace.value?.focus() }
+  if (open) {
+    previousFocus = window.document.activeElement as HTMLElement
+    await nextTick(); workspace.value?.focus()
+  }
   else { cancelGesture(); operation.value = null; previousFocus?.focus() }
 }, { immediate: true })
+
+watch(() => props.seedDocument, seed => {
+  if (!props.open || !seed) return
+  cancelGesture()
+  history.commit(parseDirectDocument(JSON.stringify(seed)))
+  selection.value = seed.bodies[0]?.id ?? ''
+  sync()
+})
 const selectedSketch = computed(() => document.value.sketches.find(s => s.id === selection.value))
 const selectedBody = computed(() => document.value.bodies.find(s => s.id === selection.value))
+const selectedNurbsCurve = computed(() => document.value.curves?.find(s => s.id === selection.value))
+const selectedNurbsSurface = computed(() => document.value.surfaces?.find(s => s.id === selection.value))
+const selectedNurbs = computed(() => selectedNurbsCurve.value ?? selectedNurbsSurface.value)
+const cvU = ref(0), cvV = ref(0), cvX = ref(0), cvY = ref(0), cvZ = ref(0), cvWeight = ref(1), knotValue = ref(.5)
+const selectedCvPoint = computed(() => selectedNurbsCurve.value?.curve.controlPoints[cvU.value] ??
+  selectedNurbsSurface.value?.surface.controlPoints[cvU.value]?.[cvV.value])
+watch(selectedCvPoint, point => {
+  if (point) {
+    [cvX.value, cvY.value, cvZ.value] = [point[0] ?? 0, point[1] ?? 0, point[2] ?? 0]
+    cvWeight.value = selectedNurbsCurve.value?.curve.weights[cvU.value] ??
+      selectedNurbsSurface.value?.surface.weights[cvU.value]?.[cvV.value] ?? 1
+  }
+}, { immediate: true })
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
 const topology = computed(() => selectedBody.value ? solidTopology(selectedBody.value.mesh) : {faces:[],edges:[]})
 const selectedFace = computed(() => topology.value.faces[faceIndex.value])
@@ -164,7 +195,10 @@ function run(action: () => void) { error.value = ''; try { action() } catch (e) 
 function persist() {
   const current = storageGet(key)
   if (current !== stored) { saveError.value = true; error.value = label('Документ изменён в другой вкладке. Скачайте JSON, чтобы сохранить свои правки.', 'Document changed in another tab. Download JSON to keep your edits.'); return }
-  const text = JSON.stringify(document.value)
+  const persisted = structuredClone(document.value)
+  if (!persisted.curves?.length) delete persisted.curves
+  if (!persisted.surfaces?.length) delete persisted.surfaces
+  const text = JSON.stringify(persisted)
   saveError.value = !storageSet(key, text)
   if (!saveError.value) stored = text
 }
@@ -212,7 +246,15 @@ watch([operation, selectedSketch, height, baseZ, revolveAxis, revolveOffset, rev
   }, 60)
 })
 watch(selection, () => { advancedOp.value=null; operation.value = null; previewBody.value = null; cornerVertex.value = 0 })
-function remove() { run(() => { advancedOp.value=null; const d = history.document; d.sketches = d.sketches.filter(s => !selectedIds.value.includes(s.id)); d.bodies = d.bodies.filter(b => !selectedIds.value.includes(b.id)); commit(d); selection.value = '';extraSelection.value=[] }) }
+function remove() { run(() => {
+  advancedOp.value=null
+  const d = history.document
+  d.sketches = d.sketches.filter(s => !selectedIds.value.includes(s.id))
+  d.bodies = d.bodies.filter(b => !selectedIds.value.includes(b.id))
+  d.curves = d.curves!.filter(c => !selectedIds.value.includes(c.id))
+  d.surfaces = d.surfaces!.filter(s => !selectedIds.value.includes(s.id))
+  commit(d); selection.value = ''; extraSelection.value=[]
+}) }
 function transform() { run(() => { advancedOp.value=null;operation.value=null;
  if(selectedSketch.value&&selectedIds.value.length===1){const d=history.document,i=d.sketches.findIndex(s=>s.id===selection.value);d.sketches[i]=transformSketch(d.sketches[i],[dx.value,dy.value],angle.value,scale.value);commit(d)}
  else commit(transformSelection(history.document,selectedIds.value,[dx.value,dy.value,dz.value],[0,0,1],angle.value,scale.value))
@@ -225,17 +267,54 @@ function appendBodies() {
     emit('append', source); emit('close')
   })
 }
+function sendToMesh() {
+  run(() => {
+    storageSet('scad-mesh-modeler-v1', JSON.stringify(solidDocumentToMeshDocument(document.value)))
+    emit('toMesh')
+  })
+}
 function download(text: string, name: string) { const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); const a = window.document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
 async function importFile(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
-  try { if (file) { if (file.size > 4_000_000) throw new Error('Document exceeds 4 MB.'); const text = await file.text(); run(() => { cancelGesture(); commit(parseDirectDocument(text)); selection.value = '' }) } }
+  try { if (file) { if (file.size > 4_000_000) throw new Error('Document exceeds 4 MB.'); const text = await file.text(); run(() => {
+    cancelGesture()
+    const parsed = JSON.parse(text)
+    if (parsed?.language === 'modelgraph/nurbs-1') {
+      const imported = importModelGraphNurbs(parsed), d = history.document
+      d.curves!.push(...imported.curves); d.surfaces!.push(...imported.surfaces)
+      commit(d); selection.value = imported.surfaces[0]?.id ?? imported.curves[0]?.id ?? ''
+    } else {
+      commit(parseDirectDocument(text)); selection.value = ''
+    }
+  }) } }
   catch (e) { error.value = String(e) } finally { input.value = '' }
 }
-function project(p: number[], pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint(p, camera.value).slice(0,2) as Point2 }
+async function importStl(event: Event) {
+  const input = event.target as HTMLInputElement, file = input.files?.[0]
+  try {
+    if (!file) return
+    if (file.size > 20_000_000) throw new Error('STL exceeds 20 MB.')
+    const mesh = stlBufferToPolygonMesh(await file.arrayBuffer())
+    run(() => {
+      const d = history.document
+      const id = crypto.randomUUID()
+      d.bodies.push({ id, name: file.name.replace(/\.stl$/i, '') || 'STL', mesh })
+      commit(d)
+      selection.value = id
+      mode.value = '3d'
+    })
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  finally { input.value = '' }
+}
+function project(p: number[], pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
 function viewBox(pane: Pane) { const size = views.value[pane], center = centers.value[pane]; return `${center[0] - size / 2} ${center[1] - size / 2} ${size} ${size}` }
 function zoom(pane: Pane, factor: number) { views.value[pane] = Math.max(.1, Math.min(2e6, views.value[pane] * factor)) }
 function fit(pane: Pane) {
-  const points = pane === '2d' ? visibleSketches.value.flatMap(s => s.points) : [...document.value.bodies, ...(previewBody.value ? [previewBody.value] : [])].flatMap(bodyPoints)
+  const points = pane === '2d' ? visibleSketches.value.flatMap(s => s.points) : [
+    ...[...document.value.bodies, ...(previewBody.value ? [previewBody.value] : [])].flatMap(bodyPoints),
+    ...(document.value.curves ?? []).flatMap(item => item.curve.controlPoints),
+    ...(document.value.surfaces ?? []).flatMap(item => item.surface.controlPoints.flat()),
+  ]
   if (!points.length) { views.value[pane] = 160; centers.value[pane] = [0, 0]; return }
   const projected = points.map(p => project(p, pane))
   const min = [Infinity, Infinity], max = [-Infinity, -Infinity]
@@ -265,6 +344,19 @@ function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
   })
 }
 const polygons = computed(() => document.value.bodies.flatMap(meshPolygons).sort((a,b)=>a.depth-b.depth))
+const nurbsSurfacePolygons = computed(() => (document.value.surfaces ?? []).flatMap(item => {
+  try { return meshPolygons({ id: item.id, name: item.name, mesh: tessellateSolidNurbsSurface(item) }).sort((a,b)=>a.depth-b.depth) }
+  catch { return [] }
+}))
+const nurbsCurvePaths = computed(() => (document.value.curves ?? []).map(item => ({
+  id: item.id,
+  points: sampleSolidNurbsCurve(item.curve).map(point => project([point[0], point[1], point[2] ?? 0], '3d').join(',')).join(' '),
+})))
+const nativeCage = computed(() => {
+  if (selectedNurbsCurve.value) return selectedNurbsCurve.value.curve.controlPoints.map((point, u) => ({ point, u, v: 0 }))
+  if (selectedNurbsSurface.value) return selectedNurbsSurface.value.surface.controlPoints.flatMap((row, u) => row.map((point, v) => ({ point, u, v })))
+  return []
+})
 const floorLines = computed(() => {
   const step = Math.pow(10, Math.floor(Math.log10(views.value['3d'] / 8))), extent = step * 20
   return Array.from({length:41},(_,i) => (i-20)*step).flatMap(n => [[[-extent,n,0],[extent,n,0]],[[n,-extent,0],[n,extent,0]]]).map(line => line.map(p=>project(p,'3d').join(',')).join(' '))
@@ -437,28 +529,95 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
  }
  const d=history.document;d.bodies.push(body);commit(d);pickObject(id,'3d');fit('3d')
 }) }
+function addNurbs(kind: 'curve'|'surface') { run(() => {
+  const d = history.document, item = kind === 'curve' ? createSolidNurbsCurve() : createSolidNurbsSurface()
+  if (kind === 'curve') d.curves!.push(item as ReturnType<typeof createSolidNurbsCurve>)
+  else d.surfaces!.push(item as ReturnType<typeof createSolidNurbsSurface>)
+  commit(d); pickObject(item.id, '3d'); fit('3d')
+}) }
+function updateCv() { run(() => {
+  const d = history.document, point = [cvX.value, cvY.value, cvZ.value]
+  if (!point.every(Number.isFinite)) throw new Error('CV coordinates must be finite.')
+  const curve = d.curves!.find(item => item.id === selection.value)
+  const surface = d.surfaces!.find(item => item.id === selection.value)
+  if (!Number.isFinite(cvWeight.value) || cvWeight.value <= 0) throw new Error('CV weight must be positive.')
+  if (curve) { curve.curve.controlPoints[cvU.value] = point; curve.curve.weights[cvU.value] = cvWeight.value }
+  else if (surface?.surface.controlPoints[cvU.value]?.[cvV.value]) {
+    surface.surface.controlPoints[cvU.value][cvV.value] = point
+    surface.surface.weights[cvU.value][cvV.value] = cvWeight.value
+  }
+  else return
+  commit(d)
+}) }
+function insertNativeKnot(axis: 'curve'|'u'|'v') { run(() => {
+  const d = history.document, curve = d.curves!.find(item => item.id === selection.value), surface = d.surfaces!.find(item => item.id === selection.value)
+  if (axis === 'curve' && curve) curve.curve = insertNurbsKnot(curve.curve, knotValue.value)
+  else if (surface && axis !== 'curve') surface.surface = insertNurbsSurfaceKnot(surface.surface, axis, knotValue.value)
+  else return
+  commit(d)
+}) }
+function elevateNative(axis: 'curve'|'u'|'v') { run(() => {
+  const d = history.document, curve = d.curves!.find(item => item.id === selection.value), surface = d.surfaces!.find(item => item.id === selection.value)
+  if (axis === 'curve' && curve) curve.curve = elevateNurbsCurve(curve.curve, curve.curve.degree + 1)
+  else if (surface && axis === 'u') surface.surface = elevateNurbsSurface(surface.surface, 'u', surface.surface.degreeU + 1)
+  else if (surface && axis === 'v') surface.surface = elevateNurbsSurface(surface.surface, 'v', surface.surface.degreeV + 1)
+  else return
+  commit(d)
+}) }
+function curveToSurface() { run(() => {
+  if (!selectedNurbsCurve.value) return
+  const d = history.document, source = d.curves!.find(item => item.id === selection.value)!
+  const item = { id: crypto.randomUUID(), name: `${source.name} · extrude`, surface: extrudeNurbsCurve(source.curve, [0,0,10]), segmentsU: 16, segmentsV: 8 }
+  d.surfaces!.push(item); commit(d); pickObject(item.id, '3d'); fit('3d')
+}) }
+function extractIso(axis: 'u'|'v') { run(() => {
+  if (!selectedNurbsSurface.value) return
+  const d = history.document, source = d.surfaces!.find(item => item.id === selection.value)!
+  const item = { id: crypto.randomUUID(), name: `${source.name} · iso ${axis.toUpperCase()}`, curve: isoNurbsCurve(source.surface, axis, knotValue.value) }
+  d.curves!.push(item); commit(d); pickObject(item.id, '3d')
+}) }
+function bakeNurbs() { run(() => {
+  const d = history.document
+  if (selectedNurbsSurface.value) {
+    const source = d.surfaces!.find(item => item.id === selection.value)!
+    const id = crypto.randomUUID()
+    d.bodies.push({ id, name: `${source.name} · baked mesh`, mesh: tessellateSolidNurbsSurface(source) })
+    commit(d); pickObject(id, '3d')
+  } else if (selectedNurbsCurve.value) {
+    const source = d.curves!.find(item => item.id === selection.value)!
+    const sketch = nurbsCurveToSketch(source)
+    d.sketches.push(sketch); commit(d); pickObject(sketch.id, '2d'); fit('2d')
+  }
+}) }
 </script>
 <template>
-  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Прямое моделирование', 'Direct modeling')" @keydown.stop="keydown">
+  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown">
     <header class="workspace-bar">
-      <button class="back" @click="emit('close')">← {{ label('Редактор', 'Editor') }}</button>
-      <strong>{{ label('Прямое моделирование', 'Direct modeling') }}</strong>
+      <button class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
+      <strong>{{ label('Solid', 'Solid') }}</strong>
+      <span class="subtle">{{ label('Plasticity-like CAD', 'Plasticity-like CAD') }}</span>
       <div class="history-tools"><button :disabled="!undoable" @click="undo()" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')">↶</button><button :disabled="!redoable" @click="undo(true)" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')">↷</button></div>
       <button @click="showHelp = !showHelp" title="Keyboard shortcuts">?</button>
       <span class="save-status" role="status">{{ saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser') }}</span>
       <details class="file-menu"><summary>{{ label('Файл', 'File') }} ▾</summary><div>
-        <button @click="download(JSON.stringify(document), 'direct-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
-        <label class="file-open">{{ label('Открыть проект', 'Open project') }}<input type="file" accept=".json" @change="importFile"></label>
-        <button :disabled="!document.bodies.length" @click="download(directBodiesScad(document), 'direct-bodies.scad')">{{ label('Экспорт SCAD', 'Export SCAD') }}</button>
-        <button :disabled="!document.bodies.length || !canAppend" @click="appendBodies">{{ embedded ? label('Применить к коду', 'Apply to code') : label('Добавить в основную сцену', 'Add to main scene') }}</button>
+        <button @click="download(JSON.stringify(document), 'solid-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
+        <button type="button" @click="stlInput?.click()">{{ label('Импорт STL как тело', 'Import STL as body') }}</button>
+        <input ref="stlInput" type="file" accept=".stl,model/stl" hidden @change="importStl" />
+        <button :disabled="!document.bodies.length" @click="download(directBodiesScad(document), 'solid-bodies.scad')">{{ label('Экспорт SCAD (bake)', 'Export SCAD (bake)') }}</button>
+        <button :disabled="!document.bodies.length || !canAppend" @click="appendBodies">{{ embedded ? label('Bake в код', 'Bake into code') : label('Bake в Code (append)', 'Bake into Code (append)') }}</button>
+        <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
       </div></details>
     </header>
     <div class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
       <button v-for="kind in primitiveKinds" :key="kind" @click="addPrimitive(kind)">{{ primitiveLabel(kind) }}</button>
+      <button @click="addNurbs('curve')">+ {{ label('NURBS-кривая','NURBS curve') }}</button>
+      <button @click="addNurbs('surface')">+ {{ label('NURBS-поверхность','NURBS surface') }}</button>
       <label>{{ label('Размер, мм','Size, mm') }} <input v-model.number="primitiveSize" type="number" min="0.1" max="10000" /></label>
-      <button v-if="embedded" :disabled="!canAppend" @click="appendBodies">{{ label('Применить к коду','Apply to code') }}</button>
-      <span v-if="embedded" class="subtle">{{ label('Результат заменит код телами polyhedron.','Result replaces code with polyhedron bodies.') }}</span>
+      <button type="button" @click="stlInput?.click()">STL</button>
+      <button v-if="embedded" :disabled="!canAppend" @click="appendBodies">{{ label('Применить в код (bake)','Apply to code') }}</button>
+      <span class="subtle">{{ label('Solid хранит свой документ; bake в .scad — только по кнопке.','Solid keeps its own document; bake to .scad is explicit.') }}</span>
     </div>
     <div ref="splitArea" class="split-workspace" :style="{ '--split': split + '%' }">
       <template v-for="pane in panes" :key="pane">
@@ -504,7 +663,15 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
                 <polyline v-if="draft.length"
  :points="draft.map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               </g>
-              <g v-else><polygon v-for="p in polygons" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="`hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="`hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></g>
+              <g v-else>
+                <polygon v-for="p in polygons" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="`hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="`hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" />
+                <polygon v-for="p in nurbsSurfacePolygons" :key="'surface-'+p.key" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="#77eac5" stroke-opacity=".35" stroke-width=".5" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(p.id,'3d')" />
+                <polyline v-for="curve in nurbsCurvePaths" :key="'curve-'+curve.id" :points="curve.points" fill="none" :stroke="selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(curve.id,'3d')" />
+                <g v-if="selectedNurbs" class="nurbs-cage">
+                  <polyline v-if="selectedNurbsCurve" :points="selectedNurbsCurve.curve.controlPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+                  <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="cvU=cv.u;cvV=cv.v;pickObject(selection,'3d')" />
+                </g>
+              </g>
               <g v-if="pane === '3d' && solidActive" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
               <g v-if="pane === '3d' && extrusionHandle" class="height-handle" @pointerdown.stop="dragHeight">
                 <line :x1="extrusionHandle.base[0]" :y1="extrusionHandle.base[1]" :x2="extrusionHandle.top[0]" :y2="extrusionHandle.top[1]" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" />
@@ -559,6 +726,29 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
               <div><button class="primary" :disabled="!advancedPreview.document" @click="applyAdvanced">{{ label('Готово · Enter','Apply · Enter') }}</button><button @click="advancedOp=null">Esc</button></div>
             </div>
 
+            <div v-if="pane==='3d' && selectedNurbs" class="operation-card nurbs-card">
+              <strong>{{ selectedNurbsCurve ? label('NURBS-кривая · CV','NURBS curve · CV') : label('NURBS-поверхность · CV','NURBS surface · CV') }}</strong>
+              <small>{{ label('Жёлтые точки — рациональная контрольная клетка. Геометрия остаётся NURBS до явного bake.','Yellow points are the rational control cage. Geometry stays NURBS until explicit bake.') }}</small>
+              <label>U / CV <select v-model.number="cvU"><option v-for="(_,i) in (selectedNurbsCurve?.curve.controlPoints ?? selectedNurbsSurface?.surface.controlPoints ?? [])" :key="i" :value="i">{{ i }}</option></select></label>
+              <label v-if="selectedNurbsSurface">V / CV <select v-model.number="cvV"><option v-for="(_,i) in selectedNurbsSurface.surface.controlPoints[cvU] ?? []" :key="i" :value="i">{{ i }}</option></select></label>
+              <label>X <input v-model.number="cvX" type="number" step=".5"></label>
+              <label>Y <input v-model.number="cvY" type="number" step=".5"></label>
+              <label>Z <input v-model.number="cvZ" type="number" step=".5"></label>
+              <label>{{ label('Вес','Weight') }} <input v-model.number="cvWeight" type="number" min=".000001" step=".1"></label>
+              <button class="primary" @click="updateCv">{{ label('Применить CV','Apply CV') }}</button>
+              <label>{{ label('Параметр узла / iso','Knot / iso parameter') }} <input v-model.number="knotValue" type="number" step=".1"></label>
+              <div v-if="selectedNurbsCurve"><button @click="insertNativeKnot('curve')">Insert knot</button><button @click="elevateNative('curve')">Degree +1</button></div>
+              <template v-if="selectedNurbsSurface">
+                <div><button @click="insertNativeKnot('u')">Knot U</button><button @click="insertNativeKnot('v')">Knot V</button></div>
+                <div><button @click="elevateNative('u')">Degree U +1</button><button @click="elevateNative('v')">Degree V +1</button></div>
+                <div><button @click="extractIso('u')">Iso U</button><button @click="extractIso('v')">Iso V</button></div>
+                <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commit(document)"></label>
+                <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commit(document)"></label>
+              </template>
+              <button v-if="selectedNurbsCurve" @click="curveToSurface">{{ label('Выдавить NURBS 10 мм','Extrude NURBS 10 mm') }}</button>
+              <button @click="bakeNurbs">{{ selectedNurbsSurface ? label('Bake поверхности в mesh-тело','Bake surface to mesh body') : label('Копировать sampled-кривую в эскиз','Copy sampled curve to sketch') }}</button>
+            </div>
+
             <div v-if="pane === '2d' && cornerActive" class="operation-card">
               <strong>{{ operation === 'fillet' ? label('Скругление', 'Fillet') : 'DogEar' }}</strong>
               <small>{{ label('Нажмите вершину контура для выбора угла.', 'Click a contour vertex to choose a corner.') }}</small>
@@ -595,14 +785,14 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
             <div v-if="pane === '3d' && !document.bodies.length && !solidActive" class="empty-hint"><strong>{{ label('Здесь появится объём', 'Your solid appears here') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
           </div>
-          <div class="object-strip"><span>{{ pane === '2d' ? label('Эскизы', 'Sketches') : label('Тела', 'Bodies') }}</span><button v-for="item in (pane === '2d' ? document.sketches : document.bodies)" :key="item.id" :aria-pressed="selectedIds.includes(item.id)" @click="pickObject(item.id,pane,$event.shiftKey)">{{ item.name }}</button></div>
+          <div class="object-strip"><span>{{ pane === '2d' ? label('Эскизы', 'Sketches') : label('Тела · NURBS', 'Bodies · NURBS') }}</span><button v-for="item in (pane === '2d' ? document.sketches : [...document.bodies,...(document.curves ?? []),...(document.surfaces ?? [])])" :key="item.id" :aria-pressed="selectedIds.includes(item.id)" @click="pickObject(item.id,pane,$event.shiftKey)">{{ item.name }}</button></div>
         </section>
       </template>
     </div>
     <footer class="context-bar">
       <template v-if="tool === 'polyline' && draft.length"><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
-      <template v-else-if="selectedSketch || selectedBody">
-        <strong>{{ selectedIds.length>1 ? label('Выбрано: ','Selected: ')+selectedIds.length : selectedSketch?.name || selectedBody?.name }}</strong>
+      <template v-else-if="selectedSketch || selectedBody || selectedNurbs">
+        <strong>{{ selectedIds.length>1 ? label('Выбрано: ','Selected: ')+selectedIds.length : selectedSketch?.name || selectedBody?.name || selectedNurbs?.name }}</strong>
         <button v-if="selectedBody && selectedFace" @click="beginAdvanced('push')">Push / Pull</button>
         <button v-if="selectedBody && selectedFace" @click="faceSketch">{{ label('Эскиз на грани','Sketch on face') }}</button>
         <button v-if="selectedBody && selectedFace" @click="beginAdvanced('shell')">Shell</button>
@@ -612,13 +802,13 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
         <button v-if="selectedSketch?.analytic" @click="beginAdvanced('curve')">{{ label('Параметры кривой','Curve parameters') }}</button>
         <button v-if="selectedSketch && (selectedSketch.closed||selectedSketch.analytic)" @click="beginAdvanced('offset')">Offset</button>
         <button v-if="selectedSketch && !selectedSketch.closed && !selectedSketch.analytic" @click="beginAdvanced('extend')">{{ label('Продлить','Extend') }}</button>
-        <button @click="beginAdvanced('transform')">{{ label('Преобразовать выбор','Transform selection') }}</button>
+        <button v-if="!selectedNurbs" @click="beginAdvanced('transform')">{{ label('Преобразовать выбор','Transform selection') }}</button>
         <button v-if="selectedSketch" class="primary" :disabled="!selectedSketch.closed" @click="beginExtrude()">{{ label('Выдавить · E', 'Extrude · E') }}</button>
         <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginExtrude('revolve')">{{ label('Вращение', 'Revolve') }}</button>
         <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('fillet')">{{ label('Скруглить', 'Fillet') }}</button>
         <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('dogear')">DogEar</button>
-        <button v-if="selectedSketch" @click="advancedOp=null; operation = operation === 'array' ? null : 'array'">{{ label('Круговые копии', 'Circular copies') }}</button><button @click="duplicate">{{ label('Копия · ⌘/Ctrl D', 'Duplicate · ⌘/Ctrl D') }}</button>
-        <details class="transform-menu"><summary>{{ label('Точные преобразования', 'Exact transforms') }}</summary><div>
+        <button v-if="selectedSketch" @click="advancedOp=null; operation = operation === 'array' ? null : 'array'">{{ label('Круговые копии', 'Circular copies') }}</button><button v-if="!selectedNurbs" @click="duplicate">{{ label('Копия · ⌘/Ctrl D', 'Duplicate · ⌘/Ctrl D') }}</button>
+        <details v-if="!selectedNurbs" class="transform-menu"><summary>{{ label('Точные преобразования', 'Exact transforms') }}</summary><div>
           <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
           <label>↻ <input v-model.number="angle" type="number" :aria-label="label('Поворот Z', 'Z rotation')">°</label><label>× <input v-model.number="scale" type="number" min=".001" step=".1" :aria-label="label('Масштаб', 'Scale')"></label><button @click="transform">{{ label('Применить', 'Apply') }}</button>
         </div></details><button class="delete" @click="remove">{{ label('Удалить', 'Delete') }}</button>
@@ -632,6 +822,7 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
 <style scoped>
 .direct-workspace{position:fixed;inset:44px 0 0;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;color:var(--text-dim);font-size:12px}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{width:100%;height:100%;display:block;touch-action:none;outline:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.object-strip{min-height:47px;max-height:90px;overflow:auto;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface)}.object-strip>span{font-size:11px;color:var(--text-dim);margin-right:5px}.object-strip button{font-size:12px;padding:4px 8px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}@media(max-width:750px){.direct-workspace{inset:0}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
 .hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
+.nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:pointer}
 </style>
 
 <style scoped>
