@@ -145,7 +145,49 @@ fn plane_basis(normal: [f64; 3]) -> Result<([f64; 3], [f64; 3])> {
     Ok((u, cross(normal, u)))
 }
 
-fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<Model> {
+fn point_on_segment(point: [f64; 3], a: [f64; 3], b: [f64; 3], tolerance: f64) -> Option<f64> {
+    let ab = sub(b, a);
+    let length_squared = dot(ab, ab);
+    if length_squared <= tolerance * tolerance {
+        return None;
+    }
+    let t = dot(sub(point, a), ab) / length_squared;
+    (t > tolerance && t < 1. - tolerance)
+        .then(|| norm(sub(point, add(a, mul(ab, t)))) <= tolerance)
+        .unwrap_or(false)
+        .then_some(t)
+}
+
+/// Split polygon edges at every collinear result vertex. Face clipping creates
+/// T-junctions unless neighboring polygons agree on these authored edge spans.
+fn normalize_polygon_edges(polygons: &mut [Vec<[f64; 3]>], tolerance: f64) {
+    let points: Vec<_> = polygons.iter().flatten().copied().collect();
+    for polygon in polygons {
+        let mut normalized = vec![];
+        for i in 0..polygon.len() {
+            let a = polygon[i];
+            let b = polygon[(i + 1) % polygon.len()];
+            normalized.push(a);
+            let mut splits: Vec<_> = points
+                .iter()
+                .copied()
+                .filter_map(|point| {
+                    point_on_segment(point, a, b, tolerance * 4.).map(|t| (t, point))
+                })
+                .collect();
+            splits.sort_by(|left, right| left.0.total_cmp(&right.0));
+            for (_, point) in splits {
+                if !close(*normalized.last().unwrap(), point, tolerance * 4.) {
+                    normalized.push(point);
+                }
+            }
+        }
+        *polygon = normalized;
+    }
+}
+
+fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<Model> {
+    normalize_polygon_edges(&mut polygons, tolerance);
     if polygons.len() > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
@@ -445,6 +487,79 @@ pub fn extrude_polygon(profile: &[[f64; 2]], z_min: f64, z_max: f64) -> Result<M
     model_from_polygons(polygons, tolerance)
 }
 
+/// Construct a declared faceted cylindrical B-rep with planar side faces.
+pub fn faceted_cylinder(radius: f64, height: f64, segments: usize) -> Result<Model> {
+    if !radius.is_finite() || !height.is_finite() || radius < 0.01 || height < 0.01 {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Faceted cylinder radius and height must be at least 0.01 mm",
+        ));
+    }
+    if !(3..=128).contains(&segments) {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Faceted cylinder segments must be 3..128",
+        ));
+    }
+    let profile: Vec<_> = (0..segments)
+        .map(|i| {
+            let angle = std::f64::consts::TAU * i as f64 / segments as f64;
+            [radius * angle.cos(), radius * angle.sin()]
+        })
+        .collect();
+    extrude_polygon(&profile, 0., height)
+}
+
+/// Construct an honest faceted sphere: every patch is a planar B-rep face.
+pub fn faceted_sphere(
+    radius: f64,
+    radial_segments: usize,
+    latitude_segments: usize,
+) -> Result<Model> {
+    if !radius.is_finite() || radius < 0.01 {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Faceted sphere radius must be at least 0.01 mm",
+        ));
+    }
+    if !(3..=32).contains(&radial_segments) || !(2..=16).contains(&latitude_segments) {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Faceted sphere segments must be radial 3..32 and latitude 2..16",
+        ));
+    }
+    let ring = |latitude: usize, radial: usize| {
+        let phi = std::f64::consts::PI * latitude as f64 / latitude_segments as f64;
+        let theta = std::f64::consts::TAU * radial as f64 / radial_segments as f64;
+        [
+            radius * phi.sin() * theta.cos(),
+            radius * phi.sin() * theta.sin(),
+            radius * phi.cos(),
+        ]
+    };
+    let mut polygons = vec![];
+    let top = [0., 0., radius];
+    let bottom = [0., 0., -radius];
+    for radial in 0..radial_segments {
+        let next = (radial + 1) % radial_segments;
+        polygons.push(vec![top, ring(1, radial), ring(1, next)]);
+        for latitude in 1..latitude_segments - 1 {
+            let a = ring(latitude, radial);
+            let b = ring(latitude + 1, radial);
+            let c = ring(latitude + 1, next);
+            let d = ring(latitude, next);
+            polygons.push(vec![a, b, c]);
+            polygons.push(vec![a, c, d]);
+        }
+        polygons.push(vec![
+            bottom,
+            ring(latitude_segments - 1, next),
+            ring(latitude_segments - 1, radial),
+        ]);
+    }
+    model_from_polygons(polygons, 1e-7)
+}
+
 fn model_from_planes(planes: &[Plane], tolerance: f64) -> Result<Model> {
     let mut unique = Vec::<Plane>::new();
     for &plane in planes {
@@ -519,30 +634,143 @@ fn model_from_planes(planes: &[Plane], tolerance: f64) -> Result<Model> {
     model_from_polygons(polygons, tolerance)
 }
 
+fn split_polygon(
+    polygon: &[[f64; 3]],
+    plane: Plane,
+    tolerance: f64,
+) -> (Vec<[f64; 3]>, Vec<[f64; 3]>) {
+    let mut inside = vec![];
+    let mut outside = vec![];
+    for i in 0..polygon.len() {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % polygon.len()];
+        let da = dot(plane.normal, a) - plane.offset;
+        let db = dot(plane.normal, b) - plane.offset;
+        let a_inside = da <= tolerance;
+        let b_inside = db <= tolerance;
+        (if a_inside { &mut inside } else { &mut outside }).push(a);
+        if a_inside != b_inside {
+            let point = add(a, mul(sub(b, a), da / (da - db)));
+            inside.push(point);
+            outside.push(point);
+        }
+    }
+    let clean = |mut polygon: Vec<[f64; 3]>| {
+        polygon.dedup_by(|a, b| close(*a, *b, tolerance));
+        if polygon.len() > 1 && close(polygon[0], *polygon.last().unwrap(), tolerance) {
+            polygon.pop();
+        }
+        if polygon.len() < 3 { vec![] } else { polygon }
+    };
+    (clean(inside), clean(outside))
+}
+
+fn partition_polygon(
+    polygon: Vec<[f64; 3]>,
+    planes: &[Plane],
+    tolerance: f64,
+) -> (Vec<Vec<[f64; 3]>>, Vec<[f64; 3]>) {
+    let mut active = polygon;
+    let mut outside = vec![];
+    for &plane in planes {
+        if active.is_empty() {
+            break;
+        }
+        let (inside, fragment) = split_polygon(&active, plane, tolerance * 8.);
+        if !fragment.is_empty() {
+            outside.push(fragment);
+        }
+        active = inside;
+    }
+    (outside, active)
+}
+
+fn convex_boundary(model: &Model) -> Result<(Vec<Plane>, Vec<Vec<[f64; 3]>>)> {
+    let planes = convex_planes(model)?;
+    let shell = &model.shells[model.bodies[0].outer_shell];
+    let polygons = shell
+        .faces
+        .iter()
+        .map(|face_use| {
+            let mut ids = loop_vertices(model, model.faces[face_use.face].outer)?;
+            if face_use.reversed {
+                ids.reverse();
+            }
+            Ok(ids
+                .into_iter()
+                .map(|vertex| model.vertices[vertex].point)
+                .collect())
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok((planes, polygons))
+}
+
+fn convex_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    let tolerance = a.tolerance_mm.max(b.tolerance_mm);
+    let (a_planes, a_faces) = convex_boundary(a)?;
+    let (b_planes, b_faces) = convex_boundary(b)?;
+    if operation == "intersection" {
+        let mut planes = a_planes;
+        planes.extend(b_planes);
+        return model_from_planes(&planes, tolerance);
+    }
+    let shared_support = |plane: Plane, others: &[Plane]| {
+        others.iter().any(|other| {
+            dot(plane.normal, other.normal) > 1. - 1e-9
+                && (plane.offset - other.offset).abs() <= tolerance * 8.
+        })
+    };
+    let mut polygons = vec![];
+    for (face, &plane) in a_faces.into_iter().zip(&a_planes) {
+        let (outside, inside) = partition_polygon(face, &b_planes, tolerance);
+        polygons.extend(outside);
+        // On a shared outward support, one operand must author the overlap.
+        if operation == "union" && shared_support(plane, &b_planes) && !inside.is_empty() {
+            polygons.push(inside);
+        }
+    }
+    for (mut face, &plane) in b_faces.into_iter().zip(&b_planes) {
+        if operation == "union" {
+            let (outside, _) = partition_polygon(face, &a_planes, tolerance);
+            polygons.extend(outside);
+        } else {
+            let (_, inside) = partition_polygon(face, &a_planes, tolerance);
+            if !inside.is_empty() && !shared_support(plane, &a_planes) {
+                face = inside;
+                face.reverse();
+                polygons.push(face);
+            }
+        }
+    }
+    if polygons.is_empty() {
+        return Err(unsupported(
+            "Boolean result is empty; empty B-rep bodies are not represented",
+        ));
+    }
+    model_from_polygons(polygons, tolerance)
+}
+
 fn orthogonal(model: &Model) -> Result<()> {
     model.validate()?;
     if model.bodies.is_empty()
-        || model
-            .bodies
-            .iter()
-            .any(|body| !body.inner_shells.is_empty())
-        || model
-            .bodies
-            .iter()
-            .any(|body| !model.shells[body.outer_shell].closed)
+        || model.bodies.iter().any(|body| {
+            std::iter::once(&body.outer_shell)
+                .chain(&body.inner_shells)
+                .any(|shell| !model.shells[*shell].closed)
+        })
     {
-        return Err(unsupported(
-            "Boolean operands require closed bodies without cavities",
-        ));
+        return Err(unsupported("Boolean operands require closed bodies"));
     }
     for body in &model.bodies {
-        for face_use in &model.shells[body.outer_shell].faces {
-            let plane = face_plane(model, face_use.face)?;
-            let axis = plane.normal.iter().filter(|v| v.abs() > 1. - 1e-8).count();
-            if axis != 1 {
-                return Err(unsupported(
-                    "Boolean operands must have axis-aligned planar faces",
-                ));
+        for shell in std::iter::once(&body.outer_shell).chain(&body.inner_shells) {
+            for face_use in &model.shells[*shell].faces {
+                let plane = face_plane(model, face_use.face)?;
+                let axis = plane.normal.iter().filter(|v| v.abs() > 1. - 1e-8).count();
+                if axis != 1 {
+                    return Err(unsupported(
+                        "Boolean operands must have axis-aligned planar faces",
+                    ));
+                }
             }
         }
     }
@@ -637,17 +865,16 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
             "Boolean operation must be union, difference, or intersection",
         ));
     }
-    // Convex planar intersection is exactly the intersection of both sets of
-    // outward half-spaces, independent of face orientation in world axes.
-    if operation == "intersection"
-        && a.bodies.len() == 1
+    // Convex planar CSG is built directly from clipped boundary polygons,
+    // independent of face orientation in world axes.
+    if a.bodies.len() == 1
         && b.bodies.len() == 1
         && a.bodies[0].inner_shells.is_empty()
         && b.bodies[0].inner_shells.is_empty()
+        && (orthogonal(a).is_err() || orthogonal(b).is_err())
     {
-        if let (Ok(mut planes), Ok(other)) = (convex_planes(a), convex_planes(b)) {
-            planes.extend(other);
-            return model_from_planes(&planes, a.tolerance_mm.max(b.tolerance_mm)).map_err(|e| {
+        if convex_planes(a).is_ok() && convex_planes(b).is_ok() {
+            return convex_boolean(a, b, operation).map_err(|e| {
                 if e.code == OPERATION_FAILED {
                     unsupported("Boolean result is empty or dimensionally collapsed")
                 } else {
@@ -978,7 +1205,7 @@ mod tests {
         for operation in ["union", "difference", "intersection"] {
             let result = boolean(&a, &b, operation).unwrap();
             assert!(result.validate().unwrap().boundary_edge_count == 0);
-            assert_eq!(result.bodies.len(), 1);
+            assert_eq!(result.bodies.len(), 1, "{operation}");
         }
         assert_eq!(
             bounds(&boolean(&a, &b, "union").unwrap()),
@@ -1004,16 +1231,32 @@ mod tests {
     }
 
     #[test]
-    fn rotated_convex_planar_intersection_uses_exact_halfspaces() {
+    fn rotated_convex_planar_booleans_use_clipped_boundaries() {
         let a = cuboid([-2., -2., -1.], [2., 2., 1.]).unwrap();
         let mut b = cuboid([-2., -1., -1.], [2., 1., 1.]).unwrap();
         rotate_z(&mut b, std::f64::consts::FRAC_PI_4);
         b.validate().unwrap();
-        let result = boolean(&a, &b, "intersection").unwrap();
-        assert_eq!(result.bodies.len(), 1);
-        assert!(result.faces.len() >= 8);
-        result.validate().unwrap();
-        assert_eq!(boolean(&a, &b, "union").unwrap_err().code, UNSUPPORTED);
+        for operation in ["union", "difference", "intersection"] {
+            let result = boolean(&a, &b, operation).unwrap();
+            assert_eq!(
+                result.bodies.len(),
+                if operation == "difference" { 4 } else { 1 },
+                "{operation}"
+            );
+            assert!(result.faces.len() >= 8);
+            assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+        }
+    }
+
+    #[test]
+    fn faceted_round_primitives_are_labeled_topological_solids() {
+        let cylinder = faceted_cylinder(2., 5., 16).unwrap();
+        assert_eq!((cylinder.faces.len(), cylinder.bodies.len()), (18, 1));
+        assert_eq!(cylinder.validate().unwrap().boundary_edge_count, 0);
+
+        let sphere = faceted_sphere(2., 16, 8).unwrap();
+        assert_eq!((sphere.faces.len(), sphere.bodies.len()), (224, 1));
+        assert_eq!(sphere.validate().unwrap().boundary_edge_count, 0);
     }
 
     #[test]
@@ -1030,7 +1273,7 @@ mod tests {
     }
 
     #[test]
-    fn enclosed_difference_builds_an_inner_shell_and_then_fails_closed_as_operand() {
+    fn enclosed_difference_builds_an_inner_shell_and_remains_a_boolean_operand() {
         let outer = cuboid([0.; 3], [4.; 3]).unwrap();
         let inner = cuboid([1.; 3], [3.; 3]).unwrap();
         let cavity = boolean(&outer, &inner, "difference").unwrap();
@@ -1038,10 +1281,19 @@ mod tests {
         assert_eq!(cavity.shells.len(), 2);
         assert_eq!(cavity.bodies[0].inner_shells.len(), 1);
         cavity.validate().unwrap();
-        assert_eq!(
-            boolean(&cavity, &inner, "union").unwrap_err().code,
-            UNSUPPORTED
-        );
+        let filled = boolean(&cavity, &inner, "union").unwrap();
+        assert!(filled.bodies[0].inner_shells.is_empty());
+        assert_eq!(bounds(&filled), ([0.; 3], [4.; 3]));
+        filled.validate().unwrap();
+
+        let untouched = boolean(
+            &cavity,
+            &cuboid([1.25; 3], [2.75; 3]).unwrap(),
+            "difference",
+        )
+        .unwrap();
+        assert_eq!(untouched.bodies[0].inner_shells.len(), 1);
+        untouched.validate().unwrap();
     }
 
     #[test]
@@ -1083,6 +1335,20 @@ mod tests {
             (6, 9, 5, 1)
         );
         wedge.validate().unwrap();
+        let slanted = wedge
+            .edges
+            .iter()
+            .position(|edge| {
+                let a = wedge.vertices[edge.vertices[0]].point;
+                let b = wedge.vertices[edge.vertices[1]].point;
+                (a[0] - b[0]).abs() > 1e-6 && (a[1] - b[1]).abs() > 1e-6
+            })
+            .unwrap();
+        chamfer(&wedge, slanted, 0.25).unwrap().validate().unwrap();
+        fillet(&wedge, slanted, 0.25, 6)
+            .unwrap()
+            .validate()
+            .unwrap();
 
         let model = cuboid([0.; 3], [10.; 3]).unwrap();
         let connected = model.edges[0]

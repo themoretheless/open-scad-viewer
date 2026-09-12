@@ -116,6 +116,8 @@ it('creates closed primitives with undo in the embedded main scene editor',async
  }
  expect(ui.doc().bodies).toHaveLength(5)
  expect(ui.doc().bodies.find(body=>body.name.startsWith('Wedge'))?.brep?.faces).toHaveLength(5)
+ expect(ui.doc().bodies.find(body=>body.name.startsWith('Cylinder'))?.brep?.faces).toHaveLength(50)
+ expect(ui.doc().bodies.find(body=>body.name.startsWith('Sphere'))?.brep?.faces).toHaveLength(224)
  await ui.click('↶');expect(ui.doc().bodies).toHaveLength(4)
  await ui.click('Apply to code');expect(emitted).toHaveLength(1);expect(emitted[0].match(/polyhedron\(/g)).toHaveLength(4)
 })

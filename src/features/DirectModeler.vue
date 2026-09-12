@@ -13,7 +13,7 @@ import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, 
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
-import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, extrudeBrepPolygon, filletNurbsBrepEdges, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
+import { booleanNurbsBrep, chamferNurbsBrepEdges, createBrepBox, createFacetedBrepCylinder, createFacetedBrepSphere, extrudeBrepPolygon, filletNurbsBrepEdges, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
 const ru = computed(() => props.locale === 'ru')
@@ -582,10 +582,12 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
   body=extrudeDirectSketch({id:crypto.randomUUID(),name,points,closed:true},size,id)
   if(kind==='box'){const brep=createBrepBox([-r,-r,0],[r,r,size]);body=bodyFromBrep(body,brep)}
   if(kind==='wedge')body=bodyFromBrep(body,extrudeBrepPolygon(points,-0,size))
+  if(kind==='cylinder'){body=bodyFromBrep(body,createFacetedBrepCylinder(r,size,48));body.name+=` · ${label('гранёный B-rep','faceted B-rep')}`}
  } else {
   const profile=kind==='cone'?[[0,0],[r,0],[0,size]]:Array.from({length:25},(_,i)=>i===0?[0,-r]:i===24?[0,r]:[r*Math.sin(i*Math.PI/24),-r*Math.cos(i*Math.PI/24)])
   const mesh=revolvePolygonProfile(profile,360,48,true)
   body={id,name,mesh:{positions:[...mesh.positions],indices:[...mesh.indices]}}
+  if(kind==='sphere'){body=bodyFromBrep(body,createFacetedBrepSphere(r,16,8));body.name+=` · ${label('гранёный B-rep','faceted B-rep')}`}
  }
  const d=history.document;d.bodies.push(body);commit(d);pickObject(id,'3d');fit('3d')
 }) }

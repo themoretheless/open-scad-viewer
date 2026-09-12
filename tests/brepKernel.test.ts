@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
+import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepSphere,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 import {transformSelection} from '../src/services/directSolidTools'
@@ -33,7 +33,8 @@ it('runs fail-closed booleans and edge treatments on manifold NURBS B-reps',()=>
  const cavity=booleanNurbsBrep(createBrepBox([0,0,0],[4,4,4]),createBrepBox([1,1,1],[3,3,3]),'difference')
  expect(cavity.bodies[0].innerShells).toHaveLength(1)
  expect(tessellateNurbsBrep(cavity,2).report.signedVolumeMm3).toBeCloseTo(56,8)
- expect(()=>booleanNurbsBrep(cavity,a,'union')).toThrow(/cavit/i)
+ const filled=booleanNurbsBrep(cavity,createBrepBox([1,1,1],[3,3,3]),'union')
+ expect(filled.bodies[0].innerShells).toHaveLength(0)
  expect(()=>filletNurbsBrep(a,0,2,8)).toThrow(/smaller|consumes/i)
 })
 it('constructs exact planar-profile B-reps and blends connected edge chains',()=>{
@@ -46,11 +47,19 @@ it('constructs exact planar-profile B-reps and blends connected edge chains',()=
  expect(tessellateNurbsBrep(fillet,2).report.closed).toBe(true)
  expect(()=>extrudeBrepPolygon([[0,0],[2,0],[1,1],[2,2],[0,2]],0,1)).toThrow(/convex/i)
 })
-it('preserves authored B-rep geometry through Solid transforms for rotated intersections',()=>{
+it('preserves authored B-rep geometry through Solid transforms for rotated booleans',()=>{
  const brep=createBrepBox([-2,-1,-1],[2,1,1]),built=tessellateNurbsBrep(brep,1)
  const document=transformSelection({version:1,sketches:[],bodies:[{id:'b',name:'Box',brep,mesh:{positions:built.positions,indices:built.indices}}]},['b'],[0,0,0],[0,0,1],45,1)
  const rotated=document.bodies[0].brep!;expect(inspectNurbsBrep(rotated).topologyValid).toBe(true)
- const result=booleanNurbsBrep(createBrepBox([-2,-2,-1],[2,2,1]),rotated,'intersection')
- expect(result.faces.length).toBeGreaterThanOrEqual(8);expect(tessellateNurbsBrep(result,1).report.closed).toBe(true)
- expect(()=>booleanNurbsBrep(createBrepBox([-2,-2,-1],[2,2,1]),rotated,'union')).toThrow(/axis-aligned/i)
+ const stock=createBrepBox([-2,-2,-1],[2,2,1])
+ for(const operation of ['union','difference','intersection'] as const){
+  const result=booleanNurbsBrep(stock,rotated,operation)
+  expect(result.faces.length).toBeGreaterThanOrEqual(8);expect(tessellateNurbsBrep(result,1).report.closed).toBe(true)
+ }
+})
+it('constructs explicitly faceted round primitives as manifold B-reps',()=>{
+ const cylinder=createFacetedBrepCylinder(2,5,16),sphere=createFacetedBrepSphere(2,16,8)
+ expect(cylinder.faces).toHaveLength(18);expect(sphere.faces).toHaveLength(224)
+ expect(tessellateNurbsBrep(cylinder,1).report.closed).toBe(true)
+ expect(tessellateNurbsBrep(sphere,1).report.closed).toBe(true)
 })

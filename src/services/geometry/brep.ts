@@ -17,6 +17,10 @@ export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_cert
 export interface BrepMesh extends PolygonBuild {faceIds:number[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,zMin,zMax})
+/** Planar-faced B-rep approximation, not an analytic cylinder. */
+export const createFacetedBrepCylinder=(radius:number,height:number,segments=48):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_cylinder',{radius,height,segments})
+/** Planar-faced B-rep approximation, not an analytic sphere. */
+export const createFacetedBrepSphere=(radius:number,radialSegments=16,latitudeSegments=8):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_sphere',{radius,radialSegments,latitudeSegments})
 export type BrepBooleanOperation='union'|'difference'|'intersection'
 export const booleanNurbsBrep=(a:NurbsBrep,b:NurbsBrep,operation:BrepBooleanOperation):NurbsBrep=>callGeometryRust('brep_nurbs_boolean',{a,b,operation})
 export const chamferNurbsBrep=(model:NurbsBrep,edge:number,size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer',{model,edge,size})

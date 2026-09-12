@@ -446,6 +446,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "zMin")?,
             field(&v, "zMax")?,
         )?),
+        "brep_nurbs_faceted_cylinder" => encode(brep_core::faceted_cylinder(
+            field(&v, "radius")?,
+            field(&v, "height")?,
+            field(&v, "segments")?,
+        )?),
+        "brep_nurbs_faceted_sphere" => encode(brep_core::faceted_sphere(
+            field(&v, "radius")?,
+            field(&v, "radialSegments")?,
+            field(&v, "latitudeSegments")?,
+        )?),
         "brep_nurbs_boolean" => encode(brep_core::boolean(
             &field(&v, "a")?,
             &field(&v, "b")?,
