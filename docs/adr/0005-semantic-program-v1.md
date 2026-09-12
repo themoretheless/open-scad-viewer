@@ -1,7 +1,10 @@
 # ADR 0005: SemanticProgram v1 identity, encoding, and execution boundary
 
-- Status: proposed; blocking G0 contract review
-- Date: 2026-08-01
+- Status: accepted
+- Date: 2026-09-12
+- Accepted-by: repository-owner (human authorization in session)
+- Reviewer: repository-owner (solo dual-role attestation; not organizationally independent)
+- Original-date: 2026-08-01
 - Renumbered: 2026-09-12 from colliding `0003-semantic-program-v1.md`
   (ADR 0003 remains the official OpenSCAD MCP oracle decision)
 - Contract: `semantic-program-contract-v1`

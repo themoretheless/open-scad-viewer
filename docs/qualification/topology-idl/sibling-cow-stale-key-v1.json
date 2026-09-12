@@ -1,0 +1,40 @@
+{
+  "schema": "open-scad-viewer/brep-topology-sibling-cow",
+  "schemaVersion": 1,
+  "fixtureId": "sibling-cow-stale-key-v1",
+  "baseFixture": "box-solid-v1.json",
+  "claimBoundary": {
+    "includes": [
+      "Sibling snapshots after COW must not share mutable arena/session keys",
+      "Stale TopoId / snapshot epoch pairs fail closed under LocalTopologyValidator policy"
+    ],
+    "excludes": [
+      "Global solid certification",
+      "Protocol v6 wire encoding of TopoId tables"
+    ]
+  },
+  "cases": [
+    {
+      "id": "sibling-distinct-topo-ids",
+      "kind": "positive",
+      "description": "A COW sibling of the unit box must mint a new solid TopoId while preserving combinatorial ownership.",
+      "parentSolidTopoId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "siblingSolidTopoId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expect": "distinct-solid-topo-ids"
+    },
+    {
+      "id": "stale-key-after-commit",
+      "kind": "negative",
+      "description": "A handle/TopoId captured before commit must not validate against the post-commit sibling snapshot.",
+      "staleSolidTopoId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "liveSolidTopoId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expect": "stale-topo-id-reject"
+    },
+    {
+      "id": "arena-key-never-cow-shared",
+      "kind": "negative",
+      "description": "ArenaKey fields remain forbidden on public IDL even after sibling publication.",
+      "expect": "arena-key-forbidden"
+    }
+  ]
+}

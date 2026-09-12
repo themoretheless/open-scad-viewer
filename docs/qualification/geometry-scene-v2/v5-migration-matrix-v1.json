@@ -1,0 +1,59 @@
+{
+  "schema": "open-scad-viewer/geometry-scene-v2-migration-matrix",
+  "schemaVersion": 1,
+  "matrixId": "v5-migration-matrix-v1",
+  "recordedAt": "2026-09-12",
+  "notes": [
+    "Live Worker already uses protocolVersion integer 6 with MeshData[] success payloads.",
+    "GeometryScene v1 remains the App scene model.",
+    "GeometrySceneV2 is the future publication root; activation is G4a, not G0."
+  ],
+  "rows": [
+    {
+      "id": "meshdata-array-to-scene-v2",
+      "source": {
+        "protocolVersion": 6,
+        "payload": "GeometryBuildSuccess.meshes: MeshData[]"
+      },
+      "target": {
+        "protocolVersion": 6,
+        "payload": "GeometrySceneV2"
+      },
+      "rule": "Each MeshData becomes one occurrence + shared/unique MeshDataV2 asset; inspection tables move into evidence/diagnostics; inventing TopologySnapshotId from mesh bytes is forbidden.",
+      "activation": "G4a"
+    },
+    {
+      "id": "geometry-scene-v1-projection",
+      "source": { "type": "GeometrySceneV2" },
+      "target": { "type": "GeometryScene", "version": 1 },
+      "rule": "Transitional renderer adapter may project assets/entities; must drop topologySnapshotId claims rather than forge GeometryScene v1 topology evidence.",
+      "activation": "G4a-adapter"
+    },
+    {
+      "id": "export-current-snapshot",
+      "source": {
+        "request": "build",
+        "discriminant": "ExportCurrentSnapshot",
+        "value": "TopologySnapshotId"
+      },
+      "target": { "terminal": "succeeded|failed typed" },
+      "rule": "Export carries TopologySnapshotId value identity, never a serializable SnapshotHandle.",
+      "activation": "G4a"
+    },
+    {
+      "id": "reject-silent-v1-widening",
+      "source": { "type": "GeometryScene", "version": 1 },
+      "target": { "type": "GeometrySceneV2" },
+      "rule": "Fail closed: v1 scenes cannot be widened into GeometrySceneV2 with fabricated kernelFingerprint or TopologySnapshotId.",
+      "activation": "always",
+      "expect": "fail-closed"
+    },
+    {
+      "id": "fullEquivalent-check",
+      "source": { "fields": ["fullEquivalent", "reduced"] },
+      "target": { "invariant": "fullEquivalent === !reduced" },
+      "rule": "Adapter verifies the invariant; must not store two independent booleans as separate truths.",
+      "activation": "always"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "schema": "open-scad-viewer/resource-security-supervisor",
+  "schemaVersion": 1,
+  "policyId": "resource-security-supervisor-v1",
+  "recordedAt": "2026-09-12",
+  "contract": "resource-security-supervisor-v1",
+  "limitLattice": {
+    "hard": "host-trusted HardLimits",
+    "requested": "document/request RequestedLimits; may only shrink",
+    "effective": "fieldwise min(Hard, Requested); enters cache keys and reports"
+  },
+  "dimensions": [
+    "input_decoded_bytes",
+    "compression_ratio",
+    "arena_entities",
+    "topology_incidence",
+    "history_size",
+    "bvh_candidate_queue",
+    "subdivision_depth",
+    "solver_iterations",
+    "generated_faces_edges_triangles",
+    "diagnostics_witness_bytes",
+    "scratch_committed_wasm_high_water",
+    "queue_depth_per_engine_class",
+    "inflight_jobs_per_engine_class"
+  ],
+  "terminals": {
+    "Cancelled": "cooperative cancel observed at step boundary",
+    "DeadlineExceeded": "watchdog; no late success",
+    "KernelFault": "trap/hard-kill; Worker replaced; Coordinator synthesizes terminal",
+    "ResourceLimit": "admission refused before start"
+  },
+  "fixtures": [
+    {
+      "id": "cooperative-cancel",
+      "signal": "cancel",
+      "expectTerminal": "Cancelled",
+      "lateSuccess": false
+    },
+    {
+      "id": "watchdog-deadline",
+      "signal": "deadline",
+      "expectTerminal": "DeadlineExceeded",
+      "lateSuccess": false
+    },
+    {
+      "id": "hard-kill-replace-worker",
+      "signal": "hard-kill",
+      "expectTerminal": "KernelFault",
+      "lateSuccess": false,
+      "replaceWorker": true
+    },
+    {
+      "id": "superseded-latest-only",
+      "signal": "superseded",
+      "expectTerminal": "Cancelled",
+      "reason": "superseded",
+      "lateSuccess": false
+    },
+    {
+      "id": "queue-overload",
+      "signal": "queue-full",
+      "expectTerminal": "ResourceLimit",
+      "startWork": false
+    }
+  ],
+  "supervisorTarget": {
+    "mainProcess": ["stdio", "admission", "duckdb", "quota-tables"],
+    "child": ["evaluation-only"],
+    "childForbidden": ["network", "arbitrary-filesystem", "secrets"],
+    "napi": "requires-separate-isolation-review",
+    "retry": "same-engine-only"
+  },
+  "nonGoals": [
+    "Ship MCP supervisor under G0",
+    "Change in-process Manifold MCP behavior under this policy alone"
+  ]
+}

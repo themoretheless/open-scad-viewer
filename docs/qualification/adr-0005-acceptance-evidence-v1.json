@@ -1,0 +1,70 @@
+{
+  "schema": "open-scad-viewer/adr-0005-acceptance-evidence",
+  "schemaVersion": 1,
+  "evidenceId": "adr-0005-acceptance-evidence-v1",
+  "recordedAt": "2026-09-12",
+  "adr": "docs/adr/0005-semantic-program-v1.md",
+  "acceptedBy": "repository-owner",
+  "reviewer": "repository-owner",
+  "dualRoleAttestation": "Solo maintainer dual-role; not organizationally independent.",
+  "gates": [
+    {
+      "id": "shadow-adapter-source-to-event",
+      "status": "closed",
+      "claim": "Independent frozen source-to-event evidence for Manifold-plan shadow path without treating discovery-only parity as sufficient.",
+      "evidence": [
+        {
+          "kind": "frozen-event-trace",
+          "path": "docs/qualification/adr-0005-shadow-adapter-traces-v1.json"
+        },
+        {
+          "kind": "test",
+          "path": "tests/adr0005AcceptanceEvidence.test.ts"
+        },
+        {
+          "kind": "parity-discovery",
+          "path": "tests/manifoldPlanBackend.test.ts",
+          "role": "non-authoritative-discovery"
+        }
+      ]
+    },
+    {
+      "id": "worker-identity-256-257",
+      "status": "closed",
+      "claim": "Exact 256-code-unit identities publish; 257 fails before success transfer; healthy follow-on job recovers on the same Worker.",
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "tests/geometryWorker.test.ts",
+          "cases": [
+            "publishes exact 256-code-unit entity, operation, and instance identities",
+            "fails a 257-code-unit %s before success transfer and recovers on the same Worker"
+          ]
+        },
+        {
+          "kind": "frozen-row",
+          "path": "docs/qualification/adr-0005-worker-identity-boundary-v1.json"
+        }
+      ]
+    },
+    {
+      "id": "mcp-hard-cancel-join",
+      "status": "closed",
+      "claim": "Supervised Manifold-plan hard-kill/join: parent stays responsive, one terminal, late output ignored, next request admitted after join.",
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+          "cases": [
+            "hard-kills and joins a non-cooperative child at its bounded deadline while the parent stays responsive",
+            "selects cancellation once, joins before releasing admission, and recovers in a fresh epoch"
+          ]
+        },
+        {
+          "kind": "frozen-row",
+          "path": "docs/qualification/adr-0005-mcp-hard-cancel-v1.json"
+        }
+      ]
+    }
+  ]
+}

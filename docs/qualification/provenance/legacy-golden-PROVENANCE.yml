@@ -1,0 +1,32 @@
+schema_version: 1
+algorithm_id: legacy-manifold-plan-golden-corpus
+algorithm_version: "1"
+contract: g0-legacy-golden-corpus-v1
+risk_tier: foundational
+code_paths:
+  - tests/fixtures/manifold-plan-oracle-v1.json
+  - tests/support/referenceFrozenLegacyOutcome.ts
+  - docs/qualification/g0-legacy-golden-corpus-v1.json
+commits: []
+source_artifacts:
+  - url: internal://open-scad-viewer/legacy-manifold-plan-oracle
+    version: "1"
+    sha256: "a6b4d6025aa59081501d4c54bce921857512cd492714efda560a31b946184897"
+    material_kind: internal_record
+    redistributed: false
+    rights_status: project-owned-qualification-fixture
+    use_basis: ideas_only
+implementer: repository-owner
+reviewer: repository-owner
+contributors: []
+exposure_attestations: []
+review_approval:
+  id: g0-legacy-golden-2026-09-12
+  date: "2026-09-12"
+tests:
+  - tests/support/referenceFrozenLegacyOutcome.ts
+  - tests/g0LegacyGoldenCorpus.test.ts
+release_artifacts: []
+legal_review_required: false
+approval_or_rationale: "G0.9 standalone provenance bundle for the frozen legacy Manifold-plan golden pack."
+legal_review_id: null

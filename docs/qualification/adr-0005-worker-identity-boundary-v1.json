@@ -1,0 +1,62 @@
+{
+  "schema": "open-scad-viewer/adr-0005-worker-identity-boundary",
+  "schemaVersion": 1,
+  "boundaryId": "adr-0005-worker-identity-boundary-v1",
+  "recordedAt": "2026-09-12",
+  "protocolVersion": 6,
+  "identityUtf16Limit": 256,
+  "rows": [
+    {
+      "id": "entityId-256",
+      "field": "entityId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "followOn": "not-required"
+    },
+    {
+      "id": "operationId-256",
+      "field": "operationId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "followOn": "not-required"
+    },
+    {
+      "id": "instanceId-256",
+      "field": "instanceId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "followOn": "not-required"
+    },
+    {
+      "id": "entityId-257",
+      "field": "entityId",
+      "utf16CodeUnits": 257,
+      "expected": "bounded-failed-terminal",
+      "errorCode": "WORKER_RESULT_UNPUBLISHABLE",
+      "phase": "serializing",
+      "transferBytes": 0,
+      "followOn": "healthy-success-same-worker"
+    },
+    {
+      "id": "operationId-257",
+      "field": "operationId",
+      "utf16CodeUnits": 257,
+      "expected": "bounded-failed-terminal",
+      "errorCode": "WORKER_RESULT_UNPUBLISHABLE",
+      "phase": "serializing",
+      "transferBytes": 0,
+      "followOn": "healthy-success-same-worker"
+    },
+    {
+      "id": "instanceId-257",
+      "field": "instanceId",
+      "utf16CodeUnits": 257,
+      "expected": "bounded-failed-terminal",
+      "errorCode": "WORKER_RESULT_UNPUBLISHABLE",
+      "phase": "serializing",
+      "transferBytes": 0,
+      "followOn": "healthy-success-same-worker"
+    }
+  ],
+  "evidenceTest": "tests/geometryWorker.test.ts"
+}

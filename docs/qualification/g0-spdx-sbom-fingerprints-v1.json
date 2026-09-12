@@ -1,0 +1,35 @@
+{
+  "schema": "open-scad-viewer/g0-spdx-sbom-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-spdx-sbom-fingerprints-v1",
+  "recordedAt": "2026-09-12",
+  "purpose": "G0.2 SPDX SBOM freeze sibling to g0-toolchain-fingerprints-v1 (v1 left immutable).",
+  "parentFingerprintId": "g0-toolchain-fingerprints-v1",
+  "generator": "inline node script in agent session 2026-09-12",
+  "artifacts": [
+    {
+      "id": "g0-npm-spdx-v1-spdx-json",
+      "path": "docs/qualification/sbom/g0-npm-spdx-v1.spdx.json",
+      "sha256": "7b99baa9ba8c585240bed70c6f51d66445877796545d8b7f95b70be31f336802",
+      "byteLength": 131355
+    },
+    {
+      "id": "g0-cargo-spdx-v1-spdx-json",
+      "path": "docs/qualification/sbom/g0-cargo-spdx-v1.spdx.json",
+      "sha256": "9c7ad920d0edbff086dd1ce4449fb21eb12d3e378f594fedf77422a4aab1f4a4",
+      "byteLength": 74299
+    },
+    {
+      "id": "g0-project-spdx-v1-json",
+      "path": "docs/qualification/sbom/g0-project-spdx-v1.json",
+      "sha256": "9111e4d12e867fdccc0414ae80c16934cdb8dec1dd33ec50ec37988d22bd868e",
+      "byteLength": 978
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/semantic-manifold-g1-plan-v16.json",
+      "note": "G1 plan package.json binding remains older; resolving requires a new G1 plan version, not rewriting v16 or toolchain fingerprints v1."
+    }
+  ]
+}

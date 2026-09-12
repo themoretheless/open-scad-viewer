@@ -1,0 +1,78 @@
+{
+  "schema": "open-scad-viewer/g0-legacy-golden-corpus",
+  "schemaVersion": 1,
+  "corpusId": "g0-legacy-golden-corpus-v1",
+  "recordedAt": "2026-09-12",
+  "claimBoundary": {
+    "includes": [
+      "Index over frozen manifold-plan-oracle-v1 success/error cases",
+      "Cancel-terminal golden rows for G0.9",
+      "MCP-path terminal digest rows for supervised Manifold-plan qualification",
+      "Standalone provenance pointer for the legacy golden pack"
+    ],
+    "excludes": [
+      "Rewriting tests/fixtures/manifold-plan-oracle-v1.json bytes",
+      "Product Worker/MCP routing changes",
+      "Geometry result changes"
+    ]
+  },
+  "frozenOracle": {
+    "path": "tests/fixtures/manifold-plan-oracle-v1.json",
+    "schema": "manifold-plan-oracle",
+    "version": 1,
+    "fileSha256": "a6b4d6025aa59081501d4c54bce921857512cd492714efda560a31b946184897",
+    "casesCorpusSha256": "c58ff48a7f174cb547b4f8aad8ada72a30816d5009a87d046d4f78d634db7482",
+    "caseCounts": { "success": 43, "error": 22, "cancelled": 0 }
+  },
+  "cancelTerminals": [
+    {
+      "id": "user-cancel-before-success",
+      "surface": "geometry-worker",
+      "reason": "user",
+      "expectedTag": "cancelled",
+      "lateSuccess": false,
+      "evidenceTest": "tests/geometryWorker.test.ts",
+      "note": "Latest-only publication; cancelled terminal precedes any success for the same jobId"
+    },
+    {
+      "id": "superseded-cancel",
+      "surface": "geometry-worker",
+      "reason": "superseded",
+      "expectedTag": "cancelled",
+      "lateSuccess": false,
+      "evidenceTest": "tests/geometryWorker.test.ts"
+    },
+    {
+      "id": "mcp-supervisor-cancel-once",
+      "surface": "mcp-manifold-plan-qualification-supervisor",
+      "reason": "cancel",
+      "expectedTag": "cancelled",
+      "joinBeforeRelease": true,
+      "lateSuccess": false,
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+    }
+  ],
+  "mcpPathGoldens": [
+    {
+      "id": "mcp-hard-kill-join-responsive-parent",
+      "surface": "mcp-manifold-plan-qualification-supervisor",
+      "expect": "KernelFault-or-equivalent after join; parent stdio remains responsive",
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+      "testName": "hard-kills and joins a non-cooperative child at its bounded deadline while the parent stays responsive"
+    },
+    {
+      "id": "mcp-identity-256-257-child-boundary",
+      "surface": "mcp-manifold-plan-qualification-supervisor",
+      "expect": "256 publishes; 257 fails closed; recover in fresh realm",
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+      "testName": "isolates controlled %s length 256/257 across the MCP child boundary"
+    },
+    {
+      "id": "mcp-stdio-primary-while-shadow-killed",
+      "surface": "mcp-manifold-plan-qualification-stdio",
+      "expect": "primary path only while shadow hard-killed",
+      "evidenceTest": "tests/mcpManifoldPlanQualificationStdio.test.ts"
+    }
+  ],
+  "provenanceBundle": "docs/qualification/provenance/legacy-golden-PROVENANCE.yml"
+}

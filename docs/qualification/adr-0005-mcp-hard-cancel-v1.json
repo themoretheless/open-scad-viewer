@@ -1,0 +1,33 @@
+{
+  "schema": "open-scad-viewer/adr-0005-mcp-hard-cancel",
+  "schemaVersion": 1,
+  "fixtureId": "adr-0005-mcp-hard-cancel-v1",
+  "recordedAt": "2026-09-12",
+  "surface": "mcp-manifold-plan-qualification-supervisor",
+  "rows": [
+    {
+      "id": "hard-kill-join-responsive-parent",
+      "signal": "hard-kill",
+      "expectTerminalClass": "KernelFault",
+      "parentResponsive": true,
+      "joinBeforeNextAdmit": true,
+      "lateChildOutput": "ignored",
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+    },
+    {
+      "id": "cancel-once-join-fresh-epoch",
+      "signal": "cancel",
+      "expectTerminalClass": "Cancelled",
+      "joinBeforeRelease": true,
+      "recoverFreshEpoch": true,
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+    },
+    {
+      "id": "join-timeout-quarantine",
+      "signal": "join-timeout",
+      "expectTerminalClass": "quarantine",
+      "furtherChildren": false,
+      "evidenceTest": "tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "open-scad-viewer/rights-inventory",
+  "schemaVersion": 1,
+  "inventoryId": "rights-inventory-v1",
+  "recordedAt": "2026-09-12",
+  "contract": "independent-reimplementation-policy-v1",
+  "outboundLicenseIntent": {
+    "expression": "MIT OR Apache-2.0",
+    "status": "proposed-not-activated",
+    "blocksActivation": [
+      "rights-holder inventory complete",
+      "LICENSE and NOTICE accepted",
+      "CONTRIBUTING inbound=outbound terms accepted"
+    ]
+  },
+  "inbound": {
+    "expectation": "inbound=outbound",
+    "dcoOrCla": "undecided",
+    "note": "Owner/legal decides DCO and/or CLA before first external contribution"
+  },
+  "spdxPolicy": {
+    "requireFullExpressions": true,
+    "sbomRole": "evidence-not-legal-approval"
+  },
+  "riskTiers": {
+    "foundational": "documented provenance gate",
+    "medium": "independent reviewer",
+    "high": "independent reviewer + legal approval id"
+  },
+  "holders": [
+    {
+      "id": "project-primary",
+      "role": "primary-rights-holder",
+      "status": "unassigned-public-placeholder",
+      "note": "Named human/legal entities required before outbound license activation"
+    }
+  ]
+}

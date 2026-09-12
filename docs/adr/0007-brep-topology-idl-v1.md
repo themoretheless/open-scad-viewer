@@ -1,7 +1,9 @@
 # ADR 0007: B-rep topology ownership, typestate, and lineage (G2a IDL)
 
-- Status: proposed; blocking G0.6 / G2a
+- Status: accepted
 - Date: 2026-09-12
+- Accepted-by: repository-owner (human authorization in session)
+- Reviewer: repository-owner (solo dual-role attestation; not organizationally independent)
 - Contract: `brep-topology-idl-v1`
 - Fixtures: `docs/qualification/topology-idl/`
 
@@ -97,8 +99,9 @@ codecs when checking these fixtures.
 
 G0.6 is complete only when:
 
-1. this ADR is accepted;
-2. schema + box fixture + mutation corpus validate under an independent checker;
+1. this ADR is **human-accepted** (not merely proposed / engineering-ready);
+2. schema + box fixture + mutation corpus + sibling-COW/stale-key fixture
+   validate under an independent checker;
 3. every mutation in `mutations-v1.json` fails for exactly the declared invariant;
 4. no production path serializes raw arena keys or treats `Generalized` as a
    solid Boolean operand.

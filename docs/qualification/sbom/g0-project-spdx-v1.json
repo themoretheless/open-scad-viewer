@@ -1,0 +1,39 @@
+{
+  "schema": "open-scad-viewer/g0-project-spdx",
+  "schemaVersion": 1,
+  "sbomId": "g0-project-spdx-v1",
+  "recordedAt": "2026-09-12",
+  "claimBoundary": {
+    "includes": [
+      "SPDX-2.3 JSON documents generated from root package-lock.json and crates/Cargo.lock",
+      "Package identity, version, and lockfile integrity/checksum where present"
+    ],
+    "excludes": [
+      "Browser distribution trees and Playwright locks",
+      "Legal approval or FTO",
+      "License concluded beyond lockfile metadata"
+    ]
+  },
+  "inputs": [
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json"
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock"
+    }
+  ],
+  "documents": [
+    {
+      "id": "npm",
+      "path": "docs/qualification/sbom/g0-npm-spdx-v1.spdx.json",
+      "packageCount": 144
+    },
+    {
+      "id": "cargo",
+      "path": "docs/qualification/sbom/g0-cargo-spdx-v1.spdx.json",
+      "packageCount": 123
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "schema": "open-scad-viewer/geometry-scene-v2",
+  "schemaVersion": 1,
+  "title": "GeometrySceneV2 publication payload (G0.8 draft IDL)",
+  "description": "Discriminated JSON shape for future Worker/MCP publication. Not activated in production under G0.",
+  "type": "object",
+  "required": [
+    "schema",
+    "schemaVersion",
+    "sceneVersion",
+    "workerEpoch",
+    "kernelKey",
+    "kernelFingerprint",
+    "capabilityManifestVersion",
+    "representation",
+    "fullEquivalent",
+    "reduced",
+    "occurrences",
+    "assets",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema": { "const": "open-scad-viewer/geometry-scene-v2" },
+    "schemaVersion": { "const": 1 },
+    "sceneVersion": { "const": 2 },
+    "workerEpoch": { "type": "integer", "minimum": 0 },
+    "kernelKey": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "kernelFingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "capabilityManifestVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "representation": {
+      "type": "string",
+      "enum": ["MeshSolid", "AnalyticBrep", "RationalBrep"]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string" },
+          "certificateId": { "type": "string" }
+        }
+      }
+    },
+    "timings": {
+      "type": "object",
+      "properties": {
+        "kernelMs": { "type": "number" },
+        "tessellationMs": { "type": "number" },
+        "packingMs": { "type": "number" }
+      }
+    },
+    "fullEquivalent": { "type": "boolean" },
+    "reduced": { "type": "boolean" },
+    "topologySnapshotId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "packetTopoTokens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["token", "topoId"],
+        "properties": {
+          "token": { "type": "integer", "minimum": 0 },
+          "topoId": { "type": "string", "pattern": "^[0-9a-f]{32}$" }
+        }
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["occurrenceId", "meshAssetId", "transform", "color"],
+        "properties": {
+          "occurrenceId": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "meshAssetId": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "transform": {
+            "type": "array",
+            "minItems": 16,
+            "maxItems": 16,
+            "items": { "type": "number" }
+          },
+          "color": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["meshAssetId", "positions", "indices"],
+        "properties": {
+          "meshAssetId": { "type": "string" },
+          "positions": {
+            "type": "array",
+            "items": { "type": "number" }
+          },
+          "indices": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "severity"],
+        "properties": {
+          "code": { "type": "string" },
+          "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "Adapter invariant: fullEquivalent must equal not reduced",
+      "$comment": "Enforced by referenceGeometrySceneV2, not only JSON Schema"
+    }
+  ],
+  "additionalProperties": false
+}

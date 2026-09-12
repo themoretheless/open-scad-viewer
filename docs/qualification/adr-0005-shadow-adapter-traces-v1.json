@@ -1,0 +1,69 @@
+{
+  "schema": "open-scad-viewer/adr-0005-shadow-adapter-traces",
+  "schemaVersion": 1,
+  "traceId": "adr-0005-shadow-adapter-traces-v1",
+  "recordedAt": "2026-09-12",
+  "claimBoundary": {
+    "includes": [
+      "Frozen source → expected terminal event sequence for Manifold-plan shadow acceptance",
+      "Cancel interleaved with sibling supersede"
+    ],
+    "excludes": [
+      "Authoritative production routing changes",
+      "B-rep backend publication"
+    ]
+  },
+  "traces": [
+    {
+      "id": "cube-full-success",
+      "source": "cube(1);",
+      "quality": "full",
+      "events": [
+        { "status": "accepted", "phase": "queued" },
+        { "status": "started", "phase": "initializing" },
+        { "status": "progress", "phase": "compiling" },
+        { "status": "succeeded", "phase": "complete", "meshCount": 1 }
+      ],
+      "terminalCount": 1
+    },
+    {
+      "id": "syntax-error-terminal",
+      "source": "cube(",
+      "quality": "full",
+      "events": [
+        { "status": "accepted", "phase": "queued" },
+        { "status": "started", "phase": "initializing" },
+        { "status": "failed", "phase": "compiling", "errorCode": "PARSE" }
+      ],
+      "terminalCount": 1,
+      "note": "errorCode class is illustrative; exact code matched by production diagnostics under oracle tests"
+    },
+    {
+      "id": "cancel-before-success",
+      "source": "cube(1);",
+      "quality": "full",
+      "events": [
+        { "status": "accepted", "phase": "queued" },
+        { "status": "started", "phase": "initializing" },
+        { "status": "cancelled", "reason": "user" }
+      ],
+      "terminalCount": 1,
+      "lateSuccessForbidden": true
+    },
+    {
+      "id": "supersede-sibling",
+      "sourcePrimary": "cube(1);",
+      "sourceSuperseding": "cube(2);",
+      "quality": "full",
+      "eventsPrimary": [
+        { "status": "accepted" },
+        { "status": "cancelled", "reason": "superseded" }
+      ],
+      "eventsSuperseding": [
+        { "status": "accepted" },
+        { "status": "succeeded", "meshCount": 1 }
+      ],
+      "terminalCountPerJob": 1
+    }
+  ]
+}

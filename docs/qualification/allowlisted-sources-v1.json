@@ -1,0 +1,100 @@
+{
+  "schema": "open-scad-viewer/allowlisted-sources",
+  "schemaVersion": 1,
+  "logId": "allowlisted-sources-v1",
+  "recordedAt": "2026-09-12",
+  "contract": "independent-reimplementation-policy-v1",
+  "policy": "Ideas-only from published mathematics or dated internal design records. New sources require an inventory amendment before use.",
+  "sources": [
+    {
+      "id": "cox-bspline-eval",
+      "citation": "Cox, numerical evaluation of B-splines",
+      "url": "https://doi.org/10.1093/imamat/10.2.134",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "boehm-knot-insertion",
+      "citation": "Boehm, knot insertion",
+      "url": "https://doi.org/10.1016/0010-4485(80)90154-2",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "piegl-tiller-nurbs-book",
+      "citation": "Piegl–Tiller, The NURBS Book",
+      "url": "https://link.springer.com/book/10.1007/978-3-642-59223-2",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false,
+      "note": "No copying of listings, variable names, or comments"
+    },
+    {
+      "id": "shewchuk-robust-predicates-paper",
+      "citation": "Shewchuk, adaptive robust predicates",
+      "url": "https://www.cs.cmu.edu/~quake/robust.html",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "usage_mode": "original_from_paper",
+      "redistributed": false
+    },
+    {
+      "id": "sederberg-nishita-bezier-clipping",
+      "citation": "Sederberg–Nishita, Bézier clipping",
+      "url": "https://doi.org/10.1016/0010-4485(90)90039-F",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "grandine-klein-ss-topology",
+      "citation": "Grandine–Klein, surface intersection topology/DAE",
+      "url": "https://doi.org/10.1016/S0167-8396(96)00024-6",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "bentley-ottmann",
+      "citation": "Bentley–Ottmann, planar intersections",
+      "url": "https://doi.org/10.1109/TC.1979.1675432",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "piegl-richard-trimmed-tessellation",
+      "citation": "Piegl–Richard, trimmed NURBS tessellation",
+      "url": "https://doi.org/10.1016/0010-4485(95)90749-6",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "requicha-solid-representations",
+      "citation": "Requicha, solid representations",
+      "url": "https://doi.org/10.1145/356827.356833",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    },
+    {
+      "id": "requicha-voelcker-boundary-eval",
+      "citation": "Requicha–Voelcker, boundary evaluation/merging",
+      "url": "https://doi.org/10.1109/PROC.1985.13108",
+      "material_kind": "publication",
+      "use_basis": "ideas_only",
+      "redistributed": false
+    }
+  ],
+  "forbidden": [
+    "proprietary-source",
+    "decompilation",
+    "debug-traces",
+    "closed-sdk-nda-docs",
+    "private-commercial-kernel-fixtures",
+    "opencascade-source-as-implementation-reference"
+  ]
+}

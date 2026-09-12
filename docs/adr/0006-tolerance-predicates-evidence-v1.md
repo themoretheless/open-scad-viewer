@@ -1,7 +1,9 @@
 # ADR 0006: Tolerance, predicates, constructions, and evidence (G2a inventory)
 
-- Status: proposed; blocking G0.7 / G2a
+- Status: accepted
 - Date: 2026-09-12
+- Accepted-by: repository-owner (human authorization in session)
+- Reviewer: repository-owner (solo dual-role attestation; not organizationally independent)
 - Contract: `tolerance-predicates-evidence-v1`
 - Inventory: `docs/qualification/g2a-predicate-inventory-v1.json`
 
@@ -156,8 +158,9 @@ authorization for G2a.
 
 G0.7 is complete only when:
 
-1. this ADR is accepted (not merely proposed);
+1. this ADR is **human-accepted** (not merely proposed / engineering-ready);
 2. `g2a-predicate-inventory-v1.json` is immutable except via version bump;
 3. an independent oracle harness exists and mutation-tests the three admitted
-   predicates plus classifier gray-band behavior;
+   predicates plus classifier gray-band behavior
+   (`tests/support/referencePredicateOracleV1.ts` + `tests/predicateOracleV1.test.ts`);
 4. no production path maps `Indeterminate` to success or false.

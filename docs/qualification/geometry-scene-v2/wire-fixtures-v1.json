@@ -1,0 +1,84 @@
+{
+  "schema": "open-scad-viewer/geometry-scene-v2-wire-fixtures",
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "unit-box-full",
+      "kind": "positive",
+      "scene": {
+        "schema": "open-scad-viewer/geometry-scene-v2",
+        "schemaVersion": 1,
+        "sceneVersion": 2,
+        "workerEpoch": 1,
+        "kernelKey": "manifold-plan",
+        "kernelFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "capabilityManifestVersion": "manifold-plan-v1",
+        "representation": "MeshSolid",
+        "evidence": [{ "kind": "mesh-watertight-claim", "certificateId": "box-local-v1" }],
+        "timings": { "kernelMs": 1.2, "tessellationMs": 0.4, "packingMs": 0.1 },
+        "fullEquivalent": true,
+        "reduced": false,
+        "topologySnapshotId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "packetTopoTokens": [
+          { "token": 0, "topoId": "cccccccccccccccccccccccccccccccc" }
+        ],
+        "occurrences": [
+          {
+            "occurrenceId": "occ:root/0",
+            "meshAssetId": "asset:v2:box",
+            "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            "color": [0.8, 0.8, 0.85, 1]
+          }
+        ],
+        "assets": [
+          {
+            "meshAssetId": "asset:v2:box",
+            "positions": [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
+            "indices": [0, 1, 2, 0, 2, 3]
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "fullEquivalent-mismatch",
+      "kind": "negative",
+      "expect": "fullEquivalent-reduced-mismatch",
+      "scene": {
+        "schema": "open-scad-viewer/geometry-scene-v2",
+        "schemaVersion": 1,
+        "sceneVersion": 2,
+        "workerEpoch": 1,
+        "kernelKey": "manifold-plan",
+        "kernelFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "capabilityManifestVersion": "manifold-plan-v1",
+        "representation": "MeshSolid",
+        "fullEquivalent": true,
+        "reduced": true,
+        "occurrences": [],
+        "assets": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "missing-kernel-fingerprint",
+      "kind": "negative",
+      "expect": "kernelFingerprint",
+      "scene": {
+        "schema": "open-scad-viewer/geometry-scene-v2",
+        "schemaVersion": 1,
+        "sceneVersion": 2,
+        "workerEpoch": 1,
+        "kernelKey": "manifold-plan",
+        "kernelFingerprint": "not-a-hash",
+        "capabilityManifestVersion": "manifold-plan-v1",
+        "representation": "MeshSolid",
+        "fullEquivalent": true,
+        "reduced": false,
+        "occurrences": [],
+        "assets": [],
+        "diagnostics": []
+      }
+    }
+  ]
+}
