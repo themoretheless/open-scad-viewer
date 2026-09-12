@@ -9,6 +9,7 @@ import {
   knifeSplitEdges,
   mergeByDistance,
   moveVertices,
+  moveVerticesProportional,
   parseMeshDocument,
   separateFaces,
   subdivideFaces,
@@ -55,6 +56,19 @@ describe('mesh editing', () => {
     expect(history.document.objects).toHaveLength(1)
     history.undo()
     expect(history.document.objects).toHaveLength(0)
+  })
+
+  it('moves nearby vertices with smooth proportional falloff', () => {
+    const mesh = {
+      positions: [0, 0, 0, 1, 0, 0, 3, 0, 0],
+      indices: [0, 1, 2],
+    }
+    const moved = moveVerticesProportional(mesh, [0], [0, 0, 2], 2)
+    expect(moved.positions[2]).toBe(2)
+    expect(moved.positions[5]).toBe(1)
+    expect(moved.positions[8]).toBe(0)
+    expect(mesh.positions[2]).toBe(0)
+    expect(() => moveVerticesProportional(mesh, [], [1, 0, 0], 2)).toThrow(/Select vertices/)
   })
 
   it('boolean unions two boxes', () => {

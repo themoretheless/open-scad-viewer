@@ -175,6 +175,42 @@ export function moveVertices(mesh: PolygonMesh, vertexIds: number[], delta: [num
   return { positions, indices: [...mesh.indices] }
 }
 
+/**
+ * Move selected vertices and nearby vertices with a smooth Euclidean falloff.
+ * This is geometric proximity, not topology-distance propagation.
+ */
+export function moveVerticesProportional(
+  mesh: PolygonMesh,
+  vertexIds: number[],
+  delta: [number, number, number],
+  radius: number,
+): PolygonMesh {
+  if (!delta.every(finite) || !finite(radius) || radius <= 0) throw new Error('Invalid proportional transform.')
+  const selected = [...new Set(vertexIds)]
+  if (!selected.length) throw new Error('Select vertices for proportional editing.')
+  for (const id of selected) {
+    if (!Number.isInteger(id) || id < 0 || id >= mesh.positions.length / 3) throw new Error('Invalid vertex.')
+  }
+  const positions = mesh.positions.slice()
+  for (let id = 0; id < mesh.positions.length / 3; id++) {
+    let distance = Infinity
+    for (const selectedId of selected) {
+      distance = Math.min(distance, Math.hypot(
+        mesh.positions[id * 3] - mesh.positions[selectedId * 3],
+        mesh.positions[id * 3 + 1] - mesh.positions[selectedId * 3 + 1],
+        mesh.positions[id * 3 + 2] - mesh.positions[selectedId * 3 + 2],
+      ))
+    }
+    if (distance >= radius) continue
+    const linear = 1 - distance / radius
+    const weight = linear * linear * (3 - 2 * linear)
+    positions[id * 3] += delta[0] * weight
+    positions[id * 3 + 1] += delta[1] * weight
+    positions[id * 3 + 2] += delta[2] * weight
+  }
+  return { positions, indices: [...mesh.indices] }
+}
+
 export function deleteFaces(mesh: PolygonMesh, faceIds: number[]): PolygonMesh {
   const remove = new Set(faceIds)
   const indices: number[] = []

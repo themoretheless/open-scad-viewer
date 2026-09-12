@@ -19,6 +19,7 @@ import {
   mergeByDistance,
   meshObjectStats,
   moveVertices,
+  moveVerticesProportional,
   parseMeshDocument,
   separateFaces,
   stlBufferToPolygonMesh,
@@ -55,6 +56,8 @@ const selectedVerts = ref<number[]>([])
 const selectedFaces = ref<number[]>([])
 const selectedEdges = ref<number[]>([])
 const dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
+const proportionalEdit = ref(false)
+const proportionalRadius = ref(5)
 const extrudeDistance = ref(2)
 const insetAmount = ref(0.5)
 const mergeDistance = ref(0.01)
@@ -142,7 +145,14 @@ function transformSelected() {
         : selectedVerts.value
       d.objects[index] = {
         ...d.objects[index],
-        mesh: moveVertices(d.objects[index].mesh, vertexIds, [dx.value, dy.value, dz.value]),
+        mesh: selectMode.value === 'vertex' && proportionalEdit.value
+          ? moveVerticesProportional(
+              d.objects[index].mesh,
+              vertexIds,
+              [dx.value, dy.value, dz.value],
+              proportionalRadius.value,
+            )
+          : moveVertices(d.objects[index].mesh, vertexIds, [dx.value, dy.value, dz.value]),
       }
     } else {
       d.objects[index] = {
@@ -496,6 +506,11 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
           <label>ΔZ <input v-model.number="dz" type="number" step="0.1" /></label>
           <label>{{ label('Угол', 'Angle') }} <input v-model.number="angle" type="number" step="1" /></label>
           <label>{{ label('Масштаб', 'Scale') }} <input v-model.number="scale" type="number" step="0.05" min="0.01" /></label>
+          <template v-if="selectMode === 'vertex'">
+            <label><span>O · {{ label('Пропорционально', 'Proportional') }}</span><input v-model="proportionalEdit" type="checkbox" /></label>
+            <label v-if="proportionalEdit">{{ label('Радиус влияния', 'Influence radius') }} <input v-model.number="proportionalRadius" type="number" step="0.5" min="0.01" /></label>
+            <p v-if="proportionalEdit" class="tool-hint">{{ label('Плавный спад по расстоянию в пространстве.', 'Smooth falloff by spatial distance.') }}</p>
+          </template>
           <button type="button" @click="transformSelected">{{ label('Применить', 'Apply') }}</button>
         </section>
 
