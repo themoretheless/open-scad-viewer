@@ -39,7 +39,7 @@ function exportSliceGcode(){
   try{
     if(!props.ready)throw Error(label('Сначала соберите текущий код','Build the current source first'))
     if(props.selection.length!==1)throw Error(label('Выберите одно тело','Select one body'))
-    const mesh=sceneBody(props.meshes[props.selection[0]!]!).mesh
+    const index=props.selection[0]!,mesh=sceneBody(props.meshes[index]!,index).mesh
     const result=emitPolygonMeshGcode(mesh,sliceZMin.value,sliceZMax.value,{
       layerHeightMm:sliceLayer.value,
       lineWidthMm:printSettings.value.nozzle,
