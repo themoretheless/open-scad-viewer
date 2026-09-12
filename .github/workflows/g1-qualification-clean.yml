@@ -1,0 +1,89 @@
+name: G1 qualification clean fragments
+
+# Executes G1 plan v18 matrix harness commands on Ubuntu runners.
+# Artifacts are uploaded; promotion to clean-post-freeze / u07 closure still
+# requires the frozen cleanRunDefinition (sanitized env, wiped caches, OS image
+# digests, no result reuse). Do not treat a green CI job alone as qualification.
+
+on:
+  workflow_dispatch:
+    inputs:
+      row:
+        description: Matrix row id from semantic-manifold-g1-plan-v18.json
+        required: true
+        type: choice
+        options:
+          - oracle-differential
+          - comparator-mutations
+          - semantic-special-terminals
+          - node-worker-identifiers
+          - mcp-supervisor-hard-kill
+          - mcp-stdio-store-isolation
+          - dependency-and-cutover-audit
+          - mcp-memory-slope
+      env_id:
+        description: Environment id
+        required: true
+        type: choice
+        options:
+          - ubuntu-node20
+          - ubuntu-node22
+      run_index:
+        description: Clean-run index (1-based)
+        required: true
+        type: string
+        default: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-qual-${{ github.event.inputs.row }}-${{ github.event.inputs.env_id }}-${{ github.event.inputs.run_index }}
+  cancel-in-progress: false
+
+jobs:
+  fragment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve Node version for environment
+        id: node
+        run: |
+          case "${{ github.event.inputs.env_id }}" in
+            ubuntu-node20) echo "version=20.19.0" >> "$GITHUB_OUTPUT" ;;
+            ubuntu-node22) echo "version=22.23.2" >> "$GITHUB_OUTPUT" ;;
+            *) echo "unknown env"; exit 1 ;;
+          esac
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      - name: Verify npm and install
+        run: |
+          node -v
+          npm -v
+          npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+
+      - name: Run fragment (discovery classification until protocol proof lands)
+        env:
+          QUALIFICATION_PLAN_ID: semantic-manifold-g1-plan-v18
+          QUALIFICATION_SEED: 'ci'
+          CI: '1'
+        run: |
+          node scripts/run-g1-candidate-clean-fragment.mjs \
+            --row "${{ github.event.inputs.row }}" \
+            --env "${{ github.event.inputs.env_id }}" \
+            --run-index "${{ github.event.inputs.run_index }}" \
+            --node-bin "$(command -v node)" \
+            --classification discovery-only
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: g1-v18-${{ github.event.inputs.row }}-${{ github.event.inputs.env_id }}-run${{ github.event.inputs.run_index }}
+          path: |
+            output/qualification/semantic-manifold-g1-candidate-run-v18/
+          if-no-files-found: warn

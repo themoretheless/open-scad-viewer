@@ -19,7 +19,7 @@
     "consensus": "GO G0 only; NO-GO G1+ until this pack closes",
     "organizationalIndependence": false,
     "acceptanceMode": "solo-dual-role",
-    "note": "G0 engineering rows closed under solo dual-role attestation. G1 v18 is executionAdmission ready-clean-rerun; gate remains open until u07 clean evidence and qualificationApproval."
+    "note": "G0 engineering rows closed under solo dual-role attestation. G1 v18 is executionAdmission ready-clean-rerun; discovery-only fragment harness started (macos MCP complete for env; Ubuntu Docker/CI helpers present). Gate remains open until u07 clean-post-freeze evidence and qualificationApproval — discovery fragments must not be imported."
   },
   "adrDependencyGraph": [
     {
@@ -323,10 +323,17 @@
         "docs/qualification/semantic-manifold-g1-plan-v18.json",
         "docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json",
         "docs/qualification/g1-plan-file-digests-v1.json",
-        "tests/qualificationPlanArtifact.test.ts"
+        "tests/qualificationPlanArtifact.test.ts",
+        "scripts/run-g1-candidate-clean-fragment.mjs",
+        "scripts/run-g1-ubuntu-docker-fragment.mjs",
+        ".github/workflows/g1-qualification-clean.yml",
+        "docs/qualification/g1-v18-execution-notes.md",
+        "output/qualification/semantic-manifold-g1-candidate-run-v18/result.json"
       ],
       "missing": [
-        "Clean post-freeze evidence for all 4740 planned work units (u07)",
+        "Clean post-freeze evidence for all 4740 planned work units (u07) — discovery-only fragments must not be imported",
+        "Full cleanRunDefinition on frozen Ubuntu/macOS/Windows jobs (sanitized env, wiped caches, OS image digests)",
+        "Browser Chromium/WebKit actual+memory clean fragments on linux supervisor",
         "Flip approvals.qualificationApproval after clean evidence (solo dual-role; org-independent seat waived as recorded-nonapproval)"
       ]
     }

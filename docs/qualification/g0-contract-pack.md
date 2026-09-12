@@ -21,7 +21,7 @@ Active G1 plan: latest `semantic-manifold-g1-plan-v1*.json` with
 | ID | Status | Notes |
 | --- | --- | --- |
 | G0.1–G0.13 | done | contracts, oracles, protocol-v6, supervisor, provenance |
-| G0.14 | **partial** | clean post-freeze execution evidence (u07) still open |
+| G0.14 | **partial** | harness + discovery fragments started; u07 clean-post-freeze still open |
 
 ## Definition of Done
 
