@@ -2620,11 +2620,821 @@
         "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
         "Cannot satisfy u07 until clean-post-freeze classification is earned."
       ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node20/run-1",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 1,
+      "seed": "0x5eed000000000001",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:22:57.708Z",
+      "endedAt": "2026-09-12T14:24:36.409Z",
+      "durationMs": 98701,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "390cf3282cce306a9b17df89f395a44b891929ee6e46d316b9e264ccb0272769",
+        "byteLength": 1017
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "fbcb154fee18de832a6e4859e9b6ebbfb1f9c0235ac401905443a4d4cc6b8ff3",
+        "byteLength": 44146
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node20/run-2",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 2,
+      "seed": "0x5eed000000000002",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:24:36.489Z",
+      "endedAt": "2026-09-12T14:26:04.995Z",
+      "durationMs": 88505,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "36b225524087671720e044c2815287dfc9e8b5659b3d4a5da49b499bc35d45b0",
+        "byteLength": 1017
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "1e15cf28622fc72742b8fb6f542e910b14d8f21733ea3b4d77da52cd7624a608",
+        "byteLength": 32450
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node20/run-3",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 3,
+      "seed": "0x5eed000000000003",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:26:05.068Z",
+      "endedAt": "2026-09-12T14:27:57.339Z",
+      "durationMs": 112270,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "bfb02d8a5c629fc8aa8a3af15e07d769322b935384256bd3938e045e50e5c137",
+        "byteLength": 1018
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "d73e0283d0014369fca841b41dab6a2451e131f74747e010f241c2297203ccf4",
+        "byteLength": 30350
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node20/run-4",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 4,
+      "seed": "0x5eed000000000004",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:27:57.415Z",
+      "endedAt": "2026-09-12T14:29:43.402Z",
+      "durationMs": 105986,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "4e15b977ce3ec3cdf48d84cca5288b21c5de6bd4d000caa8ab3edcbd7508e7b0",
+        "byteLength": 1067
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "190152a7070674435784d1bc659ee6d39dda62eb5981c760dd42461f5fcc2e8b",
+        "byteLength": 26849
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node20/run-5",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 5,
+      "seed": "0x5eed000000000005",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:29:43.475Z",
+      "endedAt": "2026-09-12T14:31:42.838Z",
+      "durationMs": 119363,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "0a4264bbdb3e87b6d5bd62055584111bd48b6374dabdc64c8092aa1cc74edb00",
+        "byteLength": 978
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "3d5d9ca42770eb500eeb78bc7d6b7e847d2085689b68dc0a370409f28bf4e5b3",
+        "byteLength": 31347
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node22/run-1",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 1,
+      "seed": "0x5eed000000000001",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:31:42.986Z",
+      "endedAt": "2026-09-12T14:33:32.290Z",
+      "durationMs": 109288,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "0717a5b52ccc977e41e303d88d8726d5c85b6936b2fdb744e73c3240a507b89a",
+        "byteLength": 1016
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "4883f1327c8e543cd4e99bb19ee3ff1340a4b354c6b98b47fbe96b86e4866557",
+        "byteLength": 36897
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node22/run-2",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 2,
+      "seed": "0x5eed000000000002",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:33:32.380Z",
+      "endedAt": "2026-09-12T14:35:07.873Z",
+      "durationMs": 95492,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "92034ec48976a97e516724243e38d87c7edcbe7c999888a74dd84e0581e79d74",
+        "byteLength": 1016
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "a74dbf43851bebc594dc2f4360813f5ffe0450850615614ed99934c6aa7bc951",
+        "byteLength": 49400
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node22/run-3",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 3,
+      "seed": "0x5eed000000000003",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:35:07.946Z",
+      "endedAt": "2026-09-12T14:36:31.210Z",
+      "durationMs": 83264,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "e05a926aaeb3865d2d6637bf3bbc01469f4015effa4ef87071f63508267fc5e0",
+        "byteLength": 973
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "7aa3e27d141947c15fe82f442be1588fc95bf4bcd883db6791be256a6efb8281",
+        "byteLength": 30196
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node22/run-4",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 4,
+      "seed": "0x5eed000000000004",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:36:31.290Z",
+      "endedAt": "2026-09-12T14:37:40.727Z",
+      "durationMs": 69436,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 139,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "afd17ec5fc21858e0feade7cde66e092e8b707b2362d76338e4e51c6f8a279ca",
+        "byteLength": 42
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "ea1459f5efae90125f581fb4ad7a08d389754aa1861589940e246843f777cae8",
+        "byteLength": 208
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "node-worker-identifiers/ubuntu-node22/run-5",
+      "matrixRowId": "node-worker-identifiers",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 5,
+      "seed": "0x5eed000000000005",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 6,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:37:40.801Z",
+      "endedAt": "2026-09-12T14:39:05.257Z",
+      "durationMs": 84456,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/geometryWorkerRealBoundary.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "92031b08f8a7417203e1598282fdf3952da0882df02f7718575545b5240144cc",
+        "byteLength": 1016
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "481093e1201a4968dc39f8da1ce9c6932e997782ff23a38468e7da068880350f",
+        "byteLength": 15130
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node20/run-1",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 1,
+      "seed": "0x5eed000000000001",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:39:05.331Z",
+      "endedAt": "2026-09-12T14:40:41.368Z",
+      "durationMs": 96037,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "a9950eaaea0372933c2a57553c9df22cfb032d601da747aaa315a7be0a56eb1d",
+        "byteLength": 2627
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "a7c57f705ca27e677d96121a95f4e511fb6f036dca0136979c5962f73dba7f16",
+        "byteLength": 47643
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node20/run-2",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 2,
+      "seed": "0x5eed000000000002",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:40:41.446Z",
+      "endedAt": "2026-09-12T14:42:17.251Z",
+      "durationMs": 95804,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "4301259d95f25511e6d7c6d8bf4241dff18cb9422e98804565379209f1325197",
+        "byteLength": 2627
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "ab660ef3826ed5cee170c18e650238bfc2fc3ed4b1747f982e69c995e7fe7fd4",
+        "byteLength": 44230
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node20/run-3",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 3,
+      "seed": "0x5eed000000000003",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:42:17.326Z",
+      "endedAt": "2026-09-12T14:43:51.554Z",
+      "durationMs": 94227,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "9140ae80e5676d56da61292c7c41ef923ddcf2c00015f70509332db539b26649",
+        "byteLength": 2617
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "8c499cfc807458e9c080ae4a928a7d1c8562437e554fb06fbb00756ae67ddceb",
+        "byteLength": 28182
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node20/run-4",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 4,
+      "seed": "0x5eed000000000004",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:43:51.633Z",
+      "endedAt": "2026-09-12T14:45:29.412Z",
+      "durationMs": 97779,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "c500192d866fbbd9f79743491936df42873bd7d3149826bf987aafd6c76db2ce",
+        "byteLength": 2617
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "11b2d8d3a166e885a3ab3024831cd6c99e488ac498e8d3b5c2658dc015943923",
+        "byteLength": 54851
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node20/run-5",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node20",
+      "runIndex": 5,
+      "seed": "0x5eed000000000005",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:45:29.488Z",
+      "endedAt": "2026-09-12T14:47:05.371Z",
+      "durationMs": 95882,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:20.19.0-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "97b26fb2351ea6129642dbbdca343b820296cb7c10221e4b739f4188d0f30501",
+        "byteLength": 2617
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "51629d89d73bc294037d1a6e237114d76152f67d0ae558482475c05a0f2dca33",
+        "byteLength": 60010
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:20.19.0-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node22/run-1",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 1,
+      "seed": "0x5eed000000000001",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:47:05.444Z",
+      "endedAt": "2026-09-12T14:52:19.384Z",
+      "durationMs": 313939,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "d0240a8413c3759510275dd8beb063d03c7112afc84b4fdcea9c614a804cb5a3",
+        "byteLength": 2690
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "00b433e2905af67b9725f17e4ba20b88d5178d66d152969b29e35a0805f41f04",
+        "byteLength": 9306
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node22/run-2",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 2,
+      "seed": "0x5eed000000000002",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:52:19.582Z",
+      "endedAt": "2026-09-12T14:57:28.628Z",
+      "durationMs": 309045,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "5c7b9365fb413a64d702fe5cd5d8448ed48649dae556368bcacd1653e4181db0",
+        "byteLength": 2627
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "9734354a2a1dfe769c1e8f0f6c90b87f5756f8fd132e973166f661c1a532bab9",
+        "byteLength": 35580
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
+    },
+    {
+      "fragmentId": "mcp-supervisor-hard-kill/ubuntu-node22/run-3",
+      "matrixRowId": "mcp-supervisor-hard-kill",
+      "environmentId": "ubuntu-node22",
+      "runIndex": 3,
+      "seed": "0x5eed000000000003",
+      "classification": "discovery-only",
+      "status": "failed",
+      "unitsPlanned": 13,
+      "unitsCompleted": 0,
+      "startedAt": "2026-09-12T14:57:28.707Z",
+      "endedAt": "2026-09-12T15:01:15.299Z",
+      "durationMs": 226591,
+      "command": [
+        "docker",
+        "run",
+        "--platform",
+        "linux/amd64",
+        "node:22.23.2-bookworm",
+        "./node_modules/.bin/vitest run tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+      ],
+      "exitCode": 1,
+      "stdoutDigest": {
+        "algorithm": "sha256",
+        "value": "7228b84470bf1b60bd25f1d7d2cb37c9aad05582d0aec3e403efd90e2e5f29dd",
+        "byteLength": 2690
+      },
+      "stderrDigest": {
+        "algorithm": "sha256",
+        "value": "37800ffd7366637d11044d64f5c0d3c711c4035b6797a7758b4553e48492cd3b",
+        "byteLength": 17326
+      },
+      "host": {
+        "platform": "linux",
+        "arch": "x86_64",
+        "via": "colima-qemu",
+        "image": "node:22.23.2-bookworm",
+        "imageNote": "node:*-bookworm amd64; not frozen Ubuntu 24.04 → discovery-only"
+      },
+      "protocolNotes": [
+        "Docker/Colima path uses linux/amd64 Node bookworm images.",
+        "OS image digest and full cleanRunDefinition wipe/sanitized-env are not claimed.",
+        "Cannot satisfy u07 until clean-post-freeze classification is earned."
+      ]
     }
   ],
   "notes": [
     "Append-only result scaffold. Fragments are also mirrored to fragments.jsonl.",
     "Only classification=clean-post-freeze fragments may close u07; discovery-only is supplemental."
   ],
-  "updatedAt": "2026-09-12T14:22:57.634Z"
+  "updatedAt": "2026-09-12T15:01:15.299Z"
 }
