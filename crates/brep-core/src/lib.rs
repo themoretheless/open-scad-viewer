@@ -10,7 +10,7 @@
 )]
 #![allow(unused_features)]
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub mod operations;
 pub use operations::{
@@ -23,20 +23,102 @@ pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
 pub type Loop = brep_topology::Loop<Curve>;
 pub type Face = brep_topology::Face<Surface>;
+#[derive(Clone, Debug, Default)]
+pub struct TopologyIds {
+    pub vertices: Vec<String>,
+    pub edges: Vec<String>,
+    pub loops: Vec<String>,
+    pub faces: Vec<String>,
+    pub shells: Vec<String>,
+    pub bodies: Vec<String>,
+}
+impl value_codec::Serialize for TopologyIds {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "vertices".into(),
+            value_codec::Serialize::to_value(&self.vertices),
+        );
+        object.insert(
+            "edges".into(),
+            value_codec::Serialize::to_value(&self.edges),
+        );
+        object.insert(
+            "loops".into(),
+            value_codec::Serialize::to_value(&self.loops),
+        );
+        object.insert(
+            "faces".into(),
+            value_codec::Serialize::to_value(&self.faces),
+        );
+        object.insert(
+            "shells".into(),
+            value_codec::Serialize::to_value(&self.shells),
+        );
+        object.insert(
+            "bodies".into(),
+            value_codec::Serialize::to_value(&self.bodies),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for TopologyIds {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected topologyIds object"))?;
+        let read = |key: &str| {
+            object
+                .get(key)
+                .cloned()
+                .map(value_codec::Deserialize::from_value)
+                .transpose()
+                .map(|value| value.unwrap_or_default())
+        };
+        Ok(Self {
+            vertices: read("vertices")?,
+            edges: read("edges")?,
+            loops: read("loops")?,
+            faces: read("faces")?,
+            shells: read("shells")?,
+            bodies: read("bodies")?,
+        })
+    }
+}
 #[derive(Clone, Debug)]
-pub struct Model(pub brep_topology::Model<Curve, Surface, Curve>);
+pub struct Model(
+    pub brep_topology::Model<Curve, Surface, Curve>,
+    pub TopologyIds,
+);
 impl value_codec::Serialize for Model {
     fn to_value(&self) -> value_codec::Value {
-        value_codec::Serialize::to_value(&self.0)
+        let mut value = value_codec::Serialize::to_value(&self.0);
+        value.as_object_mut().unwrap().insert(
+            "topologyIds".into(),
+            value_codec::Serialize::to_value(&self.1),
+        );
+        value
     }
 }
 impl<'de> value_codec::Deserialize<'de> for Model {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        Ok(Self(
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected B-rep object"))?
+            .clone();
+        let ids = object
+            .remove("topologyIds")
+            .map(TopologyIds::from_value)
+            .transpose()?;
+        let topology =
             <brep_topology::Model<Curve, Surface, Curve> as value_codec::Deserialize>::from_value(
-                value,
-            )?,
-        ))
+                value_codec::Value::Object(object),
+            )?;
+        let mut model = Self(topology, ids.unwrap_or_default());
+        if model.1.vertices.is_empty() {
+            model.rebuild_topology_ids();
+        }
+        Ok(model)
     }
 }
 impl std::ops::Deref for Model {
@@ -125,11 +207,200 @@ fn distance(a: &[f64], b: &[f64]) -> f64 {
         .sum::<f64>()
         .sqrt()
 }
+fn close_points(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
+    distance(&a, &b) <= tolerance
+}
 fn curve_point(c: &Curve, t: f64) -> Result<Vec<f64>> {
     let d = c.domain();
     Ok(c.evaluate(d[0] + t * (d[1] - d[0]))?.point)
 }
 impl Model {
+    fn hash(parts: impl IntoIterator<Item = String>) -> String {
+        let mut hash = 0xcbf29ce484222325u64;
+        for byte in parts
+            .into_iter()
+            .flat_map(|part| part.into_bytes().into_iter().chain([0xff]))
+        {
+            hash ^= byte as u64;
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+        format!("{hash:016x}")
+    }
+    fn point_key(&self, point: [f64; 3]) -> String {
+        let quantum = self.tolerance_mm.max(1e-10);
+        point
+            .map(|coordinate| (coordinate / quantum).round() as i64)
+            .map(|coordinate| coordinate.to_string())
+            .join(",")
+    }
+    pub fn rebuild_topology_ids(&mut self) {
+        let vertices: Vec<_> = self
+            .vertices
+            .iter()
+            .map(|vertex| format!("v:{}", Self::hash([self.point_key(vertex.point)])))
+            .collect();
+        let edges: Vec<_> = self
+            .edges
+            .iter()
+            .map(|edge| {
+                let mut ends = edge.vertices.map(|vertex| vertices[vertex].clone());
+                ends.sort();
+                format!("e:{}", Self::hash(ends))
+            })
+            .collect();
+        let loops: Vec<_> = self
+            .loops
+            .iter()
+            .map(|wire| {
+                let mut boundary: Vec<_> = wire
+                    .coedges
+                    .iter()
+                    .map(|coedge| edges[coedge.edge].clone())
+                    .collect();
+                boundary.sort();
+                format!("l:{}", Self::hash(boundary))
+            })
+            .collect();
+        let faces: Vec<_> = self
+            .faces
+            .iter()
+            .map(|face| {
+                let mut boundaries: Vec<_> = std::iter::once(&face.outer)
+                    .chain(&face.holes)
+                    .map(|&wire| loops[wire].clone())
+                    .collect();
+                boundaries.sort();
+                format!("f:{}", Self::hash(boundaries))
+            })
+            .collect();
+        let shells: Vec<_> = self
+            .shells
+            .iter()
+            .map(|shell| {
+                let mut members: Vec<_> = shell
+                    .faces
+                    .iter()
+                    .map(|face| faces[face.face].clone())
+                    .collect();
+                members.sort();
+                format!("s:{}", Self::hash(members))
+            })
+            .collect();
+        let bodies = self
+            .bodies
+            .iter()
+            .map(|body| {
+                let mut members: Vec<_> = std::iter::once(&body.outer_shell)
+                    .chain(&body.inner_shells)
+                    .map(|&shell| shells[shell].clone())
+                    .collect();
+                members.sort();
+                format!("b:{}", Self::hash(members))
+            })
+            .collect();
+        self.1 = TopologyIds {
+            vertices,
+            edges,
+            loops,
+            faces,
+            shells,
+            bodies,
+        };
+    }
+    pub fn inherit_topology_ids(&mut self, sources: &[&Model]) {
+        self.rebuild_topology_ids();
+        for source in sources {
+            for (target, vertex) in self.0.vertices.iter().enumerate() {
+                if let Some(source_index) = source.0.vertices.iter().position(|candidate| {
+                    close_points(candidate.point, vertex.point, self.tolerance_mm * 4.)
+                }) {
+                    self.1.vertices[target] = source.1.vertices[source_index].clone();
+                }
+            }
+            for (target, edge) in self.0.edges.iter().enumerate() {
+                let endpoints = edge.vertices.map(|vertex| self.0.vertices[vertex].point);
+                if let Some(source_index) = source.0.edges.iter().position(|candidate| {
+                    let other = candidate
+                        .vertices
+                        .map(|vertex| source.0.vertices[vertex].point);
+                    (close_points(endpoints[0], other[0], self.tolerance_mm * 4.)
+                        && close_points(endpoints[1], other[1], self.tolerance_mm * 4.))
+                        || (close_points(endpoints[0], other[1], self.tolerance_mm * 4.)
+                            && close_points(endpoints[1], other[0], self.tolerance_mm * 4.))
+                }) {
+                    self.1.edges[target] = source.1.edges[source_index].clone();
+                }
+            }
+            for (target, face) in self.0.faces.iter().enumerate() {
+                let target_vertices: BTreeSet<_> = self.0.loops[face.outer]
+                    .coedges
+                    .iter()
+                    .map(|coedge| self.1.vertices[self.0.edges[coedge.edge].vertices[0]].clone())
+                    .collect();
+                if let Some(source_index) = source.0.faces.iter().position(|candidate| {
+                    let source_vertices: BTreeSet<_> = source.0.loops[candidate.outer]
+                        .coedges
+                        .iter()
+                        .map(|coedge| {
+                            source.1.vertices[source.0.edges[coedge.edge].vertices[0]].clone()
+                        })
+                        .collect();
+                    target_vertices == source_vertices
+                }) {
+                    self.1.faces[target] = source.1.faces[source_index].clone();
+                }
+            }
+            for (target, wire) in self.0.loops.iter().enumerate() {
+                let target_edges: BTreeSet<_> = wire
+                    .coedges
+                    .iter()
+                    .map(|coedge| self.1.edges[coedge.edge].clone())
+                    .collect();
+                if let Some(source_index) = source.0.loops.iter().position(|candidate| {
+                    candidate
+                        .coedges
+                        .iter()
+                        .map(|coedge| source.1.edges[coedge.edge].clone())
+                        .collect::<BTreeSet<_>>()
+                        == target_edges
+                }) {
+                    self.1.loops[target] = source.1.loops[source_index].clone();
+                }
+            }
+            for (target, shell) in self.0.shells.iter().enumerate() {
+                let target_faces: BTreeSet<_> = shell
+                    .faces
+                    .iter()
+                    .map(|face| self.1.faces[face.face].clone())
+                    .collect();
+                if let Some(source_index) = source.0.shells.iter().position(|candidate| {
+                    candidate
+                        .faces
+                        .iter()
+                        .map(|face| source.1.faces[face.face].clone())
+                        .collect::<BTreeSet<_>>()
+                        == target_faces
+                }) {
+                    self.1.shells[target] = source.1.shells[source_index].clone();
+                }
+            }
+            for (target, body) in self.0.bodies.iter().enumerate() {
+                let target_shells: BTreeSet<_> = std::iter::once(&body.outer_shell)
+                    .chain(&body.inner_shells)
+                    .map(|&shell| self.1.shells[shell].clone())
+                    .collect();
+                if let Some(source_index) = source.0.bodies.iter().position(|candidate| {
+                    std::iter::once(&candidate.outer_shell)
+                        .chain(&candidate.inner_shells)
+                        .map(|&shell| source.1.shells[shell].clone())
+                        .collect::<BTreeSet<_>>()
+                        == target_shells
+                }) {
+                    self.1.bodies[target] = source.1.bodies[source_index].clone();
+                }
+            }
+        }
+    }
     pub fn loop_uv(&self, id: usize, segments: usize) -> Result<Vec<[f64; 2]>> {
         require((1..=64).contains(&segments), "Edge sampling must be 1..64")?;
         let wire = self.loops.get(id).ok_or_else(|| invalid("Unknown loop"))?;
@@ -166,6 +437,26 @@ impl Model {
             "Invalid B-rep tolerance (1e-10..1e-2 mm)",
         )?;
         let tol = self.tolerance_mm;
+        require(
+            self.1.vertices.len() == self.vertices.len()
+                && self.1.edges.len() == self.edges.len()
+                && self.1.loops.len() == self.loops.len()
+                && self.1.faces.len() == self.faces.len()
+                && self.1.shells.len() == self.shells.len()
+                && self.1.bodies.len() == self.bodies.len(),
+            "Topology ID table does not match entity counts",
+        )?;
+        let all_ids = self
+            .1
+            .vertices
+            .iter()
+            .chain(&self.1.edges)
+            .chain(&self.1.loops)
+            .chain(&self.1.faces)
+            .chain(&self.1.shells)
+            .chain(&self.1.bodies);
+        let ids: BTreeSet<_> = all_ids.clone().collect();
+        require(ids.len() == all_ids.count(), "Topology IDs must be unique")?;
         let mut vertex_used = vec![false; self.vertices.len()];
         for v in &self.vertices {
             require(
@@ -334,15 +625,18 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
         point: std::array::from_fn(|i| if p[i] == 0 { min[i] } else { max[i] }),
     })
     .to_vec();
-    let mut m = Model(brep_topology::Model {
-        vertices,
-        edges: vec![],
-        loops: vec![],
-        faces: vec![],
-        shells: vec![],
-        bodies: vec![],
-        tolerance_mm: 1e-7,
-    });
+    let mut m = Model(
+        brep_topology::Model {
+            vertices,
+            edges: vec![],
+            loops: vec![],
+            faces: vec![],
+            shells: vec![],
+            bodies: vec![],
+            tolerance_mm: 1e-7,
+        },
+        TopologyIds::default(),
+    );
     let mut edges = BTreeMap::new();
     for corners in [
         [0, 3, 2, 1],
@@ -414,6 +708,7 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
         outer_shell: 0,
         inner_shells: vec![],
     });
+    m.rebuild_topology_ids();
     m.validate()?;
     Ok(m)
 }
@@ -453,6 +748,7 @@ mod tests {
         m.0.shells[0].closed = false;
         assert!(m.validate().is_err());
         m.0.bodies.clear();
+        m.rebuild_topology_ids();
         m.validate().unwrap();
     }
 }

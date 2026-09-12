@@ -314,6 +314,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
     Ok(brep::Tessellation {
         built: BuiltMesh { mesh, report },
         face_ids: ids,
+        topology_face_ids: None,
     })
 }
 
@@ -398,15 +399,19 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_core::Model> {
             ),
         })
         .collect();
-    let model = brep_core::Model(brep_topology::Model {
-        vertices: polygon.vertices,
-        edges,
-        loops,
-        faces,
-        shells: polygon.shells,
-        bodies: polygon.bodies,
-        tolerance_mm: polygon.tolerance_mm,
-    });
+    let mut model = brep_core::Model(
+        brep_topology::Model {
+            vertices: polygon.vertices,
+            edges,
+            loops,
+            faces,
+            shells: polygon.shells,
+            bodies: polygon.bodies,
+            tolerance_mm: polygon.tolerance_mm,
+        },
+        brep_core::TopologyIds::default(),
+    );
+    model.rebuild_topology_ids();
     model.validate()?;
     Ok(model)
 }

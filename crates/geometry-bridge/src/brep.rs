@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 pub struct Tessellation {
     pub built: BuiltMesh,
     pub face_ids: Vec<usize>,
+    pub topology_face_ids: Option<Vec<String>>,
 }
 impl value_codec::Serialize for Tessellation {
     fn to_value(&self) -> value_codec::Value {
@@ -16,6 +17,12 @@ impl value_codec::Serialize for Tessellation {
             "faceIds".into(),
             value_codec::Serialize::to_value(&self.face_ids),
         );
+        if let Some(ids) = &self.topology_face_ids {
+            object.insert(
+                "topologyFaceIds".into(),
+                value_codec::Serialize::to_value(ids),
+            );
+        }
         value_codec::Value::Object(object)
     }
 }
@@ -65,7 +72,13 @@ pub(crate) fn weld(mesh: Mesh, tolerance: f64) -> Result<Mesh> {
     out.validate()?;
     Ok(out)
 }
-fn finish(mesh: Mesh, face_ids: Vec<usize>, tolerance: f64, closed: bool) -> Result<Tessellation> {
+fn finish(
+    mesh: Mesh,
+    face_ids: Vec<usize>,
+    topology_face_ids: Option<Vec<String>>,
+    tolerance: f64,
+    closed: bool,
+) -> Result<Tessellation> {
     let mesh = weld(mesh, tolerance)?;
     let report = mesh.inspect()?;
     if report.degenerate_triangles > 0
@@ -80,6 +93,7 @@ fn finish(mesh: Mesh, face_ids: Vec<usize>, tolerance: f64, closed: bool) -> Res
     Ok(Tessellation {
         built: BuiltMesh { mesh, report },
         face_ids,
+        topology_face_ids,
     })
 }
 pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
@@ -159,9 +173,14 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
             }
         }
     }
+    let topology_face_ids = face_ids
+        .iter()
+        .map(|&face| model.1.faces[face].clone())
+        .collect();
     finish(
         mesh,
         face_ids,
+        Some(topology_face_ids),
         model.tolerance_mm,
         model.shells.iter().all(|s| s.closed),
     )
@@ -171,6 +190,7 @@ pub fn polygons(model: &polygon_core::solid::brep::Model) -> Result<Tessellation
     finish(
         t.mesh,
         t.face_ids,
+        None,
         model.tolerance_mm,
         model.shells.iter().all(|s| s.closed),
     )

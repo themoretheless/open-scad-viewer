@@ -23,13 +23,19 @@ agreement; it does not claim general solid-geometric certification.
   more closed orthogonal planar bodies per operand. Faces must be axis-aligned.
   Union, difference, and intersection additionally support two convex planar
   single-body operands at arbitrary orientation by clipping exact planar
-  boundaries against their support half-spaces.
+  boundaries against their support half-spaces. A bounded planar boundary
+  arrangement also supports rotated non-convex solids whose individual face
+  loops are convex: it splits faces at support planes and coplanar edge lines,
+  classifies both sides of every fragment, and fails on resource limits,
+  ambiguity, non-manifold output, face holes, or non-convex individual loops.
   The result may be concave or disconnected; disconnected components are
   represented as separate B-rep bodies and can be used by later booleans.
   A fully enclosed orthogonal difference is represented as an inner shell.
   Orthogonal inner-shell operands remain supported in later booleans. Empty,
-  curved, unsupported non-convex rotated, and non-manifold cases fail closed;
-  no operation silently falls back to a mesh.
+  curved and non-manifold cases fail closed; no operation silently falls back
+  to a mesh. Analytic curved booleans remain unimplemented: there is no
+  surface/surface intersection, UV trim arrangement, or curved-region
+  classifier in this operation path.
 - `chamfer_edges(model, edges, size)` supports one convex planar body without
   cavities and one connected chain of authored convex edges. `chamfer` is the
   single-edge convenience form.
@@ -43,6 +49,16 @@ agreement; it does not claim general solid-geometric certification.
 Common error codes are `BREP_UNSUPPORTED_OPERATION`,
 `BREP_OPERATION_FAILED`, `BREP_INVALID_OPERATION`, `BREP_INVALID_SELECTION`,
 `BREP_INVALID_SIZE`, and `BREP_RESOURCE_LIMIT`.
+
+Every NURBS B-rep serializes `topologyIds` for vertices, edges, loops, faces,
+shells, and bodies. IDs are independent of compact array order. Constructors
+derive deterministic IDs; transforms preserve them; booleans and edge
+operations inherit IDs for geometrically unchanged vertices/edges/faces and
+assign deterministic IDs to generated or split entities. This is deliberately
+conservative lineage: a split face receives new IDs, and ambiguous geometric
+matches are not claimed as preservation. Tessellation publishes
+`topologyFaceIds` alongside compact numeric `faceIds`, so display LOD does not
+change authored face identity.
 
 The geometry bridge exposes these as `brep_nurbs_extrude_polygon`,
 `brep_nurbs_faceted_loft`, `brep_nurbs_faceted_sweep`,

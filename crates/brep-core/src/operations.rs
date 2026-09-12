@@ -97,6 +97,9 @@ fn face_plane(model: &Model, face_id: usize) -> Result<Plane> {
     if points
         .iter()
         .any(|&p| (dot(normal, p) - offset).abs() > model.tolerance_mm * 8.)
+        || face.surface.control_points.iter().flatten().any(|point| {
+            (dot(normal, [point[0], point[1], point[2]]) - offset).abs() > model.tolerance_mm * 8.
+        })
     {
         return Err(unsupported("Operation requires planar faces"));
     }
@@ -194,15 +197,18 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
             "Result exceeds 256 faces",
         ));
     }
-    let mut model = Model(brep_topology::Model {
-        vertices: vec![],
-        edges: vec![],
-        loops: vec![],
-        faces: vec![],
-        shells: vec![],
-        bodies: vec![],
-        tolerance_mm: tolerance,
-    });
+    let mut model = Model(
+        brep_topology::Model {
+            vertices: vec![],
+            edges: vec![],
+            loops: vec![],
+            faces: vec![],
+            shells: vec![],
+            bodies: vec![],
+            tolerance_mm: tolerance,
+        },
+        TopologyIds::default(),
+    );
     let mut edge_map = BTreeMap::<(usize, usize), usize>::new();
     for polygon in polygons {
         if polygon.len() < 3 {
@@ -408,6 +414,7 @@ fn model_from_polygons(mut polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Resu
             .inner_shells
             .push(*shell);
     }
+    model.rebuild_topology_ids();
     model.validate().map_err(|e| {
         if e.code == "BREP_RESOURCE_LIMIT" {
             e
@@ -901,7 +908,9 @@ fn convex_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     if operation == "intersection" {
         let mut planes = a_planes;
         planes.extend(b_planes);
-        return model_from_planes(&planes, tolerance);
+        let mut result = model_from_planes(&planes, tolerance)?;
+        result.inherit_topology_ids(&[a, b]);
+        return Ok(result);
     }
     let shared_support = |plane: Plane, others: &[Plane]| {
         others.iter().any(|other| {
@@ -936,7 +945,207 @@ fn convex_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
             "Boolean result is empty; empty B-rep bodies are not represented",
         ));
     }
-    model_from_polygons(polygons, tolerance)
+    let mut result = model_from_polygons(polygons, tolerance)?;
+    result.inherit_topology_ids(&[a, b]);
+    Ok(result)
+}
+
+fn planar_boundary(model: &Model) -> Result<Vec<(Plane, Vec<[f64; 3]>)>> {
+    model.validate()?;
+    if model.bodies.is_empty() {
+        return Err(unsupported("Boolean operands require closed bodies"));
+    }
+    let mut boundary = vec![];
+    let mut seen_shells = BTreeSet::new();
+    for body in &model.bodies {
+        for shell_id in std::iter::once(&body.outer_shell).chain(&body.inner_shells) {
+            if !seen_shells.insert(*shell_id) || !model.shells[*shell_id].closed {
+                return Err(unsupported(
+                    "Boolean operands require distinct closed shells",
+                ));
+            }
+            for face_use in &model.shells[*shell_id].faces {
+                let face = &model.faces[face_use.face];
+                if !face.holes.is_empty() {
+                    return Err(unsupported(
+                        "General planar booleans do not accept trimmed face holes",
+                    ));
+                }
+                let mut ids = loop_vertices(model, face.outer)?;
+                if face_use.reversed {
+                    ids.reverse();
+                }
+                let polygon: Vec<_> = ids
+                    .into_iter()
+                    .map(|vertex| model.vertices[vertex].point)
+                    .collect();
+                let normal = unit(cross(
+                    sub(polygon[1], polygon[0]),
+                    sub(polygon[2], polygon[0]),
+                ))?;
+                let mut sign = 0.;
+                for i in 0..polygon.len() {
+                    let turn = dot(
+                        cross(
+                            sub(polygon[(i + 1) % polygon.len()], polygon[i]),
+                            sub(
+                                polygon[(i + 2) % polygon.len()],
+                                polygon[(i + 1) % polygon.len()],
+                            ),
+                        ),
+                        normal,
+                    );
+                    if turn.abs() <= model.tolerance_mm * 8. {
+                        continue;
+                    }
+                    if sign == 0. {
+                        sign = turn.signum();
+                    } else if turn.signum() != sign {
+                        return Err(unsupported(
+                            "General planar booleans require convex individual face loops",
+                        ));
+                    }
+                }
+                boundary.push((
+                    Plane {
+                        normal,
+                        offset: dot(normal, polygon[0]),
+                    },
+                    polygon,
+                ));
+            }
+        }
+    }
+    Ok(boundary)
+}
+
+fn fragment_polygon(
+    polygon: Vec<[f64; 3]>,
+    splitters: &[Plane],
+    tolerance: f64,
+) -> Result<Vec<Vec<[f64; 3]>>> {
+    let mut fragments = vec![polygon];
+    for &splitter in splitters {
+        let mut next = vec![];
+        for fragment in fragments {
+            let (negative, positive) = split_polygon(&fragment, splitter, tolerance * 8.);
+            if !negative.is_empty() {
+                next.push(negative);
+            }
+            if !positive.is_empty() {
+                next.push(positive);
+            }
+        }
+        fragments = next;
+        if fragments.len() > 4096 {
+            return Err(Error::new(
+                "BREP_RESOURCE_LIMIT",
+                "Planar Boolean arrangement exceeds 4096 fragments",
+            ));
+        }
+    }
+    Ok(fragments)
+}
+
+fn boolean_state(operation: &str, inside_a: bool, inside_b: bool) -> bool {
+    match operation {
+        "union" => inside_a || inside_b,
+        "difference" => inside_a && !inside_b,
+        _ => inside_a && inside_b,
+    }
+}
+
+/// Bounded boundary arrangement for closed planar solids. Every convex input
+/// face is split by the other operand's support planes and by in-plane edge
+/// lines for coplanar overlaps. Two-sided point classification authors only
+/// fragments across which the requested Boolean state changes.
+fn planar_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    let tolerance = a.tolerance_mm.max(b.tolerance_mm);
+    let a_boundary = planar_boundary(a)?;
+    let b_boundary = planar_boundary(b)?;
+    let mut polygons = vec![];
+    for (source, other) in [
+        (a_boundary.as_slice(), b_boundary.as_slice()),
+        (b_boundary.as_slice(), a_boundary.as_slice()),
+    ] {
+        for &(source_plane, ref polygon) in source {
+            let mut splitters: Vec<_> = other.iter().map(|(plane, _)| *plane).collect();
+            for &(other_plane, ref other_polygon) in other {
+                let alignment = dot(source_plane.normal, other_plane.normal);
+                let plane_distance = if alignment >= 0. {
+                    (source_plane.offset - other_plane.offset).abs()
+                } else {
+                    (source_plane.offset + other_plane.offset).abs()
+                };
+                if alignment.abs() > 1. - 1e-9 && plane_distance <= tolerance * 8. {
+                    for i in 0..other_polygon.len() {
+                        let edge = sub(
+                            other_polygon[(i + 1) % other_polygon.len()],
+                            other_polygon[i],
+                        );
+                        let normal = unit(cross(source_plane.normal, edge))?;
+                        splitters.push(Plane {
+                            normal,
+                            offset: dot(normal, other_polygon[i]),
+                        });
+                    }
+                }
+            }
+            for mut fragment in fragment_polygon(polygon.clone(), &splitters, tolerance)? {
+                let center = mul(
+                    fragment.iter().copied().fold([0.; 3], add),
+                    1. / fragment.len() as f64,
+                );
+                let epsilon = tolerance * 64.;
+                let minus = sub(center, mul(source_plane.normal, epsilon));
+                let plus = add(center, mul(source_plane.normal, epsilon));
+                let states = [
+                    boolean_state(operation, contains(a, minus)?, contains(b, minus)?),
+                    boolean_state(operation, contains(a, plus)?, contains(b, plus)?),
+                ];
+                if states[0] == states[1] {
+                    continue;
+                }
+                if !states[0] && states[1] {
+                    fragment.reverse();
+                }
+                let mut key: Vec<_> = fragment
+                    .iter()
+                    .map(|point| {
+                        point
+                            .map(|coordinate| (coordinate / tolerance).round() as i64)
+                            .map(|coordinate| coordinate.to_string())
+                            .join(",")
+                    })
+                    .collect();
+                key.sort();
+                let duplicate = polygons.iter().any(|existing: &Vec<[f64; 3]>| {
+                    let mut existing_key: Vec<_> = existing
+                        .iter()
+                        .map(|point| {
+                            point
+                                .map(|coordinate| (coordinate / tolerance).round() as i64)
+                                .map(|coordinate| coordinate.to_string())
+                                .join(",")
+                        })
+                        .collect();
+                    existing_key.sort();
+                    existing_key == key
+                });
+                if !duplicate {
+                    polygons.push(fragment);
+                }
+            }
+        }
+    }
+    if polygons.is_empty() {
+        return Err(unsupported(
+            "Boolean result is empty; empty B-rep bodies are not represented",
+        ));
+    }
+    let mut result = model_from_polygons(polygons, tolerance)?;
+    result.inherit_topology_ids(&[a, b]);
+    Ok(result)
 }
 
 fn orthogonal(model: &Model) -> Result<()> {
@@ -1072,6 +1281,9 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
             });
         }
     }
+    if orthogonal(a).is_err() || orthogonal(b).is_err() {
+        return planar_boolean(a, b, operation);
+    }
     orthogonal(a)?;
     orthogonal(b)?;
     let mut coordinates: [Vec<f64>; 3] = std::array::from_fn(|_| vec![]);
@@ -1159,7 +1371,9 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
             });
         }
     }
-    model_from_polygons(polygons, a.tolerance_mm.max(b.tolerance_mm))
+    let mut result = model_from_polygons(polygons, a.tolerance_mm.max(b.tolerance_mm))?;
+    result.inherit_topology_ids(&[a, b]);
+    Ok(result)
 }
 
 fn edge_faces(model: &Model, edge_id: usize) -> Result<[usize; 2]> {
@@ -1291,7 +1505,7 @@ fn edge_operation(
         }
         supports.extend([a, b]);
     }
-    let result = model_from_planes(&planes, model.tolerance_mm)?;
+    let mut result = model_from_planes(&planes, model.tolerance_mm)?;
     // A consumed adjacent support face means the requested size crossed a
     // neighboring feature even if the half-space intersection stayed nonempty.
     for original in supports {
@@ -1309,6 +1523,7 @@ fn edge_operation(
             ));
         }
     }
+    result.inherit_topology_ids(&[model]);
     Ok(result)
 }
 
@@ -1435,6 +1650,53 @@ mod tests {
             assert!(result.faces.len() >= 8);
             assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
         }
+    }
+
+    #[test]
+    fn topology_ids_survive_preserved_boolean_entities_and_round_trip() {
+        let stock = cuboid([0., 0., 0.], [3., 2., 2.]).unwrap();
+        let cutter = cuboid([2., 0., 0.], [4., 2., 2.]).unwrap();
+        let result = boolean(&stock, &cutter, "difference").unwrap();
+        let shared_vertices = result
+            .1
+            .vertices
+            .iter()
+            .filter(|id| stock.1.vertices.contains(id))
+            .count();
+        let shared_edges = result
+            .1
+            .edges
+            .iter()
+            .filter(|id| stock.1.edges.contains(id))
+            .count();
+        let shared_faces = result
+            .1
+            .faces
+            .iter()
+            .filter(|id| stock.1.faces.contains(id))
+            .count();
+        assert!(shared_vertices >= 4);
+        assert!(shared_edges >= 4);
+        assert!(shared_faces >= 1);
+        let restored: Model =
+            value_codec::from_str(&value_codec::to_string(&result).unwrap()).unwrap();
+        assert_eq!(restored.1.vertices, result.1.vertices);
+        assert_eq!(restored.1.edges, result.1.edges);
+        assert_eq!(restored.1.faces, result.1.faces);
+    }
+
+    #[test]
+    fn rotated_nonconvex_planar_boolean_uses_bounded_arrangement() {
+        let stock = cuboid([0., 0., 0.], [4., 4., 2.]).unwrap();
+        let notch = cuboid([2., 2., -1.], [5., 5., 3.]).unwrap();
+        let mut nonconvex = boolean(&stock, &notch, "difference").unwrap();
+        rotate_z(&mut nonconvex, std::f64::consts::PI / 9.);
+        let mut cutter = cuboid([1., -1., -1.], [3., 5., 3.]).unwrap();
+        rotate_z(&mut cutter, -std::f64::consts::PI / 12.);
+        let result = boolean(&nonconvex, &cutter, "intersection").unwrap();
+        assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+        assert_eq!(result.bodies.len(), 1);
+        assert!(result.faces.len() > 6);
     }
 
     #[test]

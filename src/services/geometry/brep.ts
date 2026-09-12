@@ -10,11 +10,20 @@ export interface BrepModel<C,S,P> {
  shells:{faces:{face:number;reversed:boolean}[];closed:boolean}[]
  bodies:{outerShell:number;innerShells:number[]}[]
  toleranceMm:number
+ topologyIds?:BrepTopologyIds
+}
+export interface BrepTopologyIds {
+ vertices:string[]
+ edges:string[]
+ loops:string[]
+ faces:string[]
+ shells:string[]
+ bodies:string[]
 }
 export type NurbsBrep=BrepModel<NurbsCurve,NurbsSurface,NurbsCurve>
 export type PolygonBrep=BrepModel<null,{mesh:PolygonMesh;sourceFaceId:number},null>
 export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_certified'}
-export interface BrepMesh extends PolygonBuild {faceIds:number[]}
+export interface BrepMesh extends PolygonBuild {faceIds:number[];topologyFaceIds?:string[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */

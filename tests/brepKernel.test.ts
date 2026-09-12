@@ -5,9 +5,11 @@ import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 import {transformSelection} from '../src/services/directSolidTools'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{
  const model=createBrepBox([0,0,0],[2,3,4]);expect([model.vertices.length,model.edges.length,model.faces.length,model.bodies.length]).toEqual([8,12,6,1])
+ expect(model.topologyIds?.vertices).toHaveLength(8);expect(new Set(model.topologyIds?.faces).size).toBe(6)
  expect(inspectNurbsBrep(model).topologyValid).toBe(true)
  const mesh=tessellateNurbsBrep(model,3);expect(mesh.report.closed).toBe(true);expect(mesh.report.signedVolumeMm3).toBeCloseTo(24,8)
  expect(new Set(mesh.faceIds).size).toBe(6)
+ expect(new Set(mesh.topologyFaceIds).size).toBe(6)
  const polygon=nurbsBrepToPolygon(model,3);expect(inspectPolygonBrep(polygon).topologyValid).toBe(true);expect(polygon.faces).toHaveLength(6)
  expect(tessellatePolygonBrep(polygon).report.signedVolumeMm3).toBeCloseTo(24,8)
  model.edges[0].vertices[0]=999;expect(()=>inspectNurbsBrep(model)).toThrow()
@@ -56,6 +58,15 @@ it('preserves authored B-rep geometry through Solid transforms for rotated boole
   const result=booleanNurbsBrep(stock,rotated,operation)
   expect(result.faces.length).toBeGreaterThanOrEqual(8);expect(tessellateNurbsBrep(result,1).report.closed).toBe(true)
  }
+})
+it('keeps persistent topology IDs for unchanged Boolean entities',()=>{
+ const stock=createBrepBox([0,0,0],[3,2,2]),cutter=createBrepBox([2,0,0],[4,2,2])
+ const result=booleanNurbsBrep(stock,cutter,'difference')
+ expect(result.topologyIds?.vertices.filter(id=>stock.topologyIds?.vertices.includes(id)).length).toBeGreaterThanOrEqual(4)
+ expect(result.topologyIds?.edges.filter(id=>stock.topologyIds?.edges.includes(id)).length).toBeGreaterThanOrEqual(4)
+ expect(result.topologyIds?.faces.some(id=>stock.topologyIds?.faces.includes(id))).toBe(true)
+ const mesh=tessellateNurbsBrep(result,1)
+ expect(mesh.topologyFaceIds).toEqual(mesh.faceIds.map(face=>result.topologyIds!.faces[face]))
 })
 it('constructs explicitly faceted round primitives as manifold B-reps',()=>{
  const cylinder=createFacetedBrepCylinder(2,5,16),sphere=createFacetedBrepSphere(2,16,8)
