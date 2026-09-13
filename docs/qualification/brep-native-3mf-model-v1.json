@@ -1,0 +1,36 @@
+{
+  "scope": "Native 3MF part admission and model XML; OPC ZIP remains on host; full B-rep incomplete",
+  "tests": {
+    "polygonCore": 66,
+    "applicationMcpPacking": 45,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4581246,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/polygon-core/src/model_3mf.rs": "8afaf3a85ca6ed77a8c212850d425b89db8134011223c4ce81bc6e99eeb765a0",
+    "crates/geometry-bridge/src/lib.rs": "6d72ef03f354c3b60ed9b4cbfa4c1353e1ddf0d9ee162d92ed4d2dd803c77c50",
+    "src/services/geometry/meshArtifactExport.ts": "593995206e4f046145505487bb9066bc574982883f70e797b5546ada2211dc4c",
+    "src/services/meshExportFormats.ts": "1e50adcb8d08f1f3b7fe3842fab127f5f30cb155e627df0d0b7f367d0e5fd1ea",
+    "tests/meshExportFormats.test.ts": "da2553cd675245082f1a75f3bd8e0ca2d5923c2b13e489991d03c0f50a3566b0",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "31d3c52e3cc4006be979259614f2fa5e7ab2a62b152f59eeb18f9a1eacccbf2d"
+  },
+  "limits": {
+    "exportedTriangles": 100000,
+    "exportedVertices": 300000,
+    "expandedModelBytes": 67108864,
+    "finalArtifactBytes": 4194304
+  },
+  "limitations": [
+    "OPC ZIP assembly, CRC32 and compression orchestration remain in TS",
+    "Shared qualification predates this WASM",
+    "Browser memory and latency not profiled",
+    "General B-rep completion unproved"
+  ]
+}

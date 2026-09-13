@@ -1,0 +1,14 @@
+{
+  "Cargo.toml": "5606103356d59d85ddb5bdd5efd0cea897309fc0c814308d6754b55fbe0328c4",
+  "Cargo.lock": "750df6f42f6d1a8018e8a7863e335b6afbdce4f68905252418d1dc1fe4ee871b",
+  "src/cache.rs": "ec896579f309e3b0a0a3862b91ac936c91d1723680bd8787bd51faf51a1fdafc",
+  "src/egui_integration.rs": "4f6cd6427d1e4060df8133406556b89e044716eeaf47c53288e744d1ea5b9789",
+  "src/lib.rs": "bce9ae17d166b2d25d8cd3770f401d05ba06c7c6be4d3afa35004b36641921a9",
+  "src/main.rs": "f9bc84f0e0665ffcb352509b9c6d0357571284caaba3766be46a78f2a5d1c67f",
+  "src/readback.rs": "7838f9b5b22cd612106a52b443a12342f02945159616b61f99e6339a19f1cefe",
+  "src/retained.wgsl": "e9348cca731c6582bd8b6a4a903771496767ec7a28c0ef1a812ba336a03bd29d",
+  "curvex_adapter.rs": "9dd99247914eba2770e906b81006ee04b4fecb73964ba930206f5df8c18a150e",
+  "curvex_headless.rs": "80faf6cbb8ddfa9c07a1b013e9b2804dc2616c5edea97e43fb51bc1ab49ba98a",
+  "curvex_frames.rs": "5743d8def13b2a37f6e7ee9438cb67423b4fe2327e3b45b9740c868932942743",
+  "prepare_gpu.py": "37457a1b0e880bf4402281d8b7a6c3b25f6af8c6e78df04fcba0e37e6f0d629a"
+}

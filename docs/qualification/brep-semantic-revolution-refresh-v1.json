@@ -1,0 +1,25 @@
+{
+  "scope": "Refreshed shared-artifact evidence after native semantic revolution; not full B-rep completion",
+  "svgWorkflowPassed": 122,
+  "ownCadPassed": 218,
+  "nativeSvgAndPlanar": "passed",
+  "artifactTests": {
+    "initialPassed": 18,
+    "initialFailed": 1,
+    "reason": "Manifest test ran before own-CAD metadata refresh completed",
+    "manifestRerunPassed": 3
+  },
+  "mcpTypecheck": "passed",
+  "distBytes": 4698463,
+  "sha256": {
+    "docs/qualification/svg-static-cycle-v1.json": "1122464770b5a190124e99e67b0f145a057502a51accd0e4b6ac168a4c5fea72",
+    "docs/qualification/own-rust-cad-v1.json": "a0e23532d5b8db6312b0b0a747750a2b2f99d298f2670fcf1a11441f7918834a",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "b0953f58da2ec7d6fdbb587c5393ff0690dcabb2bac833402e60a4aef2f940a5",
+    "src/generated/geometry-kernels/bytes.ts": "ebe17471644194de5cf7a4546369673b552cb87021887201715047ea06d78903"
+  },
+  "limitations": [
+    "No new browser qualification",
+    "Historical G0/G1 artifacts retained",
+    "General curved revolution and holes remain open"
+  ]
+}

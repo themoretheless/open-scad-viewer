@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native shared thread geometry and radius API replacing TS generator",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeModelgraphRuntimeTests": 56,
+    "integrationTests": 65,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4617040
+  },
+  "coverage": [
+    "Existing native generator supplies source, mesh and report through one WASM API",
+    "Thread phase, handedness, starts and clearance regressions",
+    "Left/right internal/external thread source geometry and mating overlap tests",
+    "Malformed scalar/boolean inputs and nonfinite radius query refused; subsequent valid generation succeeds",
+    "Threading retained B-rep explicitly refuses without preserving stale geometry"
+  ],
+  "limitations": [
+    "Faceted basic thread, not analytic helical B-rep with runout/root rounding or tolerance-class certification",
+    "Workbench mesh cutter placement and Boolean orchestration remain to migrate",
+    "Retained B-rep threading remains unimplemented",
+    "General B-rep completion and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/modelgraph-runtime/src/mechanical.rs": "496582b3dfaa978f9994a9476a26b84537b4238d27c343db9bea4527c26fc668",
+    "crates/modelgraph-runtime/src/lib.rs": "7b26e6ed250ee659697c0e79ff4de5132a2dc6ad661ddc360fff4dbf0effadab",
+    "crates/geometry-bridge/src/lib.rs": "6e826bf0b7ca4165223f4dbce2ec7a9fecea20da188dc0dbc9e32545e6e9a8b1",
+    "src/services/modelGraphThreads.ts": "d7ee14e23ce03669f5d32d409e9c3bc4091657ea0ca1ae78262eb7c3d20634c4",
+    "src/services/cadWorkbench.ts": "0a55dc061d70782f87741d52511646965925e48b288d77325bd44abad2e563c5",
+    "tests/modelGraphMechanical.test.ts": "d8ac755377e1efdd49d3c836846cb1cf3bb82cecb3a3374d032f8a8881441d0e",
+    "tests/cadWorkbench.test.ts": "48cee59d6ba755abdf312077c430fa62fc5f31f835ee257bf8bb618faad6c9ec",
+    "src/generated/geometry-kernels/bytes.ts": "ce467a5cde60211ada8cd5130ef5b0d1025f3a28e0b62caf6dc2c2166ce216bf"
+  }
+}

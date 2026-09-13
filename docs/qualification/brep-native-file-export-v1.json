@@ -1,0 +1,43 @@
+{
+  "scope": "Primary native scene STL/OBJ file serialization; other export paths and full B-rep remain incomplete",
+  "tests": {
+    "focusedApplicationAndMcp": 183,
+    "polygonCore": 61,
+    "bridgeSession": 1,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed",
+    "fullyExpandedStlTriangles": 750000
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4725967,
+    "budget": 4700000,
+    "geometryChunkBytes": 2360764,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/polygon-core/src/solid/export_file.rs": "4f3982d82509485953e475dd74a4fca79f10f4a0fde10734cc096525543c6fe1",
+    "crates/geometry-bridge/src/mesh_export_file.rs": "c6ca9eed48f94ae1393d1f673a6e0b3c750ee13f7d4d1baeff15940281524ff6",
+    "crates/geometry-bridge/src/abi.rs": "4bb49ef575ec5eaf7bc09c5353c2b1322fa3bf94e9f4c115511f1bb631b1b9e2",
+    "crates/geometry-bridge/src/mesh_analysis.rs": "736ef4a1dfd4b854af5424311f1552f8d10bd63d2071c06beed56e2c09fc064c",
+    "crates/geometry-wasm/src/lib.rs": "86197c5d9fedb99ea429e3d43c8cbc8719d6b9b76fb38a1ccfafdfcbb0a6c6e7",
+    "src/services/geometry/meshFileExport.ts": "9453517c681e488066f499b534561c6fe04fd45894e5ddbf288e481b9e273a9c",
+    "src/services/meshExport.ts": "19854d4c087454fe319a07c0bdb302fc13898b2469950a1ad1154945ff74517b",
+    "tests/nativeFileExport.test.ts": "ee94791b49bf86b9ff61bcfcc6fbc872696111b3421f5b61ab5009cc62202c2f",
+    "tests/meshExport.test.ts": "4d5013d7a05ceaaafd0bcd0f3d525c8da69f357d45bb522e573652714d7fc9f0",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "08c3ee66a1963693cf830c72516403a061e482e4d7d33d2330091d1cff7b0de5"
+  },
+  "limits": {
+    "activeSessions": 8,
+    "activeSerializedPayloadBytes": 268435456,
+    "sceneSourceTriangles": 750000
+  },
+  "limitations": [
+    "Other export paths still require migration",
+    "Payload limits are not process memory bounds",
+    "Browser memory/latency not profiled",
+    "Shared qualification not refreshed",
+    "General B-rep completion unproved"
+  ]
+}

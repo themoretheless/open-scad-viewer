@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-13",
+  "scope": "Bounded Bernstein support refinement for ruled loft correspondence",
+  "fullGoalComplete": false,
+  "checks": {
+    "beforeFix": "Native valid-rotation fixture reproduced rejection at 90 degrees",
+    "nativeBrepTests": 107,
+    "integrationTests": 86,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4624043
+  },
+  "coverage": [
+    "Valid rotated square sections at 90/120/150 degrees now admitted",
+    "Surface volume matches independent analytic section-area integral at all three rotations",
+    "Display topology remains closed",
+    "Collapsed 180-degree twist still refuses",
+    "Typed budget refusal and valid support recovery"
+  ],
+  "limits": {
+    "maximumSubdivisionDepth": 24,
+    "sharedSupportNodeBudget": 1000000
+  },
+  "limitations": [
+    "Floating-point coefficient construction/subdivision without complete outward error accounting; not certified predicates",
+    "Conservative unresolved refusal remains possible near degeneracy",
+    "Only parallel convex matching polygon sections and bilinear station joins",
+    "General B-rep completion and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/analytic/loft.rs": "10cb0dc8465a8310ab204dd6fedd5617b8e048e479a6bc426853c809c7ce1b89",
+    "tests/brepRuledLoft.test.ts": "84c89a8ed7464f22ed60480399355f059c2249d4770c1e4f8fd41bb766fdfd0a",
+    "src/generated/geometry-kernels/bytes.ts": "3cbd56cb7344d5aa664d270d15d31dce666e5c91f0364d74a266edcdea8609e8"
+  }
+}

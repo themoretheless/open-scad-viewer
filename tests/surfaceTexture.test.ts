@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {textureSurface,type SurfaceTextureOptions} from '../src/services/surfaceTexture'
+import {textureSurface,textureHeight,type SurfaceTextureOptions} from '../src/services/surfaceTexture'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {solidTopology,facePlane} from '../src/services/directSolidTools'
@@ -12,3 +12,31 @@ it('applies default-sized texture through source editing and the actual parser',
  const {parseOpenSCAD}=await import('../src/services/openscadParser'),{sceneBody}=await import('../src/services/mainModeling'),{patchMainSource}=await import('../src/services/mainSourceEditing'),{MAX_WORKSPACE_SOURCE_LENGTH}=await import('../src/services/workspaceDocument')
  const source='cube([20,15,10]);\ntranslate([30,0,0]) cube(4);',meshes=(await parseOpenSCAD(source)).meshes,bodies=meshes.map(sceneBody);bodies[0]=textureSurface(bodies[0],{...options,pitch:6,height:.4,angle:0,detail:3});const text=patchMainSource(source,meshes,{version:1,sketches:[],bodies});expect(text.length).toBeLessThan(MAX_WORKSPACE_SOURCE_LENGTH);expect(text).toContain('translate([30,0,0]) cube(4);');const rebuilt=await parseOpenSCAD(text);expect(rebuilt.meshes).toHaveLength(2);expect(inspectPolygonMesh(sceneBody(rebuilt.meshes[0],0).mesh).closed).toBe(true)
 },15000)
+
+it('matches analytic pattern landmarks and legacy unsigned-noise seed fixtures',()=>{
+ const o={...options,angle:0}
+ for(const [pattern,point,factor] of [
+  ['ribs',[0,0,0],1],['ribs',[1,0,0],.25],['grooves',[0,0,0],-1],
+  ['knurl',[0,0,0],1],['dimples',[0,0,0],-1],['dimples',[2,2,0],0],['waves',[0,0,0],1],
+ ] as const){
+  expect(textureHeight([...point],{...o,pattern})).toBeCloseTo(factor*o.height,12)
+  expect(textureHeight([...point],{...o,pattern,invert:true})).toBeCloseTo(-factor*o.height,12)
+ }
+ // Captured from the pre-migration JS hash, including negative cells and wrapped seeds.
+ for(const [seed,factor] of [[42,.5357285599595141],[-1,.17853841771337176],[4294967338,.5357285599595141]]){
+  expect(textureHeight([-1.5,2.25,-5],{...o,pattern:'fuzzy',seed})).toBeCloseTo(factor*o.height,12)
+ }
+})
+it('refuses stale retained B-rep textures and malformed selections atomically',async()=>{
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const brep=createBrepBox([0,0,0],[8,8,8]),retained={id:'retained',name:'Stock',brep,mesh:tessellateNurbsBrep(brep,1)},before=JSON.stringify(retained)
+ expect(()=>textureSurface(retained,options)).toThrow('retained B-rep')
+ expect(JSON.stringify(retained)).toBe(before)
+ const b=body(),snapshot=JSON.stringify(b)
+ for(const triangles of [[],[-1],[.5],[999]])expect(()=>textureSurface(b,{...options,triangles})).toThrow()
+ expect(()=>textureSurface(b,{...options,u:[2,0,0]})).toThrow('frame')
+ expect(()=>textureSurface(b,{...options,seed:.5})).toThrow()
+ expect(()=>textureHeight([Infinity,0,0],options)).toThrow()
+ expect(JSON.stringify(b)).toBe(snapshot)
+ expect(inspectPolygonMesh(textureSurface(b,options).mesh).closed).toBe(true)
+})

@@ -2643,7 +2643,17 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const matrix = matrixValue(arg(node, 'm', 0, undefined, ctx), ctx, node.p)
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
-      if (shapes.some(shape => shape.dimension !== 'solid3')) evaluationError(ctx, node.p, 'multmatrix currently supports 3D children only')
+      if (shapes.some(shape => shape.dimension !== 'solid3')) {
+        if (ctx.builder.languageContract !== 'openscad-viewer/brep-1') {
+          evaluationError(ctx, node.p, 'multmatrix currently supports 3D children only')
+        }
+        // A retained 2D profile has no implicit projection back from space.
+        // Admit only matrices whose image of the entire XY plane is still XY;
+        // the backend separately checks singularity and retained curve kinds.
+        if (matrix[2] !== 0 || matrix[6] !== 0 || matrix[14] !== 0) {
+          evaluationError(ctx, node.p, '2D B-rep multmatrix must preserve the XY plane')
+        }
+      }
       return transformShapes(occurrence, shapes, () => matrix, ctx)
     }
     case 'color': {
@@ -2705,7 +2715,13 @@ function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         }], true)
       }
       if (base.dimension !== cutters.dimension) evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
-      const valueType = ctx.builder.nodes[base.node].valueType
+      const inputType = ctx.builder.nodes[base.node].valueType
+      // Cutting a single solid can split it into multiple disconnected solids.
+      // The Boolean carrier is therefore SolidSet even when its base is Solid.
+      const valueType: SemanticValueType = {
+        ...inputType,
+        geometryKind: inputType.space === 'd2' ? 'region' : 'solid-set',
+      }
       return [ctx.builder.produce(occurrence, {
         kind: 'boolean', operation: 'difference', valueType,
         inputs: [base.node, cutters.node],
@@ -3439,6 +3455,7 @@ export function lowerOpenSCADToSemanticProgramUnchecked(
   const success: SemanticLoweringSuccess = Object.freeze({
     tag: 'success' as const,
     program,
+    sourceText: source,
     get canonicalBytes() { return new Uint8Array(canonicalSnapshot) },
     attestation,
     warnings: Object.freeze([...builder.warnings]),

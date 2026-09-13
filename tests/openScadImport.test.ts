@@ -247,9 +247,15 @@ describe('independent OpenSCAD 2021.01 import assets', () => {
     ].join('')
     const geometry = parseOpenScadSvg(sourceFile('asset.svg', source))
     expect(geometry.dimension).toBe(2)
-    expect(geometry.regions.length).toBeGreaterThanOrEqual(10)
-    expect(geometry.regions[0].contours).toHaveLength(2)
-    expect(geometry.pointCount).toBeGreaterThan(200)
+    // Each authored primitive survives. Styled strokes are continuous outlines,
+    // so their old per-segment triangle/circle region count is not a contract.
+    expect(geometry.regions.length).toBeGreaterThanOrEqual(7)
+    expect(geometry.regions.some(region => region.contours.length === 2)).toBe(true)
+    const bounds = bounds2(geometry)
+    expect(bounds.minimum.every(Number.isFinite)).toBe(true)
+    expect(bounds.maximum.every(Number.isFinite)).toBe(true)
+    expect(bounds.maximum[0] - bounds.minimum[0]).toBeGreaterThan(80)
+    expect(bounds.maximum[1] - bounds.minimum[1]).toBeGreaterThan(50)
   })
 
   it('rejects external/active SVG features, DTDs, malformed path data and XML depth', () => {

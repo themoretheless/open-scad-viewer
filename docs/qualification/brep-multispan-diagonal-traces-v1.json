@@ -1,0 +1,35 @@
+{
+  "scope": "Native multispan diagonal UV trace representation and exact-value endpoint joins; no intersection completeness certificate",
+  "tests": {
+    "brepCore": 95,
+    "integrationPacking": 65,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4583910,
+    "budget": 4700000
+  },
+  "limits": {
+    "diagonalDegree": 25,
+    "diagonalTotalControlPoints": 256
+  },
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "4818df99d1bff7d41f3fbe06cc949380f231f137a98ef829e8f575485f8f6260",
+    "crates/geometry-bridge/src/intersections.rs": "5fc615efa9ed3e56116485900a86ec2cf289e0ece6f7d1264d06baa56cbda23e",
+    "crates/geometry-bridge/src/lib.rs": "62252b2f801e65a6149bd7f545a5acda58f67b659e6f6dd87da9544d1baa3745",
+    "src/services/geometry/intersections.ts": "c06de47a0d5a62ad1d7720851248624a7a0d5682a17c747277f603f19cccc235",
+    "tests/brepIntersections.test.ts": "5597fa8bbf01daef032e00157399994a8f462c0e9c73fe3657dde009e6a2d6be",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "84d36bdfea0863fb3d9797b67ed0799b5e9c8b5a32f94f87fc931ceb4aa406ad"
+  },
+  "limitations": [
+    "Numerically unequal endpoints are not welded; use separate pieces",
+    "No general intersection completeness or topology-change permission",
+    "Unrepresentable UV knot partitions are typed refusals",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

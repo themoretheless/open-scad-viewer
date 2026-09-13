@@ -1,6 +1,19 @@
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { parseOpenSCAD } from '../src/services/openscadParser'
+import {
+  ORACLE_CASES,
+  ORACLE_REVIEW,
+  PREVIOUS_ORACLE,
+  PREVIOUS_ORACLE_SHA256,
+  assertOwnCadSemantics,
+  publishOracleExclusive,
+} from '../scripts/record-own-cad-oracle.mjs'
 import {
   REFERENCE_LEGACY_DIRECT_COMPARISON_CONTRACT,
   ReferenceLegacyOracleError,
@@ -63,8 +76,31 @@ const SUCCESS_FIXTURES = Object.freeze([
   },
 ])
 
-// Separate kernel-specific snapshot. The Manifold constants above are archival.
-const OWN_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url),'utf8')) as Record<string,{meshLength:number;meshHash:string;sceneLength:number;sceneHash:string;volume:number;surfaceArea:number}>
+// The Manifold constants above and own-Rust v1 remain historical. V2 is created
+// explicitly by the reviewed generator, never by this test or a normal build.
+type OwnSnapshot = {
+  source: string
+  quality: 'preview' | 'full'
+  meshLength: number
+  meshHash: string
+  sceneLength: number
+  sceneHash: string
+  volume: number
+  surfaceArea: number
+}
+type OwnOracle = {
+  id: string
+  previous: { path: string; sha256: string }
+  review: string
+  source: { sha256: string; files: number }
+  artifacts: { wasmSha256: string; packedSha256: string; decoderSha256: string }
+  verification: { freshProcesses: number; deterministic: boolean; semanticContract: string }
+  cases: Record<string, OwnSnapshot>
+}
+const PREVIOUS_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url), 'utf8')) as Record<string, Omit<OwnSnapshot, 'source' | 'quality'>>
+function currentOracle(): OwnOracle {
+  return JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v2.json', import.meta.url), 'utf8')) as OwnOracle
+}
 
 const outcomes = new Map<string, ReferenceLegacyOutcome>()
 
@@ -99,6 +135,49 @@ beforeAll(async () => {
 })
 
 describe('independent pinned direct-evaluator differential oracle', () => {
+  it('captures deterministic complete results in fresh Node processes without writing a baseline', () => {
+    const capture = () => JSON.parse(execFileSync(process.execPath,
+      ['--import', 'tsx', 'scripts/record-own-cad-oracle.mjs', '--capture'],
+      { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8', timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }))
+    const first = capture(), second = capture()
+    expect(first).toEqual(second)
+    expect(Object.keys(first)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
+  })
+
+  it('publishes complete new baselines exclusively and leaves no output when source stability fails', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'own-oracle-publish-'))
+    try {
+      const path = join(directory, 'baseline.json')
+      expect(() => publishOracleExclusive(path, { candidate: 1 }, () => { throw new Error('source changed') })).toThrow('source changed')
+      expect(readdirSync(directory)).toEqual([])
+      publishOracleExclusive(path, { original: true }, () => {})
+      expect(() => publishOracleExclusive(path, { replacement: true }, () => {})).toThrow()
+      expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ original: true })
+      expect(readdirSync(directory)).toEqual(['baseline.json'])
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('retains immutable v1 and pins the explicit v2 capture contract', () => {
+    expect(createHash('sha256').update(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url))).digest('hex'))
+      .toBe(PREVIOUS_ORACLE_SHA256)
+    expect(ORACLE_CASES).toEqual(SUCCESS_FIXTURES.map(({ id, source, quality }) => ({ id, source, quality })))
+    const oracle = currentOracle()
+    expect(oracle.id).toBe('own-rust-cad-oracle-v2')
+    expect(oracle.previous).toEqual({ path: PREVIOUS_ORACLE, sha256: PREVIOUS_ORACLE_SHA256 })
+    expect(oracle.review).toBe(ORACLE_REVIEW)
+    expect(oracle.source.sha256).toMatch(/^[a-f0-9]{64}$/)
+    expect(oracle.source.files).toBeGreaterThan(0)
+    expect(Object.keys(oracle.artifacts).sort()).toEqual(['decoderSha256', 'packedSha256', 'wasmSha256'])
+    Object.values(oracle.artifacts).forEach(hash => expect(hash).toMatch(/^[a-f0-9]{64}$/))
+    expect(oracle.verification).toEqual({ freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v2' })
+    expect(Object.keys(oracle.cases)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
+    for (const fixture of SUCCESS_FIXTURES.filter(item => !['colored-transform', 'boolean-difference'].includes(item.id))) {
+      expect(oracle.cases[fixture.id]).toMatchObject(PREVIOUS_SNAPSHOTS[fixture.id])
+    }
+  })
+
   it('has no dependency on production source or the new adapter', () => {
     const supportSource = readFileSync(
       new URL('./support/referenceLegacyDirectEvaluatorOracle.ts', import.meta.url),
@@ -158,7 +237,9 @@ describe('independent pinned direct-evaluator differential oracle', () => {
 
   it.each(SUCCESS_FIXTURES)('pins own Rust LME1/LSE1 bytes for $id', fixture => {
     const outcome = success(fixture.id)
-    const snapshot = OWN_SNAPSHOTS[fixture.id]!
+    const snapshot = currentOracle().cases[fixture.id]!
+    expect(snapshot.source).toBe(fixture.source)
+    expect(snapshot.quality).toBe(fixture.quality)
     const meshBytes = referenceLegacyMeshBytes(outcome)
     const sceneBytes = referenceLegacySceneBytes(outcome)
     expect(new TextDecoder().decode(meshBytes.subarray(0, 4))).toBe('LME1')
@@ -167,6 +248,28 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(referenceLegacySha256(meshBytes)).toBe(snapshot.meshHash)
     expect(sceneBytes).toHaveLength(snapshot.sceneLength)
     expect(referenceLegacySha256(sceneBytes)).toBe(snapshot.sceneHash)
+  })
+
+  it.each(SUCCESS_FIXTURES)('checks fixed geometry and semantic invariants independently of v2 hashes for $id', fixture => {
+    expect(() => assertOwnCadSemantics(fixture, success(fixture.id))).not.toThrow()
+  })
+
+  it.each([
+    { name: 'reported metric drift', mutate: (value: ReturnType<typeof success>) => { (value.success as { volume: number }).volume += 0.01 } },
+    { name: 'forged source span', mutate: (value: ReturnType<typeof success>) => { (value.success.meshes[0].provenance[0].source as { start: number }).start++ } },
+    { name: 'lost color', mutate: (value: ReturnType<typeof success>) => { (value.success.meshes[0].color as number[])[3] = 1 } },
+    { name: 'invalid normal', mutate: (value: ReturnType<typeof success>) => { value.success.meshes[0].vertices.bytes.fill(0, 12, 24) } },
+    { name: 'wrong winding despite unchanged reported topology', mutate: (value: ReturnType<typeof success>) => {
+      const bytes = value.success.meshes[0].indices.bytes
+      const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      const first = data.getUint32(0, true)
+      data.setUint32(0, data.getUint32(4, true), true)
+      data.setUint32(4, first, true)
+    } },
+  ])('refuses semantic mutation before recording a replacement hash: $name', ({ mutate }) => {
+    const value = clone(success('colored-transform'))
+    mutate(value)
+    expect(() => assertOwnCadSemantics(SUCCESS_FIXTURES[0], value)).toThrow()
   })
 
   it('pins colors, stable evaluated identities, source spans, and independent scene deduplication', () => {
@@ -205,8 +308,8 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     expect(colored.surfaceArea).toBe(52)
 
     const difference = success('boolean-difference').success
-    expect(difference.volume).toBeCloseTo(OWN_SNAPSHOTS['boolean-difference']!.volume, 10)
-    expect(difference.surfaceArea).toBeCloseTo(OWN_SNAPSHOTS['boolean-difference']!.surfaceArea, 10)
+    expect(difference.volume).toBeCloseTo(PREVIOUS_SNAPSHOTS['boolean-difference']!.volume, 10)
+    expect(difference.surfaceArea).toBeCloseTo(PREVIOUS_SNAPSHOTS['boolean-difference']!.surfaceArea, 10)
   })
 
   it('pins ordered success warnings including a geometry-free 2D publication', async () => {

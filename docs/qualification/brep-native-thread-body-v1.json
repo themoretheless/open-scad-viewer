@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Atomic native workbench mesh threading",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 66,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4617610
+  },
+  "coverage": [
+    "Native thread generation, axis placement, Boolean union/difference and closed-result admission",
+    "Internal cut in X/Z axis frames matches independently measured full cutter volume",
+    "External partial union matches independent triangle clipping and tetrahedral integration",
+    "Zero direction and retained B-rep refuse without stale geometry; metadata and source retained"
+  ],
+  "oracleCorrection": "The initial assumption that half the faceted cutter length has exactly half its volume was disproved. Expected exposed volume is now obtained by clipping original triangles at local z=1, translating that plane to z=0 and integrating signed tetrahedra; tolerance was not loosened.",
+  "limitations": [
+    "Faceted mesh threading, not analytic retained B-rep threading",
+    "Polygon Boolean and mesh inspection are numerical, not certified global validity",
+    "General B-rep requirements and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_thread.rs": "dc583e8d00de6dc2b97146545b458851f3270a2b4b1415b403094ab6c4ac380a",
+    "crates/geometry-bridge/src/lib.rs": "254057728b4186140bf83fbfaef482a894fa04d4dddef8731b9e3b59a3f51235",
+    "src/services/cadWorkbench.ts": "41a24a42e490987b4e7729b7bd1d1ced060256403cc501a1985bae1933ab2de4",
+    "tests/cadWorkbench.test.ts": "1f138d81320f09669a1cf919b22d4cdbb48cdf54a64e436dc7acfe3d0b7811fc",
+    "src/generated/geometry-kernels/bytes.ts": "a2a703ca59f253ec6dc9878645e3eaceedf7442006fcfb164871c3e2bd83715f"
+  }
+}

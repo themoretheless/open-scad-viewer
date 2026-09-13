@@ -142,6 +142,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_set_parameters',
       'modelgraph_svg_export',
       'modelgraph_svg_extrude',
+      'modelgraph_svg_preview',
       'modelgraph_text_compile',
       'openscad_analyze',
       'openscad_build_history',

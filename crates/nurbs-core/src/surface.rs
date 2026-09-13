@@ -140,6 +140,12 @@ pub struct Evaluation {
     domain_u: [f64; 2],
     domain_v: [f64; 2],
 }
+impl Evaluation {
+    /// Parametric tangents when first derivatives are defined at the query.
+    pub fn first_derivatives(&self) -> Option<([f64; 3], [f64; 3])> {
+        Some((self.du?, self.dv?))
+    }
+}
 impl value_codec::Serialize for Evaluation {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80mm" height="60mm" viewBox="0 0 80 60">
+  <title>Rendered silhouette example: mask, pattern and filter</title>
+  <desc>Preview retains the artwork. Choose Rendered silhouette to extrude the visible alpha boundary.</desc>
+  <defs>
+    <pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="3" fill="#0d9488"/>
+    </pattern>
+    <mask id="ring" maskUnits="userSpaceOnUse" x="0" y="0" width="80" height="60">
+      <rect x="5" y="5" width="70" height="50" rx="10" fill="white"/>
+      <circle cx="40" cy="30" r="12" fill="black"/>
+    </mask>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation=".35"/>
+    </filter>
+  </defs>
+  <rect width="80" height="60" fill="url(#dots)" mask="url(#ring)" filter="url(#soft)"/>
+</svg>

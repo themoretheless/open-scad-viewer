@@ -3,6 +3,8 @@ import {
   identity,
   invert,
   lookAt,
+  multiply,
+  transpose,
   orthographic,
   perspective,
   rayAabbDistance,
@@ -11,6 +13,36 @@ import {
   translate,
   unprojectRay,
 } from '../src/services/math3d'
+
+describe('native matrix operations', () => {
+  it('inverts in place and with overlapping views without corrupting source reads', () => {
+    const source = new Float32Array([2, 0.5, 0, 7, 0, 3, 0.25, -4, 0, 0, 0.5, 2, 0, 0, 0, 1])
+    const expected = invert(source)
+    const inPlace = source.slice()
+    expect(invert(inPlace, inPlace)).toBe(inPlace)
+    expect(inPlace).toEqual(expected)
+    const storage = new Float32Array(20)
+    storage.set(source)
+    const output = storage.subarray(4, 20)
+    expect(invert(storage.subarray(0, 16), output)).toBe(output)
+    expect(output).toEqual(expected)
+    const product = multiply(source, output)
+    for (let i = 0; i < 16; i++) expect(product[i]).toBeCloseTo(identity()[i], 6)
+    expect(transpose(transpose(source))).toEqual(source)
+  })
+
+  it('inverts small scales and refuses singular input without changing output', () => {
+    const small = identity()
+    small[0] = small[5] = small[10] = 1e-4
+    const result = invert(small)
+    expect(result[0]).toBe(10000)
+    expect(result[5]).toBe(10000)
+    expect(result[10]).toBe(10000)
+    const output = new Float32Array(16).fill(7)
+    expect(() => invert(new Float32Array(16), output)).toThrow('Singular')
+    expect(output).toEqual(new Float32Array(16).fill(7))
+  })
+})
 
 function project(m: Float32Array, x: number, y: number, z: number) {
   const w = m[12]*x + m[13]*y + m[14]*z + m[15]

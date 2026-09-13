@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native workbench mesh holes, counterbores and countersinks",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 64,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4617458
+  },
+  "coverage": [
+    "48-sided hole cutter construction and placement in Rust",
+    "Counterbore/countersink cutter union and final body subtraction run natively",
+    "Polygonal prism/frustum volume checks for plain, counterbore and countersink in X/Z frames",
+    "Invalid diameter/depth relation and zero direction refuse without source mutation",
+    "Existing retained B-rep hole and editor regressions"
+  ],
+  "limitations": [
+    "Mesh cutters remain faceted; their volume differs from analytic circular cutters",
+    "Retained B-rep countersink support remains restricted by native Boolean coverage",
+    "General B-rep and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_hole.rs": "64342f74bfd6f90a5a7737e986016fae35278f1c4494ac2c501928a948c9c7ad",
+    "src/services/cadWorkbench.ts": "3c3f223b87188ffc8f023bc9cf6f01e923275cdbce4f3c091d1cd35b8a35ebda",
+    "tests/cadWorkbench.test.ts": "7305c1d604268725d0ba926230c41fedc11e5e89a7cf66bf9372d4ebf96f3989",
+    "src/generated/geometry-kernels/bytes.ts": "a631e0a7b6c6be3a2be03614bb9ce0a8fa327edfc012ad548c773bbf014f1d3a"
+  }
+}

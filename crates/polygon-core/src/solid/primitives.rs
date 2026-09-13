@@ -375,129 +375,18 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
 /// Constrained ear clipping with visible bridges for holes. It reuses all input
 /// boundary coordinates, so neighboring solid faces acquire no extra T junctions.
 pub fn triangulate(profile: &crate::solid::modeling::Profile) -> Result<Mesh> {
-    let mut m = empty();
-    let mut ring: Vec<usize> = vec![];
-    for p in &profile.outer {
-        ring.push(m.positions.len() / 3);
-        m.positions.extend([p[0], p[1], 0.]);
-    }
-    if area(&profile.outer) < 0. {
-        ring.reverse()
-    }
-    let point = |m: &Mesh, i: usize| [m.positions[3 * i], m.positions[3 * i + 1]];
-    let mut holes = profile.holes.clone();
-    holes.sort_by(|a, b| {
-        a.iter()
-            .map(|p| p[0])
-            .fold(f64::INFINITY, f64::min)
-            .total_cmp(&b.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min))
-    });
-    for mut h in holes {
-        if area(&h) > 0. {
-            h.reverse()
-        }
-        let start = (0..h.len())
-            .min_by(|&a, &b| {
-                h[a][0]
-                    .total_cmp(&h[b][0])
-                    .then(h[a][1].total_cmp(&h[b][1]))
-            })
-            .unwrap();
-        h.rotate_left(start);
-        let hp = h[0];
-        let mut options: Vec<_> = (0..ring.len()).collect();
-        options.sort_by(|&i, &j| {
-            let a = point(&m, ring[i]);
-            let b = point(&m, ring[j]);
-            (a[0] - hp[0])
-                .hypot(a[1] - hp[1])
-                .total_cmp(&(b[0] - hp[0]).hypot(b[1] - hp[1]))
-        });
-        let index = options
-            .into_iter()
-            .find(|&i| {
-                let p = point(&m, ring[i]);
-                let d = sub2(hp, p);
-                let midpoint = [(p[0] + hp[0]) / 2., (p[1] + hp[1]) / 2.];
-                if !inside(midpoint, &vec![profile.outer.clone()])
-                    || profile
-                        .holes
-                        .iter()
-                        .any(|hole| inside(midpoint, &vec![hole.clone()]))
-                {
-                    return false;
-                }
-                for boundary in std::iter::once(&profile.outer).chain(profile.holes.iter()) {
-                    for k in 0..boundary.len() {
-                        let a = boundary[k];
-                        let b = boundary[(k + 1) % boundary.len()];
-                        let e = sub2(b, a);
-                        let den = cross2(d, e);
-                        if den.abs() > 1e-14 {
-                            let t = cross2(sub2(a, p), e) / den;
-                            let u = cross2(sub2(a, p), d) / den;
-                            if t > 1e-10 && t < 1. - 1e-10 && u > 1e-10 && u < 1. - 1e-10 {
-                                return false;
-                            }
-                        }
-                    }
-                }
-                true
-            })
-            .ok_or_else(|| crate::error("No visible bridge for profile hole"))?;
-        let mut ids = Vec::new();
-        for p in h {
-            ids.push(m.positions.len() / 3);
-            m.positions.extend([p[0], p[1], 0.])
-        }
-        ids.push(ids[0]);
-        ids.push(ring[index]);
-        ring.splice(index + 1..index + 1, ids);
-    }
-    check(ring.len() <= 2048, "Profile triangulation budget exceeded")?;
-    let mut remaining = ring;
-    let eps = 1e-12;
-    while remaining.len() > 3 {
-        let n = remaining.len();
-        let mut ear = None;
-        for i in 0..n {
-            let a = remaining[(i + n - 1) % n];
-            let b = remaining[i];
-            let c = remaining[(i + 1) % n];
-            let pa = point(&m, a);
-            let pb = point(&m, b);
-            let pc = point(&m, c);
-            if cross2(sub2(pb, pa), sub2(pc, pb)) <= eps {
-                continue;
-            }
-            let blocked = remaining.iter().any(|&v| {
-                let p = point(&m, v);
-                if p == pa || p == pb || p == pc {
-                    return false;
-                }
-                cross2(sub2(pb, pa), sub2(p, pa)) >= -eps
-                    && cross2(sub2(pc, pb), sub2(p, pb)) >= -eps
-                    && cross2(sub2(pa, pc), sub2(p, pc)) >= -eps
-            });
-            if !blocked {
-                ear = Some((i, [a, b, c]));
-                break;
-            }
-        }
-        if let Some((i, t)) = ear {
-            m.indices.extend(t);
-            remaining.remove(i);
-        } else {
-            return Err(crate::error(
-                "Profile cannot be triangulated without crossing its boundary",
-            ));
-        }
-    }
-    if remaining.len() == 3 {
-        m.indices.extend(remaining)
-    }
-    m.validate()?;
-    Ok(m)
+    let fill = planar_geometry::triangulation::triangulate_profile(&profile.outer, &profile.holes)?;
+    let mesh = Mesh {
+        positions: fill
+            .positions
+            .iter()
+            .flat_map(|p| [p[0], p[1], 0.])
+            .collect(),
+        indices: fill.indices.iter().map(|&i| i as usize).collect(),
+        uv: None,
+    };
+    mesh.validate()?;
+    Ok(mesh)
 }
 
 pub fn halfspace(mesh: &Mesh, normal: [f64; 3], offset: f64) -> Result<Mesh> {

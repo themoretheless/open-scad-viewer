@@ -39,8 +39,7 @@ pub struct BezierPath {
 /// Default flatten tolerance in mm (chord deviation).
 pub const FLATTEN_TOLERANCE: f64 = 0.25;
 const ELLIPSE_KAPPA: f64 = 0.552_285;
-const MAX_SEGMENTS: usize = 65_536;
-const MAX_FLATTEN_POINTS: usize = 65_537;
+use crate::limits::{FLATTEN_POINTS as MAX_FLATTEN_POINTS, PATH_SEGMENTS as MAX_SEGMENTS};
 
 fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]

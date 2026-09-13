@@ -20,6 +20,14 @@ pub fn abi_alloc(len: usize) -> usize {
     }
     Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
 }
+/// Export-only staging: 750,000 expanded triangles need 54 MB of stride-6 input.
+/// Keeps the general request allocator's 32 MiB ceiling unchanged.
+pub fn abi_export_alloc(len: usize) -> usize {
+    if len > 64 * 1024 * 1024 {
+        return 0;
+    }
+    Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
+}
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
@@ -186,6 +194,133 @@ unsafe fn read_u32(ptr: usize, len: usize) -> Vec<u32> {
         .collect()
 }
 
+/// Bake one display mesh into f64 Solid positions and outward triangle indices.
+/// # Safety
+/// Buffer ranges must be live caller-owned allocations; they are read only.
+pub unsafe fn abi_solid_placement(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+) -> u64 {
+    if vl > LIMIT / 4
+        || il > LIMIT / 4
+        || ml > 16
+        || (vl / 6)
+            .checked_mul(24)
+            .and_then(|v| il.checked_mul(4).and_then(|i| v.checked_add(i)))
+            .is_none_or(|n| n > LIMIT)
+    {
+        return packed(geometry(Err(input(
+            "Solid placement exceeds transport limit",
+        ))));
+    }
+    let result = polygon_core::solid::placement::place(
+        &unsafe { read_f32(vp, vl) },
+        &unsafe { read_u32(ip, il) },
+        &unsafe { read_f32(mp, ml) },
+    )
+    .map(|result| {
+        result.map_or(0, |mesh| {
+            mesh_analysis::store(mesh_analysis::AnalysisBuffers::Placement {
+                positions: mesh.positions,
+                indices: mesh.indices,
+            })
+        })
+    })
+    .and_then(encode);
+    packed(geometry(result))
+}
+
+/// # Safety
+/// All ranges must be live caller-owned buffers. Returns copied result views.
+pub unsafe fn abi_export_prepare(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+    float32: u32,
+) -> u64 {
+    if vl > 64 * 1024 * 1024 / 4 || il > 2_250_000 || ml > 16 || float32 > 1 {
+        return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
+    }
+    let result = polygon_core::solid::export_prepare::prepare(
+        &unsafe { read_f32(vp, vl) },
+        &unsafe { read_u32(ip, il) },
+        &unsafe { read_f32(mp, ml) },
+        float32 == 1,
+    )
+    .map(|mesh| {
+        mesh_analysis::store(mesh_analysis::AnalysisBuffers::Export {
+            positions: mesh.positions,
+            indices: mesh.indices,
+            normals: mesh.normals,
+        })
+    })
+    .and_then(encode);
+    packed(geometry(result))
+}
+
+/// # Safety
+/// All ranges must be live caller-owned export staging buffers.
+pub unsafe fn abi_export_append(
+    handle: u32,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+) -> u64 {
+    if il > 2_250_000 {
+        mesh_export_file::poison(handle);
+        return packed(geometry(Err(Error::new(
+            "MESH_EXPORT_TOO_MANY_TRIANGLES",
+            "Export exceeds 750000 triangles",
+        ))));
+    }
+    if vl > 64 * 1024 * 1024 / 4 || ml > 16 {
+        mesh_export_file::poison(handle);
+        return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
+    }
+    let result = mesh_export_file::append(
+        handle,
+        &unsafe { read_f32(vp, vl) },
+        &unsafe { read_u32(ip, il) },
+        &unsafe { read_f32(mp, ml) },
+    )
+    .map(|()| Value::Null);
+    packed(geometry(result))
+}
+
+/// Build the median-split BVH and return a result handle for `abi_array_field`.
+/// Upload an immutable native picking snapshot using raw typed buffers.
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers.
+pub unsafe fn abi_picking_create(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    if vl > LIMIT / 4 || il > LIMIT / 4 {
+        return packed(geometry(Err(input(
+            "Picking upload exceeds transport limit",
+        ))));
+    }
+    let vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
+    packed(geometry(
+        super::mesh_picking::create(vertices, indices, stride, leaf).and_then(encode),
+    ))
+}
+
 /// Build the median-split BVH and return a result handle for `abi_array_field`.
 /// # Safety
 /// vp/vl (f32 vertices) and ip/il (u32 indices) must reference live caller-owned
@@ -261,16 +396,14 @@ pub unsafe fn abi_semantic_edges(
 
 /// Read one pointer/length/diagnostic slot of a stored analysis result.
 /// # Safety
-/// The handle must reference a live result from `abi_bvh_build` or
-/// `abi_semantic_edges`.
+/// The handle must reference a live array result (BVH, edges, placement, or export).
 pub unsafe fn abi_array_field(handle: usize, slot: u32) -> usize {
     mesh_analysis::field(handle, slot)
 }
 
 /// Release a stored analysis result exactly once.
 /// # Safety
-/// The handle must reference a live result from `abi_bvh_build` or
-/// `abi_semantic_edges`; it is consumed by this call.
+/// The handle must reference a live array result; it is consumed by this call.
 pub unsafe fn abi_array_free(handle: usize) {
     mesh_analysis::free(handle)
 }

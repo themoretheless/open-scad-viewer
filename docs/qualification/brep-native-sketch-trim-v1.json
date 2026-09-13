@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native local-coordinate polyline sketch trim and extend",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 71,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4612983
+  },
+  "coverage": [
+    "Open segment splits into ordered remaining chains; closed contour opens around removed interval",
+    "Either endpoint extends to nearest forward boundary; own sketch excluded",
+    "Malformed parameters and invalid contours refused without source mutation",
+    "Output exceeding 512 points refused and subsequent valid request succeeds",
+    "Self-intersecting extension refused"
+  ],
+  "limitations": [
+    "Numerical straight-segment intersections in local sketch coordinates; not certified predicates or cross-workplane arrangement",
+    "Trim bakes analytic descriptors into polylines; exact analytic trim remains open",
+    "Other TS geometry, general B-rep requirements and refreshed shared qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sketch_trim.rs": "990f87b43113db61e89dad9b453dff8023ae4da445623f1ee3a135ed0c1bde83",
+    "crates/geometry-bridge/src/lib.rs": "52d29cefe76236f92261b962bd5faae8d53071d05c90f273705caf167b61355a",
+    "src/services/directSketchGeometry.ts": "b6cdb8a4e44c8a0de0a766c34665660d2a099a46429cbe54b70b0c48f6780d46",
+    "tests/nativeSketchGeometry.test.ts": "440de76c2c71fdffd0b4dcc215f82498094a4acb8daaa7eb3b6362cd2ec1993a",
+    "src/generated/geometry-kernels/bytes.ts": "ac4ba10f674503bf4d83b231eee89d5efc3f4beafd62e3a7ceb2203d79273b92",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "344f2e6a229f511098f64e21595947c36cc2632b073e92c253f4c2e5848de48c"
+  }
+}

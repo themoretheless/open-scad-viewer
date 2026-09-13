@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native display mesh planar grouping and edge adjacency",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 55,
+    "testFiles": 7,
+    "nativeRoundingRegression": 1,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4604230
+  },
+  "coverage": [
+    "Six box supports and twelve physical edges with complete triangle ownership",
+    "Duplicated display seams and source immutability",
+    "Degenerate triangles omitted without invalid face references",
+    "Malformed mesh admission",
+    "Explicit 20000000 comparison budget and post-refusal recovery",
+    "Legacy decimal half-tie rounding verified natively and through a seam fixture",
+    "Existing selection and direct modeling regression suites"
+  ],
+  "limitations": [
+    "Display grouping uses numerical normal/offset tolerances and decimal seam keys; it is not authored B-rep topology",
+    "Large-coordinate decimal key textual ordering is not a universal JavaScript formatting compatibility claim",
+    "Maximum browser memory and latency remain unqualified",
+    "Other host geometry and general B-rep requirements remain incomplete",
+    "Shared qualification predates this artifact"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_mesh_topology.rs": "a2cca3dd224e62f1c4161521c7a701c677cd6a2c604f4c6fd99e0b0d697b1c44",
+    "crates/geometry-bridge/src/lib.rs": "d52a09126f5b7bf33796bf8c5adc6f7953471887757890c02796c801df12cbf4",
+    "src/services/directSolidTools.ts": "68d6aff3c575447913850806a8835bdda88e96d168c411a2c1510db241457617",
+    "tests/nativeDisplayTopology.test.ts": "74dfb34294ff9068b23cd7440a49f94b0e7d10d6b9ed7e51fd55c38358ccce82",
+    "src/generated/geometry-kernels/bytes.ts": "d8704c10cdf55c764e1c22209bea74b1b636e56fc6c65216bbfe5f5c63dd2ee7"
+  }
+}

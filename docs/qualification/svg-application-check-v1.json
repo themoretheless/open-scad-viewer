@@ -1,0 +1,58 @@
+{
+  "id": "svg-application-check-v1",
+  "generatedAt": "2026-09-13T11:13:37.932Z",
+  "status": "passed",
+  "sourceSha256": "8551e09495e70ce02cdae64e5f116ae33043af4f9a0ede7e7e103b2ee1de7bf6",
+  "wasmSha256": "375f878b7998b13c4cb2b76286f1116ea4565a1f3cfe6c4f1a62d547cf61a65f",
+  "svgWorkflowTests": 122,
+  "applicationTests": 2642,
+  "skippedApplicationTests": 5,
+  "nativeSvgTests": 72,
+  "nativePlanarTests": 169,
+  "ownCadTests": 218,
+  "typecheck": {
+    "vue": "passed",
+    "mcp": "passed"
+  },
+  "build": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4699211,
+    "totalBudget": 4700000,
+    "kernelChunkBudget": 2350000
+  },
+  "skippedFiles": [
+    "tests/mcpOfficialRuntimeStdio.test.ts",
+    "tests/officialOpenScadRuntimeConformance.test.ts"
+  ],
+  "browser": {
+    "status": "passed",
+    "previewMm": [
+      100,
+      100
+    ],
+    "extrusionHeightMm": 3,
+    "volumeBeforeAndAfterMm3": 180,
+    "surfaceBeforeAndAfterMm2": 312,
+    "triangles": 12,
+    "exportedProfileMm": [
+      30,
+      2
+    ],
+    "consoleErrors": 0
+  },
+  "commands": [
+    "node scripts/record-svg-evidence.mjs",
+    "VITEST_MAX_WORKERS=1 node scripts/record-own-cad-evidence.mjs",
+    "vue-tsc --noEmit",
+    "tsc --noEmit -p tsconfig.mcp.json",
+    "vite build",
+    "node scripts/verify-dist.mjs",
+    "VITEST_MAX_WORKERS=3 vitest run --maxWorkers=3"
+  ],
+  "scope": "Current static SVG viewing, import/extrusion, export/reimport and vector workflows plus ordinary application regression checks at the recorded source/WASM snapshot. Later source changes require new evidence. This is not universal SVG2/CSS conformance or G0 closure/G1 clean-run qualification.",
+  "qualification": {
+    "g0": "v3; remains open",
+    "g1": "v20; qualificationClaim none; all4740 clean work units remain outstanding"
+  }
+}

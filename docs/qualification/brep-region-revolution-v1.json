@@ -1,0 +1,32 @@
+{
+  "scope": "Full analytic revolution of profiles with cavities and nested islands; not full B-rep qualification",
+  "tests": {
+    "core": 89,
+    "integration": 62,
+    "vueTypecheck": "passed"
+  },
+  "cases": [
+    "Nested region component grouping with non-unit parameter domains",
+    "Two bodies and three shells for a cavity plus island, with analytical toroidal volume",
+    "Source annular profile displayed as hollow torus retaining an inner shell"
+  ],
+  "dist": {
+    "status": "failed",
+    "bytes": 4701215,
+    "budget": 4700000,
+    "excessBytes": 1215
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "eb38f9d54a45fa99e0f68c0aedc461f9d1338e3f157fb19aa0918939654e1181",
+    "crates/brep-core/src/planar_trim.rs": "2f1c2a0f1ad840792548ef6eda63cd5b4ff6183031b2b87d0d164ac6314e9d50",
+    "crates/brep-core/src/prism.rs": "bce674720a0f014e964f0a6eef4424bcd93bbe72f606d11c9ab9e655d5821b55",
+    "crates/geometry-bridge/src/brep_semantic.rs": "22a498d30a211ea8e81088aab28656101ad86a54eef5ee3d4607d875efff92ba",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "42b6a42332b625ddbe3dadabcc43d5e6386486db6119ef141ce2c506e8d1acc2",
+    "src/generated/geometry-kernels/bytes.ts": "01483fc00fe68b60452dc1f05f4084a2e4e6f273336b88584abae4de9fbb0801"
+  },
+  "limitations": [
+    "Partial multi-wire revolution still unsupported",
+    "Shared SVG/own-CAD evidence not refreshed",
+    "Distribution size gate remains open"
+  ]
+}

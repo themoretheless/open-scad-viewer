@@ -1,0 +1,14 @@
+{
+  "wasm": {
+    "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "2fc2fc2b486b86715da4043976487f322df39f498b85134502d496a250517460"
+  },
+  "gpu_binary": {
+    "path": "/private/tmp/osv-curvex-qualification/migrated-01/target/release/examples/osv_gpu_qualification",
+    "sha256": "8bb2eb990f455546d71d4f0d71bcc98ff1052ba0d3a2ede4912f3ab261e65214"
+  },
+  "gpu_harness": {
+    "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/integrations/curvex/stress-qualification/gpu_qualification.rs",
+    "sha256": "10718b283878667ce1ca4f816fc74ab49481c7235d9ae05310634a999ba457b2"
+  }
+}

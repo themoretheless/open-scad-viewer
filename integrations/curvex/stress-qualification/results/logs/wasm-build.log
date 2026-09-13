@@ -1,0 +1,9 @@
+    Finished `release` profile [optimized] target(s) in 0.70s
+   Compiling planar-geometry v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry)
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+   Compiling slicer-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/slicer-core)
+   Compiling sdf-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/sdf-core)
+   Compiling polygon-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/polygon-core)
+   Compiling geometry-bridge v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/geometry-bridge)
+   Compiling geometry-wasm v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/geometry-wasm)
+    Finished `release` profile [optimized] target(s) in 2m 42s

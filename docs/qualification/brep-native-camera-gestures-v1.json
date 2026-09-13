@@ -1,0 +1,33 @@
+{
+  "scope": "Native camera gesture arithmetic migration, not full B-rep qualification",
+  "tests": {
+    "applicationAndPacking": 121,
+    "mathCore": 11,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed",
+    "frozenGestureStates": 81
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4719489,
+    "budget": 4700000,
+    "geometryChunkBytes": 2350952,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/math-core/src/camera_gestures.rs": "b266f2d9edaf4f4782c65c86e8e151664deef9b677b1b8f8bb74ecd7125ded7a",
+    "crates/math-core/camera-gestures-reference-v1.json": "8a33fd536ff0dc688fa1b9d822ba942a3ce7704ed732f951924345d8013c804b",
+    "crates/geometry-bridge/src/camera_gestures.rs": "271f6442eb52beb18919315e4cb629af89b0b18a69a067fa3f5d670fcb16f657",
+    "src/services/cameraGestures.ts": "a80de0493636a72770b6b6d1a584ee5ff40a4fa56942a9f1536225b81381751a",
+    "tests/cameraGestures.test.ts": "d03e683d20bd774b645ccd0cb3e1f4228bc8a5d4b002de74c5cc64e524495ef6",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "9ba4ee9cb50059ee0576e302d43e40a05544e92ac27b1ccbd06bab10ebfef57e"
+  },
+  "limitations": [
+    "General host matrix utilities remain",
+    "Depth ordering, section clipping and selection identity retain host computation",
+    "Browser gesture latency unmeasured",
+    "Shared qualification not refreshed",
+    "Full B-rep completion unproved"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native body alignment and distribution with retained B-rep",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 38,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4596086
+  },
+  "coverage": [
+    "Alignment to first selected body using min/max/center",
+    "Distribution of unequal-sized bodies independent of selection order",
+    "Mesh and retained B-rep bounds agree",
+    "B-rep volume and trim loops preserved",
+    "Extreme nonzero axis scale normalization",
+    "Invalid later B-rep refuses whole operation with original unchanged"
+  ],
+  "remaining": [
+    "Pattern, joint and draft host geometry still require migration",
+    "General certified B-rep incomplete",
+    "Shared qualification predates scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_body_affine.rs": "64e49b5bfca12f60abe61a2455d1283dd8d412c60402aa8189fa1ec5740de2e0",
+    "crates/geometry-bridge/src/lib.rs": "76bd3e3cc7ba66d2bd0e2a027fb6ef14a65fd111b03c1d7c7a6eeba710e44dd1",
+    "src/services/cadWorkbench.ts": "6858526e72a9a28bf2ecf238da90d6631c6b55699dc549a81e10d137a55828f4",
+    "tests/nativeBodyArrangement.test.ts": "a98404637743f29bea3feab2e1826dfd82482366c97ec9b65ee53c816f37cd6a",
+    "src/generated/geometry-kernels/bytes.ts": "2e23f6cfedc1401bbffb19ca9b2d4a1ccaf5575ce74eff75f1156912ce71e6c6"
+  }
+}

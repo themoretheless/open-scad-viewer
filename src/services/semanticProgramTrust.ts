@@ -13,6 +13,8 @@ export interface SemanticLoweringReport {
 export interface SemanticLoweringSuccess {
   readonly tag: 'success'
   readonly program: SemanticProgramV1
+  /** Exact UTF-16 source text the program was lowered from; transport only. */
+  readonly sourceText: string
   readonly canonicalBytes: Uint8Array
   readonly attestation: SemanticProgramAttestation
   readonly warnings: readonly string[]

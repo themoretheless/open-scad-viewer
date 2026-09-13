@@ -24,9 +24,21 @@ sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
 brep-core = { path = "../brep-core" }
 planar-geometry = { path = "../planar-geometry" }
+resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
 subdivision-core = { path = "../subdivision-core" }
 sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }
 polygon-core = { path = "../polygon-core" }
 slicer-core = { path = "../slicer-core" }
 openscad-core = { path = "../openscad-core", optional = true }
+usvg = { version = "0.47.0", default-features = false, features = ["text"] }
+svgtypes = "0.16.1"
+base64 = "0.22"
+sha2 = "0.11"
+data-url = "0.3"
+imagesize = "0.14"
+gif = "0.14.1"
+image-webp = "0.2.4"
+zune-jpeg = "0.5.8"
+simplecss = "0.2.2"
+ttf-parser = "0.25.1"

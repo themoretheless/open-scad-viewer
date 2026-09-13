@@ -1,0 +1,51 @@
+{
+  "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+  "final_captures": 6,
+  "rows": [
+    {
+      "shapes": 100,
+      "before": {
+        "cold_paint_ms": 1.026417,
+        "warm_paint_median_ms": 0.08756249999999999,
+        "moving_paint_median_ms": 0.1056665,
+        "frame_interval_median_ms": 16.673459
+      },
+      "after": {
+        "cold_paint_ms": 1.076375,
+        "warm_paint_median_ms": 0.0902085,
+        "moving_paint_median_ms": 0.1411875,
+        "frame_interval_median_ms": 16.694291
+      }
+    },
+    {
+      "shapes": 1000,
+      "before": {
+        "cold_paint_ms": 7.811333,
+        "warm_paint_median_ms": 0.9834164999999999,
+        "moving_paint_median_ms": 1.0204995000000001,
+        "frame_interval_median_ms": 16.670082999999998
+      },
+      "after": {
+        "cold_paint_ms": 10.304832999999999,
+        "warm_paint_median_ms": 0.862104,
+        "moving_paint_median_ms": 1.173334,
+        "frame_interval_median_ms": 16.686415999999998
+      }
+    },
+    {
+      "shapes": 5000,
+      "before": {
+        "cold_paint_ms": 38.889542,
+        "warm_paint_median_ms": 38.138875,
+        "moving_paint_median_ms": 38.2790625,
+        "frame_interval_median_ms": 43.417917
+      },
+      "after": {
+        "cold_paint_ms": 38.387333000000005,
+        "warm_paint_median_ms": 4.4537495,
+        "moving_paint_median_ms": 4.3739585000000005,
+        "frame_interval_median_ms": 16.651875
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native slider and revolute joint body movement with retained B-rep",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 40,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4596412
+  },
+  "coverage": [
+    "Offset-pivot child rotation with independent vertex expectation",
+    "Negative slider travel along normalized extreme axis",
+    "Parent and unselected bodies preserved",
+    "Mesh and retained B-rep bounds match",
+    "Invalid child refuses whole operation",
+    "Existing saved joint absolute travel and source rebuild regression"
+  ],
+  "remaining": [
+    "Joint persistence/document semantics still have host code",
+    "Pattern and draft geometry require migration",
+    "General certified B-rep incomplete",
+    "Shared qualification predates scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_body_affine.rs": "d5d42a381ad27acc3e2437db5e864ca0bc32683eb90bd79c9891e30188077851",
+    "crates/geometry-bridge/src/lib.rs": "d646a6bfba8616650b7c827ad02103b22aff2855f987a722ee5c71b3558f238a",
+    "src/services/cadWorkbench.ts": "0d0cfa723748f95f8f199a767dd0cf4282b5e5323c7b52386ea78d457ff9fd6a",
+    "tests/nativeBodyArrangement.test.ts": "c9d81e3b6a0bba9e971237014657af843e75a39760d37c2906797e01bdf3afa8",
+    "src/generated/geometry-kernels/bytes.ts": "6dd0647f77fa68859cbae9c3c6215d43a0458d43a5471b0983c3357ba04dae90"
+  }
+}

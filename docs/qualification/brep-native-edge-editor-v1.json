@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-13",
+  "scope": "Atomic retained-body chamfer and faceted fillet editor integration",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 39,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4608241
+  },
+  "coverage": [
+    "Native display edge resolution and connected chain operations",
+    "Independent box chamfer volume",
+    "Declared faceted fillet volume and mesh/B-rep agreement",
+    "Invalid late edge, empty selection, excessive size and segment count refused atomically",
+    "Body metadata and source preserved"
+  ],
+  "limitations": [
+    "Fillets are planar tangent facets, not analytic curved blends",
+    "Support remains convex planar stock with supported straight edge chains",
+    "Mesh-only bodies retain legacy editing algorithms",
+    "General B-rep and full native migration remain incomplete",
+    "Shared qualification predates this build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_edge_edit.rs": "62c927e71592090c23a4b4ee7dc8efdf8802af1dc836d50e5f399c1298091118",
+    "crates/geometry-bridge/src/lib.rs": "79b26f9b9e6482d8210e0bcceb7d6b234dd270952a26c61fcb116399b08081ac",
+    "src/services/directSolidTools.ts": "3532eb5bb98cf1606ab48541e4b9ea04d386f508013b462b3f64f595522ffa4e",
+    "src/features/DirectModeler.vue": "05f6c8425565c4e9f24316f2b9992aaa4a86b9bccb2ce5b4d0d70f5a468ba7da",
+    "tests/nativePlanarBodyEdit.test.ts": "732fb9890c5464617d723f30f87b3cddac0786e20a0db613318477a9a7729a07",
+    "src/generated/geometry-kernels/bytes.ts": "edd0c6b51aad274b288c257d5c215c815ad89be72ceeb6defe555178233cae88"
+  }
+}

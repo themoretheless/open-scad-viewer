@@ -1,0 +1,31 @@
+{
+  "scope": "Refreshed shared SVG and own-CAD workflows against current residual-bounds Rust/WASM; not full B-rep qualification",
+  "tests": {
+    "svgWorkflows": 122,
+    "ownCad": 218,
+    "engineManifest": 3,
+    "nativeSvgChecks": "passed",
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4586940,
+    "budget": 4700000
+  },
+  "sha256": {
+    "src/generated/geometry-kernels/kernel_bg.wasm": "c70d8a21b465eae6dafebf836fd1d649cbe8ad66cabfa2be01681c3c76cacd11",
+    "src/core/ownRustCadEvidence.ts": "5bddc55a858ec39a5a6056bc2a9f2714255d244343e3d23802bb78fdbd535bcb",
+    "docs/qualification/own-rust-cad-v1.json": "9e712cec9dfbc7fe76ebd0022bc6cce2a3696d03c3953d8bb50514e1f5d22318",
+    "docs/qualification/svg-static-cycle-v1.json": "6c5d76dfa9ad2bb7ef8a224423bea587b40d9b61ed2446a736151bda576242bd",
+    "crates/Cargo.lock": "16cea0b66727c5f79e5985a1457c13b28f5db037d9fb736fc28f480eba7bbafb",
+    "package-lock.json": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf"
+  },
+  "limitations": [
+    "No complete-domain intersection certification",
+    "General curved Booleans and remaining Rust migration incomplete",
+    "Full B-rep completion unproved"
+  ]
+}

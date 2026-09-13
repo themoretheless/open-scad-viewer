@@ -1,0 +1,41 @@
+{
+  "scope": "Native batched STL/OBJ geometry preparation; file formatting and full B-rep remain incomplete",
+  "tests": {
+    "focusedApplication": 164,
+    "mcpIntegration": 15,
+    "polygonCore": 58,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed",
+    "fullyExpandedStlTriangles": 750000
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4719295,
+    "budget": 4700000,
+    "geometryChunkBytes": 2353252,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/polygon-core/src/solid/export_prepare.rs": "82bc43fc2e668c4ebb70c1a89886eb7eadfe1cdefb9191b1f489caca429beefd",
+    "crates/geometry-bridge/src/abi.rs": "6bce4a0affed4985cc0be226cb62e0f535f62e45786e83a80644f0e265563eae",
+    "crates/geometry-bridge/src/mesh_analysis.rs": "f45e9b961a3929be22fb987449d0d0fad326d931e37c6065df889278fd14d407",
+    "crates/geometry-wasm/src/lib.rs": "de157d9fdaa1bc8b00be320f0fbe5d658daab67e768efe89ba93f7de2e6c8c0f",
+    "src/services/geometry/meshAnalysis.ts": "990833d56f4d090962ebd7b5e1d09a34895abbdcd37f2410b2c0defecf2999ef",
+    "src/services/meshExport.ts": "0d24424275f1d321112b3066ff9579e1478223df384921d2b89edcc79a346c18",
+    "tests/nativeExportPreparation.test.ts": "d604245d35ddcb2fb7d926e901b49610975d517c92cf139c81745bf54e8767b5",
+    "tests/meshExport.test.ts": "4d5013d7a05ceaaafd0bcd0f3d525c8da69f357d45bb522e573652714d7fc9f0",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "1eb2c1602820c0aff441d6011642beadac34ddd1b4f72040c8caac51b9325e74"
+  },
+  "limits": {
+    "exportStagingPerBufferBytes": 67108864,
+    "sceneExportTriangles": 750000
+  },
+  "limitations": [
+    "File serialization still runs on the host",
+    "Other export paths still require migration",
+    "Browser memory/latency not profiled",
+    "Shared qualification not refreshed",
+    "General B-rep completion unproved"
+  ]
+}

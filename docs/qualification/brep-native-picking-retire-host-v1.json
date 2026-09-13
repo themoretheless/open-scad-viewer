@@ -1,0 +1,23 @@
+{
+  "scope": "Removal of legacy host triangle raycasting; not full B-rep qualification",
+  "verification": {
+    "focusedTests": 38,
+    "vueTypecheck": "passed",
+    "frozenQueries": 256,
+    "hits": 125,
+    "absoluteNumericTolerance": 1e-12,
+    "triangleIdentityAndOrientation": "exact"
+  },
+  "sha256": {
+    "src/services/meshBvh.ts": "7cb789a483e900c53ae583fb4ff8584bd1b3f58b5e6a51e04cf61e41637657f5",
+    "tests/meshBvh.test.ts": "0dc47331d441a6b9b0445220377c71bf218656ab412c4b1accc0a753c21acdfa",
+    "tests/nativeMeshPicking.test.ts": "1921fdd5e5c5318585457a2bc4c5adc27275904bcc6d26a43134146534dc6641",
+    "crates/polygon-core/tests/fixtures/bvh-query-parity-v1.json": "197d2ba46c60316c518dc1c647cf0057b67b0b9b7555ce2c2d01beef51c4f049",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "0db5387263fc9a33ddfe422add02cdb0b5b977b7e4100471e1abed1bc3fe6e08"
+  },
+  "limitations": [
+    "Remaining TS scene broadphase, camera and point selection computation",
+    "No new browser or distribution qualification",
+    "Full B-rep completion not proved"
+  ]
+}

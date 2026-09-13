@@ -91,3 +91,26 @@ it('constructs loft, polyline sweep and full revolve as honest faceted B-reps',(
  expect(loft.faces).toHaveLength(10);expect(sweep.faces).toHaveLength(18)
  expect(()=>createFacetedBrepLoft([[[-1,-1,0],[1,-1,0],[0,0,0],[-1,1,0]],[[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]]])).toThrow(/convex/i)
 })
+it('lofts retained parallel sections in an oblique translated frame',()=>{
+ const c=Math.SQRT1_2,place=([x,y,z]:number[]):[number,number,number]=>[c*x+c*z+5,y-3,-c*x+c*z+7]
+ const sections=[[[-2,-2,0],[2,-2,0],[2,2,0],[-2,2,0]],[[-1,-1,3],[1,-1,3],[1,1,3],[-1,1,3]]].map(s=>s.map(place)),before=JSON.stringify(sections)
+ const model=createFacetedBrepLoft(sections),mesh=tessellateNurbsBrep(model,1)
+ expect(inspectNurbsBrep(model).topologyValid).toBe(true)
+ expect(mesh.report.closed).toBe(true);expect(mesh.report.signedVolumeMm3).toBeCloseTo(28,8)
+ expect(model.faces).toHaveLength(10)
+ const bad=structuredClone(sections);bad[1][0][2]+=.1
+ expect(()=>createFacetedBrepLoft(bad)).toThrow('parallel')
+ expect(JSON.stringify(sections)).toBe(before)
+})
+it('refuses star and repeated-loop profiles before loft or sweep publication',()=>{
+ const ring=Array.from({length:5},(_,i):[number,number]=>[Math.cos(i*2*Math.PI/5),Math.sin(i*2*Math.PI/5)])
+ for(const profile of [[0,2,4,1,3].map(i=>ring[i]),[...ring,...ring]]){
+  const before=JSON.stringify(profile)
+  const sections=[0,3].map(z=>profile.map(([x,y]):[number,number,number]=>[x,y,z]))
+  expect(()=>createFacetedBrepLoft(sections)).toThrow('convex')
+  expect(()=>createFacetedBrepSweep(profile,[[0,0,0],[0,0,3]],[0,1,0])).toThrow('convex')
+  expect(JSON.stringify(profile)).toBe(before)
+ }
+ const valid=createFacetedBrepSweep(ring,[[0,0,0],[0,0,3]],[0,1,0])
+ expect(tessellateNurbsBrep(valid,1).report.closed).toBe(true)
+})

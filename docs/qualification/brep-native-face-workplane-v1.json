@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native editor face workplane construction",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 49,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4604810
+  },
+  "coverage": [
+    "Oriented orthonormal frames for all faces of a rotated box",
+    "Local coordinate reconstruction of selected face vertices",
+    "Invalid vertex selections, zero normals, inconsistent tangent and collapsed direction refused",
+    "Existing vertical face drawing/extrusion regression"
+  ],
+  "limitations": [
+    "Numerical planar display workplanes only",
+    "General surface parameter frames and B-rep certification remain incomplete",
+    "Other host geometry still requires migration",
+    "Shared qualification predates scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_mesh_topology.rs": "5f8b9241730d6df2f856bba5875fcca375d5671d3956b315ad0f0b0bd45ec08a",
+    "crates/geometry-bridge/src/lib.rs": "ce974c876720b7645f6abe97f6a727f38df1b148c94e45054c7943df3cb528c3",
+    "src/services/directSolidTools.ts": "3478a2d44d9e1f61da86f3b6b62e01a5f4b1682d8cbeea4cf1064749ba50e558",
+    "tests/nativeDisplayTopology.test.ts": "9f9cf29708e3f6bf14e43fe1ff1ef123eb83ab4fafd731efa754fe50678b0775",
+    "src/generated/geometry-kernels/bytes.ts": "48e30684bb8e95f532788d6195caeb1b8b326b3f1debc6d8460e2feb809b3b59"
+  }
+}

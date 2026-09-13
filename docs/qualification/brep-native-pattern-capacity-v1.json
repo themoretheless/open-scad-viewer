@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native pattern expansion admission against existing binary transport capacity",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 34,
+    "testFiles": 4,
+    "nativeFootprintTest": 1,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4611450
+  },
+  "coverage": [
+    "Exact footprint agrees with binary encoder including UTF-8 and object keys",
+    "Saturating count arithmetic rejects oversized expansion",
+    "Oversized retained-body pattern rejected after one prepared group before remaining copies",
+    "Source remains unchanged and subsequent small request succeeds"
+  ],
+  "limits": {
+    "wireBytes": 33554432,
+    "reservedEnvelopeBytes": 1024,
+    "wireNodes": 4000000,
+    "reservedEnvelopeNodes": 32,
+    "maximumGroupDepth": 125
+  },
+  "limitations": [
+    "One transformed group is still prepared before admission",
+    "Wire capacity is not a browser peak-heap or latency certificate",
+    "General B-rep and complete native migration remain open",
+    "Shared qualification predates this artifact"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_pattern.rs": "3b808088af5d68c04dd7a4c1dd2ec9206bab54db5569604cafc9d8c5c5846fed",
+    "tests/nativeBodyArrangement.test.ts": "77be3715e957aced2ef763444dc0fef6575f370849fd00a770ba4f909fea94d6",
+    "src/generated/geometry-kernels/bytes.ts": "9dc150564530c34fe60f98e56e59028ef3c64f25abd4adde73f0c15e101d29be"
+  }
+}

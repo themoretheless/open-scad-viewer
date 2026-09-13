@@ -5,13 +5,56 @@
 The application uses the repository's Rust CAD implementation in
 `crates/polygon-core` through `crates/geometry-bridge`. It contains no Manifold,
 OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
-The only crates.io dependency is optional `wgpu` in `crates/gpu-compute` for
-native Metal/Vulkan compute (feature `gpu`). WASM builds leave that feature
-off. Document values, binary transport, direct WASM bindings and runtime
-DEFLATE decoding are repository-owned. The UI, MCP integration and build
+The core geometry libraries use optional `wgpu` in
+`crates/gpu-compute` for native Metal/Vulkan compute (feature `gpu`). WASM builds
+leave that feature off. The document adapter additionally uses the static SVG
+libraries listed below. A separate compression bootstrap uses the Brotli crates
+listed below; they are not geometry kernels. Document values, binary transport,
+direct WASM bindings and runtime DEFLATE decoding are repository-owned.
+The UI, MCP integration and build
 tooling still use the packages listed below.
 Historical Manifold qualification fixtures and manifests describe old releases;
 they are not dependencies or attestations of the current runtime.
+
+## Static SVG parsing, text and rendering
+
+- Libraries: `usvg` and `resvg` 0.47.0, with the exact transitive versions in `crates/Cargo.lock`
+- Source: <https://github.com/linebender/resvg>
+- Local source and compatibility patches: `crates/vendor/usvg`,
+  `crates/vendor/resvg`; provenance and changes in `crates/vendor/README.md`
+- License: MIT OR Apache-2.0; dependencies carry their own notices
+- Complete shipped notices: [public/third-party/svg.txt](public/third-party/svg.txt)
+
+The browser/Node WASM adapter resolves SVG structure and text with `usvg`,
+expands vector strokes and clips using the planar kernel, and uses `resvg`
+only for explicitly selected rendered silhouettes. System font lookup and font
+memory mapping are disabled; external file and URL resolvers are disabled.
+These libraries parse/render SVG documents and do not replace the CAD kernel.
+
+### Noto Sans
+
+- Asset: `crates/geometry-bridge/assets/NotoSans-Regular.ttf`
+- Source: <https://github.com/notofonts/noto-fonts/blob/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf>
+- Copyright 2018 The Noto Project Authors
+- License: SIL Open Font License 1.1
+- Complete shipped notice: [public/third-party/noto-sans-OFL.txt](public/third-party/noto-sans-OFL.txt)
+
+The unmodified font is embedded for deterministic SVG text across browser,
+worker and Node environments. Users may supply additional fonts explicitly.
+
+## Synchronous Brotli compression bootstrap
+
+- Crates: `brotli-decompressor` 5.0.3, `alloc-no-stdlib` 2.0.4 and `alloc-stdlib` 0.2.4
+- Source: <https://github.com/dropbox/rust-brotli-decompressor> and <https://github.com/dropbox/rust-alloc-no-stdlib>
+- Distributed license: BSD-3-Clause; `brotli-decompressor` package metadata additionally lists MIT.
+- Complete shipped notice: [public/third-party/brotli.txt](public/third-party/brotli.txt)
+
+`crates/wasm-brotli` uses the default safe decoder, without its `unsafe` or
+`ffi-api` features. This small standalone WASM module decompresses generated
+geometry code synchronously. It has no geometry dependencies or external
+imports. Its compressed bytes are separate from the geometry artifact; the
+ordinary repository-owned DEFLATE decoder loads this bootstrap. The complete
+license notice is copied into the browser distribution by Vite's public assets.
 
 ## wgpu
 

@@ -1,0 +1,51 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native convex mesh support-plane construction, push/pull, chamfer, faceted fillet and shell",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 82,
+    "testFiles": 7,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4621275
+  },
+  "coverage": [
+    "Axis-aligned positive/negative push distances match independent prism volumes",
+    "Multiple edge chamfers match removed triangular prism volumes",
+    "Faceted fillets approximate circular removal and preserve both adjacent supports",
+    "Single and opposite shell openings match independent cavity volumes; duplicate opening selections are stable",
+    "Collapse, invalid selection, nonfinite input and concave shape refusal preserve source",
+    "Existing retained B-rep edits, split, editor history and workbench regression tests"
+  ],
+  "limits": {
+    "sourceSupportFaces": 64,
+    "constructionPlanes": 128,
+    "constructionVertices": 4096,
+    "meshFilletSegments": [
+      2,
+      64
+    ]
+  },
+  "limitations": [
+    "Plane grouping/intersection uses existing fixed numerical tolerances; no certified predicate claim",
+    "Mesh fillets remain planar facets, not analytic blends",
+    "Retained B-rep uses existing separate native operations and coverage",
+    "Shared SVG/own-CAD reports predate this kernel",
+    "General B-rep completion and remaining Rust migration are open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_mesh_planes.rs": "abcb11a67f2f61dc0b8cb53c6d4b6de08242d7d0148953ce43e603d3e095d1aa",
+    "crates/geometry-bridge/src/cad_planar_edit.rs": "0160e047b7f2d38c3885cb0dfcce4ba226c3e8965f81ad0a83c8ce5c39681833",
+    "crates/geometry-bridge/src/cad_edge_edit.rs": "9df0690133c1dc07883f67cadb0fd400beb0c6046faadce7a2ea6e873af09799",
+    "crates/geometry-bridge/src/lib.rs": "5f47266592bf4e918377c5a3ad570a5e7c6daef51f679d007ef83dd0c835ba12",
+    "src/services/directSolidTools.ts": "f07e1cf4d4455e4a69e813c87dc5190e67c3b0451e5c4bf37743431f4d91299b",
+    "tests/nativeMeshPlanes.test.ts": "5fd936775dc598d4dc9ecb0b94e15b5c9e252cf2576671fb4d19e5f987307cd1",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "01917a0a0b019c4faec337515429ee0a973d7dd3e489b9d11aa29407af3df97f",
+    "src/generated/geometry-kernels/bytes.ts": "8b81ab280b23ae30829574eee4123bf6375064ef68f493458563e6797d149bb5"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "scope": "Native immutable picking snapshot registry and WASM query protocol; renderer migration incomplete",
+  "tests": {
+    "nativeRegistry": 3,
+    "wasmBoundaryAndExistingBvh": 12,
+    "vueTypecheck": "passed"
+  },
+  "ownership": {
+    "maxSnapshots": 64,
+    "retainedCapacityBudgetBytes": 67108864,
+    "handles": "Monotonic and runtime-local",
+    "queryCopiesMeshBuffers": false
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4708675,
+    "budget": 4700000,
+    "excessBytes": 8675
+  },
+  "sha256": {
+    "crates/geometry-bridge/src/mesh_picking.rs": "309b51d65ce776fbd0222fc5b9a999e20023a12326e9ad5b1d671f249994ce77",
+    "crates/polygon-core/src/solid/bvh_query.rs": "d723323fb3c3c35dd0bf24ee2855d994668f30933e8bdfb0ec04e3e2bf76b173",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "cb1e7d5af9a581c79a3ba75895c029128d014a72482271383f98edf84fc353aa",
+    "src/generated/geometry-kernels/bytes.ts": "20e4ea70da33b799ad7fc574512f1504bcc8d78fa64373c3e474fb165cf89b4a"
+  },
+  "limitations": [
+    "Renderer still uses TS raycasting",
+    "Large-upload raw-buffer path and interaction performance unqualified",
+    "Budget covers retained buffers, not total peak allocator memory",
+    "Shared SVG and own-CAD evidence not refreshed for this artifact"
+  ]
+}

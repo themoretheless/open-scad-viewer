@@ -12,6 +12,7 @@ mod assembly;
 pub mod emit;
 pub mod eval;
 mod mechanical;
+pub use mechanical::{thread_geometry, thread_radius};
 pub mod nurbs;
 mod profiles;
 pub mod range;

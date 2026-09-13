@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-13",
+  "scope": "Shared qualification refresh after native body, sketch, arrangement, joint and pattern transforms",
+  "fullGoalComplete": false,
+  "checks": {
+    "svgWorkflowTests": 122,
+    "ownCadTests": 218,
+    "manifestAndTransformTests": 32,
+    "nativeBrepCore": 99,
+    "nativePolygonCore": 72,
+    "nativeSvgBridge": 72,
+    "nativePlanar": [
+      147,
+      18,
+      4
+    ],
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "viteBuild": "passed",
+    "verifiedDistArtifacts": 68,
+    "distBytes": 4598718
+  },
+  "wasmSha256": "eeb90acf50825bc35b4cf4323fcb2b7df7804b261e24373d01da9d6910be9a29",
+  "limitations": [
+    "Scoped workflow and native tests do not prove full B-rep certification",
+    "Permanent production B-rep provider and complete native semantic frontend remain incomplete",
+    "General intersections, curved Boolean, analytic features and B-rep interchange remain open",
+    "Browser peak-memory and clean release matrix not qualified"
+  ],
+  "sha256": {
+    "docs/qualification/svg-static-cycle-v1.json": "3b1c87f14f052523692bbe00ae42b287cea5669dc18f60f2172c3f0f33395fc8",
+    "docs/qualification/own-rust-cad-v1.json": "a6242b7a21197fadf09c1c9c59087d67492fd4a92180908453559e3df093ac22",
+    "src/core/ownRustCadEvidence.ts": "1eaea9c239919b86a25a956d8834ea31d6b2393acafae6dd3eeb1f026abe24a1",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "eeb90acf50825bc35b4cf4323fcb2b7df7804b261e24373d01da9d6910be9a29",
+    "src/generated/geometry-kernels/bytes.ts": "40b3b0dfd6e4639897434ae72d63a99c012c57b3d9e2b47a153f11e7ce8c178e"
+  }
+}

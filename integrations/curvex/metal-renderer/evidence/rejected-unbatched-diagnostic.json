@@ -1,0 +1,538 @@
+{
+  "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+  "cases": [
+    {
+      "cpu_baseline_ms": 0.13433299999999998,
+      "cpu_retained_ms": 0.266959,
+      "gpu_baseline_ms": 18446554323756.62,
+      "gpu_retained_ms": 18446554323758.875,
+      "samples": [
+        {
+          "callbacks": 0,
+          "cpu_ms": 1.5022499999999999,
+          "cycle": 0,
+          "gpu_ms": 18446554323795.465,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.607041,
+          "cycle": 0,
+          "gpu_ms": 0.0,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.109375,
+          "cycle": 1,
+          "gpu_ms": 18446554323789.957,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.118917,
+          "cycle": 1,
+          "gpu_ms": 18446554323788.047,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.076209,
+          "cycle": 2,
+          "gpu_ms": 18446554323786.14,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.20845799999999998,
+          "cycle": 2,
+          "gpu_ms": 0.99625,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.10525,
+          "cycle": 3,
+          "gpu_ms": 18446554323780.027,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.11695900000000001,
+          "cycle": 3,
+          "gpu_ms": 0.088333,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.094417,
+          "cycle": 4,
+          "gpu_ms": 18446554323774.727,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.13937500000000003,
+          "cycle": 4,
+          "gpu_ms": 18446554323772.75,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.09075,
+          "cycle": 5,
+          "gpu_ms": 18446554323770.766,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.13433299999999998,
+          "cycle": 5,
+          "gpu_ms": 18446554323768.42,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.30824999999999997,
+          "cycle": 6,
+          "gpu_ms": 18446554323764.965,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.361375,
+          "cycle": 6,
+          "gpu_ms": 18446554323761.2,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.23025,
+          "cycle": 7,
+          "gpu_ms": 18446554323758.875,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.203375,
+          "cycle": 7,
+          "gpu_ms": 18446554323756.62,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.124208,
+          "cycle": 8,
+          "gpu_ms": 18446554323754.42,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.27137500000000003,
+          "cycle": 8,
+          "gpu_ms": 1.663792,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.266959,
+          "cycle": 9,
+          "gpu_ms": 18446554323747.46,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.17358400000000002,
+          "cycle": 9,
+          "gpu_ms": 18446554323745.355,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.124125,
+          "cycle": 10,
+          "gpu_ms": 18446554323738.87,
+          "retained": false
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.346792,
+          "cycle": 10,
+          "gpu_ms": 18446554323736.414,
+          "retained": true
+        },
+        {
+          "callbacks": 1,
+          "cpu_ms": 0.278541,
+          "cycle": 11,
+          "gpu_ms": 18446554323733.48,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.23775000000000002,
+          "cycle": 11,
+          "gpu_ms": 18446554323728.477,
+          "retained": false
+        }
+      ],
+      "shapes": 1
+    },
+    {
+      "cpu_baseline_ms": 6.394042,
+      "cpu_retained_ms": 8.366667,
+      "gpu_baseline_ms": 18446554323540.9,
+      "gpu_retained_ms": 18446554323554.918,
+      "samples": [
+        {
+          "callbacks": 0,
+          "cpu_ms": 14.005500000000001,
+          "cycle": 0,
+          "gpu_ms": 18446554323704.85,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 15.746541999999998,
+          "cycle": 0,
+          "gpu_ms": 2.848959,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.5738749999999999,
+          "cycle": 1,
+          "gpu_ms": 18446554323673.234,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 11.615749999999998,
+          "cycle": 1,
+          "gpu_ms": 3.677459,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 1.0833329999999999,
+          "cycle": 2,
+          "gpu_ms": 18446554323646.582,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 14.771125,
+          "cycle": 2,
+          "gpu_ms": 18446554323626.25,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.517709,
+          "cycle": 3,
+          "gpu_ms": 18446554323620.965,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 7.957917,
+          "cycle": 3,
+          "gpu_ms": 18446554323608.617,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.701916,
+          "cycle": 4,
+          "gpu_ms": 18446554323603.137,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 9.641667,
+          "cycle": 4,
+          "gpu_ms": 18446554323587.883,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.358,
+          "cycle": 5,
+          "gpu_ms": 18446554323583.88,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 7.2485420000000005,
+          "cycle": 5,
+          "gpu_ms": 18446554323571.984,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.5951249999999999,
+          "cycle": 6,
+          "gpu_ms": 1.953875,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 8.366667,
+          "cycle": 6,
+          "gpu_ms": 18446554323554.918,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.316916,
+          "cycle": 7,
+          "gpu_ms": 18446554323551.16,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 6.500125,
+          "cycle": 7,
+          "gpu_ms": 18446554323540.9,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.523833,
+          "cycle": 8,
+          "gpu_ms": 18446554323536.152,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 8.397833,
+          "cycle": 8,
+          "gpu_ms": 18446554323523.605,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.298041,
+          "cycle": 9,
+          "gpu_ms": 18446554323518.83,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 6.5469159999999995,
+          "cycle": 9,
+          "gpu_ms": 18446554323508.02,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 0.512875,
+          "cycle": 10,
+          "gpu_ms": 18446554323503.273,
+          "retained": false
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 8.756458,
+          "cycle": 10,
+          "gpu_ms": 18446554323489.195,
+          "retained": true
+        },
+        {
+          "callbacks": 116,
+          "cpu_ms": 0.356708,
+          "cycle": 11,
+          "gpu_ms": 18446554323483.78,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 6.394042,
+          "cycle": 11,
+          "gpu_ms": 18446554323471.934,
+          "retained": false
+        }
+      ],
+      "shapes": 100
+    },
+    {
+      "cpu_baseline_ms": 66.187125,
+      "cpu_retained_ms": 86.80212499999999,
+      "gpu_baseline_ms": 18446554322292.19,
+      "gpu_retained_ms": 18446554322388.44,
+      "samples": [
+        {
+          "callbacks": 0,
+          "cpu_ms": 68.77862499999999,
+          "cycle": 0,
+          "gpu_ms": 18.089875,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 86.351208,
+          "cycle": 0,
+          "gpu_ms": 1.513583,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.9638329999999997,
+          "cycle": 1,
+          "gpu_ms": 18446554323257.406,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 120.33916599999999,
+          "cycle": 1,
+          "gpu_ms": 18446554323124.95,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 9.262083,
+          "cycle": 2,
+          "gpu_ms": 18446554323088.023,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 94.203917,
+          "cycle": 2,
+          "gpu_ms": 18446554322967.605,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.412292,
+          "cycle": 3,
+          "gpu_ms": 18446554322932.535,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 66.86441699999999,
+          "cycle": 3,
+          "gpu_ms": 18446554322841.516,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 7.085166,
+          "cycle": 4,
+          "gpu_ms": 18446554322807.44,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 96.821542,
+          "cycle": 4,
+          "gpu_ms": 18446554322681.105,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.633584,
+          "cycle": 5,
+          "gpu_ms": 18446554322654.543,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 75.548209,
+          "cycle": 5,
+          "gpu_ms": 19.419125,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 5.975708,
+          "cycle": 6,
+          "gpu_ms": 18446554322533.316,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 96.909958,
+          "cycle": 6,
+          "gpu_ms": 11.994583,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.766709,
+          "cycle": 7,
+          "gpu_ms": 18446554322388.44,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 81.887708,
+          "cycle": 7,
+          "gpu_ms": 18446554322292.19,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 6.893584000000001,
+          "cycle": 8,
+          "gpu_ms": 18446554322266.918,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 109.534542,
+          "cycle": 8,
+          "gpu_ms": 18446554322131.5,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.527542,
+          "cycle": 9,
+          "gpu_ms": 18446554322099.332,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 66.187125,
+          "cycle": 9,
+          "gpu_ms": 18446554322011.547,
+          "retained": false
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 6.558084,
+          "cycle": 10,
+          "gpu_ms": 19.914459,
+          "retained": false
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 86.80212499999999,
+          "cycle": 10,
+          "gpu_ms": 18446554321866.133,
+          "retained": true
+        },
+        {
+          "callbacks": 1166,
+          "cpu_ms": 2.793583,
+          "cycle": 11,
+          "gpu_ms": 18446554321840.2,
+          "retained": true
+        },
+        {
+          "callbacks": 0,
+          "cpu_ms": 77.920834,
+          "cycle": 11,
+          "gpu_ms": 6.861708,
+          "retained": false
+        }
+      ],
+      "shapes": 1000
+    }
+  ],
+  "workload": "overlapping copies of actual Curvex fixtures; diagnostic, not final document benchmark",
+  "qualification_status": "REJECTED: alternating separate documents invalidated the shared thread-local geometry cache, so these are mixed warm/cold samples. GPU timestamps also include invalid pairs and wrapped subtraction. No acceleration or per-callback regression conclusion is established by this diagnostic."
+}

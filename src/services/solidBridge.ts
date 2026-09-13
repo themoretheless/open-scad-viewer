@@ -1,38 +1,50 @@
 import type { MeshData } from '../core/mesh'
+import {isNativeGeometryArtifact} from '../core/nativeGeometry'
 import type { DirectBody, DirectDocument } from './directModeling'
-import { emptyDirectDocument } from './directModeling'
+import { emptyDirectDocument, parseDirectDocument } from './directModeling'
+import {inspectNurbsBrep, transformNurbsBrep, type NurbsBrep} from './geometry/brep'
 import type { PolygonMesh } from './geometry/polygon'
 import type { MeshObject, MeshWorkspaceDocument } from './meshEditing'
 import { emptyMeshDocument } from './meshEditing'
 import { tessellateSolidNurbsSurface } from './solidNurbs'
+import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
 
-/** Convert renderer meshes into a Solid (Direct) document of bodies. */
+/** Convert the scene while retaining authored B-rep carriers and display placement. */
 export function sceneMeshesToSolidDocument(meshes: readonly MeshData[], namePrefix = 'Body'): DirectDocument {
   const doc = emptyDirectDocument()
   meshes.forEach((mesh, index) => {
     const body = meshDataToPolygonBody(mesh, `${namePrefix} ${index + 1}`, `solid-${index + 1}-${Date.now().toString(36)}`)
     if (body) doc.bodies.push(body)
   })
-  return doc
+  return parseDirectDocument(JSON.stringify(doc))
 }
 
 export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string): DirectBody | null {
   const polygon = meshDataToPolygon(mesh)
+  if (mesh.nativeGeometry?.kind === 'brep') {
+    if (!isNativeGeometryArtifact(mesh.nativeGeometry)) throw new Error('Invalid native B-rep snapshot.')
+    const data = JSON.parse(mesh.nativeGeometry.geometryJson) as {geometry?: NurbsBrep}
+    if (!data || !data.geometry) throw new Error('Missing native B-rep geometry.')
+    const model = data.geometry
+    inspectNurbsBrep(model)
+    const empty = [model.vertices,model.edges,model.loops,model.faces,model.shells,model.bodies].every(items=>items.length===0)
+    if (empty) {
+      if (polygon) throw new Error('An empty B-rep cannot have a displayed Solid body.')
+      return null
+    }
+    if (!polygon) throw new Error('A nonempty B-rep requires a display mesh for Solid.')
+    const identity = mesh.transform.every((v, i) => v === (i % 5 === 0 ? 1 : 0))
+    const brep = identity ? model : transformNurbsBrep(model,
+      Array.from({length:4}, (_, row) => Array.from(mesh.transform.slice(row*4,row*4+4))))
+    return {id, name, mesh:polygon, brep}
+  }
   if (!polygon) return null
   return { id, name, mesh: polygon }
 }
 
 /** MeshData uses interleaved position+normal (stride 6). */
 export function meshDataToPolygon(mesh: MeshData): PolygonMesh | null {
-  const stride = 6
-  const vertexCount = mesh.vertices.length / stride
-  if (!Number.isInteger(vertexCount) || vertexCount < 3 || mesh.indices.length < 3) return null
-  const positions: number[] = []
-  for (let i = 0; i < vertexCount; i++) {
-    const o = i * stride
-    positions.push(mesh.vertices[o], mesh.vertices[o + 1], mesh.vertices[o + 2])
-  }
-  return { positions, indices: Array.from(mesh.indices) }
+  return placeSolidMeshInKernel(mesh.vertices, mesh.indices, mesh.transform)
 }
 
 export function solidDocumentToMeshDocument(solid: DirectDocument): MeshWorkspaceDocument {

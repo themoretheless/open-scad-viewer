@@ -1,0 +1,71 @@
+{
+  "generated_utc": "2026-09-13T06:00:44.742347+00:00",
+  "runtime_dependencies": [
+    "osv-math (own shared math crate)"
+  ],
+  "source_hashes": {
+    "crates/planar-geometry/src/stroke.rs": "faa3398158352e520037d8be7559b57e3a45508e4b548e1395aa6c9e9bc17391",
+    "crates/planar-geometry/src/stroke_simple.rs": "31d2c1d2a3714b9eaf5eb70d1c3b6dd4548c505556009c6c9b0c9dcc9a3186f1",
+    "crates/planar-geometry/src/render.rs": "e177788f195278528fd60ff0a229da1103e6250cd6e215bbbfb3466f441ee3d4",
+    "crates/polygon-core/src/gradient_mesh.rs": "870c547b2326f33955431ae46cb6c33810afa5711051d2afcd6908a4cefb388a"
+  },
+  "curvex": {
+    "passed": 1492,
+    "ignored": 1,
+    "ignored_test_explicitly_passed": true,
+    "all_targets_release_doctests_passed": true,
+    "source_frozen": true,
+    "migration_patch_unchanged": true
+  },
+  "native_tests": {
+    "planar": 145,
+    "curvex_parity": 18,
+    "polygon": 46,
+    "polygon_integration": 13,
+    "note": "Shared checkout includes one unrelated BRep triangulation test."
+  },
+  "isolated_wasm": {
+    "passed": 6,
+    "base_revision": "83f40b6",
+    "source_overlay": [
+      "crates/planar-geometry/src/stroke.rs",
+      "crates/planar-geometry/src/stroke_simple.rs",
+      "crates/planar-geometry/src/render.rs",
+      "crates/polygon-core/src/gradient_mesh.rs"
+    ],
+    "wasm_sha256": "71448a7d3092761bb2c2993d0967f3530210e0ca79c62bfb7c2b27443612204d",
+    "scope": "Snapshot of committed code with this optimization; excludes other tasks uncommitted BRep/SVG changes."
+  },
+  "render": {
+    "captures": 36,
+    "minimum_iou_vs_previous_own_kernel": 1.0,
+    "maximum_fraction_changed_by_more_than_3_vs_previous": 0.0,
+    "minimum_iou_vs_original_curvex": 0.9997543022696328,
+    "maximum_analytic_gradient_error": 2,
+    "cached_frames_identical": true
+  },
+  "benchmark": "../benchmark-results/stroke-optimization.json",
+  "limits": [
+    "General union remains for folds, self-intersections, consumed insets, dashes and multi-contour render unions.",
+    "These performance results measure uncached mesh construction, not whole-document FPS.",
+    "GUI/SVG transitive Kurbo usage in Curvex is unchanged."
+  ],
+  "workspace_wasm": {
+    "build_command": "node scripts/build-geometry-kernels.mjs",
+    "test_command": "node_modules/.bin/vitest run tests/path2dCurvex.test.ts",
+    "build_passed": true,
+    "tests_passed": 6,
+    "files": {
+      "src/generated/geometry-kernels/kernel_bg.wasm": {
+        "sha256": "96fa8df32b4f013663ab0e524171de797909455d1dd2569448764dd1d1e5fd3c",
+        "bytes": 6436798
+      },
+      "src/generated/geometry-kernels/bytes.ts": {
+        "sha256": "5df0d6b58abdafa0cb48163dd38b8262145859e8483568dd665eaf89c59b3c5e",
+        "bytes": 2195571
+      }
+    },
+    "scope": "Regenerated actual workspace bundle including existing unrelated BRep/SVG work; original Curvex remains unchanged."
+  },
+  "original_curvex_clean": true
+}

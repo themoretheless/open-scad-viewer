@@ -1,7 +1,7 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
 import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
-import {unpackWasmBase64} from '../wasmPacking'
+import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
 
 export class GeometryKernelError extends Error {
@@ -22,6 +22,11 @@ interface KernelExports extends WebAssembly.Exports {
  abi_mesh_free(ptr:number):void
  abi_import_mesh(stride:number,vp:number,vl:number,ip:number,il:number):bigint
  abi_bvh_build(stride:number,leaf:number,vp:number,vl:number,ip:number,il:number):bigint
+ abi_picking_create(stride:number,leaf:number,vp:number,vl:number,ip:number,il:number):bigint
+ abi_solid_placement(vp:number,vl:number,ip:number,il:number,mp:number,ml:number):bigint
+ abi_export_alloc(len:number):number
+ abi_export_prepare(vp:number,vl:number,ip:number,il:number,mp:number,ml:number,float32:number):bigint
+ abi_export_append(handle:number,vp:number,vl:number,ip:number,il:number,mp:number,ml:number):bigint
  abi_semantic_edges(vp:number,vl:number,ip:number,il:number,mfp:number,mfl:number,mtp:number,mtl:number,weld:number,creaseDotThreshold:number):bigint
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
@@ -30,10 +35,26 @@ let wasm:KernelExports
 let initialized = false
 let wasmMemory: WebAssembly.Memory
 let readingCadMesh = false
+let warming: Promise<void> | undefined
+/** Compile before interactive use. Never replace an instance owning live handles. */
+export function warmGeometryKernel(): Promise<void> {
+  if (initialized) return Promise.resolve()
+  warming ??= (async () => {
+    const module = await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    // A synchronous caller may have initialized the runtime while compilation
+    // was pending. Its native snapshots must remain attached to that instance.
+    if (!initialized) {
+      wasm = new WebAssembly.Instance(module).exports as KernelExports
+      wasmMemory = wasm.memory
+      initialized = true
+    }
+  })().finally(() => { warming = undefined })
+  return warming
+}
 function initialize(): void {
   if (readingCadMesh) throw new Error('WASM calls are not allowed while reading a borrowed CAD mesh')
   if (initialized) return
-  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackWasmBase64(wasmBase64))).exports as KernelExports
+  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackBrotliWasmBase64(wasmBase64))).exports as KernelExports
   wasmMemory=wasm.memory
   initialized = true
 }
@@ -52,7 +73,9 @@ export function decodeNurbsResult<T>(result:unknown):T{
  if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURBS_')?NurbsCurveError:GeometryKernelError;throw new ErrorType(envelope.error.code,envelope.error.message)}
  return envelope.value
 }
-export function callGeometryRust<T>(op:string,args:object):T{return decodeNurbsResult<T>(request(0,{op,...args}))}
+export function callGeometryRust<T>(op:string,args:object):T{
+  return decodeNurbsResult<T>(request(0,{op,...args}))
+}
 export function createRustSurfaceEvaluator(surface:object){
  const id=decodeNurbsResult<number>(request(6,surface));let disposed=false
  return {evaluate(u:number,v:number){if(disposed)throw new Error('NURBS surface evaluator is disposed.');return request(7,{id,u,v})},free(){if(!disposed){request(8,{id});disposed=true}}}

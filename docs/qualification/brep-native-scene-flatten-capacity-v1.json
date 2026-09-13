@@ -1,0 +1,20 @@
+{
+  "scope": "Real WASM scene-flatten capacity and recovery at declared geometry limits",
+  "tests": {
+    "focusedTransport": 4,
+    "expandedTriangles": 100000,
+    "distinctVertices": 300000,
+    "oneVertexOverLimit": "refused",
+    "subsequentRequest": "passed",
+    "previousReturnedResult": "preserved"
+  },
+  "runtimeSourceMatches": "brep-native-scene-flatten-v1.json",
+  "sha256": {
+    "tests/nativeSceneFlatten.test.ts": "80d558b0d14a3004b4e7c9b656aa7c12fd837efaee48b9603706737feabf8b5d",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "638522e2b7fcd6dd8a6b02552b546a1da4560d7ef26e01f99bb9fe784488a05b"
+  },
+  "limitations": [
+    "Functional capacity only; browser peak memory and latency not profiled",
+    "Full B-rep completion unproved"
+  ]
+}

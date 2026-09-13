@@ -1,0 +1,88 @@
+{
+  "id": "svg-static-cycle-v1",
+  "generatedAt": "2026-09-13T17:30:55.513Z",
+  "sourceSha256": "be4bbfab4c34d6d7878fea6fbcad331f3a6c6acd0f552001a7f76ea565af8187",
+  "wasmSha256": "fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6",
+  "packedSha256": "3cbd56cb7344d5aa664d270d15d31dce666e5c91f0364d74a266edcdea8609e8",
+  "decoderSha256": "1909c63301aafb730440d40d74a90d417a3e1dc3bcc7ea42c3eb8dbbf4618f1a",
+  "tests": [
+    "tests/svgDocument.test.ts",
+    "tests/svgGeometry.test.ts",
+    "tests/svgProjectionValidation.test.ts",
+    "tests/svgWorker.test.ts",
+    "tests/svgWorkerRealBoundary.test.ts",
+    "tests/svgDraftStore.test.ts",
+    "tests/svgPanel.test.ts",
+    "tests/mcpSvgTools.test.ts",
+    "tests/openScadImport.test.ts",
+    "tests/path2dCurvex.test.ts",
+    "tests/directProfileTools.test.ts",
+    "tests/directModelingTools.test.ts"
+  ],
+  "passedTests": 122,
+  "nativeChecks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib",
+        "svg",
+        "--no-default-features",
+        "--offline"
+      ],
+      "status": "passed"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "planar-geometry",
+        "--offline"
+      ],
+      "status": "passed"
+    }
+  ],
+  "requirements": {
+    "artwork": [
+      "CSS cascade and geometry properties, use/symbol inheritance, viewports, gradients, clipping, masks, filters",
+      "Bundled and supplied font outlines, explicit raster silhouette conversion"
+    ],
+    "geometry": [
+      "Physical units, curve tolerance, compound holes, strokes and transformed projections",
+      "Non-scaling strokes, dashes, markers and per-instance paint resources in outer viewport coordinates",
+      "SVG → solid → SVG with independent area, volume, bounds and topology checks",
+      "Optional editable ModelGraph, nested holes/islands and explicit graph admission limits"
+    ],
+    "interaction": [
+      "Real isolated worker, responsive host, warm reuse, cancellation and hard timeout",
+      "Stale source, settings, scene and destination rejection; source-capacity admission"
+    ],
+    "persistence": [
+      "SVG, settings and exact font bytes restored through IndexedDB",
+      "Unfinished numeric fields, rapid saves, cross-tab conflicts and unavailable-storage recovery"
+    ],
+    "vectors": [
+      "Path2D operations, direct contour corner/revolve tools and direct modeling tools"
+    ]
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "v22.23.2"
+  },
+  "scope": "The bounded static SVG viewing/import/extrusion/export workflows, browser worker protocol and persistence, MCP roundtrips and adjacent vector operations. This is not universal SVG 2 conformance or whole-application release qualification.",
+  "limitations": [
+    "Scripts, animation, foreignObject, external resources, DTDs and vector effects other than none/non-scaling-stroke are explicitly rejected.",
+    "CSS math, custom variables, viewport-relative lengths and cascade at-rules require resolved values.",
+    "Effects use opt-in pixel silhouettes; text requires the correct supplied outline font for matching metrics. Custom SVG/COLR/bitmap font tables are unsupported.",
+    "Reference/marker/text and non-scaling resource expansion use conservative budgets before normalization or resource cloning.",
+    "ModelGraph uses its own profile/node budgets; SCAD source and general transport limits apply."
+  ]
+}

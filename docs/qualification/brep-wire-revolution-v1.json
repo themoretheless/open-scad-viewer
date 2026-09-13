@@ -1,0 +1,24 @@
+{
+  "scope": "Native full revolution of one off-axis analytic wire; not full B-rep completion",
+  "coreTestsPassed": 85,
+  "integrationTestsPassed": 59,
+  "vueTypecheck": "passed",
+  "dist": {
+    "status": "failed",
+    "bytes": 4701943,
+    "budget": 4700000,
+    "excess": 1943,
+    "previousBytesBeforeTorusDeduplication": 4703935
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "5e3161ed2390e7255e8c180df7a8d043ae4779c46d0ed808c15208b264c7bc36",
+    "crates/geometry-bridge/src/brep_semantic.rs": "8fcd895675bf5e33aab802f5202daf8ec3481879146c48585745fd35dd4740b8",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "cd0c5c6414dd85eb0201726864d4c6ff8bbdb057b52212f0dc783dbe1112b92c",
+    "src/generated/geometry-kernels/bytes.ts": "40715deed0a4012f751ea5a9635da71aa1d3a57fee1c1e0e4730aaefe5073f0a"
+  },
+  "limitations": [
+    "Partial curved turns, axis contacts and multi-wire profiles remain unsupported",
+    "Shared SVG and own-CAD evidence not refreshed for this artifact",
+    "Distribution size gate remains unresolved"
+  ]
+}

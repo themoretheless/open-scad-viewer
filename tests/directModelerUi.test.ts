@@ -1,9 +1,10 @@
-import {createRenderer,nextTick} from 'vue'
+import {createRenderer,h,nextTick,shallowReactive} from 'vue'
 import {it,expect,vi,afterEach} from 'vitest'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,tessellateNurbsBrep} from '../src/services/geometry/brep'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}
@@ -31,7 +32,8 @@ async function mount(props: Record<string,unknown> = {}){
  vi.stubGlobal('localStorage',{getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v}})
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('document',{activeElement:null});vi.stubGlobal('window',{document:{activeElement:null}});vi.stubGlobal('SVGSVGElement',Node)
  vi.stubGlobal('DOMPoint',class {constructor(public x:number,public y:number){}matrixTransform(){return this}})
- const root=new Node('root'),app=renderer.createApp(DirectModeler,{open:true,locale:'en',canAppend:true,remainingSource:100000,...props});app.mount(root);mounts.push(()=>app.unmount());await nextTick()
+ const currentProps=shallowReactive({open:true,locale:'en',canAppend:true,remainingSource:100000,...props})
+ const root=new Node('root'),app=renderer.createApp({setup:()=>()=>h(DirectModeler,currentProps)});app.mount(root);mounts.push(()=>app.unmount());await nextTick()
  const all=(n:Node=root):Node[]=>[n,...n.children.flatMap(all)]
  const text=(n:Node):string=>n.text+n.children.map(text).join('')
  const button=(name:string)=>{const n=all().find(n=>n.tag==='button'&&text(n)===name);if(!n)throw Error('Missing button '+name);return n}
@@ -39,13 +41,70 @@ async function mount(props: Record<string,unknown> = {}){
  const svg=()=>all().find(n=>n.tag==='svg'&&n.props['aria-label']==='3D body canvas')!
  const event=(n:Node,x=0,y=0)=>({button:0,target:n,currentTarget:n,clientX:x,clientY:y,pointerId:1,preventDefault(){},stopPropagation(){}})
  const pointer=async(n:Node,x=0,y=0)=>{n.props.onPointerdown(event(n,x,y));await nextTick()}
- return {all,text,button,click,svg,pointer,event,doc:()=>JSON.parse(stored) as DirectDocument,field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await nextTick()}}
+ return {all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},doc:()=>JSON.parse(stored) as DirectDocument,field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await nextTick()}}
 }
+
+function cylinderSeed(): DirectDocument {
+ const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,2)
+ return {version:1,sketches:[],bodies:[{id:'imported-cylinder',name:'Imported cylinder',brep,
+  mesh:{positions:built.positions,indices:built.indices}}]}
+}
+
+it('changes retained B-rep display detail and restores the previous mesh with Undo',async()=>{
+ const seed=cylinderSeed(),before=structuredClone(seed.bodies[0])
+ const ui=await mount({seedDocument:seed})
+ await ui.click('Imported cylinder')
+ const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
+ field.props['onUpdate:modelValue'](8);await nextTick();await ui.click('Retessellate')
+ expect(ui.doc().bodies[0].mesh.indices.length).toBeGreaterThan(before.mesh.indices.length)
+ expect(ui.doc().bodies[0].brep).toEqual(before.brep)
+ expect(ui.button('↶').props.disabled).toBe(false)
+ await ui.click('↶')
+ expect(ui.doc().bodies[0]).toEqual(before)
+ expect(seed.bodies[0]).toEqual(before)
+})
+
+it('applies a seed already present at mount and preserves Undo across reopening',async()=>{
+ const seed=cylinderSeed(),ui=await mount({seedDocument:seed})
+ expect(ui.doc().bodies.map(body=>body.id)).toEqual(['imported-cylinder'])
+ expect(ui.doc().bodies[0].brep).toEqual(seed.bodies[0].brep)
+ expect(ui.button('↶').props.disabled).toBe(false)
+ await ui.click('↶')
+ expect(ui.doc().bodies.map(body=>body.id)).toEqual(['b'])
+ expect(ui.doc().sketches.map(sketch=>sketch.id)).toEqual(['s','circle','line','boundary'])
+ const undone=ui.doc()
+ await ui.setProps({open:false});await ui.setProps({open:true})
+ expect(ui.doc()).toEqual(undone)
+})
+
+it('defers a closed workspace seed until opening and does not replay it over later edits',async()=>{
+ const ui=await mount({open:false,seedDocument:cylinderSeed()})
+ expect(ui.doc().bodies.map(body=>body.id)).toEqual(['b'])
+ await ui.setProps({open:true})
+ expect(ui.doc().bodies.map(body=>body.id)).toEqual(['imported-cylinder'])
+ await ui.click('Box')
+ const edited=ui.doc();expect(edited.bodies).toHaveLength(2)
+ await ui.setProps({open:false});await ui.setProps({open:true})
+ expect(ui.doc()).toEqual(edited)
+ await ui.setProps({open:false,seedDocument:{version:1,sketches:[],bodies:[]}})
+ expect(ui.doc()).toEqual(edited)
+ await ui.setProps({open:true});expect(ui.doc().bodies).toEqual([])
+ await ui.click('↶');expect(ui.doc()).toEqual(edited)
+})
 it('binds face selection, Push/Pull preview, confirm and undo to the document',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Faces');const polygon=ui.all(ui.svg()).find(n=>n.tag==='polygon')!;await ui.pointer(polygon)
  await ui.click('Push / Pull');expect(ui.doc().bodies[0].mesh).toBeDefined();await ui.click('Apply · Enter')
  expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1200)
  await ui.click('↶');expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1000)
+})
+
+it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
+ const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,4)
+ const body=(id:string)=>({id,name:id,brep:structuredClone(brep),mesh:{positions:built.positions,indices:built.indices}})
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock'),body('Cutter')]}})
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B')
+ expect(ui.doc().bodies).toEqual([])
+ await ui.click('↶');expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
 })
 it('binds an edge selection to chamfer and creates a shell with the selected opening',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!;await ui.pointer(edge)
@@ -76,6 +135,18 @@ it('authors a full sketch revolve as an explicitly faceted B-rep',async()=>{
  expect(body.brep).toBeDefined()
  expect(body.brep?.faces.length).toBeGreaterThan(6)
  expect(inspectPolygonMesh(body.mesh).closed).toBe(true)
+})
+it.each(['x','y'])('keeps exact partial revolve outward oriented around %s and refuses implicit mesh combination',async axis=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Revolve')
+ const set=async(label:string,value:unknown)=>{const field=ui.all().find(n=>['input','select'].includes(n.tag)&&n.parent&&ui.text(n.parent).startsWith(label)&&n.props['onUpdate:modelValue'])!;field.props['onUpdate:modelValue'](value);await nextTick()}
+ await set('Sketch axis',axis);await set('Axis offset, mm',-5);await set('Revolve surfaces','exact');await set('Angle, °',180);await ui.click('Add')
+ await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
+ expect(ui.text(ui.all()[0])).toContain('Exact B-rep revolve combination requires an authored B-rep target.')
+ await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(1)
+ await ui.click('New');await new Promise(resolve=>setTimeout(resolve,100));await nextTick();await ui.click('Apply · Enter')
+ const body=ui.doc().bodies.at(-1)!
+ expect(body.name).toMatch(/exact B-rep/);expect(body.brep?.faces).toHaveLength(10)
+ const report=inspectPolygonMesh(body.mesh);expect(report.closed).toBe(true);expect(report.signedVolumeMm3).toBeGreaterThan(3000)
 })
 it('binds splitting and Shift selection to shared transforms',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(2)
@@ -125,8 +196,8 @@ it('creates closed primitives with undo in the embedded main scene editor',async
  }
  expect(ui.doc().bodies).toHaveLength(5)
  expect(ui.doc().bodies.find(body=>body.name.startsWith('Wedge'))?.brep?.faces).toHaveLength(5)
- expect(ui.doc().bodies.find(body=>body.name.startsWith('Cylinder'))?.brep?.faces).toHaveLength(50)
- expect(ui.doc().bodies.find(body=>body.name.startsWith('Sphere'))?.brep?.faces).toHaveLength(224)
+ expect(ui.doc().bodies.find(body=>body.name.startsWith('Cylinder'))?.brep?.faces).toHaveLength(6)
+ expect(ui.doc().bodies.find(body=>body.name.startsWith('Sphere'))?.brep?.faces).toHaveLength(8)
  await ui.click('↶');expect(ui.doc().bodies).toHaveLength(4)
  await ui.click('Apply to code');expect(emitted).toHaveLength(1);expect(emitted[0].match(/polyhedron\(/g)).toHaveLength(4)
 })
@@ -150,4 +221,64 @@ it('drags a native NURBS CV in the 3D viewport and commits one undo step',async(
  expect(ui.doc().surfaces![0].surface.controlPoints[0][0]).not.toEqual(before)
  await ui.click('↶')
  expect(ui.doc().surfaces![0].surface.controlPoints[0][0]).toEqual(before)
+})
+
+it('creates rational tube/frustum solids and retains the faceted cylinder option',async()=>{
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[]}})
+ for(const name of ['Tube','Frustum']){
+  await ui.click(name)
+  const body=ui.doc().bodies.at(-1)!
+  expect(body.brep?.faces.some(face=>face.surface.degreeU===2)).toBe(true)
+  expect(inspectPolygonMesh(body.mesh).closed).toBe(true)
+ }
+ expect(ui.doc().bodies[0].brep!.faces.filter(face=>face.holes.length)).toHaveLength(2)
+ const selector=ui.all().find(n=>n.tag==='select'&&n.options.some(o=>o.props.value==='faceted')&&n.options.some(o=>ui.text(o)==='Exact surfaces'))!
+ selector.props['onUpdate:modelValue']('faceted');await nextTick();await ui.click('Cylinder')
+ expect(ui.doc().bodies.at(-1)?.brep?.faces).toHaveLength(50)
+})
+
+it('preserves authored B-rep while dragging and running native planar edits',async()=>{
+ const ui=await mount();await ui.click('Box');const original=ui.doc().bodies.at(-1)!
+ await ui.click('↔ Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!,0,0)
+ svg.props.onPointermove(ui.event(svg,4,3));svg.props.onPointerup(ui.event(svg,4,3));await nextTick()
+ const moved=ui.doc().bodies.find(b=>b.id===original.id)!
+ expect(moved.brep).toBeDefined();expect(moved.brep!.topologyIds).toEqual(original.brep!.topologyIds);expect(moved.brep!.vertices).not.toEqual(original.brep!.vertices)
+ await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Push / Pull');await ui.click('Apply · Enter')
+ expect(ui.doc().bodies.find(b=>b.id===original.id)!.brep).toBeDefined()
+ await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Shell');await ui.click('Apply · Enter')
+ const shell=ui.doc().bodies.find(b=>b.id===original.id)!
+ expect(shell.brep).toBeDefined();expect(inspectPolygonMesh(shell.mesh).signedVolumeMm3).toBeLessThan(8000)
+})
+
+it('previews and commits retained splits with positive-side identity and reversible history',async()=>{
+ const brep=createBrepBox([0,0,0],[10,10,10]),mesh=tessellateNurbsBrep(brep,1)
+ const seed:DirectDocument={version:1,sketches:[],bodies:[{id:'retained',name:'Retained stock',brep,mesh}]}
+ const before=structuredClone(seed),ui=await mount({seedDocument:seed})
+ await ui.click('Retained stock');await ui.click('Split')
+ expect(ui.doc()).toEqual(before)
+ await ui.click('Apply · Enter')
+ const result=ui.doc();expect(result.bodies).toHaveLength(2)
+ expect(result.bodies[0].id).toBe('retained');expect(result.bodies[1].id).not.toBe('preview-split')
+ expect(result.bodies[1].id).not.toBe('retained')
+ expect(analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(800,7)
+ expect(analyzeNurbsBrep(result.bodies[1].brep!).signedVolumeMm3).toBeCloseTo(200,7)
+ for(const body of result.bodies)expect(inspectPolygonMesh(body.mesh).signedVolumeMm3).toBeCloseTo(analyzeNurbsBrep(body.brep!).signedVolumeMm3,7)
+ await ui.click('↶');expect(ui.doc().bodies).toEqual(before.bodies)
+ expect(seed).toEqual(before)
+})
+it('previews, applies and undoes a retained ruled loft from ordered sketch selection',async()=>{
+ const c=Math.SQRT1_2,points:[number,number][]=[[-1,-1],[1,-1],[1,1],[-1,1]]
+ const seed:DirectDocument={version:1,sketches:[{id:'lower',name:'Lower',closed:true,points},{id:'upper',name:'Upper',closed:true,points:points.map(([x,y])=>[c*(x-y),c*(x+y)]),plane:{origin:[0,0,3],u:[1,0,0],v:[0,1,0]}}],bodies:[]}
+ const ui=await mount({seedDocument:seed}),before=ui.doc()
+ await ui.click('Lower');await ui.click('Upper',true);await ui.click('B-rep loft')
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ await ui.click('Apply · Enter')
+ const result=ui.doc();expect(result.bodies).toHaveLength(1)
+ expect(result.bodies[0].brep!.faces).toHaveLength(6)
+ expect(analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(4*(2+c),6)
+ expect(result.sketches).toEqual(before.sketches)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('Upper');await ui.click('Lower',true);await ui.click('B-rep loft')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.doc()).toEqual(before)
 })

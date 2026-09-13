@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { geometryAssetId } from '../src/core/scene'
 import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import * as sceneBounds from '../src/services/sceneAabbIndex'
+import * as meshAnalysis from '../src/services/geometry/meshAnalysis'
+import {callGeometryRust} from '../src/services/geometry/kernel'
 
 class FakeBuffer {
   destroyCalls = 0
@@ -93,6 +96,24 @@ function harness() {
 }
 
 describe('WebGPURenderer retained geometry resources', () => {
+  it('uses one native picking snapshot for repeated hits and frees it on teardown',()=>{
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const upload=vi.spyOn(meshAnalysis,'createPickingSnapshotInKernel')
+    const {renderer,internal}=harness()
+    const picking=internal as unknown as {rayForClientPoint(x:number,y:number):unknown;findHitCandidates(x:number,y:number,n:number):Array<{value:{triangleIndex:number}}>}
+    picking.rayForClientPoint=()=>({origin:[0.2,0.2,2],direction:[0,0,-1]})
+    try{
+      renderer.setMeshes([fixture()])
+      for(let i=0;i<20;i++)expect(picking.findHitCandidates(0,0,1)[0]?.value.triangleIndex).toBe(0)
+      expect(upload).toHaveBeenCalledTimes(1)
+      renderer.setMeshes([fixture()])
+      expect(picking.findHitCandidates(0,0,1)).toHaveLength(1)
+      expect(upload).toHaveBeenCalledTimes(1)
+      const handle=upload.mock.results[0].value
+      renderer.destroy()
+      expect(()=>callGeometryRust('mesh_picking',{action:'query',handle,origin:[0,0,2],direction:[0,0,-1],excludedTriangles:[]})).toThrow()
+    }finally{renderer.destroy();upload.mockRestore()}
+  })
   afterEach(() => vi.unstubAllGlobals())
 
   it('restores native face selection after mesh publication and rejects changed geometry',()=>{
@@ -393,4 +414,55 @@ it('animates transform-only changes and continues through quality publications',
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[12]).toBe(20)
     expect(moved.transform[3]).toBe(20)
   } finally { vi.unstubAllGlobals() }
+})
+
+it('keeps the published scene intact if native broadphase admission fails', () => {
+  vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+  const { renderer, internal, device } = harness()
+  try {
+    renderer.setMeshes([fixture()])
+    const previous = internal.meshes[0]
+    const stagedStart = device.buffers.length
+    const admission = vi.spyOn(sceneBounds, 'buildSceneAabbIndex').mockImplementationOnce(() => { throw new Error('native admission refused') })
+    try { expect(() => renderer.setMeshes([fixture(2)])).toThrow('native admission refused') }
+    finally { admission.mockRestore() }
+    expect(internal.meshes).toEqual([previous])
+    expect(previous.vb.destroyCalls).toBe(0)
+    for (const buffer of device.buffers.slice(stagedStart)) expect(buffer.destroyCalls).toBe(1)
+    // More than the registry slot limit: each publication must retire its index.
+    for (let n = 0; n < 80; n++) renderer.setMeshes([fixture(n)])
+  } finally { renderer.destroy(); vi.unstubAllGlobals() }
+})
+
+it('snaps point selection to a transformed corner through Rust', () => {
+  vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+  const { renderer, internal } = harness()
+  const picking = internal as unknown as {
+    rayForClientPoint(x: number, y: number): unknown
+    findHitCandidates(x: number, y: number, n: number): Array<{ value: { point: number[] } }>
+  }
+  picking.rayForClientPoint = () => ({ origin: [5.2, 0.2, 2], direction: [0, 0, -1] })
+  try {
+    const mesh = fixture()
+    mesh.transform[3] = 5
+    renderer.setMeshes([mesh])
+    renderer.setSelectionMode('point')
+    expect(picking.findHitCandidates(0, 0, 1)[0]?.value.point).toEqual([5, 0, 0])
+  } finally { renderer.destroy(); vi.unstubAllGlobals() }
+})
+
+it('refuses singular geometry transforms before replacing the published scene', () => {
+  vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+  const { renderer, internal, device } = harness()
+  try {
+    renderer.setMeshes([fixture()])
+    const live = internal.meshes[0]
+    const count = device.buffers.length
+    const invalid = fixture(2)
+    invalid.transform.fill(0)
+    expect(() => renderer.setMeshes([invalid])).toThrow('Singular')
+    expect(internal.meshes).toEqual([live])
+    expect(live.vb.destroyCalls).toBe(0)
+    expect(device.buffers).toHaveLength(count)
+  } finally { renderer.destroy(); vi.unstubAllGlobals() }
 })

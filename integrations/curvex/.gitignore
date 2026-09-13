@@ -2,3 +2,6 @@ __pycache__/
 render-benchmark/target/
 !qualification-results/logs/*.log
 !benchmark-results/interaction-criterion/**/*.log
+!stroke-optimization/logs/*.log
+!stress-qualification/results/logs/*.log
+!architecture-qualification/logs/*.log

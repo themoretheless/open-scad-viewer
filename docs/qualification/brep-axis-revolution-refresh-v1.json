@@ -1,0 +1,26 @@
+{
+  "scope": "Shared artifact qualification after unified axis-aware Rust revolution; not full B-rep completion",
+  "tests": {
+    "svgWorkflow": 122,
+    "nativeSvgAndPlanar": "passed",
+    "ownCad": 218,
+    "packingAndWorker": 16,
+    "manifest": 3,
+    "mcpTypecheck": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "bytes": 4698711,
+    "budget": 4700000
+  },
+  "sha256": {
+    "docs/qualification/svg-static-cycle-v1.json": "31d35035e5c283d016e7558013d8279f916b4ca4addc698a6c25b6d40655f83d",
+    "docs/qualification/own-rust-cad-v1.json": "ef773916a0e5fbebb8f0a5d2181da3a4cdc8f28469411cdfe31f6d4a1984b6f9",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "015f04e118f207a3e46e080160690b0e2bcbaf6a4f325a582b2c80ac20dc02af",
+    "src/generated/geometry-kernels/bytes.ts": "20a0e4453019c300e863dfe9d32a3b58cb9d75a40fbb303eaf78dc55b86112cf"
+  },
+  "limitations": [
+    "No new browser qualification",
+    "Multi-wire revolution and general certified B-rep remain open"
+  ]
+}

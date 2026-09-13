@@ -86,4 +86,32 @@ describe('mesh export', () => {
     expect(obj.match(/^v /gm)).toHaveLength(3)
     expect(obj).not.toContain('v 999 999 999')
   })
+
+  it('checks STL degeneracy after f32 rounding while retaining OBJ precision', () => {
+    const mesh = triangleMesh()
+    mesh.transform = translate(identity(), [1e8, 1e8, 0])
+    expect(new DataView(buildBinaryStl([mesh]).buffer).getUint32(80, true)).toBe(0)
+    expect(buildObj([mesh])).toContain('v 100000001 100000000 0')
+    expect(buildObj([mesh])).toContain('f 1 2 3')
+  })
+
+  it('exports the existing 750000-triangle limit even with expanded vertex storage', () => {
+    const count = 750000
+    const mesh = triangleMesh()
+    mesh.transform = identity()
+    mesh.vertices = new Float32Array(count * 18)
+    mesh.indices = new Uint32Array(count * 3)
+    for (let t = 0; t < count; t++) {
+      mesh.vertices[t * 18 + 6] = 1
+      mesh.vertices[t * 18 + 13] = 1
+      mesh.indices[t * 3] = t * 3
+      mesh.indices[t * 3 + 1] = t * 3 + 1
+      mesh.indices[t * 3 + 2] = t * 3 + 2
+    }
+    const stl = buildBinaryStl([mesh])
+    expect(stl.byteLength).toBe(84 + count * 50)
+    const view = new DataView(stl.buffer)
+    expect(view.getUint32(80, true)).toBe(count)
+    expect(view.getFloat32(84 + (count - 1) * 50 + 8, true)).toBe(1)
+  }, 30000)
 })

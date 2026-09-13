@@ -1,6 +1,11 @@
 [workspace]
-members = ["value-codec", "math-core", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "nurbs-core", "polygon-core", "gcode-core", "slicer-core", "mechanics-core", "openscad-core", "geometry-bridge", "geometry-wasm", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
+members = ["value-codec", "math-core", "cad-predicates", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "nurbs-core", "polygon-core", "gcode-core", "slicer-core", "mechanics-core", "openscad-core", "geometry-bridge", "geometry-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
 resolver = "3"
+exclude = ["vendor/usvg", "vendor/resvg"]
+
+[patch.crates-io]
+usvg = { path = "vendor/usvg" }
+resvg = { path = "vendor/resvg" }
 
 [workspace.package]
 edition = "2024"
@@ -29,5 +34,12 @@ opt-level = 3
 [profile.release.package.polygon-core]
 opt-level = 3
 
-
-
+# A small synchronous compression bootstrap, separate from all geometry code.
+[profile.release.package.wasm-brotli]
+opt-level = "z"
+[profile.release.package.brotli-decompressor]
+opt-level = "z"
+[profile.release.package.alloc-no-stdlib]
+opt-level = "z"
+[profile.release.package.alloc-stdlib]
+opt-level = "z"

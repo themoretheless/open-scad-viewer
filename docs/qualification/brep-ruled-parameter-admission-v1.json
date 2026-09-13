@@ -1,0 +1,33 @@
+{
+  "scope": "Native whole-span numerical ruled parameter range admission; not certified geometric completeness",
+  "regression": "Endpoint-valid trace previously converted despite leaving the source parameter domain in its interior",
+  "tests": {
+    "brepCore": 98,
+    "integrationPacking": 67,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4587425,
+    "budget": 4700000
+  },
+  "limits": {
+    "rangeAdmissionDepthPerSpan": 32,
+    "rangeAdmissionBoxesPerSpan": 4096
+  },
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "d6fa3295a74c7642a029945f6f817bf1e7f4b28231bb05d7b9cc38167b458b97",
+    "tests/brepIntersections.test.ts": "74c96462196fe14d11eea8c786a3f17c6fa21d1a4a3812a2a06fdc46541dcfe2",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "86eb149e0b1ecb63073bccc634aa6da96e745f8ab63c899e9673f20a54b33d81"
+  },
+  "limitations": [
+    "Bounds do not cover preceding knot edits, plane normalization or residual construction",
+    "Unresolved boundary tangencies return BREP_INTERSECTION_UNRESOLVED",
+    "No topology-change permission",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

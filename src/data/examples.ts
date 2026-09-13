@@ -1,4 +1,16 @@
 export const EXAMPLES: Record<string, string> = {
+  'brep-enclosure': `// @modelgraph-text/1
+// Корпус с приподнятым боковым выступом и глухим карманом: дно 2 мм.
+// Источник геометрии — B-rep с рациональными дугами; сетка нужна для показа.
+// Здесь поддержаны параллельные ступенчатые тела с круговыми профилями.
+// Пересечения произвольных NURBS-поверхностей ещё требуют отдельного решения.
+base = brep_cylinder(18mm, 8mm)
+boss = brep_cylinder(8mm, 12mm).transform([[1,0,0,16],[0,1,0,0],[0,0,1,4],[0,0,0,1]])
+pocket = brep_cylinder(11mm, 16mm).transform([[1,0,0,0],[0,1,0,0],[0,0,1,2],[0,0,0,1]])
+body = base.brep_union(boss).brep_subtract(pocket)
+show body.brep_tessellate(6)
+`,
+
   basic: `// OpenSCAD primitives — rendered with a real geometry kernel
 cube([20, 15, 10]);
 
@@ -87,6 +99,13 @@ export interface ExampleCatalogEntry {
 
 /** Curated metadata stays separate from source identity used by MCP callers. */
 export const EXAMPLE_CATALOG: readonly ExampleCatalogEntry[] = Object.freeze([
+  {
+    id: 'brep-enclosure',
+    title: { ru: 'B-rep: корпус с карманом', en: 'B-rep pocket enclosure' },
+    description: { ru: 'Круглый корпус, глухой карман и боковой выступ. Дно 2 мм; рациональные дуги сохраняются.', en: 'Round enclosure, blind pocket and side boss. A 2 mm floor with retained rational arcs.' },
+    tags: ['brep', 'nurbs', 'cad', 'boolean', 'advanced'],
+    source: EXAMPLES['brep-enclosure'],
+  },
   {
     id: 'basic',
     title: { ru: 'Примитивы', en: 'Primitives' },

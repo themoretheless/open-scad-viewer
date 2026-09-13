@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Normalized native point/triangle closest-point computation",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativePolygonTests": 73,
+    "integrationTests": 32,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4613082
+  },
+  "reproducedBeforeFix": "At scale 1e-100, interior projection (0.2,0.3,0)*scale incorrectly returned the boundary point (0,0.3,0)*scale",
+  "coverage": [
+    "Normalization before normal projection and barycentric coordinates",
+    "Interior/edge/vertex regions over scales 1e-100,1,1e100",
+    "Cyclic and reversed vertex orders",
+    "Mesh reconstruction, empty B-rep consumers and native clearance regression suites"
+  ],
+  "limitations": [
+    "Floating-point proximity is not certified analytic B-rep distance",
+    "Unrepresentable relative coordinate differences remain outside finite calculation range",
+    "General B-rep and full native migration incomplete",
+    "Shared qualification predates this artifact"
+  ],
+  "sha256": {
+    "crates/polygon-core/src/solid/proximity.rs": "a002a9db18f2a54cd97dad9a40e8204d07a3b666bd95bebe52c56b2f56d4e824",
+    "tests/nativeCadClearance.test.ts": "13920c57aa5fb4f1d50c355b9d65d059fbb5b109a8ebdaa374fee8fd55fcba24",
+    "tests/meshReconstruction.test.ts": "18dbe90035a40a6d939e04bef29cd402bfc2a00e29e97514dbe0ea5dc9d88cee",
+    "src/generated/geometry-kernels/bytes.ts": "7d63769a8f6ffee566abcda7bbb0d1eb498254c50475bee8f9df8ae682d86055"
+  }
+}

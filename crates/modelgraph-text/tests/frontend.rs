@@ -72,3 +72,25 @@ fn geometry_collection_remains_a_parameterized_collect() {
     assert_eq!(collect["op"], "collect");
     assert_eq!(collect["values"]["end"]["param"], "n");
 }
+
+#[test]
+fn curve_extrusion_keeps_nested_geometry_references_and_units() {
+    let source = "a=nurbs_curve(1,[0,0,1,1],[[0mm,0mm],[1mm,0mm]],[1,1])\nb=nurbs_curve(1,[0,0,1,1],[[1mm,0mm],[0mm,0mm]],[1,1])\nshow brep_extrude_curves([[a,b]],z_min:-2mm,z_max:3mm)";
+    let result = compile(source).unwrap();
+    let extrusion = &result["nodes"][2];
+    assert_eq!(extrusion["op"], "brep_extrude_curves");
+    assert_eq!(extrusion["loops"], json!([["n1", "n2"]]));
+    assert_eq!(extrusion["z_max"]["unit"], "mm");
+    assert_eq!(
+        compile("show brep_extrude_curves([],0mm,1mm)").unwrap()["nodes"][0]["loops"],
+        json!([])
+    );
+    for bad in [
+        "show brep_extrude_curves([[1]],0,1)",
+        "show brep_extrude_curves([[]],0,1)",
+        "show brep_extrude_curves([1],0,1)",
+        "show brep_box([0,0,0],[1,1,1]).brep_extrude_curves([],0,1)",
+    ] {
+        assert!(compile(bad).is_err(), "Unexpected accepted input: {bad}");
+    }
+}

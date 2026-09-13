@@ -1,0 +1,21 @@
+START curvex-package-clean
+END curvex-package-clean: exit 0, 0.541s
+START curvex-tests
+END curvex-tests: exit 0, 31.418s
+START curvex-original-ignored-timing
+END curvex-original-ignored-timing: exit 0, 0.548s
+START curvex-doctests
+END curvex-doctests: exit 0, 0.716s
+START curvex-check-all-targets
+END curvex-check-all-targets: exit 0, 7.588s
+START curvex-release-build
+END curvex-release-build: exit 0, 98.634s
+START metadata
+END metadata: exit 0, 0.712s
+START remaining-kurbo@0.13.1
+END remaining-kurbo@0.13.1: exit 0, 0.495s
+START curvex-render-release
+END curvex-render-release: exit 0, 43.473s
+START baseline-render-release
+END baseline-render-release: exit 0, 0.58s
+Qualification build/test evidence saved to /private/tmp/osv-curvex-qualification/architecture-final/qualification

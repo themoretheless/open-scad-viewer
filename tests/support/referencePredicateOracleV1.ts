@@ -117,26 +117,83 @@ export function orient3dExact(
   return signRational(det)
 }
 
-/** Outward interval enclosure of a binary64 value (one ulp pad). */
+function checkDistanceDimension(p: readonly unknown[], q: readonly unknown[]): void {
+  if ((p.length !== 2 && p.length !== 3) || p.length !== q.length) {
+    throw new Error('distance comparison requires matching 2D or 3D points')
+  }
+}
+
+/** Exact sign of ||p-q||²-r²; the radius is an exact nonnegative bound. */
+export function compareSquaredDistanceExact(
+  p: readonly BigRational[],
+  q: readonly BigRational[],
+  radius: BigRational,
+): Sign {
+  checkDistanceDimension(p, q)
+  if (radius.n < 0n) throw new Error('radius must be nonnegative')
+  let squaredDistance = rational(0)
+  for (let i = 0; i < p.length; i++) {
+    const difference = sub(p[i], q[i])
+    squaredDistance = add(squaredDistance, mul(difference, difference))
+  }
+  return signRational(sub(squaredDistance, mul(radius, radius)))
+}
+
+/** Outward interval enclosure, including unbounded intermediate results. */
 export type Interval = { readonly lo: number; readonly hi: number }
+
+const floatBits = new DataView(new ArrayBuffer(8))
+
+function nextUp(value: number): number {
+  if (Number.isNaN(value)) throw new Error('NaN has no interval endpoint')
+  if (value === Infinity) return Infinity
+  if (value === -Infinity) return -Number.MAX_VALUE
+  if (value === 0) return Number.MIN_VALUE
+  floatBits.setFloat64(0, value, false)
+  const bits = floatBits.getBigUint64(0, false)
+  floatBits.setBigUint64(0, value > 0 ? bits + 1n : bits - 1n, false)
+  return floatBits.getFloat64(0, false)
+}
+
+function nextDown(value: number): number {
+  return -nextUp(-value)
+}
 
 export function outwardInterval(value: number): Interval {
   if (!Number.isFinite(value)) throw new Error('non-finite')
-  if (value === 0) return { lo: -Number.MIN_VALUE, hi: Number.MIN_VALUE }
-  const ulp = Number.EPSILON * Math.max(Math.abs(value), Number.MIN_VALUE)
-  return { lo: value - ulp, hi: value + ulp }
+  return { lo: nextDown(value), hi: nextUp(value) }
 }
 
-function mulInterval(a: Interval, b: Interval): Interval {
+function encloseRounded(lo: number, hi: number): Interval {
+  // Extended endpoints such as 0*Infinity or Infinity-Infinity do not
+  // determine a finite bound. Widen instead of allowing NaN comparisons to
+  // certify a sign. Finite overflow and underflow each get outward endpoints.
+  if (Number.isNaN(lo) || Number.isNaN(hi)) return { lo: -Infinity, hi: Infinity }
+  return { lo: nextDown(lo), hi: nextUp(hi) }
+}
+
+export function addInterval(a: Interval, b: Interval): Interval {
+  return encloseRounded(a.lo + b.lo, a.hi + b.hi)
+}
+
+export function subInterval(a: Interval, b: Interval): Interval {
+  return encloseRounded(a.lo - b.hi, a.hi - b.lo)
+}
+
+export function mulInterval(a: Interval, b: Interval): Interval {
   const products = [a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi]
-  return { lo: Math.min(...products), hi: Math.max(...products) }
-}
-
-function subInterval(a: Interval, b: Interval): Interval {
-  return { lo: a.lo - b.hi, hi: a.hi - b.lo }
+  return encloseRounded(Math.min(...products), Math.max(...products))
 }
 
 export type FilterSign = Sign | 'indeterminate'
+
+function intervalSign(value: Interval): FilterSign {
+  if (value.hi < 0) return -1
+  if (value.lo > 0) return 1
+  // An overlapping enclosure cannot prove exact zero. Only the exact
+  // rational stage reports zero, including underflowed determinants.
+  return 'indeterminate'
+}
 
 export function orient2dFilter(
   ax: number,
@@ -155,10 +212,44 @@ export function orient2dFilter(
   const left = mulInterval(subInterval(Bx, Ax), subInterval(Cy, Ay))
   const right = mulInterval(subInterval(By, Ay), subInterval(Cx, Ax))
   const det = subInterval(left, right)
-  if (det.hi < 0) return -1
-  if (det.lo > 0) return 1
-  if (det.lo === 0 && det.hi === 0) return 0
-  return 'indeterminate'
+  return intervalSign(det)
+}
+
+export function orient3dFilter(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+  c: readonly [number, number, number],
+  d: readonly [number, number, number],
+): FilterSign {
+  const A = a.map(outwardInterval)
+  const ab = b.map((value, i) => subInterval(outwardInterval(value), A[i]))
+  const ac = c.map((value, i) => subInterval(outwardInterval(value), A[i]))
+  const ad = d.map((value, i) => subInterval(outwardInterval(value), A[i]))
+  const cross = [
+    subInterval(mulInterval(ac[1], ad[2]), mulInterval(ac[2], ad[1])),
+    subInterval(mulInterval(ac[2], ad[0]), mulInterval(ac[0], ad[2])),
+    subInterval(mulInterval(ac[0], ad[1]), mulInterval(ac[1], ad[0])),
+  ]
+  return intervalSign(addInterval(
+    addInterval(mulInterval(ab[0], cross[0]), mulInterval(ab[1], cross[1])),
+    mulInterval(ab[2], cross[2]),
+  ))
+}
+
+export function compareSquaredDistanceFilter(
+  p: readonly number[],
+  q: readonly number[],
+  radius: number,
+): FilterSign {
+  checkDistanceDimension(p, q)
+  if (radius < 0) throw new Error('radius must be nonnegative')
+  const bound = outwardInterval(radius)
+  let squaredDistance: Interval = { lo: 0, hi: 0 }
+  for (let i = 0; i < p.length; i++) {
+    const difference = subInterval(outwardInterval(p[i]), outwardInterval(q[i]))
+    squaredDistance = addInterval(squaredDistance, mulInterval(difference, difference))
+  }
+  return intervalSign(subInterval(squaredDistance, mulInterval(bound, bound)))
 }
 
 export type ModelClass = 'Coincident' | 'Separate' | 'Indeterminate'
@@ -168,7 +259,9 @@ export function classifyResidual(
   onTol: number,
   clearTol: number,
 ): ModelClass {
-  if (!(onTol > 0) || !(clearTol > onTol)) throw new Error('invalid tolerance profile')
+  if (!Number.isFinite(onTol) || !Number.isFinite(clearTol) || !(onTol > 0) || !(clearTol > onTol)) {
+    throw new Error('invalid tolerance profile')
+  }
   if (!Number.isFinite(residual) || residual < 0) return 'Indeterminate'
   if (residual < onTol) return 'Coincident'
   if (residual > clearTol) return 'Separate'

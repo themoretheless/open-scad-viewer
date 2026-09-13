@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native spatial lattice graph generation and indexed component volume checks",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 70,
+    "testFiles": 4,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4629160
+  },
+  "coverage": [
+    "Legacy seeded interior-node and diagonal-edge fixtures match",
+    "Unsigned wrapped seeds preserve identical graph; 125-node boundary admitted and larger graph refused",
+    "Grid has all three directions and deterministic optional diagonals",
+    "Disconnected components count correctly at remote 1e12 placement; reversed winding excluded in positive-only count",
+    "Empty mesh and invalid indices covered with source preservation",
+    "Spatial/bone lattice, skin/open-top/wall-core and actual parser roundtrip regressions"
+  ],
+  "behaviorChange": "Component signed volumes now use per-component local origins and compensated summation. Spatial graph validates its own cell, jitter, seed and pattern inputs.",
+  "limitations": [
+    "Connectivity remains indexed triangle connectivity, not geometric welding or B-rep topology",
+    "Positive component classification uses numerical volume threshold 1e-8, not certified orientation",
+    "Lattice decimation, planar lightening construction and operation orchestration still contain TS computation",
+    "Shared SVG/own-CAD reports predate this kernel; full B-rep completion remains open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_lattice.rs": "d2153c5c9e652149ec184f8f58bc710901586966cd887dfa90f6ac35f67338d8",
+    "crates/geometry-bridge/src/lib.rs": "40055a1e22773349ee49fecc1735c1c5236b2f6e6b5b862a8bfa274c7359f63c",
+    "src/services/solidLightening.ts": "c8513e8f17038f9e78fac9ef989681eca5b14197755e1eb030abe2fb107ef4c1",
+    "tests/spatialLattice.test.ts": "f07f381ce9377bd71d59a03fb42f11022e66bcdebc3c4103c742b8a9e3a8fe65",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "0c782df6b25ba6658002dda8a59abe071976b27f6803c0c3c3a8dc51c459cddc",
+    "src/generated/geometry-kernels/bytes.ts": "92cda8f39f4d522cb59889f15b9dfcd126d5dcaa91ca0e909b548548e3999e4f"
+  }
+}

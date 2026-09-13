@@ -27,6 +27,76 @@ function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], bytes: Ui
   return ptr
 }
 
+/** One upload per mesh; retain f64 placed coordinates without numeric JSON encoding. */
+export function placeSolidMeshInKernel(vertices: Float32Array, indices: Uint32Array, matrix: Float32Array): { positions: number[]; indices: number[] } | null {
+  const {exports: wasm, takeResponse} = kernelRuntime()
+  const allocations: Array<[number, number]> = []
+  let handle = 0
+  const upload = (view: Float32Array | Uint32Array) => {
+    if (!view.byteLength) return 0
+    const ptr = copyBuffer(wasm, new Uint8Array(view.buffer, view.byteOffset, view.byteLength))
+    allocations.push([ptr, view.byteLength])
+    return ptr
+  }
+  try {
+    const vp = upload(vertices), ip = upload(indices), mp = upload(matrix)
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_solid_placement(vp, vertices.length, ip, indices.length, mp, matrix.length)))
+    if (!handle) return null
+    const positionsPtr = wasm.abi_array_field(handle, 0), positionsLen = wasm.abi_array_field(handle, 1)
+    const indicesPtr = wasm.abi_array_field(handle, 2), indicesLen = wasm.abi_array_field(handle, 3)
+    const buffer = kernelRuntime().memory.buffer
+    return {
+      positions: Array.from(new Float64Array(buffer, positionsPtr, positionsLen)),
+      indices: Array.from(new Uint32Array(buffer, indicesPtr, indicesLen)),
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    for (const [ptr, length] of allocations) wasm.abi_free(ptr, length)
+  }
+}
+
+export interface PreparedExportMesh { positions: Float64Array; indices: Uint32Array; normals: Float64Array }
+/** Batched export geometry, copied out before releasing all native buffers. */
+export function prepareExportMeshInKernel(vertices: Float32Array, indices: Uint32Array, matrix: Float32Array, float32: boolean): PreparedExportMesh {
+  const {exports: wasm, takeResponse} = kernelRuntime()
+  const allocations: Array<[number, number]> = []
+  let handle = 0
+  const upload = (view: Float32Array | Uint32Array) => {
+    if (!view.byteLength) return 0
+    const ptr = wasm.abi_export_alloc(view.byteLength)
+    if (!ptr) throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT', 'Mesh export exceeds transport limit')
+    allocations.push([ptr, view.byteLength])
+    new Uint8Array(kernelRuntime().memory.buffer, ptr, view.byteLength).set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength))
+    return ptr
+  }
+  try {
+    const vp = upload(vertices), ip = upload(indices), mp = upload(matrix)
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_export_prepare(vp, vertices.length, ip, indices.length, mp, matrix.length, Number(float32))))
+    const p = wasm.abi_array_field(handle, 0), pl = wasm.abi_array_field(handle, 1)
+    const i = wasm.abi_array_field(handle, 2), il = wasm.abi_array_field(handle, 3)
+    const n = wasm.abi_array_field(handle, 4), nl = wasm.abi_array_field(handle, 5)
+    const buffer = kernelRuntime().memory.buffer
+    return { positions: new Float64Array(buffer,p,pl).slice(), indices: new Uint32Array(buffer,i,il).slice(), normals: new Float64Array(buffer,n,nl).slice() }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    for (const [ptr, length] of allocations) wasm.abi_free(ptr, length)
+  }
+}
+
+/** Build the median-split BVH in the Rust kernel. Options are pre-clamped by the caller. */
+export function createPickingSnapshotInKernel(vertices: Float32Array, indices: Uint32Array, stride: number, leafSize: number): string {
+  const {exports: wasm, takeResponse} = kernelRuntime()
+  let vp = 0, ip = 0
+  try {
+    if (vertices.byteLength) vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    if (indices.byteLength) ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    return decodeNurbsResult<string>(takeResponse(wasm.abi_picking_create(stride, leafSize, vp, vertices.length, ip, indices.length)))
+  } finally {
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
+  }
+}
+
 /** Build the median-split BVH in the Rust kernel. Options are pre-clamped by the caller. */
 export function buildBvhInKernel(
   vertices: Float32Array,

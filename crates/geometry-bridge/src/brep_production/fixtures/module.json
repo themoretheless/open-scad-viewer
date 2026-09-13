@@ -1,0 +1,295 @@
+{
+ "source": "module box2(){cube(2);} box2();",
+ "operations": [
+  {
+   "id": 0,
+   "operationId": "opv1:c2f1d1be93544f73e05db88730c6e361b6197d43c1e62b7757916c601a769a46",
+   "parent": null,
+   "childOrdinal": 0,
+   "name": "box2",
+   "category": "module",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "box2",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:e30a2342258cab861f9c0afce83d8102a11a8d9871582ba3021469bdc16c8f9c"
+  },
+  {
+   "id": 1,
+   "operationId": "opv1:493def830584a6dc2e65f745e9d3888442875f492689ebe2fc7fcad6e583cc34",
+   "parent": 0,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "box2",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 2,
+   "operationId": "opv1:d49fd3e660d0060c3500665fe6aa58ec16f9701bb57447a6d93a660fad3f4cf6",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "box2",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 3,
+   "operationId": "opv1:b6fe00bb7e0c6c0b728dcf87edbc959d0e34116498de57051f3ff26b7e65b836",
+   "parent": null,
+   "childOrdinal": 1,
+   "name": "box2",
+   "category": "module",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "box2",
+     "ordinal": 1
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:e30a2342258cab861f9c0afce83d8102a11a8d9871582ba3021469bdc16c8f9c"
+  },
+  {
+   "id": 4,
+   "operationId": "opv1:e5d57b5d444b9adb9da4d0312d03bf077e5bb76150cdb65a5cad2898eb12bb90",
+   "parent": 3,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "box2",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 5,
+   "operationId": "opv1:038399969ae1c89926e1ce499b7a21a30f5eb502b7ea3eeb7f0f403336fc7942",
+   "parent": 4,
+   "childOrdinal": 0,
+   "name": "$expansion",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "box2",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  }
+ ],
+ "occurrences": [
+  {
+   "id": 0,
+   "occurrenceId": "occv1:c0f95917a3e04826616aa82994ff8d0f2bc322328ee7695b7cae974d17f231e3",
+   "operation": 0,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 1,
+   "occurrenceId": "occv1:406cbed590e26583e98b0323724a7f1721e019fc661f4cb6536157bcc02664c7",
+   "operation": 3,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 2,
+   "occurrenceId": "occv1:daa489fddb837fc60bd58362fbe47ee3b57dcaf89d830e7944e496c26befb778",
+   "operation": 4,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 3,
+   "occurrenceId": "occv1:e053d058c60189bcab72bb0309147601977e97139aa67fbc902753e45a77ecb7",
+   "operation": 0,
+   "parent": 2,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 4,
+   "occurrenceId": "occv1:3928a80baaa3c6340b9aebe2433cc10764d8002535467ef57e46e9d5150c17c4",
+   "operation": 1,
+   "parent": 3,
+   "staticParent": 3,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 5,
+   "occurrenceId": "occv1:49873fd6198e49c6c8aada139ab3f4e48c1c1d1e37c9a2d7d929af50bec71da3",
+   "operation": 2,
+   "parent": 4,
+   "staticParent": 4,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 0,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:12276647f801dcb022e7881eb3ad17c702e517bc79d0da87b342a92d6ef60e8f"
+  }
+ ],
+ "nodes": [
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    2,
+    2,
+    2
+   ],
+   "center": false,
+   "id": 0
+  }
+ ],
+ "result": {
+  "tag": "single",
+  "item": {
+   "node": 0,
+   "producerOccurrence": 5,
+   "identityOccurrence": 5,
+   "color": [
+    0.26,
+    0.52,
+    0.96,
+    1
+   ]
+  }
+ },
+ "execution": {
+  "version": "semantic-execution-v2",
+  "evaluationOrder": [
+   0
+  ],
+  "discardedEffects": [],
+  "terminal": null
+ }
+}

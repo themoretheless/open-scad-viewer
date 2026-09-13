@@ -1,4 +1,5 @@
-/** Minimal 3D math: mat4 (row-major) + vec3 */
+/** Row-major matrix transport and remaining vector helpers. */
+import { callGeometryRust } from './geometry/kernel'
 
 export type Mat4 = Float32Array
 export type Vec3 = [number, number, number]
@@ -20,14 +21,9 @@ export function identity(): Mat4 {
 }
 
 export function multiply(a: Mat4, b: Mat4): Mat4 {
-  const r = new Float32Array(16)
-  for (let i = 0; i < 4; i++)
-    for (let j = 0; j < 4; j++) {
-      let s = 0
-      for (let k = 0; k < 4; k++) s += a[i * 4 + k] * b[k * 4 + j]
-      r[i * 4 + j] = s
-    }
-  return r
+  return new Float32Array(callGeometryRust<number[]>('viewport', {
+    action: 'multiply', matrix: Array.from(a), other: Array.from(b),
+  }))
 }
 
 export function translate(m: Mat4, v: Vec3): Mat4 {
@@ -129,42 +125,14 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
 }
 
 export function transpose(m: Mat4): Mat4 {
-  const r = new Float32Array(16)
-  for (let i = 0; i < 4; i++)
-    for (let j = 0; j < 4; j++) r[j * 4 + i] = m[i * 4 + j]
-  return r
+  return new Float32Array(callGeometryRust<number[]>('viewport', { action: 'transpose', matrix: Array.from(m) }))
 }
 
+/** Native inverse. Singular matrices refuse; output remains untouched on failure. */
 export function invert(a: Mat4, out?: Mat4): Mat4 {
-  const inv = out ?? new Float32Array(16)
-  inv[0]  =  a[5]*a[10]*a[15] - a[5]*a[11]*a[14] - a[9]*a[6]*a[15] + a[9]*a[7]*a[14] + a[13]*a[6]*a[11] - a[13]*a[7]*a[10]
-  inv[4]  = -a[4]*a[10]*a[15] + a[4]*a[11]*a[14] + a[8]*a[6]*a[15] - a[8]*a[7]*a[14] - a[12]*a[6]*a[11] + a[12]*a[7]*a[10]
-  inv[8]  =  a[4]*a[9]*a[15]  - a[4]*a[11]*a[13] - a[8]*a[5]*a[15] + a[8]*a[7]*a[13] + a[12]*a[5]*a[11] - a[12]*a[7]*a[9]
-  inv[12] = -a[4]*a[9]*a[14]  + a[4]*a[10]*a[13] + a[8]*a[5]*a[14] - a[8]*a[6]*a[13] - a[12]*a[5]*a[10] + a[12]*a[6]*a[9]
-  inv[1]  = -a[1]*a[10]*a[15] + a[1]*a[11]*a[14] + a[9]*a[2]*a[15] - a[9]*a[3]*a[14] - a[13]*a[2]*a[11] + a[13]*a[3]*a[10]
-  inv[5]  =  a[0]*a[10]*a[15] - a[0]*a[11]*a[14] - a[8]*a[2]*a[15] + a[8]*a[3]*a[14] + a[12]*a[2]*a[11] - a[12]*a[3]*a[10]
-  inv[9]  = -a[0]*a[9]*a[15]  + a[0]*a[11]*a[13] + a[8]*a[1]*a[15] - a[8]*a[3]*a[13] - a[12]*a[1]*a[11] + a[12]*a[3]*a[9]
-  inv[13] =  a[0]*a[9]*a[14]  - a[0]*a[10]*a[13] - a[8]*a[1]*a[14] + a[8]*a[2]*a[13] + a[12]*a[1]*a[10] - a[12]*a[2]*a[9]
-  inv[2]  =  a[1]*a[6]*a[15]  - a[1]*a[7]*a[14]  - a[5]*a[2]*a[15] + a[5]*a[3]*a[14] + a[13]*a[2]*a[7]  - a[13]*a[3]*a[6]
-  inv[6]  = -a[0]*a[6]*a[15]  + a[0]*a[7]*a[14]  + a[4]*a[2]*a[15] - a[4]*a[3]*a[14] - a[12]*a[2]*a[7]  + a[12]*a[3]*a[6]
-  inv[10] =  a[0]*a[5]*a[15]  - a[0]*a[7]*a[13]  - a[4]*a[1]*a[15] + a[4]*a[3]*a[13] + a[12]*a[1]*a[7]  - a[12]*a[3]*a[5]
-  inv[14] = -a[0]*a[5]*a[14]  + a[0]*a[6]*a[13]  + a[4]*a[1]*a[14] - a[4]*a[2]*a[13] - a[12]*a[1]*a[6]  + a[12]*a[2]*a[5]
-  inv[3]  = -a[1]*a[6]*a[11]  + a[1]*a[7]*a[10]  + a[5]*a[2]*a[11] - a[5]*a[3]*a[10] - a[9]*a[2]*a[7]   + a[9]*a[3]*a[6]
-  inv[7]  =  a[0]*a[6]*a[11]  - a[0]*a[7]*a[10]  - a[4]*a[2]*a[11] + a[4]*a[3]*a[10] + a[8]*a[2]*a[7]   - a[8]*a[3]*a[6]
-  inv[11] = -a[0]*a[5]*a[11]  + a[0]*a[7]*a[9]   + a[4]*a[1]*a[11] - a[4]*a[3]*a[9]  - a[8]*a[1]*a[7]   + a[8]*a[3]*a[5]
-  inv[15] =  a[0]*a[5]*a[10]  - a[0]*a[6]*a[9]   - a[4]*a[1]*a[10] + a[4]*a[2]*a[9]  + a[8]*a[1]*a[6]   - a[8]*a[2]*a[5]
-  let det = a[0]*inv[0] + a[1]*inv[4] + a[2]*inv[8] + a[3]*inv[12]
-  if (Math.abs(det) < 1e-10) {
-    const id = identity()
-    if (out) {
-      out.set(id)
-      return out
-    }
-    return id
-  }
-  det = 1 / det
-  for (let i = 0; i < 16; i++) inv[i] *= det
-  return inv
+  const values = callGeometryRust<number[]>('viewport', { action: 'inverse', matrix: Array.from(a) })
+  if (out) { out.set(values); return out }
+  return new Float32Array(values)
 }
 
 /** Transform a point by a row-major matrix, including homogeneous division. */
@@ -193,16 +161,7 @@ export function transformVector(m: Mat4, vector: Vec3): Vec3 {
  * Build a world-space ray from WebGPU NDC coordinates. The supplied matrix is
  * the inverse of projection * view; WebGPU's near/far depth values are 0/1.
  */
-export function unprojectRay(inverseViewProjection: Mat4, ndcX: number, ndcY: number): Ray3 | null {
-  const origin = transformPoint(inverseViewProjection, [ndcX, ndcY, 0])
-  const far = transformPoint(inverseViewProjection, [ndcX, ndcY, 1])
-  const dx = far[0] - origin[0]
-  const dy = far[1] - origin[1]
-  const dz = far[2] - origin[2]
-  const length = Math.hypot(dx, dy, dz)
-  if (!Number.isFinite(length) || length < 1e-12 || !origin.every(Number.isFinite)) return null
-  return { origin, direction: [dx / length, dy / length, dz / length] }
-}
+export { unprojectRayInKernel as unprojectRay } from './geometry/viewport'
 
 /** Return the first non-negative ray distance to an AABB, or null on a miss. */
 export function rayAabbDistance(ray: Ray3, bounds: Aabb3, maxDistance = Infinity): number | null {

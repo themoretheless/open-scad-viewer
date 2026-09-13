@@ -1,4 +1,3 @@
-import { OpenSCADParseError } from '../src/services/openscadParser'
 import { describe, expect, it, vi } from 'vitest'
 import {
   ArtifactSizeError,
@@ -108,8 +107,10 @@ cube(width);`
   })
 
   it('rejects non-finite geometry before analysis or export can expose corrupt meshes', async () => {
+    // These source values are finite; conversion to the display/export mesh
+    // overflows Float32. This is a geometry failure, not a source parse error.
     await expect(service.analyze('cube([1e100, 1e100, 1e-200]);'))
-      .rejects.toBeInstanceOf(OpenSCADParseError)
+      .rejects.toBeInstanceOf(InvalidGeometryError)
     await expect(service.export('translate([1e300, 0, 0]) cube(1);', 'stl'))
       .rejects.toBeInstanceOf(InvalidGeometryError)
   })

@@ -19,10 +19,10 @@ fn require(ok: bool, message: &str) -> Result<()> {
     math_core::ensure(ok, INVALID_TOPOLOGY, message)
 }
 #[derive(Clone, Debug)]
-pub struct Vertex {
-    pub point: [f64; 3],
+pub struct Vertex<V = [f64; 3]> {
+    pub point: V,
 }
-impl value_codec::Serialize for Vertex {
+impl<V: value_codec::Serialize> value_codec::Serialize for Vertex<V> {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
         object.insert(
@@ -32,13 +32,13 @@ impl value_codec::Serialize for Vertex {
         value_codec::Value::Object(object)
     }
 }
-impl<'de> value_codec::Deserialize<'de> for Vertex {
+impl<'de, V: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Vertex<V> {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = value
             .as_object()
             .ok_or_else(|| value_codec::error("Expected object"))?
             .clone();
-        let point: [f64; 3] = value_codec::Deserialize::from_value(
+        let point: V = value_codec::Deserialize::from_value(
             object
                 .remove("point")
                 .ok_or_else(|| value_codec::error("Missing field point"))?,
@@ -51,12 +51,18 @@ impl<'de> value_codec::Deserialize<'de> for Vertex {
 }
 #[derive(Clone, Debug)]
 pub struct Edge<C> {
+    /// A surface boundary collapsed to one pole vertex. It contributes no
+    /// one-dimensional incidence; geometric kernels must certify collapse.
+    pub degenerate: bool,
     pub vertices: [usize; 2],
     pub curve: C,
 }
 impl<C: value_codec::Serialize> value_codec::Serialize for Edge<C> {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
+        if self.degenerate {
+            object.insert("degenerate".into(), value_codec::Value::Bool(true));
+        }
         object.insert(
             "vertices".into(),
             value_codec::Serialize::to_value(&self.vertices),
@@ -74,6 +80,11 @@ impl<'de, C: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Ed
             .as_object()
             .ok_or_else(|| value_codec::error("Expected object"))?
             .clone();
+        let degenerate = object
+            .remove("degenerate")
+            .map(value_codec::Deserialize::from_value)
+            .transpose()?
+            .unwrap_or(false);
         let vertices: [usize; 2] = value_codec::Deserialize::from_value(
             object
                 .remove("vertices")
@@ -87,7 +98,11 @@ impl<'de, C: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Ed
         if let Some(key) = object.keys().next() {
             return Err(value_codec::error(format!("Unknown field {key}")));
         }
-        Ok(Self { vertices, curve })
+        Ok(Self {
+            degenerate,
+            vertices,
+            curve,
+        })
     }
 }
 /// A face-local use of an edge. pcurve follows the traversal direction in UV.
@@ -355,8 +370,8 @@ impl<'de> value_codec::Deserialize<'de> for Body {
     }
 }
 #[derive(Clone, Debug)]
-pub struct Model<C, S, P> {
-    pub vertices: Vec<Vertex>,
+pub struct Model<C, S, P, V = [f64; 3]> {
+    pub vertices: Vec<Vertex<V>>,
     pub edges: Vec<Edge<C>>,
     pub loops: Vec<Loop<P>>,
     pub faces: Vec<Face<S>>,
@@ -364,8 +379,12 @@ pub struct Model<C, S, P> {
     pub bodies: Vec<Body>,
     pub tolerance_mm: f64,
 }
-impl<C: value_codec::Serialize, S: value_codec::Serialize, P: value_codec::Serialize>
-    value_codec::Serialize for Model<C, S, P>
+impl<
+    C: value_codec::Serialize,
+    S: value_codec::Serialize,
+    P: value_codec::Serialize,
+    V: value_codec::Serialize,
+> value_codec::Serialize for Model<C, S, P, V>
 {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
@@ -405,14 +424,15 @@ impl<
     C: value_codec::Deserialize<'de>,
     S: value_codec::Deserialize<'de>,
     P: value_codec::Deserialize<'de>,
-> value_codec::Deserialize<'de> for Model<C, S, P>
+    V: value_codec::Deserialize<'de>,
+> value_codec::Deserialize<'de> for Model<C, S, P, V>
 {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = value
             .as_object()
             .ok_or_else(|| value_codec::error("Expected object"))?
             .clone();
-        let vertices: Vec<Vertex> = value_codec::Deserialize::from_value(
+        let vertices: Vec<Vertex<V>> = value_codec::Deserialize::from_value(
             object
                 .remove("vertices")
                 .ok_or_else(|| value_codec::error("Missing field vertices"))?,
@@ -464,6 +484,22 @@ impl<
 
 impl<C, S, P> Model<C, S, P> {
     pub fn validate_topology(&self) -> Result<()> {
+        self.validate_topology_with_vertices(|point| {
+            require(
+                point.iter().all(|x| x.is_finite() && x.abs() <= 1e6),
+                "Invalid vertex coordinates",
+            )
+        })
+    }
+}
+impl<C, S, P, V> Model<C, S, P, V> {
+    /// Validate indexed incidence with application-owned vertex admission.
+    /// The callback must validate geometry/provenance in its owning context;
+    /// this method alone does not certify geometric or solid validity.
+    pub fn validate_topology_with_vertices(
+        &self,
+        mut validate_vertex: impl FnMut(&V) -> Result<()>,
+    ) -> Result<()> {
         let count = self.vertices.len()
             + self.edges.len()
             + self.loops.len()
@@ -483,12 +519,13 @@ impl<C, S, P> Model<C, S, P> {
         )?;
         let mut vertices = vec![false; self.vertices.len()];
         for v in &self.vertices {
-            require(
-                v.point.iter().all(|x| x.is_finite() && x.abs() <= 1e6),
-                "Invalid vertex coordinates",
-            )?;
+            validate_vertex(&v.point)?;
         }
         for e in &self.edges {
+            require(
+                !e.degenerate || e.vertices[0] == e.vertices[1],
+                "Collapsed boundary must reference one pole vertex",
+            )?;
             for &v in &e.vertices {
                 require(v < vertices.len(), "Unknown edge vertex")?;
                 vertices[v] = true;
@@ -532,6 +569,7 @@ impl<C, S, P> Model<C, S, P> {
             require(!s.faces.is_empty(), "Empty shell")?;
             let mut incidence = BTreeMap::<usize, Vec<(usize, bool)>>::new();
             let mut links = BTreeMap::<usize, Vec<(usize, usize)>>::new();
+            let mut pole_uses = BTreeMap::<usize, BTreeSet<usize>>::new();
             for u in &s.faces {
                 let f = self
                     .faces
@@ -542,7 +580,22 @@ impl<C, S, P> Model<C, S, P> {
                     "Face belongs to multiple shells or is repeated",
                 )?;
                 for l in std::iter::once(&f.outer).chain(&f.holes) {
-                    let cs = &self.loops[*l].coedges;
+                    let all = &self.loops[*l].coedges;
+                    for c in all.iter().filter(|c| self.edges[c.edge].degenerate) {
+                        require(*l == f.outer, "Collapsed boundary cannot belong to a hole")?;
+                        require(
+                            pole_uses.entry(c.edge).or_default().insert(u.face),
+                            "Collapsed boundary is repeated on one face",
+                        )?;
+                    }
+                    let cs: Vec<_> = all
+                        .iter()
+                        .filter(|c| !self.edges[c.edge].degenerate)
+                        .collect();
+                    require(
+                        !cs.is_empty() && (cs.len() == all.len() || cs.len() >= 2),
+                        "Pole face needs at least two ordinary boundary edges",
+                    )?;
                     for (i, c) in cs.iter().enumerate() {
                         incidence
                             .entry(c.edge)
@@ -625,9 +678,377 @@ impl<C, S, P> Model<C, S, P> {
     }
 }
 
+type VertexAdmission<'a, V> = dyn Fn(&V) -> Result<()> + 'a;
+type ModelAdmission<'a, C, S, P, V> = dyn Fn(&Model<C, S, P, V>) -> Result<()> + 'a;
+
+/// Immutable indexed topology plus a retained owner admission policy.
+/// Certifies incidence/admission only, not geometric solid validity. Geometry
+/// payloads and the policy must themselves be immutable; external side effects
+/// in edit/admission callbacks are outside this transaction boundary.
+pub struct TopologySnapshot<'a, C, S, P, V = [f64; 3]> {
+    model: std::sync::Arc<Model<C, S, P, V>>,
+    validate_vertex: std::sync::Arc<VertexAdmission<'a, V>>,
+    validate_model: std::sync::Arc<ModelAdmission<'a, C, S, P, V>>,
+}
+impl<C, S, P, V> Clone for TopologySnapshot<'_, C, S, P, V> {
+    fn clone(&self) -> Self {
+        Self {
+            model: self.model.clone(),
+            validate_vertex: self.validate_vertex.clone(),
+            validate_model: self.validate_model.clone(),
+        }
+    }
+}
+impl<'a, C, S, P, V> TopologySnapshot<'a, C, S, P, V> {
+    pub fn new(
+        model: Model<C, S, P, V>,
+        validate_vertex: impl Fn(&V) -> Result<()> + 'a,
+    ) -> Result<Self> {
+        Self::new_with_model_validation(model, validate_vertex, |_| Ok(()))
+    }
+    /// Retain additional owner checks for curves, surfaces and their incidence.
+    /// Both callbacks are reused on every candidate edit.
+    pub fn new_with_model_validation(
+        model: Model<C, S, P, V>,
+        validate_vertex: impl Fn(&V) -> Result<()> + 'a,
+        validate_model: impl Fn(&Model<C, S, P, V>) -> Result<()> + 'a,
+    ) -> Result<Self> {
+        model.validate_topology_with_vertices(&validate_vertex)?;
+        validate_model(&model)?;
+        Ok(Self {
+            model: std::sync::Arc::new(model),
+            validate_vertex: std::sync::Arc::new(validate_vertex),
+            validate_model: std::sync::Arc::new(validate_model),
+        })
+    }
+    pub fn model(&self) -> &Model<C, S, P, V> {
+        &self.model
+    }
+}
+impl<C: Clone, S: Clone, P: Clone, V: Clone> TopologySnapshot<'_, C, S, P, V> {
+    /// Edit an isolated topology copy and publish a new snapshot only after the
+    /// same retained owner policy and all incidence checks succeed.
+    pub fn try_edit(
+        &self,
+        edit: impl FnOnce(&mut Model<C, S, P, V>) -> Result<()>,
+    ) -> Result<Self> {
+        let mut candidate = (*self.model).clone();
+        edit(&mut candidate)?;
+        candidate.validate_topology_with_vertices(|v| (self.validate_vertex)(v))?;
+        (self.validate_model)(&candidate)?;
+        Ok(Self {
+            model: std::sync::Arc::new(candidate),
+            validate_vertex: self.validate_vertex.clone(),
+            validate_model: self.validate_model.clone(),
+        })
+    }
+}
+
+/// Single-writer in-memory revision store; not a persisted/distributed CAS.
+pub const MAX_TOPOLOGY_HISTORY: usize = 32;
+/// Owner-defined immutable admitted state. Implementations must validate every
+/// edited candidate before returning it and preserve their admission policy.
+/// This contract does not itself certify geometric solids.
+pub trait RevisionState: Clone {
+    type Model;
+    /// History restoration must not replace admission with a weaker policy.
+    fn same_admission_policy(&self, other: &Self) -> bool;
+    fn model(&self) -> &Self::Model;
+    fn try_edit(&self, edit: impl FnOnce(&mut Self::Model) -> Result<()>) -> Result<Self>;
+}
+impl<C: Clone, S: Clone, P: Clone, V: Clone> RevisionState for TopologySnapshot<'_, C, S, P, V> {
+    type Model = Model<C, S, P, V>;
+    fn same_admission_policy(&self, other: &Self) -> bool {
+        std::sync::Arc::ptr_eq(&self.validate_vertex, &other.validate_vertex)
+            && std::sync::Arc::ptr_eq(&self.validate_model, &other.validate_model)
+    }
+    fn model(&self) -> &Self::Model {
+        TopologySnapshot::model(self)
+    }
+    fn try_edit(&self, edit: impl FnOnce(&mut Self::Model) -> Result<()>) -> Result<Self> {
+        TopologySnapshot::try_edit(self, edit)
+    }
+}
+pub type TopologyStore<'a, C, S, P, V = [f64; 3]> = RevisionStore<TopologySnapshot<'a, C, S, P, V>>;
+pub type TopologyCheckout<'a, C, S, P, V = [f64; 3]> =
+    RevisionCheckout<TopologySnapshot<'a, C, S, P, V>>;
+pub type TopologyTransaction<'a, C, S, P, V = [f64; 3]> =
+    RevisionTransaction<TopologySnapshot<'a, C, S, P, V>>;
+pub struct RevisionStore<T: RevisionState> {
+    current: T,
+    undo: Vec<T>,
+    redo: Vec<T>,
+    identity: std::sync::Arc<()>,
+    revision: u64,
+}
+pub struct RevisionCheckout<T: RevisionState> {
+    snapshot: T,
+    identity: std::sync::Arc<()>,
+    revision: u64,
+}
+pub struct RevisionTransaction<T: RevisionState> {
+    candidate: T,
+    identity: std::sync::Arc<()>,
+    base_revision: u64,
+}
+impl<T: RevisionState> RevisionStore<T> {
+    pub fn new(snapshot: T) -> Self {
+        Self {
+            current: snapshot,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            identity: std::sync::Arc::new(()),
+            revision: 0,
+        }
+    }
+    /// Restore already admitted states into a fresh store identity/revision.
+    /// Histories are ordered oldest-to-newest, with the next restoration last.
+    pub fn from_history(current: T, undo: Vec<T>, redo: Vec<T>) -> Result<Self> {
+        if undo.len().saturating_add(redo.len()) > MAX_TOPOLOGY_HISTORY {
+            return Err(Error::new(
+                "BREP_RESOURCE_LIMIT",
+                "History exceeds 32 snapshots",
+            ));
+        }
+        if undo
+            .iter()
+            .chain(&redo)
+            .any(|snapshot| !current.same_admission_policy(snapshot))
+        {
+            return Err(Error::new(
+                "BREP_HISTORY_POLICY_MISMATCH",
+                "History snapshots use different admission policies",
+            ));
+        }
+        let mut store = Self::new(current);
+        store.undo = undo;
+        store.redo = redo;
+        Ok(store)
+    }
+    pub fn history_snapshots(&self) -> (&[T], &[T]) {
+        (&self.undo, &self.redo)
+    }
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+    pub fn snapshot(&self) -> &T {
+        &self.current
+    }
+    pub fn history_lengths(&self) -> (usize, usize) {
+        (self.undo.len(), self.redo.len())
+    }
+    /// Restoring geometry still advances revision; pending checkouts stay stale.
+    pub fn undo(&mut self) -> Result<bool> {
+        self.restore_history(false)
+    }
+    pub fn redo(&mut self) -> Result<bool> {
+        self.restore_history(true)
+    }
+    fn restore_history(&mut self, redo: bool) -> Result<bool> {
+        let (source, target) = if redo {
+            (&mut self.redo, &mut self.undo)
+        } else {
+            (&mut self.undo, &mut self.redo)
+        };
+        if source.is_empty() {
+            return Ok(false);
+        }
+        let next = self.revision.checked_add(1).ok_or_else(|| {
+            Error::new("BREP_REVISION_EXHAUSTED", "Topology revision cannot wrap")
+        })?;
+        let restored = source.pop().expect("History was checked nonempty");
+        target.push(std::mem::replace(&mut self.current, restored));
+        self.revision = next;
+        Ok(true)
+    }
+    pub fn checkout(&self) -> RevisionCheckout<T> {
+        RevisionCheckout {
+            snapshot: self.current.clone(),
+            identity: self.identity.clone(),
+            revision: self.revision,
+        }
+    }
+    /// Consumes an already validated edit. Stale/foreign/overflow failures leave
+    /// current state unchanged. Every commit advances revision, even a no-op.
+    pub fn commit(&mut self, transaction: RevisionTransaction<T>) -> Result<u64> {
+        self.commit_with_check(transaction, |_| Ok(()))
+    }
+    /// Run a final caller check (e.g. cancellation/deadline) after identity and
+    /// revision validation, immediately before replacing state. Failure leaves
+    /// the current snapshot, revision and both history stacks unchanged.
+    pub fn commit_with_check(
+        &mut self,
+        transaction: RevisionTransaction<T>,
+        check: impl FnOnce(&T::Model) -> Result<()>,
+    ) -> Result<u64> {
+        if !std::sync::Arc::ptr_eq(&self.identity, &transaction.identity) {
+            return Err(Error::new(
+                "BREP_FOREIGN_TRANSACTION",
+                "Transaction belongs to another topology store",
+            ));
+        }
+        if self.revision != transaction.base_revision {
+            return Err(Error::new(
+                "BREP_STALE_TRANSACTION",
+                "Topology changed after checkout",
+            ));
+        }
+        let next = self.revision.checked_add(1).ok_or_else(|| {
+            Error::new("BREP_REVISION_EXHAUSTED", "Topology revision cannot wrap")
+        })?;
+        check(transaction.candidate.model())?;
+        let previous = std::mem::replace(&mut self.current, transaction.candidate);
+        if self.undo.len() == MAX_TOPOLOGY_HISTORY {
+            self.undo.remove(0);
+        }
+        self.undo.push(previous);
+        self.redo.clear();
+        self.revision = next;
+        Ok(next)
+    }
+}
+impl<T: RevisionState> RevisionCheckout<T> {
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+    pub fn snapshot(&self) -> &T {
+        &self.snapshot
+    }
+}
+impl<T: RevisionState> RevisionCheckout<T> {
+    pub fn prepare(
+        &self,
+        edit: impl FnOnce(&mut T::Model) -> Result<()>,
+    ) -> Result<RevisionTransaction<T>> {
+        let candidate = self.snapshot.try_edit(edit)?;
+        if !self.snapshot.same_admission_policy(&candidate) {
+            return Err(Error::new(
+                "BREP_TRANSACTION_POLICY_MISMATCH",
+                "Prepared edit changed admission policy",
+            ));
+        }
+        Ok(RevisionTransaction {
+            candidate,
+            identity: self.identity.clone(),
+            base_revision: self.revision,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn revision_exhaustion_never_wraps_or_publishes_candidate() {
+        let snapshot = TopologySnapshot::new(sheet(), |point| {
+            require(point.iter().all(|x| x.is_finite()), "Invalid point")
+        })
+        .unwrap();
+        let mut store = TopologyStore::new(snapshot);
+        store.revision = u64::MAX;
+        let old_tolerance = store.snapshot().model().tolerance_mm;
+        let edit = store
+            .checkout()
+            .prepare(|m| {
+                m.tolerance_mm = 2e-6;
+                Ok(())
+            })
+            .unwrap();
+        assert_eq!(
+            store.commit(edit).unwrap_err().code,
+            "BREP_REVISION_EXHAUSTED"
+        );
+        assert_eq!(store.revision(), u64::MAX);
+        assert_eq!(store.snapshot().model().tolerance_mm, old_tolerance);
+    }
+    #[test]
+    fn history_is_bounded_and_branching_invalidates_redo() {
+        let snapshot = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
+        let mut store = TopologyStore::new(snapshot);
+        assert!(!store.undo().unwrap());
+        assert!(!store.redo().unwrap());
+        assert_eq!(store.revision(), 0);
+        for i in 0..40 {
+            let tx = store
+                .checkout()
+                .prepare(|m| {
+                    m.tolerance_mm = (i + 1) as f64 * 1e-6;
+                    Ok(())
+                })
+                .unwrap();
+            store.commit(tx).unwrap();
+        }
+        assert_eq!(store.history_lengths(), (MAX_TOPOLOGY_HISTORY, 0));
+        for _ in 0..MAX_TOPOLOGY_HISTORY {
+            assert!(store.undo().unwrap());
+        }
+        assert!(!store.undo().unwrap());
+        assert_eq!(store.history_lengths(), (0, MAX_TOPOLOGY_HISTORY));
+        assert_eq!(store.snapshot().model().tolerance_mm, 8e-6);
+        assert!(store.redo().unwrap());
+        let tx = store
+            .checkout()
+            .prepare(|m| {
+                m.tolerance_mm = 5e-6;
+                Ok(())
+            })
+            .unwrap();
+        store.commit(tx).unwrap();
+        assert!(!store.redo().unwrap());
+        assert_eq!(store.history_lengths(), (2, 0));
+        store.revision = u64::MAX;
+        assert!(store.undo().is_err());
+        assert_eq!(store.history_lengths(), (2, 0));
+        assert_eq!(store.snapshot().model().tolerance_mm, 5e-6);
+    }
+    #[test]
+    fn restored_history_cannot_change_owner_admission_policy() {
+        let original = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
+        let foreign = TopologySnapshot::new(sheet(), |_| Ok(())).unwrap();
+        assert!(TopologyStore::from_history(original.clone(), vec![foreign], vec![]).is_err());
+        assert!(TopologyStore::from_history(original.clone(), vec![original], vec![]).is_ok());
+    }
+    #[test]
+    fn prepared_state_cannot_substitute_its_admission_policy() {
+        #[derive(Clone)]
+        struct OwnerState {
+            value: u32,
+            policy: u32,
+        }
+        impl RevisionState for OwnerState {
+            type Model = u32;
+            fn model(&self) -> &u32 {
+                &self.value
+            }
+            fn same_admission_policy(&self, other: &Self) -> bool {
+                self.policy == other.policy
+            }
+            fn try_edit(&self, edit: impl FnOnce(&mut u32) -> Result<()>) -> Result<Self> {
+                let mut next = self.clone();
+                edit(&mut next.value)?;
+                next.policy += 1; // Deliberately faulty owner implementation.
+                Ok(next)
+            }
+        }
+        let store = RevisionStore::new(OwnerState {
+            value: 7,
+            policy: 1,
+        });
+        let result = store.checkout().prepare(|v| {
+            *v = 9;
+            Ok(())
+        });
+        assert!(matches!(
+            result,
+            Err(Error {
+                code: "BREP_TRANSACTION_POLICY_MISMATCH",
+                ..
+            })
+        ));
+        assert_eq!(*store.snapshot().model(), 7);
+        assert_eq!(store.revision(), 0);
+        assert_eq!(store.history_lengths(), (0, 0));
+    }
     fn sheet() -> Model<(), (), ()> {
         Model {
             vertices: vec![
@@ -643,14 +1064,17 @@ mod tests {
             ],
             edges: vec![
                 Edge {
+                    degenerate: false,
                     vertices: [0, 1],
                     curve: (),
                 },
                 Edge {
+                    degenerate: false,
                     vertices: [1, 2],
                     curve: (),
                 },
                 Edge {
+                    degenerate: false,
                     vertices: [2, 0],
                     curve: (),
                 },

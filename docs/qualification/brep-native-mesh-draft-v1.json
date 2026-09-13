@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native mesh draft and retained B-rep consistency refusal",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 56,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4613040
+  },
+  "coverage": [
+    "Neutral-plane draft coordinates and unchanged mesh connectivity",
+    "Source preservation, zero angle and post-refusal recovery",
+    "Mixed mesh/B-rep input rejected atomically before mutation",
+    "Collapsed sections, angle outside limits and zero axis refused"
+  ],
+  "limitations": [
+    "Topology-aware retained B-rep draft remains unimplemented and explicitly refuses",
+    "Mesh draft is a vertex deformation, not analytic face draft or a global validity certificate",
+    "General B-rep completion, other TS computations and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_draft.rs": "8f3e14c8afbe96a8d6b0363ecf94ff12062a3ca64c8a82f4adba017d45a3abe4",
+    "crates/geometry-bridge/src/lib.rs": "e4c499f2443b7d1e977ba23ece48c3e922f5fa580a749f3e4ca5e3090eb031aa",
+    "src/services/cadWorkbench.ts": "7241c4cc830716cf56652cb6609ae04ec625aaef1f69fbbaf50acfd93810edd4",
+    "tests/cadWorkbench.test.ts": "3ab25124e0d845e729c931ee0ff5b762d7e36300276de2d28016f217d0ef6ab7",
+    "src/generated/geometry-kernels/bytes.ts": "8545c2d63857691c32383d45f07518d1cf662345c0e4bb5b9a3a2a46ad7c8f4c"
+  }
+}

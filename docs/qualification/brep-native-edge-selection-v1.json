@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native numerical straight-edge selection admission for legacy editor display",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 34,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4602188
+  },
+  "coverage": [
+    "All twelve box edges in either direction",
+    "Invalid and repeated endpoint indices refused",
+    "Tessellation diagonals refused",
+    "Curved authored edge chord refused despite matching endpoints"
+  ],
+  "limitations": [
+    "Tolerance-based straight-edge admission is not general curved correspondence or persistent naming",
+    "Revision-bound explicit display identity transfer remains open",
+    "Legacy host topology grouping and other geometry still require migration",
+    "Shared qualification predates this artifact; general B-rep incomplete"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_face_selection.rs": "c0f5629610a4a8bc1eedcb78083f3105efdc46810cc415de4fffcc4916293272",
+    "crates/geometry-bridge/src/lib.rs": "0a39fdc22933a2d3c379a26da0502d4227259e1a905f14d07a6d63138e9c9e91",
+    "src/services/directSolidTools.ts": "ba21c2301d9c3febf589622c8697f2bc194f8ea13c295586bdce344b3b1cec14",
+    "src/features/DirectModeler.vue": "e3a5524255939368e23502813628bb7ac56b6383fabbae613cbe2707a0ef8d27",
+    "tests/nativeBrepFaceSelection.test.ts": "bbf8a003f4863147ee22caf91b311a0c33719bb65ad376bb124c7419222eb5d1",
+    "src/generated/geometry-kernels/bytes.ts": "21fd496b63d113050a92f5b928e3cb5e7344f44fda04c0123329626a98978e73"
+  }
+}

@@ -1,0 +1,10 @@
+   Compiling curvex-metal-renderer v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/integrations/curvex/metal-renderer)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.75s
+     Running unittests src/lib.rs (integrations/curvex/metal-renderer/target/debug/deps/curvex_metal_renderer-00040a95e9731ce1)
+
+running 2 tests
+test egui_integration::tests::batches_preserve_visible_barriers_and_clip_changes ... ok
+test egui_integration::tests::frame_budget_falls_back_and_resets_without_accepting_invalid_camera ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+

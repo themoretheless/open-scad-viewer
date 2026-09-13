@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native directional and sketch-path body translation patterns",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 43,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4598718
+  },
+  "coverage": [
+    "Directional group copies retain synchronized mesh and B-rep",
+    "Fresh host body IDs and unchanged unselected body",
+    "Equal arc-length stations on placed polyline with zero-length segment",
+    "Group pivot and independent station expectations",
+    "Invalid count/path and late invalid B-rep refuse complete operation"
+  ],
+  "limitations": [
+    "Patterns translate without orienting bodies to the path, matching existing operation semantics",
+    "Peak memory of maximum-size repeated bodies remains unqualified",
+    "General certified B-rep and other host geometry incomplete",
+    "Shared qualification predates scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_pattern.rs": "ba44056ff7242bcee5116de2cb600c12b68d1845d81ec460999f5169db02f4bb",
+    "crates/geometry-bridge/src/lib.rs": "36860f3101338e76e73b0a0d306468f455e194602e317d02a70dc89375c26fa2",
+    "src/services/cadWorkbench.ts": "6c627ceacbc0b1d74c2dfa1d7f8db5860d4fb30d6547cb4e2e588647079ccf1a",
+    "tests/nativeBodyArrangement.test.ts": "c1e64acff1f4e7b9cd97890e774ec21b7063db38908227d4c6bc799356cc4097",
+    "src/generated/geometry-kernels/bytes.ts": "40b3b0dfd6e4639897434ae72d63a99c012c57b3d9e2b47a153f11e7ce8c178e"
+  }
+}

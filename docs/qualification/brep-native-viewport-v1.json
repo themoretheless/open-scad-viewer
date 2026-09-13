@@ -1,0 +1,31 @@
+{
+  "scope": "Native viewport ray/projection/corner-snap migration, not full B-rep qualification",
+  "tests": {
+    "applicationAndPacking": 103,
+    "mathCore": 6,
+    "vueTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4719554,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/math-core/src/viewport.rs": "428a02fb81215e93a8b42858880096e6c8dfacfdef5aa5e7154d8ceeb05a5ce5",
+    "crates/geometry-bridge/src/viewport.rs": "879f2537047f02cf53251f5bffba662f297012dae5f1e6310bf2bb297fc516a6",
+    "src/services/geometry/viewport.ts": "858c5ed5ea8866333ed37312d3fcee384da3162485b6f8eb8b544b73646f3d7c",
+    "src/services/math3d.ts": "1f8bafaad60c42b133e6cddfeec704a0c2f263dbfb1305678be7db082e29c50f",
+    "src/services/webgpuRenderer.ts": "22cfe6e3872812cd9a52cb8928554d0f8e44a4e5fc34aadfdfafddd1a0386faa",
+    "tests/nativeViewport.test.ts": "8f85ac15481c46466168b4670d0d28fdab926928f40795b91988828625d1aebf",
+    "tests/webgpuRendererResources.test.ts": "708083d0a206c9e3d13eafea06af20d10538522f787d2312e203d39855c1c6b2",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "c7de31e64d47a68a91d3f58bd241f5235e8a685ca9214452a820169a1dc9e85d"
+  },
+  "limitations": [
+    "Numerical display math, not certified geometry",
+    "Matrix construction, depth ordering, section clipping and selection identity retain host computation",
+    "Browser latency unmeasured",
+    "Shared qualification not refreshed",
+    "Full B-rep completion unproved"
+  ]
+}

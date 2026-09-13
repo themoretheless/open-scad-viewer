@@ -1,0 +1,39 @@
+{
+  "scope": "Native batched Code-to-Solid placement, not full B-rep qualification",
+  "tests": {
+    "applicationPackingConversionExport": 161,
+    "polygonCore": 55,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4719303,
+    "budget": 4700000,
+    "geometryChunkBytes": 2352668,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/polygon-core/src/solid/placement.rs": "f5d4297a7d21601cdb70eb91aba40b8825abc27633352a079bf929a1a60c1ed3",
+    "crates/geometry-bridge/src/abi.rs": "cf38cf53331d4c2f8e7e69402d092b7d8e481865892e38c40e3cfdef20b03c22",
+    "crates/geometry-bridge/src/mesh_analysis.rs": "89b5fd53a31d9c355cb824f69186a88036617b527a2d19a17b634e17e561fb81",
+    "crates/geometry-wasm/src/lib.rs": "6a8d483d00047947ffc562723b221f02be863e0f0965035eb47dcfc3fb33d98d",
+    "src/services/geometry/meshAnalysis.ts": "83a4af05a084d4c6ddeda773e6524ad83fe31467942340c7ad24ac28b6a1a0fd",
+    "src/services/solidBridge.ts": "74e660e4b4be6f61dcc2bed3e45ee23f4e176623a13915a53a7a413cdbc31e06",
+    "tests/nativeSolidPlacement.test.ts": "3c3fe22cdec6c93d26077051a627b3fd197ce1e9897a1eeeecfda26763679729",
+    "tests/brepSolidBridge.test.ts": "139e489ee6f2a61fd82428cc89ecc781d88b72f0bb7b6796bc9a0c1a0a0dc567",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "97f095d9e9020862959482ec4be304b78191a2e89db64765578ece4f5935363b"
+  },
+  "limits": {
+    "placedOutputBytes": 33554432,
+    "absoluteCoordinate": 1000000
+  },
+  "limitations": [
+    "Other point-transform consumers still need batched migration",
+    "Document assembly remains partly in TypeScript",
+    "Shared qualification not refreshed",
+    "Browser performance not measured",
+    "General B-rep completion remains unproved"
+  ]
+}

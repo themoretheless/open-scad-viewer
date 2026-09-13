@@ -3,6 +3,9 @@ use crate::path::BezierPath;
 use crate::{Result, check};
 use math_core::{add2, norm2, scale2, sub2, unit2};
 
+#[path = "stroke_simple.rs"]
+mod simple;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LineCap {
     #[default]
@@ -74,6 +77,82 @@ pub fn outline_stroke_tol(
     opts: &StrokeOptions,
     tolerance: f64,
 ) -> Result<Vec<BezierPath>> {
+    stroke_rings(path, opts, tolerance)?
+        .iter()
+        .map(|ring| BezierPath::from_polyline(ring, true))
+        .collect()
+}
+
+/// Shared internal region pipeline. Keep normalized rings as rings until a
+/// caller actually needs editable paths; renderers consume them directly.
+pub(crate) fn stroke_rings(
+    path: &BezierPath,
+    opts: &StrokeOptions,
+    tolerance: f64,
+) -> Result<crate::rings::Rings> {
+    let mut pts = stroke_points(path, opts, tolerance)?;
+    let origin = center_stroke_points(&mut pts)?;
+    let mut rings = outline_points(pts, path.closed, opts, tolerance, true)?;
+    if origin != [0., 0.] {
+        for point in rings.iter_mut().flatten() {
+            *point = add2(*point, origin);
+        }
+    }
+    Ok(rings)
+}
+
+/// Direct, nonoverlapping ribbon mesh when the offset boundary is certified.
+/// Complex strokes retain the general union and fill tessellation behavior.
+pub fn tessellate_stroke(
+    path: &BezierPath,
+    opts: &StrokeOptions,
+    tolerance: f64,
+) -> Result<crate::tessellation::FillMesh> {
+    let mut pts = stroke_points(path, opts, tolerance)?;
+    let origin = center_stroke_points(&mut pts)?;
+    let mut mesh = tessellate_stroke_points(pts, path.closed, opts, tolerance)?;
+    if origin != [0., 0.] {
+        for point in &mut mesh.positions {
+            *point = add2(*point, origin);
+        }
+    }
+    Ok(mesh)
+}
+
+// Build offsets and intersections in local coordinates when document position
+// dwarfs path extent. Otherwise arc endpoints lose enough bits to open joins.
+fn center_stroke_points(pts: &mut [[f64; 2]]) -> Result<[f64; 2]> {
+    let (scale, extent) = crate::rings::coordinate_metrics(pts.iter())?;
+    let origin = if scale > extent * 1024. {
+        pts[0]
+    } else {
+        [0., 0.]
+    };
+    if origin != [0., 0.] {
+        for point in pts {
+            *point = sub2(*point, origin);
+        }
+    }
+    Ok(origin)
+}
+
+fn tessellate_stroke_points(
+    pts: Vec<[f64; 2]>,
+    closed: bool,
+    opts: &StrokeOptions,
+    tolerance: f64,
+) -> Result<crate::tessellation::FillMesh> {
+    if opts.dash.as_ref().is_none_or(Vec::is_empty) {
+        if let Some(mesh) = simple::mesh(&pts, closed, opts, tolerance)? {
+            return Ok(mesh);
+        }
+    }
+    // A rejected ribbon must not repeat the bounded intersection certificate.
+    let rings = outline_points(pts, closed, opts, tolerance, false)?;
+    crate::tessellation::tessellate_normalized_rings(&rings)
+}
+
+fn stroke_points(path: &BezierPath, opts: &StrokeOptions, tolerance: f64) -> Result<Vec<[f64; 2]>> {
     check(
         opts.width > 0. && opts.width.is_finite(),
         "Invalid stroke width",
@@ -93,19 +172,29 @@ pub fn outline_stroke_tol(
         pts.pop();
     }
     check(pts.len() >= 2, "Path too short to outline")?;
-    if path.closed && opts.dash.as_ref().is_none_or(Vec::is_empty) {
+    Ok(pts)
+}
+
+fn outline_points(
+    pts: Vec<[f64; 2]>,
+    closed: bool,
+    opts: &StrokeOptions,
+    tolerance: f64,
+    try_simple: bool,
+) -> Result<crate::rings::Rings> {
+    if closed && opts.dash.as_ref().is_none_or(Vec::is_empty) {
         if let Some(rings) = convex_closed_stroke(&pts, opts, tolerance)? {
-            return rings
-                .iter()
-                .map(|r| BezierPath::from_polyline(r, true))
-                .collect();
+            return Ok(rings);
+        }
+    }
+    if try_simple && opts.dash.as_ref().is_none_or(Vec::is_empty) {
+        if let Some(rings) = simple::outline(&pts, closed, opts, tolerance)? {
+            return Ok(rings);
         }
     }
     let polylines = match &opts.dash {
-        Some(dash) if !dash.is_empty() => {
-            dash_polylines(&pts, path.closed, dash, opts.dash_offset)?
-        }
-        _ => vec![(pts, path.closed)],
+        Some(dash) if !dash.is_empty() => dash_polylines(&pts, closed, dash, opts.dash_offset)?,
+        _ => vec![(pts, closed)],
     };
     let mut pieces = Vec::new();
     for (poly, closed) in polylines {
@@ -113,10 +202,7 @@ pub fn outline_stroke_tol(
     }
     let contours = crate::rings::nonzero(&pieces)?;
     check(!contours.is_empty(), "Stroke produced no outline")?;
-    contours
-        .iter()
-        .map(|ring| BezierPath::from_polyline(ring, true))
-        .collect()
+    Ok(contours)
 }
 
 /// A simple convex ring has two offset boundaries, with no arrangement to

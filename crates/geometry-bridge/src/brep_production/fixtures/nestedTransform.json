@@ -1,0 +1,343 @@
+{
+ "source": "translate([1,2,3]) rotate([0,0,45]) cube(1);",
+ "operations": [
+  {
+   "id": 0,
+   "operationId": "opv1:409380517eacf96e0261afbe45692e5b7e1d72c4e4e4733cae328491c2abfa6f",
+   "parent": null,
+   "childOrdinal": 0,
+   "name": "translate",
+   "category": "transform",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 1,
+   "operationId": "opv1:e1c336ec437be7f076892887aa62dfe1c2fbd2f433cb207461117427579878e5",
+   "parent": 0,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 2,
+   "operationId": "opv1:ff6a1c341ec8aabd1ee2b8b633b7a280adbe82fd70902571443035196ab8df4b",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "rotate",
+   "category": "transform",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "rotate",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 3,
+   "operationId": "opv1:cbe6a5aee4660f6bd1752b454037eee27c69af67d153829fb20a60f9da30c463",
+   "parent": 2,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "rotate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 4,
+   "operationId": "opv1:cbd6941021446c11ec7c48c9cc87e5cb1234aa07f32977969f6e8b2699e4fe2d",
+   "parent": 3,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "rotate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  }
+ ],
+ "occurrences": [
+  {
+   "id": 0,
+   "occurrenceId": "occv1:3ff1d59e4709fb53f5dfda9891f4385bd097a6892831f4ba26039564fbd55a76",
+   "operation": 0,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 2,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:12124d29423c48023b49044ffd381b131bf8c2c893984219073ec6e956c73d00"
+  },
+  {
+   "id": 1,
+   "occurrenceId": "occv1:dd2cd791672cc8d4327bc635af9844f75e40b2cb5eaa90e34a8d6e201060811a",
+   "operation": 1,
+   "parent": 0,
+   "staticParent": 0,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 2,
+   "occurrenceId": "occv1:9d7ea1412b7bcf6628bed1697d0b0df6c8d569ea61816ae1e8f441c438aecc26",
+   "operation": 2,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 1,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:71e2be8bc22a1c0513b356fdd5fc0b8b714ee287f5ddca5fd2b2ac5ce930ec03"
+  },
+  {
+   "id": 3,
+   "occurrenceId": "occv1:bf095b781152c12ae89379d79a291958a0dc14b2ac5763752d5ad3e360222f7c",
+   "operation": 3,
+   "parent": 2,
+   "staticParent": 2,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 4,
+   "occurrenceId": "occv1:cfb98676cdddb6ac5350c72941260b60993e04f576a0eb4d926f80592c0ac922",
+   "operation": 4,
+   "parent": 3,
+   "staticParent": 3,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 0,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:1ad6b8ea47fde2bd2f689cae1ffb8bb010a19f1bd806c021e01463a000022421"
+  }
+ ],
+ "nodes": [
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    1,
+    1,
+    1
+   ],
+   "center": false,
+   "id": 0
+  },
+  {
+   "kind": "transform",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "input": 0,
+   "matrix": [
+    0.7071067811865476,
+    0.7071067811865475,
+    0,
+    0,
+    -0.7071067811865475,
+    0.7071067811865476,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1
+   ],
+   "id": 1
+  },
+  {
+   "kind": "transform",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "input": 1,
+   "matrix": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    2,
+    3,
+    1
+   ],
+   "id": 2
+  }
+ ],
+ "result": {
+  "tag": "single",
+  "item": {
+   "node": 2,
+   "producerOccurrence": 0,
+   "identityOccurrence": 4,
+   "color": [
+    0.26,
+    0.52,
+    0.96,
+    1
+   ]
+  }
+ },
+ "execution": {
+  "version": "semantic-execution-v2",
+  "evaluationOrder": [
+   0,
+   1,
+   2
+  ],
+  "discardedEffects": [],
+  "terminal": null
+ }
+}

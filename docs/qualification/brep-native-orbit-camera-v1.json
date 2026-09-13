@@ -1,0 +1,31 @@
+{
+  "scope": "Native orbit camera frame migration, not full B-rep qualification",
+  "tests": {
+    "applicationAndPacking": 115,
+    "mathCore": 8,
+    "vueTypecheck": "passed",
+    "viteBuild": "passed",
+    "frozenReferenceFrames": 72
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4718249,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/math-core/src/orbit_camera.rs": "5ea1b532a6fe1e4bb21c95f13bfbcc7e3c4cf72ff5874e41ca55cfac0dacd56f",
+    "crates/math-core/orbit-camera-reference-v1.json": "00ec659423638b0afad901f62406f1876b2b46c31b8c1df436779023ccbd34cd",
+    "crates/geometry-bridge/src/viewport.rs": "573960ce0136e3928723780687ffc04fd73bcfc73b94d89aad17ab4f96cf8d17",
+    "src/services/orbitCameraProjection.ts": "207365c58061f89f096042461551cb4fb9537e5bb71c09c9f57bb20a8c66317a",
+    "tests/orbitCameraProjection.test.ts": "8de466517b1fec6526df57131337096f5d2d328d76c03d60493e54386190d144",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "7e1d8828263f01a3c5f4c3142d905e202a95e54553975557fa4adfd5b940f118"
+  },
+  "limitations": [
+    "Numerical display math, not certified CAD geometry",
+    "Orbit gestures and general host matrix utilities remain",
+    "Depth ordering, section clipping and selection identity retain host computation",
+    "Browser latency unmeasured",
+    "Shared qualification not refreshed",
+    "Full B-rep completion unproved"
+  ]
+}

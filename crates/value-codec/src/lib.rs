@@ -493,6 +493,13 @@ impl fmt::Display for Value {
     }
 }
 pub fn from_str<T: for<'a> Deserialize<'a>>(s: &str) -> Result<T> {
+    parse_json(s, false)
+}
+/// JSON decoding that rejects duplicate object keys, including escaped aliases.
+pub fn from_str_strict<T: for<'a> Deserialize<'a>>(s: &str) -> Result<T> {
+    parse_json(s, true)
+}
+fn parse_json<T: for<'a> Deserialize<'a>>(s: &str, reject_duplicates: bool) -> Result<T> {
     if s.len() > 32 * 1024 * 1024 {
         return Err(error("Document exceeds 32 MiB"));
     }
@@ -500,6 +507,7 @@ pub fn from_str<T: for<'a> Deserialize<'a>>(s: &str) -> Result<T> {
         b: s.as_bytes(),
         i: 0,
         n: 0,
+        reject_duplicates,
     };
     let v = p.value(0)?;
     p.ws();
@@ -509,6 +517,7 @@ pub fn from_str<T: for<'a> Deserialize<'a>>(s: &str) -> Result<T> {
     T::from_value(v)
 }
 struct Parser<'a> {
+    reject_duplicates: bool,
     b: &'a [u8],
     i: usize,
     n: usize,
@@ -636,7 +645,9 @@ impl Parser<'_> {
                     if self.byte()? != b':' {
                         return Err(error("Expected colon"));
                     }
-                    v.insert(k, self.value(d + 1)?);
+                    if v.insert(k, self.value(d + 1)?).is_some() && self.reject_duplicates {
+                        return Err(error("Duplicate JSON key"));
+                    }
                     self.ws();
                     match self.byte()? {
                         b'}' => break,

@@ -274,8 +274,7 @@ fn adaptive_tiles(field: impl Fn(P) -> f64, grid: &sdf_core::Grid) -> Result<Mes
                 "Adaptive Shell exceeds four million samples; increase grid step",
             ));
         }
-        let tile =
-            sdf_core::polygonize_tile(&field, &sdf_core::Grid { min, max, cells }, false)?;
+        let tile = sdf_core::polygonize_tile(&field, &sdf_core::Grid { min, max, cells }, false)?;
         let ids: Vec<usize> = tile
             .positions
             .as_chunks::<3>()
@@ -756,21 +755,24 @@ pub fn lattice_accelerated(
                 blend, &field,
             )? {
                 Some(mesh) => mesh,
-                None => crate::mesh_from_triangles(
-                    sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })?,
-                ),
+                None => crate::mesh_from_triangles(sdf_core::polygonize_with(
+                    &field,
+                    &sdf_core::Grid { min, max, cells },
+                )?),
             }
         } else {
-            crate::mesh_from_triangles(
-                sdf_core::polygonize_with(&field, &sdf_core::Grid { min, max, cells })?,
-            )
+            crate::mesh_from_triangles(sdf_core::polygonize_with(
+                &field,
+                &sdf_core::Grid { min, max, cells },
+            )?)
         }
         #[cfg(not(feature = "gpu"))]
         {
             let _ = acceleration;
-            crate::mesh_from_triangles(
-                sdf_core::polygonize_with(field, &sdf_core::Grid { min, max, cells })?,
-            )
+            crate::mesh_from_triangles(sdf_core::polygonize_with(
+                field,
+                &sdf_core::Grid { min, max, cells },
+            )?)
         }
     };
     let result = output.inspect()?;

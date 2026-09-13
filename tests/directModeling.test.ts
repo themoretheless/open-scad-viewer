@@ -45,3 +45,18 @@ describe('direct modeling', () => {
     for (const m of result.meshes) { expect(m.topology.boundary).toBe(0); expect(m.topology.nonManifold).toBe(0) }
   })
 })
+it('transforms mixed-dimensional point batches natively without losing dimensions',()=>{
+ const points=[[1,0],[3,0,4]],before=JSON.stringify(points)
+ const result=transformDirectPoints(points,[10,20,30],90,2)
+ expect(result[0]).toHaveLength(2);expect(result[1]).toHaveLength(3)
+ ;[[12,18],[12,22,36]].forEach((p,i)=>p.forEach((x,k)=>expect(result[i][k]).toBeCloseTo(x,12)))
+ expect(JSON.stringify(points)).toBe(before)
+})
+it('keeps representable large centroids finite and refuses malformed point transforms',()=>{
+ const points=[[1e308,0],[1e308,0]]
+ expect(transformDirectPoints(points,[0,0],0,1)).toEqual(points)
+ for(const p of [[],[[1]],[[1,2,3,4]],[[0,0],[Infinity,0]]])expect(()=>transformDirectPoints(p,[0,0],0,1)).toThrow()
+ expect(()=>transformDirectPoints([[0,0]],[0],0,1)).toThrow()
+ expect(()=>transformDirectPoints([[1e308,0]],[1e308,0],0,1)).toThrow('finite')
+ expect(transformDirectPoints([[0,0]],[1,2],0,1)).toEqual([[1,2]])
+})

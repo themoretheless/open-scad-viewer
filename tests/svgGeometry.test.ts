@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours } from '../src/services/svgGeometry'
+import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_BYTES } from '../src/services/svgGeometry'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 const geometry = new HeadlessGeometryService()
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="20mm" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M0 0H20V20H0Z M5 5H15V15H5Z"/></svg>'
@@ -35,8 +35,8 @@ describe('SVG geometry workflows', () => {
     expect(result.volume).toBeCloseTo(36*26 - (4-Math.PI)*16, 0)
   })
   it('rejects unsupported SVG and invalid extrusion inputs', async () => {
-    await expect(svgContours('<svg><text>hello</text></svg>')).rejects.toThrow()
-    await expect(svgContours('x'.repeat(262145))).rejects.toThrow('256 KiB')
+    await expect(svgContours('<svg><foreignObject>hello</foreignObject></svg>')).rejects.toThrow()
+    await expect(svgContours('x'.repeat(SVG_MAX_BYTES + 1))).rejects.toThrow('4 MiB')
     expect(()=>contoursExtrusion([[[0,0],[1,0],[0,1]]],0)).toThrow('height')
   })
 })

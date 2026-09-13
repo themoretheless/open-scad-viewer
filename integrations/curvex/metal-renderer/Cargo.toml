@@ -1,0 +1,30 @@
+[package]
+name = "curvex-metal-renderer"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+wgpu = { version = "29.0.4", default-features = false, features = ["std", "metal", "wgsl"] }
+pollster = { version = "0.4", optional = true }
+serde_json = { version = "1", optional = true }
+
+[workspace]
+
+[features]
+qualification = ["dep:pollster", "dep:serde_json"]
+egui-integration = ["dep:egui", "dep:egui-wgpu"]
+
+[dependencies.egui]
+version = "0.35"
+optional = true
+
+[dependencies.egui-wgpu]
+version = "0.35"
+optional = true
+
+[[bin]]
+name = "curvex-metal-renderer"
+path = "src/main.rs"
+required-features = ["qualification"]

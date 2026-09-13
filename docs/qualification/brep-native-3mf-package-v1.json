@@ -1,0 +1,33 @@
+{
+  "scope": "Native complete stored and compressed OPC 3MF artifact construction; full B-rep incomplete",
+  "tests": {
+    "polygonCore": 67,
+    "applicationMcpPacking": 47,
+    "independentNodeCrcDeflateHeaders": "passed",
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4580260,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/polygon-core/src/package_3mf.rs": "3489993d843fee88e44636b1add44075c019791f077a8c451a0a00b6b67a88ef",
+    "crates/polygon-core/src/model_3mf.rs": "8afaf3a85ca6ed77a8c212850d425b89db8134011223c4ce81bc6e99eeb765a0",
+    "crates/polygon-core/Cargo.toml": "90c5296ed12ea12035f59029d5a347dd562f94b8bd42110ea2bd5fe864a1900f",
+    "crates/Cargo.lock": "16cea0b66727c5f79e5985a1457c13b28f5db037d9fb736fc28f480eba7bbafb",
+    "crates/geometry-bridge/src/lib.rs": "2bdcb955a63d29a739bc37ee6ab715614ec3d0b49adb4f9ccb215be4d8a80832",
+    "src/services/geometry/meshArtifactExport.ts": "18dd41df0fb25ef73dc5ec7415d0432e7919f1827b133c390ad441231b84adc7",
+    "src/services/meshExportFormats.ts": "ed2abb21605b600a0d4598c74a82789657ad3443c56504b5f9d011608efc4734",
+    "tests/meshExportFormats.test.ts": "55f2eb01c7f9ce819920b7269b8cd00b720fcb209dbbd131cc0e581dc9f96344",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "5af4255574708d59fe5b960677ea89fbf4a61947af29aec44d0a6e1a5ba980d9"
+  },
+  "limitations": [
+    "Shared qualification predates this WASM",
+    "Browser scheduling, memory and latency not profiled",
+    "General B-rep completion unproved"
+  ]
+}

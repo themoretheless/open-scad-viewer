@@ -1,0 +1,33 @@
+{
+  "scope": "Shared cap-frame bounds and refreshed region revolution evidence; not full B-rep qualification",
+  "tests": {
+    "svgWorkflow": 122,
+    "nativeSvgAndPlanar": "passed",
+    "ownCad": 218,
+    "brepIntegrationAndPacking": 69,
+    "manifest": 3
+  },
+  "sizeExperiment": {
+    "baselineBytes": 4700371,
+    "forcedOutOfLineBytes": 4702347,
+    "compilerDefaultBytes": 4701331
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4701331,
+    "budget": 4700000,
+    "excessBytes": 1331
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "a00ef1b5eac2048f282f0f1140377472a0a26c1c4281f814e5f178dccaea1e64",
+    "docs/qualification/svg-static-cycle-v1.json": "06e52f45d7b76d961bda646da3af29d28e062fa528f48ba58e38e9102367ae8a",
+    "docs/qualification/own-rust-cad-v1.json": "516bab173cb5b1c139d1eda3485601593bd6fca964189306feff47778d05df6a",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "84b4f2ffcee29c0f0913d0b8311f274158dcc59264430a0869563b684651282d",
+    "src/generated/geometry-kernels/bytes.ts": "d317d3c9c5755822eae376821a544f2bed6d6ac72b057391ee9aa2380283f018"
+  },
+  "limitations": [
+    "No new browser qualification",
+    "Size reduction objective remains unresolved",
+    "Full B-rep scope remains incomplete"
+  ]
+}

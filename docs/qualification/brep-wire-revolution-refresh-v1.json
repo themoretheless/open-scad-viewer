@@ -1,0 +1,32 @@
+{
+  "scope": "Curved-wire revolution artifact refresh and compression size correction; not full B-rep qualification",
+  "wasmBytes": 6808388,
+  "compressedBytes": 1743940,
+  "previousCompressedBytes": 1746531,
+  "packedSavingsBytes": 3456,
+  "brotliWindowBits": 24,
+  "decoderMemoryCapChanged": false,
+  "tests": {
+    "svgWorkflow": 122,
+    "ownCad": 218,
+    "packingAndWorker": 16,
+    "manifest": 3,
+    "nativeSvgAndPlanar": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "bytes": 4698487,
+    "budget": 4700000
+  },
+  "sha256": {
+    "scripts/build-geometry-kernels.mjs": "6cb1edff1f420bf6b0dbfe9afc45b006ac34a801659990c5e0dec2fb35aa8805",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "cd0c5c6414dd85eb0201726864d4c6ff8bbdb057b52212f0dc783dbe1112b92c",
+    "src/generated/geometry-kernels/bytes.ts": "1b90365ed7d98145480f1d87de7a56cc7ef050bcee0d62892fd597447e683b09",
+    "docs/qualification/svg-static-cycle-v1.json": "551c6e2beb66d93854286b41a600293723b6fa0d66c89870b4c61ff303492b5b",
+    "docs/qualification/own-rust-cad-v1.json": "51f28951be06c56f2df8eeb14d0647ed7cdaa07fd6441cd96f30b7af4e042f37"
+  },
+  "limitations": [
+    "No new browser qualification",
+    "Partial curved revolutions, poles and multi-wire regions remain open"
+  ]
+}

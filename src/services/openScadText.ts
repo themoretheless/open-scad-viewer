@@ -265,26 +265,21 @@ function textError(
   throw new OpenScadTextError(code, message, details, cause === undefined ? {} : { cause })
 }
 
-function runtimeIsNode(): boolean {
-  const processValue = (globalThis as { process?: { versions?: { node?: string }; type?: string } }).process
-  return typeof processValue?.versions?.node === 'string' && processValue.type !== 'renderer'
-}
-
 async function loadHarfBuzz(): Promise<HarfBuzzApi> {
   if (!harfBuzzPromise) {
     const attempt = (async () => {
-      const [{ default: createHarfBuzzModule }, { default: bindHarfBuzz }] = await Promise.all([
+      const [
+        { default: createHarfBuzzModule },
+        { default: bindHarfBuzz },
+        { default: wasmBase64 },
+        { unpackBrotliWasmBase64 },
+      ] = await Promise.all([
         import('harfbuzzjs/hb.js'),
         import('harfbuzzjs/hbjs.js'),
+        import('../generated/harfbuzz/bytes'),
+        import('./wasmBrotliPacking'),
       ])
-      const module = runtimeIsNode()
-        ? await createHarfBuzzModule()
-        : await (async () => {
-            const wasmUrl = (await import('harfbuzzjs/hb.wasm?url')).default
-            return createHarfBuzzModule({
-              locateFile: path => path === 'hb.wasm' ? wasmUrl : path,
-            })
-          })()
+      const module = await createHarfBuzzModule({wasmBinary: unpackBrotliWasmBase64(wasmBase64)})
       return bindHarfBuzz(module) as HarfBuzzApi
     })()
       .catch(error => textError(

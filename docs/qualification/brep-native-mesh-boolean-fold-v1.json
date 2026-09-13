@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Unified native workbench Boolean reduction for homogeneous mesh/B-rep bodies",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 71,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4619154
+  },
+  "coverage": [
+    "Ordered three-operand mesh union preserves first-selected metadata",
+    "Repeated operand difference and touching-only intersection return empty body lists",
+    "Empty results remove selected bodies while retaining unrelated bodies",
+    "Invalid late operand is admitted and refused without source mutation",
+    "Retained B-rep regressions and native mixed-representation refusal"
+  ],
+  "behaviorChange": "Mesh empty Boolean results now remove selected bodies, matching the retained B-rep path, instead of throwing after a successful empty construction.",
+  "limitations": [
+    "Mesh operations remain numerical BSP Booleans; retained geometry uses its existing bounded coverage",
+    "Mixed mesh/B-rep operands refuse rather than silently losing retained geometry",
+    "General curved Booleans, full B-rep completion and refreshed shared qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_boolean.rs": "ed29382d7d9d698bdc21d6cfe2046cb3e9b89ef92f66e3ab6c75a6be28da2e39",
+    "src/services/cadWorkbench.ts": "98be7219553be985de5c1c79bf08969a9a94d301e3d6ef37b4b09f98b12cc340",
+    "tests/cadWorkbench.test.ts": "39196b701f9600d7159843b50b7adb250bf754d15ea747e713ed186ec17e60d7",
+    "src/generated/geometry-kernels/bytes.ts": "5892a9904cccd16039484268ae66c99e99d21938632701c8f6fac2f1ca49ee9c"
+  }
+}

@@ -2,7 +2,7 @@
 use crate::appearance::Gradient;
 use crate::{Result, check};
 use planar_geometry::path::BezierPath;
-use planar_geometry::stroke::{StrokeOptions, outline_stroke};
+use planar_geometry::stroke::{StrokeOptions, tessellate_stroke};
 use planar_geometry::tessellation::{
     FillMesh, FillRule as TessFillRule, tessellate_path, tessellate_rings,
 };
@@ -61,20 +61,15 @@ pub fn gradient_fill_rings(
     colorize_spatial(mesh, gradient)
 }
 
-/// Expand stroke to outline paths, tessellate, color by spatial or along-path mode.
+/// Tessellate the stroke and color it by spatial or along-path mode.
 pub fn gradient_stroke_mesh(
     path: &BezierPath,
     opts: &StrokeOptions,
     gradient: &Gradient,
     mode: GradientSampleMode,
 ) -> Result<ColoredMesh> {
-    let outlines = outline_stroke(path, opts)?;
-    check(!outlines.is_empty(), "Gradient stroke produced no outline")?;
-    let rings = outlines
-        .iter()
-        .map(|p| p.to_ring(0.25))
-        .collect::<Result<Vec<_>>>()?;
-    let mesh = tessellate_rings(&rings, TessFillRule::NonZero)?;
+    let mesh = tessellate_stroke(path, opts, planar_geometry::path::FLATTEN_TOLERANCE)?;
+    check(!mesh.is_empty(), "Gradient stroke produced no outline")?;
     match mode {
         GradientSampleMode::AlongPath => colorize_along(mesh, gradient, &arc_length_table(path)?),
         GradientSampleMode::Spatial => colorize_spatial(mesh, gradient),
@@ -101,7 +96,9 @@ fn colorize_spatial(mesh: FillMesh, gradient: &Gradient) -> Result<ColoredMesh> 
     } else {
         max_edge
     };
-    sample_colors(mesh, max_edge, &seams, |p| gradient.sample_at(p).to_rgba())
+    sample_colors(mesh, max_edge, &seams, |p| {
+        Ok(gradient.sample_at(p).to_rgba())
+    })
 }
 
 fn gradient_seams(positions: &[[f64; 2]], gradient: &Gradient) -> Vec<[f64; 3]> {
@@ -164,7 +161,7 @@ fn sample_colors(
     mesh: FillMesh,
     max_edge: f64,
     seams: &[[f64; 3]],
-    sample: impl Fn([f64; 2]) -> [u8; 4],
+    sample: impl Fn([f64; 2]) -> Result<[u8; 4]>,
 ) -> Result<ColoredMesh> {
     use planar_geometry::attribute_mesh::{SampleOptions, sample_mesh_with_seams};
     let bounds = mesh.positions.iter().fold(
@@ -178,6 +175,7 @@ fn sample_colors(
         },
     );
     let min_edge = ((bounds.1[0] - bounds.0[0]).max(bounds.1[1] - bounds.0[1]) / 4096.).max(1e-9);
+    let sample_error = std::cell::RefCell::new(None);
     let result = sample_mesh_with_seams(
         &mesh,
         &SampleOptions {
@@ -186,8 +184,18 @@ fn sample_colors(
             ..Default::default()
         },
         seams,
-        |p| sample(p).map(f64::from),
-    )?;
+        |p| match sample(p) {
+            Ok(color) => color.map(f64::from),
+            Err(error) => {
+                *sample_error.borrow_mut() = Some(error);
+                [0.; 4]
+            }
+        },
+    );
+    if let Some(error) = sample_error.into_inner() {
+        return Err(error);
+    }
+    let result = result?;
     Ok(ColoredMesh {
         positions: result.positions,
         colors: result
@@ -202,56 +210,23 @@ fn sample_colors(
 fn colorize_along(
     mesh: FillMesh,
     gradient: &Gradient,
-    table: &[(f64, [f64; 2])],
+    table: &planar_geometry::measure::ArcLengthIndex,
 ) -> Result<ColoredMesh> {
-    check(!table.is_empty(), "Empty arc-length table")?;
-    let total = table.last().map(|e| e.0).unwrap_or(0.0).max(1e-12);
+    let total = table.total_length().max(1e-12);
     let max_edge = if gradient.spread == crate::appearance::GradientSpread::Pad {
         f64::INFINITY
     } else {
         total / 32.
     };
     sample_colors(mesh, max_edge, &[], |p| {
-        gradient.sample(nearest_arc_t(p, table) / total).to_rgba()
+        Ok(gradient.sample(table.nearest_length(p)? / total).to_rgba())
     })
 }
 
-fn arc_length_table(path: &BezierPath) -> Result<Vec<(f64, [f64; 2])>> {
-    let pts = path.flatten()?;
-    check(pts.len() >= 2, "Path too short for arc table")?;
-    let mut out = Vec::with_capacity(pts.len());
-    let mut acc = 0.0;
-    out.push((0.0, pts[0]));
-    for w in pts.windows(2) {
-        let d = ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2)).sqrt();
-        acc += d;
-        out.push((acc, w[1]));
-    }
-    Ok(out)
-}
-
-fn nearest_arc_t(p: [f64; 2], table: &[(f64, [f64; 2])]) -> f64 {
-    let mut best_t = 0.0;
-    let mut best_d = f64::INFINITY;
-    for window in table.windows(2) {
-        let (t0, a) = window[0];
-        let (t1, b) = window[1];
-        let ab = [b[0] - a[0], b[1] - a[1]];
-        let ap = [p[0] - a[0], p[1] - a[1]];
-        let l2 = ab[0] * ab[0] + ab[1] * ab[1];
-        let u = if l2 < 1e-18 {
-            0.0
-        } else {
-            ((ap[0] * ab[0] + ap[1] * ab[1]) / l2).clamp(0.0, 1.0)
-        };
-        let q = [a[0] + ab[0] * u, a[1] + ab[1] * u];
-        let d = (p[0] - q[0]).hypot(p[1] - q[1]);
-        if d < best_d {
-            best_d = d;
-            best_t = t0 + (t1 - t0) * u;
-        }
-    }
-    best_t
+fn arc_length_table(path: &BezierPath) -> Result<planar_geometry::measure::ArcLengthIndex> {
+    Ok(planar_geometry::measure::ArcLengthIndex::new(
+        &path.flatten()?,
+    )?)
 }
 
 /// Premultiply vertex colors by document opacity in `[0,1]`.
@@ -315,6 +290,51 @@ mod tests {
             .unwrap();
         assert!(left > 200);
         assert!(right > 200);
+    }
+
+    #[test]
+    fn direct_gradient_stroke_keeps_hole_and_spatial_colors() {
+        let path = BezierPath::from_rect([0., 0.], [10., 10.]).unwrap();
+        let gradient = Gradient::linear(
+            [0., 0.],
+            [10., 0.],
+            vec![
+                GradientStop {
+                    offset: 0.,
+                    color: Color::rgb(255, 0, 0),
+                },
+                GradientStop {
+                    offset: 1.,
+                    color: Color::rgb(0, 0, 255),
+                },
+            ],
+        );
+        let mesh = gradient_stroke_mesh(
+            &path,
+            &StrokeOptions {
+                width: 2.,
+                ..Default::default()
+            },
+            &gradient,
+            GradientSampleMode::Spatial,
+        )
+        .unwrap();
+        let mut area = 0.;
+        for ids in mesh.indices.chunks_exact(3) {
+            let [a, b, c] = [
+                mesh.positions[ids[0] as usize],
+                mesh.positions[ids[1] as usize],
+                mesh.positions[ids[2] as usize],
+            ];
+            area += ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) * 0.5;
+            let center = [(a[0] + b[0] + c[0]) / 3., (a[1] + b[1] + c[1]) / 3.];
+            assert!(center[0] <= 1. || center[0] >= 9. || center[1] <= 1. || center[1] >= 9.);
+        }
+        assert!((area - 80.).abs() < 1e-8);
+        for (p, color) in mesh.positions.iter().zip(&mesh.colors) {
+            let expected = gradient.sample_at(*p).to_rgba();
+            assert!((0..4).all(|i| (color[i] as i16 - expected[i] as i16).abs() <= 1));
+        }
     }
 
     #[test]

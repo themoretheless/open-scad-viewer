@@ -1,0 +1,390 @@
+--- a/crates/planar-geometry/src/tessellation.rs
++++ b/crates/planar-geometry/src/tessellation.rs
+@@ -9,7 +9,8 @@
+ use math_core::{cross2, sub2};
+ use std::collections::{BTreeSet, HashMap};
+ 
+-use crate::limits::{MESH_TRIANGLES as MAX_TRIANGLES, MESH_VERTICES as MAX_VERTICES};
++const MAX_VERTICES: usize = 65_536;
++const MAX_TRIANGLES: usize = 131_072;
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+ pub enum FillRule {
+@@ -118,7 +119,6 @@
+     });
+     let (mut start_cursor, mut end_cursor) = (0, 0);
+     let mut active_ids = BTreeSet::new();
+-    let mut active = Vec::new();
+     for band in levels.windows(2) {
+         let (bottom, top) = (band[0], band[1]);
+         while start_cursor < starts.len() {
+@@ -155,11 +155,13 @@
+         };
+         // Normalization split every crossing; active edges cannot exchange
+         // order inside this open band. Outer and hole edges alternate here.
+-        active.clear();
+-        active.extend(active_ids.iter().map(|&index| {
+-            let (a, b) = edges[index];
+-            (x_at(a, b, middle), a, b)
+-        }));
++        let mut active: Vec<_> = active_ids
++            .iter()
++            .map(|&index| {
++                let (a, b) = edges[index];
++                (x_at(a, b, middle), a, b)
++            })
++            .collect();
+         active.sort_by(|a, b| a.0.total_cmp(&b.0));
+         check(active.len() % 2 == 0, "Unbalanced fill boundary")?;
+         for pair in active.chunks_exact(2) {
+--- a/crates/planar-geometry/src/stroke.rs
++++ b/crates/planar-geometry/src/stroke.rs
+@@ -77,28 +77,23 @@
+     opts: &StrokeOptions,
+     tolerance: f64,
+ ) -> Result<Vec<BezierPath>> {
+-    stroke_rings(path, opts, tolerance)?
+-        .iter()
+-        .map(|ring| BezierPath::from_polyline(ring, true))
+-        .collect()
+-}
+-
+-/// Shared internal region pipeline. Keep normalized rings as rings until a
+-/// caller actually needs editable paths; renderers consume them directly.
+-pub(crate) fn stroke_rings(
+-    path: &BezierPath,
+-    opts: &StrokeOptions,
+-    tolerance: f64,
+-) -> Result<crate::rings::Rings> {
+     let mut pts = stroke_points(path, opts, tolerance)?;
+     let origin = center_stroke_points(&mut pts)?;
+-    let mut rings = outline_points(pts, path.closed, opts, tolerance, true)?;
+-    if origin != [0., 0.] {
+-        for point in rings.iter_mut().flatten() {
+-            *point = add2(*point, origin);
+-        }
+-    }
+-    Ok(rings)
++    let paths = outline_points(pts, path.closed, opts, tolerance, true)?;
++    if origin == [0., 0.] {
++        return Ok(paths);
++    }
++    paths
++        .into_iter()
++        .map(|p| {
++            let points: Vec<_> = p
++                .flatten_tol(tolerance)?
++                .into_iter()
++                .map(|v| add2(v, origin))
++                .collect();
++            BezierPath::from_polyline(&points, true)
++        })
++        .collect()
+ }
+ 
+ /// Direct, nonoverlapping ribbon mesh when the offset boundary is certified.
+@@ -148,7 +143,11 @@
+         }
+     }
+     // A rejected ribbon must not repeat the bounded intersection certificate.
+-    let rings = outline_points(pts, closed, opts, tolerance, false)?;
++    let paths = outline_points(pts, closed, opts, tolerance, false)?;
++    let rings = paths
++        .iter()
++        .map(|p| p.flatten_tol(tolerance))
++        .collect::<Result<_>>()?;
+     crate::tessellation::tessellate_normalized_rings(&rings)
+ }
+ 
+@@ -181,15 +180,21 @@
+     opts: &StrokeOptions,
+     tolerance: f64,
+     try_simple: bool,
+-) -> Result<crate::rings::Rings> {
++) -> Result<Vec<BezierPath>> {
+     if closed && opts.dash.as_ref().is_none_or(Vec::is_empty) {
+         if let Some(rings) = convex_closed_stroke(&pts, opts, tolerance)? {
+-            return Ok(rings);
++            return rings
++                .iter()
++                .map(|r| BezierPath::from_polyline(r, true))
++                .collect();
+         }
+     }
+     if try_simple && opts.dash.as_ref().is_none_or(Vec::is_empty) {
+         if let Some(rings) = simple::outline(&pts, closed, opts, tolerance)? {
+-            return Ok(rings);
++            return rings
++                .iter()
++                .map(|r| BezierPath::from_polyline(r, true))
++                .collect();
+         }
+     }
+     let polylines = match &opts.dash {
+@@ -202,7 +207,10 @@
+     }
+     let contours = crate::rings::nonzero(&pieces)?;
+     check(!contours.is_empty(), "Stroke produced no outline")?;
+-    Ok(contours)
++    contours
++        .iter()
++        .map(|ring| BezierPath::from_polyline(ring, true))
++        .collect()
+ }
+ 
+ /// A simple convex ring has two offset boundaries, with no arrangement to
+--- a/crates/planar-geometry/src/render.rs
++++ b/crates/planar-geometry/src/render.rs
+@@ -11,7 +11,7 @@
+     use crate::path::{BezierPath, PathSegment};
+     use crate::{Result, check};
+ 
+-    use crate::limits::PATH_SEGMENTS as MAX_PATH_ITEMS;
++    const MAX_PATH_ITEMS: usize = 65_536;
+ 
+     pub mod math {
+         #[derive(Debug, Clone, Copy, PartialEq, Default)]
+@@ -329,11 +329,14 @@
+                 if contour.segments.is_empty() {
+                     continue;
+                 }
+-                rings.extend(crate::stroke::stroke_rings(
++                let outlines = crate::stroke::outline_stroke_tol(
+                     contour,
+                     &core_options,
+                     options.tolerance as f64,
+-                )?);
++                )?;
++                for outline in outlines {
++                    rings.push(outline.flatten_tol(options.tolerance as f64)?);
++                }
+             }
+             // A single outline operation already returned a normalized region.
+             // Multiple independently stroked contours still need a joint union.
+--- a/crates/planar-geometry/src/lib.rs
++++ b/crates/planar-geometry/src/lib.rs
+@@ -13,8 +13,6 @@
+ pub mod curve_boolean;
+ pub mod edit;
+ pub mod effects;
+-pub mod limits;
+-pub mod measure;
+ pub mod path;
+ pub mod path_offset;
+ pub mod pathfinder;
+--- a/crates/planar-geometry/src/path.rs
++++ b/crates/planar-geometry/src/path.rs
+@@ -39,7 +39,8 @@
+ /// Default flatten tolerance in mm (chord deviation).
+ pub const FLATTEN_TOLERANCE: f64 = 0.25;
+ const ELLIPSE_KAPPA: f64 = 0.552_285;
+-use crate::limits::{FLATTEN_POINTS as MAX_FLATTEN_POINTS, PATH_SEGMENTS as MAX_SEGMENTS};
++const MAX_SEGMENTS: usize = 65_536;
++const MAX_FLATTEN_POINTS: usize = 65_537;
+ 
+ fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
+     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+--- a/crates/planar-geometry/src/rings.rs
++++ b/crates/planar-geometry/src/rings.rs
+@@ -54,9 +54,116 @@
+     }
+ }
+ 
+-mod winding;
+-use winding::WindingIndex;
+-
++#[derive(Clone, Copy)]
++struct WindingEdge {
++    a: [f64; 2],
++    b: [f64; 2],
++    operand: usize,
++}
++
++/// Interval index for horizontal ray queries. A typical smooth outline has
++/// only two active edges at a queried height, so boundary classification should
++/// not rescan thousands of unrelated source edges per atomic segment.
++struct WindingIndex {
++    middle: f64,
++    lower: Vec<WindingEdge>,
++    upper: Vec<WindingEdge>,
++    left: Option<Box<Self>>,
++    right: Option<Box<Self>>,
++}
++
++impl WindingIndex {
++    fn new(a: &Rings, b: &Rings) -> Option<Box<Self>> {
++        Self::build(
++            [a, b]
++                .into_iter()
++                .enumerate()
++                .flat_map(|(operand, rings)| {
++                    rings.iter().flat_map(move |ring| {
++                        (0..ring.len()).map(move |i| WindingEdge {
++                            a: ring[i],
++                            b: ring[(i + 1) % ring.len()],
++                            operand,
++                        })
++                    })
++                })
++                .filter(|edge| edge.a[1] != edge.b[1])
++                .collect(),
++        )
++    }
++
++    fn build(edges: Vec<WindingEdge>) -> Option<Box<Self>> {
++        if edges.is_empty() {
++            return None;
++        }
++        // Split at a median lower endpoint, rather than an interpolated center:
++        // the median interval necessarily spans this coordinate even if it is
++        // only one ULP high. Both recursive sides contain at most half the edges.
++        let mut starts: Vec<_> = edges.iter().map(|e| e.a[1].min(e.b[1])).collect();
++        let median = starts.len() / 2;
++        starts.select_nth_unstable_by(median, f64::total_cmp);
++        Some(Box::new(Self::partition_at(edges, starts[median])))
++    }
++
++    fn partition_at(edges: Vec<WindingEdge>, middle: f64) -> Self {
++        let (mut left, mut right, mut lower) = (Vec::new(), Vec::new(), Vec::new());
++        for edge in edges {
++            if edge.a[1].max(edge.b[1]) <= middle {
++                left.push(edge);
++            } else if edge.a[1].min(edge.b[1]) > middle {
++                right.push(edge);
++            } else {
++                lower.push(edge);
++            }
++        }
++        lower.sort_by(|a, b| a.a[1].min(a.b[1]).total_cmp(&b.a[1].min(b.b[1])));
++        let mut upper = lower.clone();
++        upper.sort_by(|a, b| b.a[1].max(b.b[1]).total_cmp(&a.a[1].max(a.b[1])));
++        Self {
++            middle,
++            lower,
++            upper,
++            left: Self::build(left),
++            right: Self::build(right),
++        }
++    }
++
++    fn winding(&self, p: [f64; 2], output: &mut [i32; 2]) {
++        let add = |edge: &WindingEdge, output: &mut [i32; 2]| {
++            if edge.a[0].max(edge.b[0]) <= p[0] {
++                return;
++            }
++            let cross = cross2(sub2(edge.b, edge.a), sub2(p, edge.a));
++            if edge.b[1] > edge.a[1] && cross > 0. {
++                output[edge.operand] += 1;
++            }
++            if edge.b[1] < edge.a[1] && cross < 0. {
++                output[edge.operand] -= 1;
++            }
++        };
++        if p[1] < self.middle {
++            for edge in &self.lower {
++                if edge.a[1].min(edge.b[1]) > p[1] {
++                    break;
++                }
++                add(edge, output);
++            }
++            if let Some(left) = &self.left {
++                left.winding(p, output);
++            }
++        } else {
++            for edge in &self.upper {
++                if edge.a[1].max(edge.b[1]) <= p[1] {
++                    break;
++                }
++                add(edge, output);
++            }
++            if let Some(right) = &self.right {
++                right.winding(p, output);
++            }
++        }
++    }
++}
+ pub fn hull2(mut p: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
+     p.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+     p.dedup();
+@@ -194,15 +301,15 @@
+     rule_a: Option<FillRule>,
+     rule_b: Option<FillRule>,
+ ) -> Result<Rings> {
+-    use crate::limits::ARRANGEMENT_ATOMS as MAX_ATOMS;
+-    use crate::limits::ARRANGEMENT_SPLIT_POINTS as MAX_SPLIT_POINTS;
++    const MAX_SPLIT_POINTS: usize = 262_144;
++    const MAX_ATOMS: usize = 131_072;
+     let edges: Vec<_> = a
+         .iter()
+         .chain(b)
+         .flat_map(|r| (0..r.len()).map(move |i| (r[i], r[(i + 1) % r.len()])))
+         .collect();
+     check(
+-        edges.len() <= crate::limits::ARRANGEMENT_EDGES,
++        edges.len() <= 65_536,
+         "Planar arrangement exceeds 65536 edges",
+     )?;
+     let (coordinate_scale, extent) = coordinate_metrics(a.iter().chain(b).flatten())?;
+@@ -223,7 +330,9 @@
+     let winding_index = WindingIndex::new(a, b);
+     let choose = |p| {
+         let mut count = [0; 2];
+-        winding_index.winding(p, &mut count);
++        if let Some(index) = &winding_index {
++            index.winding(p, &mut count);
++        }
+         let [wa, wb] = count;
+         let x = filled(wa, rule_a);
+         let y = filled(wb, rule_b);
+@@ -274,7 +383,7 @@
+         }
+     }
+     check(
+-        candidates(&edge_order, axis) <= crate::limits::ARRANGEMENT_PAIR_CANDIDATES,
++        candidates(&edge_order, axis) <= 8_000_000,
+         "Planar candidate pair budget exceeded",
+     )?;
+     for (order, &i) in edge_order.iter().enumerate() {
+@@ -524,10 +633,7 @@
+                     }
+                 }
+             }
+-            check(
+-                count <= crate::limits::ARRANGEMENT_SPLIT_POINTS,
+-                "Planar boundary noding budget exceeded",
+-            )?;
++            check(count <= 262_144, "Planar boundary noding budget exceeded")?;
+         }
+     }
+     let mut out = BTreeSet::new();
+--- a/crates/planar-geometry/src/stroke_simple.rs
++++ b/crates/planar-geometry/src/stroke_simple.rs
+@@ -170,7 +170,7 @@
+         && (min_turn >= 0. || max_turn <= 0.)
+         && (total_turn.abs() - std::f64::consts::TAU).abs() < 1e-7;
+     crate::rings::coordinate_metrics(rings.iter().flatten())?;
+-    if rings.iter().map(Vec::len).sum::<usize>() > crate::limits::MESH_VERTICES
++    if rings.iter().map(Vec::len).sum::<usize>() > 65_536
+         || (!convex && !simple_boundaries(&rings)?)
+     {
+         return Ok(None);
+@@ -232,9 +232,7 @@
+                 triangle(&mut mesh, base, base + i + 1, base + i)?;
+             }
+         }
+-        if mesh.positions.len() > crate::limits::MESH_VERTICES
+-            || mesh.indices.len() / 3 > crate::limits::MESH_TRIANGLES
+-        {
++        if mesh.positions.len() > 65_536 || mesh.indices.len() / 3 > 131_072 {
+             return None;
+         }
+         Some(mesh)
+@@ -283,7 +281,7 @@
+             edges.push((a, b, r, i));
+         }
+     }
+-    if edges.len() > crate::limits::MESH_VERTICES {
++    if edges.len() > 65_536 {
+         return Ok(false);
+     }
+     edges.sort_unstable_by(|a, b| a.0[0].min(a.1[0]).total_cmp(&b.0[0].min(b.1[0])));

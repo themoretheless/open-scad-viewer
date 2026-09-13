@@ -1,0 +1,275 @@
+{
+  "id": "own-rust-cad-oracle-v2",
+  "generatedAt": "2026-09-13T10:39:37.742Z",
+  "previous": {
+    "path": "tests/fixtures/own-rust-cad-oracle-v1.json",
+    "sha256": "4564124cc236974f353d66944cff953f4ae4fbd71f546d5c10310bf645c0a9c7"
+  },
+  "review": "docs/qualification/own-rust-cad-oracle-v2-review.md",
+  "scope": "Five fixed own-Rust direct evaluator cases; current LME1/LSE1 bytes, independently checked geometry and retained semantic metadata. Not Manifold binary compatibility or whole-application qualification.",
+  "source": {
+    "sha256": "5fc7b0308baf93d07e547e395cdf62e8bb89f3c59b82400645631d0c4774e32a",
+    "files": 645
+  },
+  "artifacts": {
+    "wasmSha256": "bc9e39e2ff1e0b08c0dba9c857752522250431f3b4d121957c92fb43b2102d44",
+    "packedSha256": "0643ec25aaf79a281c8f09cf30ede95b8b0b7b087b23b5e6b7523cb60602bd4e",
+    "decoderSha256": "a977746b545c60593208ae2f3e4fe6f0661e602cc2f7dc6342533b7d36cda47f"
+  },
+  "verification": {
+    "freshProcesses": 2,
+    "deterministic": true,
+    "semanticContract": "own-rust-cad-oracle-v2"
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "v22.23.2",
+    "rustc": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "cargo": "cargo 1.100.0-nightly (3c0b53475 2026-09-04)"
+  },
+  "cases": {
+    "colored-transform": {
+      "source": "color(\"#336699cc\") translate([1,2,3]) cube([2,3,4]);",
+      "quality": "full",
+      "meshLength": 2718,
+      "meshHash": "b5557695b31fada6d1ecaf352b4706fd1602ba02d418704c558a325ac76581d0",
+      "sceneLength": 2950,
+      "sceneHash": "6c8c7e019585df4b12e04b5647ab1f38314dfa0279fac2810db8a10d17f49256",
+      "volume": 24,
+      "surfaceArea": 52,
+      "measurements": [
+        {
+          "bounds": {
+            "min": [
+              1,
+              2,
+              3
+            ],
+            "max": [
+              3,
+              5,
+              7
+            ]
+          },
+          "components": [
+            {
+              "vertices": 8,
+              "edges": 18,
+              "triangles": 12,
+              "volume": 24.000000000000004,
+              "area": 52
+            }
+          ],
+          "volume": 24.000000000000004,
+          "area": 52
+        }
+      ]
+    },
+    "boolean-difference": {
+      "source": "difference(){ cube([4,4,4], center=true); sphere(r=1,$fn=16); }",
+      "quality": "full",
+      "meshLength": 11334,
+      "meshHash": "f025ca77304fa8200afcdfa15edc55dc1fb0f0240bd78d47ccf3eee3bced35f1",
+      "sceneLength": 11568,
+      "sceneHash": "ef8f43e6799a850bd6eb31fe1fa53434898f152a8a65a03c3277279a22a8a245",
+      "volume": 60.073403610888725,
+      "surfaceArea": 108.16668943855439,
+      "measurements": [
+        {
+          "bounds": {
+            "min": [
+              -2,
+              -2,
+              -2
+            ],
+            "max": [
+              2,
+              2,
+              2
+            ]
+          },
+          "components": [
+            {
+              "vertices": 114,
+              "edges": 336,
+              "triangles": 224,
+              "volume": -3.9265963371696175,
+              "area": 12.166689327606445
+            },
+            {
+              "vertices": 8,
+              "edges": 18,
+              "triangles": 12,
+              "volume": 64,
+              "area": 96
+            }
+          ],
+          "volume": 60.07340366283038,
+          "area": 108.16668932760645
+        }
+      ]
+    },
+    "repeated-loop-identities": {
+      "source": "module peg(x=0){translate([x,0,0]) sphere(r=1,$fn=12);} for(i=[0,2,0]) peg(i);",
+      "quality": "full",
+      "meshLength": 20634,
+      "meshHash": "4007b64c1dd58b9c74aac76fa31e2c1c2df697e8c4b4881b075ea6f74a0568f8",
+      "sceneLength": 17967,
+      "sceneHash": "53028403fcc9b90528df79bfe05cc3396e54c20efd39d7690d1c7a35dd7dd765",
+      "volume": 11.196152422706632,
+      "surfaceArea": 35.58386500883158,
+      "measurements": [
+        {
+          "bounds": {
+            "min": [
+              -1,
+              -1,
+              -1
+            ],
+            "max": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "vertices": 62,
+              "edges": 180,
+              "triangles": 120,
+              "volume": 3.7320507038085577,
+              "area": 11.861288112824736
+            }
+          ],
+          "volume": 3.7320507038085577,
+          "area": 11.861288112824736
+        },
+        {
+          "bounds": {
+            "min": [
+              1,
+              -1,
+              -1
+            ],
+            "max": [
+              3,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "vertices": 62,
+              "edges": 180,
+              "triangles": 120,
+              "volume": 3.7320508322387127,
+              "area": 11.861288384114127
+            }
+          ],
+          "volume": 3.7320508322387127,
+          "area": 11.861288384114127
+        },
+        {
+          "bounds": {
+            "min": [
+              -1,
+              -1,
+              -1
+            ],
+            "max": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "vertices": 62,
+              "edges": 180,
+              "triangles": 120,
+              "volume": 3.7320507038085577,
+              "area": 11.861288112824736
+            }
+          ],
+          "volume": 3.7320507038085577,
+          "area": 11.861288112824736
+        }
+      ]
+    },
+    "reduced-preview": {
+      "source": "sphere(r=5,$fn=96);",
+      "quality": "preview",
+      "meshLength": 98690,
+      "meshHash": "d65a1ec2080b801557359a00e43512696f714c7d7851b887b6e5bcdc1c81c760",
+      "sceneLength": 98926,
+      "sceneHash": "63a08599986c85373d2bb4a3de8efd237a3926fb2aed50403379c5faa1b1b741",
+      "volume": 519.8714295426239,
+      "surfaceArea": 313.0390631940918,
+      "measurements": [
+        {
+          "bounds": {
+            "min": [
+              -5,
+              -5,
+              -5
+            ],
+            "max": [
+              5,
+              5,
+              5
+            ]
+          },
+          "components": [
+            {
+              "vertices": 1106,
+              "edges": 3312,
+              "triangles": 2208,
+              "volume": 519.8714260853623,
+              "area": 313.0390618051524
+            }
+          ],
+          "volume": 519.8714260853623,
+          "area": 313.0390618051524
+        }
+      ]
+    },
+    "reduced-preview-full-companion": {
+      "source": "sphere(r=5,$fn=96);",
+      "quality": "full",
+      "meshLength": 408964,
+      "meshHash": "2aacddc467ff5d5129cfb8c4120a22ff0321163a6145ac47d7a7a86150d9d223",
+      "sceneLength": 409202,
+      "sceneHash": "56a79f97b98d5c2d12fceb1cd66c4414a54787062dc698f3bef4bffad70ef1a9",
+      "volume": 522.6649013606755,
+      "surfaceArea": 313.8789780354338,
+      "measurements": [
+        {
+          "bounds": {
+            "min": [
+              -5,
+              -5,
+              -5
+            ],
+            "max": [
+              5,
+              5,
+              5
+            ]
+          },
+          "components": [
+            {
+              "vertices": 4514,
+              "edges": 13536,
+              "triangles": 9024,
+              "volume": 522.6649029908974,
+              "area": 313.8789786876998
+            }
+          ],
+          "volume": 522.6649029908974,
+          "area": 313.8789786876998
+        }
+      ]
+    }
+  }
+}

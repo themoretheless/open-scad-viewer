@@ -1,0 +1,43 @@
+{
+  "before_source_sha256": {
+    "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+    "crates/planar-geometry/src/tessellation.rs": "a8ce82eae986e2a64bf5324b28775479a4494f66bc006613554487372e5969cc",
+    "crates/planar-geometry/src/stroke.rs": "faa3398158352e520037d8be7559b57e3a45508e4b548e1395aa6c9e9bc17391",
+    "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+    "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+    "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+    "crates/planar-geometry/src/render.rs": "e177788f195278528fd60ff0a229da1103e6250cd6e215bbbfb3466f441ee3d4",
+    "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+    "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+    "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+    "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+    "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+    "crates/planar-geometry/src/rings.rs": "878c098e1e7d61700e98d9ab306081212eebcfe9b9976a53dc9f0b92fae9025f",
+    "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+    "crates/planar-geometry/src/stroke_simple.rs": "31d2c1d2a3714b9eaf5eb70d1c3b6dd4548c505556009c6c9b0c9dcc9a3186f1",
+    "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+    "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+    "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c"
+  },
+  "after_source_sha256": {
+    "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+    "crates/planar-geometry/src/tessellation.rs": "119c3c9d2a1c8e3ea1eaf53bff280fdd4f836dcabfc67bfa6aa694be03a2ad6e",
+    "crates/planar-geometry/src/stroke.rs": "cd6c4423b890cc0ba6fba91a6e8e18c8565806942c2a2f3c5d0d54c300590b04",
+    "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+    "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+    "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+    "crates/planar-geometry/src/render.rs": "e177788f195278528fd60ff0a229da1103e6250cd6e215bbbfb3466f441ee3d4",
+    "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+    "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+    "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+    "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+    "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+    "crates/planar-geometry/src/rings.rs": "f96dc6af1ee3d7268b4070b70b7a8cac3fbfdf694ffb59abee2bf48b4434d27c",
+    "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+    "crates/planar-geometry/src/stroke_simple.rs": "31d2c1d2a3714b9eaf5eb70d1c3b6dd4548c505556009c6c9b0c9dcc9a3186f1",
+    "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+    "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+    "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c"
+  },
+  "harness_sha256": "2ebe9496ac79884bfd0964b44bcd1fdd05bc5be255ddc065726087d44684b5ea"
+}

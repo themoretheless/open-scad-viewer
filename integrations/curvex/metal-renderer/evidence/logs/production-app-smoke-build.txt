@@ -1,0 +1,11 @@
+   Compiling curvex v0.1.0 (/private/tmp/osv-curvex-qualification/metal-production)
+warning: unused import: `eframe::App`
+ --> examples/osv_metal_app_smoke.rs:8:5
+  |
+8 | use eframe::App as _;
+  |     ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `curvex` (example "osv_metal_app_smoke") generated 1 warning
+    Finished `release` profile [optimized] target(s) in 37.45s

@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native circle/arc sampling and planar sketch transforms",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 63,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4613804
+  },
+  "coverage": [
+    "Signed arc endpoints and circle closure convention",
+    "Explicit-pivot polyline placement and workplane metadata preservation",
+    "Analytic center/radius/start transformed before display resampling",
+    "Invalid radius/sweep/pivot/scale and empty point set refusal",
+    "Existing direct editor, profile and modeling UI regressions"
+  ],
+  "limitations": [
+    "Other contour operations, world placement helpers and document semantics still have host code",
+    "Sampling is display discretization, not a curve approximation certificate",
+    "General B-rep and complete Rust migration remain open",
+    "Shared qualification predates this artifact"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sketch.rs": "b84d9332c85e41b390641684085d17971e4459693988e92908cbe2bfad628bd6",
+    "crates/geometry-bridge/src/lib.rs": "8be62887480fea942b8f0865688c680e9ee5133c3dd44326afddf547e40120ba",
+    "src/services/directSketchGeometry.ts": "ccc6c52a35fa19d03a36efeb692460d07b39edb4d746672724dfc875f39da809",
+    "tests/nativeSketchGeometry.test.ts": "4c356cb028996e519e9d72bb25c3a524361be5b27aedae0fb2cb49f6957a1146",
+    "src/generated/geometry-kernels/bytes.ts": "ad6544b616e1af9da600d754001756337a493b3c94d2c01560522d3c4548b820"
+  }
+}

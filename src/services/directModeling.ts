@@ -1,4 +1,5 @@
-import { sampleCurve, worldPoint, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
+import {callGeometryRust} from './geometry/kernel'
+import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, type PolygonMesh } from './geometry/polygon'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
@@ -36,7 +37,10 @@ export function parseDirectDocument(text: string): DirectDocument {
   for (const b of d.bodies) {
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
-    if (b.brep) inspectNurbsBrep(b.brep)
+    if (b.brep) {
+      inspectNurbsBrep(b.brep)
+      if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
+    }
   }
   for (const item of d.curves) validateNurbsCurve(item.curve)
   for (const item of d.surfaces) {
@@ -72,16 +76,14 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
-  return { id, name: sketch.name + ' · 3D', mesh: { positions: Array.from({length:built.positions.length/3},(_,i)=>worldPoint(built.positions.slice(i*3,i*3+3),sketch.plane)).flat(), indices: [...built.indices] } }
+  return { id, name: sketch.name + ' · 3D', mesh: { positions: worldPoints(Array.from({length:built.positions.length/3},(_,i)=>built.positions.slice(i*3,i*3+3)),sketch.plane).flat(), indices: [...built.indices] } }
 }
 
+/** Author the sketch extrusion before deriving a display mesh. */
+export const extrudeSketchBrep=(sketch:DirectSketch,height:number,baseZ=0):NurbsBrep=>callGeometryRust('brep_nurbs_sketch_extrude',{sketch,height,baseZ})
+
 export function transformDirectPoints(points: number[][], delta: number[], angle: number, scale: number): number[][] {
-  if (!points.length || !delta.every(finite) || !finite(angle) || !finite(scale) || scale <= 0) throw new Error('Invalid transform.')
-  const center = [0, 1, 2].map(axis => points.reduce((sum, p) => sum + (p[axis] ?? 0), 0) / points.length)
-  const a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a)
-  return points.map(p => {
-    const x = (p[0] - center[0]) * scale, y = (p[1] - center[1]) * scale
-    return [center[0] + c * x - s * y + delta[0], center[1] + s * x + c * y + delta[1], center[2] + ((p[2] ?? 0) - center[2]) * scale + (delta[2] ?? 0)].slice(0, p.length)
-  })
+  return callGeometryRust('cad_transform_points',{points,delta,angle,scale})
 }
+
 export { bodyPoints, directBodiesScad } from './directBodiesScad'

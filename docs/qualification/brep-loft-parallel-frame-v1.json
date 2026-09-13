@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Faceted B-rep loft of parallel sections in arbitrary rigid placement",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBrepTests": 103,
+    "integrationTests": 73,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4619440
+  },
+  "coverage": [
+    "Native common-frame convexity and parallel-plane ordering admission",
+    "Rotated translated loft returns closed ten-face B-rep with volume 28 cubic mm",
+    "Nonparallel and reverse-ordered sections refuse",
+    "World coordinate bounds do not introduce a stricter translated local bound",
+    "Source section arrays preserved"
+  ],
+  "limitations": [
+    "Faceted planar side triangles, not smooth analytic NURBS loft",
+    "Only strictly convex consistently oriented parallel sections with matching vertex counts",
+    "Numerical geometry and validation, not global certified self-intersection proof",
+    "Workbench polygonal loft remains separate; general SectionMatch/FrameLaw and full B-rep completion remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/operations.rs": "5e221139eb2eeaeea02dd419413c1470f5d0ed6f2d1388fbefe9db6f78569800",
+    "tests/brepKernel.test.ts": "992d6f2bf9f0b88ac6308e90ef7c1de8c086d7171b61f4efdd2bd33ef1a9cd30",
+    "src/generated/geometry-kernels/bytes.ts": "a035f7fb7b83f879acd0adf7e81c813ed02ce4f743de878885bbfeec3908be83"
+  }
+}

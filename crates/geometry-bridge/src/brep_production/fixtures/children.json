@@ -1,0 +1,666 @@
+{
+ "source": "module pair(){children(0);children(1);} pair(){cube(1);translate([2,0,0]) cube(1);}",
+ "operations": [
+  {
+   "id": 0,
+   "operationId": "opv1:2df2d01bb690243e6ac0c6373023bf3137cb1f1ef5f15f7f2054454fa826169a",
+   "parent": null,
+   "childOrdinal": 0,
+   "name": "pair",
+   "category": "module",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "pair",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:0be55bf8c1d27bc1cb314ed05c3cc565246e3cb9a3466169eeffd43e367d0fde"
+  },
+  {
+   "id": 1,
+   "operationId": "opv1:459510509f758aec3f99e600179f3c3a838b104204c66f35d0f7d80eef524872",
+   "parent": 0,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "pair",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 2,
+   "operationId": "opv1:6795ac91e2cd635827102994e6423aac9f88e7a26122963a112b5fa1db66ee78",
+   "parent": 1,
+   "childOrdinal": 0,
+   "name": "children",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "pair",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "children",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:812e550a238c4625bf3e4c717bb0031e5c5d3b7f978acd6e7ed0f45aefbaa126"
+  },
+  {
+   "id": 3,
+   "operationId": "opv1:cacaf28f60d5df3f1aa8eeb9f51dc042410e50db78bee05671b84c925a689a60",
+   "parent": 1,
+   "childOrdinal": 1,
+   "name": "children",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "module",
+     "name": "pair",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "children",
+     "ordinal": 1
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:812e550a238c4625bf3e4c717bb0031e5c5d3b7f978acd6e7ed0f45aefbaa126"
+  },
+  {
+   "id": 4,
+   "operationId": "opv1:45feb7b2678b6f2f53f7d82a54da3fbbe0f0003faae2753d702676d862810004",
+   "parent": null,
+   "childOrdinal": 1,
+   "name": "pair",
+   "category": "module",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    }
+   ],
+   "identityEvidence": "same-name-positional",
+   "ambiguityGroup": "ambv1:0be55bf8c1d27bc1cb314ed05c3cc565246e3cb9a3466169eeffd43e367d0fde"
+  },
+  {
+   "id": 5,
+   "operationId": "opv1:6dc4a53467df82d442ed5f74be4f0245e06cf6265c2c3cce29e7c1b8e14c61b5",
+   "parent": 4,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 6,
+   "operationId": "opv1:565de1d208925a62c9c27890ef65205e2b03b847b5fcbc0f856c71de821cb342",
+   "parent": 5,
+   "childOrdinal": 0,
+   "name": "$expansion",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 7,
+   "operationId": "opv1:8553fe70097fec5f0b9dc273707acdadbc90e6ded1e0d76c938f8c7390be2ec0",
+   "parent": 6,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 8,
+   "operationId": "opv1:5785e970f78911956d634444bbb899535b97e03fb6ea1511792d08a77dc6bf52",
+   "parent": 6,
+   "childOrdinal": 0,
+   "name": "translate",
+   "category": "transform",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 9,
+   "operationId": "opv1:52689d27fca326992e98990ebb53a375f71614ac0796fb9ac20d1d5362cee4e1",
+   "parent": 8,
+   "childOrdinal": 0,
+   "name": "$body",
+   "category": "control",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  },
+  {
+   "id": 10,
+   "operationId": "opv1:44939dde9efe0d07046eaec523fa254de2d354fb4ae5b78e557695b26935c9a8",
+   "parent": 9,
+   "childOrdinal": 0,
+   "name": "cube",
+   "category": "geometry",
+   "structuralPath": [
+    {
+     "kind": "call",
+     "name": "pair",
+     "ordinal": 1
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "control",
+     "name": "$expansion",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "translate",
+     "ordinal": 0
+    },
+    {
+     "kind": "body",
+     "name": "$body",
+     "ordinal": 0
+    },
+    {
+     "kind": "call",
+     "name": "cube",
+     "ordinal": 0
+    }
+   ],
+   "identityEvidence": "structural-unique",
+   "ambiguityGroup": null
+  }
+ ],
+ "occurrences": [
+  {
+   "id": 0,
+   "occurrenceId": "occv1:5c218513b9ad271c5e5928b014db10af29c449f0f72a8b8faaf06f31d3a87c26",
+   "operation": 0,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 1,
+   "occurrenceId": "occv1:2fbe583f3f1d8fc9fe5b1928955e5e5eb5212705f733e9e36a9d4eb0ee293b61",
+   "operation": 4,
+   "parent": null,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 2,
+   "occurrenceId": "occv1:a98a634bb81315ba6094151be4fb9a731ffa622ae6170145e8b0aa4d8e0f64a0",
+   "operation": 5,
+   "parent": 1,
+   "staticParent": 1,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 3,
+   "occurrenceId": "occv1:eaa84da04f5afa202c7802a3cedd3a6f4cb15a68e70854e032ecb3802416f247",
+   "operation": 0,
+   "parent": 2,
+   "staticParent": null,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 4,
+   "occurrenceId": "occv1:71e9e6c126e769e24f8f313d8f623931165a9a027358c9979a128358bdcc1de5",
+   "operation": 1,
+   "parent": 3,
+   "staticParent": 3,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 5,
+   "occurrenceId": "occv1:ba0d30929cad72cba26acf38f2491728aa4a7f90b0a3d5b4e68367c0888f5821",
+   "operation": 2,
+   "parent": 4,
+   "staticParent": 4,
+   "dynamicSlots": [
+    {
+     "name": "$index",
+     "value": {
+      "tag": "number",
+      "value": 0
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 6,
+   "occurrenceId": "occv1:6a6f39392ef505cce2e44d7f456a14bd3ddc0136bf84191fae55f1d54ab071a6",
+   "operation": 6,
+   "parent": 5,
+   "staticParent": 2,
+   "dynamicSlots": [
+    {
+     "name": "$index",
+     "value": {
+      "tag": "number",
+      "value": 0
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 7,
+   "occurrenceId": "occv1:e1ec0082d4b36542813bcce7514972c7301b6b5eeea0dc171a931f44b49ef6f1",
+   "operation": 7,
+   "parent": 6,
+   "staticParent": 6,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 0,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:a63d29be4e250c09b8912bb279c88a2d00c4f7ef8f5fe86f9bda683259ef7af1"
+  },
+  {
+   "id": 8,
+   "occurrenceId": "occv1:b10cf1c43dfcf4397e471e31751419159ae86c9122d8175531331778bede26e6",
+   "operation": 3,
+   "parent": 4,
+   "staticParent": 4,
+   "dynamicSlots": [
+    {
+     "name": "$index",
+     "value": {
+      "tag": "number",
+      "value": 1
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 9,
+   "occurrenceId": "occv1:8f12dc1c80601f53c568df7c6d82baf5c0589bd1e907b7cea9e9546afd130b76",
+   "operation": 6,
+   "parent": 8,
+   "staticParent": 2,
+   "dynamicSlots": [
+    {
+     "name": "$index",
+     "value": {
+      "tag": "number",
+      "value": 1
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 10,
+   "occurrenceId": "occv1:62bc7570951ab45f7c31675610d733461b42c7c3e4bce4afa263a6616e99ba21",
+   "operation": 8,
+   "parent": 9,
+   "staticParent": 9,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 2,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:46f998c54dd69bb9a10b7d65eee9bda1584c92dcaf2727119d847795adc42519"
+  },
+  {
+   "id": 11,
+   "occurrenceId": "occv1:9bfe236a595497dec6fd9ccb08d73d976b14b1e658435921242e27cf4b4bf512",
+   "operation": 9,
+   "parent": 10,
+   "staticParent": 10,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": null,
+   "outputOrdinal": null,
+   "sceneEntityId": null
+  },
+  {
+   "id": 12,
+   "occurrenceId": "occv1:78542cc26adc790cbd89fd735cc35d8fdeccb71e6c2ee35c672e42145a3bf478",
+   "operation": 10,
+   "parent": 11,
+   "staticParent": 11,
+   "dynamicSlots": [
+    {
+     "name": "$evaluation",
+     "value": {
+      "tag": "undefined"
+     },
+     "duplicateOrdinal": 0
+    }
+   ],
+   "node": 1,
+   "outputOrdinal": 0,
+   "sceneEntityId": "entity:v2:8a85941bb17653c7c96afc570f8045aaced7ef318df79b77b3835dd6d3ed0d74"
+  }
+ ],
+ "nodes": [
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    1,
+    1,
+    1
+   ],
+   "center": false,
+   "id": 0
+  },
+  {
+   "kind": "box",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "size": [
+    1,
+    1,
+    1
+   ],
+   "center": false,
+   "id": 1
+  },
+  {
+   "kind": "transform",
+   "valueType": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "analytic-brep",
+    "evidence": {
+     "tag": "representation-preserving"
+    }
+   },
+   "input": 1,
+   "matrix": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    2,
+    0,
+    0,
+    1
+   ],
+   "id": 2
+  }
+ ],
+ "result": {
+  "tag": "multi",
+  "items": [
+   {
+    "node": 0,
+    "producerOccurrence": 7,
+    "identityOccurrence": 7,
+    "color": [
+     0.26,
+     0.52,
+     0.96,
+     1
+    ]
+   },
+   {
+    "node": 2,
+    "producerOccurrence": 10,
+    "identityOccurrence": 12,
+    "color": [
+     0.96,
+     0.52,
+     0.26,
+     1
+    ]
+   }
+  ]
+ },
+ "execution": {
+  "version": "semantic-execution-v2",
+  "evaluationOrder": [
+   0,
+   1,
+   2
+  ],
+  "discardedEffects": [],
+  "terminal": null
+ }
+}

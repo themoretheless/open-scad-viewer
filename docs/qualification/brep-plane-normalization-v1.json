@@ -1,0 +1,26 @@
+{
+  "scope": "Overflow/subnormal-safe native intersection plane normalization; not certified completeness",
+  "tests": {
+    "brepCore": 93,
+    "integrationPacking": 64,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4580270,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "9b97c688ab85ef9f896b2b439532089b7f990b606e6502e6c19c9f0872f118c4",
+    "tests/brepIntersections.test.ts": "7116518b981dc8ff05034aa6a3332e11ca71549d7957122c5c573f438013a0a6",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "dc416c1020ef4b9cd6a95731429bb9bb182fd7f1b51521bcd7739841c5930bce"
+  },
+  "limitations": [
+    "Intersection reports still cannot authorize topology changes",
+    "Shared qualification predates this WASM",
+    "General intersections, trimming and curved Booleans incomplete"
+  ]
+}

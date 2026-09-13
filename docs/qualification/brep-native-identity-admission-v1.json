@@ -1,0 +1,71 @@
+{
+  "date": "2026-09-14",
+  "scope": "Native identity-digest admission for semantic operations and occurrences: byte-exact Rust port of identityDigest/stableJson and of the opv1:/ambv1:/occv1:/entity:v2: derivers, strict validateOperations and the validateOccurrences identity subset behind the WASM ABI",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBridgeTests": 163,
+    "integrationTests": 79,
+    "testFiles": 6,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4657872
+  },
+  "coverage": [
+    "identityDigest ported byte-exact: SHA-256 (sha2 crate) over big-endian length-prefixed UTF-8 domain plus canonical payload bytes",
+    "stableJson ported byte-exact: object keys sorted by raw UTF-8 bytes (BTreeMap order), JSON.stringify string escaping, ECMAScript Number::toString number formatting replicated from the shortest round-trip digits (integer form up to 1e21, 0.000001 boundary, 1e-7 exponential boundary, subnormals, 19 pinned number cases match node String(n) exactly)",
+    "All four derivers ported: opv1: operation IDs, ambv1: ambiguity groups, occv1: occurrence IDs over parentId/staticParentId/operationId/dynamicSlots, entity:v2: scene entity IDs; every digest pinned against values produced by running the TS derivers in node, including non-ASCII path names and number/boolean/string/undefined/null/vector dynamic slots",
+    "Operations admitted natively: positional IDs, deterministic parent-before-child preorder with stack discipline, exact-once structural path extension, re-derived operation IDs, unique paths and IDs, dense-from-zero sibling child ordinals, ambiguity-group membership iff more than one same-name sibling with a re-derived group ID, identityEvidence consistency",
+    "Occurrence identity subset admitted natively: positional IDs, parent/staticParent bounded below the row and targeting the canonical first row of the referenced occurrence ID, staticParent null-ness and static operation instantiation consistency, re-derived occurrence IDs, rows sharing an ID describing the same logical evaluation (operation, parents, dynamic slots), per-ID output rows dense from zero with re-derived scene entity IDs, unique scene entity IDs, dynamic slot duplicate-ordinal density and distinctness",
+    "Unknown digest prefixes (opv2:/occv2:/entity:v3:) refuse natively through digest mismatch; wrong-by-one mutations across parent order, ordinals, structural paths, occurrenceId/sceneEntityId, duplicate ordinals and ambiguity membership all refuse",
+    "Admission stays optional-but-strict: absent operations skip operations and occurrence identity admission; present operations are strict, and refusals fire in brep_envelope::validate before Runner::new, so no graph node executes",
+    "executeBrepNativeProgram now transports core.operations through graph-begin with zero added host-side validation logic; a real lowered OpenSCAD difference program executes natively, and nine per-field identity tampers refuse with E_BREP_SEMANTIC_CONTRACT and zero onNode progress callbacks",
+    "Cargo.lock refreshed with sha2 0.11 (already pinned via rbench) plus previously untracked geometry-bridge dependencies; cargo build --locked and cargo test --locked pass"
+  ],
+  "behaviorChange": "Graph/session admission now re-derives operation, occurrence and scene-entity identity digests natively before any node executes; requests carrying tampered or inconsistent operations/occurrence identity fail with BREP_SEMANTIC_CONTRACT instead of executing geometry. Requests without operations behave exactly as before.",
+  "limits": {
+    "nodes": 25000,
+    "operations": 50000,
+    "occurrences": 100000,
+    "outputs": 1000,
+    "diagnostics": 10000,
+    "discardedEffects": 25000,
+    "tessellationIntents": 50000,
+    "declaredCapabilities": 32,
+    "capabilityClosure": 128,
+    "sourceCodeUnits": 250000,
+    "stringCodeUnits": 1000000,
+    "diagnosticMessageCodeUnits": 1000000,
+    "canonicalStringBytes": 16777216,
+    "snapshotValues": 1000000,
+    "snapshotDepth": 256,
+    "identityValueDepth": 32,
+    "sourceUtf8Bytes": 4000000,
+    "abiRequestBytes": 33554432
+  },
+  "limitations": [
+    "validateOccurrenceProduction replay (semanticProgramValidator.ts l.1381) remains host-side; native occurrence admission covers the identity subset only",
+    "$expansion continuation and module-activation anchoring (l.600/669), including the runtime ancestor-chain walk for staticParent, remain host-side",
+    "Provenance, tessellationIntents and diagnostics admission remain host-side; only the diagnostic template count enters the native closure derivation",
+    "Occurrence identity admission requires operations on the request; occurrence rows without operations keep the previous structural-only admission",
+    "The full envelope (envelope schema/version, exact core key set) is not admitted as one object natively; components arrive as graph-begin fields",
+    "The application executor replacement and full SemanticProgram admission remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_identity.rs": "bc6c5a0cfd27b8fccb42c2be5707dc9129608058cfa8b741a7630ee7bf1480c2",
+    "crates/geometry-bridge/src/brep_identity/tests.rs": "705472733aebb2cf5da3958ec28f2aaf047ba79474b3d20124e2217974fa9bd2",
+    "crates/geometry-bridge/src/brep_envelope.rs": "304f29763483e915f6f38aa4328a883dc8a210cad958f743df73c016bea59d55",
+    "crates/geometry-bridge/src/brep_result.rs": "3d65e1224e419a5644393ecc71ba8607612d14b32a0af811bec09157ce4776e2",
+    "crates/geometry-bridge/src/lib.rs": "116542ac76f1b006c6d8bba32f3fac8eb386291a08867a162857ded68dfac974",
+    "crates/geometry-bridge/Cargo.toml": "23711d45c51643764095e5bf7039de79c1f5d002eb0716c19f536a16faa70228",
+    "crates/Cargo.lock": "c7346c4f458a8b181bdcb3608781ce388d8877dc42ccf5964e89695dc993fa58",
+    "src/services/brepNativeExecutor.ts": "270dd413b445964172ce25516f13cc70157be73ac85eb929c7ede3b52e02832d",
+    "tests/brepIdentityAdmission.test.ts": "ebfe7dca2ffd51e55ec47f0a33b9eb4b16d234d615798b1c8029dd006c5841ba",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "b3572ebe6e3b251eb0da960521e6c7c4de120211c5d3647c37e91320857f827b",
+    "src/generated/geometry-kernels/bytes.ts": "da04c0cef0e8733b4a61821902acba2ac0bf620871f928fff5a2c464d2efc581"
+  }
+}

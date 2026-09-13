@@ -1,0 +1,31 @@
+{
+  "scope": "Raw immutable picking upload ABI; renderer migration incomplete",
+  "tests": {
+    "nativeRegistry": 3,
+    "wasmAndBvh": 13,
+    "vueTypecheck": "passed"
+  },
+  "cases": [
+    "Nonzero source view offsets",
+    "Snapshot remains unchanged after host mutations",
+    "Empty raw buffers",
+    "Explicit snapshot disposal"
+  ],
+  "dist": {
+    "status": "failed",
+    "bytes": 4708827,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/geometry-bridge/src/abi.rs": "eefe27df7aeba180f9bc5b2a7d2e286438aff96c912215cc4b48ff5273dde170",
+    "crates/geometry-bridge/src/mesh_picking.rs": "883be8a34c7e6b832b9ad80adef867690362fb83c5beff7c2838bc2798c6f084",
+    "crates/geometry-wasm/src/lib.rs": "c2cbf3babf45622760c459a800b8a0250805fe9e9522974745ad73d32909e477",
+    "src/services/geometry/meshAnalysis.ts": "aed86bf0c50bee5ca3f1e0b24f559844c107d77211662965aa901ca07f90f169",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "0db5387263fc9a33ddfe422add02cdb0b5b977b7e4100471e1abed1bc3fe6e08"
+  },
+  "limitations": [
+    "Renderer still uses TS raycasting",
+    "No interactive latency or full scene lifecycle qualification",
+    "Shared artifact evidence not refreshed"
+  ]
+}

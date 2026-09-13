@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native planar sketch miter offset and simple-contour admission",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 66,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4611341
+  },
+  "coverage": [
+    "Polygon insets/outsets for both windings",
+    "Collapsed inset refusal",
+    "Analytic signed arc retains center/start/sweep and adjusted radius",
+    "Open-contour, zero-distance, malformed and over-512-point requests refused",
+    "Self-intersection admission and existing editor/profile regressions"
+  ],
+  "limitations": [
+    "Numerical straight-segment miter offset only; topology-changing offset outputs and multiple loops are not supported by this adapter",
+    "Analytic circles/arcs remain exact parameters; sampled display points are not a deviation certificate",
+    "Trim/extend and other host geometry remain unmigrated",
+    "General B-rep completion and refreshed shared qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sketch_offset.rs": "b5ff4f6bc81313a67e789d3f9ba7bf6e3cee55035ef7603ec46db0973d36a377",
+    "crates/geometry-bridge/src/lib.rs": "67569800fac24bdb7d8daf087a5cfbfb9507c229e93604a9f36b0d91a40232ca",
+    "src/services/directSketchGeometry.ts": "eabd4b89083455845830e59ea6f043bb574ad7f2753553ddf3b27fe579e12fd0",
+    "tests/nativeSketchGeometry.test.ts": "e4637dc22b55a6b872266c5fd003a7eedbfb9d631e008c6748bfb339cf5f5d93",
+    "src/generated/geometry-kernels/bytes.ts": "424e40518fae41db9f3bd1c2f9991c0dec86488da7b69ff6595b88e38983c327"
+  }
+}

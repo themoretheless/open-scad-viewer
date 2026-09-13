@@ -1,0 +1,31 @@
+{
+  "scope": "Native group resize of display meshes and retained B-rep using one shared affine transform",
+  "tests": {
+    "polygonCore": 71,
+    "integrationPacking": 69,
+    "sphereToEllipsoid": "passed",
+    "lateInvalidBrepRollback": "passed",
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4589631,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/polygon-core/src/scene_flatten.rs": "8ae59978d0d1dbfd9c8f134e30e91a370dbbf73dac1166a3d3fe88cb42df01a9",
+    "crates/geometry-bridge/src/cad_resize.rs": "62f76c5fc2dde08b4ab20523d5a44b5de51abd7303c326d9370d6734e2a1edaf",
+    "crates/geometry-bridge/src/lib.rs": "9f6a06a289e6f3b56b352c131a0f92fa1d428c51e4118e709c357d96632c5640",
+    "src/services/cadWorkbench.ts": "0c4edfaad57f0c5d5c44e1cac00b93f92375069dd012390b2b3c9f4ea4ae3e26",
+    "tests/cadWorkbench.test.ts": "ec0e53ddcc91600026933f2dea02a5a0e7464b35f168865c4c198c54641e9d43",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "1b18c75215af9789655de71c073eb406c9bfd5f1cd298d8a8cdf787281cffbc7"
+  },
+  "limitations": [
+    "Other CAD operations still require migration",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

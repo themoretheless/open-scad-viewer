@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-13",
+  "scope": "Correct convex profile admission for native faceted B-rep operations",
+  "fullGoalComplete": false,
+  "checks": {
+    "reproducedBeforeFix": "Native pentagram admission regression failed before correction",
+    "nativeBrepTests": 104,
+    "integrationTests": 74,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4618785
+  },
+  "coverage": [
+    "Same-turn pentagram refused by profile admission",
+    "Double-wound convex ring refused",
+    "WASM loft and sweep reject both invalid profile classes without source mutation",
+    "Valid convex pentagon builds after refusals"
+  ],
+  "limitations": [
+    "Fixed-tolerance floating-point support tests, not certified predicates",
+    "Strictly convex planar profiles only; general trimming and global B-rep validity remain open",
+    "Full objective and refreshed shared qualification remain incomplete"
+  ],
+  "sha256": {
+    "crates/brep-core/src/operations.rs": "17fdf66241e49edb823b4392c2bd1d8c27e7f274f60bc9fe830932aafabb79ed",
+    "tests/brepKernel.test.ts": "45a3f960d32898a90a742ac5afe6cb92fcbca2edfb2dcffe1b473bd669c7fd65",
+    "src/generated/geometry-kernels/bytes.ts": "ff13995c1f7bf0303425ed822ea504c26d7067d5ab8c37f68c1c5a3d20c80838"
+  }
+}

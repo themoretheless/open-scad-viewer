@@ -1,0 +1,66 @@
+{
+  "date": "2026-09-14",
+  "scope": "Native admission of SemanticProgram envelope source identity, core literal fields (schemaVersion/language/units/requiredFeatures/identityVersion/schema), declared capabilities and the exact derived capability closure",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBridgeTests": 156,
+    "integrationTests": 69,
+    "testFiles": 5,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4639607
+  },
+  "coverage": [
+    "Source descriptor admitted natively: exact keys, lowercase SHA-256 digest, UTF-8 byte length 0..4000000 and UTF-16 code-unit length 0..250000, including boundary values",
+    "Core literals admitted natively: semantic-program-core schema, semantic-program-core-v1 identity, exactly semantic.execution-v2 required feature, semantic-capabilities-v1 capability graph and the fixed units/frame/matrix sextet",
+    "Schema versions 1.0 and 1.1 refuse with the relowering-style message; other versions refuse as unsupported",
+    "Both language contracts admitted natively with their pinned semantics revisions (legacy/current 1.0.0, openscad-viewer/brep-1 brep-1.0.0); cross-pinned revisions refuse",
+    "deriveSemanticCapabilityClosure ported exactly to Rust: per-kind capabilities, geometry kind/space/representation/evidence entries, certified-approximation profile/policy entries, Boolean operation entries, geometry/representation/evidence transitions, semantic.program-v1 and semantic.result.<tag>, with dedup and raw UTF-8 byte sort",
+    "A multi-node program (box + transform + Boolean union) derives the closure string-for-string, as does a 2D-to-3D extrusion crossing a geometry transition",
+    "Declared capabilities (limit 32) and capability closure (limit 128) refuse when unsorted, duplicated, malformed or oversized; every wrong-by-one closure variant refuses",
+    "Admission is optional-but-strict: requests without envelope components execute unchanged, and every refusal happens before any graph node executes (zero completed nodes, no partial outputs)",
+    "executeBrepNativeProgram now transports source, schemaVersion, language, units, requiredFeatures, identityVersion, schema, declaredCapabilities, capabilityClosure and diagnosticTemplates through graph-begin; tampered programs are refused natively with E_BREP_SEMANTIC_CONTRACT"
+  ],
+  "behaviorChange": "The graph/session admission path now validates envelope components carried on the request before any node executes; requests carrying tampered or inconsistent source, literal or capability components fail with BREP_SEMANTIC_CONTRACT instead of executing geometry.",
+  "limits": {
+    "nodes": 25000,
+    "operations": 50000,
+    "occurrences": 100000,
+    "outputs": 1000,
+    "diagnostics": 10000,
+    "discardedEffects": 25000,
+    "tessellationIntents": 50000,
+    "declaredCapabilities": 32,
+    "capabilityClosure": 128,
+    "sourceCodeUnits": 250000,
+    "stringCodeUnits": 1000000,
+    "diagnosticMessageCodeUnits": 1000000,
+    "canonicalStringBytes": 16777216,
+    "snapshotValues": 1000000,
+    "snapshotDepth": 256,
+    "identityValueDepth": 32,
+    "sourceUtf8Bytes": 4000000,
+    "abiRequestBytes": 33554432
+  },
+  "limitations": [
+    "Occurrence-ID digest hashing (occv1:/entity:v2:) is not yet recomputed natively; occurrence rows are admitted structurally only",
+    "Operations structural identity (opv1: digests, structural paths, ambiguity groups) remains host-validated only",
+    "Provenance, tessellationIntents and diagnostics admission remain host-side; only the diagnostic template count enters the native closure derivation",
+    "The full envelope (envelope schema/version, exact core key set) is not admitted as one object natively; components arrive as graph-begin fields",
+    "The application executor replacement and full SemanticProgram admission remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_envelope.rs": "d178e8ac56abf59b7833b9b404dd31dbdf5fc65b782ddc1425575e72658bbff2",
+    "crates/geometry-bridge/src/brep_graph.rs": "7548200814ffb45b2e2c0f8aefffa8dd1258e29e69c0bc65250d3d84e6f210ef",
+    "crates/geometry-bridge/src/lib.rs": "f7117e861ab6883278539839869ec882247b06edaeb0ff8eb1bef1d8a23f6840",
+    "src/services/brepNativeExecutor.ts": "96d7017fb63af50ca579c9df68979ffa8c67d034773a7658c3a69051fda63db1",
+    "tests/brepEnvelopeAdmission.test.ts": "febd25c103aaa1102b4935f8b6a5db922a63592c25b82d30bb8d4527523d406b",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "c900d2532303c9926db0b2e2effbbb3f6f366d2abfaddc0ccf0c18e92b9c69e9",
+    "src/generated/geometry-kernels/bytes.ts": "a000613894b0f6798f76c664210e406f9e7a6b51352d5bc1102a8141c6635b92"
+  }
+}

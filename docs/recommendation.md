@@ -319,13 +319,13 @@ Reopen these only for a demonstrated regression.
 
 ### Print P2 — mesh sections to G-code preview
 
-- **Priority/status:** P2 / In progress
-- **Evidence:** [`polygon-core` print](../crates/polygon-core/src/print.rs)
-  turns indexed mesh sections into concentric walls, sparse hatch infill and
-  a parse-back G-code preview with filament-length E. Box and annulus
-  regressions cover hole exclusion and volume-flow agreement.
-- **Acceptance remaining:** browser/WASM dispatch, machine-profile dialects,
-  variable width and a UI layer preview. Does not launch a printer.
+- **Priority/status:** P2 / Preview pipeline implemented; machine-specific output pending.
+- **Evidence:** [`G-code preview contract`](design/gcode-preview.md) connects
+  indexed mesh sections, bounded walls/hatch planning, strict G-code parse-back,
+  WASM dispatch and a cancellable browser worker with layer preview. Native,
+  host and UI regression tests cover the supported preview workflow.
+- **Acceptance remaining:** qualified machine profiles, physical layer placement,
+  solid skins/supports and variable width. Does not launch a printer.
 
 ## Update rule
 

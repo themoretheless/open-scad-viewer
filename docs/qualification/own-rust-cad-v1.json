@@ -1,9 +1,9 @@
 {
   "id": "own-rust-cad-v1",
-  "wasmSha256": "865354bf5c9bbe0bdfe48f3ab914308019301cdcd7eaa9ebcc08e03c6272778e",
-  "noticesSha256": "05c576c9c3a93512d85e1361ae44e536fa87b09e51a41278585d38a4c4f19394",
-  "lockfileSha256": "970dc1c6a58331959bd4042a585c779f1070c5d9fdf03698adc71327718a3ee8",
-  "rustLockfileSha256": "70f390a73d4e16eb7bfbea19d4e6cd528afaa2e6934c8407dbf61504d1efb994",
+  "wasmSha256": "fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6",
+  "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+  "lockfileSha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+  "rustLockfileSha256": "16cea0b66727c5f79e5985a1457c13b28f5db037d9fb736fc28f480eba7bbafb",
   "tests": [
     "tests/valueBinaryCodec.test.ts",
     "tests/cadBinaryTransport.test.ts",
@@ -16,11 +16,11 @@
     "tests/mcpDirectGeometrySupervisor.test.ts",
     "tests/mcpServer.test.ts"
   ],
-  "passedTests": 214,
+  "passedTests": 218,
   "environment": {
     "platform": "darwin",
     "architecture": "arm64",
-    "node": "v26.8.1"
+    "node": "v22.23.2"
   },
   "scope": "Own CAD geometry and legacy frontend parity on one kernel, including Node worker boundaries. Not binary compatibility with archived Manifold meshes or browser/MCP parity qualification.",
   "limitations": [

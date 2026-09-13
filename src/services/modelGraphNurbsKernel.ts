@@ -4,7 +4,7 @@ import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsP
 import type {SubdivisionCage} from './geometry/subdivision';
 import {tessellateSubdivision} from './geometry/subdivision';
 import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './geometry/sdf';
-import {createBrepBox,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
+import {transformNurbsBrep,createBrepSphere,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileModelGraphNurbs } from './modelGraphNurbs';
@@ -86,6 +86,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
         throw new Error(`Expected surface at ${key}.`); return result.data; };
     const needMesh = (key: string) => { const result = get(key); if (result.kind !== 'mesh')
         throw new Error(`Expected tessellated mesh at ${key}.`); return result.data; };
+    const needBrep=(key:string):NurbsBrep=>{const v=get(key);if(v.kind!=='brep')throw new Error('Expected a B-rep body');return v.data;};
     const needSdf=(key:string):SdfField=>{const v=get(key);if(v.kind!=='sdf')throw new Error('Expected SDF field');return v.data;};
     const reconstructionReports:Record<string,unknown>={};
     let meshTriangles = 0;
@@ -196,6 +197,24 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 case 'brep_box':
                     result={kind:'brep',data:createBrepBox(n.min,n.max)};
                     break;
+                case 'brep_sphere': result={kind:'brep',data:createBrepSphere(n.radius)};break;
+                case 'brep_torus': result={kind:'brep',data:createBrepTorus(n.major_radius,n.minor_radius)};break;
+                case 'brep_cylinder': result={kind:'brep',data:createBrepCylinder(n.radius,n.height)};break;
+                case 'brep_frustum': result={kind:'brep',data:createBrepFrustum(n.bottom_radius,n.top_radius,n.height)};break;
+                case 'brep_tube': result={kind:'brep',data:createBrepTube(n.outer_radius,n.inner_radius,n.height)};break;
+                case 'brep_revolve': {
+                    const profile=get(n.input);if(profile.kind!=='profile'||profile.data.holes?.length)throw new Error('Exact revolve requires one polygon profile without holes');
+                    result={kind:'brep',data:revolveBrepProfile(profile.data.outer as [number,number][],n.angle)};break;
+                }
+                case 'brep_extrude': {
+                    const profile=get(n.input);if(profile.kind!=='profile')throw new Error('Expected a polygon profile');
+                    result={kind:'brep',data:extrudeBrepPolygon(profile.data.outer as [number,number][],Math.min(0,n.height),Math.max(0,n.height),profile.data.holes as [number,number][][])};break;
+                }
+                case 'brep_extrude_curves':
+                    result={kind:'brep',data:extrudeBrepCurves(n.loops.map(wire=>wire.map(needCurve)),n.z_min,n.z_max)};break;
+                case 'brep_boolean': result={kind:'brep',data:booleanNurbsBrep(needBrep(n.inputs[0]),needBrep(n.inputs[1]),n.operation)};break;
+                case 'brep_chamfer': result={kind:'brep',data:chamferNurbsBrepEdges(needBrep(n.input),n.edges,n.size)};break;
+                case 'brep_fillet': result={kind:'brep',data:filletNurbsBrepEdges(needBrep(n.input),n.edges,n.radius,n.segments)};break;
                 case 'brep_tessellate': {
                     const input=get(n.input);if(input.kind!=='brep')throw new Error('Expected a B-rep model');
                     result={kind:'mesh',data:tessellateNurbsBrep(input.data,n.segments)};
@@ -225,6 +244,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                         validateNurbsSurface(s);
                         result = { kind: 'surface', data: s };
                     }
+                    else if(v.kind==='brep')result={kind:'brep',data:transformNurbsBrep(v.data,m)};
                     else
                         throw new Error('Transform spline control data before tessellation.');
                     break;

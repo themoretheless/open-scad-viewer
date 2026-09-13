@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native atomic plane split for mesh and retained B-rep bodies",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 73,
+    "testFiles": 5,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4622021
+  },
+  "coverage": [
+    "Axis-aligned and oblique cuts match independent half volumes and half-space placement",
+    "Concave L-prism cut preserves independently known 250/1250 volumes",
+    "Extreme normal scales preserve signed-distance semantics",
+    "Invalid planes and empty mesh refuse atomically; subsequent valid operation recovers",
+    "Retained B-rep split and editor regressions"
+  ],
+  "limitations": [
+    "Polygon splits use numerical mesh Booleans, not certified analytic B-rep construction",
+    "Shared SVG/own-CAD qualification has not been refreshed for this kernel",
+    "General B-rep completion and remaining TS computation migration are open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_split.rs": "ad9d1d07318bb67ec583054658e23f66a8ced0e9b123734d3fb053cd83a25b76",
+    "src/services/directSolidTools.ts": "70710a1a3c1830c9f22d72bf8f87c1dc99524b3093624727f66bbb24ca9366b5",
+    "tests/nativeBodySplit.test.ts": "d3f64a0fa9735b99950b73d79abda1185548bb94da35a94264993d36f23998a9",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "f4771af771a607cf7c61757574b7d1d4980858aa59c98cb45540e641bac7138c",
+    "src/generated/geometry-kernels/bytes.ts": "2ecb5ef12eb3ed362ec47ff92c6b8c55565bbcbfb6c5d6714e59df2f8bd2cb5a"
+  }
+}

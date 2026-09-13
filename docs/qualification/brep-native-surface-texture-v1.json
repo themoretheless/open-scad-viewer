@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native deterministic mesh surface texture and height sampling",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 71,
+    "testFiles": 5,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4627221
+  },
+  "coverage": [
+    "All six patterns produce closed exportable meshes without source mutation",
+    "Selected surface boundaries remain fixed",
+    "Pattern heights match analytic landmarks and sign inversion",
+    "Noise fixtures match pre-migration JS at negative cells and signed/wrapped seeds",
+    "Source editing and actual parser roundtrip retain closed geometry",
+    "Invalid selections/frame/parameters refuse and valid operation recovers",
+    "Retained B-rep refusal preserves both model and display geometry"
+  ],
+  "behaviorChange": "Retained B-rep texture now refuses atomically instead of returning a displaced mesh paired with stale unchanged B-rep geometry. Direct height sampling now uses the same validated options contract as the body operation.",
+  "limits": {
+    "refinedTriangles": 40000,
+    "boundaryDistancePairs": 20000000
+  },
+  "limitations": [
+    "Textures are mesh displacement only; analytic B-rep texture is not implemented",
+    "Fold checks are local triangle orientation checks, not global self-intersection certification",
+    "Shared SVG/own-CAD reports predate this kernel",
+    "General B-rep completion and remaining Rust migration are open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_texture.rs": "5d784bce0c4ed8c85f720d29cb34b0448b2ad0b71f92b7bdf7257c1115bbaf10",
+    "crates/geometry-bridge/src/lib.rs": "b4aace714d2a1c790d858313f07a15731678fc5e30a9720dbc3e444cd5ca90c8",
+    "src/services/surfaceTexture.ts": "9a6f9fd5084ae6bdcd2cb7c2412068f68210cb6327d31daced9f8f21bb34f77f",
+    "tests/surfaceTexture.test.ts": "b89ae4612e1df8329693ab08e7b15ed803dab27f6831051e917ceeed53f8c51d",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "f51f6410f00a3ff5186c0bcd1dd4ba778b9effae280de9c253e27afbb6190312",
+    "src/generated/geometry-kernels/bytes.ts": "29fbcee891b86ffee14dcd77d85b7ba38dff94cd9874c2be67d9025a0a8ec1f1"
+  }
+}

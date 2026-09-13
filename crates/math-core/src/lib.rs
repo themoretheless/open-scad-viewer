@@ -324,3 +324,7 @@ mod hotpath_bench {
         assert!(acc.is_finite());
     }
 }
+
+pub mod camera_gestures;
+pub mod orbit_camera;
+pub mod viewport;

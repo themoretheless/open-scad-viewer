@@ -1,0 +1,125 @@
+{
+  "qualified_platform": "Apple M5 / Metal / macOS / aarch64",
+  "scope": "Retained 2D path in isolated migrated Curvex; original remains untouched",
+  "original_head": "bf6967e4df618815e05eefc987947ca6b1c22461",
+  "original_clean": true,
+  "original_source_hashes_unchanged": true,
+  "runtime_source_hashes_unchanged": true,
+  "migration_patch_apply_check": true,
+  "migration_patch_reconstructs_tested_files": true,
+  "migration_changed_files": [
+    "Cargo.lock",
+    "Cargo.toml",
+    "benches/perf_cache_round2.rs",
+    "benches/perf_top12_verify.rs",
+    "src/actions/transform/path_commands.rs",
+    "src/actions/transform/path_effects/offset.rs",
+    "src/app.rs",
+    "src/boolean_ops.rs",
+    "src/document.rs",
+    "src/document/kurbo_convert.rs",
+    "src/tools/shape_builder.rs",
+    "src/ui/osv_gpu_adapter.rs",
+    "src/ui/osv_gradient_sampling.rs",
+    "src/ui/osv_render_cache.rs",
+    "src/ui/shape_render.rs",
+    "tests/unit/app_tests.rs",
+    "tests/unit/boolean_ops_tests.rs",
+    "tests/unit/compound_ops_tests.rs",
+    "tests/unit/outline_stroke_tests.rs",
+    "tests/unit/render_cache_tests.rs",
+    "tests/unit/shape_builder_tests.rs"
+  ],
+  "app_tests": {
+    "passed": 1494,
+    "failed": 0,
+    "ignored": 1,
+    "ignored_test_separately_passed": true
+  },
+  "renderer_unit_tests": 2,
+  "pixel_suites": {
+    "parity": {
+      "cases": 144,
+      "max_channel_difference": 0
+    },
+    "dpi": {
+      "cases": 144,
+      "max_channel_difference": 0
+    }
+  },
+  "renderer_lifecycle_phases": 10,
+  "native_smoke": {
+    "enabled": {
+      "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+      "gpu_cache_enabled": true,
+      "hits": 29,
+      "pixels_per_point": 2.0,
+      "target_format": "Bgra8Unorm",
+      "ui_passes": 31,
+      "uploads": 1
+    },
+    "disabled": {
+      "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+      "gpu_cache_enabled": false,
+      "hits": 0,
+      "pixels_per_point": 2.0,
+      "target_format": "Bgra8Unorm",
+      "ui_passes": 31,
+      "uploads": 0
+    }
+  },
+  "third_party_versions_added": 0,
+  "gpu_exclusive_timestamps_valid": false,
+  "limits": "Qualified on this device, MSAA 1, RGBA/BGRA unorm, DPI 1/2. Bounded precision/resources and host texture-restoration responsibilities remain.",
+  "spatial": [
+    {
+      "completed_baseline_ms": 1.536667,
+      "completed_retained_ms": 1.5384579999999999,
+      "cpu_baseline_ms": 0.5462079999999999,
+      "cpu_retained_ms": 0.243792,
+      "gpu_baseline_ms": null,
+      "gpu_retained_ms": null,
+      "shapes": 100,
+      "valid_gpu_samples": [
+        0,
+        0
+      ],
+      "image_comparisons": 22,
+      "max_channel_difference": 0
+    },
+    {
+      "completed_baseline_ms": 3.078542,
+      "completed_retained_ms": 3.061042,
+      "cpu_baseline_ms": 6.914375000000001,
+      "cpu_retained_ms": 1.9061670000000002,
+      "gpu_baseline_ms": null,
+      "gpu_retained_ms": null,
+      "shapes": 1000,
+      "valid_gpu_samples": [
+        0,
+        0
+      ],
+      "image_comparisons": 22,
+      "max_channel_difference": 0
+    },
+    {
+      "completed_baseline_ms": 6.117291000000001,
+      "completed_retained_ms": 3.075958,
+      "cpu_baseline_ms": 40.559791999999995,
+      "cpu_retained_ms": 10.401957999999999,
+      "gpu_baseline_ms": null,
+      "gpu_retained_ms": null,
+      "shapes": 5000,
+      "valid_gpu_samples": [
+        0,
+        0
+      ],
+      "image_comparisons": 22,
+      "max_channel_difference": 1
+    }
+  ],
+  "spatial_budgets_verified": true,
+  "spatial_no_warm_geometry_uploads": true,
+  "logs": "logs/production-*.txt",
+  "native_smoke_build_warning": "One unused eframe::App import in the qualification example; no production library warning."
+}

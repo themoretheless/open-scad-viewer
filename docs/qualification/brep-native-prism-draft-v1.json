@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native retained convex planar prism draft about a neutral plane",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBrepTests": 99,
+    "integrationTests": 58,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4615200
+  },
+  "coverage": [
+    "Positive and negative geometric draft angles, X and Z axes",
+    "Neutral plane shifted to mid-height",
+    "Rotated and translated prism axis frame",
+    "Analytical frustum volume compared with retained B-rep and display mesh",
+    "Closed six-face result, metadata and source preservation",
+    "Collapsed cap and incompatible axis refused",
+    "Unsupported curved later operand fails atomically after mesh operand"
+  ],
+  "limitations": [
+    "Only a convex planar prism without cavities or face holes, at most 64 support planes",
+    "Numerical half-space reconstruction and validation, not certified predicates or global validity",
+    "Curved face draft, arbitrary selected face draft and general B-rep completion remain open",
+    "Legacy mesh draft retains vertex deformation semantics; retained prism draft uses geometric support angle",
+    "Shared qualification refresh and remaining host geometry migration remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/operations.rs": "d32e4d9fd1a2cf58678f6736af5f69ebb7295e065c62c08f948581f7819e3a27",
+    "crates/geometry-bridge/src/cad_draft.rs": "909c1e1448d8bf0f0a6de74e3c4f219fb6ce48ff37bb01e3d112b16dd213a685",
+    "src/services/cadWorkbench.ts": "7241c4cc830716cf56652cb6609ae04ec625aaef1f69fbbaf50acfd93810edd4",
+    "tests/cadWorkbench.test.ts": "2d24b29fd612f4bf8ca80c5135d52fac13536fa1a8c4d7c162eefd5fd308828c",
+    "src/generated/geometry-kernels/bytes.ts": "4e306e07f2dd5d8ce1c0f04f922b5694e2109baaeb2084ff2c353ee841f2aeff"
+  }
+}

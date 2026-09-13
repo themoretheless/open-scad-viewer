@@ -1,0 +1,69 @@
+{
+  "date": "2026-09-14",
+  "scope": "Native admission of the complete SemanticProgramEnvelopeV1 as one object (exact envelope/core keys, schema literals, deep-equality with the separately transported duplicates, adoption of envelope-only components) and native source attestation (semanticSourceDescriptor + attestSemanticProgramSource ports: SHA-256 over the exact UTF-8 bytes, UTF-8/UTF-16 lengths, a faithful parseGeometrySourceRoutingHeader port, and the UTF-16 surrogate-pair span-endpoint check for provenance/diagnostics spans) behind the WASM ABI",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBridgeTests": 178,
+    "integrationTests": 95,
+    "testFiles": 8,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4667137
+  },
+  "coverage": [
+    "Unified envelope object admitted natively: a present graph-begin envelope field must be an object with exactly ['schema','schemaVersion','source','core','provenance','tessellationIntents','diagnostics'], schema === 'semantic-program-envelope', a supported 1.2 schemaVersion, and a core with exactly the 14 validateCore keys and schema === 'semantic-program-core'",
+    "Envelope consistency semantics (chosen: duplicates must match exactly): every component transported both as a top-level graph-begin field and inside the envelope must be deep-equal; components carried only inside the envelope are adopted into admission; execution inputs remain the top-level fields, so the envelope can never silently supersede what executes",
+    "Native source attestation (port of attestSemanticProgramSource and semanticSourceDescriptor): when the request transports sourceText, its exact UTF-8 bytes are SHA-256-hashed and compared to source.sha256, its UTF-8 byte length and UTF-16 code-unit length (computed from the decoded string) are compared to source.utf8ByteLength/utf16CodeUnitLength, and the 250,000-unit / 4,000,000-byte source limits are enforced",
+    "Faithful Rust port of parseGeometrySourceRoutingHeader: line splitting on CR/LF/CRLF, block-comment/string masking with escape tracking, @language/@requires/@engine directive recognition with the JavaScript \\s whitespace set, header-placement and duplication rules, capability identifier syntax and the 32-capability budget; the parsed languageContract must equal language.contract and the sorted unique @requires set must equal declaredCapabilities",
+    "Surrogate-pair span-endpoint check enabled natively when sourceText is present: every provenance span start/end and every non-null diagnostics span start/end must not fall between a high and a low surrogate; endpoints at pair edges and at the text end admit; absent sourceText keeps descriptor-only admission with the check skipped (optional-but-strict)",
+    "Admission runs inside brep_envelope::validate in prepare, after execution-plan validation and before Runner::new, so every refusal precedes all node execution; requests without envelope/sourceText behave exactly as before",
+    "executeBrepNativeProgram now transports the trusted lowering's program as the envelope object and its exact source text (threaded through SemanticLoweringSuccess.sourceText from the lowerer input) with zero added host-side validation logic; a real lowered OpenSCAD difference program executes natively, and tampered source text, tampered descriptors and a mid-surrogate provenance span refuse with E_BREP_SEMANTIC_CONTRACT and zero onNode progress callbacks",
+    "Wrong-by-one native coverage: extra/missing envelope key, wrong envelope schema literal, wrong envelope schema version, extra/missing core key, valid-but-different envelope component (declared capability and closure), envelope nodes mismatch against the executing top-level nodes, envelope-only forged provenance adopted and refused, sha256 with one flipped hex character, utf8ByteLength/utf16CodeUnitLength off by one in both directions, missing descriptor/language/declaredCapabilities context, non-string sourceText, provenance and diagnostics span endpoints mid-pair (including empty diagnostic spans) versus pair edges and the text-end boundary, routing-header language/capability mismatches, unsupported contract, duplicated @language, @engine selection, malformed reserved directive, directive after body, and @requires deduplication"
+  ],
+  "behaviorChange": "Graph/session admission now admits the unified SemanticProgramEnvelopeV1 object and, when the exact source text is transported, attests it natively (digest, lengths, routing header, surrogate-safe span endpoints) before any node executes; requests carrying tampered envelope objects, source text, descriptors or mid-surrogate spans fail with BREP_SEMANTIC_CONTRACT instead of executing geometry. Requests without envelope/sourceText behave exactly as before.",
+  "limits": {
+    "nodes": 25000,
+    "operations": 50000,
+    "occurrences": 100000,
+    "outputs": 1000,
+    "diagnostics": 10000,
+    "discardedEffects": 25000,
+    "tessellationIntents": 50000,
+    "declaredCapabilities": 32,
+    "capabilityClosure": 128,
+    "sourceCodeUnits": 250000,
+    "stringCodeUnits": 1000000,
+    "diagnosticMessageCodeUnits": 1000000,
+    "canonicalStringBytes": 16777216,
+    "snapshotValues": 1000000,
+    "snapshotDepth": 256,
+    "identityValueDepth": 32,
+    "sourceUtf8Bytes": 4000000,
+    "abiRequestBytes": 33554432,
+    "routingRequiredCapabilities": 32
+  },
+  "limitations": [
+    "validateOccurrenceProduction replay (semanticProgramValidator.ts l.1381) remains host-side; native occurrence admission covers the identity subset only",
+    "$expansion continuation and module-activation anchoring (l.600/669), including the runtime ancestor-chain walk for staticParent, remain host-side",
+    "Occurrence identity admission still requires operations on the request; provenance admission inherits the same context requirement",
+    "The surrogate-pair span-endpoint check and routing-header attestation run only when sourceText is transported; descriptor-only requests keep the previous behavior with the check skipped",
+    "Envelope admission requires deep-equality between duplicated components rather than letting the envelope supersede them; an envelope-only request is admitted but execution still consumes the top-level fields",
+    "The application executor replacement remains open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_attestation.rs": "5b9a3df9b48892f826fa937db05f39fec930b8c7473ae07a80597e63369016d1",
+    "crates/geometry-bridge/src/brep_envelope.rs": "5beb475d5ea9c5d3221ac338f88d0f6b68cf6d6c16bd4cf32018abe020f86f7c",
+    "crates/geometry-bridge/src/lib.rs": "d99e337f471741ef1839bf55a1f0bc5a12f608907f56f8bf8348e386a506ab02",
+    "src/services/semanticProgramTrust.ts": "f697ce7bee026dab711fc1d5574c7110bf5341d455575cec6998e0d72d8c19d7",
+    "src/services/openscadSemanticLowerer.ts": "47ef06c6491cda36cd2f250bb2559d9de5f0136fbec85fa7b3f22004c3d44e8d",
+    "src/services/brepNativeExecutor.ts": "61cefbda622e18f8a3658a452b53ee79acc3119b9a3ab8c4cc9efa5548f58c9c",
+    "tests/brepSourceAttestation.test.ts": "8cf17a13171a27320876af8281375d23e7f1c7cb8a5b4eba7be08c15b675dc98",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "08e04e557401923cb92d5c98c93ed050b6d62063f294b0f69ae54c8ee3763703",
+    "src/generated/geometry-kernels/bytes.ts": "c7b4ae0ad89d629b94ae1bab80366f8956e384f8e970b3ff5aabb3ef8902214a"
+  }
+}

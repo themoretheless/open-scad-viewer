@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as geometryKernel from '../src/services/geometry/kernel'
 import {
   WebGPURenderer,
   type RendererLifecycleEvent,
@@ -6,6 +7,23 @@ import {
 
 describe('WebGPURenderer lifecycle reporting', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('does not allocate a device after teardown during kernel warmup',async()=>{
+    let finish!:()=>void
+    const pending=new Promise<void>(resolve=>{finish=resolve})
+    const warmup=vi.spyOn(geometryKernel,'warmGeometryKernel').mockReturnValue(pending)
+    const requestDevice=vi.fn()
+    vi.stubGlobal('navigator',{gpu:{requestAdapter:async()=>({requestDevice})}})
+    const renderer=new WebGPURenderer()
+    try{
+      const running=renderer.init({} as HTMLCanvasElement)
+      await Promise.resolve()
+      expect(warmup).toHaveBeenCalledOnce()
+      renderer.destroy();finish()
+      expect(await running).toBe(false)
+      expect(requestDevice).not.toHaveBeenCalled()
+    }finally{finish();renderer.destroy();warmup.mockRestore()}
+  })
 
   it('reports typed initialization and availability states without changing init semantics', async () => {
     vi.stubGlobal('navigator', {})

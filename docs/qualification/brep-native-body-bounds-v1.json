@@ -1,0 +1,28 @@
+{
+  "scope": "Native selected-body bounds in CAD operations, inspection and drawing paths",
+  "tests": {
+    "polygonCore": 70,
+    "integrationPacking": 67,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4588641,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/polygon-core/src/scene_flatten.rs": "55acb5832c926656f7a6111da558bc432c84c480775a2e9a27ffb9fd631df0c5",
+    "crates/geometry-bridge/src/lib.rs": "82bdf55be5911fc001688f74ca90d1de71f2cd0a2a41fe0798e3ca36533ec669",
+    "src/services/cadWorkbench.ts": "02a50c77d23cfdc2db6c0255d0d575246a84d770e9d974502c0ae9443ac9e555",
+    "tests/cadWorkbench.test.ts": "93781557f2b949aed9b412fe629fb151ceefdef3c441ace3cc0af0a44a4a742e",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "e79bb679e190ffb2dc531ee01429a75d92b9a5501f4b5f95cda388ce956ecfbf"
+  },
+  "limitations": [
+    "Other CAD transformations and layout computations remain in TS",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

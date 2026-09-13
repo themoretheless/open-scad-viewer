@@ -1,6 +1,12 @@
 # Curvex 2D library replacement contract
 
+The latest [2D architecture and performance qualification](../../integrations/curvex/architecture-qualification/README.md) records the transport split, prepared geometry indexes, final benchmarks and verification limits.
+
 Status: **qualified for the recorded Curvex 2D dependency boundary**, 2026-09-12.
+The [2026-09-13 stroke optimization](../../integrations/curvex/stroke-optimization/README.md)
+updates the stroke performance results with fresh qualification evidence.
+The [complex-stroke, robustness and GPU follow-up](../../integrations/curvex/stress-qualification/README.md)
+adds the latest migration patch and verifies native Metal rendering on large documents.
 The isolated migrated application passes its full original test suite, added
 regressions, release build and actual renderer checks. This contract covers
 the actual 2D geometry dependencies used by Curvex, including its tests,
@@ -225,7 +231,7 @@ populates the cache, and **0.104 ms** for a warm cache. These measurements do
 not imply a whole-document frame-rate guarantee. In the independent
 [stroke/fill benchmark](../../integrations/curvex/benchmark-results/render-final.json),
 4096-point fill is about **0.134 ms vs Lyon's 0.322 ms**. General uncached stroke
-construction remains substantially slower: **0.335–0.652 ms** for the tested
+construction at that initial qualification was substantially slower: **0.335–0.652 ms** for the tested
 open curves and **1.74 ms** for 1200 points; Lyon takes roughly 0.002–0.004 ms
 and 0.080 ms respectively. This residual cost is explicit rather than hidden
 behind cached or unrelated gradient-sampling timings. The complete
@@ -258,3 +264,16 @@ Finite renderer coordinates are no longer artificially capped at ±10⁶, and
 narrow radial/conic stop bands are not guaranteed by bounded adaptive preview
 sampling. Remaining GUI/SVG Kurbo usage and these resource/preview limits must
 not be described as an unrestricted replacement of every third-party API.
+
+## Subsequent GPU / Metal qualification
+
+The [retained Metal implementation and report](../../integrations/curvex/metal-renderer/README.md)
+supersede the earlier CPU-only rendering qualification for the tested Apple M5
+platform. The isolated migration passes 1494 application tests, 288 exact GPU
+pixel comparisons at DPI 1/2, ten edit/restore/renderer/device lifecycle phases,
+and native startup with retained rendering both enabled and disabled. On the
+5000-shape spatial workload, median warm CPU frame preparation falls from
+40.560 to 10.402 ms; submit-to-render-completion falls from 6.117 to 3.076 ms.
+These are workload measurements, not GPU-exclusive timers or editor FPS.
+The report documents bounded memory, ordinary-renderer fallback, a verified
+patch, raw samples and remaining host/platform/precision limits.

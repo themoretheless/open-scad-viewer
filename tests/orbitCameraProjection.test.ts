@@ -6,6 +6,7 @@ import {
   type Aabb3, type Vec3,
 } from '../src/services/math3d'
 import type { ProjectionMode } from '../src/services/viewportModel'
+import reference from '../crates/math-core/orbit-camera-reference-v1.json'
 
 const spinner: Aabb3 = { min: [-34, -34, 0], max: [34, 34, 10] }
 const base = {
@@ -19,6 +20,49 @@ const base = {
   bounds: spinner,
   backgroundRadius: 350,
 }
+
+it('matches 72 frozen pre-migration orbit camera frames', () => {
+  expect(reference.cases).toHaveLength(72)
+  for (const entry of reference.cases) {
+    const actual = computeOrbitCameraFrame({ ...entry.options,
+      target: entry.options.target as Vec3,
+      projection: entry.options.projection as ProjectionMode,
+      bounds: entry.options.bounds as Aabb3,
+    })
+    for (const key of ['eyeDistance', 'near', 'far'] as const)
+      expect(actual[key]).toBeCloseTo(entry.expected[key], 10)
+    for (let i = 0; i < 3; i++) expect(actual.eye[i]).toBeCloseTo(entry.expected.eye[i], 10)
+    // f32 GPU storage permits a last-bit difference between native and JS
+    // trigonometric implementations; no expected values are regenerated.
+    for (let i = 0; i < 16; i++) {
+      const expected = entry.expected.viewProjection[i]
+      expect(Math.abs(actual.viewProjection[i] - expected)).toBeLessThanOrEqual(2e-7 * Math.max(1, Math.abs(expected)))
+    }
+  }
+})
+
+it('rejects invalid orbit parameters instead of publishing nonfinite matrices', () => {
+  expect(() => computeOrbitCameraFrame({ ...base, aspect: 0 })).toThrow()
+  expect(() => computeOrbitCameraFrame({ ...base, distance: 0 })).toThrow()
+  expect(() => computeOrbitCameraFrame({ ...base, bounds: { min: [2, 2, 2], max: [1, 1, 1] } })).toThrow()
+})
+
+it('builds an empty-scene frame and keeps translated bounds inside depth planes', () => {
+  const empty = computeOrbitCameraFrame({ ...base, yaw: 0, pitch: 0, target: [0, 0, 0], bounds: null })
+  expect(empty.eye).toEqual([0, -100, 0])
+  expect(empty.eyeDistance).toBe(100)
+  expect(empty.near).toBe(5)
+  expect(empty.far).toBeCloseTo(485, 12)
+  for (const projection of ['perspective', 'orthographic'] as const) {
+    const bounds: Aabb3 = { min: [120, -50, 20], max: [150, -10, 25] }
+    const frame = computeOrbitCameraFrame({ ...base, projection, bounds, target: [130, -30, 22], distance: 0.02 })
+    for (const p of corners(bounds)) {
+      const depth = transformPoint(frame.viewProjection, p)[2]
+      expect(depth).toBeGreaterThan(0)
+      expect(depth).toBeLessThan(1)
+    }
+  }
+})
 
 function corners(bounds: Aabb3): Vec3[] {
   const result: Vec3[] = []

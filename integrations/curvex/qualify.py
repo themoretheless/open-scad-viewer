@@ -67,7 +67,8 @@ def main():
             target = destination / relative
             if target.read_text() != changed:
                 target.write_text(changed)
-        shutil.copy2(HERE/"gradient_sampling.rs", destination/"src/ui/osv_gradient_sampling.rs")
+        for helper in ("gradient_sampling", "render_cache"):
+            shutil.copy2(HERE/f"{helper}.rs", destination/f"src/ui/osv_{helper}.rs")
     else:
         subprocess.run([sys.executable, str(HERE / "prepare.py"), str(source), str(destination)], check=True)
     evidence = destination / "qualification"
@@ -148,7 +149,7 @@ def main():
     # Rebuild the patch after Cargo updates the lockfile. Qualification examples
     # and logs are deliberately outside the application migration patch.
     paths = [p.relative_to(source) for p in source.rglob("*.rs") if not any(x in p.parts for x in ("target", ".git"))]
-    paths += [Path("Cargo.toml"), Path("Cargo.lock"), Path("src/ui/osv_gradient_sampling.rs")]
+    paths += [Path("Cargo.toml"), Path("Cargo.lock"), Path("src/ui/osv_gradient_sampling.rs"), Path("src/ui/osv_render_cache.rs")]
     patch = []
     for path in sorted(set(paths)):
         original = (source/path).read_text() if (source/path).exists() else ""

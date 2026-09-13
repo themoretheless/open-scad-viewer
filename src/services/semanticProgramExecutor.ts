@@ -194,7 +194,7 @@ function semanticCarrierKey(valueType: SemanticValueType): SemanticCarrierKey {
   return `${valueType.geometryKind}/${valueType.space}/${valueType.representation}`
 }
 
-function checkControl(control: SemanticExecutionControl, node: number | null): void {
+export function checkSemanticExecutionControl(control: SemanticExecutionControl, node: number | null): void {
   if (control.signal?.aborted) throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
   try {
     if (control.shouldAbort?.()) throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
@@ -576,7 +576,7 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 0 || nodes.length > maxNodes) {
     throw new SemanticProgramExecutionError('E_SEMANTIC_BUDGET', null, `Semantic program requires ${nodes.length} nodes but the effective limit is ${String(maxNodes)}`)
   }
-  checkControl(control, null)
+  checkSemanticExecutionControl(control, null)
 
   let publishedSession: unknown
   try {
@@ -649,7 +649,7 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
     for (const nodeIndex of program.core.execution.evaluationOrder) {
       const node = nodes[nodeIndex]
       activeNode = node.id
-      checkControl(control, node.id)
+      checkSemanticExecutionControl(control, node.id)
       const authoredInputNodeIndices = semanticNodeInputs(node)
       const authoredInputs = Object.freeze(authoredInputNodeIndices.map(reference => values[reference]))
       const reduction = reduceEmptyInputs(node, authoredInputs)
@@ -664,7 +664,7 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
           languageContract: program.core.language.contract,
           signal: executionController.signal,
         })), control, executionController, node.id)
-        checkControl(control, node.id)
+        checkSemanticExecutionControl(control, node.id)
         value = snapshotRuntimeValue(
           returned,
           node.valueType,
@@ -683,7 +683,7 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
           leasesByNode[node.id] = lease
           },
         )
-        checkControl(control, node.id)
+        checkSemanticExecutionControl(control, node.id)
         if (value.tag === 'empty' && nodeMustReturnValueAfterReduction(node)) {
           throw new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_TYPE', node.id, 'Backend returned empty where the shared semantic empty algebra requires a value')
         }
@@ -695,10 +695,10 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
       } catch {
         throw new SemanticProgramExecutionError('E_SEMANTIC_CALLBACK', node.id, 'Semantic execution progress callback failed')
       }
-      checkControl(control, node.id)
+      checkSemanticExecutionControl(control, node.id)
       activeNode = null
     }
-    checkControl(control, null)
+    checkSemanticExecutionControl(control, null)
   } catch (error) {
     return closeFailedSession(session, executionController, executionFailure(error, activeNode))
   }

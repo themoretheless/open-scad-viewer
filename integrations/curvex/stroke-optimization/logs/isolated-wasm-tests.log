@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /private/tmp/curvex-stroke-wasm-w2uierof
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  05:45:55
+   Duration  979ms (transform 330ms, setup 0ms, import 405ms, tests 331ms, environment 0ms)
+

@@ -1,0 +1,2182 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -251,9 +251,6 @@
+ version = "0.7.8"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+-dependencies = [
+- "serde",
+-]
+ 
+ [[package]]
+ name = "as-raw-xcb-connection"
+@@ -858,20 +855,27 @@
+ dependencies = [
+  "arboard",
+  "criterion",
++ "curvex-metal-renderer",
+  "eframe",
+  "egui",
+- "kurbo",
+- "linesweeper",
+- "lyon_path",
+- "lyon_tessellation",
+  "objc2 0.6.4",
+  "objc2-app-kit 0.3.2",
+  "objc2-foundation 0.3.2",
++ "planar-geometry",
+  "rfd",
+  "serde",
+  "serde_json",
+  "usvg",
+  "uuid",
++]
++
++[[package]]
++name = "curvex-metal-renderer"
++version = "0.1.0"
++dependencies = [
++ "egui",
++ "egui-wgpu",
++ "wgpu",
+ ]
+ 
+ [[package]]
+@@ -1236,12 +1240,6 @@
+ checksum = "98de4bbd547a563b716d8dfa9aad1cb19bfab00f4fa09a6a4ed21dbcf44ce9c4"
+ 
+ [[package]]
+-name = "float_next_after"
+-version = "1.0.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8bf7cc16383c4b8d58b9905a8509f02926ce3058053c056376248d958c9df1e8"
+-
+-[[package]]
+ name = "foldhash"
+ version = "0.1.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1867,7 +1865,6 @@
+  "arrayvec",
+  "euclid",
+  "polycool",
+- "serde",
+  "smallvec",
+ ]
+ 
+@@ -1912,19 +1909,6 @@
+ checksum = "d4a5ff6bcca6c4867b1c4fd4ef63e4db7436ef363e0ad7531d1558856bae64f4"
+ 
+ [[package]]
+-name = "linesweeper"
+-version = "0.4.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "9c19728333c060c6569a53c9a0e56c4be0df52cb4e6e07a8fbe16084cecce769"
+-dependencies = [
+- "arrayvec",
+- "kurbo",
+- "polycool",
+- "rustc-hash 2.1.3",
+- "smallvec",
+-]
+-
+-[[package]]
+ name = "linux-raw-sys"
+ version = "0.4.15"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1962,38 +1946,6 @@
+ version = "0.4.33"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+-
+-[[package]]
+-name = "lyon_geom"
+-version = "1.0.19"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "4336502e29e32af93cf2dad2214ed6003c17ceb5bd499df77b1de663b9042b92"
+-dependencies = [
+- "arrayvec",
+- "euclid",
+- "num-traits",
+-]
+-
+-[[package]]
+-name = "lyon_path"
+-version = "1.0.19"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5c463f9c428b7fc5ec885dcd39ce4aa61e29111d0e33483f6f98c74e89d8621e"
+-dependencies = [
+- "lyon_geom",
+- "num-traits",
+-]
+-
+-[[package]]
+-name = "lyon_tessellation"
+-version = "1.0.20"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8e43b7e44161571868f5c931d12583592c223c5583eef86b08aa02b7048a3552"
+-dependencies = [
+- "float_next_after",
+- "lyon_path",
+- "num-traits",
+-]
+ 
+ [[package]]
+ name = "memchr"
+@@ -2550,6 +2502,10 @@
+ ]
+ 
+ [[package]]
++name = "osv-math"
++version = "0.1.0"
++
++[[package]]
+ name = "owned_ttf_parser"
+ version = "0.25.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -2713,6 +2669,13 @@
+ version = "0.2.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
++
++[[package]]
++name = "planar-geometry"
++version = "0.1.0"
++dependencies = [
++ "osv-math",
++]
+ 
+ [[package]]
+ name = "png"
+@@ -3221,9 +3184,6 @@
+ version = "1.15.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+-dependencies = [
+- "serde",
+-]
+ 
+ [[package]]
+ name = "smithay-client-toolkit"
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -3,7 +3,7 @@
+ version = "0.1.0"
+ edition = "2021"
+ # MSRV: benches use usize::is_multiple_of (stabilized in Rust 1.87).
+-rust-version = "1.87"
++rust-version = "1.92"
+ description = "A 2D vector graphics editor built with Rust and egui"
+ license = "MIT OR Apache-2.0"
+ repository = "https://github.com/themoretheless/curvex"
+@@ -13,15 +13,13 @@
+ categories = ["graphics", "gui"]
+ 
+ [dependencies]
++curvex-metal-renderer = { path = "/Users/themoretheless/Documents/Sources/open-scad-viewer/integrations/curvex/metal-renderer", features = ["egui-integration"] }
++osv_geometry = { package = "planar-geometry", path = "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry" }
+ eframe = "0.35"
+ egui = "0.35"
+ serde = { version = "1", features = ["derive"] }
+ serde_json = "1"
+ uuid = { version = "1", features = ["v4", "serde"] }
+-lyon_tessellation = "1.0"
+-lyon_path = "1.0"
+-linesweeper = "0.4"
+-kurbo = "0.13"
+ rfd = "0.17"
+ # OS clipboard access for the curvex shape payload (copy/cut write, paste
+ # fallback read). egui 0.35 exposes only clipboard WRITE (Context::copy_text);
+--- a/benches/perf_cache_round2.rs
++++ b/benches/perf_cache_round2.rs
+@@ -227,7 +227,7 @@
+ // ---------------------------------------------------------------------------
+ 
+ fn bench_r2_subtract_loop(c: &mut Criterion) {
+-    use linesweeper::BinaryOp;
++    use osv_geometry::curve_boolean::BinaryOp;
+     // 30 closed bezier shapes, each subtracted by the same complex cutter
+     // (the app's subtract command does exactly this per selected shape).
+     let shapes: Vec<Shape> = (0..30).map(|i| make_bezier(i * 2, 40)).collect();
+--- a/benches/perf_top12_verify.rs
++++ b/benches/perf_top12_verify.rs
+@@ -449,7 +449,7 @@
+ // ---------------------------------------------------------------------------
+ 
+ fn bench_claim8_boolean(c: &mut Criterion) {
+-    use linesweeper::BinaryOp;
++    use osv_geometry::curve_boolean::BinaryOp;
+ 
+     // Subtract: 1000x1000 rect minus 50 ellipses (same fixture as prAC).
+     let mut big = make_rect(0);
+--- a/src/actions/transform/path_commands.rs
++++ b/src/actions/transform/path_commands.rs
+@@ -248,7 +248,7 @@
+     /// outside the source and its inner edge exactly `|d|` inside, so the right
+     /// edge is a true parallel offset with correct joins. kurbo handles the
+     /// self-intersection collapse that an inset can cause. This deliberately
+-    /// reuses the stroke-ring trick rather than `kurbo::offset`, whose
++    /// reuses the stroke-ring trick rather than `osv_geometry::curve::offset`, whose
+     /// kurbo-0.13 implementation is single-cubic and join-unaware.
+     ///
+     /// Open inputs (line, open polyline, open BezierPath) are skipped and
+@@ -1028,16 +1028,16 @@
+ 
+         // Build the kurbo stroke from the source style (geometry in mm).
+         let start_cap = match src.stroke.cap {
+-            LineCap::Butt => kurbo::Cap::Butt,
+-            LineCap::Round => kurbo::Cap::Round,
+-            LineCap::Square => kurbo::Cap::Square,
++            LineCap::Butt => osv_geometry::curve::Cap::Butt,
++            LineCap::Round => osv_geometry::curve::Cap::Round,
++            LineCap::Square => osv_geometry::curve::Cap::Square,
+         };
+         let join = match src.stroke.join {
+-            LineJoin::Miter => kurbo::Join::Miter,
+-            LineJoin::Round => kurbo::Join::Round,
+-            LineJoin::Bevel => kurbo::Join::Bevel,
+-        };
+-        let mut stroke = kurbo::Stroke::new(src.stroke.width as f64)
++            LineJoin::Miter => osv_geometry::curve::Join::Miter,
++            LineJoin::Round => osv_geometry::curve::Join::Round,
++            LineJoin::Bevel => osv_geometry::curve::Join::Bevel,
++        };
++        let mut stroke = osv_geometry::curve::Stroke::new(src.stroke.width as f64)
+             .with_caps(start_cap)
+             .with_join(join)
+             .with_miter_limit(4.0);
+@@ -1051,10 +1051,10 @@
+         }
+ 
+         // Tolerance 0.05 mm matches the eps used in the boolean ops.
+-        let outline = kurbo::stroke(
++        let outline = osv_geometry::curve::stroke(
+             input.elements().iter().copied(),
+             &stroke,
+-            &kurbo::StrokeOpts::default(),
++            &osv_geometry::curve::StrokeOpts::default(),
+             0.05,
+         );
+         // A source that yields no usable contour is a skip, not a destroy:
+--- a/src/actions/transform/path_effects/offset.rs
++++ b/src/actions/transform/path_effects/offset.rs
+@@ -133,7 +133,7 @@
+         shape_to_region_kurbo_path,
+     };
+     use crate::shape::LineJoin;
+-    use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};
++    use osv_geometry::curve_boolean::{binary_op_with_eps, BinaryOp, FillRule};
+ 
+     // Degenerate distance: nothing to offset (the action wrapper also guards
+     // this for its status message; guarding here keeps the helper standalone).
+@@ -149,19 +149,19 @@
+     let input = shape_to_kurbo_path_any(src)?;
+ 
+     let join = match src.stroke.join {
+-        LineJoin::Miter => kurbo::Join::Miter,
+-        LineJoin::Round => kurbo::Join::Round,
+-        LineJoin::Bevel => kurbo::Join::Bevel,
++        LineJoin::Miter => osv_geometry::curve::Join::Miter,
++        LineJoin::Round => osv_geometry::curve::Join::Round,
++        LineJoin::Bevel => osv_geometry::curve::Join::Bevel,
+     };
+     // Width 2*|d|, miter limit 4.0, tolerance 0.05 - matching the stroke set
+     // up in `action_outline_stroke`. Caps are irrelevant for a closed input.
+-    let stroke = kurbo::Stroke::new(2.0 * f64::from(d.abs()))
++    let stroke = osv_geometry::curve::Stroke::new(2.0 * f64::from(d.abs()))
+         .with_join(join)
+         .with_miter_limit(4.0);
+-    let ring = kurbo::stroke(
++    let ring = osv_geometry::curve::stroke(
+         input.elements().iter().copied(),
+         &stroke,
+-        &kurbo::StrokeOpts::default(),
++        &osv_geometry::curve::StrokeOpts::default(),
+         0.05,
+     );
+ 
+@@ -169,7 +169,7 @@
+     // boundary contours via a NonZero self-union against an empty path - the
+     // 0.05 eps matches `boolean_paths_pure`. Without this the inner inset ring
+     // is a winding-flipped bowtie whose bbox wrongly spans the whole source.
+-    let empty = kurbo::BezPath::new();
++    let empty = osv_geometry::curve::BezPath::new();
+     let Ok(normalized) =
+         binary_op_with_eps(&ring, &empty, FillRule::NonZero, BinaryOp::Union, 0.05)
+     else {
+@@ -181,7 +181,7 @@
+     // reads correctly under the solver's NonZero inputs.
+     if matches!(&src.data, crate::shape::ShapeData::Compound { .. }) {
+         let source = shape_to_region_kurbo_path(src)?;
+-        let mut ring_path = kurbo::BezPath::new();
++        let mut ring_path = osv_geometry::curve::BezPath::new();
+         for c in normalized.contours() {
+             ring_path.extend(c.path.iter());
+         }
+@@ -197,7 +197,7 @@
+         else {
+             return None;
+         };
+-        let mut out = kurbo::BezPath::new();
++        let mut out = osv_geometry::curve::BezPath::new();
+         for c in result.contours() {
+             out.extend(c.path.iter());
+         }
+@@ -214,9 +214,9 @@
+     // INNER boundary (smallest area) for an inset. `bez_path_bbox_area` is the
+     // same comparator `boolean_paths_pure` uses, so ties resolve identically.
+     let outset = d > 0.0;
+-    let mut best: Option<(kurbo::BezPath, f64)> = None;
++    let mut best: Option<(osv_geometry::curve::BezPath, f64)> = None;
+     for c in normalized.contours() {
+-        let mut path = kurbo::BezPath::new();
++        let mut path = osv_geometry::curve::BezPath::new();
+         path.extend(c.path.iter());
+         if path.is_empty() {
+             continue;
+--- a/src/app.rs
++++ b/src/app.rs
+@@ -806,6 +806,11 @@
+ 
+ impl CurvexApp {
+     pub fn new(cc: &eframe::CreationContext) -> Self {
++        if let Some(state) = &cc.wgpu_render_state {
++            if std::env::var_os("CURVEX_DISABLE_GPU_CACHE").is_none() {
++            curvex_metal_renderer::egui_integration::install(&cc.egui_ctx, &mut state.renderer.write(), &state.device, state.target_format, 1, true);
++            }
++        }
+         let mut fonts = egui::FontDefinitions::default();
+ 
+         fonts.font_data.insert(
+--- a/src/boolean_ops.rs
++++ b/src/boolean_ops.rs
+@@ -4,12 +4,12 @@
+ 
+ impl crate::app::CurvexApp {
+     pub(crate) fn merge_selected_shapes(&mut self) {
+-        self.apply_boolean_op_to_selection(linesweeper::BinaryOp::Union, "Merged", "Merged shapes");
++        self.apply_boolean_op_to_selection(osv_geometry::curve_boolean::BinaryOp::Union, "Merged", "Merged shapes");
+     }
+ 
+     pub(crate) fn intersect_selected_shapes(&mut self) {
+         self.apply_boolean_op_to_selection(
+-            linesweeper::BinaryOp::Intersection,
++            osv_geometry::curve_boolean::BinaryOp::Intersection,
+             "Intersect",
+             "Intersected shapes",
+         );
+@@ -17,7 +17,7 @@
+ 
+     pub(crate) fn exclude_selected_shapes(&mut self) {
+         self.apply_boolean_op_to_selection(
+-            linesweeper::BinaryOp::Xor,
++            osv_geometry::curve_boolean::BinaryOp::Xor,
+             "Exclude",
+             "Excluded shapes",
+         );
+@@ -104,7 +104,7 @@
+         let mut base_fill_rule = crate::shape::FillRule::Nonzero;
+         let mut base_shadows: Vec<crate::shape::DropShadow> = Vec::new();
+         let mut base_inner_shadows: Vec<crate::shape::InnerShadow> = Vec::new();
+-        let mut paths: Vec<kurbo::BezPath> = Vec::new();
++        let mut paths: Vec<osv_geometry::curve::BezPath> = Vec::new();
+         for id in &ids {
+             let Some(shape) = self.document.get_shape_by_id(id) else {
+                 continue;
+@@ -316,7 +316,7 @@
+ 
+     pub(crate) fn apply_boolean_op_to_selection(
+         &mut self,
+-        op: linesweeper::BinaryOp,
++        op: osv_geometry::curve_boolean::BinaryOp,
+         name_prefix: &str,
+         status: &str,
+     ) {
+@@ -707,7 +707,7 @@
+     // Compound cutter contributes ALL its rings via `closed_kurbo_path`, so
+     // its holes are preserved by the solver rather than filled in.
+     let mut consumed_ids: Vec<ShapeId> = Vec::new();
+-    let cutter_paths: Vec<kurbo::BezPath> = cutters
++    let cutter_paths: Vec<osv_geometry::curve::BezPath> = cutters
+         .iter()
+         .filter_map(|c| {
+             let path = document.closed_kurbo_path(c)?;
+@@ -725,9 +725,9 @@
+     // this single fold subtracts the UNION of every cutter without an explicit
+     // union step: the engine's documented pairwise left-fold guarantees it,
+     // matching how subtract composes one cutter against many shapes.
+-    let mut paths: Vec<&kurbo::BezPath> = vec![&survivor_path];
++    let mut paths: Vec<&osv_geometry::curve::BezPath> = vec![&survivor_path];
+     paths.extend(cutter_paths.iter());
+-    let contours = boolean_paths_pure(&paths, linesweeper::BinaryOp::Difference);
++    let contours = boolean_paths_pure(&paths, osv_geometry::curve_boolean::BinaryOp::Difference);
+     if contours.is_empty() {
+         // The survivor is fully covered by the cutters (or the op produced no
+         // geometry): bail before destroying anything, exactly like subtract.
+@@ -833,7 +833,7 @@
+         let shape_path = document.closed_kurbo_path(shape);
+         let contours = match (&shape_path, &cutter_path) {
+             (Some(sp), Some(cp)) => {
+-                boolean_paths_pure(&[sp, cp], linesweeper::BinaryOp::Difference)
++                boolean_paths_pure(&[sp, cp], osv_geometry::curve_boolean::BinaryOp::Difference)
+             }
+             // One input has no closed-path form: same empty result the
+             // all-in-one call produced before.
+@@ -903,7 +903,7 @@
+ fn shape_builder_closed_paths(
+     document: &crate::document::Document,
+     ids: &[ShapeId],
+-) -> Vec<(Shape, kurbo::BezPath)> {
++) -> Vec<(Shape, osv_geometry::curve::BezPath)> {
+     crate::document::collect_shapes_by_ids_in_order(document, ids)
+         .into_iter()
+         .filter_map(|s| {
+@@ -1044,7 +1044,7 @@
+ pub(crate) fn boolean_op_in_document(
+     document: &mut crate::document::Document,
+     ids: &[ShapeId],
+-    op: linesweeper::BinaryOp,
++    op: osv_geometry::curve_boolean::BinaryOp,
+     stroke: &StrokeStyle,
+     fill: Option<&FillStyle>,
+     opacity: f32,
+@@ -1069,7 +1069,7 @@
+     let result_shapes = if shapes.len() < 2 {
+         Vec::new()
+     } else {
+-        let paths: Vec<kurbo::BezPath> = shapes
++        let paths: Vec<osv_geometry::curve::BezPath> = shapes
+             .iter()
+             .filter_map(|s| {
+                 let path = document.closed_kurbo_path(s)?;
+@@ -1077,7 +1077,7 @@
+                 Some(path)
+             })
+             .collect();
+-        let refs: Vec<&kurbo::BezPath> = paths.iter().collect();
++        let refs: Vec<&osv_geometry::curve::BezPath> = paths.iter().collect();
+         boolean_paths_pure(&refs, op)
+     };
+     let Some(data) = boolean_result_data(result_shapes) else {
+@@ -1144,7 +1144,7 @@
+     // like Crop keeps the subject's look (here: the front shape's).
+     let front = closed.last().expect("len >= 2").0.clone();
+ 
+-    let paths: Vec<kurbo::BezPath> = closed.into_iter().map(|(_, p)| p).collect();
++    let paths: Vec<osv_geometry::curve::BezPath> = closed.into_iter().map(|(_, p)| p).collect();
+     let cells = arrangement_cells_pure(&paths);
+     let Some(cell) = cells.get(cell_index) else {
+         return Err("Shape Builder: no region here");
+@@ -1217,7 +1217,7 @@
+         return Err("Shape Builder: limited to 10 shapes");
+     }
+ 
+-    let paths: Vec<kurbo::BezPath> = closed.iter().map(|(_, p)| p.clone()).collect();
++    let paths: Vec<osv_geometry::curve::BezPath> = closed.iter().map(|(_, p)| p.clone()).collect();
+     let cells = arrangement_cells_pure(&paths);
+     let Some(cell) = cells.get(cell_index) else {
+         return Err("Shape Builder: no region here");
+@@ -1241,7 +1241,7 @@
+     let mut any_change = false;
+     for (shape, sp) in &closed {
+         let before = bez_path_area(sp);
+-        let contours = boolean_paths_pure(&[sp, &cell_path], linesweeper::BinaryOp::Difference);
++        let contours = boolean_paths_pure(&[sp, &cell_path], osv_geometry::curve_boolean::BinaryOp::Difference);
+         if contours.is_empty() {
+             // Fully consumed by the cell: this shape is removed entirely.
+             outcomes.push(Outcome {
+@@ -1364,7 +1364,7 @@
+         let Some(sp) = shape_to_region_kurbo_path(s) else {
+             continue;
+         };
+-        let contours = boolean_paths_pure(&[&sp, &frame_path], linesweeper::BinaryOp::Intersection);
++        let contours = boolean_paths_pure(&[&sp, &frame_path], osv_geometry::curve_boolean::BinaryOp::Intersection);
+         if contours.is_empty() {
+             continue;
+         }
+@@ -1479,7 +1479,7 @@
+ 
+     // Pre-convert every shape's closed kurbo path once (None for open paths), so
+     // the inner loop reuses each cutter's path instead of reconverting it.
+-    let closed_paths: Vec<Option<kurbo::BezPath>> =
++    let closed_paths: Vec<Option<osv_geometry::curve::BezPath>> =
+         ordered.iter().map(shape_to_region_kurbo_path).collect();
+ 
+     // Stage every decision WITHOUT touching the document, so an
+@@ -1520,7 +1520,7 @@
+ 
+         // Cutters = shapes drawn ABOVE this one (higher index) that bound a
+         // closed region. Open cutters contribute nothing and are skipped.
+-        let cutter_paths: Vec<&kurbo::BezPath> = closed_paths[i + 1..]
++        let cutter_paths: Vec<&osv_geometry::curve::BezPath> = closed_paths[i + 1..]
+             .iter()
+             .filter_map(Option::as_ref)
+             .collect();
+@@ -1537,9 +1537,9 @@
+ 
+         // Subtract the UNION of the cutters via a single left-fold Difference:
+         // (((S - C1) - C2) - C3) = S - (C1 ∪ C2 ∪ C3).
+-        let mut paths: Vec<&kurbo::BezPath> = vec![subject_path];
++        let mut paths: Vec<&osv_geometry::curve::BezPath> = vec![subject_path];
+         paths.extend(cutter_paths.iter().copied());
+-        let contours = boolean_paths_pure(&paths, linesweeper::BinaryOp::Difference);
++        let contours = boolean_paths_pure(&paths, osv_geometry::curve_boolean::BinaryOp::Difference);
+ 
+         // Decide whether the fold ACTUALLY changed the shape. The cutters above
+         // may not overlap this shape at all, in which case Difference returns
+@@ -1691,7 +1691,7 @@
+         // `None` = no fill. `Color` is Eq-but-not-Hash, so buckets are matched by
+         // linear scan over `key`, not via a HashMap.
+         key: Option<crate::shape::Color>,
+-        paths: Vec<kurbo::BezPath>,
++        paths: Vec<osv_geometry::curve::BezPath>,
+         member_ids: Vec<ShapeId>,
+         stroke: StrokeStyle,
+         fill: Option<FillStyle>,
+@@ -1774,8 +1774,8 @@
+         // N-path slice returns their union (the same contract Trim / Divide rely
+         // on). A 1-path bucket is still routed through Union for self-intersection
+         // normalization.
+-        let refs: Vec<&kurbo::BezPath> = b.paths.iter().collect();
+-        let contours = boolean_paths_pure(&refs, linesweeper::BinaryOp::Union);
++        let refs: Vec<&osv_geometry::curve::BezPath> = b.paths.iter().collect();
++        let contours = boolean_paths_pure(&refs, osv_geometry::curve_boolean::BinaryOp::Union);
+         // A single contour stays a closed `BezierPath`; multiple contours become
+         // ONE `Compound` so holes / disjoint same-color islands render under the
+         // bucket's fill_rule (the exact choice `boolean_op_in_document` makes via
+@@ -1867,7 +1867,7 @@
+ /// inherited; degenerate or empty results are dropped there, and empty
+ /// contributions are simply skipped. `< 2` inputs return empty (guards the bail
+ /// in `CurvexApp::action_divide`).
+-pub fn divide_paths_pure(paths: &[kurbo::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {
++pub fn divide_paths_pure(paths: &[osv_geometry::curve::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {
+     // Divide is exactly the arrangement flattened: each cell contributes its
+     // contour(s) as independent fragments, so the historical flat-Vec shape is
+     // recovered by concatenating the per-cell groups in the same subset order.
+@@ -1897,7 +1897,7 @@
+ /// point-test the cursor against each cell and extract / delete it as one
+ /// region. `< 2` inputs return empty.
+ pub(crate) fn arrangement_cells_pure(
+-    paths: &[kurbo::BezPath],
++    paths: &[osv_geometry::curve::BezPath],
+ ) -> Vec<Vec<(Vec2, Vec<PathSegment>)>> {
+     let n = paths.len();
+     if n < 2 {
+@@ -1907,13 +1907,13 @@
+     // Union of the inputs at the given indices, folded via boolean_paths_pure
+     // and converted back to a single kurbo path. `None` when the subset is
+     // empty or the fold produced no geometry.
+-    let union_of = |indices: &[usize]| -> Option<kurbo::BezPath> {
++    let union_of = |indices: &[usize]| -> Option<osv_geometry::curve::BezPath> {
+         match indices {
+             [] => None,
+             [only] => Some(paths[*only].clone()),
+             _ => {
+-                let refs: Vec<&kurbo::BezPath> = indices.iter().map(|&k| &paths[k]).collect();
+-                let contours = boolean_paths_pure(&refs, linesweeper::BinaryOp::Union);
++                let refs: Vec<&osv_geometry::curve::BezPath> = indices.iter().map(|&k| &paths[k]).collect();
++                let contours = boolean_paths_pure(&refs, osv_geometry::curve_boolean::BinaryOp::Union);
+                 if contours.is_empty() {
+                     return None;
+                 }
+@@ -1941,8 +1941,8 @@
+         let inter = if in_s.len() == 1 {
+             canonical_boolean_contours(&paths[in_s[0]])
+         } else {
+-            let refs: Vec<&kurbo::BezPath> = in_s.iter().map(|&i| &paths[i]).collect();
+-            boolean_paths_pure(&refs, linesweeper::BinaryOp::Intersection)
++            let refs: Vec<&osv_geometry::curve::BezPath> = in_s.iter().map(|&i| &paths[i]).collect();
++            boolean_paths_pure(&refs, osv_geometry::curve_boolean::BinaryOp::Intersection)
+         };
+         if inter.is_empty() {
+             continue;
+@@ -1961,7 +1961,7 @@
+         match union_of(&others) {
+             Some(rest) => {
+                 let frag =
+-                    boolean_paths_pure(&[&inter_path, &rest], linesweeper::BinaryOp::Difference);
++                    boolean_paths_pure(&[&inter_path, &rest], osv_geometry::curve_boolean::BinaryOp::Difference);
+                 if !frag.is_empty() {
+                     cells.push(frag);
+                 }
+@@ -1976,8 +1976,8 @@
+ 
+ const BOOLEAN_EPS: f64 = 0.05;
+ 
+-fn split_kurbo_sub_paths(path: &kurbo::BezPath) -> Vec<kurbo::BezPath> {
+-    use kurbo::{BezPath, PathEl};
++fn split_kurbo_sub_paths(path: &osv_geometry::curve::BezPath) -> Vec<osv_geometry::curve::BezPath> {
++    use osv_geometry::curve::{BezPath, PathEl};
+     let mut out = Vec::new();
+     let mut current = BezPath::new();
+     for el in path.elements() {
+@@ -1992,25 +1992,25 @@
+     out
+ }
+ 
+-fn canonical_boolean_contours(path: &kurbo::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {
+-    use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};
++fn canonical_boolean_contours(path: &osv_geometry::curve::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {
++    use osv_geometry::curve_boolean::{binary_op_with_eps, BinaryOp, FillRule};
+     let Ok(contours) =
+         binary_op_with_eps(path, path, FillRule::NonZero, BinaryOp::Union, BOOLEAN_EPS)
+     else {
+         return Vec::new();
+     };
+-    let mut canonical = kurbo::BezPath::new();
++    let mut canonical = osv_geometry::curve::BezPath::new();
+     for contour in contours.contours() {
+         canonical.extend(contour.path.iter());
+     }
+     boolean_contours_above_noise(&canonical, BOOLEAN_EPS)
+ }
+ 
+-fn boolean_contours_above_noise(path: &kurbo::BezPath, eps: f64) -> Vec<(Vec2, Vec<PathSegment>)> {
++fn boolean_contours_above_noise(path: &osv_geometry::curve::BezPath, eps: f64) -> Vec<(Vec2, Vec<PathSegment>)> {
+     let mut sub_paths = split_kurbo_sub_paths(path);
+     let noise_area = eps * eps * 1e-6;
+     sub_paths.retain(|sp| bez_path_area(sp) > noise_area);
+-    let mut combined = kurbo::BezPath::new();
++    let mut combined = osv_geometry::curve::BezPath::new();
+     for sub_path in &sub_paths {
+         combined.extend(sub_path.iter());
+     }
+@@ -2024,17 +2024,17 @@
+ /// parity mismatch on a non-canonical fallback and a fresh flatten allocation
+ /// on every Shape Builder hover.
+ pub(crate) fn point_in_cell(cell: &[(Vec2, Vec<PathSegment>)], p: Vec2) -> bool {
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     contours_to_kurbo_path(cell)
+-        .is_some_and(|path| path.winding(kurbo::Point::new(f64::from(p.x), f64::from(p.y))) != 0)
++        .is_some_and(|path| path.winding(osv_geometry::curve::Point::new(f64::from(p.x), f64::from(p.y))) != 0)
+ }
+ 
+ /// Rebuild a single closed kurbo path from `(start, segments)` contours so a
+ /// derived region (e.g. a folded union, or a pairwise intersection) can feed
+ /// back into another `boolean_paths_pure` call. Each contour becomes one
+ /// closed sub-path. Returns `None` when there is nothing to rebuild.
+-fn contours_to_kurbo_path(contours: &[(Vec2, Vec<PathSegment>)]) -> Option<kurbo::BezPath> {
+-    use kurbo::{BezPath, Point};
++fn contours_to_kurbo_path(contours: &[(Vec2, Vec<PathSegment>)]) -> Option<osv_geometry::curve::BezPath> {
++    use osv_geometry::curve::{BezPath, Point};
+     if contours.is_empty() {
+         return None;
+     }
+@@ -2065,16 +2065,16 @@
+ /// `boolean_paths_pure`.
+ pub fn boolean_shapes_pure(
+     shapes: &[&Shape],
+-    op: linesweeper::BinaryOp,
++    op: osv_geometry::curve_boolean::BinaryOp,
+ ) -> Vec<(Vec2, Vec<PathSegment>)> {
+     if shapes.len() < 2 {
+         return Vec::new();
+     }
+-    let paths: Vec<kurbo::BezPath> = shapes
++    let paths: Vec<osv_geometry::curve::BezPath> = shapes
+         .iter()
+         .filter_map(|s| shape_to_kurbo_path(s))
+         .collect();
+-    let refs: Vec<&kurbo::BezPath> = paths.iter().collect();
++    let refs: Vec<&osv_geometry::curve::BezPath> = paths.iter().collect();
+     boolean_paths_pure(&refs, op)
+ }
+ 
+@@ -2082,11 +2082,11 @@
+ /// the same input to many operations (e.g. subtract: one cutter against N
+ /// shapes) convert each shape exactly once.
+ pub fn boolean_paths_pure(
+-    paths: &[&kurbo::BezPath],
+-    op: linesweeper::BinaryOp,
++    paths: &[&osv_geometry::curve::BezPath],
++    op: osv_geometry::curve_boolean::BinaryOp,
+ ) -> Vec<(Vec2, Vec<PathSegment>)> {
+-    use kurbo::BezPath;
+-    use linesweeper::{binary_op_with_eps, FillRule};
++    use osv_geometry::curve::BezPath;
++    use osv_geometry::curve_boolean::{binary_op_with_eps, FillRule};
+ 
+     if paths.len() < 2 {
+         return Vec::new();
+@@ -2126,10 +2126,10 @@
+ ///
+ /// Any contour containing a non-finite coordinate is dropped, mirroring the
+ /// SVG importer's finiteness guard, so a pathological input (e.g. a NaN from a
+-/// degenerate transform fed through `kurbo::stroke`) cannot inject invalid
++/// degenerate transform fed through `osv_geometry::curve::stroke`) cannot inject invalid
+ /// geometry into the document.
+-pub(crate) fn bez_path_to_contours(path: &kurbo::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {
+-    use kurbo::{BezPath, PathEl, Point};
++pub(crate) fn bez_path_to_contours(path: &osv_geometry::curve::BezPath) -> Vec<(Vec2, Vec<PathSegment>)> {
++    use osv_geometry::curve::{BezPath, PathEl, Point};
+ 
+     // Split by MoveTo into individual sub-paths so each becomes one contour.
+     let mut sub_paths: Vec<BezPath> = Vec::new();
+@@ -2288,9 +2288,9 @@
+     PathSegment::Cubic { c1, c2, to: *start }
+ }
+ 
+-pub(crate) fn shape_to_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {
++pub(crate) fn shape_to_kurbo_path(shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
+     if let ShapeData::Compound { contours } = &shape.data {
+-        let mut path = kurbo::BezPath::new();
++        let mut path = osv_geometry::curve::BezPath::new();
+         for contour in contours {
+             append_contour_to_kurbo(&mut path, contour.start, &contour.segments);
+         }
+@@ -2314,7 +2314,7 @@
+ /// On a solver error (or an empty normalization) the RAW rings are returned
+ /// instead of dropping the shape - the pre-normalization behavior, never a
+ /// silent empty input.
+-pub(crate) fn shape_to_region_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {
++pub(crate) fn shape_to_region_kurbo_path(shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
+     if matches!(&shape.data, ShapeData::Compound { .. }) {
+         // The single winding-normalization implementation lives in the
+         // document layer (see its doc comment for the rationale).
+@@ -2323,8 +2323,8 @@
+     shape_to_kurbo_path(shape)
+ }
+ 
+-fn append_contour_to_kurbo(path: &mut kurbo::BezPath, start: Vec2, segments: &[PathSegment]) {
+-    use kurbo::Point;
++fn append_contour_to_kurbo(path: &mut osv_geometry::curve::BezPath, start: Vec2, segments: &[PathSegment]) {
++    use osv_geometry::curve::Point;
+     path.move_to(Point::new(f64::from(start.x), f64::from(start.y)));
+     for segment in segments {
+         match segment {
+@@ -2348,8 +2348,8 @@
+ /// paths too - that is the headline case where end caps finally become
+ /// visible. Returns `None` only for degenerate shapes (`to_path_segments`
+ /// yields nothing).
+-pub(crate) fn shape_to_kurbo_path_any(shape: &Shape) -> Option<kurbo::BezPath> {
+-    use kurbo::{BezPath, Point};
++pub(crate) fn shape_to_kurbo_path_any(shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
++    use osv_geometry::curve::{BezPath, Point};
+     if let ShapeData::Compound { contours } = &shape.data {
+         let mut path = BezPath::new();
+         for contour in contours {
+@@ -2387,8 +2387,8 @@
+     start: &Vec2,
+     segments: &[PathSegment],
+     closed: bool,
+-) -> Option<kurbo::BezPath> {
+-    use kurbo::{BezPath, Point};
++) -> Option<osv_geometry::curve::BezPath> {
++    use osv_geometry::curve::{BezPath, Point};
+     if !closed {
+         return None;
+     }
+@@ -2426,18 +2426,18 @@
+ /// (dead_code allowed: only the bench target calls this, the binary doesn't.)
+ #[allow(dead_code)]
+ pub fn boolean_union_for_bench(shapes: &[&Shape]) -> Vec<(Vec2, Vec<PathSegment>)> {
+-    boolean_shapes_pure(shapes, linesweeper::BinaryOp::Union)
++    boolean_shapes_pure(shapes, osv_geometry::curve_boolean::BinaryOp::Union)
+ }
+ 
+ /// Bench-only hook: pure boolean difference (first minus rest).
+ #[allow(dead_code)]
+ pub fn boolean_difference_for_bench(shapes: &[&Shape]) -> Vec<(Vec2, Vec<PathSegment>)> {
+-    boolean_shapes_pure(shapes, linesweeper::BinaryOp::Difference)
++    boolean_shapes_pure(shapes, osv_geometry::curve_boolean::BinaryOp::Difference)
+ }
+ 
+ /// Bench-only hook: convert one shape to its (closed) kurbo path.
+ #[allow(dead_code)]
+-pub fn shape_to_kurbo_path_for_bench(shape: &Shape) -> Option<kurbo::BezPath> {
++pub fn shape_to_kurbo_path_for_bench(shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
+     shape_to_kurbo_path(shape)
+ }
+ 
+@@ -2665,13 +2665,13 @@
+     Some((chain_start, chain_segs))
+ }
+ 
+-pub(crate) fn bez_path_bbox_area(p: &kurbo::BezPath) -> f64 {
+-    use kurbo::PathEl;
++pub(crate) fn bez_path_bbox_area(p: &osv_geometry::curve::BezPath) -> f64 {
++    use osv_geometry::curve::PathEl;
+     let mut min_x = f64::INFINITY;
+     let mut min_y = f64::INFINITY;
+     let mut max_x = f64::NEG_INFINITY;
+     let mut max_y = f64::NEG_INFINITY;
+-    let mut include = |pt: kurbo::Point| {
++    let mut include = |pt: osv_geometry::curve::Point| {
+         if pt.x < min_x {
+             min_x = pt.x;
+         }
+@@ -2713,10 +2713,10 @@
+ /// higher shapes did not overlap it). Unlike [`bez_path_bbox_area`] this is the
+ /// true filled area, so an interior notch that leaves the bbox unchanged is
+ /// still seen as a shrink.
+-fn bez_path_area(p: &kurbo::BezPath) -> f64 {
++fn bez_path_area(p: &osv_geometry::curve::BezPath) -> f64 {
+     // `Shape::area` returns a signed area (orientation-dependent); the absolute
+     // value is the geometric area regardless of winding direction.
+-    kurbo::Shape::area(p).abs()
++    osv_geometry::curve::Shape::area(p).abs()
+ }
+ 
+ #[cfg(test)]
+--- a/src/document.rs
++++ b/src/document.rs
+@@ -381,7 +381,7 @@
+     /// exactly the cached `path_segments` conversion the callers used before,
+     /// so non-Compound behavior (and its caching) is unchanged. Open paths
+     /// yield `None`, same as before.
+-    pub fn closed_kurbo_path(&self, shape: &Shape) -> Option<kurbo::BezPath> {
++    pub fn closed_kurbo_path(&self, shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
+         if matches!(&shape.data, ShapeData::Compound { .. }) {
+             // Region-normalized: all rings, re-wound under the shape's own
+             // fill rule so a NonZero solver read preserves the donut's hole.
+--- a/src/document/kurbo_convert.rs
++++ b/src/document/kurbo_convert.rs
+@@ -15,8 +15,8 @@
+ const SOLVER_EPS: f64 = 0.05;
+ 
+ /// Append one ring to `path` as a CLOSED subpath (kurbo geometry is f64).
+-fn append_ring(path: &mut kurbo::BezPath, start: Vec2, segments: &[PathSegment]) {
+-    use kurbo::Point;
++fn append_ring(path: &mut osv_geometry::curve::BezPath, start: Vec2, segments: &[PathSegment]) {
++    use osv_geometry::curve::Point;
+     path.move_to(Point::new(f64::from(start.x), f64::from(start.y)));
+     for segment in segments {
+         match segment {
+@@ -41,11 +41,11 @@
+     start: &Vec2,
+     segments: &[PathSegment],
+     closed: bool,
+-) -> Option<kurbo::BezPath> {
++) -> Option<osv_geometry::curve::BezPath> {
+     if !closed {
+         return None;
+     }
+-    let mut path = kurbo::BezPath::new();
++    let mut path = osv_geometry::curve::BezPath::new();
+     append_ring(&mut path, *start, segments);
+     (!path.is_empty()).then_some(path)
+ }
+@@ -62,11 +62,11 @@
+ ///
+ /// On a solver error (or an empty normalization) the RAW rings are returned
+ /// instead of dropping the shape - never a silent empty input.
+-pub(crate) fn compound_region_kurbo_path(shape: &Shape) -> Option<kurbo::BezPath> {
++pub(crate) fn compound_region_kurbo_path(shape: &Shape) -> Option<osv_geometry::curve::BezPath> {
+     let ShapeData::Compound { contours } = &shape.data else {
+         return None;
+     };
+-    let mut raw = kurbo::BezPath::new();
++    let mut raw = osv_geometry::curve::BezPath::new();
+     for c in contours {
+         append_ring(&mut raw, c.start, &c.segments);
+     }
+@@ -74,20 +74,20 @@
+         return None;
+     }
+     let rule = match shape.fill_rule {
+-        crate::shape::FillRule::EvenOdd => linesweeper::FillRule::EvenOdd,
+-        crate::shape::FillRule::Nonzero => linesweeper::FillRule::NonZero,
++        crate::shape::FillRule::EvenOdd => osv_geometry::curve_boolean::FillRule::EvenOdd,
++        crate::shape::FillRule::Nonzero => osv_geometry::curve_boolean::FillRule::NonZero,
+     };
+-    let empty = kurbo::BezPath::new();
+-    let Ok(normalized) = linesweeper::binary_op_with_eps(
++    let empty = osv_geometry::curve::BezPath::new();
++    let Ok(normalized) = osv_geometry::curve_boolean::binary_op_with_eps(
+         &raw,
+         &empty,
+         rule,
+-        linesweeper::BinaryOp::Union,
++        osv_geometry::curve_boolean::BinaryOp::Union,
+         SOLVER_EPS,
+     ) else {
+         return Some(raw);
+     };
+-    let mut combined = kurbo::BezPath::new();
++    let mut combined = osv_geometry::curve::BezPath::new();
+     for c in normalized.contours() {
+         combined.extend(c.path.iter());
+     }
+--- a/src/tools/shape_builder.rs
++++ b/src/tools/shape_builder.rs
+@@ -68,7 +68,7 @@
+ pub(crate) fn selection_closed_paths(
+     document: &Document,
+     selection: &[ShapeId],
+-) -> Vec<kurbo::BezPath> {
++) -> Vec<osv_geometry::curve::BezPath> {
+     crate::document::collect_shapes_by_ids_in_order(document, selection)
+         .into_iter()
+         .filter_map(|shape| document.closed_kurbo_path(&shape))
+--- /dev/null
++++ b/src/ui/osv_gpu_adapter.rs
+@@ -0,0 +1,171 @@
++// Included into shape_render.rs by prepare_gpu.py. The CPU snapshot cache uses
++// geometry allocation identity plus premultiplied color. Weak ownership prevents
++// stale pointer reuse; a new tessellation or recolor creates a new GPU identity.
++struct OsvGpuSnapshot {
++    source: std::rc::Weak<dyn std::any::Any>,
++    mesh: std::sync::Arc<curvex_metal_renderer::cache::MeshData>,
++    age: u64,
++}
++#[derive(Default)]
++struct OsvGpuSnapshots {
++    entries: std::collections::HashMap<(usize, u32), OsvGpuSnapshot>,
++    ages: std::collections::BTreeMap<u64, (usize, u32)>,
++    clock: u64,
++    bytes: u64,
++}
++thread_local! {
++    static OSV_GPU_SNAPSHOTS: RefCell<OsvGpuSnapshots> = RefCell::new(OsvGpuSnapshots::default());
++}
++fn osv_try_gpu_solid(
++    painter: &Painter,
++    geometry: &Rc<osv_geometry::render::tess::VertexBuffers<Pos2, u32>>,
++    color: egui::Color32,
++    ct: &CanvasTransform,
++) -> bool {
++    if !curvex_metal_renderer::egui_integration::is_enabled(painter.ctx()) {
++        return false;
++    }
++    let bytes = geometry.vertices.len() as u64 * 12 + geometry.indices.len() as u64 * 4;
++    const BUDGET: u64 = 32 * 1024 * 1024;
++    if bytes > BUDGET || geometry.vertices.is_empty() || geometry.indices.is_empty() {
++        return false;
++    }
++    let mesh = osv_gpu_snapshot(
++        geometry,
++        u32::from_le_bytes(color.to_array()),
++        bytes,
++        || {
++            curvex_metal_renderer::cache::MeshData::new(
++                geometry
++                    .vertices
++                    .iter()
++                    .map(|p| curvex_metal_renderer::Vertex {
++                        position: [p.x, p.y],
++                        color: color.to_array(),
++                    })
++                    .collect(),
++                geometry.indices.clone(),
++            )
++            .ok()
++        },
++    );
++    let Some(mesh) = mesh else {
++        return false;
++    };
++    curvex_metal_renderer::egui_integration::paint(
++        painter,
++        mesh,
++        curvex_metal_renderer::Camera {
++            screen: [1., 1.],
++            origin: [ct.origin.x, ct.origin.y],
++            offset: [ct.offset.x, ct.offset.y],
++            zoom: ct.zoom,
++            dithering: true,
++        },
++    )
++}
++
++fn osv_gpu_snapshot<T: std::any::Any>(
++    source: &Rc<T>,
++    discriminator: u32,
++    bytes: u64,
++    build: impl FnOnce() -> Option<std::sync::Arc<curvex_metal_renderer::cache::MeshData>>,
++) -> Option<std::sync::Arc<curvex_metal_renderer::cache::MeshData>> {
++    const BUDGET: u64 = 32 * 1024 * 1024;
++    if bytes > BUDGET {
++        return None;
++    }
++    let key = (Rc::as_ptr(source) as usize, discriminator);
++    OSV_GPU_SNAPSHOTS.with(|cache| {
++        let mut cache = cache.borrow_mut();
++        if cache.clock == u64::MAX {
++            *cache = OsvGpuSnapshots::default();
++        }
++        let age = cache.clock;
++        cache.clock += 1;
++        if let Some(entry) = cache.entries.get(&key) {
++            if entry.source.upgrade().is_some() {
++                let mesh = entry.mesh.clone();
++                let old_age = entry.age;
++                cache.ages.remove(&old_age);
++                cache.ages.insert(age, key);
++                cache.entries.get_mut(&key).unwrap().age = age;
++                return Some(mesh);
++            }
++        }
++        let mesh = build()?;
++        if let Some(old) = cache.entries.remove(&key) {
++            cache.bytes -= old.mesh.byte_size();
++            cache.ages.remove(&old.age);
++        }
++        while cache.bytes + bytes > BUDGET || cache.entries.len() >= 8192 {
++            let (_, old_key) = cache.ages.pop_first()?;
++            let old = cache.entries.remove(&old_key)?;
++            cache.bytes -= old.mesh.byte_size();
++        }
++        cache.bytes += bytes;
++        cache.ages.insert(age, key);
++        cache.entries.insert(
++            key,
++            OsvGpuSnapshot {
++                source: Rc::downgrade(&(source.clone() as Rc<dyn std::any::Any>)),
++                mesh: mesh.clone(),
++                age,
++            },
++        );
++        Some(mesh)
++    })
++}
++
++fn osv_try_gpu_gradient(
++    painter: &Painter,
++    sampled: &Rc<osv_geometry::attribute_mesh::SampledMesh>,
++    ct: &CanvasTransform,
++) -> bool {
++    if !curvex_metal_renderer::egui_integration::is_enabled(painter.ctx()) {
++        return false;
++    }
++    let bytes = sampled.positions.len() as u64 * 12 + sampled.indices.len() as u64 * 4;
++    let mesh = osv_gpu_snapshot(sampled, 0, bytes, || {
++        curvex_metal_renderer::cache::MeshData::new(
++            sampled
++                .positions
++                .iter()
++                .zip(&sampled.values)
++                .map(|(p, v)| curvex_metal_renderer::Vertex {
++                    position: [p[0] as f32, p[1] as f32],
++                    color: v.map(|x| x.round().clamp(0., 255.) as u8),
++                })
++                .collect(),
++            sampled.indices.clone(),
++        )
++        .ok()
++    });
++    let Some(mesh) = mesh else {
++        return false;
++    };
++    curvex_metal_renderer::egui_integration::paint(
++        painter,
++        mesh,
++        curvex_metal_renderer::Camera {
++            screen: [1., 1.],
++            origin: [ct.origin.x, ct.origin.y],
++            offset: [ct.offset.x, ct.offset.y],
++            zoom: ct.zoom,
++            dithering: true,
++        },
++    )
++}
++
++/// Payload diagnostics; budgets exclude map/node and driver allocation overhead.
++pub fn osv_gpu_cache_payloads() -> (usize, usize, usize, u64) {
++    let geometry = RENDER_CACHE.with(|cache| {
++        let c = cache.borrow();
++        (c.entries.len(), c.bytes)
++    });
++    let snapshots = OSV_GPU_SNAPSHOTS.with(|cache| {
++        let c = cache.borrow();
++        (c.entries.len(), c.bytes)
++    });
++    (geometry.0, geometry.1, snapshots.0, snapshots.1)
++}
+--- /dev/null
++++ b/src/ui/osv_gradient_sampling.rs
+@@ -0,0 +1,268 @@
++// Installed beside shape_render.rs by prepare.py. Keep gradient interpolation
++// independent of the triangulator's choice of diagonals, including cache hits.
++fn osv_paint_sampled_gradient(
++    painter: &Painter,
++    geometry: &osv_geometry::render::tess::VertexBuffers<Pos2, u32>,
++    g: &Gradient,
++    bb: &MmRect,
++    ct: &CanvasTransform,
++    op: f32,
++    revision: Option<u64>,
++    key: Option<CacheKey>,
++) {
++    use osv_geometry::attribute_mesh::{SampleOptions, SampledMesh, sample_mesh_with_seams};
++    use osv_geometry::tessellation::FillMesh;
++    // Revision handles document mutations; the fingerprint also distinguishes
++    // transient paint parameters and shadow ghosts within one revision.
++    let mut fingerprint = 0;
++    for byte in serde_json::to_vec(g).unwrap_or_default() {
++        fingerprint = hash_pair(fingerprint, u64::from(byte));
++    }
++    for value in [bb.min.x, bb.min.y, bb.max.x, bb.max.y, op] {
++        fingerprint = hash_pair(fingerprint, u64::from(value.to_bits()));
++    }
++    let sampled = key.as_ref().and_then(|key| {
++        let revision = revision?;
++        RENDER_CACHE.with(|cache| {
++            let mut cache = cache.borrow_mut();
++            cache.set_revision(revision);
++            match cache.get(key) {
++                Some(CacheEntry::GradientSamples { fingerprint: stored, sampled, .. })
++                    if stored == fingerprint => Some(sampled),
++                _ => None,
++            }
++        })
++    }).unwrap_or_else(|| {
++        let base = FillMesh {
++            positions: geometry.vertices.iter().map(|p| [f64::from(p.x), f64::from(p.y)]).collect(),
++            indices: geometry.indices.clone(),
++        };
++        let extent = f64::from(bb.width().abs().max(bb.height().abs())).max(1e-9);
++        let unit = f64::from(bb.width().abs().min(bb.height().abs())).max(1e-9);
++        let feature = match &g.kind {
++            crate::shape::GradientKind::Linear { p1, p2 } => {
++                if g.spread == crate::shape::GradientSpread::Pad && g.stops.len() <= 2 {
++                    f64::INFINITY
++                } else {
++                    f64::from((p2.x-p1.x).hypot(p2.y-p1.y)) * unit * 0.125
++                }
++            }
++            crate::shape::GradientKind::Radial { radius, .. } => f64::from(radius.abs()) * unit * 0.25,
++            crate::shape::GradientKind::Conic { .. } => unit * 0.125,
++        };
++        // Stop spacing also matters for radial/conic bands. Bound the extra
++        // uniform seeding work: arbitrarily narrow bands cannot be guaranteed
++        // by four probes, and remain subject to the explicit refinement budget.
++        let mut offsets: Vec<_> = g.stops.iter().map(|s| f64::from(s.offset))
++            .filter(|v| v.is_finite()).map(|v| v.clamp(0.,1.)).chain([0.,1.]).collect();
++        offsets.sort_by(f64::total_cmp);
++        let stop_gap = offsets.windows(2).map(|pair| pair[1]-pair[0])
++            .filter(|&gap| gap > 0.).fold(1.,f64::min);
++        let feature = if matches!(g.kind, crate::shape::GradientKind::Linear { .. }) {
++            feature
++        } else {
++            feature.min((feature*stop_gap).max(extent/64.))
++        };
++        let options = SampleOptions {
++            max_error: 1., max_edge_length: feature.max(extent / 4096.),
++            min_edge_length: extent / 4096., ..Default::default()
++        };
++        // Normalize in binary64 before converting back to the renderer's f32:
++        // an off-seam probe at x=1e7 otherwise rounds onto the seam itself.
++        let unit_bbox = MmRect::from_min_max(0.,0.,1.,1.);
++        let sample = |p: [f64; 2]| {
++            let normalized = Vec2::new(((p[0]-f64::from(bb.min.x))/f64::from(bb.width())) as f32,
++                                      ((p[1]-f64::from(bb.min.y))/f64::from(bb.height())) as f32);
++            gradient_color_at(g, &unit_bbox, normalized, op).to_array().map(f64::from)
++        };
++        let seams = osv_gradient_seams(g, bb, &base.positions);
++        let options = SampleOptions { max_edge_length: if matches!(g.kind, crate::shape::GradientKind::Linear { .. })
++            && !seams.is_empty() && seams.len() < 1024 { f64::INFINITY } else { options.max_edge_length }, ..options };
++        let mesh = sample_mesh_with_seams(&base, &options, &seams, sample).unwrap_or_else(|error| {
++            // Preserve a visible coarse preview if an extreme gradient reaches
++            // the explicit work bound. Normal document cases are refined.
++            eprintln!("Gradient sampling: {error:?}");
++            SampledMesh { values: base.positions.iter().map(|&p| sample(p)).collect(),
++                          positions: base.positions, indices: base.indices }
++        });
++        let mesh = Rc::new(mesh);
++        if let Some(key) = key {
++            if let Some(base) = cache_get(revision, &key) {
++                cache_put(revision, key, CacheEntry::GradientSamples {
++                    base: Box::new(base), fingerprint, sampled: mesh.clone(),
++                });
++            }
++        }
++        mesh
++    });
++    if osv_try_gpu_gradient(painter, &sampled, ct) { return; }
++    let vertices = sampled.positions.iter().zip(&sampled.values).map(|(p, v)| {
++        let [r,g,b,a] = v.map(|x| x.round().clamp(0.,255.) as u8);
++        egui::epaint::Vertex {
++            pos: to_screen(&Vec2::new(p[0] as f32, p[1] as f32), ct.origin, ct.offset, ct.zoom),
++            uv: egui::epaint::WHITE_UV,
++            color: egui::Color32::from_rgba_premultiplied(r,g,b,a),
++        }
++    }).collect();
++    painter.add(egui::Shape::Mesh(std::sync::Arc::new(egui::epaint::Mesh {
++        indices: sampled.indices.clone(), vertices, texture_id: egui::TextureId::default(),
++    })));
++}
++
++fn osv_gradient_seams(g: &Gradient, bb: &MmRect, positions: &[[f64;2]]) -> Vec<[f64;3]> {
++    use crate::shape::{GradientKind, GradientSpread};
++    match &g.kind {
++        GradientKind::Linear { p1,p2 } => {
++            let (dx,dy) = (f64::from(p2.x-p1.x),f64::from(p2.y-p1.y));
++            let denominator = dx*dx+dy*dy;
++            if denominator < 1e-12 { return Vec::new(); }
++            let (a,b) = (dx / f64::from(bb.width()) / denominator,dy / f64::from(bb.height()) / denominator);
++            let c = -(f64::from(p1.x)*dx+f64::from(p1.y)*dy)/denominator-a*f64::from(bb.min.x)-b*f64::from(bb.min.y);
++            let (min,max) = positions.iter().fold((f64::INFINITY,f64::NEG_INFINITY), |(lo,hi),p| {
++                let t=a*p[0]+b*p[1]+c;(lo.min(t),hi.max(t))
++            });
++            let mut breaks = Vec::new();
++            match g.spread {
++                GradientSpread::Pad => breaks.extend(g.stops.iter().map(|s| f64::from(s.offset))),
++                GradientSpread::Repeat | GradientSpread::Reflect if max-min <= 128. => {
++                    for k in (min.floor() as i32-1)..=(max.ceil() as i32+1) {
++                        breaks.push(f64::from(k));
++                        for stop in &g.stops {
++                            let value=f64::from(stop.offset);
++                            breaks.push(f64::from(k)+if g.spread == GradientSpread::Reflect && k.rem_euclid(2)==1 {1.-value} else {value});
++                        }
++                    }
++                }
++                _ => {}
++            }
++            breaks.sort_by(f64::total_cmp);breaks.dedup_by(|x,y| (*x-*y).abs()<1e-12);
++            breaks.into_iter().filter(|&t| t>=min-1e-9 && t<=max+1e-9).take(1024).map(|t| [a,b,c-t]).collect()
++        }
++        GradientKind::Conic { center,angle } => {
++            let (a,b)=(-f64::from(angle.sin())/f64::from(bb.width()),f64::from(angle.cos())/f64::from(bb.height()));
++            vec![[a,b,-a*f64::from(bb.min.x+center.x*bb.width())-b*f64::from(bb.min.y+center.y*bb.height())]]
++        }
++        _ => Vec::new(),
++    }
++}
++
++#[cfg(test)]
++mod osv_gradient_sampling_tests {
++    use super::*;
++    #[test]
++    fn repeated_gradient_at_large_document_coordinates_keeps_sharp_seams() {
++        RENDER_CACHE.with(|cache| *cache.borrow_mut()=RenderCache::new());
++        let ctx=egui::Context::default();ctx.begin_pass(egui::RawInput::default());
++        let painter=ctx.layer_painter(egui::LayerId::background());
++        let origin=1e7;
++        let shape=Shape::new("translated repeat".into(), ShapeData::Rectangle {
++            top_left:Vec2::new(origin,origin),width:128.,height:128.,
++        });
++        let geometry=osv_geometry::render::tess::VertexBuffers {
++            vertices:vec![Pos2::new(origin,origin),Pos2::new(origin+128.,origin),
++                          Pos2::new(origin+128.,origin+128.),Pos2::new(origin,origin+128.)],
++            indices:vec![0,1,2,0,2,3],
++        };
++        let mut gradient=Gradient::default_linear();
++        gradient.kind=crate::shape::GradientKind::Linear{p1:Vec2::new(0.,0.),p2:Vec2::new(0.25,0.)};
++        gradient.spread=crate::shape::GradientSpread::Repeat;
++        let key=CacheKey{id:shape.id.clone(),kind:KIND_GRADIENT_FILL,discrim:0,zoom_bucket:0};
++        cache_put(Some(800),key.clone(),CacheEntry::GradientFill(Rc::new(GradientFillTessellation {
++            geometry:geometry.clone(),bbox:shape.bounding_box(),
++        })));
++        let ct=CanvasTransform::new(Pos2::new(-origin,-origin),egui::Vec2::ZERO,1.);
++        osv_paint_sampled_gradient(&painter,&geometry,&gradient,&shape.bounding_box(),&ct,1.,Some(800),Some(key));
++        RENDER_CACHE.with(|cache| {
++            let cache=cache.borrow();
++            let mesh=cache.entries.values().find_map(|entry| match entry {
++                CacheEntry::GradientSamples { sampled, .. }=>Some(sampled),_=>None,
++            }).unwrap();
++            assert!(mesh.indices.len()/3 <= 16, "repeat fell back to coarse sampling or exhausted refinement");
++            let seam_values:Vec<_>=mesh.positions.iter().zip(&mesh.values).filter(|(p,_)|
++                (p[0]-f64::from(origin+32.)).abs()<1e-6).map(|(_,v)| v[0]).collect();
++            assert!(seam_values.iter().any(|&v| v<101.) && seam_values.iter().any(|&v| v>254.));
++        });
++        let _=ctx.end_pass();
++    }
++    #[test]
++    fn radial_interior_and_recolor_cache_survive_diagonal_changes() {
++        let ctx = egui::Context::default();
++        ctx.begin_pass(egui::RawInput::default());
++        let painter = ctx.layer_painter(egui::LayerId::background());
++        let shape = Shape::new("sampling test".into(), ShapeData::Rectangle {
++            top_left: Vec2::new(0.,0.), width: 10., height: 10.,
++        });
++        let bb = shape.bounding_box();
++        let ct = CanvasTransform::new(Pos2::ZERO, egui::Vec2::ZERO, 1.);
++        let key = CacheKey { id: shape.id.clone(), kind: KIND_GRADIENT_FILL, discrim: 0, zoom_bucket: 0 };
++        for indices in [vec![0,1,2,0,2,3], vec![0,1,3,1,2,3]] {
++            let geometry = osv_geometry::render::tess::VertexBuffers {
++                vertices: vec![Pos2::new(0.,0.),Pos2::new(10.,0.),Pos2::new(10.,10.),Pos2::new(0.,10.)], indices,
++            };
++            osv_paint_sampled_gradient(&painter, &geometry, &Gradient::default_radial(), &bb, &ct, 1., None, None);
++        }
++        let output = ctx.end_pass();
++        let meshes = ctx.tessellate(output.shapes, output.pixels_per_point);
++        let vertices: Vec<_> = meshes.iter().flat_map(|primitive| match &primitive.primitive {
++            egui::epaint::Primitive::Mesh(mesh) => mesh.vertices.as_slice(), _ => &[],
++        }).collect();
++        assert!(vertices.iter().any(|v| v.pos.distance(Pos2::new(5.,5.)) < 1e-5 && v.color.r() == 255));
++        // A style-only transient change with the same document revision must
++        // not reuse the first gradient's colored vertices.
++        ctx.begin_pass(egui::RawInput::default());
++        let geometry = osv_geometry::render::tess::VertexBuffers {
++            vertices: vec![Pos2::new(0.,0.),Pos2::new(10.,0.),Pos2::new(0.,10.)], indices: vec![0,1,2],
++        };
++        let mut gradient = Gradient::default_linear();
++        cache_put(Some(500),key.clone(),CacheEntry::GradientFill(Rc::new(GradientFillTessellation {
++            geometry:geometry.clone(),bbox:shape.bounding_box(),
++        })));
++        osv_paint_sampled_gradient(&painter, &geometry, &gradient, &bb, &ct, 1., Some(500), Some(key.clone()));
++        for stop in &mut gradient.stops { stop.color = crate::shape::Color::new(255,0,0,255); }
++        osv_paint_sampled_gradient(&painter, &geometry, &gradient, &bb, &ct, 1., Some(500), Some(key));
++        let output = ctx.end_pass();
++        let meshes = ctx.tessellate(output.shapes, output.pixels_per_point);
++        assert!(meshes.iter().any(|p| match &p.primitive {
++            egui::epaint::Primitive::Mesh(m) => m.vertices.iter().any(|v| v.color == egui::Color32::RED), _ => false,
++        }));
++    }
++
++    #[test]
++    fn three_hundred_gradient_shapes_keep_geometry_and_sample_cache_hits() {
++        RENDER_CACHE.with(|cache| *cache.borrow_mut()=RenderCache::new());
++        let ctx=egui::Context::default();
++        let shapes:Vec<_>=(0..300).map(|i| Shape::new(format!("gradient {i}"),ShapeData::Rectangle {
++            top_left:Vec2::new(0.,0.),width:10.,height:10.,
++        })).collect();
++        let keys:Vec<_>=shapes.iter().map(|shape| CacheKey {
++            id:shape.id.clone(),kind:KIND_GRADIENT_FILL,discrim:0,zoom_bucket:0,
++        }).collect();
++        let ct=CanvasTransform::new(Pos2::ZERO,egui::Vec2::ZERO,1.);
++        let gradient=Gradient::default_linear();
++        let mut first_samples=Vec::new();
++        let mut first_geometry=Vec::new();
++        for frame in 0..3 {
++            ctx.begin_pass(egui::RawInput::default());
++            let painter=ctx.layer_painter(egui::LayerId::background());
++            for (index,(shape,key)) in shapes.iter().zip(&keys).enumerate() {
++                draw_gradient_mesh(&painter,shape,&gradient,&ct,1.,Some(901),0);
++                let sample=RENDER_CACHE.with(|cache| match cache.borrow().entries.get(key) {
++                    Some(CacheEntry::GradientSamples { sampled, .. })=>sampled.clone(),
++                    _=>panic!("missing sampled mesh for shape {index}"),
++                });
++                let geometry=match cache_get(Some(901),key) {
++                    Some(CacheEntry::GradientFill(geometry))=>geometry,
++                    _=>panic!("geometry wrapper changed the cache_get contract"),
++                };
++                if frame==0 {
++                    first_samples.push(sample);first_geometry.push(geometry);
++                } else {
++                    assert!(Rc::ptr_eq(&sample,&first_samples[index]),"sample cache missed for shape {index}");
++                    assert!(Rc::ptr_eq(&geometry,&first_geometry[index]),"geometry cache missed for shape {index}");
++                }
++            }
++            RENDER_CACHE.with(|cache| assert_eq!(cache.borrow().entries.len(),300));
++            let _=ctx.end_pass();
++        }
++    }
++}
+--- /dev/null
++++ b/src/ui/osv_render_cache.rs
+@@ -0,0 +1,106 @@
++// Included by the isolated Curvex migration. Bound retained payload as well as
++// entry count; a revision change still invalidates everything atomically.
++const OSV_RENDER_CACHE_BYTES: usize = 128 * 1024 * 1024;
++struct RenderCache {
++    revision: Option<u64>,
++    entries: HashMap<CacheKey, CacheEntry>,
++    ages: HashMap<CacheKey, u64>,
++    costs: HashMap<CacheKey, usize>,
++    lru: VecDeque<(CacheKey, u64)>,
++    clock: u64,
++    bytes: usize,
++}
++impl RenderCache {
++    fn new() -> Self {
++        Self { revision: None, entries: HashMap::new(), ages: HashMap::new(),
++            costs: HashMap::new(), lru: VecDeque::new(), clock: 0, bytes: 0 }
++    }
++    fn set_revision(&mut self, revision: u64) {
++        if self.revision != Some(revision) {
++            *self = Self::new();
++            self.revision = Some(revision);
++        }
++    }
++    fn touch(&mut self, key: &CacheKey) {
++        // Compact stale touches in bounded batches, amortized constant work.
++        // No linear search/removal on every cache hit.
++        if self.lru.len() >= RENDER_CACHE_LIMIT * 2 || self.clock == u64::MAX {
++            self.lru.retain(|(key, age)| self.ages.get(key) == Some(age));
++            if self.clock == u64::MAX {
++                for (i, (key, age)) in self.lru.iter_mut().enumerate() {
++                    *age = i as u64;
++                    self.ages.insert(key.clone(), *age);
++                }
++                self.clock = self.lru.len() as u64;
++            }
++        }
++        self.clock += 1;
++        self.ages.insert(key.clone(), self.clock);
++        self.lru.push_back((key.clone(), self.clock));
++    }
++    fn get(&mut self, key: &CacheKey) -> Option<CacheEntry> {
++        let entry = self.entries.get(key)?.clone();
++        self.touch(key);
++        Some(entry)
++    }
++    fn remove(&mut self, key: &CacheKey) {
++        self.entries.remove(key);
++        self.ages.remove(key);
++        self.bytes -= self.costs.remove(key).unwrap_or(0);
++    }
++    fn insert(&mut self, key: CacheKey, entry: CacheEntry) {
++        let cost = osv_cache_cost(&entry);
++        self.remove(&key);
++        if cost > OSV_RENDER_CACHE_BYTES { return; }
++        while self.entries.len() >= RENDER_CACHE_LIMIT || self.bytes + cost > OSV_RENDER_CACHE_BYTES {
++            let Some((oldest, age)) = self.lru.pop_front() else { break; };
++            if self.ages.get(&oldest) == Some(&age) { self.remove(&oldest); }
++        }
++        self.bytes += cost;
++        self.costs.insert(key.clone(), cost);
++        self.entries.insert(key.clone(), entry);
++        self.touch(&key);
++    }
++}
++fn osv_cache_cost(entry: &CacheEntry) -> usize {
++    let geometry = |g: &osv_geometry::render::tess::VertexBuffers<Pos2,u32>| {
++        g.vertices.capacity() * std::mem::size_of::<Pos2>() + g.indices.capacity() * 4
++    };
++    std::mem::size_of::<CacheEntry>() + match entry {
++        CacheEntry::Mesh(g) => geometry(g),
++        CacheEntry::GradientFill(g) => geometry(&g.geometry) + std::mem::size_of::<MmRect>(),
++        CacheEntry::GradientSamples { base, sampled, .. } => osv_cache_cost(base)
++            + sampled.positions.capacity()*16 + sampled.values.capacity()*32 + sampled.indices.capacity()*4,
++        // Ghosts contain heterogeneous shape data; use a conservative serialized
++        // payload estimate. This is a cache weight, not a process RAM guarantee.
++        CacheEntry::Ghost(Some(g)) => std::mem::size_of::<Shape>()
++            + serde_json::to_vec(g.as_ref()).map_or(OSV_RENDER_CACHE_BYTES, |v|v.len().saturating_mul(2)),
++        CacheEntry::Ghost(None) => 0,
++    }
++}
++#[cfg(test)]
++mod osv_large_render_cache_tests {
++    use super::*;
++    fn key(i:u64) -> CacheKey { CacheKey { id: ShapeId::new(), kind: KIND_RIBBON, discrim:i, zoom_bucket:0 } }
++    #[test]
++    fn large_working_set_hits_and_touch_log_stays_bounded() {
++        let mut cache=RenderCache::new();cache.set_revision(1);
++        let keys:Vec<_>=(0..5000).map(key).collect();
++        for k in &keys { cache.insert(k.clone(),CacheEntry::Ghost(None)); }
++        for _ in 0..10 {for k in &keys {assert!(cache.get(k).is_some());}}
++        assert!(cache.lru.len()<=RENDER_CACHE_LIMIT*2);
++        assert_eq!(cache.entries.len(),5000);
++        cache.set_revision(2);assert!(cache.entries.is_empty());assert_eq!(cache.bytes,0);
++    }
++    #[test]
++    fn eviction_respects_recent_hits_replacement_and_payload_budget() {
++        let mut cache=RenderCache::new();let keys:Vec<_>=(0..RENDER_CACHE_LIMIT as u64).map(key).collect();
++        for k in &keys {cache.insert(k.clone(),CacheEntry::Ghost(None));}
++        cache.get(&keys[0]).unwrap();cache.insert(key(99999),CacheEntry::Ghost(None));
++        assert!(cache.get(&keys[0]).is_some());assert!(cache.get(&keys[1]).is_none());
++        let bytes=cache.bytes;cache.insert(keys[0].clone(),CacheEntry::Ghost(None));assert_eq!(cache.bytes,bytes);
++        let large=Rc::new(osv_geometry::render::tess::VertexBuffers { vertices:Vec::<Pos2>::with_capacity(OSV_RENDER_CACHE_BYTES/8+1), indices:vec![] });
++        cache.insert(keys[0].clone(),CacheEntry::Mesh(large));assert!(cache.get(&keys[0]).is_none());assert!(cache.bytes<=OSV_RENDER_CACHE_BYTES);
++        cache.clock=u64::MAX;cache.get(&keys[2]).unwrap();assert!(cache.clock<u64::MAX);
++    }
++}
+--- a/src/ui/shape_render.rs
++++ b/src/ui/shape_render.rs
+@@ -34,7 +34,7 @@
+ // ---------------------------------------------------------------------------
+ 
+ /// Max cache entries; oldest (least-recently-used) are evicted beyond this.
+-const RENDER_CACHE_LIMIT: usize = 512;
++const RENDER_CACHE_LIMIT: usize = 8192;
+ 
+ // Cache `kind` tags (the `kind` field of [`CacheKey`]).
+ const KIND_SOLID_FILL: u8 = 1;
+@@ -93,8 +93,9 @@
+ 
+ #[derive(Clone)]
+ enum CacheEntry {
++    GradientSamples { base: Box<CacheEntry>, fingerprint: u64, sampled: Rc<osv_geometry::attribute_mesh::SampledMesh> },
+     /// MM-space tessellated mesh (solid fill or stroke ribbon).
+-    Mesh(Rc<lyon_tessellation::VertexBuffers<Pos2, u32>>),
++    Mesh(Rc<osv_geometry::render::tess::VertexBuffers<Pos2, u32>>),
+     /// MM-space gradient fill tessellation plus its mm bbox.
+     GradientFill(Rc<GradientFillTessellation>),
+     /// Cached shadow ghost (`None` = computed once and empty, e.g. an inner
+@@ -102,69 +103,16 @@
+     Ghost(Option<Rc<Shape>>),
+ }
+ 
+-struct RenderCache {
+-    revision: Option<u64>,
+-    entries: HashMap<CacheKey, CacheEntry>,
+-    lru: VecDeque<CacheKey>,
+-}
+-
+-impl RenderCache {
+-    fn new() -> Self {
+-        Self {
+-            revision: None,
+-            entries: HashMap::new(),
+-            lru: VecDeque::new(),
+-        }
+-    }
+-
+-    /// Drop every entry when the observed document revision changes. Called
+-    /// on every cached draw; a same-revision call is a no-op.
+-    fn set_revision(&mut self, revision: u64) {
+-        if self.revision != Some(revision) {
+-            self.entries.clear();
+-            self.lru.clear();
+-            self.revision = Some(revision);
+-        }
+-    }
+-
+-    fn get(&mut self, key: &CacheKey) -> Option<CacheEntry> {
+-        let entry = self.entries.get(key)?.clone();
+-        // LRU touch: move the key to the back. O(n) scan, n <= limit.
+-        if let Some(pos) = self.lru.iter().position(|k| k == key) {
+-            self.lru.remove(pos);
+-        }
+-        self.lru.push_back(key.clone());
+-        Some(entry)
+-    }
+-
+-    fn insert(&mut self, key: CacheKey, entry: CacheEntry) {
+-        if self.entries.contains_key(&key) {
+-            self.entries.insert(key.clone(), entry);
+-            if let Some(pos) = self.lru.iter().position(|k| *k == key) {
+-                self.lru.remove(pos);
+-            }
+-            self.lru.push_back(key);
+-            return;
+-        }
+-        while self.entries.len() >= RENDER_CACHE_LIMIT {
+-            let Some(oldest) = self.lru.pop_front() else {
+-                break;
+-            };
+-            self.entries.remove(&oldest);
+-        }
+-        self.lru.push_back(key.clone());
+-        self.entries.insert(key, entry);
+-    }
+-}
++include!("osv_render_cache.rs");
+ 
+ thread_local! {
+     static RENDER_CACHE: RefCell<RenderCache> = RefCell::new(RenderCache::new());
+     // Lyon tessellators are reusable across calls; keeping one instance per
+     // thread avoids their per-shape-per-frame allocation.
+-    static FILL_TESS: RefCell<lyon_tessellation::FillTessellator> =
+-        RefCell::new(lyon_tessellation::FillTessellator::new());
+-    static STROKE_TESS: RefCell<lyon_tessellation::StrokeTessellator> =
+-        RefCell::new(lyon_tessellation::StrokeTessellator::new());
++    static FILL_TESS: RefCell<osv_geometry::render::tess::FillTessellator> =
++        RefCell::new(osv_geometry::render::tess::FillTessellator::new());
++    static STROKE_TESS: RefCell<osv_geometry::render::tess::StrokeTessellator> =
++        RefCell::new(osv_geometry::render::tess::StrokeTessellator::new());
+ }
+ 
+ /// Record the current revision (invalidating stale entries) and look up a key.
+@@ -174,7 +122,10 @@
+     RENDER_CACHE.with(|c| {
+         let mut c = c.borrow_mut();
+         c.set_revision(rev);
+-        c.get(key)
++        c.get(key).map(|entry| match entry {
++            CacheEntry::GradientSamples { base, .. } => *base,
++            entry => entry,
++        })
+     })
+ }
+ 
+@@ -189,14 +140,14 @@
+ }
+ 
+ /// Tessellate a closed lyon path into solid-fill geometry using the shared
+-/// thread-local [`lyon_tessellation::FillTessellator`]. Returns `None` on
++/// thread-local [`osv_geometry::render::tess::FillTessellator`]. Returns `None` on
+ /// tessellation failure or an empty result.
+ fn tessellate_fill_geometry(
+-    path: &lyon_path::Path,
++    path: &osv_geometry::render::path::Path,
+     rule: crate::shape::FillRule,
+     tolerance: f32,
+-) -> Option<lyon_tessellation::VertexBuffers<Pos2, u32>> {
+-    use lyon_tessellation::{
++) -> Option<osv_geometry::render::tess::VertexBuffers<Pos2, u32>> {
++    use osv_geometry::render::tess::{
+         BuffersBuilder, FillOptions, FillRule as LyonFillRule, FillVertex, VertexBuffers,
+     };
+     let lyon_rule = match rule {
+@@ -228,7 +179,7 @@
+ /// mesh to `painter`.
+ fn add_solid_mesh_mm(
+     painter: &Painter,
+-    geometry: &lyon_tessellation::VertexBuffers<Pos2, u32>,
++    geometry: &Rc<osv_geometry::render::tess::VertexBuffers<Pos2, u32>>,
+     fill_color: egui::Color32,
+     ct: &CanvasTransform,
+ ) {
+@@ -242,6 +193,7 @@
+         ((fill_color.b() as u32 * a) / 255) as u8,
+         fill_color.a(),
+     );
++    if osv_try_gpu_solid(painter, geometry, fill_premult, ct) { return; }
+     let origin = ct.origin;
+     let offset = ct.offset;
+     let zoom = ct.zoom;
+@@ -275,7 +227,7 @@
+     rule: crate::shape::FillRule,
+     fill_color: egui::Color32,
+     ct: &CanvasTransform,
+-    build_path: &dyn Fn() -> lyon_path::Path,
++    build_path: &dyn Fn() -> osv_geometry::render::path::Path,
+ ) {
+     // A fully transparent fill paints nothing (this is the gradient-fill case,
+     // where draw_gradient_mesh already painted the mesh) - skip the
+@@ -348,8 +300,8 @@
+         fill_color,
+         ct,
+         &|| {
+-            use lyon_path::math::point;
+-            use lyon_path::Path as LyonPath;
++            use osv_geometry::render::path::math::point;
++            use osv_geometry::render::path::Path as LyonPath;
+             let mut builder = LyonPath::builder();
+             builder.begin(point(mm_pts[0].x, mm_pts[0].y));
+             for p in &mm_pts[1..] {
+@@ -445,7 +397,7 @@
+     // (zero offset, or the offset fully covering the original) paints nothing.
+     let contours = crate::boolean_ops::boolean_paths_pure(
+         &[&original, &offset],
+-        linesweeper::BinaryOp::Difference,
++        osv_geometry::curve_boolean::BinaryOp::Difference,
+     );
+     if contours.is_empty() {
+         return None;
+@@ -1091,8 +1043,8 @@
+                     fill_color,
+                     ct,
+                     &|| {
+-                        use lyon_path::math::point;
+-                        use lyon_path::Path as LyonPath;
++                        use osv_geometry::render::path::math::point;
++                        use osv_geometry::render::path::Path as LyonPath;
+                         let mut builder = LyonPath::builder();
+                         builder.begin(point(start.x, start.y));
+                         for seg in segments {
+@@ -1152,8 +1104,8 @@
+                     fill_color,
+                     ct,
+                     &|| {
+-                        use lyon_path::math::point;
+-                        use lyon_path::Path as LyonPath;
++                        use osv_geometry::render::path::math::point;
++                        use osv_geometry::render::path::Path as LyonPath;
+                         let mut builder = LyonPath::builder();
+                         for c in contours {
+                             builder.begin(point(c.start.x, c.start.y));
+@@ -1339,10 +1291,10 @@
+     pts: &[Vec2],
+     closed: bool,
+     width_mm: f32,
+-) -> Option<lyon_tessellation::VertexBuffers<Pos2, u32>> {
+-    use lyon_path::math::point;
+-    use lyon_path::Path as LyonPath;
+-    use lyon_tessellation::{BuffersBuilder, StrokeOptions, StrokeVertex, VertexBuffers};
++) -> Option<osv_geometry::render::tess::VertexBuffers<Pos2, u32>> {
++    use osv_geometry::render::path::math::point;
++    use osv_geometry::render::path::Path as LyonPath;
++    use osv_geometry::render::tess::{BuffersBuilder, StrokeOptions, StrokeVertex, VertexBuffers};
+     if pts.len() < 2 || width_mm <= 0.0 {
+         return None;
+     }
+@@ -1389,6 +1341,7 @@
+     cache_key: Option<CacheKey>,
+     revision: Option<u64>,
+ ) {
++    let sample_key = cache_key.clone();
+     let geometry = match cache_key.as_ref().and_then(|k| cache_get(revision, k)) {
+         Some(CacheEntry::Mesh(geo)) => Some(geo),
+         Some(_) => None, // kind collision must not happen; treat as a miss
+@@ -1404,29 +1357,7 @@
+         return;
+     };
+ 
+-    let origin = ct.origin;
+-    let offset = ct.offset;
+-    let zoom = ct.zoom;
+-    let vertices: Vec<egui::epaint::Vertex> = geometry
+-        .vertices
+-        .iter()
+-        .map(|p| {
+-            let color = gradient_color_at(g, bb, Vec2::new(p.x, p.y), op);
+-            let screen = to_screen(&Vec2::new(p.x, p.y), origin, offset, zoom);
+-            egui::epaint::Vertex {
+-                pos: screen,
+-                uv: egui::epaint::WHITE_UV,
+-                color,
+-            }
+-        })
+-        .collect();
+-
+-    let mesh = egui::epaint::Mesh {
+-        indices: geometry.indices.clone(),
+-        vertices,
+-        texture_id: egui::TextureId::default(),
+-    };
+-    painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
++    osv_paint_sampled_gradient(painter, &geometry, g, bb, ct, op, revision, sample_key);
+ }
+ 
+ /// Paint the GRADIENT stroke ribbon(s) for `shape` after its fill/solid-stroke
+@@ -1540,14 +1471,14 @@
+ /// losing disjoint islands and making holes impossible. A single tessellation
+ /// also lets lyon apply the shape's winding rule across all rings.
+ struct GradientFillTessellation {
+-    geometry: lyon_tessellation::VertexBuffers<Pos2, u32>,
++    geometry: osv_geometry::render::tess::VertexBuffers<Pos2, u32>,
+     bbox: MmRect,
+ }
+ 
+ fn tessellate_gradient_fill(shape: &crate::shape::Shape) -> Option<GradientFillTessellation> {
+-    use lyon_path::math::point;
+-    use lyon_path::Path as LyonPath;
+-    use lyon_tessellation::{
++    use osv_geometry::render::path::math::point;
++    use osv_geometry::render::path::Path as LyonPath;
++    use osv_geometry::render::tess::{
+         BuffersBuilder, FillOptions, FillRule as LyonFillRule, FillVertex, VertexBuffers,
+     };
+ 
+@@ -1683,6 +1614,7 @@
+         discrim,
+         zoom_bucket: 0,
+     };
++    let sample_key = key.clone();
+     let tessellation = match cache_get(revision, &key) {
+         Some(CacheEntry::GradientFill(t)) => Some(t),
+         Some(_) => None, // kind collision must not happen; treat as a miss
+@@ -1698,40 +1630,7 @@
+     let geometry = &tessellation.geometry;
+     let bb = &tessellation.bbox;
+ 
+-    let origin = ct.origin;
+-    let offset = ct.offset;
+-    let zoom = ct.zoom;
+-
+-    // Per-vertex color is computed by the shared `gradient_color_at` (the SAME
+-    // helper the stroke ribbon uses, so the two cannot drift): it normalizes the
+-    // mm position into [0,1] bbox space, computes the raw parameter per kind,
+-    // applies the spread method (which guards NaN -> 0.0), samples, and folds in
+-    // the master opacity. Linear/Radial return an un-clamped parameter so
+-    // Repeat / Reflect tile / mirror across the bbox; Conic's parameter already
+-    // wraps in [0,1). Tiling resolution depends on the tessellated vertex count
+-    // (a high-frequency Repeat looks banded on a coarse mesh), same dependence
+-    // as the existing Conic seam / Radial band; refining tessellation is out of
+-    // scope here.
+-    let vertices: Vec<egui::epaint::Vertex> = geometry
+-        .vertices
+-        .iter()
+-        .map(|p| {
+-            let color = gradient_color_at(g, bb, Vec2::new(p.x, p.y), op);
+-            let screen = to_screen(&Vec2::new(p.x, p.y), origin, offset, zoom);
+-            egui::epaint::Vertex {
+-                pos: screen,
+-                uv: egui::epaint::WHITE_UV,
+-                color,
+-            }
+-        })
+-        .collect();
+-
+-    let mesh = egui::epaint::Mesh {
+-        indices: geometry.indices.clone(),
+-        vertices,
+-        texture_id: egui::TextureId::default(),
+-    };
+-    painter.add(egui::Shape::Mesh(std::sync::Arc::new(mesh)));
++    osv_paint_sampled_gradient(painter, geometry, g, bb, ct, op, revision, Some(sample_key));
+ }
+ 
+ #[cfg(test)]
+@@ -1758,7 +1657,7 @@
+         }
+     }
+ 
+-    fn mesh_covers(mesh: &lyon_tessellation::VertexBuffers<Pos2, u32>, p: Pos2) -> bool {
++    fn mesh_covers(mesh: &osv_geometry::render::tess::VertexBuffers<Pos2, u32>, p: Pos2) -> bool {
+         let cross =
+             |a: Pos2, b: Pos2, q: Pos2| (b.x - a.x) * (q.y - a.y) - (b.y - a.y) * (q.x - a.x);
+         mesh.indices.as_chunks::<3>().0.iter().any(|tri| {
+@@ -1953,3 +1852,7 @@
+ #[cfg(test)]
+ #[path = "../../tests/unit/render_cache_tests.rs"]
+ mod render_cache_tests;
++
++include!("osv_gradient_sampling.rs");
++
++include!("osv_gpu_adapter.rs");
+--- a/tests/unit/app_tests.rs
++++ b/tests/unit/app_tests.rs
+@@ -5,12 +5,12 @@
+ use crate::selection::SelectionState;
+ use crate::shape::{PathSegment, Shape, ShapeData, Vec2};
+ use crate::snap::snap_to_45;
+-use kurbo::{BezPath, PathEl, Point};
+-use linesweeper::{binary_op_with_eps, BinaryOp, FillRule};
++use osv_geometry::curve::{BezPath, PathEl, Point};
++use osv_geometry::curve_boolean::{binary_op_with_eps, BinaryOp, FillRule};
+ 
+ fn merge_shapes_pure(shapes: &[Shape]) -> Vec<(Vec2, Vec<PathSegment>)> {
+     let refs: Vec<&Shape> = shapes.iter().collect();
+-    boolean_shapes_pure(&refs, linesweeper::BinaryOp::Union)
++    boolean_shapes_pure(&refs, osv_geometry::curve_boolean::BinaryOp::Union)
+ }
+ 
+ fn make_polygon(points: Vec<(f32, f32)>, radii: Vec<f32>) -> Shape {
+@@ -549,7 +549,7 @@
+ }
+ 
+ fn abs_area(p: &BezPath) -> f64 {
+-    use kurbo::Shape;
++    use osv_geometry::curve::Shape;
+     p.area().abs()
+ }
+ 
+@@ -707,7 +707,7 @@
+     assert!(has_cubic(segs), "pill's rounded cap was lost during merge");
+ 
+     let path = rebuild_bez_path(*start, segs);
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+ 
+     assert!(
+@@ -755,7 +755,7 @@
+     assert!(bb.min_y().abs() < 1.0, "min_y = {}", bb.min_y());
+     assert!((bb.max_y() - 300.0).abs() < 1.0, "max_y = {}", bb.max_y());
+ 
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+     // Sharp union area = 400*300 + 2*(100*80) = 120_000 + 16_000 = 136_000.
+     // Subtract two NE + two SE corner "squares minus quarter disks":
+@@ -783,7 +783,7 @@
+     assert!(has_cubic(segs), "NE/SE arcs lost during merge");
+ 
+     let path = rebuild_bez_path(*start, segs);
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let bb = path.bounding_box();
+     assert!(bb.min_x().abs() < 1.0, "min_x = {}", bb.min_x());
+     assert!(
+@@ -816,7 +816,7 @@
+     assert!((bb.min_y() - 20.0).abs() < 1.0, "min_y = {}", bb.min_y());
+     assert!((bb.max_y() - 220.0).abs() < 1.0, "max_y = {}", bb.max_y());
+ 
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+     assert!(
+         (30_900.0..31_200.0).contains(&area),
+@@ -828,11 +828,11 @@
+ fn intersect_two_overlapping_rectangles() {
+     let a = make_rect(0.0, 0.0, 100.0, 100.0, [0.0; 4]);
+     let b = make_rect(60.0, 40.0, 100.0, 100.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);
++    let result = boolean_shapes_pure(&[&a, &b], osv_geometry::curve_boolean::BinaryOp::Intersection);
+     assert_eq!(result.len(), 1, "expected one intersection rect");
+     let (start, segs) = &result[0];
+     let path = rebuild_bez_path(*start, segs);
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+     assert!(
+         (2_350.0..2_450.0).contains(&area),
+@@ -849,7 +849,7 @@
+ fn intersect_disjoint_rectangles_is_empty() {
+     let a = make_rect(0.0, 0.0, 50.0, 50.0, [0.0; 4]);
+     let b = make_rect(100.0, 100.0, 50.0, 50.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);
++    let result = boolean_shapes_pure(&[&a, &b], osv_geometry::curve_boolean::BinaryOp::Intersection);
+     assert!(result.is_empty(), "disjoint intersection should be empty");
+ }
+ 
+@@ -857,9 +857,9 @@
+ fn subtract_cutter_from_rect() {
+     let target = make_rect(0.0, 0.0, 100.0, 100.0, [0.0; 4]);
+     let cutter = make_rect(60.0, 40.0, 80.0, 100.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);
++    let result = boolean_shapes_pure(&[&target, &cutter], osv_geometry::curve_boolean::BinaryOp::Difference);
+     assert!(!result.is_empty(), "subtract returned no contours");
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let total_area: f64 = result
+         .iter()
+         .map(|(s, segs)| rebuild_bez_path(*s, segs).area().abs())
+@@ -874,7 +874,7 @@
+ fn subtract_cutter_fully_covers_target_is_empty() {
+     let target = make_rect(10.0, 10.0, 50.0, 50.0, [0.0; 4]);
+     let cutter = make_rect(0.0, 0.0, 200.0, 200.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);
++    let result = boolean_shapes_pure(&[&target, &cutter], osv_geometry::curve_boolean::BinaryOp::Difference);
+     assert!(
+         result.is_empty(),
+         "subtract should vanish when cutter covers target, got {} contours",
+@@ -886,11 +886,11 @@
+ fn exclude_two_overlapping_rectangles() {
+     let a = make_rect(0.0, 0.0, 100.0, 100.0, [0.0; 4]);
+     let b = make_rect(60.0, 40.0, 100.0, 100.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Xor);
++    let result = boolean_shapes_pure(&[&a, &b], osv_geometry::curve_boolean::BinaryOp::Xor);
+     assert!(!result.is_empty(), "xor returned no contours");
+ 
+     let mut total_area = 0.0_f64;
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     for (s, segs) in &result {
+         let p = rebuild_bez_path(*s, segs);
+         total_area += p.area().abs();
+@@ -1191,7 +1191,7 @@
+     assert_eq!(merged.len(), 1, "three overlapping rects should merge to 1");
+     let (start, segs) = &merged[0];
+     let path = rebuild_bez_path(*start, segs);
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+     // Union of three 100x100 rects with overlaps should be less than 30000
+     assert!(
+@@ -1204,10 +1204,10 @@
+ fn xor_rounded_rectangles() {
+     let a = make_rect(0.0, 0.0, 100.0, 100.0, [20.0; 4]);
+     let b = make_rect(50.0, 50.0, 100.0, 100.0, [20.0; 4]);
+-    let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Xor);
++    let result = boolean_shapes_pure(&[&a, &b], osv_geometry::curve_boolean::BinaryOp::Xor);
+     assert!(!result.is_empty(), "xor should produce contours");
+     let mut total_area = 0.0_f64;
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     for (s, segs) in &result {
+         total_area += rebuild_bez_path(*s, segs).area().abs();
+     }
+@@ -1239,12 +1239,12 @@
+ fn subtract_non_overlapping_shapes_preserves_target() {
+     let target = make_rect(0.0, 0.0, 50.0, 50.0, [0.0; 4]);
+     let cutter = make_rect(200.0, 200.0, 50.0, 50.0, [0.0; 4]);
+-    let result = boolean_shapes_pure(&[&target, &cutter], linesweeper::BinaryOp::Difference);
++    let result = boolean_shapes_pure(&[&target, &cutter], osv_geometry::curve_boolean::BinaryOp::Difference);
+     assert!(
+         !result.is_empty(),
+         "non-overlapping subtract should preserve target"
+     );
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let total: f64 = result
+         .iter()
+         .map(|(s, segs)| rebuild_bez_path(*s, segs).area().abs())
+@@ -1361,7 +1361,7 @@
+ fn intersect_rounded_rectangles() {
+     let a = make_rect(0.0, 0.0, 100.0, 100.0, [15.0; 4]);
+     let b = make_rect(50.0, 0.0, 100.0, 100.0, [15.0; 4]);
+-    let result = boolean_shapes_pure(&[&a, &b], linesweeper::BinaryOp::Intersection);
++    let result = boolean_shapes_pure(&[&a, &b], osv_geometry::curve_boolean::BinaryOp::Intersection);
+     assert!(
+         !result.is_empty(),
+         "overlapping rounded rects should have intersection"
+@@ -1429,7 +1429,7 @@
+     assert_eq!(merged.len(), 1, "identical rects should merge to 1");
+     let (start, segs) = &merged[0];
+     let path = rebuild_bez_path(*start, segs);
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     let area = path.area().abs();
+     assert!(
+         (area - 10_000.0).abs() < 500.0,
+--- a/tests/unit/boolean_ops_tests.rs
++++ b/tests/unit/boolean_ops_tests.rs
+@@ -1,6 +1,6 @@
+ use super::*;
+ use crate::shape::flatten_bezier_path;
+-use linesweeper::BinaryOp;
++use osv_geometry::curve_boolean::BinaryOp;
+ 
+ // ---------------------------------------------------------------------------
+ // Helpers
+@@ -56,7 +56,7 @@
+     );
+ }
+ 
+-fn cell_from_paths(paths: &[kurbo::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {
++fn cell_from_paths(paths: &[osv_geometry::curve::BezPath]) -> Vec<(Vec2, Vec<PathSegment>)> {
+     paths.iter().flat_map(bez_path_to_contours).collect()
+ }
+ 
+@@ -99,11 +99,11 @@
+     // One more tuple -> path round-trip pins the exact re-feed seam from item
+     // 57: contour order/direction must remain a valid NonZero region.
+     let round_trip = contours_to_kurbo_path(&with_island).expect("region reconstructs");
+-    use kurbo::Shape as _;
++    use osv_geometry::curve::Shape as _;
+     for (point, expected_inside) in [
+-        (kurbo::Point::new(10.0, 50.0), true),
+-        (kurbo::Point::new(30.0, 50.0), false),
+-        (kurbo::Point::new(50.0, 50.0), true),
++        (osv_geometry::curve::Point::new(10.0, 50.0), true),
++        (osv_geometry::curve::Point::new(30.0, 50.0), false),
++        (osv_geometry::curve::Point::new(50.0, 50.0), true),
+     ] {
+         assert_eq!(round_trip.winding(point) != 0, expected_inside);
+     }
+@@ -277,11 +277,11 @@
+         BinaryOp::Xor,
+     ] {
+         let via_shapes = boolean_shapes_pure(&shapes, op);
+-        let paths: Vec<kurbo::BezPath> = shapes
++        let paths: Vec<osv_geometry::curve::BezPath> = shapes
+             .iter()
+             .filter_map(|s| shape_to_kurbo_path(s))
+             .collect();
+-        let refs: Vec<&kurbo::BezPath> = paths.iter().collect();
++        let refs: Vec<&osv_geometry::curve::BezPath> = paths.iter().collect();
+         let via_paths = boolean_paths_pure(&refs, op);
+         assert_eq!(via_shapes.len(), via_paths.len(), "{op:?}");
+         for ((s1, segs1), (s2, segs2)) in via_shapes.iter().zip(via_paths.iter()) {
+@@ -296,11 +296,11 @@
+     let a = rect_shape(0.0, 0.0, 100.0, 100.0);
+     let open = line_shape(0.0, 0.0, 50.0, 50.0);
+     let via_shapes = boolean_shapes_pure(&[&a, &open], BinaryOp::Difference);
+-    let paths: Vec<kurbo::BezPath> = [&a, &open]
++    let paths: Vec<osv_geometry::curve::BezPath> = [&a, &open]
+         .iter()
+         .filter_map(|s| shape_to_kurbo_path(s))
+         .collect();
+-    let refs: Vec<&kurbo::BezPath> = paths.iter().collect();
++    let refs: Vec<&osv_geometry::curve::BezPath> = paths.iter().collect();
+     let via_paths = boolean_paths_pure(&refs, BinaryOp::Difference);
+     assert!(via_shapes.is_empty());
+     assert!(via_paths.is_empty());
+@@ -697,7 +697,7 @@
+ 
+ /// Closed kurbo path for a shape (panics if the shape has no closed form, which
+ /// would be a test-setup bug for the rect/ellipse inputs used here).
+-fn kurbo_of(shape: &Shape) -> kurbo::BezPath {
++fn kurbo_of(shape: &Shape) -> osv_geometry::curve::BezPath {
+     shape_to_kurbo_path(shape).expect("test shape must have a closed path form")
+ }
+ 
+@@ -709,18 +709,18 @@
+     fragments
+         .iter()
+         .map(|(start, segs)| {
+-            let mut p = kurbo::BezPath::new();
+-            p.move_to(kurbo::Point::new(f64::from(start.x), f64::from(start.y)));
++            let mut p = osv_geometry::curve::BezPath::new();
++            p.move_to(osv_geometry::curve::Point::new(f64::from(start.x), f64::from(start.y)));
+             for seg in segs {
+                 match seg {
+                     PathSegment::Line { to } => {
+-                        p.line_to(kurbo::Point::new(f64::from(to.x), f64::from(to.y)));
++                        p.line_to(osv_geometry::curve::Point::new(f64::from(to.x), f64::from(to.y)));
+                     }
+                     PathSegment::Cubic { c1, c2, to } => {
+                         p.curve_to(
+-                            kurbo::Point::new(f64::from(c1.x), f64::from(c1.y)),
+-                            kurbo::Point::new(f64::from(c2.x), f64::from(c2.y)),
+-                            kurbo::Point::new(f64::from(to.x), f64::from(to.y)),
++                            osv_geometry::curve::Point::new(f64::from(c1.x), f64::from(c1.y)),
++                            osv_geometry::curve::Point::new(f64::from(c2.x), f64::from(c2.y)),
++                            osv_geometry::curve::Point::new(f64::from(to.x), f64::from(to.y)),
+                         );
+                     }
+                 }
+--- a/tests/unit/compound_ops_tests.rs
++++ b/tests/unit/compound_ops_tests.rs
+@@ -319,7 +319,7 @@
+     let new_sel = boolean_op_in_document(
+         &mut doc,
+         &[donut_id, rect_id],
+-        linesweeper::BinaryOp::Union,
++        osv_geometry::curve_boolean::BinaryOp::Union,
+         &stroke,
+         None,
+         1.0,
+--- a/tests/unit/outline_stroke_tests.rs
++++ b/tests/unit/outline_stroke_tests.rs
+@@ -4,7 +4,7 @@
+ //! `#[path]` pattern, so these compile inside the crate and can reach the
+ //! `pub(crate)` helpers (`shape_to_kurbo_path_any`, `bez_path_to_contours`).
+ //!
+-//! The heavy logic - `kurbo::stroke` plus `bez_path_to_contours` - is pure and
++//! The heavy logic - `osv_geometry::curve::stroke` plus `bez_path_to_contours` - is pure and
+ //! testable without an egui context, so these construct shapes and exercise the
+ //! helpers directly rather than driving `CurvexApp`.
+ 
+@@ -64,16 +64,16 @@
+ fn outline_contours(shape: &Shape) -> Vec<(Vec2, Vec<PathSegment>)> {
+     let input = shape_to_kurbo_path_any(shape).expect("shape has a path form");
+     let start_cap = match shape.stroke.cap {
+-        LineCap::Butt => kurbo::Cap::Butt,
+-        LineCap::Round => kurbo::Cap::Round,
+-        LineCap::Square => kurbo::Cap::Square,
++        LineCap::Butt => osv_geometry::curve::Cap::Butt,
++        LineCap::Round => osv_geometry::curve::Cap::Round,
++        LineCap::Square => osv_geometry::curve::Cap::Square,
+     };
+     let join = match shape.stroke.join {
+-        crate::shape::LineJoin::Miter => kurbo::Join::Miter,
+-        crate::shape::LineJoin::Round => kurbo::Join::Round,
+-        crate::shape::LineJoin::Bevel => kurbo::Join::Bevel,
+-    };
+-    let mut stroke = kurbo::Stroke::new(shape.stroke.width as f64)
++        crate::shape::LineJoin::Miter => osv_geometry::curve::Join::Miter,
++        crate::shape::LineJoin::Round => osv_geometry::curve::Join::Round,
++        crate::shape::LineJoin::Bevel => osv_geometry::curve::Join::Bevel,
++    };
++    let mut stroke = osv_geometry::curve::Stroke::new(shape.stroke.width as f64)
+         .with_caps(start_cap)
+         .with_join(join)
+         .with_miter_limit(4.0);
+@@ -85,10 +85,10 @@
+     {
+         stroke = stroke.with_dashes(0.0, [d as f64, g as f64]);
+     }
+-    let outline = kurbo::stroke(
++    let outline = osv_geometry::curve::stroke(
+         input.elements().iter().copied(),
+         &stroke,
+-        &kurbo::StrokeOpts::default(),
++        &osv_geometry::curve::StrokeOpts::default(),
+         0.05,
+     );
+     bez_path_to_contours(&outline)
+@@ -246,7 +246,7 @@
+ 
+ #[test]
+ fn bez_path_to_contours_matches_inline() {
+-    use kurbo::{BezPath, Point};
++    use osv_geometry::curve::{BezPath, Point};
+     // Hand-built path: MoveTo, a CurveTo, and a QuadTo, then ClosePath. Assert
+     // the produced (start, segments) match the expected Cubic/Line mapping,
+     // including the QuadTo -> Cubic 2/3 control-point conversion.
+@@ -294,7 +294,7 @@
+ 
+ #[test]
+ fn bez_path_to_contours_drops_non_finite_contour() {
+-    use kurbo::{BezPath, Point};
++    use osv_geometry::curve::{BezPath, Point};
+     // A contour containing a NaN coordinate must be dropped (finiteness guard),
+     // while a clean sibling contour survives.
+     let mut p = BezPath::new();
+--- a/tests/unit/render_cache_tests.rs
++++ b/tests/unit/render_cache_tests.rs
+@@ -129,7 +129,7 @@
+ }
+ 
+ fn mesh_entry() -> CacheEntry {
+-    CacheEntry::Mesh(Rc::new(lyon_tessellation::VertexBuffers::new()))
++    CacheEntry::Mesh(Rc::new(osv_geometry::render::tess::VertexBuffers::new()))
+ }
+ 
+ #[test]
+--- a/tests/unit/shape_builder_tests.rs
++++ b/tests/unit/shape_builder_tests.rs
+@@ -32,7 +32,7 @@
+     )
+ }
+ 
+-fn kurbo_of(shape: &Shape) -> kurbo::BezPath {
++fn kurbo_of(shape: &Shape) -> osv_geometry::curve::BezPath {
+     shape_to_kurbo_path(shape).expect("test shape must have a closed path form")
+ }
+ 
+@@ -92,7 +92,7 @@
+ 
+ /// Index of the overlap cell in `arrangement_cells_pure` for the two rects: the
+ /// cell whose flattened polygon contains the overlap centre (7.5, 7.5).
+-fn overlap_cell_index(paths: &[kurbo::BezPath]) -> usize {
++fn overlap_cell_index(paths: &[osv_geometry::curve::BezPath]) -> usize {
+     let cells = arrangement_cells_pure(paths);
+     cells
+         .iter()

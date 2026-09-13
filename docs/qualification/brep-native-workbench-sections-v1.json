@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native workbench loft/sweep preparation and construction",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 81,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4618755
+  },
+  "coverage": [
+    "Native profile/path selection, closed/open admission, world placement and section resampling",
+    "Unequal section point counts produce expected 160 cubic mm prism",
+    "Invalid later section refuses without changing source document",
+    "Existing loft, sweep and editor regressions"
+  ],
+  "limitations": [
+    "Workbench loft/sweep still return polygonal solids; general retained B-rep loft/sweep not implemented by this change",
+    "Underlying native loft retains 2\u201364 sections and 3\u2013128 matched vertices limits",
+    "Section matching retains indexed arclength semantics, not general SectionMatch/FrameLaw",
+    "General B-rep requirements and refreshed shared qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sections.rs": "bdee82bb88c977fbf71ca3e88f6974b366b592ae399e8cfaaa6462ef2ba41d6e",
+    "crates/geometry-bridge/src/lib.rs": "7218e53eb7f764c5bffb4117cc61abea1e55ffdc8eb69ad8769dabca109061b9",
+    "src/services/cadWorkbench.ts": "5a74e7a378a5dac20fc15965287654dd3e2bc1cd193fac2a30a97ad778cf8e2c",
+    "tests/cadWorkbench.test.ts": "8c285ce4322851d2147123aec5cb6fc9a4498dd2e89a0d8b534f10074f8c9520",
+    "src/generated/geometry-kernels/bytes.ts": "1a8f38ef4a8a3bdf0862dfce56c9d54516646c6af9b1bb519e5cd5b647ea9a16"
+  }
+}

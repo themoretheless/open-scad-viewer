@@ -1,0 +1,18 @@
+{
+  "scope": "Native borrowed-buffer BVH query foundation; renderer integration not completed",
+  "polygonCoreTestsPassed": 50,
+  "frozenHostQueries": 256,
+  "frozenHits": 125,
+  "vectorTolerance": 1e-12,
+  "sha256": {
+    "crates/polygon-core/src/solid/bvh_query.rs": "d723323fb3c3c35dd0bf24ee2855d994668f30933e8bdfb0ec04e3e2bf76b173",
+    "crates/polygon-core/tests/fixtures/bvh-query-parity-v1.json": "197d2ba46c60316c518dc1c647cf0057b67b0b9b7555ce2c2d01beef51c4f049",
+    "src/services/meshBvh.ts": "af7c514693187a5b40bb0ebd840b87c41c1047925fe8a9bf2bb914cc612e894f"
+  },
+  "limitations": [
+    "Renderer still uses TypeScript raycasting",
+    "No retained native mesh/BVH query ABI yet",
+    "No pointer-interaction performance qualification",
+    "No WASM rebuild or distribution size correction in this slice"
+  ]
+}

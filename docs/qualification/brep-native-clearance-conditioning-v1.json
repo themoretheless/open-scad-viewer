@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-13",
+  "scope": "Scale conditioning and near-parallel segment minima in native mesh clearance",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTests": 3,
+    "integrationTests": 30,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4612677
+  },
+  "reproducedBeforeFix": [
+    "Scale 1e-100 yielded sqrt(10) times scale instead of 3 times scale",
+    "Nearly parallel intersecting segments yielded a nonzero minimum"
+  ],
+  "coverage": [
+    "Normalized cross-product line parameters avoid absolute parallel threshold",
+    "Endpoint minima cover constrained boundary and collapsed/parallel edges",
+    "Scales 1e-100 through 1e100 with reversals and operand exchange",
+    "Crossing transverse components down to 1e-200",
+    "Nonfinite candidate distances refuse instead of being silently ignored"
+  ],
+  "limitations": [
+    "Floating-point mesh clearance remains uncertified",
+    "Closest-triangle conditioning and general analytic B-rep distance still need qualification",
+    "General B-rep and complete migration remain open",
+    "Shared qualification predates this artifact"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_clearance.rs": "ecd83a134b5cf4a3f8155a3436c992bd1b27e2c659ed18b9051293dacc84b99a",
+    "tests/nativeCadClearance.test.ts": "13920c57aa5fb4f1d50c355b9d65d059fbb5b109a8ebdaa374fee8fd55fcba24",
+    "src/generated/geometry-kernels/bytes.ts": "136311a534adbaad36ab1486ed8b385d2a547fea3420427b9ff1264474ea9cee"
+  }
+}

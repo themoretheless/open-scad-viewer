@@ -1,0 +1,30 @@
+{
+  "scope": "Signed partial analytic region revolution with holed planar caps; not full B-rep completion",
+  "tests": {
+    "core": 91,
+    "integration": 63,
+    "vueTypecheck": "passed"
+  },
+  "cases": [
+    "Annular sectors at +90,-90,+210,-210 with one closed shell and analytical volume",
+    "Two offset holes at -120 degrees with shared cap UV frames",
+    "Application display of a quarter hollow torus retaining two holed native faces"
+  ],
+  "dist": {
+    "status": "failed",
+    "bytes": 4700371,
+    "budget": 4700000,
+    "excessBytes": 371
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "ea7672c2b36c87ea5476c3aecebeca95499ae7807be5ad8715597428f35a0928",
+    "crates/geometry-bridge/src/brep_semantic.rs": "16d663c49bad0848ccc0e46458c880424cf5a0c46530251fc06bb4f84dfd5838",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "e88ce4ab3cfc7c1b7ed3edf09cfaf829f14cd659396621966ae80c4fb3bb9d71",
+    "src/generated/geometry-kernels/bytes.ts": "cc87218436e5c5d165c576bb9fe2f6be3f5b88066ebd53bce13f57f47b7b771e"
+  },
+  "limitations": [
+    "Shared SVG/own-CAD evidence not refreshed for this artifact",
+    "Distribution size gate remains open",
+    "General certified NURBS B-rep remains incomplete"
+  ]
+}

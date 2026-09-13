@@ -1,5 +1,7 @@
-import { readdirSync, statSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
+import { createRequire } from 'node:module'
+import { verifyPackedWasmChunk } from './verify-packed-wasm.mjs'
 
 const root = new URL('../dist/', import.meta.url)
 const files = []
@@ -18,11 +20,22 @@ const limits = new Map([
   ['.js', 500_000],
   ['.wasm', 800_000],
 ])
-for (const required of ['.html', '.css', '.js', '.wasm']) {
+// Static SVG adds usvg/resvg, shaping, raster decoders and bundled Noto Sans.
+// CSS geometry and instance-correct non-scaling strokes bring the packed kernel
+// to ~2.32 MB. Isolated size-profile trials saved only 4.7 kB for usvg/resvg
+// or increased decoder size by 5.1 kB, with slower text. Retain the fast profile
+// and bound this feature addition; the complete distribution stays below 4.7 MB.
+// The native occurrence-production replay + $expansion/module-activation
+// anchoring port (brep_production.rs, brep_identity.rs) adds ~16 kB packed
+// (2365958 bytes measured).
+const geometryChunkBudget = 2_400_000
+// WASM is losslessly packed in JS chunks; validate its actual decoded module
+// and source identity below instead of relying on an artifact's file suffix.
+for (const required of ['.html', '.css', '.js']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? 1_200_000 : limits.get(file.extension)
+  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
   if (limit !== undefined && file.bytes > limit) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
@@ -36,8 +49,33 @@ if (files.some(file => /manifold-3d/i.test(file.path))) throw new Error('Foreign
 // benchmark (identical triangles) at +68 kB packed; sdf/nurbs/geometry-bridge
 // at opt-level=3 added size without speed, so they keep the size profile.
 const geometryBytes = files.filter(file => /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path))
-if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_200_000) {
-  throw new Error('Expected one shared geometry kernel chunk within 1200000 bytes')
+if (geometryBytes.length !== 1 || geometryBytes[0].bytes > geometryChunkBudget) {
+  throw new Error(`Expected one shared geometry kernel chunk within ${geometryChunkBudget} bytes`)
+}
+verifyPackedWasmChunk(
+  readFileSync(new URL(geometryBytes[0].path, root), 'utf8'),
+  readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url)),
+  'Geometry kernel',
+)
+const harfBuzzBytes = files.filter(file => /^assets\/harfbuzz-bytes-[^/]+\.js$/.test(file.path))
+if (harfBuzzBytes.length !== 1) throw new Error('Expected one shared packed HarfBuzz runtime')
+verifyPackedWasmChunk(
+  readFileSync(new URL(harfBuzzBytes[0].path, root), 'utf8'),
+  readFileSync(createRequire(import.meta.url).resolve('harfbuzzjs/hb.wasm')),
+  'HarfBuzz',
+)
+for (const [name, artifact, compression] of [
+  ['photogrammetry-bytes', 'photogrammetry_wasm', 'brotli'],
+  ['wasm-brotli-bytes', 'wasm_brotli', 'deflate'],
+]) {
+  const packed = files.filter(file => new RegExp(`^assets/${name}-[^/]+\\.js$`).test(file.path))
+  if (packed.length !== 1) throw new Error(`Expected one shared ${name} runtime`)
+  verifyPackedWasmChunk(
+    readFileSync(new URL(packed[0].path, root), 'utf8'),
+    readFileSync(new URL(`../crates/target/wasm32-unknown-unknown/release/${artifact}.wasm`, import.meta.url)),
+    name,
+    compression,
+  )
 }
 // Integrated distribution: 3D lattice adds ~13 kB; the current photo worker
 // adds ~26 kB independently. Field traits, record updates and ret functions add
@@ -59,6 +97,8 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > 1_200_000) {
 // The OpenSCAD value evaluator (openscad-core eval/builtins, migration stage
 // 2) adds ~110 kB packed to the shared kernel chunk (1106620 bytes; chunk
 // budget raised to 1200000) and ~110 kB to the total (3225631 bytes measured).
-const totalBudget = 3_300_000
+// SVG runtime, panel and complete font/dependency notices bring the measured
+// distribution to ~4.5 MB. Keep the shared-code and per-artifact checks intact.
+const totalBudget = 4_700_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

@@ -1,5 +1,7 @@
 # Curvex replacement qualification
 
+The latest [2D architecture and performance qualification](architecture-qualification/README.md) records the transport split, prepared geometry indexes, final benchmarks and verification limits.
+
 The replacement contract is in [curvex-2d-replacement.md](../../docs/design/curvex-2d-replacement.md).
 This directory contains the source inventory, a reproducible native migration,
 rendering qualification fixtures, and application-level performance workloads.
@@ -9,6 +11,16 @@ The contract defines the evidence required to qualify a replacement.
 [result summary](qualification-results/summary.json),
 [migration patch](qualification-results/curvex-migration.patch), and
 [render comparison](qualification-results/render-contact-sheet.png).
+
+The [2026-09-13 stroke optimization](stroke-optimization/README.md) adds direct,
+certified ribbon meshes and fresh native, Curvex, WASM and renderer validation.
+Its measurements and source hashes are separate from the original qualification.
+
+The latest [complex-stroke and GPU qualification](stress-qualification/README.md)
+adds numerical robustness fixes, bounded large-document caching, and native
+Metal captures for up to 5000 visible shapes. Use its
+[updated migration patch](stress-qualification/results/curvex-migration.patch)
+for these changes; earlier patches remain historical evidence.
 
 The independent implementation is in `crates/planar-geometry`; its only runtime
 dependency is the shared `osv-math` crate. Removing the four direct geometry
@@ -122,3 +134,13 @@ tests passed. The earlier frozen qualification captured a shared working tree
 that also contained an unrelated BRep triangulation module and its one test.
 That module and export are excluded from this replacement commit; the historical
 source hashes and 142-test log remain unchanged as provenance.
+
+## Retained GPU / Metal qualification
+
+The [Metal renderer report](metal-renderer/README.md) records the completed
+Apple M5 qualification: retained geometry/batching, 288 exact pixel comparisons
+including Retina, ten lifecycle phases, 1494 application tests, native startup
+and fallback, plus full-canvas measurements through 5000 shapes. The original
+Curvex checkout remains unchanged; the report includes the verified migration
+patch, payload budgets, source hashes and platform limits. For the kernel and
+transport architecture, see [the 2D follow-up](architecture-qualification/README.md).

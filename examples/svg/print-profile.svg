@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90mm" height="50mm" viewBox="0 0 90 50">
+  <title>90 × 50 mm plate, 60 × 20 mm slot and four 4 mm holes</title>
+  <path fill="#2563eb" fill-rule="evenodd" d="
+    M0 0H90V50H0Z
+    M15 15H75V35H15Z
+    M7 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z
+    M79 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z
+    M7 42a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z
+    M79 42a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z"/>
+</svg>

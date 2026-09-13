@@ -10,6 +10,9 @@ export default defineConfig({
   plugins: [vue()],
   worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
     if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
+    if (id.includes('/src/generated/harfbuzz/bytes')) return 'harfbuzz-bytes'
+    if (id.includes('/src/generated/photogrammetry/bytes')) return 'photogrammetry-bytes'
+    if (id.includes('/src/generated/wasm-brotli/bytes')) return 'wasm-brotli-bytes'
   } } } },
   build: {
     chunkSizeWarningLimit: 700,
@@ -18,6 +21,9 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },
+            { name: 'harfbuzz-bytes', test: /src[\\/]generated[\\/]harfbuzz[\\/]bytes/ },
+            { name: 'photogrammetry-bytes', test: /src[\\/]generated[\\/]photogrammetry[\\/]bytes/ },
+            { name: 'wasm-brotli-bytes', test: /src[\\/]generated[\\/]wasm-brotli[\\/]bytes/ },
             // Shared by the entry graph (photogrammetry loader) and lazy language
             // chunks; without its own chunk it drags the geometry kernel into
             // the entry preload list.

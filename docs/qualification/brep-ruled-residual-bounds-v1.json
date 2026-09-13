@@ -1,0 +1,27 @@
+{
+  "scope": "Native ruled residual-construction and normalized-weight interval bounds; not full certification",
+  "tests": {
+    "brepCore": 99,
+    "integrationPacking": 68,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4586940,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "f0fb29150baed26a8fa5c287bde2c8fcba46a6d23173a2ee1ac155b92cd6f7dc",
+    "tests/brepIntersections.test.ts": "aa48cbdd73471022f9aea35798955899f330db64f63c2417e5aa38d615ba251f",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "c70d8a21b465eae6dafebf836fd1d649cbe8ad66cabfa2be01681c3c76cacd11"
+  },
+  "limitations": [
+    "Prior knot edits and plane-normalization roundoff remain uncovered",
+    "No independent complete-domain intersection certificate",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

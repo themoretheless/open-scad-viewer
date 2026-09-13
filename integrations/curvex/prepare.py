@@ -28,7 +28,7 @@ def migrate_gradient_sampling(source):
     source = source.replace('enum CacheEntry {',
         'enum CacheEntry {\n    GradientSamples { base: Box<CacheEntry>, fingerprint: u64, sampled: Rc<osv_geometry::attribute_mesh::SampledMesh> },', 1)
     # A colored mesh enriches its existing geometry entry, preserving the
-    # original 512-shape capacity and the original cache_get call contract.
+    # original cache_get call contract (capacity is migrated separately).
     source = source.replace('        c.get(key)\n',
         '        c.get(key).map(|entry| match entry {\n'
         '            CacheEntry::GradientSamples { base, .. } => *base,\n'
@@ -53,6 +53,11 @@ def migrate_gradient_sampling(source):
             function = function.replace(marker, '    let sample_key = key.clone();\n'+marker, 1)
         cut = function.index('    let origin = ct.origin;')
         source = source[:start] + function[:cut] + paint + source[end:]
+    start = source.index('struct RenderCache {')
+    end = source.index('thread_local! {', start)
+    source = source[:start] + 'include!("osv_render_cache.rs");\n\n' + source[end:]
+    source = source.replace('const RENDER_CACHE_LIMIT: usize = 512;',
+                            'const RENDER_CACHE_LIMIT: usize = 8192;', 1)
     return source + '\ninclude!("osv_gradient_sampling.rs");\n'
 
 def main():
@@ -85,10 +90,11 @@ def main():
             path.write_text(changed)
             patch.extend(difflib.unified_diff(original.splitlines(True), changed.splitlines(True),
                          fromfile='a/'+str(relative), tofile='b/'+str(relative)))
-    helper = Path(__file__).with_name('gradient_sampling.rs').read_text()
-    helper_path = 'src/ui/osv_gradient_sampling.rs'
-    (destination / helper_path).write_text(helper)
-    patch.extend(difflib.unified_diff([], helper.splitlines(True), fromfile='/dev/null', tofile='b/'+helper_path))
+    for helper_name in ['gradient_sampling', 'render_cache']:
+        helper = Path(__file__).with_name(helper_name+'.rs').read_text()
+        helper_path = 'src/ui/osv_'+helper_name+'.rs'
+        (destination / helper_path).write_text(helper)
+        patch.extend(difflib.unified_diff([], helper.splitlines(True), fromfile='/dev/null', tofile='b/'+helper_path))
     manifest = destination / 'Cargo.toml'
     original = manifest.read_text()
     changed = re.sub(r'(?m)^(kurbo|linesweeper|lyon_path|lyon_tessellation)\s*=.*\n', '', original)

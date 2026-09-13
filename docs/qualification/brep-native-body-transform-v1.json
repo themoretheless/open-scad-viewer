@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native translation, axis rotation and uniform scaling of body-only selections about common bounds center",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 47,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "verifiedDistArtifacts": 68,
+    "distBytes": 4590732
+  },
+  "coverage": [
+    "Independent quarter-turn coordinate expectations for two offset bodies",
+    "Mesh and retained B-rep volume scales cubically",
+    "Source metadata and topology retained",
+    "Extreme nonzero axis normalization",
+    "Invalid late B-rep rejects whole batch",
+    "Existing analytic B-rep selection integration"
+  ],
+  "remaining": [
+    "Mixed body/sketch selection still computes its shared transform in TypeScript",
+    "General certified B-rep and other host computations incomplete",
+    "Shared qualification must be refreshed before broad release claims"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_body_affine.rs": "34fe659e877cf982a0658fef6c9558d779cf10d827918eb357da14a3d5f4039c",
+    "crates/geometry-bridge/src/lib.rs": "c36af0580b9ee5d77b01247d0b022f81cad92000bf56f7c6bf67966263a07a6a",
+    "src/services/directSolidTools.ts": "8e0e941f8d3421996f6d062fdd4a67035786e6c162d11d0d6563b801708f81ca",
+    "tests/nativeBodyTransform.test.ts": "e68e79e33946154a18eba22314c9128ff5eafbffd1f4beef853891d422b4eb8e",
+    "src/generated/geometry-kernels/bytes.ts": "725dd91ad4b4febdcd8c6c9cd0c5fd18365ee9284eec0c259d6ac71424b8db94"
+  }
+}

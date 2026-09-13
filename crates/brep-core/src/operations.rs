@@ -40,7 +40,7 @@ fn norm(a: [f64; 3]) -> f64 {
 }
 fn unit(a: [f64; 3]) -> Result<[f64; 3]> {
     let n = norm(a);
-    if n <= 1e-12 {
+    if !n.is_finite() || n <= 1e-12 {
         return Err(unsupported("Degenerate planar face"));
     }
     Ok(mul(a, 1. / n))
@@ -68,9 +68,17 @@ struct Plane {
 
 fn face_plane(model: &Model, face_id: usize) -> Result<Plane> {
     let face = &model.faces[face_id];
-    if !face.holes.is_empty() {
+    if std::iter::once(&face.outer)
+        .chain(&face.holes)
+        .any(|&wire| {
+            model.loops[wire]
+                .coedges
+                .iter()
+                .any(|c| model.edges[c.edge].curve.degree != 1)
+        })
+    {
         return Err(unsupported(
-            "Planar operations do not accept trimmed face holes",
+            "Planar operations require straight boundary edges; curved booleans are unsupported",
         ));
     }
     let ids = loop_vertices(model, face.outer)?;
@@ -79,20 +87,17 @@ fn face_plane(model: &Model, face_id: usize) -> Result<Plane> {
     }
     let points: Vec<_> = ids.iter().map(|&i| model.vertices[i].point).collect();
     let origin = points[0];
-    let mut normal = None;
-    for i in 1..points.len() {
-        for j in i + 1..points.len() {
-            let candidate = cross(sub(points[i], origin), sub(points[j], origin));
-            if norm(candidate) > model.tolerance_mm {
-                normal = Some(unit(candidate)?);
-                break;
-            }
-        }
-        if normal.is_some() {
-            break;
-        }
-    }
-    let normal = normal.ok_or_else(|| unsupported("Degenerate planar face"))?;
+    // Signed area vector respects the complete loop, including a reflex first corner.
+    let area_vector = (0..points.len()).fold([0.; 3], |sum, i| {
+        add(
+            sum,
+            cross(
+                sub(points[i], origin),
+                sub(points[(i + 1) % points.len()], origin),
+            ),
+        )
+    });
+    let normal = unit(area_vector)?;
     let offset = dot(normal, origin);
     if points
         .iter()
@@ -119,6 +124,9 @@ fn convex_planes(model: &Model) -> Result<Vec<Plane>> {
     let shell = &model.shells[model.bodies[0].outer_shell];
     let mut planes = Vec::with_capacity(shell.faces.len());
     for face_use in &shell.faces {
+        if !model.faces[face_use.face].holes.is_empty() {
+            return Err(unsupported("Convex operations do not accept face holes"));
+        }
         let mut plane = face_plane(model, face_use.face)?;
         if face_use.reversed {
             plane.normal = mul(plane.normal, -1.);
@@ -239,10 +247,15 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
         if polygon.len() < 3 || boundary.holes.iter().any(|hole| hole.len() < 3) {
             return Err(failed("Operation produced a degenerate face"));
         }
-        let normal = unit(cross(
-            sub(polygon[1], polygon[0]),
-            sub(polygon[2], polygon[0]),
-        ))?;
+        let normal = unit((0..polygon.len()).fold([0.; 3], |sum, i| {
+            add(
+                sum,
+                cross(
+                    sub(polygon[i], polygon[0]),
+                    sub(polygon[(i + 1) % polygon.len()], polygon[0]),
+                ),
+            )
+        }))?;
         let (u, v) = plane_basis(normal)?;
         let origin = polygon[0];
         let all_points: Vec<_> = polygon
@@ -310,6 +323,7 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
                     let start = model.vertices[key.0].point.to_vec();
                     let end = model.vertices[key.1].point.to_vec();
                     model.edges.push(Edge {
+                        degenerate: false,
                         vertices: [key.0, key.1],
                         curve: line(start, end),
                     });
@@ -514,7 +528,7 @@ fn rings_intersect(a: &[[f64; 2]], b: &[[f64; 2]]) -> bool {
     })
 }
 
-fn validate_extrusion_ring(ring: &[[f64; 2]], ccw: bool, name: &str) -> Result<()> {
+pub(super) fn validate_extrusion_ring(ring: &[[f64; 2]], ccw: bool, name: &str) -> Result<()> {
     if ring.len() < 3 || ring.len() > 128 {
         return Err(unsupported(format!("{name} must have 3..128 vertices")));
     }
@@ -574,18 +588,6 @@ pub fn extrude_polygon_with_holes(
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
             "Extrusion supports at most 16 holes and 512 boundary vertices",
-        ));
-    }
-    if !holes.is_empty()
-        && (0..profile.len()).any(|index| {
-            let a = profile[index];
-            let b = profile[(index + 1) % profile.len()];
-            let c = profile[(index + 2) % profile.len()];
-            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <= 1e-12
-        })
-    {
-        return Err(unsupported(
-            "Extrusion holes currently require a strictly convex outer profile",
         ));
     }
     for (index, hole) in holes.iter().enumerate() {
@@ -670,17 +672,30 @@ fn validate_convex_profile(profile: &[[f64; 2]], name: &str) -> Result<()> {
             format!("{name} coordinates must be finite and within 1000000 mm"),
         ));
     }
+    validate_convex_boundary(profile, name)
+}
+
+// Use after dimensional and world-coordinate admission. Rigid local placement
+// can exceed the world-coordinate bound without making the input inadmissible.
+fn validate_convex_boundary(profile: &[[f64; 2]], name: &str) -> Result<()> {
     let tolerance = 1e-7;
-    let turns = (0..profile.len()).map(|i| {
+    // Every nonincident vertex must lie strictly inside every oriented support.
+    // Adjacent turn signs alone admit multiply wound stars and repeated loops.
+    for i in 0..profile.len() {
+        let next = (i + 1) % profile.len();
         let a = profile[i];
-        let b = profile[(i + 1) % profile.len()];
-        let c = profile[(i + 2) % profile.len()];
-        (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
-    });
-    if turns.into_iter().any(|turn| turn <= tolerance) {
-        return Err(unsupported(format!(
-            "{name} currently requires a strictly convex CCW profile"
-        )));
+        let b = profile[next];
+        for (j, p) in profile.iter().enumerate() {
+            if j == i || j == next {
+                continue;
+            }
+            let side = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+            if !side.is_finite() || side <= tolerance {
+                return Err(unsupported(format!(
+                    "{name} currently requires a simple strictly convex CCW profile"
+                )));
+            }
+        }
     }
     Ok(())
 }
@@ -701,11 +716,16 @@ fn triangulated_strip(sections: &[Vec<[f64; 3]>]) -> Vec<Vec<[f64; 3]>> {
     polygons
 }
 
-/// Loft strictly convex CCW horizontal sections into an honest faceted B-rep.
+/// Loft strictly convex, consistently oriented parallel sections into a faceted B-rep.
 ///
 /// Side quads are triangulated because arbitrary corresponding section edges
 /// need not be coplanar. This is planar construction, not a smooth NURBS loft.
 pub fn faceted_loft(sections: &[Vec<[f64; 3]>]) -> Result<Model> {
+    admit_loft_sections(sections)?;
+    model_from_polygons(triangulated_strip(sections), 1e-7)
+}
+
+pub(super) fn admit_loft_sections(sections: &[Vec<[f64; 3]>]) -> Result<()> {
     if sections.len() < 2 || sections.len() > 64 {
         return Err(unsupported("Loft requires 2..64 sections"));
     }
@@ -715,29 +735,44 @@ pub fn faceted_loft(sections: &[Vec<[f64; 3]>]) -> Result<Model> {
             "Loft sections must have the same 3..128 vertex count",
         ));
     }
-    let mut previous_z = f64::NEG_INFINITY;
+    if sections
+        .iter()
+        .flatten()
+        .flatten()
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Loft coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let origin = sections[0][0];
+    let u = unit(sub(sections[0][1], origin))?;
+    let normal = unit(cross(u, sub(sections[0][2], origin)))?;
+    let v = cross(normal, u);
+    let mut previous_height = f64::NEG_INFINITY;
     for section in sections {
+        let height = dot(sub(section[0], origin), normal);
         if section
             .iter()
-            .flatten()
-            .any(|value| !value.is_finite() || value.abs() > 1e6)
+            .any(|point| (dot(sub(*point, origin), normal) - height).abs() > 1e-7)
+            || height <= previous_height + 1e-7
         {
-            return Err(Error::new(
-                "BREP_INVALID_SIZE",
-                "Loft coordinates must be finite and within 1000000 mm",
-            ));
-        }
-        let z = section[0][2];
-        if section.iter().any(|point| (point[2] - z).abs() > 1e-7) || z <= previous_z + 1e-7 {
             return Err(unsupported(
-                "Loft sections must be horizontal and strictly increasing in Z",
+                "Loft sections must be parallel planar profiles ordered along their oriented normal",
             ));
         }
-        let profile: Vec<_> = section.iter().map(|point| [point[0], point[1]]).collect();
-        validate_convex_profile(&profile, "Loft")?;
-        previous_z = z;
+        let profile: Vec<_> = section
+            .iter()
+            .map(|point| {
+                let p = sub(*point, origin);
+                [dot(p, u), dot(p, v)]
+            })
+            .collect();
+        validate_convex_boundary(&profile, "Loft")?;
+        previous_height = height;
     }
-    model_from_polygons(triangulated_strip(sections), 1e-7)
+    Ok(())
 }
 
 /// Sweep a strictly convex CCW profile along a polyline with transported frames.
@@ -1000,10 +1035,11 @@ fn split_polygon(
     for i in 0..polygon.len() {
         let a = polygon[i];
         let b = polygon[(i + 1) % polygon.len()];
-        let da = dot(plane.normal, a) - plane.offset;
-        let db = dot(plane.normal, b) - plane.offset;
-        let a_inside = da <= tolerance;
-        let b_inside = db <= tolerance;
+        let snap = |d: f64| if d.abs() <= tolerance { 0. } else { d };
+        let da = snap(dot(plane.normal, a) - plane.offset);
+        let db = snap(dot(plane.normal, b) - plane.offset);
+        let a_inside = da <= 0.;
+        let b_inside = db <= 0.;
         (if a_inside { &mut inside } else { &mut outside }).push(a);
         if a_inside != b_inside {
             let point = add(a, mul(sub(b, a), da / (da - db)));
@@ -1016,7 +1052,23 @@ fn split_polygon(
         if polygon.len() > 1 && close(polygon[0], *polygon.last().unwrap(), tolerance) {
             polygon.pop();
         }
-        if polygon.len() < 3 { vec![] } else { polygon }
+        if polygon.len() < 3 {
+            return vec![];
+        }
+        let area = (0..polygon.len()).fold([0.; 3], |sum, i| {
+            add(
+                sum,
+                cross(
+                    sub(polygon[i], polygon[0]),
+                    sub(polygon[(i + 1) % polygon.len()], polygon[0]),
+                ),
+            )
+        });
+        if norm(area) <= tolerance * tolerance {
+            vec![]
+        } else {
+            polygon
+        }
     };
     (clean(inside), clean(outside))
 }
@@ -1068,7 +1120,12 @@ fn convex_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     if operation == "intersection" {
         let mut planes = a_planes;
         planes.extend(b_planes);
-        let mut result = model_from_planes(&planes, tolerance)?;
+        let mut result = match model_from_planes(&planes, tolerance) {
+            Ok(model) => model,
+            // The half-space constructor requires positive volume. The
+            // boundary arrangement can represent regularized empty contacts.
+            Err(_) => return planar_boolean(a, b, operation),
+        };
         result.inherit_topology_ids(&[a, b]);
         return Ok(result);
     }
@@ -1101,12 +1158,11 @@ fn convex_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         }
     }
     if polygons.is_empty() {
-        return Err(unsupported(
-            "Boolean result is empty; empty B-rep bodies are not represented",
-        ));
+        return Model::empty(a.tolerance_mm.max(b.tolerance_mm));
     }
     let mut result = model_from_polygons(polygons, tolerance)?;
     result.inherit_topology_ids(&[a, b]);
+    result.validate()?;
     Ok(result)
 }
 
@@ -1126,53 +1182,53 @@ fn planar_boundary(model: &Model) -> Result<Vec<(Plane, Vec<[f64; 3]>)>> {
             }
             for face_use in &model.shells[*shell_id].faces {
                 let face = &model.faces[face_use.face];
-                if !face.holes.is_empty() {
-                    return Err(unsupported(
-                        "General planar booleans do not accept trimmed face holes",
-                    ));
-                }
-                let mut ids = loop_vertices(model, face.outer)?;
+                let mut plane = face_plane(model, face_use.face)?;
                 if face_use.reversed {
-                    ids.reverse();
+                    plane.normal = mul(plane.normal, -1.);
+                    plane.offset = -plane.offset;
                 }
-                let polygon: Vec<_> = ids
-                    .into_iter()
-                    .map(|vertex| model.vertices[vertex].point)
-                    .collect();
-                let normal = unit(cross(
-                    sub(polygon[1], polygon[0]),
-                    sub(polygon[2], polygon[0]),
-                ))?;
-                let mut sign = 0.;
-                for i in 0..polygon.len() {
-                    let turn = dot(
-                        cross(
-                            sub(polygon[(i + 1) % polygon.len()], polygon[i]),
-                            sub(
-                                polygon[(i + 2) % polygon.len()],
-                                polygon[(i + 1) % polygon.len()],
-                            ),
-                        ),
-                        normal,
-                    );
-                    if turn.abs() <= model.tolerance_mm * 8. {
-                        continue;
-                    }
-                    if sign == 0. {
-                        sign = turn.signum();
-                    } else if turn.signum() != sign {
-                        return Err(unsupported(
-                            "General planar booleans require convex individual face loops",
+                let (u, v) = plane_basis(plane.normal)?;
+                let origin = model.vertices[loop_vertices(model, face.outer)?[0]].point;
+                let project = |wire| -> Result<Vec<[f64; 2]>> {
+                    Ok(loop_vertices(model, wire)?
+                        .iter()
+                        .map(|&vertex| {
+                            let delta = sub(model.vertices[vertex].point, origin);
+                            [dot(delta, u), dot(delta, v)]
+                        })
+                        .collect())
+                };
+                let mut outer = project(face.outer)?;
+                if ring_area(&outer) < 0. {
+                    outer.reverse();
+                }
+                let convex = (0..outer.len()).all(|i| {
+                    let a = outer[i];
+                    let b = outer[(i + 1) % outer.len()];
+                    let c = outer[(i + 2) % outer.len()];
+                    (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+                        >= -model.tolerance_mm.powi(2)
+                });
+                let lift = |p: [f64; 2]| add(origin, add(mul(u, p[0]), mul(v, p[1])));
+                if face.holes.is_empty() && convex {
+                    boundary.push((plane, outer.into_iter().map(lift).collect()));
+                } else {
+                    let holes = face
+                        .holes
+                        .iter()
+                        .map(|&wire| project(wire))
+                        .collect::<Result<Vec<_>>>()?;
+                    let fill = planar_geometry::triangulation::triangulate_profile(&outer, &holes)?;
+                    for triangle in fill.indices.chunks_exact(3) {
+                        boundary.push((
+                            plane,
+                            triangle
+                                .iter()
+                                .map(|&i| lift(fill.positions[i as usize]))
+                                .collect(),
                         ));
                     }
                 }
-                boundary.push((
-                    Plane {
-                        normal,
-                        offset: dot(normal, polygon[0]),
-                    },
-                    polygon,
-                ));
             }
         }
     }
@@ -1211,6 +1267,7 @@ fn boolean_state(operation: &str, inside_a: bool, inside_b: bool) -> bool {
     match operation {
         "union" => inside_a || inside_b,
         "difference" => inside_a && !inside_b,
+        "xor" => inside_a != inside_b,
         _ => inside_a && inside_b,
     }
 }
@@ -1224,13 +1281,14 @@ fn planar_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     let a_boundary = planar_boundary(a)?;
     let b_boundary = planar_boundary(b)?;
     let mut polygons = vec![];
-    for (source, other) in [
-        (a_boundary.as_slice(), b_boundary.as_slice()),
-        (b_boundary.as_slice(), a_boundary.as_slice()),
-    ] {
+    for source in [a_boundary.as_slice(), b_boundary.as_slice()] {
         for &(source_plane, ref polygon) in source {
-            let mut splitters: Vec<_> = other.iter().map(|(plane, _)| *plane).collect();
-            for &(other_plane, ref other_polygon) in other {
+            // Both operands must see the same arrangement. Using only the other
+            // operand's planes leaves a large face coincident with several smaller
+            // faces and produces multiply-owned edges after sewing.
+            let all = || a_boundary.iter().chain(&b_boundary);
+            let mut splitters: Vec<_> = all().map(|(plane, _)| *plane).collect();
+            for &(other_plane, ref other_polygon) in all() {
                 let alignment = dot(source_plane.normal, other_plane.normal);
                 let plane_distance = if alignment >= 0. {
                     (source_plane.offset - other_plane.offset).abs()
@@ -1269,28 +1327,23 @@ fn planar_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
                 if !states[0] && states[1] {
                     fragment.reverse();
                 }
-                let mut key: Vec<_> = fragment
-                    .iter()
-                    .map(|point| {
-                        point
-                            .map(|coordinate| (coordinate / tolerance).round() as i64)
-                            .map(|coordinate| coordinate.to_string())
-                            .join(",")
+                let on_boundary = |point: [f64; 3], ring: &[[f64; 3]]| {
+                    (0..ring.len()).any(|i| {
+                        close(point, ring[i], tolerance * 4.)
+                            || point_on_segment(
+                                point,
+                                ring[i],
+                                ring[(i + 1) % ring.len()],
+                                tolerance * 4.,
+                            )
+                            .is_some()
                     })
-                    .collect();
-                key.sort();
+                };
+                // Equal fragments can have different collinear subdivisions.
+                // Comparing sorted vertex lists would retain both coincident faces.
                 let duplicate = polygons.iter().any(|existing: &Vec<[f64; 3]>| {
-                    let mut existing_key: Vec<_> = existing
-                        .iter()
-                        .map(|point| {
-                            point
-                                .map(|coordinate| (coordinate / tolerance).round() as i64)
-                                .map(|coordinate| coordinate.to_string())
-                                .join(",")
-                        })
-                        .collect();
-                    existing_key.sort();
-                    existing_key == key
+                    existing.iter().all(|&point| on_boundary(point, &fragment))
+                        && fragment.iter().all(|&point| on_boundary(point, existing))
                 });
                 if !duplicate {
                     polygons.push(fragment);
@@ -1299,12 +1352,11 @@ fn planar_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         }
     }
     if polygons.is_empty() {
-        return Err(unsupported(
-            "Boolean result is empty; empty B-rep bodies are not represented",
-        ));
+        return Model::empty(a.tolerance_mm.max(b.tolerance_mm));
     }
     let mut result = model_from_polygons(polygons, tolerance)?;
     result.inherit_topology_ids(&[a, b]);
+    result.validate()?;
     Ok(result)
 }
 
@@ -1335,56 +1387,47 @@ fn orthogonal(model: &Model) -> Result<()> {
     Ok(())
 }
 
-fn ray_triangle(
-    origin: [f64; 3],
-    direction: [f64; 3],
-    a: [f64; 3],
-    b: [f64; 3],
-    c: [f64; 3],
-) -> Option<f64> {
-    let e1 = sub(b, a);
-    let e2 = sub(c, a);
-    let h = cross(direction, e2);
-    let determinant = dot(e1, h);
-    if determinant.abs() < 1e-10 {
-        return None;
-    }
-    let f = 1. / determinant;
-    let s = sub(origin, a);
-    let u = f * dot(s, h);
-    if !(-1e-10..=1. + 1e-10).contains(&u) {
-        return None;
-    }
-    let q = cross(s, e1);
-    let v = f * dot(direction, q);
-    if v < -1e-10 || u + v > 1. + 1e-10 {
-        return None;
-    }
-    let t = f * dot(e2, q);
-    (t > 1e-9).then_some(t)
-}
-
 fn contains_faces(model: &Model, faces: &[usize], point: [f64; 3]) -> Result<bool> {
+    // Intersect the supporting plane once, then test the actual trimmed region.
+    // A fan from vertex zero incorrectly fills concave notches and counts holes twice.
     let direction = unit([1., 0.371_390_7, 0.217_113_9])?;
-    let mut hits = vec![];
+    let mut hits = Vec::<f64>::new();
     for &face in faces {
-        for &loop_id in std::iter::once(&model.faces[face].outer).chain(&model.faces[face].holes) {
-            let ids = loop_vertices(model, loop_id)?;
-            let mut loop_hits = vec![];
-            for i in 1..ids.len() - 1 {
-                if let Some(t) = ray_triangle(
-                    point,
-                    direction,
-                    model.vertices[ids[0]].point,
-                    model.vertices[ids[i]].point,
-                    model.vertices[ids[i + 1]].point,
-                ) {
-                    if !loop_hits.iter().any(|x: &f64| (*x - t).abs() <= 1e-7) {
-                        loop_hits.push(t);
-                    }
-                }
-            }
-            hits.extend(loop_hits);
+        let plane = face_plane(model, face)?;
+        let denominator = dot(plane.normal, direction);
+        if denominator.abs() < 1e-12 {
+            continue;
+        }
+        let t = (plane.offset - dot(plane.normal, point)) / denominator;
+        if t <= model.tolerance_mm {
+            continue;
+        }
+        let hit = add(point, mul(direction, t));
+        let (u, v) = plane_basis(plane.normal)?;
+        let projected = [dot(hit, u), dot(hit, v)];
+        let in_wire = |wire| -> Result<bool> {
+            let polygon = loop_vertices(model, wire)?
+                .iter()
+                .map(|&id| {
+                    let p = model.vertices[id].point;
+                    [dot(p, u), dot(p, v)]
+                })
+                .collect::<Vec<_>>();
+            Ok(point_in_ring(projected, &polygon))
+        };
+        if in_wire(model.faces[face].outer)?
+            && !model.faces[face]
+                .holes
+                .iter()
+                .map(|&wire| in_wire(wire))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .any(|inside| inside)
+            && !hits
+                .iter()
+                .any(|existing| (*existing - t).abs() <= model.tolerance_mm * 4.)
+        {
+            hits.push(t);
         }
     }
     Ok(hits.len() % 2 == 1)
@@ -1414,22 +1457,37 @@ fn contains(model: &Model, point: [f64; 3]) -> Result<bool> {
     Ok(inside)
 }
 
-/// Supported exact-topology boolean envelope: axis-aligned, orthogonal, closed
-/// planar bodies. Disconnected results become multiple bodies; enclosed
-/// enclosed orthogonal cavities become inner shells. Coincident boundaries are
-/// resolved on the coordinate grid.
+/// Bounded regularized CSG over retained boundary geometry. Empty results have
+/// no placeholder topology. Unsupported curved intersections remain explicit.
 pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     a.validate()?;
     b.validate()?;
-    if !matches!(operation, "union" | "difference" | "intersection") {
+    if !matches!(operation, "union" | "difference" | "intersection" | "xor") {
         return Err(Error::new(
             "BREP_INVALID_OPERATION",
-            "Boolean operation must be union, difference, or intersection",
+            "Boolean operation must be union, difference, intersection, or xor",
         ));
+    }
+    if let Some(result) = crate::boolean_support::simplify(a, b, operation)? {
+        return Ok(result);
+    }
+    if a.edges
+        .iter()
+        .chain(&b.edges)
+        .any(|edge| edge.curve.degree > 1)
+        || a.faces
+            .iter()
+            .chain(&b.faces)
+            .any(|face| face.surface.degree_u > 1 || face.surface.degree_v > 1)
+    {
+        if let Some(result) = crate::prismatic_boolean::boolean(a, b, operation)? {
+            return Ok(result);
+        }
     }
     // Convex planar CSG is built directly from clipped boundary polygons,
     // independent of face orientation in world axes.
-    if a.bodies.len() == 1
+    if operation != "xor"
+        && a.bodies.len() == 1
         && b.bodies.len() == 1
         && a.bodies[0].inner_shells.is_empty()
         && b.bodies[0].inner_shells.is_empty()
@@ -1485,6 +1543,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
                 let keep = match operation {
                     "union" => inside_a || inside_b,
                     "difference" => inside_a && !inside_b,
+                    "xor" => inside_a != inside_b,
                     _ => inside_a && inside_b,
                 };
                 if keep {
@@ -1494,9 +1553,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         }
     }
     if occupied.is_empty() {
-        return Err(unsupported(
-            "Boolean result is empty; empty B-rep bodies are not represented",
-        ));
+        return Model::empty(a.tolerance_mm.max(b.tolerance_mm));
     }
     let mut polygons = vec![];
     let directions = [
@@ -1537,7 +1594,216 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     }
     let mut result = model_from_polygons(polygons, a.tolerance_mm.max(b.tolerance_mm))?;
     result.inherit_topology_ids(&[a, b]);
+    result.validate()?;
     Ok(result)
+}
+
+/// Translate one supporting plane of a convex planar body. All adjacent faces
+/// are rebuilt from their exact half-spaces; no display mesh participates.
+/// Draft a convex planar prism about a neutral plane perpendicular to `axis`.
+/// Positive angles expand sections in the positive axis direction. Caps remain
+/// fixed; each lateral support tilts by the requested geometric angle.
+/// This numerical half-space construction does not accept curved or oblique faces.
+pub fn draft_planar_prism(
+    model: &Model,
+    axis: [f64; 3],
+    origin: [f64; 3],
+    angle: f64,
+) -> Result<Model> {
+    if !axis
+        .iter()
+        .chain(&origin)
+        .chain([&angle])
+        .all(|x| x.is_finite())
+        || angle.abs() > 60.
+    {
+        return Err(failed(
+            "Draft requires finite parameters and an angle within ±60 degrees",
+        ));
+    }
+    let magnitude = axis.iter().map(|x| x.abs()).fold(0., f64::max);
+    if magnitude == 0. {
+        return Err(failed("Draft requires a nonzero axis"));
+    }
+    let axis = unit(axis.map(|x| x / magnitude))?;
+    let mut planes = convex_planes(model)?;
+    if planes.len() > 64 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Draft supports at most 64 support planes",
+        ));
+    }
+    let tangent = angle.to_radians().tan();
+    let neutral = dot(axis, origin);
+    let mut sides = 0;
+    let mut caps = [false; 2];
+    for plane in &mut planes {
+        let alignment = dot(plane.normal, axis);
+        if alignment.abs() <= 1e-10 {
+            sides += 1;
+            let normal = sub(plane.normal, mul(axis, tangent));
+            let length = norm(normal);
+            plane.normal = mul(normal, 1. / length);
+            plane.offset = (plane.offset - tangent * neutral) / length;
+            if !plane.offset.is_finite() {
+                return Err(failed("Draft exceeds finite numeric range"));
+            }
+        } else if alignment.abs() >= 1. - 1e-10 {
+            caps[usize::from(alignment > 0.)] = true;
+        } else {
+            return Err(unsupported(
+                "Draft requires planar prism sides parallel to the axis and perpendicular caps",
+            ));
+        }
+    }
+    if sides < 3 || !caps.iter().all(|x| *x) {
+        return Err(unsupported("Draft requires a closed planar prism"));
+    }
+    if angle == 0. {
+        return Ok(model.clone());
+    }
+    let mut out = model_from_planes(&planes, model.tolerance_mm)?;
+    // Reject disappearance of a cap or lateral support, including taper collapse.
+    for plane in &planes {
+        let count = out
+            .vertices
+            .iter()
+            .filter(|v| {
+                (dot(plane.normal, v.point) - plane.offset).abs() <= model.tolerance_mm * 8.
+            })
+            .count();
+        if count < 3 {
+            return Err(failed("Draft consumes a support face"));
+        }
+    }
+    out.inherit_topology_ids(&[model]);
+    out.validate()?;
+    Ok(out)
+}
+
+pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<Model> {
+    if !distance.is_finite() || distance.abs() > 1e6 {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Face displacement must be finite and within ±1000000 mm",
+        ));
+    }
+    let mut planes = convex_planes(model)?;
+    let faces = &model.shells[model.bodies[0].outer_shell].faces;
+    let selected = faces
+        .iter()
+        .position(|u| u.face == face_id)
+        .ok_or_else(|| Error::new("BREP_INVALID_SELECTION", "Unknown face"))?;
+    if planes.len() > 64 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Planar editing supports at most 64 support planes",
+        ));
+    }
+    planes[selected].offset += distance;
+    let mut out = model_from_planes(&planes, model.tolerance_mm)?;
+    if !out.vertices.iter().any(|v| {
+        (dot(planes[selected].normal, v.point) - planes[selected].offset).abs()
+            <= model.tolerance_mm * 8.
+    }) {
+        return Err(failed("Displacement consumes the selected face"));
+    }
+    out.inherit_topology_ids(&[model]);
+    out.validate()?;
+    Ok(out)
+}
+/// Exact planar inward shell of a convex body. Selected opening planes extend
+/// the inner cutter outside the original envelope before the native Boolean.
+pub fn shell_planar(model: &Model, openings: &[usize], thickness: f64) -> Result<Model> {
+    if !thickness.is_finite() || !(1e-5..=1e6).contains(&thickness) {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Shell thickness must be 0.00001..1000000 mm",
+        ));
+    }
+    let mut planes = convex_planes(model)?;
+    let mut cavity_planes = planes.clone();
+    if planes.len() > 64 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Planar shell supports at most 64 support planes",
+        ));
+    }
+    let faces = &model.shells[model.bodies[0].outer_shell].faces;
+    if openings.iter().any(|f| !faces.iter().any(|u| u.face == *f)) {
+        return Err(Error::new(
+            "BREP_INVALID_SELECTION",
+            "Unknown shell opening face",
+        ));
+    }
+    for (plane, face) in planes.iter_mut().zip(faces) {
+        plane.offset += if openings.contains(&face.face) {
+            thickness * 2.
+        } else {
+            -thickness
+        };
+    }
+    // Opening supports extend the cutter, but an actual cavity must still lie
+    // inside the original body. Otherwise an excessive thickness can move the
+    // complete cutter outside stock and make difference return unchanged stock.
+    cavity_planes.extend(planes.iter().copied());
+    model_from_planes(&cavity_planes, model.tolerance_mm)?;
+    let inner = model_from_planes(&planes, model.tolerance_mm)?;
+    let mut out = boolean(model, &inner, "difference")?;
+    out.inherit_topology_ids(&[model]);
+    out.validate()?;
+    Ok(out)
+}
+/// Two closed pieces from an exact support-plane cut of a convex planar body.
+pub fn split_planar(model: &Model, normal: [f64; 3], offset: f64) -> Result<[Model; 2]> {
+    if normal.iter().any(|v| !v.is_finite()) || !offset.is_finite() {
+        return Err(Error::new(
+            "BREP_INVALID_OPERATION",
+            "Split plane must be finite",
+        ));
+    }
+    // Scale first so equivalent finite plane equations cannot overflow the
+    // norm (or collapse to zero) merely because of their coefficient units.
+    let magnitude = normal.iter().map(|x| x.abs()).fold(0., f64::max);
+    if magnitude == 0. {
+        return Err(Error::new(
+            "BREP_INVALID_OPERATION",
+            "Split plane normal must be nonzero",
+        ));
+    }
+    let scaled = normal.map(|x| x / magnitude);
+    let length = norm(scaled);
+    let normal = mul(scaled, 1. / length);
+    let offset = (offset / magnitude) / length;
+    if !offset.is_finite() {
+        return Err(Error::new(
+            "BREP_INVALID_OPERATION",
+            "Normalized split offset must be finite",
+        ));
+    }
+    let planes = convex_planes(model)?;
+    if planes.len() > 64 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Planar split supports at most 64 support planes",
+        ));
+    }
+    let mut a = planes.clone();
+    a.push(Plane { normal, offset });
+    let mut b = planes;
+    b.push(Plane {
+        normal: mul(normal, -1.),
+        offset: -offset,
+    });
+    let mut pair = [
+        model_from_planes(&a, model.tolerance_mm)?,
+        model_from_planes(&b, model.tolerance_mm)?,
+    ];
+    for part in &mut pair {
+        part.inherit_topology_ids(&[model]);
+        part.validate()?;
+    }
+    Ok(pair)
 }
 
 fn edge_faces(model: &Model, edge_id: usize) -> Result<[usize; 2]> {
@@ -1799,6 +2065,101 @@ mod tests {
     }
 
     #[test]
+    fn prism_draft_zero_preserves_authored_topology() {
+        let model = cuboid([0.; 3], [10.; 3]).unwrap();
+        let before = format!("{model:?}");
+        let out = draft_planar_prism(&model, [0., 0., 1.], [0.; 3], 0.).unwrap();
+        assert_eq!(format!("{out:?}"), before);
+        assert_eq!(format!("{model:?}"), before);
+    }
+
+    #[test]
+    fn prism_draft_caps_survive_and_collapse_refuses() {
+        let model = cuboid([0.; 3], [10.; 3]).unwrap();
+        let before = format!("{model:?}");
+        for angle in [-10_f64, 10.] {
+            let out = draft_planar_prism(&model, [0., 0., 1e300], [0.; 3], angle).unwrap();
+            out.validate().unwrap();
+            assert_eq!(out.faces.len(), 6);
+            assert_eq!(out.vertices.len(), 8);
+            let growth = 10. * angle.to_radians().tan();
+            for v in &out.vertices {
+                let z = v.point[2];
+                assert!(z.abs() < 1e-8 || (z - 10.).abs() < 1e-8);
+                let delta = if z.abs() < 1e-8 { 0. } else { growth };
+                for k in 0..2 {
+                    assert!(
+                        (v.point[k] + delta).abs() < 1e-8
+                            || (v.point[k] - 10. - delta).abs() < 1e-8
+                    );
+                }
+            }
+        }
+        assert!(draft_planar_prism(&model, [0., 0., 1.], [0.; 3], -60.).is_err());
+        assert!(draft_planar_prism(&model, [1., 0., 1.], [0.; 3], 10.).is_err());
+        assert_eq!(format!("{model:?}"), before);
+    }
+
+    #[test]
+    fn planar_direct_edits_preserve_native_boundaries() {
+        let stock = cuboid([0.; 3], [10.; 3]).unwrap();
+        let top = stock
+            .faces
+            .iter()
+            .position(|f| {
+                f.surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .all(|p| p[2] == 10.)
+            })
+            .unwrap();
+        let volume = |m: &Model| {
+            crate::analysis::mass_properties(m, 1e-7, 200_000)
+                .unwrap()
+                .signed_volume_mm3
+        };
+        assert!((volume(&push_planar_face(&stock, top, 2.).unwrap()) - 1200.).abs() < 1e-6);
+        assert!(
+            (volume(&shell_planar(&stock, &[top], 1.).unwrap()) - (1000. - 8. * 8. * 9.)).abs()
+                < 1e-6
+        );
+        assert!((volume(&shell_planar(&stock, &[], 1.).unwrap()) - 488.).abs() < 1e-6);
+        let pair = split_planar(&stock, [1., 0., 0.], 4.).unwrap();
+        assert!((volume(&pair[0]) - 400.).abs() < 1e-6);
+        assert!((volume(&pair[1]) - 600.).abs() < 1e-6);
+        for factor in [1e-300, 1e300] {
+            let scaled = split_planar(&stock, [factor, 0., 0.], 4. * factor).unwrap();
+            assert!((volume(&scaled[0]) - 400.).abs() < 1e-6);
+        }
+        assert!(shell_planar(&stock, &[top], 6.).is_err());
+        assert!(split_planar(&stock, [1., 0., 0.], 11.).is_err());
+        assert!(push_planar_face(&stock, usize::MAX, 2.).is_err());
+        assert!(shell_planar(&crate::cylinder(3., 5.).unwrap(), &[], 1.).is_err());
+    }
+
+    #[test]
+    fn trimmed_concave_boolean_classification_and_rotated_reuse() {
+        let outline = [[3., 2.], [3., 5.], [0., 5.], [0., 0.], [5., 0.], [5., 2.]];
+        let hole = vec![[1., 1.], [1., 2.], [2., 2.], [2., 1.]];
+        let mut stock = extrude_polygon_with_holes(&outline, &[hole], 0., 2.).unwrap();
+        assert!(contains(&stock, [0.5, 1.5, 1.]).unwrap());
+        assert!(!contains(&stock, [1.5, 1.5, 1.]).unwrap());
+        assert!(!contains(&stock, [4., 3., 1.]).unwrap());
+        let mut cutter = cuboid([0., 0., -1.], [2.5, 6., 3.]).unwrap();
+        rotate_z(&mut stock, 0.37);
+        rotate_z(&mut cutter, 0.37);
+        for op in ["intersection", "difference", "union"] {
+            let result = boolean(&stock, &cutter, op).unwrap_or_else(|e| panic!("{op}: {e:?}"));
+            assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+            // Consuming the result again exercises newly split boundary faces.
+            let again =
+                boolean(&result, &cutter, "union").unwrap_or_else(|e| panic!("reuse {op}: {e:?}"));
+            assert_eq!(again.validate().unwrap().boundary_edge_count, 0);
+        }
+    }
+
+    #[test]
     fn overlapping_box_booleans_are_closed_breps() {
         let a = cuboid([0.; 3], [2., 2., 2.]).unwrap();
         let b = cuboid([1., 0., 0.], [3., 2., 2.]).unwrap();
@@ -1936,7 +2297,7 @@ mod tests {
                 0.,
                 2.,
             )
-            .is_err()
+            .is_ok()
         );
     }
 
@@ -1977,6 +2338,71 @@ mod tests {
     }
 
     #[test]
+    fn convex_profile_admission_refuses_a_same_turn_pentagram() {
+        let ring: Vec<[f64; 2]> = (0..5)
+            .map(|i| {
+                let angle = (i as f64) * std::f64::consts::TAU / 5.;
+                [angle.cos(), angle.sin()]
+            })
+            .collect();
+        let star: Vec<_> = [0, 2, 4, 1, 3].iter().map(|&i| ring[i]).collect();
+        assert!(validate_convex_profile(&star, "Test").is_err());
+        assert!(validate_convex_profile(&ring, "Test").is_ok());
+        let twice: Vec<_> = ring.iter().chain(&ring).copied().collect();
+        assert!(validate_convex_profile(&twice, "Test").is_err());
+    }
+
+    #[test]
+    fn loft_world_bounds_do_not_limit_translated_local_coordinates() {
+        let sections = vec![
+            vec![
+                [-800000., -1., 0.],
+                [800000., -1., 0.],
+                [800000., 1., 0.],
+                [-800000., 1., 0.],
+            ],
+            vec![
+                [-800000., -1., 2.],
+                [800000., -1., 2.],
+                [800000., 1., 2.],
+                [-800000., 1., 2.],
+            ],
+        ];
+        faceted_loft(&sections).unwrap().validate().unwrap();
+    }
+
+    #[test]
+    fn faceted_loft_accepts_placed_parallel_sections_and_refuses_nonparallel_ones() {
+        let c = 0.5_f64.sqrt();
+        let place = |p: [f64; 3]| {
+            [
+                c * p[0] + c * p[2] + 5.,
+                p[1] - 3.,
+                -c * p[0] + c * p[2] + 7.,
+            ]
+        };
+        let sections = vec![
+            vec![[-2., -2., 0.], [2., -2., 0.], [2., 2., 0.], [-2., 2., 0.]]
+                .into_iter()
+                .map(place)
+                .collect(),
+            vec![[-1., -1., 3.], [1., -1., 3.], [1., 1., 3.], [-1., 1., 3.]]
+                .into_iter()
+                .map(place)
+                .collect(),
+        ];
+        let model = faceted_loft(&sections).unwrap();
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+        assert_eq!(model.faces.len(), 10);
+        let mut tilted = sections.clone();
+        tilted[1][0][2] += 0.1;
+        assert!(faceted_loft(&tilted).is_err());
+        let mut backwards = sections.clone();
+        backwards.reverse();
+        assert!(faceted_loft(&backwards).is_err());
+    }
+
+    #[test]
     fn faceted_loft_sweep_and_revolve_are_closed_planar_breps() {
         let loft = faceted_loft(&[
             vec![[-2., -2., 0.], [2., -2., 0.], [2., 2., 0.], [-2., 2., 0.]],
@@ -2001,16 +2427,13 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_boolean_results_fail_closed() {
+    fn separated_boolean_preserves_components_and_regularized_empty() {
         let a = cuboid([0.; 3], [1.; 3]).unwrap();
         let separated = cuboid([2., 0., 0.], [3., 1., 1.]).unwrap();
         let union = boolean(&a, &separated, "union").unwrap();
         assert_eq!(union.bodies.len(), 2);
         union.validate().unwrap();
-        assert_eq!(
-            boolean(&a, &separated, "intersection").unwrap_err().code,
-            UNSUPPORTED
-        );
+        assert!(boolean(&a, &separated, "intersection").unwrap().is_empty());
     }
 
     #[test]

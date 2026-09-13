@@ -1,0 +1,2003 @@
+{
+  "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+  "captures": 6,
+  "elapsed_seconds": 8.822948208,
+  "note": "Native eframe/wgpu window; CPU paint and inter-frame intervals, not GPU timestamp queries. No editor input/layout timing.",
+  "stages": [
+    {
+      "samples": [
+        {
+          "frame": 0,
+          "interval_ms": 26.733957999999998,
+          "moving": false,
+          "paint_ms": 1.026417
+        },
+        {
+          "frame": 1,
+          "interval_ms": 34.064833,
+          "moving": false,
+          "paint_ms": 0.0785
+        },
+        {
+          "frame": 2,
+          "interval_ms": 63.56529199999999,
+          "moving": false,
+          "paint_ms": 0.08529099999999999
+        },
+        {
+          "frame": 3,
+          "interval_ms": 2.3831249999999997,
+          "moving": false,
+          "paint_ms": 0.075
+        },
+        {
+          "frame": 4,
+          "interval_ms": 8.051957999999999,
+          "moving": false,
+          "paint_ms": 0.135708
+        },
+        {
+          "frame": 5,
+          "interval_ms": 5.745542,
+          "moving": false,
+          "paint_ms": 0.094708
+        },
+        {
+          "frame": 6,
+          "interval_ms": 31.35425,
+          "moving": false,
+          "paint_ms": 0.079666
+        },
+        {
+          "frame": 7,
+          "interval_ms": 19.4485,
+          "moving": false,
+          "paint_ms": 0.081209
+        },
+        {
+          "frame": 8,
+          "interval_ms": 12.726625,
+          "moving": false,
+          "paint_ms": 0.08320799999999999
+        },
+        {
+          "frame": 9,
+          "interval_ms": 18.495125,
+          "moving": false,
+          "paint_ms": 0.08512499999999999
+        },
+        {
+          "frame": 10,
+          "interval_ms": 15.105792,
+          "moving": false,
+          "paint_ms": 0.093542
+        },
+        {
+          "frame": 11,
+          "interval_ms": 16.295166,
+          "moving": false,
+          "paint_ms": 0.1065
+        },
+        {
+          "frame": 12,
+          "interval_ms": 16.999917,
+          "moving": false,
+          "paint_ms": 0.103125
+        },
+        {
+          "frame": 13,
+          "interval_ms": 16.983042,
+          "moving": false,
+          "paint_ms": 0.093125
+        },
+        {
+          "frame": 14,
+          "interval_ms": 16.201,
+          "moving": false,
+          "paint_ms": 0.08645800000000001
+        },
+        {
+          "frame": 15,
+          "interval_ms": 16.793,
+          "moving": false,
+          "paint_ms": 0.095083
+        },
+        {
+          "frame": 16,
+          "interval_ms": 16.550208,
+          "moving": false,
+          "paint_ms": 0.087958
+        },
+        {
+          "frame": 17,
+          "interval_ms": 16.718417,
+          "moving": false,
+          "paint_ms": 0.087084
+        },
+        {
+          "frame": 18,
+          "interval_ms": 16.795708,
+          "moving": false,
+          "paint_ms": 0.087541
+        },
+        {
+          "frame": 19,
+          "interval_ms": 16.558917,
+          "moving": false,
+          "paint_ms": 0.08254099999999999
+        },
+        {
+          "frame": 20,
+          "interval_ms": 16.421625,
+          "moving": false,
+          "paint_ms": 0.083625
+        },
+        {
+          "frame": 21,
+          "interval_ms": 16.639541,
+          "moving": false,
+          "paint_ms": 0.08508299999999999
+        },
+        {
+          "frame": 22,
+          "interval_ms": 16.698833999999998,
+          "moving": false,
+          "paint_ms": 0.088709
+        },
+        {
+          "frame": 23,
+          "interval_ms": 16.767625000000002,
+          "moving": false,
+          "paint_ms": 0.087584
+        },
+        {
+          "frame": 24,
+          "interval_ms": 17.135666,
+          "moving": false,
+          "paint_ms": 0.078792
+        },
+        {
+          "frame": 25,
+          "interval_ms": 16.501209,
+          "moving": false,
+          "paint_ms": 0.083
+        },
+        {
+          "frame": 26,
+          "interval_ms": 16.285874999999997,
+          "moving": false,
+          "paint_ms": 0.08712500000000001
+        },
+        {
+          "frame": 27,
+          "interval_ms": 114.527541,
+          "moving": false,
+          "paint_ms": 0.12441700000000001
+        },
+        {
+          "frame": 28,
+          "interval_ms": 27.328792,
+          "moving": false,
+          "paint_ms": 0.105875
+        },
+        {
+          "frame": 29,
+          "interval_ms": 8.970417,
+          "moving": false,
+          "paint_ms": 0.065042
+        },
+        {
+          "frame": 30,
+          "interval_ms": 15.985375,
+          "moving": false,
+          "paint_ms": 0.078625
+        },
+        {
+          "frame": 31,
+          "interval_ms": 17.078916,
+          "moving": false,
+          "paint_ms": 0.080208
+        },
+        {
+          "frame": 32,
+          "interval_ms": 16.487084,
+          "moving": false,
+          "paint_ms": 0.070958
+        },
+        {
+          "frame": 33,
+          "interval_ms": 16.499458,
+          "moving": false,
+          "paint_ms": 0.0805
+        },
+        {
+          "frame": 34,
+          "interval_ms": 16.9605,
+          "moving": false,
+          "paint_ms": 0.088667
+        },
+        {
+          "frame": 35,
+          "interval_ms": 16.553542,
+          "moving": false,
+          "paint_ms": 0.088834
+        },
+        {
+          "frame": 36,
+          "interval_ms": 16.619625,
+          "moving": false,
+          "paint_ms": 0.085459
+        },
+        {
+          "frame": 37,
+          "interval_ms": 16.654166,
+          "moving": false,
+          "paint_ms": 0.08841700000000001
+        },
+        {
+          "frame": 38,
+          "interval_ms": 16.683667,
+          "moving": false,
+          "paint_ms": 0.090625
+        },
+        {
+          "frame": 39,
+          "interval_ms": 16.675375,
+          "moving": false,
+          "paint_ms": 0.08508299999999999
+        },
+        {
+          "frame": 40,
+          "interval_ms": 16.566542,
+          "moving": true,
+          "paint_ms": 0.107917
+        },
+        {
+          "frame": 41,
+          "interval_ms": 16.771458,
+          "moving": true,
+          "paint_ms": 0.0875
+        },
+        {
+          "frame": 42,
+          "interval_ms": 16.572875,
+          "moving": true,
+          "paint_ms": 0.087417
+        },
+        {
+          "frame": 43,
+          "interval_ms": 16.82625,
+          "moving": true,
+          "paint_ms": 0.09929199999999999
+        },
+        {
+          "frame": 44,
+          "interval_ms": 16.603042,
+          "moving": true,
+          "paint_ms": 0.094458
+        },
+        {
+          "frame": 45,
+          "interval_ms": 16.649875,
+          "moving": true,
+          "paint_ms": 0.111375
+        },
+        {
+          "frame": 46,
+          "interval_ms": 16.868875,
+          "moving": true,
+          "paint_ms": 0.108417
+        },
+        {
+          "frame": 47,
+          "interval_ms": 16.442333,
+          "moving": true,
+          "paint_ms": 0.092292
+        },
+        {
+          "frame": 48,
+          "interval_ms": 16.65925,
+          "moving": true,
+          "paint_ms": 0.093541
+        },
+        {
+          "frame": 49,
+          "interval_ms": 16.702708,
+          "moving": true,
+          "paint_ms": 0.09658299999999999
+        },
+        {
+          "frame": 50,
+          "interval_ms": 16.769459,
+          "moving": true,
+          "paint_ms": 0.10754100000000001
+        },
+        {
+          "frame": 51,
+          "interval_ms": 16.557916,
+          "moving": true,
+          "paint_ms": 0.103583
+        },
+        {
+          "frame": 52,
+          "interval_ms": 16.74875,
+          "moving": true,
+          "paint_ms": 0.10575
+        },
+        {
+          "frame": 53,
+          "interval_ms": 16.58575,
+          "moving": true,
+          "paint_ms": 0.106334
+        },
+        {
+          "frame": 54,
+          "interval_ms": 16.73075,
+          "moving": true,
+          "paint_ms": 0.105583
+        },
+        {
+          "frame": 55,
+          "interval_ms": 16.597084000000002,
+          "moving": true,
+          "paint_ms": 0.102084
+        },
+        {
+          "frame": 56,
+          "interval_ms": 17.407833,
+          "moving": true,
+          "paint_ms": 0.10325000000000001
+        },
+        {
+          "frame": 57,
+          "interval_ms": 16.091167,
+          "moving": true,
+          "paint_ms": 0.101333
+        },
+        {
+          "frame": 58,
+          "interval_ms": 16.28025,
+          "moving": true,
+          "paint_ms": 0.08625
+        },
+        {
+          "frame": 59,
+          "interval_ms": 17.301040999999998,
+          "moving": true,
+          "paint_ms": 0.131666
+        },
+        {
+          "frame": 60,
+          "interval_ms": 16.6755,
+          "moving": true,
+          "paint_ms": 0.130417
+        },
+        {
+          "frame": 61,
+          "interval_ms": 16.727916999999998,
+          "moving": true,
+          "paint_ms": 0.149167
+        },
+        {
+          "frame": 62,
+          "interval_ms": 16.253208,
+          "moving": true,
+          "paint_ms": 0.109292
+        },
+        {
+          "frame": 63,
+          "interval_ms": 16.673459,
+          "moving": true,
+          "paint_ms": 0.106667
+        },
+        {
+          "frame": 64,
+          "interval_ms": 17.257041,
+          "moving": true,
+          "paint_ms": 0.134833
+        },
+        {
+          "frame": 65,
+          "interval_ms": 16.332875,
+          "moving": true,
+          "paint_ms": 0.129
+        },
+        {
+          "frame": 66,
+          "interval_ms": 16.775834,
+          "moving": true,
+          "paint_ms": 0.144583
+        },
+        {
+          "frame": 67,
+          "interval_ms": 16.6235,
+          "moving": true,
+          "paint_ms": 0.15187499999999998
+        },
+        {
+          "frame": 68,
+          "interval_ms": 16.431333,
+          "moving": true,
+          "paint_ms": 0.108125
+        },
+        {
+          "frame": 69,
+          "interval_ms": 16.915667,
+          "moving": true,
+          "paint_ms": 0.127375
+        },
+        {
+          "frame": 70,
+          "interval_ms": 16.209291,
+          "moving": true,
+          "paint_ms": 0.093125
+        },
+        {
+          "frame": 71,
+          "interval_ms": 16.719624999999997,
+          "moving": true,
+          "paint_ms": 0.08625
+        },
+        {
+          "frame": 72,
+          "interval_ms": 17.093291999999998,
+          "moving": true,
+          "paint_ms": 0.13025
+        },
+        {
+          "frame": 73,
+          "interval_ms": 16.258499999999998,
+          "moving": true,
+          "paint_ms": 0.093
+        },
+        {
+          "frame": 74,
+          "interval_ms": 16.518749999999997,
+          "moving": true,
+          "paint_ms": 0.09641699999999999
+        },
+        {
+          "frame": 75,
+          "interval_ms": 16.796499999999998,
+          "moving": true,
+          "paint_ms": 0.092125
+        },
+        {
+          "frame": 76,
+          "interval_ms": 16.830333,
+          "moving": true,
+          "paint_ms": 0.10008299999999999
+        },
+        {
+          "frame": 77,
+          "interval_ms": 16.4925,
+          "moving": true,
+          "paint_ms": 0.11124999999999999
+        },
+        {
+          "frame": 78,
+          "interval_ms": 16.747208999999998,
+          "moving": true,
+          "paint_ms": 0.096
+        },
+        {
+          "frame": 79,
+          "interval_ms": 16.92525,
+          "moving": true,
+          "paint_ms": 0.128875
+        },
+        {
+          "frame": 80,
+          "interval_ms": 16.305291,
+          "moving": false,
+          "paint_ms": 0.093334
+        },
+        {
+          "frame": 81,
+          "interval_ms": 17.015875,
+          "moving": false,
+          "paint_ms": 0.126125
+        },
+        {
+          "frame": 82,
+          "interval_ms": 16.469209,
+          "moving": false,
+          "paint_ms": 0.128417
+        },
+        {
+          "frame": 83,
+          "interval_ms": 16.114957999999998,
+          "moving": false,
+          "paint_ms": 0.073
+        },
+        {
+          "frame": 84,
+          "interval_ms": 17.034417,
+          "moving": false,
+          "paint_ms": 0.086917
+        },
+        {
+          "frame": 85,
+          "interval_ms": 16.805457999999998,
+          "moving": false,
+          "paint_ms": 0.092625
+        },
+        {
+          "frame": 86,
+          "interval_ms": 16.798417,
+          "moving": false,
+          "paint_ms": 0.10545800000000001
+        },
+        {
+          "frame": 87,
+          "interval_ms": 16.469166,
+          "moving": false,
+          "paint_ms": 0.092166
+        },
+        {
+          "frame": 88,
+          "interval_ms": 16.876834,
+          "moving": false,
+          "paint_ms": 0.105375
+        },
+        {
+          "frame": 89,
+          "interval_ms": 16.683583,
+          "moving": false,
+          "paint_ms": 0.14016699999999999
+        },
+        {
+          "frame": 90,
+          "interval_ms": 16.346958,
+          "moving": false,
+          "paint_ms": 0.096667
+        },
+        {
+          "frame": 91,
+          "interval_ms": 16.736334,
+          "moving": false,
+          "paint_ms": 0.08887500000000001
+        },
+        {
+          "frame": 92,
+          "interval_ms": 16.471166,
+          "moving": false,
+          "paint_ms": 0.087417
+        },
+        {
+          "frame": 93,
+          "interval_ms": 17.180459,
+          "moving": false,
+          "paint_ms": 0.128625
+        },
+        {
+          "frame": 94,
+          "interval_ms": 16.489957999999998,
+          "moving": false,
+          "paint_ms": 0.168125
+        },
+        {
+          "frame": 95,
+          "interval_ms": 16.658083,
+          "moving": false,
+          "paint_ms": 0.096208
+        },
+        {
+          "frame": 96,
+          "interval_ms": 16.496584000000002,
+          "moving": false,
+          "paint_ms": 0.091417
+        },
+        {
+          "frame": 97,
+          "interval_ms": 16.716333,
+          "moving": false,
+          "paint_ms": 0.08666700000000001
+        },
+        {
+          "frame": 98,
+          "interval_ms": 16.630875,
+          "moving": false,
+          "paint_ms": 0.093917
+        },
+        {
+          "frame": 99,
+          "interval_ms": 17.041583,
+          "moving": false,
+          "paint_ms": 0.123166
+        },
+        {
+          "frame": 100,
+          "interval_ms": 17.021042,
+          "moving": false,
+          "paint_ms": 0.15312499999999998
+        },
+        {
+          "frame": 101,
+          "interval_ms": 16.391666999999998,
+          "moving": false,
+          "paint_ms": 0.152292
+        },
+        {
+          "frame": 102,
+          "interval_ms": 16.963833,
+          "moving": false,
+          "paint_ms": 0.183083
+        },
+        {
+          "frame": 103,
+          "interval_ms": 24.239458,
+          "moving": false,
+          "paint_ms": 0.086708
+        },
+        {
+          "frame": 104,
+          "interval_ms": 14.816459,
+          "moving": false,
+          "paint_ms": 0.064
+        },
+        {
+          "frame": 105,
+          "interval_ms": 10.169083,
+          "moving": false,
+          "paint_ms": 0.092041
+        },
+        {
+          "frame": 106,
+          "interval_ms": 17.005375,
+          "moving": false,
+          "paint_ms": 0.094041
+        },
+        {
+          "frame": 107,
+          "interval_ms": 16.392208,
+          "moving": false,
+          "paint_ms": 0.0935
+        },
+        {
+          "frame": 108,
+          "interval_ms": 16.735917,
+          "moving": false,
+          "paint_ms": 0.104917
+        },
+        {
+          "frame": 109,
+          "interval_ms": 16.542958,
+          "moving": false,
+          "paint_ms": 0.098125
+        }
+      ],
+      "shapes": 100
+    },
+    {
+      "samples": [
+        {
+          "frame": 0,
+          "interval_ms": 16.851167,
+          "moving": false,
+          "paint_ms": 7.811333
+        },
+        {
+          "frame": 1,
+          "interval_ms": 16.954957999999998,
+          "moving": false,
+          "paint_ms": 0.844875
+        },
+        {
+          "frame": 2,
+          "interval_ms": 15.870875,
+          "moving": false,
+          "paint_ms": 0.8334170000000001
+        },
+        {
+          "frame": 3,
+          "interval_ms": 16.829,
+          "moving": false,
+          "paint_ms": 1.002167
+        },
+        {
+          "frame": 4,
+          "interval_ms": 16.754,
+          "moving": false,
+          "paint_ms": 1.0029590000000002
+        },
+        {
+          "frame": 5,
+          "interval_ms": 16.919709,
+          "moving": false,
+          "paint_ms": 1.007792
+        },
+        {
+          "frame": 6,
+          "interval_ms": 16.281582999999998,
+          "moving": false,
+          "paint_ms": 0.91575
+        },
+        {
+          "frame": 7,
+          "interval_ms": 16.930542,
+          "moving": false,
+          "paint_ms": 0.914166
+        },
+        {
+          "frame": 8,
+          "interval_ms": 16.285791,
+          "moving": false,
+          "paint_ms": 0.742292
+        },
+        {
+          "frame": 9,
+          "interval_ms": 17.06325,
+          "moving": false,
+          "paint_ms": 0.929333
+        },
+        {
+          "frame": 10,
+          "interval_ms": 16.684917000000002,
+          "moving": false,
+          "paint_ms": 0.944
+        },
+        {
+          "frame": 11,
+          "interval_ms": 16.593083,
+          "moving": false,
+          "paint_ms": 0.948375
+        },
+        {
+          "frame": 12,
+          "interval_ms": 16.639584,
+          "moving": false,
+          "paint_ms": 0.961042
+        },
+        {
+          "frame": 13,
+          "interval_ms": 17.166125,
+          "moving": false,
+          "paint_ms": 1.038125
+        },
+        {
+          "frame": 14,
+          "interval_ms": 16.402416,
+          "moving": false,
+          "paint_ms": 0.9978750000000001
+        },
+        {
+          "frame": 15,
+          "interval_ms": 16.526542000000003,
+          "moving": false,
+          "paint_ms": 0.988791
+        },
+        {
+          "frame": 16,
+          "interval_ms": 16.777458,
+          "moving": false,
+          "paint_ms": 0.9469580000000001
+        },
+        {
+          "frame": 17,
+          "interval_ms": 16.376292,
+          "moving": false,
+          "paint_ms": 0.848125
+        },
+        {
+          "frame": 18,
+          "interval_ms": 16.895,
+          "moving": false,
+          "paint_ms": 0.9768330000000001
+        },
+        {
+          "frame": 19,
+          "interval_ms": 16.602625,
+          "moving": false,
+          "paint_ms": 1.0421250000000002
+        },
+        {
+          "frame": 20,
+          "interval_ms": 16.258958,
+          "moving": false,
+          "paint_ms": 0.8509169999999999
+        },
+        {
+          "frame": 21,
+          "interval_ms": 16.829417,
+          "moving": false,
+          "paint_ms": 1.149292
+        },
+        {
+          "frame": 22,
+          "interval_ms": 16.973208,
+          "moving": false,
+          "paint_ms": 1.142334
+        },
+        {
+          "frame": 23,
+          "interval_ms": 16.755499999999998,
+          "moving": false,
+          "paint_ms": 0.978042
+        },
+        {
+          "frame": 24,
+          "interval_ms": 16.770584000000003,
+          "moving": false,
+          "paint_ms": 1.028084
+        },
+        {
+          "frame": 25,
+          "interval_ms": 16.119541,
+          "moving": false,
+          "paint_ms": 0.824
+        },
+        {
+          "frame": 26,
+          "interval_ms": 16.804,
+          "moving": false,
+          "paint_ms": 0.896208
+        },
+        {
+          "frame": 27,
+          "interval_ms": 17.364959,
+          "moving": false,
+          "paint_ms": 1.0767909999999998
+        },
+        {
+          "frame": 28,
+          "interval_ms": 24.206958,
+          "moving": false,
+          "paint_ms": 0.886084
+        },
+        {
+          "frame": 29,
+          "interval_ms": 11.30075,
+          "moving": false,
+          "paint_ms": 0.732416
+        },
+        {
+          "frame": 30,
+          "interval_ms": 13.78975,
+          "moving": false,
+          "paint_ms": 0.917625
+        },
+        {
+          "frame": 31,
+          "interval_ms": 16.666375000000002,
+          "moving": false,
+          "paint_ms": 0.9749580000000001
+        },
+        {
+          "frame": 32,
+          "interval_ms": 16.657667,
+          "moving": false,
+          "paint_ms": 0.773042
+        },
+        {
+          "frame": 33,
+          "interval_ms": 16.856708,
+          "moving": false,
+          "paint_ms": 0.940458
+        },
+        {
+          "frame": 34,
+          "interval_ms": 16.680958,
+          "moving": false,
+          "paint_ms": 0.9265420000000001
+        },
+        {
+          "frame": 35,
+          "interval_ms": 16.615917,
+          "moving": false,
+          "paint_ms": 0.8983749999999999
+        },
+        {
+          "frame": 36,
+          "interval_ms": 16.736082999999997,
+          "moving": false,
+          "paint_ms": 0.972292
+        },
+        {
+          "frame": 37,
+          "interval_ms": 16.129625,
+          "moving": false,
+          "paint_ms": 0.709083
+        },
+        {
+          "frame": 38,
+          "interval_ms": 16.946167000000003,
+          "moving": false,
+          "paint_ms": 0.8773340000000001
+        },
+        {
+          "frame": 39,
+          "interval_ms": 16.767332999999997,
+          "moving": false,
+          "paint_ms": 0.942833
+        },
+        {
+          "frame": 40,
+          "interval_ms": 16.717459,
+          "moving": true,
+          "paint_ms": 0.926666
+        },
+        {
+          "frame": 41,
+          "interval_ms": 16.803958,
+          "moving": true,
+          "paint_ms": 0.907917
+        },
+        {
+          "frame": 42,
+          "interval_ms": 17.529625,
+          "moving": true,
+          "paint_ms": 0.9957500000000001
+        },
+        {
+          "frame": 43,
+          "interval_ms": 15.487875,
+          "moving": true,
+          "paint_ms": 1.0325
+        },
+        {
+          "frame": 44,
+          "interval_ms": 16.500958,
+          "moving": true,
+          "paint_ms": 0.8588330000000001
+        },
+        {
+          "frame": 45,
+          "interval_ms": 17.180709,
+          "moving": true,
+          "paint_ms": 1.023416
+        },
+        {
+          "frame": 46,
+          "interval_ms": 16.205125000000002,
+          "moving": true,
+          "paint_ms": 0.960375
+        },
+        {
+          "frame": 47,
+          "interval_ms": 16.496791,
+          "moving": true,
+          "paint_ms": 0.8538330000000001
+        },
+        {
+          "frame": 48,
+          "interval_ms": 16.771,
+          "moving": true,
+          "paint_ms": 0.8580420000000001
+        },
+        {
+          "frame": 49,
+          "interval_ms": 16.919375,
+          "moving": true,
+          "paint_ms": 0.8158329999999999
+        },
+        {
+          "frame": 50,
+          "interval_ms": 16.637625,
+          "moving": true,
+          "paint_ms": 0.88575
+        },
+        {
+          "frame": 51,
+          "interval_ms": 16.853834000000003,
+          "moving": true,
+          "paint_ms": 1.050708
+        },
+        {
+          "frame": 52,
+          "interval_ms": 16.570708,
+          "moving": true,
+          "paint_ms": 0.838958
+        },
+        {
+          "frame": 53,
+          "interval_ms": 16.666207999999997,
+          "moving": true,
+          "paint_ms": 1.134792
+        },
+        {
+          "frame": 54,
+          "interval_ms": 17.001125,
+          "moving": true,
+          "paint_ms": 1.1644590000000001
+        },
+        {
+          "frame": 55,
+          "interval_ms": 16.808084,
+          "moving": true,
+          "paint_ms": 1.0298340000000001
+        },
+        {
+          "frame": 56,
+          "interval_ms": 16.043291,
+          "moving": true,
+          "paint_ms": 0.868833
+        },
+        {
+          "frame": 57,
+          "interval_ms": 16.460124999999998,
+          "moving": true,
+          "paint_ms": 0.867416
+        },
+        {
+          "frame": 58,
+          "interval_ms": 17.164542,
+          "moving": true,
+          "paint_ms": 1.032667
+        },
+        {
+          "frame": 59,
+          "interval_ms": 16.561916999999998,
+          "moving": true,
+          "paint_ms": 1.0047910000000002
+        },
+        {
+          "frame": 60,
+          "interval_ms": 16.718041,
+          "moving": true,
+          "paint_ms": 1.014875
+        },
+        {
+          "frame": 61,
+          "interval_ms": 17.041917,
+          "moving": true,
+          "paint_ms": 1.2426659999999998
+        },
+        {
+          "frame": 62,
+          "interval_ms": 16.780707999999997,
+          "moving": true,
+          "paint_ms": 1.323875
+        },
+        {
+          "frame": 63,
+          "interval_ms": 16.279292,
+          "moving": true,
+          "paint_ms": 1.085
+        },
+        {
+          "frame": 64,
+          "interval_ms": 16.809,
+          "moving": true,
+          "paint_ms": 1.217166
+        },
+        {
+          "frame": 65,
+          "interval_ms": 16.212958,
+          "moving": true,
+          "paint_ms": 0.8325
+        },
+        {
+          "frame": 66,
+          "interval_ms": 16.754334,
+          "moving": true,
+          "paint_ms": 1.0833329999999999
+        },
+        {
+          "frame": 67,
+          "interval_ms": 16.498375,
+          "moving": true,
+          "paint_ms": 0.908583
+        },
+        {
+          "frame": 68,
+          "interval_ms": 16.756,
+          "moving": true,
+          "paint_ms": 1.0745419999999999
+        },
+        {
+          "frame": 69,
+          "interval_ms": 16.428874999999998,
+          "moving": true,
+          "paint_ms": 0.964291
+        },
+        {
+          "frame": 70,
+          "interval_ms": 17.021958,
+          "moving": true,
+          "paint_ms": 1.114792
+        },
+        {
+          "frame": 71,
+          "interval_ms": 16.616916999999997,
+          "moving": true,
+          "paint_ms": 1.063667
+        },
+        {
+          "frame": 72,
+          "interval_ms": 16.864541,
+          "moving": true,
+          "paint_ms": 1.1280000000000001
+        },
+        {
+          "frame": 73,
+          "interval_ms": 16.521292,
+          "moving": true,
+          "paint_ms": 0.839291
+        },
+        {
+          "frame": 74,
+          "interval_ms": 16.580333,
+          "moving": true,
+          "paint_ms": 0.9241250000000001
+        },
+        {
+          "frame": 75,
+          "interval_ms": 17.074749999999998,
+          "moving": true,
+          "paint_ms": 1.0175830000000001
+        },
+        {
+          "frame": 76,
+          "interval_ms": 16.19925,
+          "moving": true,
+          "paint_ms": 1.1276249999999999
+        },
+        {
+          "frame": 77,
+          "interval_ms": 17.660249999999998,
+          "moving": true,
+          "paint_ms": 1.203791
+        },
+        {
+          "frame": 78,
+          "interval_ms": 15.872292,
+          "moving": true,
+          "paint_ms": 1.156542
+        },
+        {
+          "frame": 79,
+          "interval_ms": 17.344667,
+          "moving": true,
+          "paint_ms": 1.308792
+        },
+        {
+          "frame": 80,
+          "interval_ms": 16.500207999999997,
+          "moving": false,
+          "paint_ms": 1.3464589999999999
+        },
+        {
+          "frame": 81,
+          "interval_ms": 16.540833000000003,
+          "moving": false,
+          "paint_ms": 1.175625
+        },
+        {
+          "frame": 82,
+          "interval_ms": 16.406750000000002,
+          "moving": false,
+          "paint_ms": 1.324584
+        },
+        {
+          "frame": 83,
+          "interval_ms": 16.583000000000002,
+          "moving": false,
+          "paint_ms": 1.275208
+        },
+        {
+          "frame": 84,
+          "interval_ms": 16.986917000000002,
+          "moving": false,
+          "paint_ms": 1.3094999999999999
+        },
+        {
+          "frame": 85,
+          "interval_ms": 16.530833,
+          "moving": false,
+          "paint_ms": 0.960875
+        },
+        {
+          "frame": 86,
+          "interval_ms": 16.395792,
+          "moving": false,
+          "paint_ms": 0.8482919999999999
+        },
+        {
+          "frame": 87,
+          "interval_ms": 16.786708,
+          "moving": false,
+          "paint_ms": 0.9969589999999999
+        },
+        {
+          "frame": 88,
+          "interval_ms": 16.854750000000003,
+          "moving": false,
+          "paint_ms": 1.0187499999999998
+        },
+        {
+          "frame": 89,
+          "interval_ms": 15.988834,
+          "moving": false,
+          "paint_ms": 0.800042
+        },
+        {
+          "frame": 90,
+          "interval_ms": 17.12575,
+          "moving": false,
+          "paint_ms": 0.789417
+        },
+        {
+          "frame": 91,
+          "interval_ms": 17.009916,
+          "moving": false,
+          "paint_ms": 1.037583
+        },
+        {
+          "frame": 92,
+          "interval_ms": 15.929499999999999,
+          "moving": false,
+          "paint_ms": 0.862584
+        },
+        {
+          "frame": 93,
+          "interval_ms": 17.122042,
+          "moving": false,
+          "paint_ms": 0.784541
+        },
+        {
+          "frame": 94,
+          "interval_ms": 16.251292,
+          "moving": false,
+          "paint_ms": 0.792875
+        },
+        {
+          "frame": 95,
+          "interval_ms": 16.621582999999998,
+          "moving": false,
+          "paint_ms": 0.765042
+        },
+        {
+          "frame": 96,
+          "interval_ms": 16.951999999999998,
+          "moving": false,
+          "paint_ms": 0.96225
+        },
+        {
+          "frame": 97,
+          "interval_ms": 16.758167,
+          "moving": false,
+          "paint_ms": 1.111958
+        },
+        {
+          "frame": 98,
+          "interval_ms": 16.47175,
+          "moving": false,
+          "paint_ms": 0.813875
+        },
+        {
+          "frame": 99,
+          "interval_ms": 17.120041,
+          "moving": false,
+          "paint_ms": 0.99825
+        },
+        {
+          "frame": 100,
+          "interval_ms": 16.888042,
+          "moving": false,
+          "paint_ms": 0.8805
+        },
+        {
+          "frame": 101,
+          "interval_ms": 16.110667,
+          "moving": false,
+          "paint_ms": 0.746375
+        },
+        {
+          "frame": 102,
+          "interval_ms": 17.75625,
+          "moving": false,
+          "paint_ms": 1.046667
+        },
+        {
+          "frame": 103,
+          "interval_ms": 23.656041,
+          "moving": false,
+          "paint_ms": 0.785792
+        },
+        {
+          "frame": 104,
+          "interval_ms": 16.608625,
+          "moving": false,
+          "paint_ms": 0.7771250000000001
+        },
+        {
+          "frame": 105,
+          "interval_ms": 8.591042,
+          "moving": false,
+          "paint_ms": 0.820333
+        },
+        {
+          "frame": 106,
+          "interval_ms": 16.250667,
+          "moving": false,
+          "paint_ms": 0.8082919999999999
+        },
+        {
+          "frame": 107,
+          "interval_ms": 16.670082999999998,
+          "moving": false,
+          "paint_ms": 0.810375
+        },
+        {
+          "frame": 108,
+          "interval_ms": 16.714541999999998,
+          "moving": false,
+          "paint_ms": 0.7864169999999999
+        },
+        {
+          "frame": 109,
+          "interval_ms": 16.633208,
+          "moving": false,
+          "paint_ms": 0.8352499999999999
+        }
+      ],
+      "shapes": 1000
+    },
+    {
+      "samples": [
+        {
+          "frame": 0,
+          "interval_ms": 16.937041999999998,
+          "moving": false,
+          "paint_ms": 38.889542
+        },
+        {
+          "frame": 1,
+          "interval_ms": 44.943833000000005,
+          "moving": false,
+          "paint_ms": 38.581959
+        },
+        {
+          "frame": 2,
+          "interval_ms": 43.266917,
+          "moving": false,
+          "paint_ms": 38.980124999999994
+        },
+        {
+          "frame": 3,
+          "interval_ms": 43.426916000000006,
+          "moving": false,
+          "paint_ms": 39.075458
+        },
+        {
+          "frame": 4,
+          "interval_ms": 43.496167,
+          "moving": false,
+          "paint_ms": 39.186417
+        },
+        {
+          "frame": 5,
+          "interval_ms": 43.822792,
+          "moving": false,
+          "paint_ms": 38.925708
+        },
+        {
+          "frame": 6,
+          "interval_ms": 45.004916,
+          "moving": false,
+          "paint_ms": 39.539708
+        },
+        {
+          "frame": 7,
+          "interval_ms": 44.214917,
+          "moving": false,
+          "paint_ms": 38.960333999999996
+        },
+        {
+          "frame": 8,
+          "interval_ms": 43.688708,
+          "moving": false,
+          "paint_ms": 38.215125
+        },
+        {
+          "frame": 9,
+          "interval_ms": 43.978209,
+          "moving": false,
+          "paint_ms": 38.221666
+        },
+        {
+          "frame": 10,
+          "interval_ms": 42.274291,
+          "moving": false,
+          "paint_ms": 38.154167
+        },
+        {
+          "frame": 11,
+          "interval_ms": 43.407250000000005,
+          "moving": false,
+          "paint_ms": 38.597833
+        },
+        {
+          "frame": 12,
+          "interval_ms": 42.809584,
+          "moving": false,
+          "paint_ms": 37.705957999999995
+        },
+        {
+          "frame": 13,
+          "interval_ms": 41.877458,
+          "moving": false,
+          "paint_ms": 37.376332999999995
+        },
+        {
+          "frame": 14,
+          "interval_ms": 41.843417,
+          "moving": false,
+          "paint_ms": 38.768875
+        },
+        {
+          "frame": 15,
+          "interval_ms": 43.963625,
+          "moving": false,
+          "paint_ms": 38.11725
+        },
+        {
+          "frame": 16,
+          "interval_ms": 44.259,
+          "moving": false,
+          "paint_ms": 38.015750000000004
+        },
+        {
+          "frame": 17,
+          "interval_ms": 42.781541,
+          "moving": false,
+          "paint_ms": 38.413999999999994
+        },
+        {
+          "frame": 18,
+          "interval_ms": 43.511,
+          "moving": false,
+          "paint_ms": 38.349541
+        },
+        {
+          "frame": 19,
+          "interval_ms": 43.19625,
+          "moving": false,
+          "paint_ms": 38.496584
+        },
+        {
+          "frame": 20,
+          "interval_ms": 43.178334,
+          "moving": false,
+          "paint_ms": 38.253625
+        },
+        {
+          "frame": 21,
+          "interval_ms": 44.232833,
+          "moving": false,
+          "paint_ms": 38.051958
+        },
+        {
+          "frame": 22,
+          "interval_ms": 42.569875,
+          "moving": false,
+          "paint_ms": 37.924167000000004
+        },
+        {
+          "frame": 23,
+          "interval_ms": 42.832583,
+          "moving": false,
+          "paint_ms": 37.673584000000005
+        },
+        {
+          "frame": 24,
+          "interval_ms": 42.210499999999996,
+          "moving": false,
+          "paint_ms": 38.1605
+        },
+        {
+          "frame": 25,
+          "interval_ms": 42.797334,
+          "moving": false,
+          "paint_ms": 37.993416
+        },
+        {
+          "frame": 26,
+          "interval_ms": 42.629541,
+          "moving": false,
+          "paint_ms": 38.149375
+        },
+        {
+          "frame": 27,
+          "interval_ms": 42.851709,
+          "moving": false,
+          "paint_ms": 38.613082999999996
+        },
+        {
+          "frame": 28,
+          "interval_ms": 51.715833,
+          "moving": false,
+          "paint_ms": 38.464917
+        },
+        {
+          "frame": 29,
+          "interval_ms": 59.466832999999994,
+          "moving": false,
+          "paint_ms": 37.761458
+        },
+        {
+          "frame": 30,
+          "interval_ms": 42.485167,
+          "moving": false,
+          "paint_ms": 38.120167
+        },
+        {
+          "frame": 31,
+          "interval_ms": 42.945542,
+          "moving": false,
+          "paint_ms": 38.5045
+        },
+        {
+          "frame": 32,
+          "interval_ms": 43.620958,
+          "moving": false,
+          "paint_ms": 38.647416
+        },
+        {
+          "frame": 33,
+          "interval_ms": 44.169624999999996,
+          "moving": false,
+          "paint_ms": 38.063334
+        },
+        {
+          "frame": 34,
+          "interval_ms": 43.719333,
+          "moving": false,
+          "paint_ms": 38.68125
+        },
+        {
+          "frame": 35,
+          "interval_ms": 43.661125000000006,
+          "moving": false,
+          "paint_ms": 39.13675
+        },
+        {
+          "frame": 36,
+          "interval_ms": 44.612834,
+          "moving": false,
+          "paint_ms": 38.416875000000005
+        },
+        {
+          "frame": 37,
+          "interval_ms": 44.596291,
+          "moving": false,
+          "paint_ms": 38.605916
+        },
+        {
+          "frame": 38,
+          "interval_ms": 43.629875,
+          "moving": false,
+          "paint_ms": 38.789125
+        },
+        {
+          "frame": 39,
+          "interval_ms": 44.620584,
+          "moving": false,
+          "paint_ms": 38.767916
+        },
+        {
+          "frame": 40,
+          "interval_ms": 44.55945800000001,
+          "moving": true,
+          "paint_ms": 38.386666
+        },
+        {
+          "frame": 41,
+          "interval_ms": 43.417917,
+          "moving": true,
+          "paint_ms": 54.2165
+        },
+        {
+          "frame": 42,
+          "interval_ms": 61.751166000000005,
+          "moving": true,
+          "paint_ms": 60.397458
+        },
+        {
+          "frame": 43,
+          "interval_ms": 66.935834,
+          "moving": true,
+          "paint_ms": 46.364583
+        },
+        {
+          "frame": 44,
+          "interval_ms": 52.883125,
+          "moving": true,
+          "paint_ms": 39.387709
+        },
+        {
+          "frame": 45,
+          "interval_ms": 45.276916,
+          "moving": true,
+          "paint_ms": 38.346834
+        },
+        {
+          "frame": 46,
+          "interval_ms": 42.981041999999995,
+          "moving": true,
+          "paint_ms": 38.31125
+        },
+        {
+          "frame": 47,
+          "interval_ms": 42.552125000000004,
+          "moving": true,
+          "paint_ms": 38.246875
+        },
+        {
+          "frame": 48,
+          "interval_ms": 43.784583000000005,
+          "moving": true,
+          "paint_ms": 42.3495
+        },
+        {
+          "frame": 49,
+          "interval_ms": 48.338125000000005,
+          "moving": true,
+          "paint_ms": 45.024625
+        },
+        {
+          "frame": 50,
+          "interval_ms": 52.80525,
+          "moving": true,
+          "paint_ms": 45.07875
+        },
+        {
+          "frame": 51,
+          "interval_ms": 51.312125,
+          "moving": true,
+          "paint_ms": 39.453208
+        },
+        {
+          "frame": 52,
+          "interval_ms": 46.32791700000001,
+          "moving": true,
+          "paint_ms": 38.459875
+        },
+        {
+          "frame": 53,
+          "interval_ms": 42.67075,
+          "moving": true,
+          "paint_ms": 37.792167
+        },
+        {
+          "frame": 54,
+          "interval_ms": 42.285958,
+          "moving": true,
+          "paint_ms": 37.867
+        },
+        {
+          "frame": 55,
+          "interval_ms": 41.899792,
+          "moving": true,
+          "paint_ms": 37.69
+        },
+        {
+          "frame": 56,
+          "interval_ms": 42.192583,
+          "moving": true,
+          "paint_ms": 38.0485
+        },
+        {
+          "frame": 57,
+          "interval_ms": 41.891125,
+          "moving": true,
+          "paint_ms": 37.925124999999994
+        },
+        {
+          "frame": 58,
+          "interval_ms": 41.931042000000005,
+          "moving": true,
+          "paint_ms": 38.077041
+        },
+        {
+          "frame": 59,
+          "interval_ms": 42.222833,
+          "moving": true,
+          "paint_ms": 42.958417
+        },
+        {
+          "frame": 60,
+          "interval_ms": 47.021292,
+          "moving": true,
+          "paint_ms": 40.081875000000004
+        },
+        {
+          "frame": 61,
+          "interval_ms": 44.055667,
+          "moving": true,
+          "paint_ms": 37.941250000000004
+        },
+        {
+          "frame": 62,
+          "interval_ms": 41.462041,
+          "moving": true,
+          "paint_ms": 37.833040999999994
+        },
+        {
+          "frame": 63,
+          "interval_ms": 41.529375,
+          "moving": true,
+          "paint_ms": 37.840332999999994
+        },
+        {
+          "frame": 64,
+          "interval_ms": 41.128125000000004,
+          "moving": true,
+          "paint_ms": 37.651917
+        },
+        {
+          "frame": 65,
+          "interval_ms": 41.726791999999996,
+          "moving": true,
+          "paint_ms": 37.870042
+        },
+        {
+          "frame": 66,
+          "interval_ms": 41.328208,
+          "moving": true,
+          "paint_ms": 37.866
+        },
+        {
+          "frame": 67,
+          "interval_ms": 42.199917000000006,
+          "moving": true,
+          "paint_ms": 37.512958999999995
+        },
+        {
+          "frame": 68,
+          "interval_ms": 40.674917,
+          "moving": true,
+          "paint_ms": 37.767292
+        },
+        {
+          "frame": 69,
+          "interval_ms": 42.470875,
+          "moving": true,
+          "paint_ms": 37.76625
+        },
+        {
+          "frame": 70,
+          "interval_ms": 41.204375,
+          "moving": true,
+          "paint_ms": 39.793041
+        },
+        {
+          "frame": 71,
+          "interval_ms": 43.795833,
+          "moving": true,
+          "paint_ms": 43.908625
+        },
+        {
+          "frame": 72,
+          "interval_ms": 48.886792,
+          "moving": true,
+          "paint_ms": 52.485541
+        },
+        {
+          "frame": 73,
+          "interval_ms": 57.820291000000005,
+          "moving": true,
+          "paint_ms": 43.81979200000001
+        },
+        {
+          "frame": 74,
+          "interval_ms": 47.214125,
+          "moving": true,
+          "paint_ms": 37.718333
+        },
+        {
+          "frame": 75,
+          "interval_ms": 42.114792,
+          "moving": true,
+          "paint_ms": 37.624041
+        },
+        {
+          "frame": 76,
+          "interval_ms": 40.885333,
+          "moving": true,
+          "paint_ms": 37.667541
+        },
+        {
+          "frame": 77,
+          "interval_ms": 41.64425,
+          "moving": true,
+          "paint_ms": 37.887667
+        },
+        {
+          "frame": 78,
+          "interval_ms": 41.245208999999996,
+          "moving": true,
+          "paint_ms": 42.879666
+        },
+        {
+          "frame": 79,
+          "interval_ms": 46.950790999999995,
+          "moving": true,
+          "paint_ms": 44.396291999999995
+        },
+        {
+          "frame": 80,
+          "interval_ms": 49.094041999999995,
+          "moving": false,
+          "paint_ms": 48.850625
+        },
+        {
+          "frame": 81,
+          "interval_ms": 55.238417,
+          "moving": false,
+          "paint_ms": 49.350417
+        },
+        {
+          "frame": 82,
+          "interval_ms": 56.143666,
+          "moving": false,
+          "paint_ms": 45.360875
+        },
+        {
+          "frame": 83,
+          "interval_ms": 52.078625,
+          "moving": false,
+          "paint_ms": 39.488
+        },
+        {
+          "frame": 84,
+          "interval_ms": 45.194209,
+          "moving": false,
+          "paint_ms": 38.701417
+        },
+        {
+          "frame": 85,
+          "interval_ms": 43.7035,
+          "moving": false,
+          "paint_ms": 38.202374999999996
+        },
+        {
+          "frame": 86,
+          "interval_ms": 42.923041000000005,
+          "moving": false,
+          "paint_ms": 38.7975
+        },
+        {
+          "frame": 87,
+          "interval_ms": 43.901334,
+          "moving": false,
+          "paint_ms": 38.782292000000005
+        },
+        {
+          "frame": 88,
+          "interval_ms": 44.449916,
+          "moving": false,
+          "paint_ms": 38.625083999999994
+        },
+        {
+          "frame": 89,
+          "interval_ms": 43.508708999999996,
+          "moving": false,
+          "paint_ms": 38.1385
+        },
+        {
+          "frame": 90,
+          "interval_ms": 43.220957999999996,
+          "moving": false,
+          "paint_ms": 38.666291
+        },
+        {
+          "frame": 91,
+          "interval_ms": 45.332875,
+          "moving": false,
+          "paint_ms": 38.045500000000004
+        },
+        {
+          "frame": 92,
+          "interval_ms": 42.624833,
+          "moving": false,
+          "paint_ms": 38.204167
+        },
+        {
+          "frame": 93,
+          "interval_ms": 42.618417,
+          "moving": false,
+          "paint_ms": 39.187542
+        },
+        {
+          "frame": 94,
+          "interval_ms": 44.771832999999994,
+          "moving": false,
+          "paint_ms": 44.469625
+        },
+        {
+          "frame": 95,
+          "interval_ms": 51.411625,
+          "moving": false,
+          "paint_ms": 45.313209
+        },
+        {
+          "frame": 96,
+          "interval_ms": 53.531292,
+          "moving": false,
+          "paint_ms": 41.008417
+        },
+        {
+          "frame": 97,
+          "interval_ms": 47.392292000000005,
+          "moving": false,
+          "paint_ms": 38.26675
+        },
+        {
+          "frame": 98,
+          "interval_ms": 43.076457999999995,
+          "moving": false,
+          "paint_ms": 38.276959
+        },
+        {
+          "frame": 99,
+          "interval_ms": 43.367375,
+          "moving": false,
+          "paint_ms": 37.623125
+        },
+        {
+          "frame": 100,
+          "interval_ms": 42.509625,
+          "moving": false,
+          "paint_ms": 37.820584
+        },
+        {
+          "frame": 101,
+          "interval_ms": 42.962042,
+          "moving": false,
+          "paint_ms": 38.407084
+        },
+        {
+          "frame": 102,
+          "interval_ms": 45.33675,
+          "moving": false,
+          "paint_ms": 38.228667
+        },
+        {
+          "frame": 103,
+          "interval_ms": 52.685458,
+          "moving": false,
+          "paint_ms": 38.157458
+        },
+        {
+          "frame": 104,
+          "interval_ms": 57.353417,
+          "moving": false,
+          "paint_ms": 37.928125
+        },
+        {
+          "frame": 105,
+          "interval_ms": 42.893750000000004,
+          "moving": false,
+          "paint_ms": 38.150625
+        },
+        {
+          "frame": 106,
+          "interval_ms": 42.888541000000004,
+          "moving": false,
+          "paint_ms": 38.053083
+        },
+        {
+          "frame": 107,
+          "interval_ms": 42.777708999999994,
+          "moving": false,
+          "paint_ms": 37.823750000000004
+        },
+        {
+          "frame": 108,
+          "interval_ms": 44.092708,
+          "moving": false,
+          "paint_ms": 37.965209
+        },
+        {
+          "frame": 109,
+          "interval_ms": 42.974875000000004,
+          "moving": false,
+          "paint_ms": 38.107459000000006
+        }
+      ],
+      "shapes": 5000
+    }
+  ]
+}

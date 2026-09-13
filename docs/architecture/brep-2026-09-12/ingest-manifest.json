@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "prepared_at": "2026-09-13T17:54:18.248Z",
+  "status": "prepared_not_ingested",
+  "ingestion_performed": false,
+  "gateway": "http://127.0.0.1:7432/mcp",
+  "ingestion_blocker": "The responding gateway uses a different database and mock embedding identity; awaiting confirmation of the intended target corpus.",
+  "gateway_observation": {
+    "schema_version": 1,
+    "observed_at": "2026-09-13T06:03:31.843637+00:00",
+    "gateway": "http://127.0.0.1:7432/mcp",
+    "server_name": "rag-mcp",
+    "protocol_version": "2025-06-18",
+    "connected": true,
+    "current": {
+      "db_path": "/Users/themoretheless/Documents/Sources/rag/rag.duckdb",
+      "document_count": 26,
+      "chunk_count": 322,
+      "embed_provider": "mock",
+      "embed_model": "text-embedding-3-small",
+      "embed_dims": 1536,
+      "ready_for_search": true,
+      "fts_ready": true,
+      "embedding_manifest_match": true
+    },
+    "historical_receipt": "docs/architecture/geometry-2026-09-08/retrieval.json",
+    "historical": {
+      "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+      "document_count": 82844,
+      "chunk_count": 643994,
+      "embed_provider": "ollama",
+      "embed_model": "nomic-embed-text",
+      "embed_dims": 768,
+      "ready_for_search": true,
+      "fts_ready": true,
+      "embedding_manifest_match": true
+    },
+    "target_confirmed": false,
+    "ingestion_performed": false,
+    "decision": "awaiting_target_clarification",
+    "reason": "The responding server uses a different database and embedding identity from the previously recorded corpus."
+  },
+  "policy": {
+    "order": "sequential",
+    "remove_deleted": false,
+    "verify_source_hash_before_write": true,
+    "verify_returned_document_ids_and_content": true
+  },
+  "documents": [
+    {
+      "path": "README.md",
+      "sha256": "a3d4bd6a6f397a49ae5afc8d663fb381458e0d8b9a8136a3c836973b8070759a",
+      "bytes": 39972,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/README.md",
+        "uri": "project://open-scad-viewer/repository/README.md",
+        "title": "open-scad-viewer — текущие возможности",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"README.md\",\"source_sha256\":\"a3d4bd6a6f397a49ae5afc8d663fb381458e0d8b9a8136a3c836973b8070759a\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "crates/brep-core/README.md",
+      "sha256": "4063fc7709d2b8ac389c792e434ecb044e8d59e024eb1cc265c7d083f1e2f90a",
+      "bytes": 15307,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core/README.md",
+        "uri": "project://open-scad-viewer/repository/crates/brep-core/README.md",
+        "title": "B-rep — точный исполняемый набор операций и ограничения",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"crates/brep-core/README.md\",\"source_sha256\":\"4063fc7709d2b8ac389c792e434ecb044e8d59e024eb1cc265c7d083f1e2f90a\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "crates/cad-predicates/README.md",
+      "sha256": "9638a675f306d458c80d94249da1273561b946f25ec6eb2bccbbeaa1881f81b7",
+      "bytes": 29865,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/cad-predicates/README.md",
+        "uri": "project://open-scad-viewer/repository/crates/cad-predicates/README.md",
+        "title": "B-rep — кандидат точных предикатов, контексты и пределы",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"crates/cad-predicates/README.md\",\"source_sha256\":\"9638a675f306d458c80d94249da1273561b946f25ec6eb2bccbbeaa1881f81b7\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "docs/design/brep-completion-status.md",
+      "sha256": "661b3234720bea2fe3252fbe6f4a5f926c70d7248ce934575d2b0eb5f1b68b43",
+      "bytes": 192228,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/brep-completion-status.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/brep-completion-status.md",
+        "title": "B-rep — аудит реализации и незавершённые требования",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/brep-completion-status.md\",\"source_sha256\":\"661b3234720bea2fe3252fbe6f4a5f926c70d7248ce934575d2b0eb5f1b68b43\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "docs/design/modelgraph-nurbs-own-kernel.md",
+      "sha256": "2200e7ace5a697bbd8d78004016b624acdc39f8341b399c0fa9790cee246f2fa",
+      "bytes": 24262,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/modelgraph-nurbs-own-kernel.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/modelgraph-nurbs-own-kernel.md",
+        "title": "ModelGraph NURBS — синтаксис, операции и допустимые параметры",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/modelgraph-nurbs-own-kernel.md\",\"source_sha256\":\"2200e7ace5a697bbd8d78004016b624acdc39f8341b399c0fa9790cee246f2fa\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "docs/design/brep-semantic-diagnostic.md",
+      "sha256": "21e8d58c80b3a6a082fc195681b9f328aad2d79db4e0a65d4b9d2995888052d6",
+      "bytes": 3010,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/brep-semantic-diagnostic.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/brep-semantic-diagnostic.md",
+        "title": "B-rep — изолированный семантический запуск и ограничения",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/brep-semantic-diagnostic.md\",\"source_sha256\":\"21e8d58c80b3a6a082fc195681b9f328aad2d79db4e0a65d4b9d2995888052d6\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "docs/design/nurbs-intersection-queries.md",
+      "sha256": "20059b5aa6886fab6ef7ed273afbc4124db4b3957bbbe85ca7827ca5af92c382",
+      "bytes": 28364,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/nurbs-intersection-queries.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/nurbs-intersection-queries.md",
+        "title": "NURBS — численные запросы пересечений и границы свидетельств",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/nurbs-intersection-queries.md\",\"source_sha256\":\"20059b5aa6886fab6ef7ed273afbc4124db4b3957bbbe85ca7827ca5af92c382\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    },
+    {
+      "path": "docs/architecture/brep-2026-09-12/README.md",
+      "sha256": "b08d0bd8945d94b1a329d6b9ea76a8b78db5c985b6cfdf3bbd5e37852a5323c7",
+      "bytes": 56917,
+      "future_tool_arguments": {
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/architecture/brep-2026-09-12/README.md",
+        "uri": "project://open-scad-viewer/repository/docs/architecture/brep-2026-09-12/README.md",
+        "title": "B-rep — актуализация знаний 2026-09-12",
+        "wing": "open-scad-viewer",
+        "room": "brep-implementation",
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/architecture/brep-2026-09-12/README.md\",\"source_sha256\":\"b08d0bd8945d94b1a329d6b9ea76a8b78db5c985b6cfdf3bbd5e37852a5323c7\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "scope": "Unified polygon and analytic revolution with shared axis poles; not full B-rep qualification",
+  "tests": {
+    "core": 87,
+    "integration": 61,
+    "vueTypecheck": "passed"
+  },
+  "cases": [
+    "Full and signed partial semicircle revolutions with two shared poles and analytical sphere-sector volume",
+    "Horn torus rejected",
+    "Source circle/rectangle intersection then revolution produces displayed sphere"
+  ],
+  "endpointAgreement": "Numerical profile tolerance; curve definitions retained unchanged",
+  "dist": {
+    "status": "passed",
+    "bytes": 4698711,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "1d5f358bf68854dab271ab60e0778e59d52dd39bb282b6da7c44a88dcddc898b",
+    "crates/geometry-bridge/src/brep_semantic.rs": "7374fdb93edf30fdd4dafc93e589022d371bb8890d5ee7b50f0dc4ffb553f767",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "015f04e118f207a3e46e080160690b0e2bcbaf6a4f325a582b2c80ac20dc02af",
+    "src/generated/geometry-kernels/bytes.ts": "20a0e4453019c300e863dfe9d32a3b58cb9d75a40fbb303eaf78dc55b86112cf"
+  },
+  "limitations": [
+    "Multi-wire profile revolutions not implemented",
+    "General certified geometry validity remains open",
+    "Shared SVG/own-CAD evidence not refreshed for this artifact"
+  ]
+}

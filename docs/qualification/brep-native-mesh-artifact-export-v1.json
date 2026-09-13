@@ -1,0 +1,39 @@
+{
+  "scope": "Native admission and serialization of ModelGraph STL, binary STL, OBJ, PLY, OFF, AMF; full B-rep incomplete",
+  "tests": {
+    "polygonCore": 64,
+    "focusedApplicationMcpPacking": 55,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4581465,
+    "budget": 4700000,
+    "geometryChunkBytes": 2215853,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/polygon-core/src/mesh_export.rs": "404362ab824f97c5a9980234d19a9eca7c330da0639625cb9a6cad0ff42242a3",
+    "crates/polygon-core/src/lib.rs": "ff2ae2264b10a732896c1bdfafd8307cb8bc4cf16b6577b85769e474f12fbcbb",
+    "crates/polygon-core/src/solid/export_file.rs": "da6b8d3e7138cf28a35d8e39992a5d76fe8ae397708ffaae10e2e9e06bf758ff",
+    "crates/geometry-bridge/src/lib.rs": "33f5e3bb6b33714ad8b4213783c8170a8a19df1936f09628817871fab02f0253",
+    "src/services/geometry/meshArtifactExport.ts": "25ba1d6655a525297575153ca652cd17d193c773afe4999afc038d47eb71fa44",
+    "src/services/meshExportFormats.ts": "5c2258c39e3cefef2188be9400e40dd7f2b40415870e5d5f6fb0ff7adc208dc5",
+    "tests/nativeMeshArtifactExport.test.ts": "0843e8835b078228170da6ffafa31b69cc2f79d9d03d79b9a0ee54d4398f589d",
+    "tests/meshExportFormats.test.ts": "36781e799cb50a684b12bf9021317800d2fe814b4887d9a6b278743137da75fe",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "d24e81ea7bc1b4ca10cfc8777e8b8a2c9f8dfa6335f493af15b615020393ff12"
+  },
+  "limits": {
+    "sourceTriangles": 100000,
+    "artifactBytes": 4194304
+  },
+  "limitations": [
+    "3MF serialization and ZIP packaging remain in TS",
+    "Shared workflow qualification predates this WASM",
+    "Browser resource and latency not profiled",
+    "General B-rep completion unproved"
+  ]
+}

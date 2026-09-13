@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-13",
+  "scope": "Direct editor retained convex-planar B-rep split integration",
+  "fullGoalComplete": false,
+  "checks": {
+    "passedTestsAcrossSixFiles": 34,
+    "note": "Initial assertion distinguished signed zero; corrected numeric bounds comparison and reran the affected three-test file successfully",
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4600044
+  },
+  "coverage": [
+    "Positive/negative side order and body naming",
+    "Offset interpreted as signed distance with normalized axis",
+    "Both halves retain B-rep and matching mesh bounds/volumes",
+    "Repeated split remains available",
+    "Oblique split conserves total volume",
+    "Extreme axis normalization",
+    "Boundary/outside planes and unsupported curved models refuse without mesh fallback"
+  ],
+  "limitations": [
+    "Supported B-rep split remains convex planar only",
+    "Bodies lacking B-rep still use the existing mesh split path",
+    "Face selection correspondence is required before native push/pull editor integration",
+    "General B-rep completion and shared qualification of this new artifact remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_split.rs": "b3666f5b9c18d187dcc7c342cb2dde09f818c1508045b67878fdf05f72eac4b9",
+    "crates/geometry-bridge/src/lib.rs": "75e89de50af15ea60a7a5bec3c37feb4728e0430f5751851b0aee610f0d2bfc4",
+    "src/services/directSolidTools.ts": "23f0c68090bc0521830eed4a1558db1b7884348bad1f0ced96a4c414b6e0afd5",
+    "tests/nativeBodySplit.test.ts": "c8a77c973904e4d7b4834aafcf0dbc316eff2bd2889d62ff4c0e2197725ee507",
+    "src/generated/geometry-kernels/bytes.ts": "71d02e0414c599d6a792bf7e59be57281fc59d5086775b5c151faf74b3e5d695"
+  }
+}

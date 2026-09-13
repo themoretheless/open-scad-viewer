@@ -1,0 +1,32 @@
+{
+  "scope": "Native inverse/multiply/transpose migration, not full B-rep qualification",
+  "tests": {
+    "applicationPackingAnimationExport": 153,
+    "mathCore": 12,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4718808,
+    "budget": 4700000,
+    "geometryChunkBytes": 2351988,
+    "geometryChunkBudget": 2350000
+  },
+  "sha256": {
+    "crates/math-core/src/viewport.rs": "06685e9d4ee69d99a7ec22dc97c8995bd654a2120348e1da38ed6f768b251d8b",
+    "crates/geometry-bridge/src/viewport.rs": "6d8dfd89788030d92084e5b985d600cda3e1023619c383f8657dcee4fe6e7ebd",
+    "src/services/math3d.ts": "d419857deda28f6d4423d37079a55441ca56a16026e47f55d438d3f38523326f",
+    "tests/math3d.test.ts": "2abbbdff34cc49ea1269e7aed129bd934c419a2e0eb3aac68772b7340db1f16b",
+    "tests/webgpuRendererResources.test.ts": "6159d7b7ff8f8325e78fb3c1b88b3de1bdbcf4e03f92388de6614811c84ab0f2",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "663f46c277ca3d78ad527630b89a63a7cb6705dc3350023604b1c76ba6a187c9"
+  },
+  "limitations": [
+    "Remaining point/vector transforms require batched migration",
+    "Matrix constructors remain partly in TypeScript",
+    "General B-rep requirements remain incomplete",
+    "Shared qualification not refreshed",
+    "Browser performance not measured"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native retained-body plain hole and counterbore integration",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 31,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4610870
+  },
+  "coverage": [
+    "Through and blind cylindrical holes retain rational walls and analytic volume",
+    "Counterbore has expected stepped cavity volume",
+    "Non-Z axis placement and extreme axis normalization",
+    "Repeated drilling preserves retained geometry",
+    "Invalid parameters and unsupported countersink Boolean refuse atomically"
+  ],
+  "limitations": [
+    "Countersink frustum Boolean remains unsupported for this path",
+    "General angled intersections outside admitted prismatic Boolean matrix remain unsupported",
+    "Retained-body thread and draft paths still require correction/migration",
+    "Mesh-only hole construction remains legacy code",
+    "General B-rep and shared qualification remain incomplete"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_hole.rs": "c8fdbd4e941a1d8546336ff83ebbaf3a93436220098ee9d8af274375a60c4e71",
+    "crates/geometry-bridge/src/lib.rs": "62bd5e499ef8bb576562baaf262bbd65f4a67885b033e724ef85e50317e02c16",
+    "src/services/cadWorkbench.ts": "b6043069d532b75b9801adf93a66ba01a7e544cbb922de81536514c26c2bbc28",
+    "tests/nativeBodyHole.test.ts": "9d177723aded6d1deb2c8145a3a048078c2f89f7266597b56c1d02bcadfdce07",
+    "src/generated/geometry-kernels/bytes.ts": "85024263b2d7927c8cb729d3661390f16adc311486a54bd5a25da473bec0412b"
+  }
+}

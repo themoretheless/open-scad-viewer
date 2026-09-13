@@ -9,8 +9,7 @@ use crate::{Result, check};
 use math_core::{cross2, sub2};
 use std::collections::{BTreeSet, HashMap};
 
-const MAX_VERTICES: usize = 65_536;
-const MAX_TRIANGLES: usize = 131_072;
+use crate::limits::{MESH_TRIANGLES as MAX_TRIANGLES, MESH_VERTICES as MAX_VERTICES};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FillRule {
@@ -119,6 +118,7 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
     });
     let (mut start_cursor, mut end_cursor) = (0, 0);
     let mut active_ids = BTreeSet::new();
+    let mut active = Vec::new();
     for band in levels.windows(2) {
         let (bottom, top) = (band[0], band[1]);
         while start_cursor < starts.len() {
@@ -138,6 +138,12 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
             end_cursor += 1;
         }
         let middle = bottom + (top - bottom) * 0.5;
+        // Adjacent binary64 ordinates have no representable interior sample.
+        // Sorting at an endpoint instead would mix edges that meet there and
+        // manufacture inverted slivers. Such a band is below numeric resolution.
+        if middle == bottom || middle == top {
+            continue;
+        }
         let x_at = |a: [f64; 2], b: [f64; 2], y: f64| {
             if y == a[1] {
                 return a[0];
@@ -149,22 +155,35 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
         };
         // Normalization split every crossing; active edges cannot exchange
         // order inside this open band. Outer and hole edges alternate here.
-        let mut active: Vec<_> = active_ids
-            .iter()
-            .map(|&index| {
-                let (a, b) = edges[index];
-                (x_at(a, b, middle), a, b)
-            })
-            .collect();
+        active.clear();
+        active.extend(active_ids.iter().map(|&index| {
+            let (a, b) = edges[index];
+            (x_at(a, b, middle), a, b)
+        }));
         active.sort_by(|a, b| a.0.total_cmp(&b.0));
         check(active.len() % 2 == 0, "Unbalanced fill boundary")?;
         for pair in active.chunks_exact(2) {
             let (_, a, b) = pair[0];
             let (_, c, d) = pair[1];
-            let lb = [x_at(a, b, bottom), bottom];
-            let rb = [x_at(c, d, bottom), bottom];
-            let rt = [x_at(c, d, top), top];
-            let lt = [x_at(a, b, top), top];
+            let mut lb = [x_at(a, b, bottom), bottom];
+            let mut rb = [x_at(c, d, bottom), bottom];
+            let mut rt = [x_at(c, d, top), top];
+            let mut lt = [x_at(a, b, top), top];
+            // A normalized band can converge to a single endpoint. Evaluating
+            // its two supports may reverse them by a few rounding units. Snap
+            // only that numerical inversion, never a genuinely crossed band.
+            let coordinate_scale = [a, b, c, d]
+                .iter()
+                .flatten()
+                .fold(0_f64, |scale, v| scale.max(v.abs()));
+            let error = coordinate_scale * f64::EPSILON * 16.;
+            for (left, right) in [(&mut lb, &mut rb), (&mut lt, &mut rt)] {
+                if left[0] > right[0] && left[0] - right[0] <= error {
+                    let x = right[0] + (left[0] - right[0]) * 0.5;
+                    left[0] = x;
+                    right[0] = x;
+                }
+            }
             append_triangle(&mut mesh, &mut vertex_ids, lb, rb, rt)?;
             append_triangle(&mut mesh, &mut vertex_ids, lb, rt, lt)?;
         }

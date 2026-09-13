@@ -83,21 +83,68 @@ export interface ToolpathLayerResult {
 export interface ToolpathPlanResult {
   layers: ToolpathLayerResult[]
 }
+export interface GcodePreviewMove {
+  x: number
+  y: number
+  z: number
+  /** Absolute filament length in mm. */
+  e: number
+  extruded: boolean
+  feedrateMmS: number
+  layerIndex: number
+}
+export const GCODE_PREVIEW_DIALECT = 'open-scad-viewer/print-preview 2'
+export interface GcodePreviewResult {
+  layers: number
+  extrusionMm: number
+  depositedVolumeMm3: number
+  bounds: { min: [number, number, number]; max: [number, number, number] } | null
+  travelDistanceMm: number
+  printDistanceMm: number
+  /** Constant-speed estimate; excludes initial positioning and firmware dynamics. */
+  estimatedTimeS: number
+  moves: GcodePreviewMove[]
+}
+export interface GcodeExportResult {
+  gcode: string
+  dialect: string
+  layerCount: number
+  preview: GcodePreviewResult
+}
+
+// Explicit fields preserve the operation and mesh even for untyped callers.
+function toolpathArguments(settings: ToolpathSettingsInput): ToolpathSettingsInput {
+  return {
+    layerHeightMm: settings.layerHeightMm,
+    lineWidthMm: settings.lineWidthMm,
+    wallCount: settings.wallCount,
+    infillSpacingMm: settings.infillSpacingMm,
+    feedrateMmS: settings.feedrateMmS,
+    travelFeedrateMmS: settings.travelFeedrateMmS,
+    filamentDiameterMm: settings.filamentDiameterMm,
+  }
+}
+/** Samples Z = zMin + i * layerHeightMm below zMax, preserving model coordinates. */
 export function planPolygonMeshToolpaths(
   mesh: PolygonMesh,
   zMin: number,
   zMax: number,
   settings: ToolpathSettingsInput = {},
 ): ToolpathPlanResult {
-  return callGeometryRust('mesh_toolpaths', { mesh, zMin, zMax, ...settings })
+  return callGeometryRust('mesh_toolpaths', { mesh, zMin, zMax, ...toolpathArguments(settings) })
 }
 export function emitPolygonMeshGcode(
   mesh: PolygonMesh,
   zMin: number,
   zMax: number,
   settings: ToolpathSettingsInput = {},
-): { gcode: string; layerCount: number } {
-  return callGeometryRust('mesh_gcode', { mesh, zMin, zMax, ...settings })
+): GcodeExportResult {
+  return callGeometryRust('mesh_gcode', { mesh, zMin, zMax, ...toolpathArguments(settings) })
+}
+
+/** Parses the versioned viewer preview dialect; unsupported machine commands fail. */
+export function parseGcodePreview(gcode: string): GcodePreviewResult {
+  return callGeometryRust('gcode_preview', { gcode })
 }
 
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}

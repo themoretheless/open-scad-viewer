@@ -380,9 +380,14 @@ function openWorkspaceMode(mode: WorkspaceMode) {
 
 function bringCodeToSolid() {
   if (!sceneMeshes.value.length) return
-  solidSeedDocument.value = sceneMeshesToSolidDocument(sceneMeshes.value, lang.value === 'ru' ? 'Тело' : 'Body')
-  meshModelerOpen.value = false
-  directModelerOpen.value = true
+  try {
+    const next = sceneMeshesToSolidDocument(sceneMeshes.value, lang.value === 'ru' ? 'Тело' : 'Body')
+    solidSeedDocument.value = next
+    meshModelerOpen.value = false
+    directModelerOpen.value = true
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  }
 }
 
 function openMeshFromSolid() {
@@ -2509,7 +2514,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
           <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
-        <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" @append="source => replacePresetSource(code + '\n\n' + source)" />
+        <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
         <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
 <details class="performance-panel">
     <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
@@ -2909,8 +2914,8 @@ button, select { color: inherit; }
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .editor-panel {
-  min-width: 300px; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
-  background: var(--surface); overflow: hidden;
+  min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
+  background: var(--surface); overflow-x: hidden; overflow-y: auto;
 }
 .toolbar { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-bottom: 1px solid var(--border); }
 .editor-toolbar { flex-wrap: wrap; }
@@ -3074,6 +3079,7 @@ button, select { color: inherit; }
   .kernel-badge { display: none; }
   .main { flex-direction: column; overflow: auto; }
   .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; }
+  .editor-panel:has(.svg-panel[open]) { height: auto; min-height: 46dvh; flex-basis: auto; }
   .splitter { display: none; }
   .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--border); }
   .view-btn span { display: none; }

@@ -109,3 +109,10 @@ it('aligns odd-tooth planets against both mating members',async()=>{
     }
   }
 })
+it('rejects malformed native thread arguments and returns mesh arrays after recovery',()=>{
+ for(const patch of [{pitch:NaN},{starts:1.5},{internal:'yes'},{left_handed:null}])expect(()=>buildModelGraphThread({...THREAD_DEFAULTS,...patch} as typeof THREAD_DEFAULTS)).toThrow()
+ expect(()=>threadRadiusAt(THREAD_DEFAULTS,Infinity,0)).toThrow()
+ const built=buildModelGraphThread({...THREAD_DEFAULTS,length:3})
+ expect(built.mesh.positions.length).toBe(3*Number(built.report.vertex_count))
+ expect(built.mesh.indices.length).toBe(3*Number(built.report.triangle_count))
+})

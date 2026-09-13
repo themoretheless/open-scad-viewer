@@ -1,0 +1,289 @@
+{
+  "status": "passed within documented bounds",
+  "runtime_kernel_dependencies": [
+    "osv-math (own)"
+  ],
+  "curvex_tests": {
+    "ok": 1494,
+    "ignored": 1
+  },
+  "existing_ignored_timing_test_explicitly_passed": true,
+  "native_tests": {
+    "planar": 145,
+    "curvex_parity": 18,
+    "stroke_robustness": 4,
+    "polygon": 46,
+    "polygon_integration": 13,
+    "total": 226,
+    "note": "Includes one unrelated shared-checkout BRep triangulation unit test."
+  },
+  "wasm_tests_passed": 6,
+  "oracle": {
+    "cases": 1024,
+    "failures": [],
+    "probes": 261987
+  },
+  "gpu": {
+    "adapter": "AdapterInfo { name: \"Apple M5\", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: \"\", driver: \"\", driver_info: \"\", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }",
+    "final_captures": 6,
+    "rows": [
+      {
+        "shapes": 100,
+        "before": {
+          "cold_paint_ms": 1.026417,
+          "warm_paint_median_ms": 0.08756249999999999,
+          "moving_paint_median_ms": 0.1056665,
+          "frame_interval_median_ms": 16.673459
+        },
+        "after": {
+          "cold_paint_ms": 1.076375,
+          "warm_paint_median_ms": 0.0902085,
+          "moving_paint_median_ms": 0.1411875,
+          "frame_interval_median_ms": 16.694291
+        }
+      },
+      {
+        "shapes": 1000,
+        "before": {
+          "cold_paint_ms": 7.811333,
+          "warm_paint_median_ms": 0.9834164999999999,
+          "moving_paint_median_ms": 1.0204995000000001,
+          "frame_interval_median_ms": 16.670082999999998
+        },
+        "after": {
+          "cold_paint_ms": 10.304832999999999,
+          "warm_paint_median_ms": 0.862104,
+          "moving_paint_median_ms": 1.173334,
+          "frame_interval_median_ms": 16.686415999999998
+        }
+      },
+      {
+        "shapes": 5000,
+        "before": {
+          "cold_paint_ms": 38.889542,
+          "warm_paint_median_ms": 38.138875,
+          "moving_paint_median_ms": 38.2790625,
+          "frame_interval_median_ms": 43.417917
+        },
+        "after": {
+          "cold_paint_ms": 38.387333000000005,
+          "warm_paint_median_ms": 4.4537495,
+          "moving_paint_median_ms": 4.3739585000000005,
+          "frame_interval_median_ms": 16.651875
+        }
+      }
+    ]
+  },
+  "benchmark": [
+    {
+      "case": "crossing_80",
+      "before_median_us": 1366.125,
+      "after_median_us": 1234.417,
+      "speedup": 1.1066965215158249,
+      "run_medians_us": {
+        "before": [
+          1216.9170000000001,
+          1353.125,
+          4211.334,
+          1379.125
+        ],
+        "after": [
+          1386.292,
+          1381.542,
+          1064.9170000000001,
+          1087.292
+        ]
+      },
+      "area_range": [
+        4501.297800898206,
+        4501.297800898206
+      ]
+    },
+    {
+      "case": "crossing_240_wide",
+      "before_median_us": 9897.771,
+      "after_median_us": 6914.437,
+      "speedup": 1.4314644851055842,
+      "run_medians_us": {
+        "before": [
+          11854.875,
+          6968.292,
+          16174.708999999999,
+          7940.667
+        ],
+        "after": [
+          5957.334,
+          10245.917,
+          6906.665999999999,
+          6922.208
+        ]
+      },
+      "area_range": [
+        31782.257111447434,
+        31782.257111447463
+      ]
+    },
+    {
+      "case": "wide_wave_400",
+      "before_median_us": 66605.292,
+      "after_median_us": 55352.6455,
+      "speedup": 1.20329013000833,
+      "run_medians_us": {
+        "before": [
+          66080.084,
+          67130.5,
+          115293.541,
+          55356.625
+        ],
+        "after": [
+          55665.375,
+          58491.709,
+          55039.916000000005,
+          48792.917
+        ]
+      },
+      "area_range": [
+        35496.36010230232,
+        35496.36010230236
+      ]
+    },
+    {
+      "case": "consumed_square",
+      "before_median_us": 238.3335,
+      "after_median_us": 168.39600000000002,
+      "speedup": 1.415315684458063,
+      "run_medians_us": {
+        "before": [
+          230.542,
+          296.334,
+          246.12499999999997,
+          210.125
+        ],
+        "after": [
+          153.667,
+          238.833,
+          153.834,
+          182.958
+        ]
+      },
+      "area_range": [
+        62090.56649455913,
+        62090.566494559134
+      ]
+    },
+    {
+      "case": "retraced_200",
+      "before_median_us": 43186.4375,
+      "after_median_us": 28165.2295,
+      "speedup": 1.5333245376182714,
+      "run_medians_us": {
+        "before": [
+          47939.0,
+          52133.875,
+          32204.583000000002,
+          38433.875
+        ],
+        "after": [
+          28080.209,
+          28250.25,
+          32027.291999999998,
+          27498.875
+        ]
+      },
+      "area_range": [
+        12391.609745316226,
+        12391.609745316226
+      ]
+    },
+    {
+      "case": "dashed_wave",
+      "before_median_us": 10341.271,
+      "after_median_us": 9620.25,
+      "speedup": 1.0749482601803488,
+      "run_medians_us": {
+        "before": [
+          10215.167000000001,
+          17639.709,
+          10379.125,
+          10303.417000000001
+        ],
+        "after": [
+          9715.75,
+          14566.917000000001,
+          9524.75,
+          9497.0
+        ]
+      },
+      "area_range": [
+        8547.672704813762,
+        8547.672704813767
+      ]
+    }
+  ],
+  "software_render": {
+    "original": {
+      "captures": 36,
+      "min_coverage_iou": 0.9997543022696328,
+      "max_changed_fraction_gt3": 0.9596428571428571,
+      "cached_frames_identical": true,
+      "max_analytic_gradient_error": 2
+    },
+    "prior": {
+      "captures": 36,
+      "min_coverage_iou": 1.0,
+      "max_changed_fraction_gt3": 0.0,
+      "cached_frames_identical": true,
+      "max_analytic_gradient_error": 2
+    }
+  },
+  "qualified_source_hashes": {
+    "crates/planar-geometry/src/attribute_mesh.rs": "a3e389c69d2747c4b1df99ac43510cf7e8c07788e98a8f30ef97fe90a7e456b7",
+    "crates/planar-geometry/src/corners.rs": "5cf0af6e08b8dce503b69a4ee3add8592aaced3a2237080e646cd1e4fe918658",
+    "crates/planar-geometry/src/curve.rs": "7d7c69af07ec6517e9a217b01d55233d06254e166d3eaf0905923f37ea913136",
+    "crates/planar-geometry/src/curve_boolean.rs": "ffd418e715791873aea7e3743462b5de32931e8a659aa53866395c5f8d9bc022",
+    "crates/planar-geometry/src/edit.rs": "d3118131e5087fe58022ea31ebb090ce19576b9099d346653b6fae2caf5db1be",
+    "crates/planar-geometry/src/effects.rs": "2283ac837bb9bb8815b38116e0689c4dbef52837be72de87bf704796c5e2991f",
+    "crates/planar-geometry/src/lib.rs": "db7ade6a0b54d7a609f888ce1c88c8ae06c2758c6073a3ef54699a9848930330",
+    "crates/planar-geometry/src/path.rs": "8b42406dd43acd896feab9e8894f97fbc8d3f4c097e6e93f02c45f2c4ecb7366",
+    "crates/planar-geometry/src/path_offset.rs": "07bdc6a2726692ef0d87f52862bd352ba8cf1d7f221163c488f7643f5456d4c5",
+    "crates/planar-geometry/src/pathfinder.rs": "74f8c33752881bed5928c682ae086c2de3201f43070be2fb6f567cf484024448",
+    "crates/planar-geometry/src/render.rs": "e177788f195278528fd60ff0a229da1103e6250cd6e215bbbfb3466f441ee3d4",
+    "crates/planar-geometry/src/rings.rs": "f96dc6af1ee3d7268b4070b70b7a8cac3fbfdf694ffb59abee2bf48b4434d27c",
+    "crates/planar-geometry/src/scissors.rs": "b0ce256024a7f6a04f5f4d0d3197f68102b7d0960eda1274cd958f1e2d3eeefa",
+    "crates/planar-geometry/src/stroke.rs": "cd6c4423b890cc0ba6fba91a6e8e18c8565806942c2a2f3c5d0d54c300590b04",
+    "crates/planar-geometry/src/stroke_simple.rs": "31d2c1d2a3714b9eaf5eb70d1c3b6dd4548c505556009c6c9b0c9dcc9a3186f1",
+    "crates/planar-geometry/src/tessellation.rs": "119c3c9d2a1c8e3ea1eaf53bff280fdd4f836dcabfc67bfa6aa694be03a2ad6e",
+    "crates/planar-geometry/src/triangulation.rs": "a22030cd4af926d07f4a269f2ef254dabca44efd3698003ad2cf8872145cc7fa",
+    "crates/planar-geometry/tests/curvex_parity.rs": "e8b7c2dabe29245721dbbac7524a0a9e965ebe4a0ac01b1651157cbf08fec17f",
+    "crates/planar-geometry/tests/stroke_robustness.rs": "a3abf3dbbe8a9036702d825363d8ac2180cf6f8a85bb5c95e21b14826ba28446",
+    "crates/math-core/examples/bench_leaf_math.rs": "6397dbe3841be2d049c034b28a4b268828862a6168d38cbc447dbefcd6f7991c",
+    "crates/math-core/src/lib.rs": "d7b9b6dded573ab65b906c4b80877ae5f86281c77373bce4541740a45ade636c",
+    "integrations/curvex/boolean_benchmark.rs": "c6f42946e779d5a70008a887631a724c70544b2891266446a2917b4cd8d9165a",
+    "integrations/curvex/gradient_sampling.rs": "1a6c7ea472376960126be0db8231c96ffac2518efc86a7fa836c4d52d92cdc67",
+    "integrations/curvex/render_cache.rs": "86e9987034417be908fc333f8c2c6a69d501807c382f66fe73a065272f1da7cf",
+    "integrations/curvex/render_qualification.rs": "949b4c08ede2d74a8daec0775167b2741d39cbe864132df73a9a502546e397fe",
+    "integrations/curvex/compare_render.py": "5958252f03464351e5f7effe495605535ed0ffdc0fe27261eae327cf802457e0",
+    "integrations/curvex/inventory.py": "63922f4f965770352ac4986d1dd0eae2364946bf438629c40914ddc99db6bee8",
+    "integrations/curvex/prepare.py": "d7582b607d34a3d9fc0a86e98fbcb40836759bdd9804393b28c052ee71c67d8a",
+    "integrations/curvex/qualify.py": "9a46c73fdd0081fcc5cd497370f38c5f12eebfba4adbb6c65e60527b718125e7",
+    "integrations/curvex/run_boolean_benchmark.py": "e7c1f8a2daf29538895eccb4407fffe4cbd1290d5dff24656353fc539f8e4754",
+    "integrations/curvex/test_prepare.py": "9572437d12a8b0e2a8950b26f1f1466acbf077633dff56cefac029fe1f1f3324",
+    "crates/planar-geometry/Cargo.toml": "3ddbf4480a9cb995292b4172b4a37cc321bd07896d8cc1ac8321006a8e10f91e",
+    "crates/math-core/Cargo.toml": "901892676373afdefff22b2e51af3533ed58062e325130e9cbaf75c728cc100a"
+  },
+  "original_curvex_clean": true,
+  "migration_patch_applies": true,
+  "gpu_harness_sha256": "10718b283878667ce1ca4f816fc74ab49481c7235d9ae05310634a999ba457b2",
+  "gpu_executable_sha256": "43898a463cd8f17d1572f45a129e4b04d6e3b672b57c4a7f79f8f4997a714319",
+  "workspace_wasm": {
+    "sha256": "73e95f1ed20a682290bc39924ed92f3b2487cf140e1ab3287f2356342dcad8e9",
+    "bytes": 6441810
+  },
+  "limits": [
+    "Complex wide 400-point wave measured about 55ms uncached.",
+    "Finite binary64 precision and explicit candidate/intersection/output budgets remain.",
+    "1024 deterministic random round-stroke cases do not prove all possible inputs.",
+    "GPU verified on one Apple M5/Metal device in synthetic native documents, not every GPU or full editor interaction.",
+    "Render cache uses an estimated 64MiB payload weight and 8192-entry bound; total process RAM is not bounded by that weight."
+  ]
+}

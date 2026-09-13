@@ -1,0 +1,8441 @@
+{
+  "schema": "cad-predicates-candidate-corpus-v1",
+  "claim": "candidate-only-not-qualification",
+  "oracle": "tests/support/referencePredicateOracleV1.ts (independent bigint rational arithmetic)",
+  "cases": [
+    {
+      "id": "o2-unit-012",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-unit-021",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-unit-102",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-unit-120",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-unit-201",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-unit-210",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "easy"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-cancel-one-bit-012",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-cancel-one-bit-021",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-cancel-one-bit-102",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-cancel-one-bit-120",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-cancel-one-bit-201",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-cancel-one-bit-210",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "cancellation",
+        "exact-stage"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-collinear-012",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-collinear-021",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-collinear-102",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-collinear-120",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-collinear-201",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-collinear-210",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-translated-integer",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000002"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000003"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "translation",
+        "cancellation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-signed-zero",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "8000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "8000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "signed-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-subnormal-square",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "subnormal",
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-underflow-square",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "1a70000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "1a70000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-overflow-square",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-max-span",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "subtraction-overflow"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-mixed-exponents",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7830000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "07b0000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "mixed-exponents"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-overflow-collinear",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fdfffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fdfffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o3-unit-0123",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-0132",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-0213",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-0231",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-0312",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-0321",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-1023",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-1032",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-1203",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-1230",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-1302",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-1320",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-2013",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-2031",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-2103",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-2130",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-2301",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-2310",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-3012",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-3021",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-3102",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-unit-3120",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-3201",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-unit-3210",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "permutation",
+        "handedness"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-0123",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-0132",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-0213",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-0231",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-0312",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-0321",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-1023",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-1032",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-1203",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-1230",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-1302",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-1320",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-2013",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-2031",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-2103",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-2130",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-2301",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-2310",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-3012",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-3021",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-3102",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-cancel-one-bit-3120",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-3201",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-cancel-one-bit-3210",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3feffffffffffffe"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-0123",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-0132",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-0213",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-0231",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-0312",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-0321",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-1023",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-1032",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-1203",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-1230",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-1302",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-1320",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-2013",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-2031",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-2103",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-2130",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-2301",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-2310",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-3012",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-3021",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-3102",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-dense-cancellation-3120",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-3201",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-dense-cancellation-3210",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "cancellation",
+        "exact-stage",
+        "all-components",
+        "permutation"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-coplanar",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "exact-zero",
+        "coplanar"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o3-near-plane",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000001"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-coplanar"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-subnormal-cube",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "subnormal",
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-underflow-cube",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "26f0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "26f0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "26f0000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-overflow-cube",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "58f0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "58f0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "58f0000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-max-span",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "subtraction-overflow"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o3-mixed-exponents",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7830000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "07b0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "subnormal",
+        "mixed-exponents"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-overflow-coplanar",
+      "dimension": 3,
+      "predicate": "orient3d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d2-equal",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4014000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "exact-zero",
+        "symmetry"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d2-equal-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4014000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "exact-zero",
+        "symmetry"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d2-outside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "positive",
+        "symmetry"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-outside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "positive",
+        "symmetry"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-inside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4018000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "negative",
+        "symmetry"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-inside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4018000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "negative",
+        "symmetry"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-ulp-outside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-ulp-outside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-ulp-inside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-ulp-inside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-min-outside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "subnormal",
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-min-outside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "subnormal",
+        "underflow",
+        "must-not-zero"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-overflow-equality",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d2-overflow-equality-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "6570000000000000"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d2-overflow-outside",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "subtraction-overflow"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-overflow-outside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "ffefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "7fefffffffffffff"
+        }
+      ],
+      "mustDecide": false,
+      "tags": [
+        "overflow",
+        "subtraction-overflow"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d3-equal",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "exact-zero",
+        "symmetry"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d3-equal-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "exact-zero",
+        "symmetry"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d3-outside",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "positive",
+        "symmetry"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d3-outside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "positive",
+        "symmetry"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d3-inside",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "negative",
+        "symmetry"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d3-inside-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4010000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "negative",
+        "symmetry"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d3-cancel-one-bit",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality",
+        "all-components"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d3-cancel-one-bit-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "near-equality",
+        "all-components"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d3-translated-equality",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000002"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000002"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "translation",
+        "exact-zero",
+        "all-components"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d3-translated-equality-swap",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "4330000000000001"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000002"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000002"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4330000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "4008000000000000"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "translation",
+        "exact-zero",
+        "all-components"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "o2-rational-thirds",
+      "predicate": "orient2d",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "7"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o3-rational-thirds",
+      "predicate": "orient3d",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "7"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "-1",
+          "denominator": "11"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-rational-equality",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational",
+        "exact-zero"
+      ],
+      "expectedSign": 0
+    },
+    {
+      "id": "d3-rational-inside",
+      "predicate": "compare_squared_distance",
+      "dimension": 3,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "2",
+          "denominator": "3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-binary-third-vs-rational",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fd5555555555555"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "mixed-leaf-types",
+        "must-not-round-rational"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "d2-rational-third-vs-binary",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fd5555555555555"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "mixed-leaf-types",
+        "must-not-round-rational"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-rational-third-vs-binary",
+      "predicate": "orient2d",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fd5555555555555"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fd5555555555555"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "mixed-leaf-types",
+        "must-not-round-rational"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "d2-u64-rational-boundary",
+      "predicate": "compare_squared_distance",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3fe0000000000000"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "9223372036854775807",
+          "denominator": "18446744073709551615"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational",
+        "integer-width",
+        "must-not-round-rational"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-i64-min-rational",
+      "predicate": "orient2d",
+      "dimension": 2,
+      "leaves": [
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "-9223372036854775808",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "0",
+          "denominator": "1"
+        },
+        {
+          "kind": "rational",
+          "numerator": "1",
+          "denominator": "1"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "canonical-rational",
+        "integer-width"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-0",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000066"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000008d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000008d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000007"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-1",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000088"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000047"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000047"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d1"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-2",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000fa"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000011"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000011"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d5"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-3",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000003c"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000006b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000006b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ed"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-4",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ce"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d5"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d5"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000058"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-5",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000030"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000cf"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000cf"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000059"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-6",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000e2"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d9"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d9"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d6"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-7",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000064"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000073"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000073"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000fa"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-8",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000036"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000001d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000001d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-9",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d8"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000057"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000057"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000f3"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-10",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ca"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000011"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-11",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000008c"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000007b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000007b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a8"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-12",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000009e"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000065"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000065"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000096"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-13",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000080"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000df"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000df"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000bd"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-14",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000b2"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000069"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000069"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a5"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-15",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000b4"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000083"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000083"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000017"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-16",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000006"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ad"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ad"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000c2"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-17",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000028"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000067"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000067"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d9"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-18",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000009a"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000031"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000031"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000b2"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-19",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000dc"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000008b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000008b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000067"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-20",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000006e"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000f5"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000f5"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000077"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-21",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d0"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ef"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ef"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000065"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-22",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000082"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000f9"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000f9"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000057"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-23",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000004"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000093"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000093"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000b8"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-24",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d6"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000003d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000003d"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000d6"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-25",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000078"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000077"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000077"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000083"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-26",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000006a"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000c1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000c1"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000b6"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-27",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000002c"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000009b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000009b"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000002a"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-28",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff000000000003e"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000085"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000085"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000fd"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-29",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000020"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ff"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000051"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    },
+    {
+      "id": "o2-seeded-30",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000052"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000089"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000089"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000ee"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": 1
+    },
+    {
+      "id": "o2-seeded-31",
+      "dimension": 2,
+      "predicate": "orient2d",
+      "leaves": [
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "0000000000000000"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff0000000000054"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a3"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000a3"
+        },
+        {
+          "kind": "binary64",
+          "bits": "3ff00000000000dd"
+        }
+      ],
+      "mustDecide": true,
+      "tags": [
+        "seeded",
+        "near-collinear"
+      ],
+      "expectedSign": -1
+    }
+  ]
+}

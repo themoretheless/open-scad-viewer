@@ -163,6 +163,7 @@ pub fn from_mesh(mesh: &Mesh, face_ids: Option<&[usize]>) -> Result<Model> {
                 let edge = *edges.entry(key).or_insert_with(|| {
                     let id = m.edges.len();
                     m.edges.push(Edge {
+                        degenerate: false,
                         vertices: [key.0, key.1],
                         curve: (),
                     });

@@ -11,7 +11,7 @@ pub mod path {
     use crate::path::{BezierPath, PathSegment};
     use crate::{Result, check};
 
-    const MAX_PATH_ITEMS: usize = 65_536;
+    use crate::limits::PATH_SEGMENTS as MAX_PATH_ITEMS;
 
     pub mod math {
         #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -314,19 +314,26 @@ pub mod tess {
                 miter_limit: options.miter_limit as f64,
                 ..Default::default()
             };
+            if path.contours.len() == 1 && !path.contours[0].segments.is_empty() {
+                return append_mesh(
+                    crate::stroke::tessellate_stroke(
+                        &path.contours[0],
+                        &core_options,
+                        options.tolerance as f64,
+                    )?,
+                    output,
+                );
+            }
             let mut rings = Vec::new();
             for contour in &path.contours {
                 if contour.segments.is_empty() {
                     continue;
                 }
-                let outlines = crate::stroke::outline_stroke_tol(
+                rings.extend(crate::stroke::stroke_rings(
                     contour,
                     &core_options,
                     options.tolerance as f64,
-                )?;
-                for outline in outlines {
-                    rings.push(outline.flatten_tol(options.tolerance as f64)?);
-                }
+                )?);
             }
             // A single outline operation already returned a normalized region.
             // Multiple independently stroked contours still need a joint union.

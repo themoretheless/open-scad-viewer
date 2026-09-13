@@ -8,3 +8,6 @@ publish.workspace = true
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }
+
+[dev-dependencies]
+cad-predicates = { path = "../cad-predicates" }

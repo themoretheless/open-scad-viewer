@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-09-13T06:03:31.843637+00:00",
+  "gateway": "http://127.0.0.1:7432/mcp",
+  "server_name": "rag-mcp",
+  "protocol_version": "2025-06-18",
+  "connected": true,
+  "current": {
+    "db_path": "/Users/themoretheless/Documents/Sources/rag/rag.duckdb",
+    "document_count": 26,
+    "chunk_count": 322,
+    "embed_provider": "mock",
+    "embed_model": "text-embedding-3-small",
+    "embed_dims": 1536,
+    "ready_for_search": true,
+    "fts_ready": true,
+    "embedding_manifest_match": true
+  },
+  "historical_receipt": "docs/architecture/geometry-2026-09-08/retrieval.json",
+  "historical": {
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "document_count": 82844,
+    "chunk_count": 643994,
+    "embed_provider": "ollama",
+    "embed_model": "nomic-embed-text",
+    "embed_dims": 768,
+    "ready_for_search": true,
+    "fts_ready": true,
+    "embedding_manifest_match": true
+  },
+  "target_confirmed": false,
+  "ingestion_performed": false,
+  "decision": "awaiting_target_clarification",
+  "reason": "The responding server uses a different database and embedding identity from the previously recorded corpus."
+}

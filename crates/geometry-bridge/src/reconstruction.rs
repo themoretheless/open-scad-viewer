@@ -392,6 +392,7 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_core::Model> {
         .edges
         .iter()
         .map(|e| brep_topology::Edge {
+            degenerate: false,
             vertices: e.vertices,
             curve: line(
                 polygon.vertices[e.vertices[0]].point.to_vec(),

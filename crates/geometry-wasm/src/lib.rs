@@ -79,6 +79,68 @@ pub unsafe extern "C" fn abi_bvh_build(
 }
 
 /// # Safety
+/// Buffer ranges must be live allocations owned by the caller in this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_picking_create(
+    stride: usize,
+    leaf: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_picking_create(stride, leaf, vp, vl, ip, il) }
+}
+
+/// # Safety
+/// All ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_solid_placement(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_solid_placement(vp, vl, ip, il, mp, ml) }
+}
+
+/// # Safety
+/// All ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_export_prepare(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+    float32: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_export_prepare(vp, vl, ip, il, mp, ml, float32) }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_export_alloc(len: usize) -> usize {
+    geometry_bridge::abi::abi_export_alloc(len)
+}
+
+/// # Safety
+/// All ranges must be live caller-owned export staging buffers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_export_append(
+    handle: u32,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    mp: usize,
+    ml: usize,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_export_append(handle, vp, vl, ip, il, mp, ml) }
+}
+
+/// # Safety
 /// All buffer pointers must reference live caller-owned buffers allocated by
 /// this module; they are only read.
 #[unsafe(no_mangle)]

@@ -1,0 +1,96 @@
+{
+  "id": "brep-display-transport-v1",
+  "generatedAt": "2026-09-13T11:21:15.339Z",
+  "sourceSha256": "98fcb0663034d2592d11e3bc13d23ecfe3475ec149740c4b30ccd9c9d2a9e9ac",
+  "wasmSha256": "b5f1ce9132088bd4c7113480dd6ae10a0bed265f5ae80c60a159e8018ac5a71c",
+  "packedSha256": "3c9f57f06bb787c948245f70ff903fbe40b611c5fa8e19b3f764427eb6b131cf",
+  "scope": "Compact native B-rep display transport and regression verification; not complete B-rep qualification.",
+  "transportBefore": [
+    {
+      "name": "box",
+      "triangles": 12,
+      "rawBytes": 1326,
+      "compactBytes": 1180,
+      "savedBytes": 146,
+      "savedPercent": 11.010558069381599
+    },
+    {
+      "name": "sphere",
+      "triangles": 960,
+      "rawBytes": 398107,
+      "compactBytes": 362055,
+      "savedBytes": 36052,
+      "savedPercent": 9.055856842507165
+    },
+    {
+      "name": "cylinder",
+      "triangles": 572,
+      "rawBytes": 171400,
+      "compactBytes": 153872,
+      "savedBytes": 17528,
+      "savedPercent": 10.22637106184364
+    }
+  ],
+  "transportAfter": [
+    {
+      "name": "box",
+      "bytes": 1180,
+      "triangles": 12,
+      "hasRawPositions": false,
+      "hasRawIndices": false
+    },
+    {
+      "name": "sphere",
+      "bytes": 362055,
+      "triangles": 960,
+      "hasRawPositions": false,
+      "hasRawIndices": false
+    },
+    {
+      "name": "cylinder",
+      "bytes": 153872,
+      "triangles": 572,
+      "hasRawPositions": false,
+      "hasRawIndices": false
+    }
+  ],
+  "checks": {
+    "nativeDisplayPassed": 2,
+    "brepIntegrationPassed": 56,
+    "svgWorkflowPassed": 122,
+    "ownCadPassed": 218,
+    "application": {
+      "initialPassed": 2635,
+      "initialFailed": 7,
+      "initialFailure": "HTTP listen EPERM at 127.0.0.1 in sandbox",
+      "httpRetestPassed": 7,
+      "combinedPassed": 2642,
+      "remainingFailures": 0,
+      "optionalSkipped": 5
+    },
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "packedBytes": "passed",
+    "dist": {
+      "artifacts": 68,
+      "bytes": 4699595,
+      "totalBudget": 4700000
+    }
+  },
+  "limitations": [
+    "Optional official-runtime tests were not executed.",
+    "Previous SVG browser report is preserved at its original source/WASM snapshot; no new browser run is claimed.",
+    "Display geometry and metrics remain numerical, uncertified."
+  ],
+  "commands": [
+    "cargo test --offline --locked -p geometry-bridge --lib brep_display --manifest-path crates/Cargo.toml",
+    "node scripts/record-svg-evidence.mjs",
+    "VITEST_MAX_WORKERS=1 node scripts/record-own-cad-evidence.mjs",
+    "npx vitest run --maxWorkers=3",
+    "npx vitest run tests/modelGraphHttp.test.ts --maxWorkers=1 (local-port permission)",
+    "npx vue-tsc --noEmit",
+    "npx tsc --noEmit -p tsconfig.mcp.json",
+    "npx vite build",
+    "node scripts/verify-dist.mjs"
+  ]
+}

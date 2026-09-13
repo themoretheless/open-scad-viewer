@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native direct point rotation, scaling and translation",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 88,
+    "testFiles": 7,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4619650
+  },
+  "coverage": [
+    "Mixed 2D/3D point transforms retain output dimensions and expected coordinates",
+    "Representable centroid at 1e308 avoids overflow of an unscaled coordinate sum",
+    "Malformed dimensions, nonfinite inputs and overflowing output refuse",
+    "Source preservation and recovery after refused requests"
+  ],
+  "limitations": [
+    "Numerical centroid-based point transform, not B-rep topology transformation",
+    "Other host geometry and complete B-rep requirements remain open",
+    "Shared qualification refresh remains open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sketch.rs": "12554011b6fb90a696453fc5f4cba91168c113f4a7c173f6e31f5395f2c070bb",
+    "crates/geometry-bridge/src/lib.rs": "f3a4e888241b341bac59afdd5a247b0ff509e2ef718d79d81b4794dc26888e02",
+    "src/services/directModeling.ts": "e9004388c5edcbe401b5e521b43f5685fb1501c8034c47a518dc48e443cd3e4f",
+    "tests/directModeling.test.ts": "55e725edf8dc79f08aa9ed687f811152c6a759fc37ba836613cab5303d5703cf",
+    "src/generated/geometry-kernels/bytes.ts": "72f790dc6147ecb2c31176fce51668272ecd9ee1fdc14b19cd11651d44bd3aa4"
+  }
+}

@@ -1,11 +1,7 @@
-declare module 'harfbuzzjs/hb.wasm?url' {
-  const url: string
-  export default url
-}
-
 declare module 'harfbuzzjs/hb.js' {
   interface HarfBuzzModuleOptions {
     readonly locateFile?: (path: string) => string
+    readonly wasmBinary?: Uint8Array<ArrayBuffer>
   }
 
   const createHarfBuzzModule: (options?: HarfBuzzModuleOptions) => Promise<unknown>

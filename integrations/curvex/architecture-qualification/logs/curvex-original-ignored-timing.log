@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.36s
+     Running unittests src/lib.rs (/private/tmp/osv-curvex-qualification/migrated-01/target/debug/deps/curvex-92e2795212f7da84)
+
+running 1 test
+test ui::shape_render::render_cache_tests::sample_fast_path_timing ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1468 filtered out; finished in 0.14s
+

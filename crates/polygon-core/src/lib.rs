@@ -18,6 +18,10 @@
 #![allow(unused_features)]
 pub mod appearance;
 pub mod gradient_mesh;
+pub mod mesh_export;
+pub mod model_3mf;
+pub mod package_3mf;
+pub mod scene_flatten;
 pub mod solid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;

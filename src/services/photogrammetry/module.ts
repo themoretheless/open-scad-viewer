@@ -1,5 +1,3 @@
-import {unpackWasmBase64} from '../wasmPacking'
-
 let sharedModule: Promise<WebAssembly.Module> | null = null
 
 /**
@@ -8,7 +6,10 @@ let sharedModule: Promise<WebAssembly.Module> | null = null
  */
 export function compilePhotogrammetryKernel(): Promise<WebAssembly.Module> {
   if (!sharedModule) {
-    sharedModule = import('../../generated/photogrammetry/bytes').then(({default: wasmBase64}) => WebAssembly.compile(unpackWasmBase64(wasmBase64)))
+    sharedModule = Promise.all([
+      import('../../generated/photogrammetry/bytes'),
+      import('../wasmBrotliPacking'),
+    ]).then(([{default: wasmBase64}, {unpackBrotliWasmBase64}]) => WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64)))
     sharedModule.catch(() => { sharedModule = null })
   }
   return sharedModule

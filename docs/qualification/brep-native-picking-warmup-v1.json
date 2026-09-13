@@ -1,0 +1,35 @@
+{
+  "scope": "Pre-interaction native kernel initialization; not full B-rep qualification",
+  "tests": {
+    "warmupPickingRendererSelection": 76,
+    "vueTypecheck": "passed"
+  },
+  "latency": {
+    "triangles": 20000,
+    "warmupMs": 209.925291,
+    "firstPickMs": 16.820750000000032,
+    "medianMs": 0.033375000000035016,
+    "p95Ms": 0.05362499999995407,
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4707140,
+    "budget": 4700000
+  },
+  "sha256": {
+    "src/services/geometry/kernel.ts": "2ea392113b8f08acfa0861cd4da9581a75a935115efdc3bb938084fed63ef44b",
+    "src/services/webgpuRenderer.ts": "50b36d60ba59acf5bd008a9e8d02fdc4d6dc7741e98d269da1e0d0162a716d65",
+    "tests/geometryKernelWarmup.test.ts": "6232b5021dc4bc9f444c93df76db5c81638b90df4766f11ff1593d3dc2b74c8a",
+    "tests/webgpuRendererLifecycle.test.ts": "c44ed34889a68c3c3e38ae60bb31ff6fe6658c3b854af92a3fdda844addc65d3",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "0db5387263fc9a33ddfe422add02cdb0b5b977b7e4100471e1abed1bc3fe6e08"
+  },
+  "limitations": [
+    "Snapshot upload and BVH build still occur on first geometry query",
+    "Node measurements do not qualify browser latency",
+    "Synchronous decompression still occurs during startup",
+    "Shared source qualification not refreshed"
+  ]
+}

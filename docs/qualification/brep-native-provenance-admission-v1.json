@@ -1,0 +1,67 @@
+{
+  "date": "2026-09-14",
+  "scope": "Native admission of SemanticProgram envelope provenance, tessellationIntents, diagnostics and diagnosticTemplates: Rust ports of the envelope-component subsets of validateSemanticProgramV1 and of validateDiagnosticTemplates, validated against the already-admitted operations, occurrences, language contract and source descriptor behind the WASM ABI",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBridgeTests": 169,
+    "integrationTests": 90,
+    "testFiles": 7,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4661642
+  },
+  "coverage": [
+    "Provenance admitted natively: exact record keys, array bounded by the operations limit, exactly one source record per static operation in operation order (operation index == position), half-open UTF-16 spans non-empty, non-negative and bounded by the source descriptor utf16CodeUnitLength, labels bounded at 512 UTF-16 code units",
+    "TessellationIntents admitted natively: exact intent keys, array bounded by the tessellationIntents limit, forbidden when the language contract is legacy/current (brep-1 only), unique strictly ascending occurrence references in range of the transported occurrences and targeting a producing (non-null node) occurrence, chordTolerance/angularToleranceDegrees null or finite positive binary64, minSegments/maxSegments null or integers in [3, 1000000] with maxSegments never below minSegments",
+    "Diagnostics admitted natively: exact entry keys, array bounded by the diagnostics limit, exactly one source-bound presentation per diagnostic template in template order (template index == position), messages bounded at 1,000,000 UTF-16 code units (SEMANTIC_PROGRAM_LIMITS.diagnosticMessageCodeUnits), spans nullable and otherwise half-open, possibly empty, bounded by the source descriptor",
+    "DiagnosticTemplates admitted natively: exact template keys, positional IDs, code pattern ^[A-Z][A-Z0-9_]{0,63}$, severity enum {info, warning, error}, the v1.2 rule admitting error severity only on the frozen LEGACY_LANGUAGE_ERROR template, operation references null or in range of the transported operations (any reference refused without operations), arguments capped at 128 entries with exact keys, unique names in authored order bounded at 128 code units and full validateIdentityValue checking (tags, exact keys, finite non--0 numbers, 4,096-unit strings, 100,000-item vectors, depth 32)",
+    "Cross-field consistency enforced natively: provenance requires transported operations and the source descriptor, non-empty intents require the language contract and occurrences, diagnostics require the transported diagnosticTemplates and a present span requires the source descriptor",
+    "Admission stays optional-but-strict: absent components skip their checks; present components are strict and every refusal fires inside brep_envelope::validate in prepare, after execution-plan validation and before Runner::new, so no graph node executes",
+    "executeBrepNativeProgram now transports program.provenance, program.tessellationIntents and program.diagnostics through graph-begin with zero added host-side validation logic; a real lowered OpenSCAD difference program executes natively with all components, and ten envelope-component tampers refuse with E_BREP_SEMANTIC_CONTRACT and zero onNode progress callbacks",
+    "Wrong-by-one native coverage: provenance count/order/empty/reversed/out-of-range spans, missing context; intents non-ascending/duplicate occurrences, out-of-range and non-producing occurrences, zero/negative tolerances, segment bounds at 2/1,000,001/fractional/negative, max below min, legacy-contract refusal, missing language/occurrence context; diagnostics count/order, 1,000,001-unit messages, out-of-range/reversed spans, missing template/source context; templates non-index IDs, five bad code shapes, unknown severity, non-legacy error severity, out-of-range and absent operation references, 129 arguments, duplicate/overlong argument names, unknown/non-canonical/overlong identity values"
+  ],
+  "behaviorChange": "Graph/session admission now validates the transported envelope provenance, tessellationIntents, diagnostics and diagnosticTemplates natively before any node executes; requests carrying tampered or inconsistent envelope components fail with BREP_SEMANTIC_CONTRACT instead of executing geometry. Requests without these components behave exactly as before.",
+  "limits": {
+    "nodes": 25000,
+    "operations": 50000,
+    "occurrences": 100000,
+    "outputs": 1000,
+    "diagnostics": 10000,
+    "discardedEffects": 25000,
+    "tessellationIntents": 50000,
+    "declaredCapabilities": 32,
+    "capabilityClosure": 128,
+    "sourceCodeUnits": 250000,
+    "stringCodeUnits": 1000000,
+    "diagnosticMessageCodeUnits": 1000000,
+    "canonicalStringBytes": 16777216,
+    "snapshotValues": 1000000,
+    "snapshotDepth": 256,
+    "identityValueDepth": 32,
+    "sourceUtf8Bytes": 4000000,
+    "abiRequestBytes": 33554432
+  },
+  "limitations": [
+    "The UTF-16 span surrogate-pair endpoint check (attestSemanticProgramSource, semanticProgramValidator.ts l.2368) stays host-side: it needs the actual source text and only the source descriptor crosses the ABI",
+    "validateOccurrenceProduction replay (semanticProgramValidator.ts l.1381) remains host-side; native occurrence admission covers the identity subset only",
+    "$expansion continuation and module-activation anchoring (l.600/669), including the runtime ancestor-chain walk for staticParent, remain host-side",
+    "The full envelope is not admitted as one object natively: envelope exact keys and the semantic-program-envelope schema literal remain host-side; components arrive as individual graph-begin fields",
+    "Occurrence identity admission still requires operations on the request; provenance admission inherits the same context requirement",
+    "The application executor replacement and full SemanticProgram admission remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_provenance.rs": "dbead0c7a05eaa3938dfd8ef78f5360cb637a6803625aab150a1b1c2303ef3ea",
+    "crates/geometry-bridge/src/brep_envelope.rs": "3efb9657ebd94260429d4afc76c9adde7e789dac76d4268ac52a31622723d600",
+    "crates/geometry-bridge/src/brep_identity.rs": "a4cb167337d17b287d14450e2c21c991900530bf5518dc2bc441cc24ec4257d1",
+    "crates/geometry-bridge/src/lib.rs": "5a61cf23faee8960363fdc41a6d4d2bcdaad16ff1ee257ee18ff655ae1f0c518",
+    "src/services/brepNativeExecutor.ts": "edc41ef751410c454f77738d743380a5b6e77193084827573134a629afb27766",
+    "tests/brepProvenanceAdmission.test.ts": "493b369521a5bd7160304b439fa9602d0b574bf22f01cc65d5fec477cbf4e671",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "42af1e35df1ef73665a7ee61c4b95f62361130daf5cd16b26e113c77f2685f39",
+    "src/generated/geometry-kernels/bytes.ts": "11e13700dd95e502b35a671ac77432bd218ab2893551c279df3c9a45841f6ffa"
+  }
+}

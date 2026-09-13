@@ -14,15 +14,59 @@
 )]
 #![allow(unused_features)]
 pub mod brep;
+pub mod brep_attestation;
+mod brep_display;
+pub mod brep_envelope;
+pub mod brep_execution_plan;
+pub mod brep_graph;
+pub mod brep_graph_runner;
+pub mod brep_identity;
+mod brep_json_size;
+pub mod brep_profile;
+pub mod brep_production;
+pub mod brep_provenance;
+pub mod brep_result;
+mod brep_semantic;
+pub mod brep_session;
+mod brep_session_abi;
+mod cad_body_affine;
+mod cad_boolean;
+mod cad_clearance;
+mod cad_draft;
+mod cad_edge_edit;
+mod cad_face_selection;
+mod cad_hole;
+mod cad_lattice;
+mod cad_mesh_planes;
+mod cad_mesh_topology;
+mod cad_path;
+mod cad_pattern;
+mod cad_planar_edit;
+mod cad_sections;
+mod cad_selection;
+mod cad_sketch;
+mod cad_sketch_offset;
+mod cad_sketch_trim;
+mod cad_split;
+mod cad_texture;
+#[cfg(feature = "languages")]
+mod cad_thread;
+mod camera_gestures;
+mod gcode;
+pub mod intersections;
 #[cfg(feature = "languages")]
 mod languages;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 mod mesh;
 pub mod mesh_analysis;
+mod mesh_export_file;
+pub mod mesh_picking;
 pub mod mesh_shell;
 #[cfg(feature = "languages")]
 pub mod openscad;
+mod scene_picking;
+mod viewport;
 #[cfg(feature = "languages")]
 pub use languages::{
     compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text,
@@ -31,6 +75,9 @@ pub use languages::{
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;
+mod svg;
+mod svg_css;
+mod svg_silhouette;
 use nurbs_core::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -67,81 +114,6 @@ fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
 }
 fn encode(v: impl Serialize) -> Result<Value> {
     value_codec::to_value(v).map_err(|e| input(e.to_string()))
-}
-
-fn toolpath_settings(v: &Value) -> Result<slicer_core::ToolpathSettings> {
-    let mut settings = slicer_core::ToolpathSettings::default();
-    if let Some(value) = v.get("layerHeightMm").and_then(|x| x.as_f64()) {
-        settings.layer_height_mm = value;
-    }
-    if let Some(value) = v.get("lineWidthMm").and_then(|x| x.as_f64()) {
-        settings.line_width_mm = value;
-    }
-    if let Some(value) = v.get("wallCount").and_then(|x| x.as_u64()) {
-        settings.wall_count = value as usize;
-    }
-    if let Some(value) = v.get("infillSpacingMm").and_then(|x| x.as_f64()) {
-        settings.infill_spacing_mm = value;
-    }
-    if let Some(value) = v.get("feedrateMmS").and_then(|x| x.as_f64()) {
-        settings.feedrate_mm_s = value;
-    }
-    if let Some(value) = v.get("travelFeedrateMmS").and_then(|x| x.as_f64()) {
-        settings.travel_feedrate_mm_s = value;
-    }
-    if let Some(value) = v.get("filamentDiameterMm").and_then(|x| x.as_f64()) {
-        settings.filament_diameter_mm = value;
-    }
-    Ok(settings)
-}
-
-fn layer_from_mesh_section(
-    section: polygon_core::solid::section::MeshSection,
-) -> planar_geometry::LayerSection {
-    planar_geometry::LayerSection {
-        z_mm: section.z_mm,
-        contours: section
-            .contours
-            .into_iter()
-            .map(|contour| contour.points)
-            .collect(),
-    }
-}
-
-fn mesh_toolpaths(v: &Value) -> Result<Value> {
-    let mesh: Mesh = field(v, "mesh")?;
-    let z_min: f64 = field(v, "zMin")?;
-    let z_max: f64 = field(v, "zMax")?;
-    let settings = toolpath_settings(v)?;
-    let index = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?;
-    let layers = slicer_core::schedule_layers(
-        |z| {
-            index
-                .section(z)
-                .map(layer_from_mesh_section)
-                .map_err(|error| slicer_core::Error {
-                    code: error.code,
-                    message: error.message,
-                })
-        },
-        z_min,
-        z_max,
-        &settings,
-    )?;
-    Ok(json!({
-        "layers": layers.iter().map(|layer| json!({
-            "z_mm": layer.z_mm,
-            "paths": layer.paths.iter().map(|path| json!({
-                "role": match path.role {
-                    slicer_core::PathRole::Outline => "outline",
-                    slicer_core::PathRole::Inset => "inset",
-                    slicer_core::PathRole::Hatch => "hatch",
-                },
-                "closed": path.closed,
-                "points": path.points,
-            })).collect::<Vec<_>>(),
-        })).collect::<Vec<_>>(),
-    }))
 }
 
 fn response(result: Result<Value>) -> String {
@@ -240,8 +212,31 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_intersect_surface_surface"
+        | "brep_intersect_curve_segment"
+        | "brep_intersect_curve_plane"
+        | "brep_intersect_surface_plane"
+        | "brep_intersect_curve_surface"
+        | "brep_intersection_trace_curve"
+        | "brep_intersection_trace_curve_segments"
+        | "brep_intersection_trace_evaluate" => intersections::dispatch(v),
+        "brep_session" => brep_session_abi::dispatch(v),
+        "mesh_picking" => mesh_picking::dispatch(v),
+        "scene_picking" => scene_picking::dispatch(v),
+        "viewport" => viewport::dispatch(v),
+        "camera_gesture" => camera_gestures::dispatch(v),
+        "mesh_export_file" => mesh_export_file::dispatch(v),
+        "brep_graph" => brep_graph::dispatch(v),
+        "brep_graph_report" => Ok(brep_graph::report(v)),
+        "brep_semantic_geometry" => brep_semantic::execute(v),
+        "brep_profile_transform"
+        | "brep_profile_author"
+        | "brep_profile_validate"
+        | "brep_profile_boolean"
+        | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "path2d" => path2d::dispatch(v),
+        "svg" => svg::dispatch(v),
         "subdivision_extrude" => encode(subdivision_core::Cage::extrude(
             &field::<Vec<[f64; 3]>>(&v, "profile")?,
             field(&v, "vector")?,
@@ -398,7 +393,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 None => polygon_core::solid::boolean::Options::default(),
             },
         )?),
-        // P2 print path: section → toolpaths → optional G-code (crates already existed).
+        // Mesh sections, planned toolpaths and validated G-code previews.
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
@@ -413,34 +408,104 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 })).collect::<Vec<_>>(),
             }))
         }
-        "mesh_toolpaths" => mesh_toolpaths(&v),
-        "mesh_gcode" => {
-            let mesh: Mesh = field(&v, "mesh")?;
-            let z_min: f64 = field(&v, "zMin")?;
-            let z_max: f64 = field(&v, "zMax")?;
-            let settings = toolpath_settings(&v)?;
-            let index = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?;
-            let layers = slicer_core::schedule_layers(
-                |z| {
-                    index
-                        .section(z)
-                        .map(layer_from_mesh_section)
-                        .map_err(|error| slicer_core::Error {
-                            code: error.code,
-                            message: error.message,
-                        })
-                },
-                z_min,
-                z_max,
-                &settings,
-            )?;
-            let gcode = slicer_core::emit_gcode(&layers, &settings)?;
-            Ok(json!({
-                "gcode": gcode,
-                "layerCount": layers.len(),
-            }))
+        "mesh_toolpaths" => gcode::toolpaths(&v),
+        "mesh_gcode" => gcode::export(&v),
+        "gcode_preview" => gcode::parse(&v),
+        "brep_nurbs_sketch_extrude" => {
+            let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
+            let profile = match sketch.get("analytic") {
+                Some(analytic)
+                    if analytic.get("kind").and_then(Value::as_str) == Some("circle") =>
+                {
+                    brep_core::sketch::Profile::Circle {
+                        center: field(analytic, "center")?,
+                        radius: field(analytic, "radius")?,
+                    }
+                }
+                _ => brep_core::sketch::Profile::Polygon(field(sketch, "points")?),
+            };
+            let plane = match sketch.get("plane") {
+                None | Some(Value::Null) => None,
+                Some(plane) => Some([
+                    field(plane, "origin")?,
+                    field(plane, "u")?,
+                    field(plane, "v")?,
+                ]),
+            };
+            encode(brep_core::sketch::extrude(
+                profile,
+                field(sketch, "closed")?,
+                field(&v, "height")?,
+                field(&v, "baseZ")?,
+                plane,
+            )?)
         }
+        "brep_nurbs_transform" => encode(brep_core::transform::affine(
+            &field(&v, "model")?,
+            field(&v, "matrix")?,
+        )?),
+        "brep_nurbs_workplane" => encode(brep_core::transform::workplane(
+            &field(&v, "model")?,
+            field(&v, "origin")?,
+            field(&v, "u")?,
+            field(&v, "v")?,
+            field(&v, "offset")?,
+        )?),
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_revolve" => encode(brep_core::revolve_angle(
+            &field::<Vec<[f64; 2]>>(&v, "profile")?,
+            v.get("angleDegrees")
+                .and_then(Value::as_f64)
+                .unwrap_or(360.),
+        )?),
+        "brep_nurbs_sphere" => encode(brep_core::sphere(field(&v, "radius")?)?),
+        "brep_nurbs_torus" => encode(brep_core::torus(
+            field(&v, "majorRadius")?,
+            field(&v, "minorRadius")?,
+        )?),
+        "brep_nurbs_push_face" => encode(brep_core::operations::push_planar_face(
+            &field(&v, "model")?,
+            field(&v, "face")?,
+            field(&v, "distance")?,
+        )?),
+        "brep_nurbs_shell" => encode(brep_core::operations::shell_planar(
+            &field(&v, "model")?,
+            &field::<Vec<usize>>(&v, "openings")?,
+            field(&v, "thickness")?,
+        )?),
+        "brep_nurbs_split" => encode(brep_core::operations::split_planar(
+            &field(&v, "model")?,
+            field(&v, "normal")?,
+            field(&v, "offset")?,
+        )?),
+        "brep_nurbs_mass_properties" => encode(brep_core::analysis::mass_properties(
+            &field::<brep_core::Model>(&v, "model")?,
+            v.get("relativeTolerance")
+                .and_then(Value::as_f64)
+                .unwrap_or(1e-7),
+            v.get("maxEvaluations")
+                .and_then(Value::as_u64)
+                .unwrap_or(300000) as usize,
+        )?),
+        "brep_nurbs_cylinder" => encode(brep_core::cylinder(
+            field(&v, "radius")?,
+            field(&v, "height")?,
+        )?),
+        "brep_nurbs_frustum" => encode(brep_core::frustum(
+            field(&v, "bottomRadius")?,
+            field(&v, "topRadius")?,
+            field(&v, "height")?,
+        )?),
+        "brep_nurbs_tube" => encode(brep_core::tube(
+            field(&v, "outerRadius")?,
+            field(&v, "innerRadius")?,
+            field(&v, "height")?,
+        )?),
+        "brep_nurbs_extrude_curves" => encode(brep_core::prism::extrude(
+            &field::<Vec<Vec<Curve>>>(&v, "loops")?,
+            field(&v, "zMin")?,
+            field(&v, "zMax")?,
+        )?),
         "brep_nurbs_extrude_polygon" => {
             let holes = v
                 .get("holes")
@@ -454,6 +519,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 field(&v, "zMax")?,
             )?)
         }
+        "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(&field::<Vec<Vec<[f64; 3]>>>(
+            &v, "sections",
+        )?)?),
         "brep_nurbs_faceted_loft" => encode(brep_core::faceted_loft(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
         )?),
@@ -509,6 +577,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }
+        "brep_nurbs_display" => brep_display::dispatch(v),
         "brep_nurbs_to_polygon" => {
             let t = brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;
             encode(polygon_core::solid::brep::from_mesh(
@@ -530,6 +599,78 @@ pub fn dispatch(v: Value) -> Result<Value> {
         }
         "brep_polygon_tessellate" => encode(brep::polygons(&field(&v, "model")?)?),
         "mesh_inspect" => encode(field::<Mesh>(&v, "mesh")?.inspect()?),
+        "scene_flatten" => {
+            let meshes = field::<Vec<Value>>(&v, "meshes")?
+                .into_iter()
+                .map(|m| {
+                    Ok(polygon_core::scene_flatten::Input {
+                        vertices: field(&m, "vertices")?,
+                        indices: field(&m, "indices")?,
+                        transform: field(&m, "transform")?,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            encode(polygon_core::scene_flatten::flatten(&meshes)?)
+        }
+        "body_bounds" => {
+            let (min, max) =
+                polygon_core::scene_flatten::bounds(&field::<Vec<Vec<f64>>>(&v, "positions")?)?;
+            encode(json!({"min":min,"max":max}))
+        }
+        "cad_resize_bodies" => cad_body_affine::resize(v),
+        "cad_draft_bodies" => cad_draft::draft(v),
+        "cad_mirror_bodies" => cad_body_affine::mirror(v),
+        "cad_trim_sketch" => cad_sketch_trim::trim(v),
+        "cad_extend_sketch" => cad_sketch_trim::extend(v),
+        "cad_validate_sketch" => cad_sketch_offset::validate_request(v),
+        "cad_offset_sketch" => cad_sketch_offset::offset(v),
+        "cad_ruled_sketch_loft" => cad_sections::ruled(v),
+        "cad_build_sections" => cad_sections::build(v),
+        "cad_path_points" => cad_path::sample(v),
+        #[cfg(feature = "languages")]
+        "cad_thread_body" => cad_thread::apply(v),
+        #[cfg(feature = "languages")]
+        "cad_thread_geometry" => {
+            modelgraph_runtime::thread_geometry(&field::<Value>(&v, "options")?)
+                .map_err(|e| input(e.message))
+        }
+        #[cfg(feature = "languages")]
+        "cad_thread_radius" => encode(
+            modelgraph_runtime::thread_radius(
+                &field::<Value>(&v, "options")?,
+                field(&v, "angle")?,
+                field(&v, "z")?,
+            )
+            .map_err(|e| input(e.message))?,
+        ),
+        "cad_transform_points" => cad_sketch::transform_points(v),
+        "cad_world_points" => cad_sketch::world_points(v),
+        "cad_sample_curve" => cad_sketch::sample(field(&v, "curve")?),
+        "cad_transform_sketch" => cad_sketch::transform(v),
+        "cad_inspect_pairs" => cad_clearance::inspect(v),
+        "cad_hole_body" => cad_hole::hole(v),
+        "cad_boolean_bodies" => cad_boolean::boolean(v),
+        "cad_edge_edit" => cad_edge_edit::edit(v),
+        "cad_planar_edit" => cad_planar_edit::edit(v),
+        "cad_face_plane" => cad_mesh_topology::face_plane(v),
+        "cad_mesh_topology" => cad_mesh_topology::topology(v),
+        "cad_select_brep_edge" => cad_face_selection::edge(v),
+        "cad_select_brep_support" => cad_face_selection::select(v),
+        "cad_split_body" => cad_split::split(v),
+        "cad_lattice_components" => cad_lattice::components(v),
+        "cad_lattice_decimate" => cad_lattice::decimate(v),
+        "cad_lattice_print_fit" => cad_lattice::print_fit(v),
+        "cad_lattice_bridge_warning" => cad_lattice::bridge_warning(v),
+        "cad_lightening_cells" => cad_lattice::lightening_cells(v),
+        "cad_spatial_graph" => cad_lattice::graph(v),
+        "cad_lightening" => cad_lattice::lightening(v),
+        "cad_texture_height" => cad_texture::height(v),
+        "cad_texture_body" => cad_texture::apply(v),
+        "cad_pattern_bodies" => cad_pattern::pattern(v),
+        "cad_joint_bodies" => cad_body_affine::joint(v),
+        "cad_arrange_bodies" => cad_body_affine::arrange(v),
+        "cad_transform_bodies" => cad_body_affine::transform(v),
+        "cad_transform_selection" => cad_selection::transform(v),
         "mesh_thicken" => encode(field::<Mesh>(&v, "mesh")?.thicken(field(&v, "vector")?)?),
         "mesh_transform" => {
             let mesh = field::<Mesh>(&v, "mesh")?.transform(field(&v, "matrix")?)?;
@@ -539,6 +680,34 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "mesh_boundary_loops" => encode(field::<Mesh>(&v, "mesh")?.boundary_loops()?),
         "mesh_boundary_curves" => encode(boundary_curves(&field(&v, "mesh")?)?),
         "mesh_export_stl" => encode(field::<Mesh>(&v, "mesh")?.export_stl()?),
+        "mesh_export_format" => {
+            let bytes = polygon_core::mesh_export::export(
+                &field(&v, "mesh")?,
+                &field::<String>(&v, "format")?,
+            )?;
+            encode(mesh_analysis::store(
+                mesh_analysis::AnalysisBuffers::Bytes { bytes },
+            ))
+        }
+        "mesh_export_3mf_model" => {
+            let bytes = polygon_core::model_3mf::export(
+                &field(&v, "mesh")?,
+                &field::<Vec<Mesh>>(&v, "parts")?,
+            )?;
+            encode(mesh_analysis::store(
+                mesh_analysis::AnalysisBuffers::Bytes { bytes },
+            ))
+        }
+        "mesh_export_3mf" => {
+            let bytes = polygon_core::package_3mf::export(
+                &field(&v, "mesh")?,
+                &field::<Vec<Mesh>>(&v, "parts")?,
+                field(&v, "compressed")?,
+            )?;
+            encode(mesh_analysis::store(
+                mesh_analysis::AnalysisBuffers::Bytes { bytes },
+            ))
+        }
         _ => Ok(nurbs_core::dispatch(v)?),
     }
 }

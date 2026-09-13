@@ -44,7 +44,54 @@ npm run build:geometry
 npm run test:geometry
 ```
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. The Cargo workspace uses only repository-owned crates; the WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust is pinned in `rust-toolchain.toml` (`nightly-2026-09-10`, rustc 1.100).
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust is pinned in `rust-toolchain.toml` (`nightly-2026-09-10`, rustc 1.100).
+
+## Authored B-rep modeling
+
+The CAD workbench also provides [G-code export and layer preview](docs/design/gcode-preview.md)
+from a selected scene body, with configurable toolpaths, worker cancellation,
+file validation and filament/time statistics. The versioned preview dialect
+preserves model coordinates; printer-specific preparation and physical print
+jobs are outside this export contract.
+
+Solid provides exact rational cylinders, apex cones, conical frustums, tubes,
+spheres and tori. Exact profile rotation supports signed partial turns and
+profiles touching the axis. New sketch
+extrusions retain B-rep topology, including exact circular walls. Display
+retessellation preserves the authored surfaces and face identities. Planar
+Push/Pull, Shell and Split preserve B-rep bodies, as does viewport dragging.
+B-rep properties integrate NURBS surfaces for area, volume, centroid and inertia
+independently of the display mesh.
+Code → Solid retains native B-rep snapshots, rational weights and scene placement,
+so imported authored bodies keep surface properties and retessellation controls.
+
+B-rep booleans support rational line/circle prismatic profiles with holes,
+parallel extrusion axes, different heights, blind pockets, sealed cavities,
+empty results and XOR. Stepped results survive serialization and further
+operations after rotation; unsupported general curved
+intersections remain explicit. Planar booleans support concave outlines and face
+holes, including rotated operands and chained operations. Analytic fillets remain
+unsupported; the explicit faceted-cylinder option retains planar Boolean use.
+The same constructors, supported booleans, chamfers, and faceted fillets are available
+through ModelGraph Text and the NURBS MCP tools. See the precise
+[operation envelope](crates/brep-core/README.md) and the full
+[completion audit](docs/design/brep-completion-status.md).
+Try the [curved Boolean example](examples/brep/curved-boolean.modelgraph.scad)
+in the viewer's Code mode, or choose **B-rep pocket enclosure** in the example
+gallery for a raised boss and blind pocket with a 2 mm floor.
+
+The internal SemanticProgram B-rep backend executes native primitives and
+supported operations with immutable snapshots and checked resource ownership.
+Its scene adapter preserves multiple outputs, source identities and colors,
+and separates display settings from authored geometry. The permanent
+`openscad-viewer/brep-1` provider remains unavailable pending its runtime and
+qualification integration.
+An [isolated diagnostic runner](docs/design/brep-semantic-diagnostic.md) executes
+the supported OpenSCAD B-rep subset in a disposable browser or Node worker with
+hard cancellation, bounded transport and checked snapshot identities.
+The separate [native predicate candidate](crates/cad-predicates/README.md) provides
+bounded exact signs for orientation and squared-distance comparisons. It is not
+yet connected to geometric construction or the shared WASM runtime.
 
 ## Highlights
 
@@ -513,23 +560,105 @@ prerequisites. The MCP sidecar has its own
 
 ## SVG creation and conversion
 
-Open **SVG ↔ 3D** below the editor to create a rectangle or circle, edit SVG
-markup, or load a local SVG. Preview and download normalize the geometry into
-filled contours. **Add extrusion to model** appends self-contained SCAD with
-an editable height in millimeters. Curves are tessellated; fill rules, holes,
-and supported strokes use the existing bounded SVG importer. Convert text to
-outlines first; images, masks and clipping paths are unsupported.
+Examples: [artwork with text and CSS](examples/svg/static-artwork.svg),
+[dimensioned plate with holes](examples/svg/print-profile.svg), and
+[rendered silhouette with effects](examples/svg/rendered-silhouette.svg).
+
+Open **SVG ↔ 3D** below the editor to create an example, edit SVG markup or
+load a local SVG. **Preview** and **Download SVG** retain the static artwork:
+colors, gradients, patterns, clipping paths, masks, filters and embedded raster
+images. CSS, `<use>`, symbols, nested viewports and text are resolved into a
+portable document. Text is outlined using bundled Noto Sans (Latin, Greek and
+Cyrillic), or explicitly loaded outline TTF/OTF/TTC fonts. No system fonts or remote
+resources are required. Use your original font when its exact metrics matter.
+SVG 2 geometry properties (`x`, `y`, `width`, `height`, `cx`, `cy`, `r`, `rx`,
+`ry`, and `d: path(...)`) participate in the CSS cascade, including selectors,
+inline styles, `!important` and explicit inheritance through each `use` instance.
+Physical units, percentages and `em`/`ex` are resolved in their proper context.
+`vector-effect="non-scaling-stroke"` retains the intrinsic physical stroke
+width through affine transforms, nested viewports, text and stroke-width markers.
+Patterns and masks receive the painted instance's coordinate context. Normalized
+artwork freezes these strokes into filled outlines at the document's intrinsic
+size, so subsequent CAD import and export do not depend on the consumer's DPI.
+Embedded PNG/JPEG/GIF/WebP images are decoded and validated; GIF/WebP are
+normalized to a PNG of their first frame with a diagnostic, so preview and
+silhouette use the same static image.
+Custom font collections are checked face by face, with at most 128 faces per file. SVG, COLR and bitmap glyph
+tables are rejected: these embedded renderers bypass the SVG document admission
+path. Convert colored glyphs to ordinary SVG paths before import.
+SVG processing runs in a dedicated worker with cancellation and a 30-second
+deadline. The draft, settings and uploaded fonts are saved in IndexedDB; storage
+failure is reported, and a second tab cannot silently overwrite a newer draft.
+
+**Add extrusion to model** appends self-contained SCAD with an editable height
+in millimeters to an OpenSCAD document and starts a full build. Editable native
+ModelGraph output is available through MCP as described below. The source is checked against the remaining
+workspace capacity before insertion. The default **Vector outlines** mode handles fills, holes,
+clip paths, markers and strokes with caps, joins and dash patterns. Curves are
+flattened at the selected tolerance in millimeters. Paint colors do not affect
+extrusion height; opaque gradient-filled paths use their vector outline. **Download
+contours** exports the same CAD profile for subsequent editing or cutting.
+
+For masks, filters, patterns, gradients with transparent stops and embedded images, explicitly select **Rendered
+silhouette**. This renders the artwork on a transparent bitmap, thresholds its
+alpha channel, and traces its boundary including holes. Resolution (128–2048
+pixels on the longest edge) and alpha threshold are editable. This is a pixel
+approximation clipped to the SVG viewport, not an exact vector reconstruction.
+
+Standalone SVG uses 96 DPI by default; physical units such as `mm` preserve
+scale. OpenSCAD project `import("shape.svg", dpi=...)` shares the vector engine
+and keeps the existing 72 DPI compatibility convention (explicit CSS `px`
+remains 96 pixels/inch). Project TTF/OTF/TTC assets are available to SVG text.
 
 After a current full build, export a silhouette along X/Y/Z or select a planar
-face and export it in its own plane at true scale. The result also becomes the
-panel's SVG input, so it can be extruded again. Export uses all model geometry,
+face and export it in its own plane at true scale. Export preserves the current
+artwork; **Open exported SVG** explicitly loads the result for another extrusion.
+Export uses all model geometry,
 including hidden bodies; section clipping does not change it. Face export uses
 the selected mesh's kernel face identity and verifies planarity. Curved-surface
-unwrapping is not implemented. SVG viewport bounds are cropped to the contour
-bounds; reimport preserves size and holes, not the original world-space origin.
+unwrapping is not implemented. CAD SVG exports crop to contour bounds;
+reimport preserves size and holes, not the original world-space origin.
 
-MCP exposes `modelgraph_svg_extrude(svg, height)` with an actual full geometry
-check, and `modelgraph_svg_export(document, axis?, face?)` returning SVG.
+MCP exposes `modelgraph_svg_preview(svg, ...)`, `modelgraph_svg_extrude(svg,
+height, ...)` with a full geometry check, and `modelgraph_svg_export(document,
+axis?, face?)`. Preview/extrusion accept `dpi`, `tolerance`, `geometryMode`,
+`rasterSize`, `alphaThreshold` and optional base64 `fonts`. Extrusion returns
+conversion warnings along with the SCAD, contour SVG and measured geometry.
+With `includeModelGraph: true`, extrusion also returns a validated editable
+ModelGraph document with a height parameter, preserving holes and nested islands.
+Both representations undergo full builds. This option uses ModelGraph's own
+limits (including 256 points per polygon and 128 nodes) and reports a conversion
+error if the profile cannot fit; SCAD remains the default representation.
 `face` contains zero-based `meshIndex` and `triangleIndex` from a full build.
-Limits: 256 KiB input SVG, 20000 contour points, 20000 source triangles for
-projection, and 4 MiB output SVG.
+
+The supported profile is static SVG. Scripts, event handlers, animation,
+`foreignObject`, external references/stylesheets, CSS font loading and
+vector effects other than `none` and `non-scaling-stroke` are rejected with a
+diagnostic. CSS math/variables, viewport-relative or unsupported font-relative
+lengths, min/max sizing, cascade at-rules and unsupported geometry selectors
+require resolved values; they are diagnosed before geometry conversion.
+Linked images must
+be embedded; local fonts must be supplied explicitly. The input is never
+inserted into the application DOM as active markup.
+
+Limits: 4 MiB input SVG, 20000 contour points in the panel/MCP, 500000 points in
+the shared import engine, 20000 source triangles for model projection, and
+4 MiB normalized or CAD SVG output. The SCAD model also has a 250000-character
+source limit; increase curve tolerance or lower silhouette resolution if needed.
+Selected-face export counts only that face's triangles. Up to 16 custom fonts,
+4 MiB each and 8 MiB total.
+Rendered silhouettes additionally bound pixel and filter/layer work. General
+project and MCP transport limits still apply.
+Reference/text/marker expansion has a separate conservative budget of 500000
+geometry units, checked before normalization; unused definitions, overridden
+CSS declarations and markers in clipping paths may contribute to that estimate.
+Instance-dependent non-scaling paint resources have a separate 500000-unit
+budget, checked before cloning resources. CSS selector matching is bounded too.
+
+Run `node scripts/record-svg-evidence.mjs` to rebuild the current Rust sources
+and run the native SVG/planar geometry suites plus the SVG cycle,
+worker/persistence behavior, MCP and vector tool checks.
+It records `docs/qualification/svg-static-cycle-v1.json` only when every check
+passes and neither the sources, test inputs, build configuration nor geometry
+WASM/Brotli decoder change during qualification. This
+component evidence does not replace the application's broader release gates.

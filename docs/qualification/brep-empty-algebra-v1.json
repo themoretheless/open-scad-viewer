@@ -1,0 +1,173 @@
+{
+  "id": "brep-empty-algebra-v1",
+  "generatedAt": "2026-09-13T11:29:46.085Z",
+  "sourceSha256": "224f31ec96c3bde40afc96b1551c4ce3d8ebe3f171d7fe9da9d04a09d6056d86",
+  "wasmSha256": "54d697d75a8cd2188e0b52edfdf845c27dce70900db9da234e35d5811413ded9",
+  "packedSha256": "079db1ebbdd5e1a379f59ede9ab2653aa34f98769b234214aec6145657e16509",
+  "before": [
+    {
+      "source": "translate([0,0,1]) difference(){square(1);square(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": {
+        "code": "E_SEMANTIC_BACKEND_FAILURE",
+        "node": 3,
+        "message": "A 2D B-rep transform must preserve the XY plane"
+      }
+    },
+    {
+      "source": "linear_extrude(height=2,twist=30) difference(){square(1);square(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": {
+        "code": "E_SEMANTIC_BACKEND_FAILURE",
+        "node": 3,
+        "message": "B-rep linear extrusion currently requires zero twist and unit scale"
+      }
+    },
+    {
+      "source": "rotate_extrude() difference(){square(1);square(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": {
+        "code": "E_SEMANTIC_BACKEND_FAILURE",
+        "node": 3,
+        "message": "Unsupported B-rep semantic node"
+      }
+    },
+    {
+      "source": "hull(){difference(){cube(1);cube(1);}}",
+      "old": [
+        "empty"
+      ],
+      "native": [
+        "empty"
+      ]
+    },
+    {
+      "source": "projection() difference(){cube(1);cube(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": {
+        "code": "E_SEMANTIC_BACKEND_FAILURE",
+        "node": 3,
+        "message": "Unsupported B-rep semantic node"
+      }
+    },
+    {
+      "source": "offset(1) difference(){square(1);square(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": {
+        "code": "E_SEMANTIC_BACKEND_FAILURE",
+        "node": 3,
+        "message": "Unsupported B-rep semantic node"
+      }
+    },
+    {
+      "source": "translate([2,3,0]) difference(){circle(1);circle(1);}",
+      "old": [
+        "empty"
+      ],
+      "native": [
+        "empty"
+      ]
+    }
+  ],
+  "after": [
+    {
+      "source": "translate([0,0,1]) difference(){square(1);square(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "linear_extrude(height=2,twist=30) difference(){square(1);square(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "rotate_extrude() difference(){square(1);square(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "hull(){difference(){cube(1);cube(1);}}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "projection() difference(){cube(1);cube(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "offset(1) difference(){square(1);square(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    },
+    {
+      "source": "translate([2,3,0]) difference(){circle(1);circle(1);}",
+      "expected": [
+        "empty"
+      ],
+      "actual": [
+        "empty"
+      ],
+      "matches": true
+    }
+  ],
+  "checks": {
+    "nativeBrepPassed": 41,
+    "brepIntegrationPassed": 57,
+    "artifactAndWorkerPassed": 19,
+    "svgWorkflowPassed": 122,
+    "ownCadPassed": 218,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "dist": {
+      "artifacts": 68,
+      "bytes": 4699439,
+      "totalBudget": 4700000
+    }
+  },
+  "scope": "Native empty-set propagation for known unary operations and all-empty hull. Nonempty feature support and complete B-rep qualification are not claimed.",
+  "limitations": [
+    "Full application corpus was not rerun for this checkpoint; the preceding transport checkpoint records that separate run.",
+    "Full native SemanticProgram admission remains incomplete."
+  ]
+}

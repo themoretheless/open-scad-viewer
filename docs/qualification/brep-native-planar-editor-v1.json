@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Atomic native retained-body push/pull and planar shell editor integration",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 39,
+    "testFiles": 7,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4606032
+  },
+  "coverage": [
+    "Push/pull signed volume and repeated edit",
+    "Retained B-rep and mesh agree in volume",
+    "Open shell volume and duplicate opening selection",
+    "Invalid selection, excessive thickness/displacement and curved support refuse without mesh fallback",
+    "Source and body identity preserved"
+  ],
+  "limitations": [
+    "Native operations remain convex planar; general curved direct editing and offsets incomplete",
+    "Display-to-support selection is numerical unique-plane admission",
+    "Bodies lacking B-rep retain the earlier mesh editing implementation",
+    "Shared qualification predates this artifact and complete migration remains open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_planar_edit.rs": "f1f4d78e935365fff7899269744094c1759c4b78a7631d6d52eea3275f9da3d9",
+    "crates/geometry-bridge/src/lib.rs": "a43af041523f936dfe073f4303f7c5b6bc7b50ccb9b2b7cee213c0141553fb87",
+    "src/services/directSolidTools.ts": "d9522158b67f3b6f562561614cf1bef55eab7839a03d67d7fca15181b024a8ac",
+    "src/features/DirectModeler.vue": "2aba49f33cf1563cc0c5948f89312efe7ee1ec291f5b60a58d55abe0ff35c9d4",
+    "tests/nativePlanarBodyEdit.test.ts": "36a98ca7c01d17f28588ae7ed0fcb879028e8afa6b0806c7a08ee17fdb895ebe",
+    "src/generated/geometry-kernels/bytes.ts": "9afa58a15ca7e17569bc9d3db29364f144d826f7b7db6f1e12d505decb5d0912"
+  }
+}

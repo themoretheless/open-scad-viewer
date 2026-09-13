@@ -1,0 +1,70 @@
+{
+  "scope": "Lossless compact Rust bootstrap packaging; not full B-rep qualification",
+  "tests": {
+    "focusedApplicationMcpPacking": 188,
+    "nativeBootstrap": 3,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed",
+    "distributionVerification": "passed"
+  },
+  "dist": {
+    "bytes": 4582433,
+    "budget": 4700000,
+    "geometryChunkBytes": 2213228,
+    "geometryChunkBudget": 2350000,
+    "totalBytesSaved": 143534
+  },
+  "geometryWasmUnchanged": true,
+  "sha256": {
+    "crates/wasm-brotli/src/lib.rs": "684d45c973a4771039f29194bd3a744cbf28abbc82159dda607a619315c81cf1",
+    "scripts/wasm-base85.mjs": "6d3f6a198db501f10cdbe5c4c2c341e1998484349c2e60f028151b5a2e153bc3",
+    "scripts/build-geometry-kernels.mjs": "13676b818f3f585b602850eb33cd30e3078653305ae705fe1509dddbd170861b",
+    "scripts/verify-packed-wasm.mjs": "bd170dd5d5f555bd3f4961fa94f01d8260a13c96cdb99f09af80d39c7d58f294",
+    "scripts/record-own-cad-oracle.mjs": "21cab6bd57ab4dcee1c415bc0bf63a91f3e16253f695b1f7b8ad42f2ba02ac3c",
+    "src/services/wasmBrotliPacking.ts": "078b0f7d8a760bde119228d8f857de544e05d503cc541ba5a8951e7662c29a41",
+    "tests/wasmBrotliPacking.test.ts": "5015602afd768d61fdcf728e297857e1d08413e52d3aa10f53c68972fa095968",
+    "src/generated/geometry-kernels/bytes.ts": "0ba54052d2ebe815d51e3fcb8251ffa34da68972b582bf15dadf1fab4551c8a4",
+    "src/generated/wasm-brotli/bytes.ts": "1909c63301aafb730440d40d74a90d417a3e1dc3bcc7ea42c3eb8dbbf4618f1a",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "08c3ee66a1963693cf830c72516403a061e482e4d7d33d2330091d1cff7b0de5"
+  },
+  "latency": {
+    "scope": "Node warm-bootstrap decode only; not browser or full kernel initialization",
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "roundsPerFormat": 8,
+    "bytes": 6922657,
+    "samplesMs": {
+      "base64": [
+        169.45120900000006,
+        168.66933400000016,
+        169.65137499999992,
+        167.91837499999997,
+        169.21562500000005,
+        166.80041600000004,
+        168.06591700000013,
+        166.50745899999993
+      ],
+      "base85": [
+        75.123334,
+        74.85445900000002,
+        74.39862499999981,
+        74.74799999999982,
+        73.87083400000006,
+        74.36870900000008,
+        74.01433399999996,
+        74.3934589999999
+      ]
+    },
+    "medianMs": {
+      "base64": 168.36762550000014,
+      "base85": 74.39604199999985
+    }
+  },
+  "limitations": [
+    "Latency measurement is Node warm-bootstrap decoding, not full initialization or browser interaction",
+    "Shared qualification not refreshed",
+    "General B-rep completion unproved"
+  ]
+}

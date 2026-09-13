@@ -1,0 +1,3 @@
+   Compiling curvex v0.1.0 (/private/tmp/osv-curvex-qualification/stress-final)
+    Finished `release` profile [optimized] target(s) in 53.86s
+     Running `/private/tmp/osv-curvex-qualification/migrated-01/target/release/examples/osv_render_qualification`

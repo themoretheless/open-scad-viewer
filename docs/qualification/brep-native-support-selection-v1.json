@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native numerical unique planar support selection for legacy editor mesh faces",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 35,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4600964
+  },
+  "coverage": [
+    "Cross-check selected support against tessellator faceIds at detail 1/3/8",
+    "Empty/out-of-range/degenerate/nonplanar selections refused",
+    "Translated stale display support refused",
+    "Curved face triangle refused",
+    "Multiple coplanar authored supports refused without guessing"
+  ],
+  "limitations": [
+    "Numerical support-plane admission is not certified trimmed-face correspondence or persistent naming",
+    "Explicit identity transfer with revision-bound display mapping remains necessary",
+    "Legacy display topology grouping and edge selection still contain host geometry",
+    "General B-rep completion and refreshed full qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_face_selection.rs": "cfd41a476ff73cd651d79d3424acb6ea926901508e1a4b6919417c446303afb1",
+    "crates/geometry-bridge/src/lib.rs": "ab596d58c9e3444112173e90c380110d6090570546d16b50394597f55d38ffdf",
+    "src/services/directSolidTools.ts": "ad06fda2f5f4ae5451daf2150c79a40dd1081baa37a41e804d4ead037aac254e",
+    "src/features/DirectModeler.vue": "0148849f1c76902aabe6a99f29302294ab125a711f504f37b6e87bdc74e69800",
+    "tests/nativeBrepFaceSelection.test.ts": "4f080088876ed8325837784d9c5f15d8065e4a69464c3ccc47f45f5637ac980e",
+    "src/generated/geometry-kernels/bytes.ts": "e90cb33984437759adf2a3512759b8d39cf3b663a0017c98d167a6c964a63da4"
+  }
+}

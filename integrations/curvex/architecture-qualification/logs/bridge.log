@@ -1,0 +1,25 @@
+   Compiling sdf-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/sdf-core)
+   Compiling slicer-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/slicer-core)
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+   Compiling geometry-bridge v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/geometry-bridge)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.89s
+     Running unittests src/lib.rs (crates/target/debug/build/geometry-bridge/7774ba0f3da8ad0b/out/geometry_bridge-7774ba0f3da8ad0b)
+
+running 8 tests
+test path2d::tests::compound_knife_and_scissors_transport_preserves_ring_grouping ... ok
+test path2d::tests::semantic_editor_options_survive_transport ... ok
+test path2d::tests::rejects_invalid_holes_and_dash_values_instead_of_discarding_them ... ok
+test path2d::tests::dispatches_ridge_smoothing_and_keeps_legacy_repeat_defaults ... ok
+test path2d::tests::dispatches_single_ring_stipple_jitter_and_seed_without_dropping_options ... ok
+test path2d::tests::node_editing_and_missing_mesh_tools_are_reachable ... ok
+test path2d::tests::dispatches_miter_limit_without_requiring_region_flag_and_preserves_concentric_nesting ... ok
+test path2d::tests::dispatches_fill_rule_and_holes_for_mesh_offset_and_gradient ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 50 filtered out; finished in 0.01s
+
+     Running tests/analytic_brep_tessellation.rs (crates/target/debug/build/geometry-bridge/de0e3eacf66a7979/out/analytic_brep_tessellation-de0e3eacf66a7979)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+

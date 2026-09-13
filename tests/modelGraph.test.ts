@@ -15,12 +15,17 @@ describe('ModelGraph/1 frontend', () => {
     } finally { await runtime.close() }
   })
 
-  it('builds real geometry and preserves its actual Manifold execution identity', async () => {
+  it('builds real geometry and preserves the own Rust mesh execution identity', async () => {
     const compiled = compileModelGraph(MODELGRAPH_EXAMPLE)
     const analysis = await new HeadlessGeometryService().analyze(compiled.source, 'full')
     expect(analysis.volume).toBeGreaterThan(9100)
     expect(analysis.volume).toBeLessThan(9600)
-    expect(analysis.execution.engineClass).toBe('manifold')
+    expect(analysis.execution).toMatchObject({
+      engineClass: 'mesh',
+      languageContract: 'legacy/current',
+      automaticFallback: false,
+      evidence: 'runtime',
+    })
     expect(analysis.bounds).toEqual({ min: [0, 0, 0], max: [40, 30, 8] })
   })
 

@@ -1,19 +1,17 @@
-//! G-code encoding of a planned toolpath. Not a print process and not the
-//! only possible machine dialect. No mesh/NURBS/WASM dependency.
-//! Coordinates are millimeters; feedrate is mm/s internally and F is mm/min.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+//! Bounded, model-space G-code previews, not executable printer jobs.
+//! XYZ is millimeters; E is absolute filament length; F is mm/min on disk.
 
-pub const DIALECT: &str = "open-scad-viewer/print-preview 1";
+use std::fmt::{self, Write};
+
+pub const DIALECT: &str = "open-scad-viewer/print-preview 2";
 pub const MAX_LAYERS: usize = 2_048;
+pub const MAX_MOVES: usize = 100_000;
 pub const MAX_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
+pub const MAX_LINE_BYTES: usize = 1_024;
+pub const MAX_COORDINATE_MM: f64 = 1_000_000.0;
+pub const COORDINATE_RESOLUTION_MM: f64 = 0.00001;
+const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
+const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
 pub use math_core::{Error, Result};
 
@@ -40,19 +38,27 @@ impl Default for MachineProfile {
 
 impl MachineProfile {
     pub fn validate(&self) -> Result<()> {
-        if ![
+        let dimensions = [
             self.layer_height_mm,
             self.line_width_mm,
-            self.print_feedrate_mm_s,
-            self.travel_feedrate_mm_s,
             self.filament_diameter_mm,
-        ]
-        .iter()
-        .all(|value| value.is_finite() && *value > 0.0)
+        ];
+        let speeds = [self.print_feedrate_mm_s, self.travel_feedrate_mm_s];
+        if !dimensions.iter().all(|v| valid_dimension(*v))
+            || !speeds
+                .iter()
+                .all(|v| v.is_finite() && (MIN_FEEDRATE_MM_S..=MAX_COORDINATE_MM).contains(v))
+            || ![
+                self.bead_area_mm2(),
+                self.filament_area_mm2(),
+                self.bead_area_mm2() / self.filament_area_mm2(),
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v > 0.0)
         {
-            return Err(Error::new(
+            return Err(invalid(
                 "GCODE_INVALID_SETTINGS",
-                "Machine profile values must be finite and positive",
+                "Dimensions must be 0.00001..1000000 mm and speeds 0.001/60..1000000 mm/s, with finite positive derived values",
             ));
         }
         Ok(())
@@ -84,7 +90,18 @@ pub struct GcodeMove {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+    /// Absolute filament position in millimeters.
+    pub e: f64,
+    pub feedrate_mm_s: f64,
+    pub layer_index: usize,
+    /// True only when absolute E increases on this movement.
     pub extruded: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GcodeBounds {
+    pub min: [f64; 3],
+    pub max: [f64; 3],
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -93,6 +110,12 @@ pub struct GcodePreview {
     pub extrusion_mm: f64,
     pub deposited_volume_mm3: f64,
     pub moves: Vec<GcodeMove>,
+    /// Bounds of fully known positions, without an assumed machine origin.
+    pub bounds: Option<GcodeBounds>,
+    pub travel_distance_mm: f64,
+    pub print_distance_mm: f64,
+    /// Nominal distance / commanded speed; excludes acceleration and startup.
+    pub estimated_time_s: f64,
 }
 
 impl GcodePreview {
@@ -106,6 +129,18 @@ fn invalid(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
 
+fn valid_dimension(value: f64) -> bool {
+    value.is_finite() && (COORDINATE_RESOLUTION_MM..=MAX_COORDINATE_MM).contains(&value)
+}
+
+fn valid_coordinate(value: f64) -> bool {
+    value.is_finite() && value.abs() <= MAX_COORDINATE_MM
+}
+
+fn rounded_coordinate(value: f64) -> f64 {
+    (value * 100_000.0).round() / 100_000.0
+}
+
 fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
     if layers.len() > MAX_LAYERS {
         return Err(invalid(
@@ -113,141 +148,523 @@ fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
             "G-code preview exceeded 2048 layers",
         ));
     }
-    if layers.iter().any(|layer| !layer.z_mm.is_finite()) {
-        return Err(invalid(
-            "GCODE_INVALID_HEIGHT",
-            "Layer height must be finite",
-        ));
+    let mut previous_z = None;
+    let mut moves = 0usize;
+    let mut paths = 0usize;
+    for layer in layers {
+        if !valid_coordinate(layer.z_mm) {
+            return Err(invalid(
+                "GCODE_INVALID_HEIGHT",
+                "Layer Z must be finite and within +/-1000000 mm",
+            ));
+        }
+        let z = rounded_coordinate(layer.z_mm);
+        if previous_z.is_some_and(|previous| z <= previous) {
+            return Err(invalid(
+                "GCODE_INVALID_HEIGHT",
+                "Layer Z must increase at the exported 0.00001 mm resolution",
+            ));
+        }
+        previous_z = Some(z);
+        moves += 1;
+        if moves > MAX_MOVES {
+            return Err(move_limit());
+        }
+        for path in &layer.paths {
+            paths += 1;
+            // Bound work before visiting vertices or allocating output, even for one huge layer.
+            let additional = path.points.len().checked_add(usize::from(path.closed));
+            moves = additional
+                .and_then(|n| moves.checked_add(n))
+                .ok_or_else(move_limit)?;
+            if paths > MAX_MOVES || moves > MAX_MOVES {
+                return Err(move_limit());
+            }
+            if path.closed && path.points.len() < 3 {
+                return Err(invalid(
+                    "GCODE_INVALID_PATH",
+                    "A closed path needs at least three points",
+                ));
+            }
+            if path
+                .points
+                .iter()
+                .flatten()
+                .any(|value| !valid_coordinate(*value))
+            {
+                return Err(invalid(
+                    "GCODE_INVALID_COORDINATE",
+                    "Path coordinates must be finite and within +/-1000000 mm",
+                ));
+            }
+        }
     }
     Ok(())
 }
 
-fn path_vertices(path: &PlannedPath) -> Vec<[f64; 2]> {
-    if path.closed && path.points.len() >= 3 {
-        let mut points = path.points.clone();
-        points.push(path.points[0]);
-        points
-    } else {
-        path.points.clone()
-    }
+fn move_limit() -> Error {
+    invalid(
+        "GCODE_MOVE_LIMIT",
+        "G-code preview exceeded 100000 moves or paths",
+    )
 }
 
 pub fn path_length_mm(path: &PlannedPath) -> f64 {
-    let points = path_vertices(path);
-    if points.len() < 2 {
-        return 0.0;
+    let open: f64 = path
+        .points
+        .windows(2)
+        .map(|pair| (pair[1][0] - pair[0][0]).hypot(pair[1][1] - pair[0][1]))
+        .sum();
+    if path.closed && path.points.len() >= 3 {
+        let first = path.points[0];
+        let last = path.points[path.points.len() - 1];
+        open + (last[0] - first[0]).hypot(last[1] - first[1])
+    } else {
+        open
     }
-    points
-        .array_windows()
-        .map(|[a, b]| (b[0] - a[0]).hypot(b[1] - a[1]))
-        .sum()
 }
 
+/// Analytic volume of an unquantized plan. Callers must validate their plan/profile.
 pub fn deposited_volume_mm3(layers: &[PlannedLayer], machine: &MachineProfile) -> f64 {
     let area = machine.bead_area_mm2();
     layers
         .iter()
-        .flat_map(|layer| layer.paths.iter())
+        .flat_map(|layer| &layer.paths)
         .map(|path| path_length_mm(path) * area)
         .sum()
 }
 
-/// Serialize a completed print plan. Units are millimeters; E is filament length.
+/// Fails before an append would take the string length past the public output limit.
+struct BoundedOutput(String);
+
+impl Write for BoundedOutput {
+    fn write_str(&mut self, text: &str) -> fmt::Result {
+        if text.len() > MAX_OUTPUT_BYTES.saturating_sub(self.0.len()) {
+            return Err(fmt::Error);
+        }
+        self.0.push_str(text);
+        Ok(())
+    }
+}
+
+fn output_limit(_: fmt::Error) -> Error {
+    invalid("GCODE_OUTPUT_LIMIT", "G-code preview exceeds 4 MiB")
+}
+
+/// Serialize a preview plan. This contains no homing/heating or printer setup.
 pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String> {
     machine.validate()?;
     require_layers(layers)?;
-    let filament = machine.filament_area_mm2();
-    if filament <= 0.0 {
-        return Err(invalid(
-            "GCODE_INVALID_SETTINGS",
-            "Filament diameter must be positive",
-        ));
-    }
-    let area = machine.bead_area_mm2();
+    let ratio = machine.bead_area_mm2() / machine.filament_area_mm2();
     let print_f = machine.print_feedrate_mm_s * 60.0;
     let travel_f = machine.travel_feedrate_mm_s * 60.0;
-    let mut out = format!("; {DIALECT}\nG21\nG90\nM82\nG92 E0\n");
+    let mut out = BoundedOutput(String::new());
+    writeln!(out, "; {DIALECT}\n; Preview only: model coordinates, no printer startup or shutdown\n;FILAMENT_DIAMETER_MM:{}", machine.filament_diameter_mm).map_err(output_limit)?;
+    for command in PROLOGUE {
+        writeln!(out, "{command}").map_err(output_limit)?;
+    }
     let mut e = 0.0;
+    let mut written_e = 0.0;
     for (index, layer) in layers.iter().enumerate() {
-        out.push_str(&format!(
-            ";LAYER:{index}\n;Z:{:.5}\nG1 Z{:.5} F{travel_f:.3}\n",
-            layer.z_mm, layer.z_mm
-        ));
+        let z = rounded_coordinate(layer.z_mm);
+        writeln!(out, ";LAYER:{index}\n;Z:{z:.5}\nG1 Z{z:.5} F{travel_f:.3}")
+            .map_err(output_limit)?;
         for path in &layer.paths {
-            if path.points.is_empty() {
+            let Some(first) = path.points.first() else {
                 continue;
+            };
+            let start = first.map(rounded_coordinate);
+            writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
+                .map_err(output_limit)?;
+            let mut previous = start;
+            for point in path
+                .points
+                .iter()
+                .skip(1)
+                .chain(path.closed.then_some(first))
+            {
+                let next = point.map(rounded_coordinate);
+                let length = (next[0] - previous[0]).hypot(next[1] - previous[1]);
+                if length == 0.0 {
+                    continue;
+                }
+                let next_e = e + length * ratio;
+                if !next_e.is_finite() || next_e <= e {
+                    return Err(invalid(
+                        "GCODE_NUMERIC",
+                        "Extrusion accumulation exceeds numeric precision",
+                    ));
+                }
+                let e_text = format!("{next_e:.7}");
+                let next_written_e = number(&e_text)?;
+                if !next_written_e.is_finite() || next_written_e <= written_e {
+                    return Err(invalid(
+                        "GCODE_NUMERIC",
+                        "A segment's extrusion cannot be represented at 0.0000001 mm precision",
+                    ));
+                }
+                e = next_e;
+                written_e = next_written_e;
+                writeln!(
+                    out,
+                    "G1 X{:.5} Y{:.5} E{e_text} F{print_f:.3}",
+                    next[0], next[1]
+                )
+                .map_err(output_limit)?;
+                previous = next;
             }
-            let start = path.points[0];
-            out.push_str(&format!(
-                "G0 X{:.5} Y{:.5} F{travel_f:.3}\n",
-                start[0], start[1]
-            ));
-            for [a, b] in path_vertices(path).array_windows() {
-                let length = (b[0] - a[0]).hypot(b[1] - a[1]);
-                e += length * area / filament;
-                out.push_str(&format!(
-                    "G1 X{:.5} Y{:.5} E{:.7} F{print_f:.3}\n",
-                    b[0], b[1], e
-                ));
-            }
-        }
-        if out.len() > MAX_OUTPUT_BYTES {
-            return Err(invalid(
-                "GCODE_OUTPUT_LIMIT",
-                "G-code preview exceeds 4 MiB",
-            ));
         }
     }
-    out.push_str("M104 S0\nM140 S0\nG28\n");
-    Ok(out)
+    Ok(out.0)
 }
 
-/// Independent parse of exported preview G-code. Physical print is out of scope.
+#[derive(Default)]
+struct MoveWords {
+    x: Option<f64>,
+    y: Option<f64>,
+    z: Option<f64>,
+    e: Option<f64>,
+    f: Option<f64>,
+}
+
+fn number(text: &str) -> Result<f64> {
+    text.parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
+        .ok_or_else(|| {
+            invalid(
+                "GCODE_INVALID_NUMBER",
+                "G-code numbers must be finite decimal values",
+            )
+        })
+}
+
+fn words<'a>(tokens: impl Iterator<Item = &'a str>) -> Result<MoveWords> {
+    let mut words = MoveWords::default();
+    let mut count = 0;
+    for token in tokens {
+        // Check ASCII before splitting: malformed Unicode must never panic.
+        if token.len() < 2 || !token.is_ascii() {
+            return Err(invalid(
+                "GCODE_SYNTAX",
+                "Expected whitespace-separated axis/value words",
+            ));
+        }
+        let (axis, value) = token.split_at(1);
+        let slot = match axis {
+            "X" => &mut words.x,
+            "Y" => &mut words.y,
+            "Z" => &mut words.z,
+            "E" => &mut words.e,
+            "F" => &mut words.f,
+            _ => return Err(invalid("GCODE_SYNTAX", "Unsupported G-code move word")),
+        };
+        if slot.is_some() {
+            return Err(invalid("GCODE_SYNTAX", "Duplicate G-code move word"));
+        }
+        *slot = Some(number(value)?);
+        count += 1;
+    }
+    if count == 0 {
+        return Err(invalid(
+            "GCODE_SYNTAX",
+            "A move needs at least one axis or feedrate",
+        ));
+    }
+    Ok(words)
+}
+
+/// Strict parser for this crate's preview dialect, not a general printer parser.
+/// Initial incomplete XYZ setup establishes position without inventing an origin.
 pub fn parse(gcode: &str) -> Result<GcodePreview> {
-    if !gcode.starts_with(&format!("; {DIALECT}")) {
+    if gcode.len() > MAX_OUTPUT_BYTES {
+        return Err(invalid(
+            "GCODE_OUTPUT_LIMIT",
+            "G-code preview exceeds 4 MiB",
+        ));
+    }
+    if gcode.lines().next() == Some("; open-scad-viewer/print-preview 1") {
+        return Err(invalid(
+            "GCODE_DIALECT",
+            "Legacy print-preview 1 is unsupported; regenerate the preview with the current exporter",
+        ));
+    }
+    if gcode.lines().next() != Some(format!("; {DIALECT}").as_str()) {
         return Err(invalid(
             "GCODE_DIALECT",
             "Not an open-scad-viewer print preview",
         ));
     }
-    let mut layers = 0_usize;
-    let mut extrusion_mm = 0.0;
-    let mut x = 0.0;
-    let mut y = 0.0;
-    let mut z = 0.0;
-    let mut moves = Vec::new();
-    for line in gcode.lines() {
-        if let Some(rest) = line.strip_prefix(";LAYER:")
-            && rest.parse::<usize>().is_ok()
-        {
-            layers += 1;
-        }
-        let command = line.split_whitespace().next().unwrap_or("");
-        if command != "G0" && command != "G1" {
-            continue;
-        }
-        let extruded = line.contains(" E");
-        for token in line.split_whitespace().skip(1) {
-            if token.len() < 2 {
-                continue;
+    let mut result = GcodePreview {
+        layers: 0,
+        extrusion_mm: 0.0,
+        deposited_volume_mm3: 0.0,
+        moves: Vec::new(),
+        bounds: None,
+        travel_distance_mm: 0.0,
+        print_distance_mm: 0.0,
+        estimated_time_s: 0.0,
+    };
+    let mut prologue = 0;
+    let mut diameter = None;
+    let mut position = [0.0f64; 3];
+    let mut known = [false; 3];
+    let mut feedrate = None;
+    let mut current_layer_z = None;
+    let mut previous_layer_z = None;
+    let mut annotated_z = None;
+    let mut move_count = 0usize;
+    for (line_index, raw) in gcode.lines().enumerate().skip(1) {
+        let line_result: Result<()> = (|| {
+            if raw.len() > MAX_LINE_BYTES {
+                return Err(invalid(
+                    "GCODE_LINE_LIMIT",
+                    "G-code line exceeds 1024 bytes",
+                ));
             }
-            let (axis, value) = token.split_at(1);
-            if let Ok(number) = value.parse::<f64>() {
-                match axis {
-                    "X" => x = number,
-                    "Y" => y = number,
-                    "Z" => z = number,
-                    "E" => extrusion_mm = number,
-                    _ => {}
+            let line = raw.trim();
+            if let Some(text) = line.strip_prefix(";FILAMENT_DIAMETER_MM:") {
+                if diameter.is_some() || result.layers != 0 {
+                    return Err(invalid(
+                        "GCODE_METADATA",
+                        "Filament diameter must occur once before layers",
+                    ));
+                }
+                let value = number(text)?;
+                if !valid_dimension(value) {
+                    return Err(invalid(
+                        "GCODE_INVALID_SETTINGS",
+                        "Invalid filament diameter metadata",
+                    ));
+                }
+                diameter = Some(value);
+                return Ok(());
+            }
+            if let Some(text) = line.strip_prefix(";LAYER:") {
+                if prologue != PROLOGUE.len() || diameter.is_none() {
+                    return Err(invalid(
+                        "GCODE_PROLOGUE",
+                        "Layers require complete units/modes and filament metadata",
+                    ));
+                }
+                if result.layers > 0 && current_layer_z.is_none() {
+                    return Err(invalid(
+                        "GCODE_LAYER",
+                        "Each layer must establish its Z coordinate",
+                    ));
+                }
+                let index = text
+                    .parse::<usize>()
+                    .map_err(|_| invalid("GCODE_LAYER", "Invalid layer index"))?;
+                if index != result.layers {
+                    return Err(invalid(
+                        "GCODE_LAYER",
+                        "Layer indices must start at zero and be consecutive",
+                    ));
+                }
+                if result.layers == MAX_LAYERS {
+                    return Err(invalid(
+                        "GCODE_LAYER_LIMIT",
+                        "G-code preview exceeded 2048 layers",
+                    ));
+                }
+                result.layers += 1;
+                previous_layer_z = current_layer_z;
+                current_layer_z = None;
+                annotated_z = None;
+                return Ok(());
+            }
+            if let Some(text) = line.strip_prefix(";Z:") {
+                let value = number(text)?;
+                if result.layers == 0
+                    || current_layer_z.is_some()
+                    || annotated_z.is_some()
+                    || !valid_coordinate(value)
+                {
+                    return Err(invalid(
+                        "GCODE_LAYER",
+                        "Invalid or misplaced layer Z metadata",
+                    ));
+                }
+                annotated_z = Some(value);
+                return Ok(());
+            }
+            let command_text = line.split(';').next().unwrap_or("").trim();
+            if command_text.is_empty() {
+                return Ok(());
+            }
+            let mut tokens = command_text.split_whitespace();
+            let command = tokens.next().unwrap_or("");
+            if prologue < PROLOGUE.len() {
+                if command_text
+                    .split_whitespace()
+                    .ne(PROLOGUE[prologue].split_whitespace())
+                {
+                    return Err(invalid(
+                        "GCODE_PROLOGUE",
+                        "Expected G21, G90, M82, M200 D0, then G92 E0",
+                    ));
+                }
+                prologue += 1;
+                return Ok(());
+            }
+            if command != "G0" && command != "G1" {
+                return Err(invalid(
+                    "GCODE_UNSUPPORTED_COMMAND",
+                    "Only absolute G0/G1 moves are allowed after preview setup",
+                ));
+            }
+            if result.layers == 0 {
+                return Err(invalid("GCODE_LAYER", "Motion must follow a layer marker"));
+            }
+            move_count += 1;
+            if move_count > MAX_MOVES {
+                return Err(move_limit());
+            }
+            let words = words(tokens)?;
+            let old_position = position;
+            let was_known = known.iter().all(|v| *v);
+            for (index, value) in [words.x, words.y, words.z].into_iter().enumerate() {
+                if let Some(value) = value {
+                    if !valid_coordinate(value) {
+                        return Err(invalid(
+                            "GCODE_INVALID_COORDINATE",
+                            "Move coordinates must be within +/-1000000 mm",
+                        ));
+                    }
+                    position[index] = value;
+                    known[index] = true;
                 }
             }
-        }
-        moves.push(GcodeMove { x, y, z, extruded });
+            if current_layer_z.is_none() {
+                let z = words.z.ok_or_else(|| {
+                    invalid("GCODE_LAYER", "The first move in each layer must set Z")
+                })?;
+                if previous_layer_z.is_some_and(|previous| z <= previous)
+                    || annotated_z.is_some_and(|annotation| z != annotation)
+                {
+                    return Err(invalid(
+                        "GCODE_LAYER",
+                        "Layer Z must increase and match its annotation",
+                    ));
+                }
+                current_layer_z = Some(z);
+            } else if position[2] != current_layer_z.unwrap_or(position[2]) {
+                return Err(invalid(
+                    "GCODE_LAYER",
+                    "Z changes require a new layer marker",
+                ));
+            }
+            if let Some(value) = words.f {
+                if value < 0.001 || value > MAX_COORDINATE_MM * 60.0 {
+                    return Err(invalid(
+                        "GCODE_INVALID_FEEDRATE",
+                        "Feedrate F must be 0.001..60000000 mm/min",
+                    ));
+                }
+                feedrate = Some(value / 60.0);
+            }
+            let feedrate = feedrate.ok_or_else(|| {
+                invalid(
+                    "GCODE_INVALID_FEEDRATE",
+                    "A move requires an established positive feedrate",
+                )
+            })?;
+            let e = words.e.unwrap_or(result.extrusion_mm);
+            if e < result.extrusion_mm {
+                return Err(invalid(
+                    "GCODE_UNSUPPORTED_EXTRUSION",
+                    "Preview extrusion cannot retract or decrease",
+                ));
+            }
+            let extruded = e > result.extrusion_mm;
+            let is_known = known.iter().all(|v| *v);
+            let distance = if was_known {
+                (position[0] - old_position[0])
+                    .hypot(position[1] - old_position[1])
+                    .hypot(position[2] - old_position[2])
+            } else {
+                0.0
+            };
+            if extruded
+                && (command != "G1"
+                    || !was_known
+                    || distance == 0.0
+                    || position[2] != old_position[2])
+            {
+                return Err(invalid(
+                    "GCODE_UNSUPPORTED_EXTRUSION",
+                    "Extrusion needs a G1 XY segment from a known position at fixed Z",
+                ));
+            }
+            result.extrusion_mm = e;
+            if !is_known {
+                return Ok(());
+            }
+            // A pure F command updates modal speed without fabricating a movement.
+            if words.x.is_none() && words.y.is_none() && words.z.is_none() && words.e.is_none() {
+                return Ok(());
+            }
+            if extruded {
+                result.print_distance_mm += distance;
+            } else {
+                result.travel_distance_mm += distance;
+            }
+            result.estimated_time_s += distance / feedrate;
+            if let Some(bounds) = &mut result.bounds {
+                for (axis, value) in position.iter().enumerate() {
+                    bounds.min[axis] = bounds.min[axis].min(*value);
+                    bounds.max[axis] = bounds.max[axis].max(*value);
+                }
+            } else {
+                result.bounds = Some(GcodeBounds {
+                    min: position,
+                    max: position,
+                });
+            }
+            result.moves.push(GcodeMove {
+                x: position[0],
+                y: position[1],
+                z: position[2],
+                e,
+                feedrate_mm_s: feedrate,
+                layer_index: result.layers - 1,
+                extruded,
+            });
+            Ok(())
+        })();
+        line_result.map_err(|error| {
+            invalid(
+                error.code,
+                &format!("Line {}: {}", line_index + 1, error.message),
+            )
+        })?;
     }
-    Ok(GcodePreview {
-        layers,
-        extrusion_mm,
-        deposited_volume_mm3: 0.0,
-        moves,
-    })
+    if prologue != PROLOGUE.len() || diameter.is_none() {
+        return Err(invalid(
+            "GCODE_PROLOGUE",
+            "Preview is missing complete units/modes or filament metadata",
+        ));
+    }
+    if result.layers > 0 && current_layer_z.is_none() {
+        return Err(invalid("GCODE_LAYER", "Final layer has no Z coordinate"));
+    }
+    let filament_area = std::f64::consts::PI * (diameter.unwrap_or(0.0) / 2.0).powi(2);
+    result.deposited_volume_mm3 = result.extrusion_mm * filament_area;
+    if ![
+        result.extrusion_mm,
+        result.deposited_volume_mm3,
+        result.travel_distance_mm,
+        result.print_distance_mm,
+        result.estimated_time_s,
+    ]
+    .iter()
+    .all(|v| v.is_finite())
+    {
+        return Err(invalid(
+            "GCODE_NUMERIC",
+            "Preview totals exceed numeric precision",
+        ));
+    }
+    Ok(result)
 }

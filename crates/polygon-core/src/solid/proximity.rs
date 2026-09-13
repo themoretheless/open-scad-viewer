@@ -40,13 +40,39 @@ pub fn valid_source(mesh: &Mesh, max_triangles: usize) -> Result<Mesh> {
 pub fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
     let ab = sub(b, a);
     let ac = sub(c, a);
+    let ap = sub(p, a);
+    if !ab.iter().chain(&ac).chain(&ap).all(|v| v.is_finite()) {
+        return [f64::NAN; 3];
+    }
+    let scale = ab
+        .iter()
+        .chain(&ac)
+        .chain(&ap)
+        .map(|v| v.abs())
+        .fold(0., f64::max);
+    if scale == 0. {
+        return a;
+    }
+    let q = closest_triangle_normalized(
+        ap.map(|v| v / scale),
+        [0.; 3],
+        ab.map(|v| v / scale),
+        ac.map(|v| v / scale),
+    );
+    std::array::from_fn(|k| a[k] + q[k] * scale)
+}
+fn closest_triangle_normalized(p: Point, a: Point, b: Point, c: Point) -> Point {
+    let ab = sub(b, a);
+    let ac = sub(c, a);
     let n = cross(ab, ac);
-    let nn = dot(n, n);
-    if nn > 0. {
+    let magnitude = n.iter().map(|v| v.abs()).fold(0., f64::max);
+    if magnitude > 0. {
+        let n = n.map(|v| v / magnitude);
+        let nn = dot(n, n);
         let q = std::array::from_fn(|k| p[k] - n[k] * dot(sub(p, a), n) / nn);
         let aq = sub(q, a);
-        let v = dot(cross(aq, ac), n) / nn;
-        let w = dot(cross(ab, aq), n) / nn;
+        let v = (dot(cross(aq, ac), n) / magnitude) / nn;
+        let w = (dot(cross(ab, aq), n) / magnitude) / nn;
         if v >= 0. && w >= 0. && v + w <= 1. {
             return q;
         }
@@ -125,6 +151,30 @@ impl TrianglePoints for [usize] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nearest_triangle_scale_covariance() {
+        for scale in [1e-100, 1., 1e100] {
+            let scaled = |p: Point| p.map(|v| v * scale);
+            let a = [0.; 3];
+            let b = scaled([1., 0., 0.]);
+            let c = scaled([0., 1., 0.]);
+            for [a, b, c] in [[a, b, c], [c, b, a], [b, c, a]] {
+                for (p, expected) in [
+                    ([0.2, 0.3, 4.], [0.2, 0.3, 0.]),
+                    ([1., 1., 0.], [0.5, 0.5, 0.]),
+                    ([-2., -3., 0.], [0.; 3]),
+                ] {
+                    let result = closest_triangle(scaled(p), a, b, c);
+                    for (actual, expected) in result.into_iter().zip(expected) {
+                        assert!(
+                            (actual / scale - expected).abs() < 1e-12,
+                            "scale {scale}: {result:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
     #[test]
     fn nearest_regions() {
         let a = [0.; 3];

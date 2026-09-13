@@ -2,8 +2,28 @@ import { describe, expect, it } from 'vitest'
 import {
   buildMeshBvh,
   meshBvhTransferables,
-  raycastMeshBvh,
 } from '../src/services/meshBvh'
+
+import type { BvhRay, MeshBvh, MeshBvhHit, RaycastMeshBvhOptions } from '../src/services/meshBvh'
+import { createPickingSnapshotInKernel } from '../src/services/geometry/meshAnalysis'
+import { callGeometryRust } from '../src/services/geometry/kernel'
+
+// Exercise the shipped Rust/WASM query, including upload and disposal. The
+// worker BVH supplies construction options only; Rust owns the query snapshot.
+function raycastMeshBvh(bvh: MeshBvh, vertices: Float32Array, indices: Uint32Array,
+  ray: BvhRay, options: RaycastMeshBvhOptions = {}): MeshBvhHit | null {
+  const handle = createPickingSnapshotInKernel(vertices, indices, bvh.vertexStride, bvh.leafSize)
+  try {
+    return callGeometryRust('mesh_picking', {
+      action: 'query', handle, origin: ray.origin, direction: ray.direction,
+      minT: options.minT ?? null, maxT: options.maxT ?? null,
+      excludedTriangles: Array.from(options.excludedTriangles ?? []),
+      localFromWorld: options.localFromWorld ? Array.from(options.localFromWorld) : null,
+    })
+  } finally {
+    callGeometryRust('mesh_picking', { action: 'dispose', handle })
+  }
+}
 
 function vertexBuffer(points: Array<[number, number, number]>): Float32Array {
   return new Float32Array(points.flatMap(([x, y, z]) => [x, y, z, 0, 0, 1]))
@@ -58,7 +78,7 @@ describe('mesh BVH construction', () => {
   })
 })
 
-describe('mesh BVH raycasting', () => {
+describe('Rust/WASM mesh BVH raycasting', () => {
   it('returns triangle identity, hit points, barycentrics and face orientation', () => {
     const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
     const indices = new Uint32Array([0, 1, 2])

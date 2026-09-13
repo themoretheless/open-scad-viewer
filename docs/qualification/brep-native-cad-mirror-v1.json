@@ -1,0 +1,36 @@
+{
+  "scope": "Native atomic CAD mirror of mesh and retained B-rep",
+  "date": "2026-09-13",
+  "fullGoalComplete": false,
+  "checks": {
+    "polygonCoreNativeTests": 72,
+    "wasmApplicationTests": 71,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4590491
+  },
+  "coverage": [
+    "Offset oblique plane with independent coordinate expectation",
+    "Positive mesh and B-rep volume and matching bounds",
+    "Double reflection restores mesh coordinates and winding",
+    "Copy preserves source and creates distinct body ID",
+    "Invalid late B-rep rejects batch without source mutation",
+    "Zero normal refusal and subsequent recovery",
+    "Native plane normal scale invariance from minimum subnormal to maximum finite"
+  ],
+  "limitations": [
+    "General certified curved B-rep operations remain incomplete",
+    "Other CAD computations still require migration from TypeScript",
+    "Shared full qualification predates this scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_body_affine.rs": "7e694d833a5a9a5b492313894688e11ac253c3cab7c7e008a72e3e1373e273e1",
+    "crates/geometry-bridge/src/lib.rs": "e1479152ca53d793aaeed2c59e94d4fbe2f484b61386e1da0c88b4eda2aead3f",
+    "crates/polygon-core/src/scene_flatten.rs": "43097fae5b7767eb5b104041b08959a698e2836e5d2c4903658d2b07d60e8cf8",
+    "src/services/cadWorkbench.ts": "414f13fcb375563730b8a3cf58aed2bd55890bf7d0d074f7af2ab3b1ffeebbe1",
+    "tests/cadWorkbench.test.ts": "1463fb40e13c50f17120380d85042a25d28590945f51f6e18a48ec5c0235fc62",
+    "src/generated/geometry-kernels/bytes.ts": "22803113fd9d77fa7e6548fd9f64d8ceb89198659681c1387c8b6ad8facefe92"
+  }
+}

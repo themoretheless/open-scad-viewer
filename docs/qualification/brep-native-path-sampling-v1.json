@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native batch arclength sampling for workbench loft sections",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 80,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4616974
+  },
+  "coverage": [
+    "2D and 3D polyline arclength interpolation, repeated vertices and clamped endpoints",
+    "Batch and single point adapters agree",
+    "Zero-length, malformed dimension, nonfinite input and over-limit sample requests refuse",
+    "Source preservation and successful recovery after refusal",
+    "Existing loft and direct editor regressions"
+  ],
+  "limitations": [
+    "Piecewise linear sampling only; no certified analytic arclength",
+    "Loft section matching and further host orchestration remain to migrate",
+    "General B-rep and shared qualification remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_path.rs": "beec1f21ae65336adf48c47e568ca4b7b79b80bf0c59bac5b6bffdbb922d7fc8",
+    "crates/geometry-bridge/src/lib.rs": "4453d4154d58af4a2fbef29e45d8350809095be47d8d64959fe72ffc72d3d8c2",
+    "src/services/cadWorkbench.ts": "fc0890f99d388c933258b0e4f5e3b951dec142379fba54891a80137bbba48131",
+    "tests/cadWorkbench.test.ts": "130af661cd241bcea0447a71d41c9f4880c050f9d7a3526fe5a3120cba5cd413",
+    "src/generated/geometry-kernels/bytes.ts": "e84d7db525dfb6595de86db5c59879110603e0b472d52debe1dc54e34fe340fb"
+  }
+}

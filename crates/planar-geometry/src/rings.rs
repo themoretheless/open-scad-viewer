@@ -54,116 +54,9 @@ fn filled(winding: i32, rule: Option<FillRule>) -> bool {
     }
 }
 
-#[derive(Clone, Copy)]
-struct WindingEdge {
-    a: [f64; 2],
-    b: [f64; 2],
-    operand: usize,
-}
+mod winding;
+use winding::WindingIndex;
 
-/// Interval index for horizontal ray queries. A typical smooth outline has
-/// only two active edges at a queried height, so boundary classification should
-/// not rescan thousands of unrelated source edges per atomic segment.
-struct WindingIndex {
-    middle: f64,
-    lower: Vec<WindingEdge>,
-    upper: Vec<WindingEdge>,
-    left: Option<Box<Self>>,
-    right: Option<Box<Self>>,
-}
-
-impl WindingIndex {
-    fn new(a: &Rings, b: &Rings) -> Option<Box<Self>> {
-        Self::build(
-            [a, b]
-                .into_iter()
-                .enumerate()
-                .flat_map(|(operand, rings)| {
-                    rings.iter().flat_map(move |ring| {
-                        (0..ring.len()).map(move |i| WindingEdge {
-                            a: ring[i],
-                            b: ring[(i + 1) % ring.len()],
-                            operand,
-                        })
-                    })
-                })
-                .filter(|edge| edge.a[1] != edge.b[1])
-                .collect(),
-        )
-    }
-
-    fn build(edges: Vec<WindingEdge>) -> Option<Box<Self>> {
-        if edges.is_empty() {
-            return None;
-        }
-        // Split at a median lower endpoint, rather than an interpolated center:
-        // the median interval necessarily spans this coordinate even if it is
-        // only one ULP high. Both recursive sides contain at most half the edges.
-        let mut starts: Vec<_> = edges.iter().map(|e| e.a[1].min(e.b[1])).collect();
-        let median = starts.len() / 2;
-        starts.select_nth_unstable_by(median, f64::total_cmp);
-        Some(Box::new(Self::partition_at(edges, starts[median])))
-    }
-
-    fn partition_at(edges: Vec<WindingEdge>, middle: f64) -> Self {
-        let (mut left, mut right, mut lower) = (Vec::new(), Vec::new(), Vec::new());
-        for edge in edges {
-            if edge.a[1].max(edge.b[1]) <= middle {
-                left.push(edge);
-            } else if edge.a[1].min(edge.b[1]) > middle {
-                right.push(edge);
-            } else {
-                lower.push(edge);
-            }
-        }
-        lower.sort_by(|a, b| a.a[1].min(a.b[1]).total_cmp(&b.a[1].min(b.b[1])));
-        let mut upper = lower.clone();
-        upper.sort_by(|a, b| b.a[1].max(b.b[1]).total_cmp(&a.a[1].max(a.b[1])));
-        Self {
-            middle,
-            lower,
-            upper,
-            left: Self::build(left),
-            right: Self::build(right),
-        }
-    }
-
-    fn winding(&self, p: [f64; 2], output: &mut [i32; 2]) {
-        let add = |edge: &WindingEdge, output: &mut [i32; 2]| {
-            if edge.a[0].max(edge.b[0]) <= p[0] {
-                return;
-            }
-            let cross = cross2(sub2(edge.b, edge.a), sub2(p, edge.a));
-            if edge.b[1] > edge.a[1] && cross > 0. {
-                output[edge.operand] += 1;
-            }
-            if edge.b[1] < edge.a[1] && cross < 0. {
-                output[edge.operand] -= 1;
-            }
-        };
-        if p[1] < self.middle {
-            for edge in &self.lower {
-                if edge.a[1].min(edge.b[1]) > p[1] {
-                    break;
-                }
-                add(edge, output);
-            }
-            if let Some(left) = &self.left {
-                left.winding(p, output);
-            }
-        } else {
-            for edge in &self.upper {
-                if edge.a[1].max(edge.b[1]) <= p[1] {
-                    break;
-                }
-                add(edge, output);
-            }
-            if let Some(right) = &self.right {
-                right.winding(p, output);
-            }
-        }
-    }
-}
 pub fn hull2(mut p: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     p.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
     p.dedup();
@@ -301,15 +194,15 @@ fn planar_rule(
     rule_a: Option<FillRule>,
     rule_b: Option<FillRule>,
 ) -> Result<Rings> {
-    const MAX_SPLIT_POINTS: usize = 262_144;
-    const MAX_ATOMS: usize = 131_072;
+    use crate::limits::ARRANGEMENT_ATOMS as MAX_ATOMS;
+    use crate::limits::ARRANGEMENT_SPLIT_POINTS as MAX_SPLIT_POINTS;
     let edges: Vec<_> = a
         .iter()
         .chain(b)
         .flat_map(|r| (0..r.len()).map(move |i| (r[i], r[(i + 1) % r.len()])))
         .collect();
     check(
-        edges.len() <= 65_536,
+        edges.len() <= crate::limits::ARRANGEMENT_EDGES,
         "Planar arrangement exceeds 65536 edges",
     )?;
     let (coordinate_scale, extent) = coordinate_metrics(a.iter().chain(b).flatten())?;
@@ -330,9 +223,7 @@ fn planar_rule(
     let winding_index = WindingIndex::new(a, b);
     let choose = |p| {
         let mut count = [0; 2];
-        if let Some(index) = &winding_index {
-            index.winding(p, &mut count);
-        }
+        winding_index.winding(p, &mut count);
         let [wa, wb] = count;
         let x = filled(wa, rule_a);
         let y = filled(wb, rule_b);
@@ -351,12 +242,41 @@ fn planar_rule(
     // intersections for the many short, separated edges of flattened curves.
     let mut splits = vec![vec![0., 1.]; edges.len()];
     let mut split_count = 2 * edges.len();
-    let mut edge_order: Vec<_> = (0..edges.len()).collect();
-    edge_order.sort_by(|&i, &j| {
-        edges[i].0[0]
-            .min(edges[i].1[0])
-            .total_cmp(&edges[j].0[0].min(edges[j].1[0]))
-    });
+    let ordered = |axis: usize| {
+        let mut order: Vec<_> = (0..edges.len()).collect();
+        order.sort_by(|&i, &j| {
+            edges[i].0[axis]
+                .min(edges[i].1[axis])
+                .total_cmp(&edges[j].0[axis].min(edges[j].1[axis]))
+        });
+        order
+    };
+    let candidates = |order: &[usize], axis: usize| -> usize {
+        order
+            .iter()
+            .enumerate()
+            .map(|(at, &i)| {
+                let end = edges[i].0[axis].max(edges[i].1[axis]) + eps;
+                order[at + 1..].partition_point(|&j| edges[j].0[axis].min(edges[j].1[axis]) <= end)
+            })
+            .sum()
+    };
+    let mut axis = 0;
+    let mut edge_order = ordered(axis);
+    // Long horizontal strips (wide strokes and retracing) make an x-only
+    // sweep quadratic even when their y intervals are well separated.
+    // Choose the cheaper exact 1D candidate count before visiting any pairs.
+    if edges.len() >= 128 {
+        let by_y = ordered(1);
+        if candidates(&by_y, 1) < candidates(&edge_order, 0) {
+            axis = 1;
+            edge_order = by_y;
+        }
+    }
+    check(
+        candidates(&edge_order, axis) <= crate::limits::ARRANGEMENT_PAIR_CANDIDATES,
+        "Planar candidate pair budget exceeded",
+    )?;
     for (order, &i) in edge_order.iter().enumerate() {
         let (p, q) = edges[i];
         let d = sub2(q, p);
@@ -366,7 +286,7 @@ fn planar_rule(
         }
         for &j in &edge_order[order + 1..] {
             let (r, s) = edges[j];
-            if r[0].min(s[0]) > p[0].max(q[0]) + eps {
+            if r[axis].min(s[axis]) > p[axis].max(q[axis]) + eps {
                 break;
             }
             if (0..2).any(|k| {
@@ -435,6 +355,17 @@ fn planar_rule(
             if len < eps {
                 continue;
             }
+            // Interior atoms never participate in boundary tracing. Classify
+            // before interning endpoints: wide/crossing strokes generate many
+            // more internal intersections than visible boundary vertices.
+            let mid = [(u[0] + v[0]) / 2., (u[1] + v[1]) / 2.];
+            let delta = (eps * 8.).min(len * 1e-4);
+            let n = [-d[1] / l2.sqrt() * delta, d[0] / l2.sqrt() * delta];
+            let left = choose([mid[0] + n[0], mid[1] + n[1]]);
+            let right = choose([mid[0] - n[0], mid[1] - n[1]]);
+            if left == right {
+                continue;
+            }
             let mut index = |v: [f64; 2]| {
                 let k = ((v[0] / eps).round() as i64, (v[1] / eps).round() as i64);
                 // The same intersection can round to adjacent hash cells when
@@ -464,14 +395,7 @@ fn planar_rule(
                 visited_atoms.len() <= MAX_ATOMS,
                 "Planar segment budget exceeded",
             )?;
-            let mid = [(u[0] + v[0]) / 2., (u[1] + v[1]) / 2.];
-            let delta = (eps * 8.).min(len * 1e-4);
-            let n = [-d[1] / l2.sqrt() * delta, d[0] / l2.sqrt() * delta];
-            let left = choose([mid[0] + n[0], mid[1] + n[1]]);
-            let right = choose([mid[0] - n[0], mid[1] - n[1]]);
-            if left != right {
-                boundary.insert(if left { (x, y) } else { (y, x) });
-            }
+            boundary.insert(if left { (x, y) } else { (y, x) });
         }
     }
     if !balanced_boundary(&boundary) {
@@ -600,7 +524,10 @@ fn node_boundary_overlaps(
                     }
                 }
             }
-            check(count <= 262_144, "Planar boundary noding budget exceeded")?;
+            check(
+                count <= crate::limits::ARRANGEMENT_SPLIT_POINTS,
+                "Planar boundary noding budget exceeded",
+            )?;
         }
     }
     let mut out = BTreeSet::new();

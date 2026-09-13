@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native transformation of complete mixed body/sketch selections",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 61,
+    "testFiles": 8,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4593767
+  },
+  "coverage": [
+    "Common world-space pivot across body mesh and sketch points",
+    "Atomic mesh and retained B-rep affine transformation",
+    "Coplanar local-coordinate editing and analytic arc rotation",
+    "Out-of-plane sketch placement with scaled analytic center/radius",
+    "Malformed selected sketch rejects complete operation",
+    "Analytic overflow rejected rather than serialized to null",
+    "Existing analytic B-rep and editor/history regressions"
+  ],
+  "limitations": [
+    "Other geometry operations in directSolidTools and CAD services still require native migration",
+    "General certified B-rep kernel remains incomplete",
+    "Shared qualification predates this scoped build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_selection.rs": "a5d191d658e3641d7098b9967ff74066e93556b0db7aa7a3b777fcc57a0919c6",
+    "crates/geometry-bridge/src/cad_body_affine.rs": "d0f7b55c0570acc91dc1ee4efa762d3d831442a8181715fcbf26790a626cf624",
+    "crates/geometry-bridge/src/lib.rs": "40c6f737c514c4d69563e2cacde249ac14cae8ad96b783b836e35a67894b39a4",
+    "src/services/directSolidTools.ts": "8010f99cc91aee408d2d29eaf4446c22f0a46cbb0279d599639c8008d1987dbb",
+    "tests/nativeBodyTransform.test.ts": "666bd4ea4a9e51a0fd51c82684f396f9aa0501667a509762d47935472c1b11d9",
+    "src/generated/geometry-kernels/bytes.ts": "56028735ccf159eb509a4d501092a1ff2639f12f09ba5e9dac4694d8c0138213"
+  }
+}

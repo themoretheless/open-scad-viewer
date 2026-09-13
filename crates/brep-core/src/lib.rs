@@ -12,7 +12,23 @@
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub mod analysis;
+pub mod analytic;
+mod boolean_support;
+pub mod intersections;
 pub mod operations;
+pub mod planar_trim;
+pub mod prism;
+pub mod prism_frame;
+mod prismatic_boolean;
+pub mod sketch;
+mod stepped_prism;
+pub mod transactions;
+pub mod transform;
+pub use analytic::{
+    cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
+    revolve_wire_angle, ruled_loft, sphere, torus, tube,
+};
 pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
     faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
@@ -173,8 +189,25 @@ impl<'de> value_codec::Deserialize<'de> for Model {
             <brep_topology::Model<Curve, Surface, Curve> as value_codec::Deserialize>::from_value(
                 value_codec::Value::Object(object),
             )?;
+        let generate_ids = ids.is_none();
         let mut model = Self(topology, ids.unwrap_or_default());
-        if model.1.vertices.is_empty() {
+        if generate_ids {
+            // Legacy documents omit the optional identity tables. Validate
+            // every index and rational definition before deriving signatures;
+            // malformed documents must return errors rather than index traps.
+            let decode_error = |e: Error| value_codec::error(format!("{}: {}", e.code, e.message));
+            model.0.validate_topology().map_err(decode_error)?;
+            for edge in &model.edges {
+                edge.curve.validate().map_err(decode_error)?;
+            }
+            for wire in &model.loops {
+                for use_ in &wire.coedges {
+                    use_.pcurve.validate().map_err(decode_error)?;
+                }
+            }
+            for face in &model.faces {
+                face.surface.validate().map_err(decode_error)?;
+            }
             model.rebuild_topology_ids();
         }
         Ok(model)
@@ -266,14 +299,44 @@ fn distance(a: &[f64], b: &[f64]) -> f64 {
         .sum::<f64>()
         .sqrt()
 }
-fn close_points(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
-    distance(&a, &b) <= tolerance
-}
 fn curve_point(c: &Curve, t: f64) -> Result<Vec<f64>> {
     let d = c.domain();
     Ok(c.evaluate(d[0] + t * (d[1] - d[0]))?.point)
 }
+struct FaceIdentityRegion {
+    key: String,
+    plane: Option<(usize, f64, bool)>,
+    triangles: Vec<[[f64; 2]; 3]>,
+    bounds: [[f64; 2]; 2],
+}
 impl Model {
+    /// Canonical regularized empty solid. It has no placeholder shell or body.
+    pub fn empty(tolerance_mm: f64) -> Result<Self> {
+        let model = Self(
+            brep_topology::Model {
+                vertices: vec![],
+                edges: vec![],
+                loops: vec![],
+                faces: vec![],
+                shells: vec![],
+                bodies: vec![],
+                tolerance_mm,
+            },
+            TopologyIds::default(),
+        );
+        model.validate()?;
+        Ok(model)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
+            && self.edges.is_empty()
+            && self.loops.is_empty()
+            && self.faces.is_empty()
+            && self.shells.is_empty()
+            && self.bodies.is_empty()
+    }
+
     fn hash(parts: impl IntoIterator<Item = String>) -> String {
         let mut hash = 0xcbf29ce484222325u64;
         for byte in parts
@@ -285,52 +348,205 @@ impl Model {
         }
         format!("{hash:016x}")
     }
+    fn vector_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|axis| a[axis] - b[axis])
+    }
+    fn vector_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    }
+    fn number_key(value: f64) -> String {
+        // -0 and +0 are the same geometric coordinate. No tolerance rounding:
+        // nearby authored entities must never acquire the same identity.
+        format!("{:016x}", if value == 0. { 0 } else { value.to_bits() })
+    }
     fn point_key(&self, point: [f64; 3]) -> String {
-        let quantum = self.tolerance_mm.max(1e-10);
-        point
-            .map(|coordinate| (coordinate / quantum).round() as i64)
-            .map(|coordinate| coordinate.to_string())
-            .join(",")
+        point.map(Self::number_key).join(",")
+    }
+    fn directed_curve_key(curve: &Curve, reversed: bool) -> String {
+        let points: Vec<_> = if reversed {
+            curve.control_points.iter().rev().collect()
+        } else {
+            curve.control_points.iter().collect()
+        };
+        let coordinates = points
+            .iter()
+            .map(|point| {
+                point
+                    .iter()
+                    .copied()
+                    .map(Self::number_key)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
+            .collect::<Vec<_>>()
+            .join(";");
+        if curve.degree == 1 && points.len() == 2 && curve.weights[0] == curve.weights[1] {
+            return format!("line:{coordinates}");
+        }
+        let knots: Vec<_> = if reversed {
+            let [a, b] = curve.domain();
+            curve
+                .knots
+                .iter()
+                .rev()
+                .map(|k| Self::number_key(a + b - k))
+                .collect()
+        } else {
+            curve.knots.iter().copied().map(Self::number_key).collect()
+        };
+        let weights: Vec<_> = if reversed {
+            curve
+                .weights
+                .iter()
+                .rev()
+                .copied()
+                .map(Self::number_key)
+                .collect()
+        } else {
+            curve
+                .weights
+                .iter()
+                .copied()
+                .map(Self::number_key)
+                .collect()
+        };
+        format!(
+            "nurbs:{}:{}:{}:{}:{}",
+            curve.degree,
+            curve.periodic,
+            knots.join(","),
+            coordinates,
+            weights.join(",")
+        )
+    }
+    fn curve_key(curve: &Curve) -> String {
+        Self::directed_curve_key(curve, false).min(Self::directed_curve_key(curve, true))
+    }
+    fn cyclic_key(parts: &[String]) -> String {
+        let Some(start) = (0..parts.len()).min_by(|&a, &b| {
+            (0..parts.len())
+                .map(|offset| &parts[(a + offset) % parts.len()])
+                .cmp((0..parts.len()).map(|offset| &parts[(b + offset) % parts.len()]))
+        }) else {
+            return String::new();
+        };
+        // Compare borrowed rotations, then allocate the winning sequence once.
+        parts
+            .iter()
+            .cycle()
+            .skip(start)
+            .take(parts.len())
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("|")
+    }
+    fn loop_key(&self, wire: &Loop) -> String {
+        Self::cyclic_key(
+            &wire
+                .coedges
+                .iter()
+                .map(|coedge| {
+                    Self::directed_curve_key(&self.edges[coedge.edge].curve, coedge.reversed)
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
+    fn axis_plane(surface: &Surface) -> Option<(usize, f64, bool)> {
+        // An affine axis-aligned patch has an unambiguous support plane even
+        // when an operation changes its UV bounding rectangle. Other surfaces
+        // retain their full definition; do not infer sameness from a sample.
+        if surface.degree_u != 1
+            || surface.degree_v != 1
+            || surface.control_points.len() != 2
+            || surface.control_points.iter().any(|row| row.len() != 2)
+            || surface
+                .weights
+                .iter()
+                .flatten()
+                .any(|w| *w != surface.weights[0][0])
+        {
+            return None;
+        }
+        let points = &surface.control_points;
+        if (0..3).any(|i| points[1][1][i] - points[0][1][i] != points[1][0][i] - points[0][0][i]) {
+            return None;
+        }
+        let u = std::array::from_fn(|i| points[1][0][i] - points[0][0][i]);
+        let v = std::array::from_fn(|i| points[0][1][i] - points[0][0][i]);
+        let normal = Self::vector_cross(u, v);
+        (0..3).find_map(|axis| {
+            let coordinate = points[0][0][axis];
+            (normal[axis] != 0. && points.iter().flatten().all(|p| p[axis] == coordinate))
+                .then_some((axis, coordinate, normal[axis] > 0.))
+        })
+    }
+    fn surface_key(surface: &Surface) -> String {
+        if let Some((axis, offset, positive)) = Self::axis_plane(surface) {
+            return format!("plane:{axis}:{}:{positive}", Self::number_key(offset));
+        }
+        // Every knot, weight, control point, periodic flag and orientation is
+        // part of the support identity. A shared boundary is insufficient.
+        value_codec::to_string(surface).unwrap()
+    }
+    fn face_key(&self, face: &Face) -> String {
+        let mut holes = face
+            .holes
+            .iter()
+            .map(|&wire| self.loop_key(&self.loops[wire]))
+            .collect::<Vec<_>>();
+        holes.sort();
+        let mut parts = vec![
+            Self::surface_key(&face.surface),
+            format!("outer:{}", self.loop_key(&self.loops[face.outer])),
+        ];
+        parts.extend(holes.into_iter().map(|hole| format!("hole:{hole}")));
+        if Self::axis_plane(&face.surface).is_none() {
+            // Curved support needs the complete lifted UV trimming definition,
+            // including which branch of a periodic surface a boundary uses.
+            let uv_key = |wire: usize| {
+                Self::cyclic_key(
+                    &self.loops[wire]
+                        .coedges
+                        .iter()
+                        .map(|coedge| Self::directed_curve_key(&coedge.pcurve, false))
+                        .collect::<Vec<_>>(),
+                )
+            };
+            parts.push(format!("uv-outer:{}", uv_key(face.outer)));
+            let mut inner_uv = face
+                .holes
+                .iter()
+                .map(|&wire| uv_key(wire))
+                .collect::<Vec<_>>();
+            inner_uv.sort();
+            parts.extend(inner_uv.into_iter().map(|hole| format!("uv-hole:{hole}")));
+        }
+        Self::hash(parts)
     }
     pub fn rebuild_topology_ids(&mut self) {
-        let vertices: Vec<_> = self
+        let mut vertices: Vec<_> = self
             .vertices
             .iter()
             .map(|vertex| format!("v:{}", Self::hash([self.point_key(vertex.point)])))
             .collect();
-        let edges: Vec<_> = self
+        let mut edges: Vec<_> = self
             .edges
             .iter()
-            .map(|edge| {
-                let mut ends = edge.vertices.map(|vertex| vertices[vertex].clone());
-                ends.sort();
-                format!("e:{}", Self::hash(ends))
-            })
+            .map(|edge| format!("e:{}", Self::hash([Self::curve_key(&edge.curve)])))
             .collect();
-        let loops: Vec<_> = self
+        let mut loops: Vec<_> = self
             .loops
             .iter()
-            .map(|wire| {
-                let mut boundary: Vec<_> = wire
-                    .coedges
-                    .iter()
-                    .map(|coedge| edges[coedge.edge].clone())
-                    .collect();
-                boundary.sort();
-                format!("l:{}", Self::hash(boundary))
-            })
+            .map(|wire| format!("l:{}", Self::hash([self.loop_key(wire)])))
             .collect();
-        let faces: Vec<_> = self
+        let mut faces: Vec<_> = self
             .faces
             .iter()
-            .map(|face| {
-                let mut boundaries: Vec<_> = std::iter::once(&face.outer)
-                    .chain(&face.holes)
-                    .map(|&wire| loops[wire].clone())
-                    .collect();
-                boundaries.sort();
-                format!("f:{}", Self::hash(boundaries))
-            })
+            .map(|face| format!("f:{}", self.face_key(face)))
             .collect();
         let shells: Vec<_> = self
             .shells
@@ -339,7 +555,7 @@ impl Model {
                 let mut members: Vec<_> = shell
                     .faces
                     .iter()
-                    .map(|face| faces[face.face].clone())
+                    .map(|usage| format!("{}:{}", faces[usage.face], usage.reversed))
                     .collect();
                 members.sort();
                 format!("s:{}", Self::hash(members))
@@ -349,14 +565,64 @@ impl Model {
             .bodies
             .iter()
             .map(|body| {
-                let mut members: Vec<_> = std::iter::once(&body.outer_shell)
-                    .chain(&body.inner_shells)
-                    .map(|&shell| shells[shell].clone())
-                    .collect();
-                members.sort();
-                format!("b:{}", Self::hash(members))
+                let mut inner = body
+                    .inner_shells
+                    .iter()
+                    .map(|&shell| format!("inner:{}", shells[shell]))
+                    .collect::<Vec<_>>();
+                inner.sort();
+                format!(
+                    "b:{}",
+                    Self::hash(
+                        std::iter::once(format!("outer:{}", shells[body.outer_shell])).chain(inner)
+                    )
+                )
             })
             .collect();
+        // Separate bodies may touch while owning distinct vertices/edges.
+        // Coordinate or curve identity alone is then insufficient. Qualify
+        // only collisions using the owning shell's geometry, never an array
+        // index. Indistinguishable duplicate shells remain ambiguous and are
+        // rejected by validate rather than arbitrarily numbered.
+        if [&vertices, &edges, &loops, &faces]
+            .iter()
+            .any(|ids| ids.iter().collect::<BTreeSet<_>>().len() != ids.len())
+        {
+            let mut vertex_owners = vec![BTreeSet::new(); vertices.len()];
+            let mut edge_owners = vec![BTreeSet::new(); edges.len()];
+            let mut loop_owners = vec![BTreeSet::new(); loops.len()];
+            let mut face_owners = vec![BTreeSet::new(); faces.len()];
+            for (shell, key) in self.shells.iter().zip(&shells) {
+                for use_ in &shell.faces {
+                    face_owners[use_.face].insert(key.clone());
+                    let face = &self.faces[use_.face];
+                    for &wire in std::iter::once(&face.outer).chain(&face.holes) {
+                        loop_owners[wire].insert(key.clone());
+                        for coedge in &self.loops[wire].coedges {
+                            edge_owners[coedge.edge].insert(key.clone());
+                            for &vertex in &self.edges[coedge.edge].vertices {
+                                vertex_owners[vertex].insert(key.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            let qualify = |ids: &mut [String], owners: &[BTreeSet<String>]| {
+                let mut counts = BTreeMap::new();
+                for id in ids.iter() {
+                    *counts.entry(id.clone()).or_insert(0) += 1;
+                }
+                for (id, context) in ids.iter_mut().zip(owners) {
+                    if counts[id] > 1 && !context.is_empty() {
+                        *id = format!("{id}@{}", Self::hash(context.iter().cloned()));
+                    }
+                }
+            };
+            qualify(&mut vertices, &vertex_owners);
+            qualify(&mut edges, &edge_owners);
+            qualify(&mut loops, &loop_owners);
+            qualify(&mut faces, &face_owners);
+        }
         self.1 = TopologyIds {
             vertices,
             edges,
@@ -368,125 +634,137 @@ impl Model {
         };
     }
     fn edge_overlap(&self, target: &Edge, source: &Model, candidate: &Edge) -> bool {
-        let [a, b] = target.vertices.map(|vertex| self.0.vertices[vertex].point);
-        let [c, d] = candidate
-            .vertices
-            .map(|vertex| source.0.vertices[vertex].point);
-        let ab = std::array::from_fn::<_, 3, _>(|axis| b[axis] - a[axis]);
-        let cd = std::array::from_fn::<_, 3, _>(|axis| d[axis] - c[axis]);
-        let cross = [
-            ab[1] * cd[2] - ab[2] * cd[1],
-            ab[2] * cd[0] - ab[0] * cd[2],
-            ab[0] * cd[1] - ab[1] * cd[0],
-        ];
-        let length = distance(&a, &b);
-        if length <= self.tolerance_mm
-            || distance(&[0., 0., 0.], &cross) > length * distance(&c, &d) * 1e-8
-        {
+        // Endpoint chords do not establish overlap between rational curves.
+        if [&target.curve, &candidate.curve].iter().any(|curve| {
+            curve.degree != 1
+                || curve.control_points.len() != 2
+                || curve.weights[0] != curve.weights[1]
+        }) {
             return false;
         }
-        let ac = std::array::from_fn::<_, 3, _>(|axis| c[axis] - a[axis]);
-        let line_cross = [
-            ab[1] * ac[2] - ab[2] * ac[1],
-            ab[2] * ac[0] - ab[0] * ac[2],
-            ab[0] * ac[1] - ab[1] * ac[0],
-        ];
-        if distance(&[0., 0., 0.], &line_cross) > length * self.tolerance_mm * 8. {
+        let [a, b] = target.vertices.map(|vertex| self.vertices[vertex].point);
+        let [c, d] = candidate
+            .vertices
+            .map(|vertex| source.vertices[vertex].point);
+        let ab = Self::vector_sub(b, a);
+        if Self::vector_cross(ab, Self::vector_sub(d, c)) != [0.; 3]
+            || Self::vector_cross(ab, Self::vector_sub(c, a)) != [0.; 3]
+        {
             return false;
         }
         let axis = (0..3)
             .max_by(|left, right| ab[*left].abs().total_cmp(&ab[*right].abs()))
             .unwrap();
-        let (a0, a1) = if a[axis] < b[axis] {
-            (a[axis], b[axis])
-        } else {
-            (b[axis], a[axis])
-        };
-        let (b0, b1) = if c[axis] < d[axis] {
-            (c[axis], d[axis])
-        } else {
-            (d[axis], c[axis])
-        };
-        a1.min(b1) - a0.max(b0) > self.tolerance_mm * 4.
+        a[axis].max(b[axis]).min(c[axis].max(d[axis]))
+            > a[axis].min(b[axis]).max(c[axis].min(d[axis]))
     }
-    fn face_relation(&self, target: &Face, source: &Model, candidate: &Face) -> bool {
-        let target_points: Vec<_> = self.0.loops[target.outer]
-            .coedges
-            .iter()
-            .map(|coedge| {
-                self.0.vertices[self.0.edges[coedge.edge].vertices[usize::from(coedge.reversed)]]
-                    .point
-            })
-            .collect();
-        let source_points: Vec<_> = source.0.loops[candidate.outer]
-            .coedges
-            .iter()
-            .map(|coedge| {
-                source.0.vertices
-                    [source.0.edges[coedge.edge].vertices[usize::from(coedge.reversed)]]
-                .point
-            })
-            .collect();
-        if target_points.len() < 3 || source_points.len() < 3 {
-            return false;
-        }
-        let ab = std::array::from_fn::<_, 3, _>(|i| source_points[1][i] - source_points[0][i]);
-        let ac = std::array::from_fn::<_, 3, _>(|i| source_points[2][i] - source_points[0][i]);
-        let normal = [
-            ab[1] * ac[2] - ab[2] * ac[1],
-            ab[2] * ac[0] - ab[0] * ac[2],
-            ab[0] * ac[1] - ab[1] * ac[0],
-        ];
-        let length = distance(&normal, &[0., 0., 0.]);
-        if length <= self.tolerance_mm
-            || !target_points.iter().all(|point| {
-                let delta = std::array::from_fn::<_, 3, _>(|i| point[i] - source_points[0][i]);
-                (normal.iter().zip(delta).map(|(a, b)| a * b).sum::<f64>() / length).abs()
-                    <= self.tolerance_mm * 8.
-            })
-        {
-            return false;
-        }
-        let drop_axis = (0..3)
-            .max_by(|left, right| normal[*left].abs().total_cmp(&normal[*right].abs()))
-            .unwrap();
-        let project = |point: [f64; 3]| {
-            let kept: Vec<_> = (0..3)
-                .filter(|axis| *axis != drop_axis)
-                .map(|axis| point[axis])
-                .collect();
-            [kept[0], kept[1]]
+    fn face_region(
+        &self,
+        face: &Face,
+        axis: usize,
+    ) -> Option<planar_geometry::tessellation::FillMesh> {
+        let ring = |wire: usize| -> Option<Vec<[f64; 2]>> {
+            self.loops[wire]
+                .coedges
+                .iter()
+                .map(|coedge| {
+                    let edge = &self.edges[coedge.edge];
+                    if edge.curve.degree != 1
+                        || edge.curve.control_points.len() != 2
+                        || edge.curve.weights[0] != edge.curve.weights[1]
+                    {
+                        return None;
+                    }
+                    let point = self.vertices[edge.vertices[usize::from(coedge.reversed)]].point;
+                    Some([point[(axis + 1) % 3], point[(axis + 2) % 3]])
+                })
+                .collect()
         };
-        let center = target_points
+        let outer = ring(face.outer)?;
+        let holes = face
+            .holes
             .iter()
-            .copied()
-            .fold([0.; 3], |sum, point| {
-                std::array::from_fn(|axis| sum[axis] + point[axis])
-            })
-            .map(|coordinate| coordinate / target_points.len() as f64);
-        std::iter::once(center).any(|point| {
-            let point = project(point);
-            let polygon: Vec<_> = source_points.iter().copied().map(project).collect();
-            let mut inside = false;
-            for i in 0..polygon.len() {
-                let a = polygon[i];
-                let b = polygon[(i + 1) % polygon.len()];
-                let cross = (b[0] - a[0]) * (point[1] - a[1]) - (b[1] - a[1]) * (point[0] - a[0]);
-                if cross.abs() <= self.tolerance_mm * 8.
-                    && point[0] >= a[0].min(b[0]) - self.tolerance_mm
-                    && point[0] <= a[0].max(b[0]) + self.tolerance_mm
-                    && point[1] >= a[1].min(b[1]) - self.tolerance_mm
-                    && point[1] <= a[1].max(b[1]) + self.tolerance_mm
-                {
-                    return true;
-                }
-                if (a[1] > point[1]) != (b[1] > point[1])
-                    && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]
-                {
-                    inside = !inside;
+            .map(|&wire| ring(wire))
+            .collect::<Option<Vec<_>>>()?;
+        planar_geometry::triangulation::triangulate_profile(&outer, &holes).ok()
+    }
+    fn triangles_overlap(a: [[f64; 2]; 3], b: [[f64; 2]; 3]) -> bool {
+        // Strict separating-axis test: only positive-area material overlap
+        // establishes a face relation. Shared edges/vertices are not merges.
+        for triangle in [a, b] {
+            for i in 0..3 {
+                let start = triangle[i];
+                let end = triangle[(i + 1) % 3];
+                let axis = [start[1] - end[1], end[0] - start[0]];
+                let project = |point: [f64; 2]| axis[0] * point[0] + axis[1] * point[1];
+                let pa = a.map(project);
+                let pb = b.map(project);
+                let min = |values: [f64; 3]| values.into_iter().fold(f64::INFINITY, f64::min);
+                let max = |values: [f64; 3]| values.into_iter().fold(f64::NEG_INFINITY, f64::max);
+                if max(pa).min(max(pb)) <= min(pa).max(min(pb)) {
+                    return false;
                 }
             }
-            inside
+        }
+        true
+    }
+    fn prepare_face_identity(&self, face: &Face, key: String) -> FaceIdentityRegion {
+        let plane = Self::axis_plane(&face.surface);
+        let triangles = plane
+            .and_then(|(axis, _, _)| self.face_region(face, axis))
+            .map(|region| {
+                region
+                    .indices
+                    .chunks_exact(3)
+                    .map(|triangle| {
+                        [
+                            region.positions[triangle[0] as usize],
+                            region.positions[triangle[1] as usize],
+                            region.positions[triangle[2] as usize],
+                        ]
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let mut bounds = [[f64::INFINITY; 2], [f64::NEG_INFINITY; 2]];
+        for point in triangles.iter().flatten() {
+            for axis in 0..2 {
+                bounds[0][axis] = bounds[0][axis].min(point[axis]);
+                bounds[1][axis] = bounds[1][axis].max(point[axis]);
+            }
+        }
+        FaceIdentityRegion {
+            key,
+            plane,
+            triangles,
+            bounds,
+        }
+    }
+    fn face_relation(target: &FaceIdentityRegion, candidate: &FaceIdentityRegion) -> bool {
+        if target.key == candidate.key {
+            return true;
+        }
+        // Conservative planar-region evidence; general correspondence must
+        // come from operation provenance, not guessed centroid proximity.
+        let (Some((axis, coordinate, _)), Some((other_axis, other_coordinate, _))) =
+            (target.plane, candidate.plane)
+        else {
+            return false;
+        };
+        if axis != other_axis || coordinate != other_coordinate {
+            return false;
+        }
+        if (0..2).any(|axis| {
+            target.bounds[1][axis].min(candidate.bounds[1][axis])
+                <= target.bounds[0][axis].max(candidate.bounds[0][axis])
+        }) {
+            return false;
+        }
+        target.triangles.iter().any(|a| {
+            candidate
+                .triangles
+                .iter()
+                .any(|b| Self::triangles_overlap(*a, *b))
         })
     }
     fn record_relations(
@@ -524,13 +802,56 @@ impl Model {
                     parents: parent_ids,
                     children: vec![target_ids[child_index].clone()],
                 });
-            } else if parent_ids.len() == 1 && parent_ids[0] != target_ids[child_index] {
+            } else if parent_ids.len() == 1
+                && parent_ids[0] != target_ids[child_index]
+                && relations
+                    .iter()
+                    .filter(|relation| relation.contains(&parents[0]))
+                    .count()
+                    == 1
+            {
                 records.push(TopologyLineageRecord {
                     operation: "persist".into(),
                     entity_kind: entity_kind.into(),
                     parents: parent_ids,
                     children: vec![target_ids[child_index].clone()],
                 });
+            }
+        }
+    }
+    fn preserve_unique_ids<'a>(
+        target: &mut [String],
+        sources: impl Iterator<Item = (&'a [String], &'a [String])>,
+    ) {
+        let mut matches = BTreeMap::<String, BTreeSet<String>>::new();
+        for (geometry_ids, authored_ids) in sources {
+            for (geometry, authored) in geometry_ids.iter().zip(authored_ids) {
+                matches
+                    .entry(geometry.clone())
+                    .or_default()
+                    .insert(authored.clone());
+            }
+        }
+        let candidates: Vec<_> = target
+            .iter()
+            .map(|geometry| {
+                matches.get(geometry).and_then(|parents| {
+                    (parents.len() == 1).then(|| parents.first().unwrap().clone())
+                })
+            })
+            .collect();
+        let mut counts = BTreeMap::<String, usize>::new();
+        for id in candidates.iter().flatten() {
+            *counts.entry(id.clone()).or_default() += 1;
+        }
+        let mut occupied = target.iter().cloned().collect::<BTreeSet<_>>();
+        for (id, candidate) in target.iter_mut().zip(candidates) {
+            if let Some(candidate) = candidate {
+                if counts[&candidate] == 1 && (candidate == *id || !occupied.contains(&candidate)) {
+                    occupied.remove(id);
+                    occupied.insert(candidate.clone());
+                    *id = candidate;
+                }
             }
         }
     }
@@ -541,238 +862,103 @@ impl Model {
             .collect();
         self.rebuild_topology_ids();
         self.1.lineage = inherited_lineage;
-        for source in sources {
-            for (target, vertex) in self.0.vertices.iter().enumerate() {
-                if let Some(source_index) = source.0.vertices.iter().position(|candidate| {
-                    close_points(candidate.point, vertex.point, self.tolerance_mm * 4.)
-                }) {
-                    self.1.vertices[target] = source.1.vertices[source_index].clone();
-                }
-            }
-            for (target, edge) in self.0.edges.iter().enumerate() {
-                let endpoints = edge.vertices.map(|vertex| self.0.vertices[vertex].point);
-                if let Some(source_index) = source.0.edges.iter().position(|candidate| {
-                    let other = candidate
-                        .vertices
-                        .map(|vertex| source.0.vertices[vertex].point);
-                    (close_points(endpoints[0], other[0], self.tolerance_mm * 4.)
-                        && close_points(endpoints[1], other[1], self.tolerance_mm * 4.))
-                        || (close_points(endpoints[0], other[1], self.tolerance_mm * 4.)
-                            && close_points(endpoints[1], other[0], self.tolerance_mm * 4.))
-                }) {
-                    self.1.edges[target] = source.1.edges[source_index].clone();
-                }
-            }
-            for (target, face) in self.0.faces.iter().enumerate() {
-                let target_vertices: BTreeSet<_> = self.0.loops[face.outer]
-                    .coedges
-                    .iter()
-                    .map(|coedge| self.1.vertices[self.0.edges[coedge.edge].vertices[0]].clone())
-                    .collect();
-                if let Some(source_index) = source.0.faces.iter().position(|candidate| {
-                    let source_vertices: BTreeSet<_> = source.0.loops[candidate.outer]
-                        .coedges
-                        .iter()
-                        .map(|coedge| {
-                            source.1.vertices[source.0.edges[coedge.edge].vertices[0]].clone()
-                        })
-                        .collect();
-                    target_vertices == source_vertices
-                }) {
-                    self.1.faces[target] = source.1.faces[source_index].clone();
-                }
-            }
-            for (target, wire) in self.0.loops.iter().enumerate() {
-                let target_edges: BTreeSet<_> = wire
-                    .coedges
-                    .iter()
-                    .map(|coedge| self.1.edges[coedge.edge].clone())
-                    .collect();
-                if let Some(source_index) = source.0.loops.iter().position(|candidate| {
-                    candidate
-                        .coedges
-                        .iter()
-                        .map(|coedge| source.1.edges[coedge.edge].clone())
-                        .collect::<BTreeSet<_>>()
-                        == target_edges
-                }) {
-                    self.1.loops[target] = source.1.loops[source_index].clone();
-                }
-            }
-            for (target, shell) in self.0.shells.iter().enumerate() {
-                let target_faces: BTreeSet<_> = shell
-                    .faces
-                    .iter()
-                    .map(|face| self.1.faces[face.face].clone())
-                    .collect();
-                if let Some(source_index) = source.0.shells.iter().position(|candidate| {
-                    candidate
-                        .faces
-                        .iter()
-                        .map(|face| source.1.faces[face.face].clone())
-                        .collect::<BTreeSet<_>>()
-                        == target_faces
-                }) {
-                    self.1.shells[target] = source.1.shells[source_index].clone();
-                }
-            }
-            for (target, body) in self.0.bodies.iter().enumerate() {
-                let target_shells: BTreeSet<_> = std::iter::once(&body.outer_shell)
-                    .chain(&body.inner_shells)
-                    .map(|&shell| self.1.shells[shell].clone())
-                    .collect();
-                if let Some(source_index) = source.0.bodies.iter().position(|candidate| {
-                    std::iter::once(&candidate.outer_shell)
-                        .chain(&candidate.inner_shells)
-                        .map(|&shell| source.1.shells[shell].clone())
-                        .collect::<BTreeSet<_>>()
-                        == target_shells
-                }) {
-                    self.1.bodies[target] = source.1.bodies[source_index].clone();
-                }
-            }
-            let vertex_relations: Vec<Vec<usize>> = self
-                .vertices
-                .iter()
-                .map(|vertex| {
-                    source
-                        .vertices
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| {
-                            close_points(candidate.point, vertex.point, self.tolerance_mm * 4.)
-                        })
-                        .map(|(index, _)| index)
-                        .collect()
-                })
-                .collect();
-            let edge_relations: Vec<Vec<usize>> = self
-                .edges
-                .iter()
-                .map(|edge| {
-                    source
-                        .edges
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| self.edge_overlap(edge, source, candidate))
-                        .map(|(index, _)| index)
-                        .collect()
-                })
-                .collect();
-            let face_relations: Vec<Vec<usize>> = self
+        // Prepare geometric signatures and material regions once, not once per
+        // candidate pair. Authored IDs can differ after explicit transforms.
+        let target_edge_keys = self.1.edges.clone();
+        let target_faces: Vec<_> = self
+            .faces
+            .iter()
+            .zip(&self.1.faces)
+            .map(|(face, key)| self.prepare_face_identity(face, key.clone()))
+            .collect();
+        let geometries: Vec<_> = sources
+            .iter()
+            .map(|source| {
+                let mut geometry = (*source).clone();
+                geometry.rebuild_topology_ids();
+                geometry
+            })
+            .collect();
+        macro_rules! preserve {
+            ($kind:ident) => {
+                Self::preserve_unique_ids(
+                    &mut self.1.$kind,
+                    sources.iter().zip(&geometries).map(|(source, geometry)| {
+                        (geometry.1.$kind.as_slice(), source.1.$kind.as_slice())
+                    }),
+                );
+            };
+        }
+        preserve!(vertices);
+        preserve!(edges);
+        preserve!(loops);
+        preserve!(faces);
+        preserve!(shells);
+        preserve!(bodies);
+        let mut vertex_parents = vec![BTreeSet::new(); self.vertices.len()];
+        let mut edge_parents = vec![BTreeSet::new(); self.edges.len()];
+        let mut face_parents = vec![BTreeSet::new(); self.faces.len()];
+        for (source, geometry) in sources.iter().zip(&geometries) {
+            let source_faces: Vec<_> = source
                 .faces
                 .iter()
-                .map(|face| {
-                    source
-                        .faces
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| {
-                            self.face_relation(face, source, candidate)
-                                || source.face_relation(candidate, self, face)
-                        })
-                        .map(|(index, _)| index)
-                        .collect()
-                })
+                .zip(&geometry.1.faces)
+                .map(|(face, key)| source.prepare_face_identity(face, key.clone()))
                 .collect();
-            Self::record_relations(
-                &mut self.1.lineage,
-                "vertex",
-                &source.1.vertices,
-                &self.1.vertices,
-                &vertex_relations,
-            );
-            Self::record_relations(
-                &mut self.1.lineage,
-                "edge",
-                &source.1.edges,
-                &self.1.edges,
-                &edge_relations,
-            );
-            Self::record_relations(
-                &mut self.1.lineage,
-                "face",
-                &source.1.faces,
-                &self.1.faces,
-                &face_relations,
-            );
+            for (target_index, target) in self.vertices.iter().enumerate() {
+                for (source_index, candidate) in source.vertices.iter().enumerate() {
+                    if target.point == candidate.point {
+                        vertex_parents[target_index]
+                            .insert(source.1.vertices[source_index].clone());
+                    }
+                }
+            }
+            for (target_index, target) in self.edges.iter().enumerate() {
+                for (source_index, candidate) in source.edges.iter().enumerate() {
+                    if target_edge_keys[target_index] == geometry.1.edges[source_index]
+                        || self.edge_overlap(target, source, candidate)
+                    {
+                        edge_parents[target_index].insert(source.1.edges[source_index].clone());
+                    }
+                }
+            }
+            for (target_index, target) in target_faces.iter().enumerate() {
+                for (source_index, candidate) in source_faces.iter().enumerate() {
+                    if Self::face_relation(target, candidate) {
+                        face_parents[target_index].insert(source.1.faces[source_index].clone());
+                    }
+                }
+            }
         }
-        let mut cross_source_merges = vec![];
-        for (target_index, target) in self.vertices.iter().enumerate() {
-            let parents: Vec<_> = sources
+        for (kind, parents, target_ids) in [
+            ("vertex", vertex_parents, &self.1.vertices),
+            ("edge", edge_parents, &self.1.edges),
+            ("face", face_parents, &self.1.faces),
+        ] {
+            let parent_ids: Vec<_> = parents
                 .iter()
-                .flat_map(|source| {
-                    source
-                        .vertices
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| {
-                            close_points(candidate.point, target.point, self.tolerance_mm * 4.)
-                        })
-                        .map(|(index, _)| source.1.vertices[index].clone())
-                })
+                .flatten()
+                .cloned()
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect();
-            if parents.len() > 1 {
-                cross_source_merges.push(TopologyLineageRecord {
-                    operation: "merge".into(),
-                    entity_kind: "vertex".into(),
-                    parents,
-                    children: vec![self.1.vertices[target_index].clone()],
-                });
-            }
-        }
-        for (target_index, target) in self.edges.iter().enumerate() {
-            let parents: Vec<_> = sources
+            let parent_indices: BTreeMap<_, _> = parent_ids
                 .iter()
-                .flat_map(|source| {
-                    source
-                        .edges
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| self.edge_overlap(target, source, candidate))
-                        .map(|(index, _)| source.1.edges[index].clone())
-                })
-                .collect::<BTreeSet<_>>()
-                .into_iter()
+                .enumerate()
+                .map(|(index, id)| (id, index))
                 .collect();
-            if parents.len() > 1 {
-                cross_source_merges.push(TopologyLineageRecord {
-                    operation: "merge".into(),
-                    entity_kind: "edge".into(),
-                    parents,
-                    children: vec![self.1.edges[target_index].clone()],
-                });
-            }
-        }
-        for (target_index, target) in self.faces.iter().enumerate() {
-            let parents: Vec<_> = sources
+            let relations: Vec<Vec<usize>> = parents
                 .iter()
-                .flat_map(|source| {
-                    source
-                        .faces
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, candidate)| {
-                            self.face_relation(target, source, candidate)
-                                || source.face_relation(candidate, self, target)
-                        })
-                        .map(|(index, _)| source.1.faces[index].clone())
-                })
-                .collect::<BTreeSet<_>>()
-                .into_iter()
+                .map(|set| set.iter().map(|parent| parent_indices[parent]).collect())
                 .collect();
-            if parents.len() > 1 {
-                cross_source_merges.push(TopologyLineageRecord {
-                    operation: "merge".into(),
-                    entity_kind: "face".into(),
-                    parents,
-                    children: vec![self.1.faces[target_index].clone()],
-                });
-            }
+            Self::record_relations(
+                &mut self.1.lineage,
+                kind,
+                &parent_ids,
+                target_ids,
+                &relations,
+            );
         }
-        self.1.lineage.extend(cross_source_merges);
         let mut unique = Vec::new();
         for record in self.1.lineage.drain(..) {
             if !unique.contains(&record) {
@@ -850,6 +1036,24 @@ impl Model {
                 e.curve.control_points[0].len() == 3,
                 "Edge curve must be 3D",
             )?;
+            if e.degenerate {
+                let pole = self.vertices[e.vertices[0]].point;
+                require(
+                    e.curve
+                        .control_points
+                        .iter()
+                        .all(|p| p.as_slice() == pole.as_slice()),
+                    "Collapsed edge curve must be identically its pole vertex",
+                )?;
+            } else {
+                require(
+                    e.curve
+                        .control_points
+                        .iter()
+                        .any(|p| *p != e.curve.control_points[0]),
+                    "Constant edge requires an explicit collapsed-boundary marker",
+                )?;
+            }
             for (i, &v) in e.vertices.iter().enumerate() {
                 let point = &self
                     .vertices
@@ -890,6 +1094,13 @@ impl Model {
                     edge_used[c.edge] = true;
                     c.pcurve.validate()?;
                     require(c.pcurve.control_points[0].len() == 2, "pcurve must be 2D")?;
+                    if edge.degenerate {
+                        validate_pole_boundary(
+                            &f.surface,
+                            &c.pcurve,
+                            self.vertices[edge.vertices[0]].point,
+                        )?;
+                    }
                     let start = edge.vertices[usize::from(c.reversed)];
                     let end = edge.vertices[usize::from(!c.reversed)];
                     if let Some(p) = previous {
@@ -949,7 +1160,9 @@ impl Model {
                     let f = &self.faces[u.face];
                     for &l in std::iter::once(&f.outer).chain(&f.holes) {
                         for c in &self.loops[l].coedges {
-                            *uses.entry(c.edge).or_default() += 1;
+                            if !self.edges[c.edge].degenerate {
+                                *uses.entry(c.edge).or_default() += 1;
+                            }
                         }
                     }
                 }
@@ -969,6 +1182,54 @@ impl Model {
             solid_geometry_status: "not_certified",
         })
     }
+}
+/// Certify collapsed boundaries from control nets, not a finite sample set.
+/// Currently supported pole charts collapse one complete rectangular boundary.
+fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> Result<()> {
+    require(
+        pcurve.degree == 1 && pcurve.control_points.len() == 2,
+        "Pole pcurve must be a straight surface boundary",
+    )?;
+    let u = [
+        surface.knots_u[surface.degree_u],
+        surface.knots_u[surface.control_points.len()],
+    ];
+    let v = [
+        surface.knots_v[surface.degree_v],
+        surface.knots_v[surface.control_points[0].len()],
+    ];
+    let a = &pcurve.control_points[0];
+    let b = &pcurve.control_points[1];
+    let spans = |a: f64, b: f64, domain: [f64; 2]| {
+        (a == domain[0] && b == domain[1]) || (b == domain[0] && a == domain[1])
+    };
+    let same = |p: &Vec<f64>| p.as_slice() == pole.as_slice();
+    let collapsed = if a[0] == b[0] && spans(a[1], b[1], v) {
+        if a[0] == u[0] {
+            surface.control_points[0].iter().all(same)
+        } else if a[0] == u[1] {
+            surface.control_points.last().unwrap().iter().all(same)
+        } else {
+            false
+        }
+    } else if a[1] == b[1] && spans(a[0], b[0], u) {
+        if a[1] == v[0] {
+            surface.control_points.iter().all(|r| same(&r[0]))
+        } else if a[1] == v[1] {
+            surface
+                .control_points
+                .iter()
+                .all(|r| same(r.last().unwrap()))
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+    require(
+        collapsed,
+        "Pole boundary is not identically collapsed in the surface control net",
+    )
 }
 fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
     Curve {
@@ -1035,6 +1296,7 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
             let edge = *edges.entry(key).or_insert_with(|| {
                 let id = m.0.edges.len();
                 m.0.edges.push(Edge {
+                    degenerate: false,
                     vertices: [key.0, key.1],
                     curve: line(
                         m.0.vertices[key.0].point.to_vec(),

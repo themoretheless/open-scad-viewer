@@ -1,0 +1,32 @@
+{
+  "scope": "Native scene flattening in export and direct-modeling exchange; full B-rep incomplete",
+  "tests": {
+    "polygonCore": 69,
+    "integrationPacking": 68,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4587145,
+    "budget": 4700000
+  },
+  "limits": {
+    "triangles": 100000,
+    "distinctVertices": 300000
+  },
+  "sha256": {
+    "crates/polygon-core/src/scene_flatten.rs": "8832da98307b62a8da41c15ca71b8f9e92821184f5c9806d66f4f1e6742691aa",
+    "crates/geometry-bridge/src/lib.rs": "6af90a244fe9e3dd7350921b2c98247a09e75cb7f869a334bb66608df053a7b7",
+    "src/services/meshFlatten.ts": "a0675aeef988a61a1bcb059682e7341d9bc450c0b2a551b581849c0313799534",
+    "tests/nativeSceneFlatten.test.ts": "a5b24da0411f6e7a6360ae6900ce676efd400741e2f6703f37a4f6b7316b9139",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "638522e2b7fcd6dd8a6b02552b546a1da4560d7ef26e01f99bb9fe784488a05b"
+  },
+  "limitations": [
+    "Transport copies and browser resource/latency unprofiled",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

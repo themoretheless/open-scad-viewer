@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native lattice decimation, lightening cells, spatial graph, planar lightening and FDM print-settings fitting",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 56,
+    "testFiles": 5,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4637132
+  },
+  "coverage": [
+    "Decimation is deterministic: identical positions and indices for a fixed input",
+    "A subdivided closed box decimates to the requested target and stays closed, oriented and valid",
+    "Default 2600 target applies; the cumulative-radius tolerance guard stops collapse early",
+    "Edge-collapse fold rejection keeps output closed where the input was closed",
+    "Malformed meshes (non-finite coordinates, out-of-range indices) refuse without mutation",
+    "Negative/NaN tolerance and negative/NaN target refuse at native admission",
+    "Print fitting reproduces legacy nozzle/layer quantization bit-for-bit (1e-8 epsilon, 112.5% line width, 1e6 compaction)",
+    "Spatial skin/step resolution, floor snapping, open-top and idempotent refit match pre-migration results",
+    "Bridge warning matches the legacy cell-minus-rib comparison",
+    "Non-finite or out-of-range print settings refuse with the legacy user-facing message",
+    "Spatial graph fixtures, component counting and planar lightening regressions still pass",
+    "Workbench per-body lightening orchestration still passes against the native kernels"
+  ],
+  "behaviorChange": "Lattice decimation now rejects negative or non-finite tolerance at admission instead of silently returning the unchanged mesh or collapsing without a radius guard. fitLatticeToPrint now rejects missing or non-finite lattice cell/rib/bottom/top/rim options instead of propagating NaN into the fitted result. printBridgeWarning no longer warns on non-numeric transport values.",
+  "limits": {
+    "decimationAttempts": 1000000,
+    "defaultDecimationTarget": 2600,
+    "abiRequestBytes": 33554432
+  },
+  "limitations": [
+    "The per-body lighten host loop in cadWorkbench.ts remains TS bookkeeping, applying the native cad_lightening op body by body",
+    "CadWorkbenchPanel.vue still computes the volume-reduction percentage for the info line as presentation formatting",
+    "Fold checks during decimation are local triangle orientation checks, not global self-intersection certification",
+    "No browser peak-memory qualification was performed for the decimation heap",
+    "General B-rep completion and the remaining Rust migration are open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_lattice.rs": "4047a63e880089c7713e28dcbcf91906215d37ac0c9ea7de7c66dfee5e454ec6",
+    "crates/geometry-bridge/src/lib.rs": "14eba61672473564577d90d332d8d55e09553702d2e149e144167fa6bd83685f",
+    "src/services/latticeDecimation.ts": "a9cf61e68d636fb6643efae0f40eab4a28bd1a2a314d21d9087f14b5c5b8e650",
+    "src/services/latticePrintSettings.ts": "ae791f805742a1b7523694a363572f4cc2adfb4cc83a410eaa6eaca854771e28",
+    "src/services/solidLightening.ts": "09e31024d99aca73e984906f3b9dcfeb36220f5c58cc0818ddb88e370da95c45",
+    "tests/latticeDecimation.test.ts": "8faa9a3d2bcbc5ab105106cbae3c1919192372c4a33ef16f40bb341cd097d571",
+    "tests/latticePrintSettings.test.ts": "2c4fc8bbb29a7316a5c838e7509ed52631e4185f8434634d40e6a5a8d67d40ff",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "5f26ce47e05e12666dba581b773be94561fbc4414acbe733f2a3ad41f89b9778",
+    "src/generated/geometry-kernels/bytes.ts": "7be46aa57f27194061eba3562a0489a6f7dbe7516cf91ea52ad2daa603c40754"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "native_tests": 228,
+  "native_test_scope_note": "Includes one unrelated triangulation test present in shared checkout.",
+  "bridge_tests": 8,
+  "wasm_tests": 6,
+  "curvex_tests": 1494,
+  "curvex_existing_ignored_test": 1,
+  "ignored_timing_explicitly_passed": true,
+  "stress_cases": 1024,
+  "stress_probes": 261987,
+  "software_render_cases": 36,
+  "software_min_coverage_iou": 1.0,
+  "software_max_changed_fraction_gt3": 0.0,
+  "wire_action_names": 90,
+  "source_hashes_verified": true,
+  "original_curvex_clean": true,
+  "migration_patch_applies": true,
+  "gpu": {
+    "adapter": "Apple M5 / Metal",
+    "attempts": 3,
+    "frames_each": 330,
+    "captures_each": 0,
+    "status": "Incomplete: no screenshot events returned; stopped after all three workload stages. No visual equivalence or frame cadence claim for final version. Previous successful GPU qualification remains historical."
+  }
+}

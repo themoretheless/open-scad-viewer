@@ -1,0 +1,7 @@
+   Compiling planar-geometry v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/planar-geometry)
+   Compiling sdf-core v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/sdf-core)
+   Compiling polygon-core v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/polygon-core)
+   Compiling slicer-core v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/slicer-core)
+   Compiling geometry-bridge v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/geometry-bridge)
+   Compiling geometry-wasm v0.1.0 (/private/tmp/curvex-stroke-wasm-w2uierof/crates/geometry-wasm)
+    Finished `release` profile [optimized] target(s) in 3m 52s

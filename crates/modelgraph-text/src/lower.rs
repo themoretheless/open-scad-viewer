@@ -741,6 +741,10 @@ impl Compiler {
             "sdf_difference",
             "sdf_smooth_union",
             "mesh_union",
+            "brep_union",
+            "brep_subtract",
+            "brep_intersection",
+            "brep_xor",
             "mesh_intersection",
             "mesh_subtract",
             "union",
@@ -776,6 +780,12 @@ impl Compiler {
                 return Err(crate::error(
                     "SDF operation requires two fields; smooth union also requires radius",
                 ));
+            }
+            if name.starts_with("brep_") {
+                if inputs.len() != 2 {
+                    return Err(crate::error("B-rep Boolean requires exactly two bodies"));
+                }
+                return self.add(json!({"op":"brep_boolean","inputs":inputs,"operation":match name {"brep_union"=>"union","brep_intersection"=>"intersection","brep_xor"=>"xor",_=>"difference"}}));
             }
             if name.starts_with("mesh_") {
                 if inputs.len() != 2 {
@@ -854,7 +864,32 @@ impl Compiler {
             if !sig.contains(&key) || node.get(key).is_some() {
                 return Err(crate::error("Unknown or duplicate argument"));
             }
-            node[key] = raw(v)?
+            node[key] = if name == "brep_extrude_curves" && key == "loops" {
+                let V::Array(loops) = v else {
+                    return Err(crate::error("Curve extrusion requires nested curve lists"));
+                };
+                if loops.len() > 64 {
+                    return Err(crate::error("Curve extrusion accepts at most 64 loops"));
+                }
+                let mut count = 0;
+                J::Array(loops.into_iter().map(|wire| {
+                    let V::Array(curves) = wire else {
+                        return Err(crate::error("Curve extrusion requires nested curve lists"));
+                    };
+                    count += curves.len();
+                    if curves.is_empty() || count > 254 {
+                        return Err(crate::error("Curve extrusion requires nonempty loops and at most 254 curve references"));
+                    }
+                    curves.into_iter().map(|curve| {
+                        if matches!(curve, V::Array(_)) {
+                            return Err(crate::error("Each loop item must be one curve"));
+                        }
+                        self.geometry(curve).map(J::String)
+                    }).collect::<R<Vec<_>>>().map(J::Array)
+                }).collect::<R<_>>()?)
+            } else {
+                raw(v)?
+            }
         }
         let modifier = [
             "polygon_extrude",
@@ -870,6 +905,10 @@ impl Compiler {
             "sdf_offset",
             "sdf_translate",
             "brep_tessellate",
+            "brep_extrude",
+            "brep_revolve",
+            "brep_chamfer",
+            "brep_fillet",
             "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -1970,6 +2009,16 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         "sdf_offset" => &["distance"],
         "sdf_translate" => &["vector"],
         "brep_box" => &["min", "max"],
+        "brep_sphere" => &["radius"],
+        "brep_torus" => &["major_radius", "minor_radius"],
+        "brep_cylinder" => &["radius", "height"],
+        "brep_frustum" => &["bottom_radius", "top_radius", "height"],
+        "brep_tube" => &["outer_radius", "inner_radius", "height"],
+        "brep_revolve" => &["angle"],
+        "brep_extrude" => &["height"],
+        "brep_extrude_curves" => &["loops", "z_min", "z_max"],
+        "brep_chamfer" => &["edges", "size"],
+        "brep_fillet" => &["edges", "radius", "segments"],
         "brep_tessellate" => &["segments"],
         "nurbs_surface" => &[
             "degree_u",

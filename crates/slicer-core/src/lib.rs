@@ -14,12 +14,59 @@
 )]
 #![allow(unused_features)]
 
-use planar_geometry::rings::{self as rings, Rings};
-use math_core::{cross2, sub2};
+use planar_geometry::{
+    path::BezierPath,
+    rings::{self, Rings},
+    stroke::{self, StrokeOptions},
+};
 
-pub use gcode_core::{GcodeMove, GcodePreview};
+pub use gcode_core::{DIALECT as GCODE_DIALECT, GcodeBounds, GcodeMove, GcodePreview};
 pub use math_core::{Error, Result};
 pub use planar_geometry::{LayerSection, MAX_LAYERS};
+
+/// Input contour vertices per section, before geometry normalization.
+pub const MAX_SECTION_POINTS: usize = 4_096;
+/// Total generated/intermediate vertices across one layer or scheduled plan.
+pub const MAX_PLAN_POINTS: usize = 1_000_000;
+/// Upper bound on scan lines per layer, including lines with no filled spans.
+pub const MAX_HATCH_LINES: usize = 65_536;
+/// Conservative bound on geometric pair tests and hatch edge/sort work.
+pub const MAX_PLAN_WORK: usize = 64_000_000;
+
+#[derive(Default)]
+struct Budget {
+    points: usize,
+    work: usize,
+}
+
+impl Budget {
+    fn points(&mut self, count: usize) -> Result<()> {
+        self.points = self.points.checked_add(count).ok_or_else(budget_error)?;
+        if self.points > MAX_PLAN_POINTS {
+            return Err(budget_error());
+        }
+        Ok(())
+    }
+
+    fn work(&mut self, count: usize) -> Result<()> {
+        self.work = self.work.checked_add(count).ok_or_else(budget_error)?;
+        if self.work > MAX_PLAN_WORK {
+            return Err(budget_error());
+        }
+        Ok(())
+    }
+
+    fn arrangement(&mut self, points: usize) -> Result<()> {
+        self.work(points.checked_mul(points).ok_or_else(budget_error)?)
+    }
+}
+
+fn budget_error() -> Error {
+    invalid(
+        "TOOLPATH_WORK_LIMIT",
+        "Toolpath geometry/work budget exceeded",
+    )
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathRole {
@@ -72,18 +119,15 @@ fn invalid(code: &'static str, message: &str) -> Error {
 }
 
 fn require_settings(settings: &ToolpathSettings) -> Result<()> {
-    if ![
-        settings.layer_height_mm,
-        settings.line_width_mm,
-        settings.infill_spacing_mm,
-        settings.feedrate_mm_s,
-        settings.travel_feedrate_mm_s,
-        settings.filament_diameter_mm,
-    ]
-    .iter()
-    .all(|value| value.is_finite() && *value > 0.0)
+    machine_profile(settings)
+        .validate()
+        .map_err(|error| invalid("TOOLPATH_INVALID_SETTINGS", &error.message))?;
+    if !settings.infill_spacing_mm.is_finite()
+        || settings.infill_spacing_mm < gcode_core::COORDINATE_RESOLUTION_MM
+        || settings.infill_spacing_mm > gcode_core::MAX_COORDINATE_MM
         || settings.wall_count == 0
         || settings.wall_count > 8
+        || settings.wall_count as f64 * settings.line_width_mm > gcode_core::MAX_COORDINATE_MM
     {
         return Err(invalid(
             "TOOLPATH_INVALID_SETTINGS",
@@ -93,12 +137,76 @@ fn require_settings(settings: &ToolpathSettings) -> Result<()> {
     Ok(())
 }
 
-fn rings_of(section: &LayerSection) -> &Rings {
-    &section.contours
+fn require_section(section: &LayerSection, budget: &mut Budget) -> Result<()> {
+    if !valid_coordinate(section.z_mm) {
+        return Err(invalid(
+            "TOOLPATH_INVALID_HEIGHT",
+            "Layer Z must be finite and within +/-1000000 mm",
+        ));
+    }
+    if section.contours.len() > MAX_SECTION_POINTS / 3 {
+        return Err(invalid(
+            "TOOLPATH_GEOMETRY_LIMIT",
+            "Section exceeds 1365 contours",
+        ));
+    }
+    let count = point_count(&section.contours);
+    if count > MAX_SECTION_POINTS {
+        return Err(invalid(
+            "TOOLPATH_GEOMETRY_LIMIT",
+            "Section exceeds 4096 contour vertices",
+        ));
+    }
+    if section
+        .contours
+        .iter()
+        .any(|ring| ring.len() < 3 || ring.iter().flatten().any(|&value| !valid_coordinate(value)))
+    {
+        return Err(invalid(
+            "TOOLPATH_INVALID_GEOMETRY",
+            "Section rings need at least 3 finite vertices within +/-1000000 mm",
+        ));
+    }
+    budget.points(count)?;
+    Ok(())
 }
 
-fn offset_rings(source: &Rings, distance: f64) -> Result<Rings> {
-    rings::offset(source, distance, false, 8)
+fn valid_coordinate(value: f64) -> bool {
+    value.is_finite() && value.abs() <= gcode_core::MAX_COORDINATE_MM
+}
+
+fn point_count(source: &Rings) -> usize {
+    source
+        .iter()
+        .fold(0_usize, |count, ring| count.saturating_add(ring.len()))
+}
+
+/// Subtract a band around every boundary. Direct vertex offsets can invert a
+/// consumed inset and create phantom islands; region erosion cannot do that.
+/// All input rings have already been normalized to material-left winding.
+fn inset_rings(source: &Rings, distance: f64, budget: &mut Budget) -> Result<Rings> {
+    if source.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut bands = Vec::new();
+    let tolerance = (distance * 0.01).min(0.01);
+    let options = StrokeOptions {
+        width: 2.0 * distance,
+        ..Default::default()
+    };
+    for ring in source {
+        budget.arrangement(ring.len().saturating_mul(6))?;
+        let path = BezierPath::from_polyline(ring, true)?;
+        for contour in stroke::outline_stroke_tol(&path, &options, tolerance)? {
+            let band = contour.to_ring(tolerance)?;
+            budget.points(band.len())?;
+            bands.push(band);
+        }
+    }
+    budget.arrangement(point_count(source).saturating_add(point_count(&bands)))?;
+    let result = rings::planar(source, &bands, "difference")?;
+    budget.points(point_count(&result))?;
+    Ok(result)
 }
 
 fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) -> Toolpath {
@@ -109,120 +217,160 @@ fn path_from_ring(role: PathRole, ring: &[[f64; 2]], closed: bool) -> Toolpath {
     }
 }
 
-fn winding(point: [f64; 2], source: &Rings) -> i32 {
-    let mut winding = 0;
-    for ring in source {
-        for i in 0..ring.len() {
-            let a = ring[i];
-            let b = ring[(i + 1) % ring.len()];
-            let c = cross2(sub2(b, a), sub2(point, a));
-            if a[1] <= point[1] && b[1] > point[1] && c > 0.0 {
-                winding += 1;
-            }
-            if a[1] > point[1] && b[1] <= point[1] && c < 0.0 {
-                winding -= 1;
-            }
-        }
+fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpath>> {
+    let mut min_y = f64::INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    for point in source.iter().flatten() {
+        min_y = min_y.min(point[1]);
+        max_y = max_y.max(point[1]);
     }
-    winding
-}
-
-fn hatch(source: &Rings, spacing: f64) -> Vec<Toolpath> {
-    let mut xs = Vec::new();
-    let mut ys = Vec::new();
-    for ring in source {
-        for point in ring {
-            xs.push(point[0]);
-            ys.push(point[1]);
-        }
+    if source.is_empty() || max_y - min_y < spacing * 0.25 {
+        return Ok(Vec::new());
     }
-    if xs.is_empty() {
-        return Vec::new();
+    let start = min_y + spacing * 0.5;
+    let end = max_y - spacing * 0.25;
+    if start > end {
+        return Ok(Vec::new());
     }
-    let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
-    let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    if !min_x.is_finite() || max_y - min_y < spacing * 0.25 {
-        return Vec::new();
+    let intervals = ((end - start) / spacing).floor();
+    if !intervals.is_finite() || intervals >= MAX_HATCH_LINES as f64 {
+        return Err(invalid(
+            "TOOLPATH_HATCH_LIMIT",
+            "Toolpath hatch exceeds 65536 scan lines",
+        ));
     }
+    let line_count = intervals as usize + 1;
+    let edges = point_count(source);
+    let row_work = edges
+        .checked_mul(1 + edges.max(1).ilog2() as usize)
+        .ok_or_else(budget_error)?;
+    budget.work(line_count.checked_mul(row_work).ok_or_else(budget_error)?)?;
     let mut paths = Vec::new();
-    let mut y = min_y + spacing * 0.5;
-    let mut reverse = false;
-    while y <= max_y - spacing * 0.25 {
+    let mut previous_y = None;
+    for row in 0..line_count {
+        // Index-based placement avoids accumulated roundoff and non-advancing
+        // floating-point additions. The budget counts every attempted row.
+        let y = spacing.mul_add(row as f64, start);
+        if !y.is_finite() || previous_y.is_some_and(|previous| y <= previous) {
+            return Err(invalid(
+                "TOOLPATH_INVALID_SETTINGS",
+                "Hatch spacing does not advance coordinates",
+            ));
+        }
+        previous_y = Some(y);
+        if y > end {
+            break;
+        }
         let mut hits = Vec::new();
         for ring in source {
             for i in 0..ring.len() {
                 let a = ring[i];
                 let b = ring[(i + 1) % ring.len()];
-                let (y0, y1) = (a[1], b[1]);
-                if (y0 <= y && y < y1) || (y1 <= y && y < y0) {
-                    let t = (y - y0) / (y1 - y0);
-                    if t.is_finite() {
-                        hits.push(a[0] + (b[0] - a[0]) * t);
+                if (a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1]) {
+                    let t = (y - a[1]) / (b[1] - a[1]);
+                    let x = (b[0] - a[0]).mul_add(t, a[0]);
+                    if !valid_coordinate(x) {
+                        return Err(invalid(
+                            "TOOLPATH_INVALID_GEOMETRY",
+                            "Non-finite hatch intersection",
+                        ));
                     }
+                    hits.push((x, if b[1] > a[1] { -1_i32 } else { 1_i32 }));
                 }
             }
         }
-        hits.sort_by(|a, b| a.total_cmp(b));
-        let mut pair = 0;
-        while pair + 1 < hits.len() {
-            let mut x0 = hits[pair];
-            let mut x1 = hits[pair + 1];
-            if reverse {
-                std::mem::swap(&mut x0, &mut x1);
+        hits.sort_by(|a, b| a.0.total_cmp(&b.0));
+        // Sweep signed crossings so holes, disconnected islands and touching
+        // boundaries share the same nonzero fill rule as the wall geometry.
+        let mut winding = 0_i32;
+        let mut span_start = 0.0;
+        let mut index = 0;
+        let row_start = paths.len();
+        while index < hits.len() {
+            let x = hits[index].0;
+            let old_winding = winding;
+            while index < hits.len() && hits[index].0 == x {
+                winding += hits[index].1;
+                index += 1;
             }
-            let mid = [(x0 + x1) * 0.5, y];
-            if winding(mid, source) != 0 {
+            if old_winding == 0 && winding != 0 {
+                span_start = x;
+            } else if old_winding != 0 && winding == 0 && x > span_start {
+                budget.points(2)?;
                 paths.push(Toolpath {
                     role: PathRole::Hatch,
-                    points: vec![[x0, y], [x1, y]],
+                    points: vec![[span_start, y], [x, y]],
                     closed: false,
                 });
             }
-            pair += 2;
         }
-        reverse = !reverse;
-        y += spacing;
+        if winding != 0 {
+            return Err(invalid(
+                "TOOLPATH_INVALID_GEOMETRY",
+                "Unbalanced hatch boundary",
+            ));
+        }
+        if row % 2 == 1 {
+            paths[row_start..].reverse();
+            for path in &mut paths[row_start..] {
+                path.points.reverse();
+            }
+        }
     }
-    paths
+    Ok(paths)
 }
 
-/// Offset contours and hatch one already-computed layer section.
+/// Offset contours and hatch one already-computed layer section. Contours use
+/// nonzero winding (outer boundaries and holes have opposite orientations).
+/// Coordinates remain in the host's model space; Z is a preview sample plane.
 pub fn plan_layer(section: &LayerSection, settings: &ToolpathSettings) -> Result<ToolpathLayer> {
     require_settings(settings)?;
-    if !section.z_mm.is_finite() {
-        return Err(invalid(
-            "TOOLPATH_INVALID_HEIGHT",
-            "Layer height must be finite",
-        ));
-    }
+    plan_layer_with_budget(section, settings, &mut Budget::default())
+}
+
+fn plan_layer_with_budget(
+    section: &LayerSection,
+    settings: &ToolpathSettings,
+    budget: &mut Budget,
+) -> Result<ToolpathLayer> {
+    require_section(section, budget)?;
+    budget.arrangement(point_count(&section.contours))?;
+    let source = rings::nonzero(&section.contours)?;
+    budget.points(point_count(&source))?;
     let mut paths = Vec::new();
     for wall in 0..settings.wall_count {
-        let inset = -(wall as f64 + 0.5) * settings.line_width_mm;
-        let offset = offset_rings(rings_of(section), inset)?;
+        let inset = (wall as f64 + 0.5) * settings.line_width_mm;
+        let offset = inset_rings(&source, inset, budget)?;
         let role = if wall == 0 {
             PathRole::Outline
         } else {
             PathRole::Inset
         };
         for ring in &offset {
-            if ring.len() >= 3 {
-                paths.push(path_from_ring(role, ring, true));
-            }
+            budget.points(ring.len())?;
+            paths.push(path_from_ring(role, ring, true));
+        }
+        if offset.is_empty() {
+            break;
         }
     }
-    let remaining = offset_rings(
-        rings_of(section),
-        -(settings.wall_count as f64) * settings.line_width_mm,
+    let remaining = inset_rings(
+        &source,
+        settings.wall_count as f64 * settings.line_width_mm,
+        budget,
     )?;
-    paths.extend(hatch(&remaining, settings.infill_spacing_mm));
+    paths.extend(hatch(&remaining, settings.infill_spacing_mm, budget)?);
     Ok(ToolpathLayer {
         z_mm: section.z_mm,
         paths,
     })
 }
 
-/// Walk a height range. `section_at` comes from the host (CAD mesh section).
+/// Sample `z_min + i * layer_height_mm` in the half-open range `[z_min, z_max)`.
+/// `section_at` must return the requested Z unchanged, including empty samples.
+/// Every sample consumes the 2048-layer budget; empty planned layers are omitted.
+/// This is model-space preview sampling, not first-layer/nozzle placement. The
+/// emitter uses the nominal layer height even if the final interval is partial.
 pub fn schedule_layers<F>(
     mut section_at: F,
     z_min: f64,
@@ -233,25 +381,46 @@ where
     F: FnMut(f64) -> Result<LayerSection>,
 {
     require_settings(settings)?;
-    if !z_min.is_finite() || !z_max.is_finite() || z_max <= z_min {
+    if !valid_coordinate(z_min) || !valid_coordinate(z_max) || z_max <= z_min {
         return Err(invalid(
             "TOOLPATH_INVALID_RANGE",
-            "Layer range must be finite and increasing",
+            "Layer range must be finite, increasing and within +/-1000000 mm",
         ));
     }
-    let mut layers = Vec::new();
-    let mut z = z_min;
-    while z < z_max {
-        let section = section_at(z)?;
-        if !section.contours.is_empty() {
-            layers.push(plan_layer(&section, settings)?);
+    // Preflight before calling the host, so empty sections cannot evade the cap.
+    let mut heights = Vec::new();
+    for index in 0..=MAX_LAYERS {
+        let z = settings.layer_height_mm.mul_add(index as f64, z_min);
+        if !z.is_finite() || heights.last().is_some_and(|&previous| z <= previous) {
+            return Err(invalid(
+                "TOOLPATH_INVALID_RANGE",
+                "Layer height does not advance Z",
+            ));
         }
-        z += settings.layer_height_mm;
-        if layers.len() > MAX_LAYERS {
+        if z >= z_max {
+            break;
+        }
+        if index == MAX_LAYERS {
             return Err(invalid(
                 "TOOLPATH_LAYER_LIMIT",
-                "Toolpath plan exceeded 2048 layers",
+                "Toolpath plan exceeded 2048 sampled layers",
             ));
+        }
+        heights.push(z);
+    }
+    let mut layers = Vec::new();
+    let mut budget = Budget::default();
+    for z in heights {
+        let section = section_at(z)?;
+        if section.z_mm != z {
+            return Err(invalid(
+                "TOOLPATH_INVALID_HEIGHT",
+                "Section Z does not match the requested sample plane",
+            ));
+        }
+        let layer = plan_layer_with_budget(&section, settings, &mut budget)?;
+        if !layer.paths.is_empty() {
+            layers.push(layer);
         }
     }
     Ok(layers)
@@ -267,8 +436,23 @@ fn machine_profile(settings: &ToolpathSettings) -> gcode_core::MachineProfile {
     }
 }
 
-fn planned_layers(layers: &[ToolpathLayer]) -> Vec<gcode_core::PlannedLayer> {
-    layers
+fn planned_layers(layers: &[ToolpathLayer]) -> Result<Vec<gcode_core::PlannedLayer>> {
+    if layers.len() > MAX_LAYERS {
+        return Err(invalid(
+            "TOOLPATH_LAYER_LIMIT",
+            "Toolpath plan exceeded 2048 layers",
+        ));
+    }
+    // Public callers can supply their own plans. Bound the compatibility copy
+    // before allocating; gcode-core performs the complete numeric validation.
+    let mut budget = Budget::default();
+    for layer in layers {
+        budget.points(layer.paths.len())?;
+        for path in &layer.paths {
+            budget.points(path.points.len())?;
+        }
+    }
+    Ok(layers
         .iter()
         .map(|layer| gcode_core::PlannedLayer {
             z_mm: layer.z_mm,
@@ -281,7 +465,7 @@ fn planned_layers(layers: &[ToolpathLayer]) -> Vec<gcode_core::PlannedLayer> {
                 })
                 .collect(),
         })
-        .collect()
+        .collect())
 }
 
 fn gcode_error(error: gcode_core::Error) -> Error {
@@ -291,15 +475,21 @@ fn gcode_error(error: gcode_core::Error) -> Error {
 /// One encoding of a planned toolpath. Not the only possible machine dialect.
 pub fn emit_gcode(layers: &[ToolpathLayer], settings: &ToolpathSettings) -> Result<String> {
     require_settings(settings)?;
-    gcode_core::emit(&planned_layers(layers), &machine_profile(settings)).map_err(gcode_error)
+    gcode_core::emit(&planned_layers(layers)?, &machine_profile(settings)).map_err(gcode_error)
 }
 
 pub fn parse_gcode_preview(gcode: &str) -> Result<GcodePreview> {
     gcode_core::parse(gcode).map_err(gcode_error)
 }
 
-/// Extruded volume when the plan carries filament diameter. Zero-meaning for
-/// non-extrusion machines.
+/// Nominal volume estimate; returns NaN for invalid settings or oversized plans.
+/// This does not model a printer's real bead shape or partial layer thickness.
 pub fn deposited_volume_mm3(layers: &[ToolpathLayer], settings: &ToolpathSettings) -> f64 {
-    gcode_core::deposited_volume_mm3(&planned_layers(layers), &machine_profile(settings))
+    if require_settings(settings).is_err() {
+        return f64::NAN;
+    }
+    match planned_layers(layers) {
+        Ok(layers) => gcode_core::deposited_volume_mm3(&layers, &machine_profile(settings)),
+        Err(_) => f64::NAN,
+    }
 }

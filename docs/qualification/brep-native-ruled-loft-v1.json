@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-13",
+  "scope": "Retained ruled B-rep loft with bilinear side patches and shared station topology",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBrepTests": 105,
+    "integrationTests": 71,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4620769
+  },
+  "coverage": [
+    "Rotated square sections produce six retained faces and twelve shared edges rather than triangulated side faces",
+    "Surface-integrated volume agrees with independent integral of intermediate section area",
+    "Display meshes remain closed and improve volume approximation under refinement",
+    "Rigidly placed loft retains volume",
+    "Multiple station intervals sew into one body with twenty edges and ten faces",
+    "Collapsed twist and mismatched vertex count refuse; subsequent valid request succeeds"
+  ],
+  "limitations": [
+    "Only matching strictly convex consistently oriented parallel polygon sections",
+    "Sufficient positive Bernstein support-coefficient admission is numerical and conservative, not certified or complete for all valid correspondences",
+    "Side patches are bilinear, with C0 joins across stations; not general smooth high-degree NURBS loft or arbitrary section matching",
+    "New Rust/WASM constructor is not yet connected to editor mode or ModelGraph/provider schema",
+    "General B-rep completion and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/analytic/loft.rs": "4c51b3a74d14072595d313d37931297305dbddd1a18f542a1622fd89b148c97f",
+    "crates/brep-core/src/analytic.rs": "8faee246e925bffce671cfda48397cc22284ddb34c9225e7877e19d2e951b68d",
+    "crates/brep-core/src/operations.rs": "badc61b68bc6f89844d0d4e806c127699d8a65b815696bb3fee4fffdd3809080",
+    "crates/brep-core/src/lib.rs": "5d8cc0603db2b0a07ce22d417152275916c1f274165b7b2a382eeb633d1e89a3",
+    "crates/geometry-bridge/src/lib.rs": "028ff597d269ce4aad50619bd60fdc07a6c9aadc2a0012aa0a0833483e9bb4e3",
+    "src/services/geometry/brep.ts": "2f9463d814acb48fcc065e1b86b84ecbdde3336473ea2051a9e32c668016ab29",
+    "tests/brepRuledLoft.test.ts": "7ee7c2a9936182e414ae2de5a44ebb794e1f71080a47eaba31d143f03267386c",
+    "src/generated/geometry-kernels/bytes.ts": "874a6b4de4554f9b34a38aacdd0d6813b0ffe314bc2b1111cad9e4d7086f3702"
+  }
+}

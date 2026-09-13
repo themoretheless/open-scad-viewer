@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-13",
+  "scope": "Ordered native retained-body Boolean integration in CAD workbench",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 55,
+    "testFiles": 5,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4609128
+  },
+  "coverage": [
+    "Union/difference/intersection retain updated B-rep and mesh",
+    "Operand order and repeated native operations",
+    "Regularized empties remove selected records and preserve unrelated bodies",
+    "Late invalid operands refuse atomically",
+    "Mixed retained/mesh-only operands explicitly refuse",
+    "Unsupported curved pairs refuse without mesh fallback",
+    "Coaxial cylinder subtraction retains rational walls and analytic volume"
+  ],
+  "limitations": [
+    "Native Boolean geometry support remains the existing admitted planar/prismatic matrix",
+    "General curved Boolean and mixed representation conversion are not implemented",
+    "Mesh-only workbench operands still use legacy orchestration",
+    "Shared qualification predates this artifact; full B-rep incomplete"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_boolean.rs": "ef25adcc5cdfe9485979de3b61db57321e4d1f022e56901de7f2b727c9b087ce",
+    "crates/geometry-bridge/src/lib.rs": "344b86d4a0f521140ac673e7b812d9c87f3977fc322804b3b65eceb04246a013",
+    "src/services/cadWorkbench.ts": "1d5b556607486dc87c1ee76a064dcb6f99024917b2a976379e2fc1ca66dde4d0",
+    "tests/nativeBodyBoolean.test.ts": "edbe1a3ab720ab5956e4dce5fd2b2cb04dbdea304fb843e2778149636fc11e80",
+    "src/generated/geometry-kernels/bytes.ts": "e22e81a28aab8d17386bfddf65c73cb38358400ddc89ba42fac77916dc269cfc"
+  }
+}

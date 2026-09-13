@@ -573,7 +573,57 @@ impl ThreadMesh<'_> {
         Ok(())
     }
 }
+fn admit_thread_fields(o: &Value, path: &str) -> Result<()> {
+    for key in [
+        "diameter",
+        "pitch",
+        "length",
+        "wall",
+        "clearance",
+        "starts",
+        "segments_per_turn",
+    ] {
+        if !o
+            .get(key)
+            .and_then(Value::as_f64)
+            .is_some_and(f64::is_finite)
+        {
+            return Err(err(path, format!("Thread {key} must be finite.")));
+        }
+    }
+    for key in ["internal", "left_handed"] {
+        if o.get(key).and_then(Value::as_bool).is_none() {
+            return Err(err(path, format!("Thread {key} must be boolean.")));
+        }
+    }
+    Ok(())
+}
 pub fn thread(o: &Value, path: &str) -> Result<Generated> {
+    thread_with_mesh(o, path).map(|(generated, _)| generated)
+}
+pub fn thread_geometry(o: &Value) -> Result<Value> {
+    let (generated, mesh) = thread_with_mesh(o, "thread")?;
+    Ok(json!({"source":generated.source,"mesh":mesh,"report":generated.report}))
+}
+pub fn thread_radius(o: &Value, angle: f64, z: f64) -> Result<f64> {
+    admit_thread_fields(o, "thread")?;
+    if !angle.is_finite() || !z.is_finite() || n(o, "pitch") <= 0. {
+        return Err(err("thread", "Invalid thread radius query."));
+    }
+    let phase = z / n(o, "pitch")
+        - (if flag(o, "left_handed") { -1. } else { 1. }) * n(o, "starts") * angle / TAU;
+    let wrapped = phase - phase.floor();
+    let distance = wrapped.min(1. - wrapped);
+    let depth = 3f64.sqrt() * n(o, "pitch") * (distance - 1. / 16.).clamp(0., 5. / 16.);
+    let radius = n(o, "diameter") / 2. - depth
+        + (if flag(o, "internal") { 1. } else { -1. }) * n(o, "clearance") / 2.;
+    if !phase.is_finite() || !radius.is_finite() {
+        return Err(err("thread", "Thread radius exceeds finite numeric range."));
+    }
+    Ok(radius)
+}
+fn thread_with_mesh(o: &Value, path: &str) -> Result<(Generated, Value)> {
+    admit_thread_fields(o, path)?;
     let e = |m: &str| err(path, m);
     for name in ["diameter", "pitch", "length", "wall"] {
         let v = n(o, name);
@@ -739,11 +789,15 @@ pub fn thread(o: &Value, path: &str) -> Result<Generated> {
     let depth = 5. * 3f64.sqrt() * pitch / 16.;
     let offset = (if internal { 1. } else { -1. }) * clearance / 2.;
     let report = json!({"generator":"own_helical_thread","profile":"metric_60_degree_basic_faceted","units":"mm","nominal_diameter_mm":diameter,"pitch_mm":pitch,"lead_mm":starts*pitch,"length_mm":length,"starts":starts,"handedness":if flag(o,"left_handed"){"left"}else{"right"},"internal":internal,"radial_clearance_mm":clearance,"clearance_convention":"External radius decreases by clearance/2; internal cavity radius increases by clearance/2. Matching settings give nominal radial clearance.","major_diameter_mm":diameter+2.*offset,"minor_diameter_mm":diameter-2.*depth+2.*offset,"outer_diameter_mm":if internal{diameter+clearance+2.*n(o,"wall")}else{diameter-clearance},"minimum_wall_mm":if internal{json!(n(o,"wall"))}else{Value::Null},"profile_depth_mm":depth,"flank_included_angle_degrees":60,"segments_per_turn":segments,"angular_columns":columns.len()-1,"vertex_count":mesh.points.len(),"triangle_count":mesh.faces.len(),"tolerance_class":null,"limitations":["Faceted basic profile, without root rounding, lead-in chamfers, runout or a tolerance class.","Matching pitch, starts, handedness and angular phase are required; printing fit is not certified."]});
-    Ok(Generated {
-        source,
-        report,
-        parts: vec![],
-    })
+    let geometry = json!({"positions":mesh.points.iter().flatten().copied().collect::<Vec<_>>(),"indices":mesh.faces.iter().flat_map(|f| f.iter().rev().copied()).collect::<Vec<_>>()});
+    Ok((
+        Generated {
+            source,
+            report,
+            parts: vec![],
+        },
+        geometry,
+    ))
 }
 
 #[cfg(test)]

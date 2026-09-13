@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native bounded display-mesh pair clearance and overlap inspection",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 30,
+    "testFiles": 4,
+    "nativeSegmentCases": 1,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4612592
+  },
+  "coverage": [
+    "Separated/touching/overlapping/contained boxes",
+    "Diagonal corner minima and operand symmetry",
+    "Ordered multi-body reports and source immutability",
+    "Two-million triangle-pair admission and subsequent recovery",
+    "Native interior/parallel/collapsed segment minima"
+  ],
+  "limitations": [
+    "Uses display meshes and floating-point proximity/CSG, not certified analytic B-rep distance",
+    "Whole-domain numeric conditioning and browser peak memory/latency not qualified",
+    "General B-rep and remaining native migration incomplete",
+    "Shared qualification predates this build"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_clearance.rs": "876818b250fc133b97dc36dadb5d09253c81bc95c46563f2196faffe7fb72459",
+    "crates/geometry-bridge/src/lib.rs": "34df4d4ef514b7e3d7b0e1380cbc4d46b4eca887c3f7909dc20e558489970b8d",
+    "src/services/cadInspection.ts": "da22b1247955ce2ddc22ac17ec7c14eaaa92e88a764e79f52c7953fea42b4d20",
+    "tests/nativeCadClearance.test.ts": "13920c57aa5fb4f1d50c355b9d65d059fbb5b109a8ebdaa374fee8fd55fcba24",
+    "src/generated/geometry-kernels/bytes.ts": "c6d1c30b1dc6fb70370a41020c6705a3d39cd352ab61ecbf4f9692e2bda47a60"
+  }
+}

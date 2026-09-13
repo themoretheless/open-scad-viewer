@@ -278,6 +278,22 @@ pub fn compile(mut document: J) -> Result<J> {
                 refs.extend(holes.iter().filter_map(J::as_str))
             }
         }
+        if s(node, "op") == "brep_extrude_curves" {
+            let curves = node["loops"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|wire| wire.as_array().unwrap())
+                .collect::<Vec<_>>();
+            if curves.len() > 254 {
+                return Err(Error::new(
+                    "reference_limit",
+                    format!("{path}/loops"),
+                    "Curve extrusion accepts at most 254 curve references across all loops.",
+                ));
+            }
+            refs.extend(curves.into_iter().map(|curve| curve.as_str().unwrap()));
+        }
         let mut height = 1;
         for key in refs {
             height = height.max(1 + visit(key, depth + 1, nodes, active, heights)?)
@@ -471,6 +487,37 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                         .collect::<Result<_>>()?,
                 )
             }
+            if s(node, "op") == "brep_extrude_curves" {
+                n["loops"] = J::Array(
+                    node["loops"]
+                        .as_array()
+                        .ok_or_else(|| {
+                            text_error(id, "Curve extrusion requires nested curve lists")
+                        })?
+                        .iter()
+                        .map(|wire| {
+                            wire.as_array()
+                                .ok_or_else(|| {
+                                    text_error(id, "Curve extrusion requires nested curve lists")
+                                })?
+                                .iter()
+                                .map(|curve| {
+                                    select(
+                                        curve.as_str().unwrap_or(""),
+                                        depth + 1,
+                                        by_id,
+                                        params,
+                                        found,
+                                        selected,
+                                    )
+                                    .map(J::String)
+                                })
+                                .collect::<Result<Vec<_>>>()
+                                .map(J::Array)
+                        })
+                        .collect::<Result<_>>()?,
+                );
+            }
             selected[slot] = n;
             Ok(id.into())
         }
@@ -535,6 +582,17 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "sdf_translate",
             "sdf_tessellate",
             "brep_box",
+            "brep_sphere",
+            "brep_torus",
+            "brep_cylinder",
+            "brep_frustum",
+            "brep_tube",
+            "brep_extrude",
+            "brep_extrude_curves",
+            "brep_revolve",
+            "brep_boolean",
+            "brep_chamfer",
+            "brep_fillet",
             "brep_tessellate",
             "surface",
             "curve",
@@ -555,7 +613,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             ));
         }
         for (key, value) in node.as_object_mut().unwrap() {
-            if ["id", "op", "input", "inputs", "operation"].contains(&key.as_str()) {
+            if ["id", "op", "input", "inputs", "operation", "loops"].contains(&key.as_str()) {
                 continue;
             }
             if key == "matrix" {
@@ -585,6 +643,8 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             } else {
                 let dimension = if [
                     "height",
+                    "z_min",
+                    "z_max",
                     "outer",
                     "holes",
                     "sections",
@@ -594,6 +654,11 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "center",
                     "half_size",
                     "radius",
+                    "bottom_radius",
+                    "top_radius",
+                    "inner_radius",
+                    "outer_radius",
+                    "size",
                     "major_radius",
                     "minor_radius",
                     "distance",
@@ -629,6 +694,51 @@ mod tests {
     }
     fn document(nodes: Vec<J>, root: &str) -> J {
         json!({"language":"modelgraph/nurbs-1","units":"mm","nodes":nodes,"root":root})
+    }
+
+    #[test]
+    fn curve_extrusion_references_participate_in_graph_and_conditional_traversal() {
+        let curve = json!({"id":"Curve","op":"curve","degree":1,"knots":[0,0,1,1],"control_points":[[0,0],[1,0]],"weights":[1,1]});
+        let mut body = json!({"id":"Body","op":"brep_extrude_curves","loops":[["Curve"]],"z_min":-2,"z_max":3});
+        assert!(compile(document(vec![curve.clone(), body.clone()], "Body")).is_ok());
+        body["loops"] = json!([["Missing"]]);
+        assert_eq!(
+            compile(document(vec![curve.clone(), body.clone()], "Body"))
+                .unwrap_err()
+                .code,
+            "unknown_node"
+        );
+        body["loops"] = json!([["Body"]]);
+        assert_eq!(
+            compile(document(vec![body.clone()], "Body"))
+                .unwrap_err()
+                .code,
+            "cycle"
+        );
+        body["loops"] = json!([vec!["Curve"; 128], vec!["Curve"; 127]]);
+        assert_eq!(
+            compile(document(vec![curve.clone(), body.clone()], "Body"))
+                .unwrap_err()
+                .code,
+            "reference_limit"
+        );
+        body["loops"] = json!([["Chosen"]]);
+        let choice = json!({"id":"Chosen","op":"if","condition":1,"then":"Curve","else":"Missing"});
+        let prepared = compile_text(vec![curve, choice, body], &[], "Body".into()).unwrap();
+        assert_eq!(
+            prepared["document"]["nodes"][0]["loops"],
+            json!([["Curve"]])
+        );
+        assert_eq!(prepared["document"]["nodes"].as_array().unwrap().len(), 2);
+        let body = json!({"id":"Empty","op":"brep_extrude_curves","loops":[],"z_min":{"op":"quantity","value":-2,"unit":"mm"},"z_max":{"op":"quantity","value":3,"unit":"mm"}});
+        assert_eq!(
+            compile_text(vec![body.clone()], &[], "Empty".into()).unwrap()["document"]["nodes"][0]
+                ["z_min"],
+            -2
+        );
+        let mut bad = body;
+        bad["z_max"]["unit"] = json!("deg");
+        assert!(compile_text(vec![bad], &[], "Empty".into()).is_err());
     }
 
     #[test]

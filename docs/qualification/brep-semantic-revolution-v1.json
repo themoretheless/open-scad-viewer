@@ -1,0 +1,19 @@
+{
+  "scope": "Native semantic exact polygon revolution; not full B-rep qualification",
+  "nativeBridgeTestsPassed": 42,
+  "integrationTestsPassed": 58,
+  "distArtifacts": 68,
+  "distBytes": 4698463,
+  "limitations": [
+    "One exactly joined polygonal wire in nonnegative radial half-plane",
+    "Curved spans and holes unsupported",
+    "SVG and own-CAD evidence snapshots have not been refreshed for this WASM"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_semantic.rs": "d7df71eec92869bdf667002df4bba26a876cf8d45c06a7cb1d64f1fd7f73a5f4",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "b0953f58da2ec7d6fdbb587c5393ff0690dcabb2bac833402e60a4aef2f940a5",
+    "src/generated/geometry-kernels/bytes.ts": "ebe17471644194de5cf7a4546369673b552cb87021887201715047ea06d78903",
+    "tests/brepNativeExecutor.test.ts": "2c1293c5e40052d15c2782454722a69146a5dd341e5e9ef5637b40452e058414",
+    "tests/brepSemanticBackend.test.ts": "2c8f43c4dfcfe5c59d9edad5a8f398c573fedfa29f717c8fee6e80630ff6b298"
+  }
+}

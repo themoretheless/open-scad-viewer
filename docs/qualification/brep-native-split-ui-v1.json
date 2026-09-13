@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-13",
+  "scope": "Direct editor split preview routed through the shared native retained-body operation",
+  "fullGoalComplete": false,
+  "checks": {
+    "tests": 30,
+    "testFiles": 3,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4608092
+  },
+  "coverage": [
+    "Actual Vue editor preview leaves persisted document unchanged",
+    "Apply retains original ID on positive half and assigns a new committed second ID",
+    "Both halves retain B-rep and matching mesh volumes",
+    "Undo restores original body and input seed remains unchanged",
+    "Existing direct editor and retained planar edit tests"
+  ],
+  "limitations": [
+    "Convex-planar split support remains finite",
+    "Other geometry migration and general certified B-rep remain incomplete"
+  ],
+  "sha256": {
+    "src/features/DirectModeler.vue": "274bc21daaea704c9fb7c4f651a62d98bf4bcfa9de8a75d682da4435ddb96895",
+    "tests/directModelerUi.test.ts": "aeff7d44cfb7250166275ce96b27f66b7165b89cf3815c772ceb84e8f817af79",
+    "src/services/directSolidTools.ts": "3532eb5bb98cf1606ab48541e4b9ea04d386f508013b462b3f64f595522ffa4e",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "4a4c82624ce792bbc5d4bd7a02afd4cea7a5e1a9a10dc7b59f6f1a336a44577e"
+  }
+}

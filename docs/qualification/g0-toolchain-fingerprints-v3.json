@@ -1,0 +1,93 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v3",
+  "recordedAt": "2026-09-13",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v2",
+  "purpose": "Re-freeze current SVG/BRep dependency, notice, Vitest harness, semantic lowerer and example source changes; preserve the finite G1 contract and restart all clean work.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1/v2 or G1 v1 through v18",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "e237f8637b562afa3a4826c314c752e4bf347ff5a5b30088dc9547bad39e9935",
+      "byteLength": 2800
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+      "byteLength": 5950
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "19315375ee30da2590381203cdf62da952e25608e508b75d4a249cd6392db602",
+      "byteLength": 1749
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "f258c6eb4aa142cc1c0e0fff7ff937fa8b43b4a2456be5c30248a810a1ffb7fc",
+      "byteLength": 43458
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+      "bindingId": "root-package-manifest",
+      "note": "Current bytes are newly bound in v3; v2 remains archived. Re-freeze current SVG/BRep dependency, notice, Vitest harness, semantic lowerer and example source changes; preserve the finite G1 contract and restart all clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+      "bindingId": "third-party-notices",
+      "note": "Current bytes are newly bound in v3; v2 remains archived. Re-freeze current SVG/BRep dependency, notice, Vitest harness, semantic lowerer and example source changes; preserve the finite G1 contract and restart all clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+      "bindingId": "crates-workspace-manifest",
+      "note": "Current bytes are newly bound in v3; v2 remains archived. Re-freeze current SVG/BRep dependency, notice, Vitest harness, semantic lowerer and example source changes; preserve the finite G1 contract and restart all clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v2.json",
+      "bindingId": "crates-lockfile",
+      "note": "Current bytes are newly bound in v3; v2 remains archived. Re-freeze current SVG/BRep dependency, notice, Vitest harness, semantic lowerer and example source changes; preserve the finite G1 contract and restart all clean work."
+    }
+  ],
+  "previousFingerprintSha256": "d040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76"
+}

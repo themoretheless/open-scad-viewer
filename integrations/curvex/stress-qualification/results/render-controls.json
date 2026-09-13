@@ -1,0 +1,1471 @@
+{
+  "method": "Two A/B/B/A cycles, same existing fixture, 21 timed samples after 3 warmups. Compiler/test processes from this task stopped.",
+  "binaries": {
+    "before": "c313c85ed27cadf9edfcdfbc65111fef5a6e2cacd5d5bf190ed0346a62ea6960",
+    "after": "70bf7977c9b153238f3f516ab024a103cba11d07ecafe059f532959e0e15a3e1"
+  },
+  "rows": [
+    {
+      "case": "rectangle_fill",
+      "before_us": 0.9790000000000001,
+      "after_us": 1.0,
+      "ratio_after_before": 1.0214504596527068
+    },
+    {
+      "case": "compound_16_holes_fill",
+      "before_us": 75.0625,
+      "after_us": 76.917,
+      "ratio_after_before": 1.0247060782681099
+    },
+    {
+      "case": "cubic_circle_fill",
+      "before_us": 11.75,
+      "after_us": 12.229,
+      "ratio_after_before": 1.0407659574468084
+    },
+    {
+      "case": "cubic_circle_stroke",
+      "before_us": 15.749500000000001,
+      "after_us": 16.8125,
+      "ratio_after_before": 1.067494206165275
+    },
+    {
+      "case": "overlap_nonzero_fill",
+      "before_us": 9.7085,
+      "after_us": 8.354,
+      "ratio_after_before": 0.8604830818355048
+    },
+    {
+      "case": "bowtie_evenodd_fill",
+      "before_us": 5.625,
+      "after_us": 5.5835,
+      "ratio_after_before": 0.9926222222222222
+    },
+    {
+      "case": "open_cubic_stroke",
+      "before_us": 11.646,
+      "after_us": 12.0415,
+      "ratio_after_before": 1.0339601579941609
+    },
+    {
+      "case": "curvex_sampled_gradient_stroke",
+      "before_us": 4.8955,
+      "after_us": 5.2915,
+      "ratio_after_before": 1.0808906138290266
+    },
+    {
+      "case": "polyline_1200_stroke",
+      "before_us": 74.021,
+      "after_us": 78.4165,
+      "ratio_after_before": 1.0593817970575918
+    },
+    {
+      "case": "polyline_4096_fill",
+      "before_us": 132.9995,
+      "after_us": 134.708,
+      "ratio_after_before": 1.01284591295456
+    }
+  ],
+  "runs": [
+    {
+      "version": "before",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 1.167,
+            "p95Us": 4.25,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.583,
+            "p95Us": 0.75,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 125.334,
+            "p95Us": 254.25,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 10.708,
+            "p95Us": 26.625,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 19.334,
+            "p95Us": 23.75,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 7.625,
+            "p95Us": 7.667,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 27.333,
+            "p95Us": 27.958,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 6.542,
+            "p95Us": 6.833,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 15.25,
+            "p95Us": 19.625,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.625,
+            "p95Us": 1.667,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 9.0,
+            "p95Us": 19.167,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.625,
+            "p95Us": 0.625,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 16.417,
+            "p95Us": 18.625,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 4.958,
+            "p95Us": 4.959,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 6.459,
+            "p95Us": 7.917,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.5,
+            "p95Us": 2.542,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 122.166,
+            "p95Us": 127.375,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 102.916,
+            "p95Us": 104.125,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 171.625,
+            "p95Us": 207.792,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 372.584,
+            "p95Us": 374.292,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 1.459,
+            "p95Us": 4.333,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.666,
+            "p95Us": 0.833,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 123.0,
+            "p95Us": 157.292,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 10.667,
+            "p95Us": 16.583,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 19.333,
+            "p95Us": 22.291,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 7.417,
+            "p95Us": 7.542,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 24.208,
+            "p95Us": 30.25,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 5.625,
+            "p95Us": 5.667,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 11.375,
+            "p95Us": 12.625,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.458,
+            "p95Us": 1.708,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 7.708,
+            "p95Us": 7.833,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.625,
+            "p95Us": 0.667,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 15.958,
+            "p95Us": 22.041,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 5.0,
+            "p95Us": 5.0,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 6.542,
+            "p95Us": 8.417,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.5,
+            "p95Us": 2.542,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 123.25,
+            "p95Us": 153.75,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 103.625,
+            "p95Us": 112.5,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 181.041,
+            "p95Us": 203.5,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 367.041,
+            "p95Us": 371.542,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 1.0,
+            "p95Us": 2.5,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.458,
+            "p95Us": 0.542,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 77.0,
+            "p95Us": 81.958,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.292,
+            "p95Us": 8.541,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 12.0,
+            "p95Us": 12.5,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.417,
+            "p95Us": 5.625,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 16.75,
+            "p95Us": 17.167,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.333,
+            "p95Us": 4.417,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 8.208,
+            "p95Us": 8.792,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.292,
+            "p95Us": 1.375,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.584,
+            "p95Us": 6.0,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.583,
+            "p95Us": 0.667,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 12.083,
+            "p95Us": 13.667,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.792,
+            "p95Us": 3.875,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 5.083,
+            "p95Us": 6.583,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.083,
+            "p95Us": 2.167,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 78.333,
+            "p95Us": 79.625,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 80.25,
+            "p95Us": 80.375,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 133.125,
+            "p95Us": 135.833,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 324.25,
+            "p95Us": 351.333,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 0.916,
+            "p95Us": 2.458,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.458,
+            "p95Us": 0.541,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 75.542,
+            "p95Us": 83.625,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.208,
+            "p95Us": 8.333,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 11.417,
+            "p95Us": 13.083,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.292,
+            "p95Us": 5.542,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 15.625,
+            "p95Us": 16.042,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.334,
+            "p95Us": 4.417,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 9.75,
+            "p95Us": 11.625,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.25,
+            "p95Us": 1.334,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.583,
+            "p95Us": 7.167,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.583,
+            "p95Us": 0.625,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 11.5,
+            "p95Us": 12.958,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.792,
+            "p95Us": 3.917,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 4.875,
+            "p95Us": 5.041,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.084,
+            "p95Us": 2.167,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 73.542,
+            "p95Us": 75.958,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 80.041,
+            "p95Us": 80.708,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 131.917,
+            "p95Us": 134.084,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 323.166,
+            "p95Us": 324.833,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 1.042,
+            "p95Us": 2.958,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.458,
+            "p95Us": 0.625,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 74.416,
+            "p95Us": 84.167,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.25,
+            "p95Us": 8.542,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 11.625,
+            "p95Us": 13.083,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.25,
+            "p95Us": 5.375,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 15.708,
+            "p95Us": 16.833,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.333,
+            "p95Us": 4.417,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 9.667,
+            "p95Us": 10.917,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.209,
+            "p95Us": 1.292,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.667,
+            "p95Us": 6.709,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.542,
+            "p95Us": 0.625,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 11.75,
+            "p95Us": 12.792,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.833,
+            "p95Us": 3.875,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 4.875,
+            "p95Us": 5.083,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.125,
+            "p95Us": 2.208,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 74.167,
+            "p95Us": 75.041,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 79.209,
+            "p95Us": 79.584,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 132.708,
+            "p95Us": 148.709,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 325.208,
+            "p95Us": 327.417,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 0.917,
+            "p95Us": 2.375,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.458,
+            "p95Us": 0.584,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 75.959,
+            "p95Us": 84.708,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.5,
+            "p95Us": 8.708,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 12.125,
+            "p95Us": 14.542,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.292,
+            "p95Us": 5.417,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 16.875,
+            "p95Us": 24.625,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.375,
+            "p95Us": 4.416,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 8.5,
+            "p95Us": 14.333,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.25,
+            "p95Us": 1.375,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.583,
+            "p95Us": 5.917,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.583,
+            "p95Us": 0.625,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 11.958,
+            "p95Us": 12.542,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.791,
+            "p95Us": 4.042,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 5.125,
+            "p95Us": 6.708,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.125,
+            "p95Us": 2.25,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 78.5,
+            "p95Us": 79.458,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 79.25,
+            "p95Us": 79.75,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 133.458,
+            "p95Us": 149.125,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 324.875,
+            "p95Us": 335.583,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 1.0,
+            "p95Us": 2.584,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.459,
+            "p95Us": 0.541,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 76.834,
+            "p95Us": 83.625,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.291,
+            "p95Us": 8.458,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 12.333,
+            "p95Us": 12.959,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.375,
+            "p95Us": 5.583,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 16.709,
+            "p95Us": 17.083,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.333,
+            "p95Us": 4.375,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 8.125,
+            "p95Us": 8.708,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.25,
+            "p95Us": 1.334,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.5,
+            "p95Us": 5.917,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.542,
+            "p95Us": 0.584,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 12.0,
+            "p95Us": 14.375,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.75,
+            "p95Us": 3.833,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 5.458,
+            "p95Us": 6.625,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.125,
+            "p95Us": 2.167,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 77.666,
+            "p95Us": 78.417,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 79.916,
+            "p95Us": 80.292,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 135.958,
+            "p95Us": 162.167,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 323.209,
+            "p95Us": 324.25,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "data": [
+        {
+          "case": "rectangle_fill",
+          "native": {
+            "medianUs": 0.875,
+            "p95Us": 2.417,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          },
+          "lyon": {
+            "medianUs": 0.417,
+            "p95Us": 0.5,
+            "vertices": 4,
+            "triangles": 2,
+            "area": 8000.0
+          }
+        },
+        {
+          "case": "compound_16_holes_fill",
+          "native": {
+            "medianUs": 74.583,
+            "p95Us": 107.25,
+            "vertices": 84,
+            "triangles": 50,
+            "area": 6400.0
+          },
+          "lyon": {
+            "medianUs": 8.416,
+            "p95Us": 8.625,
+            "vertices": 68,
+            "triangles": 98,
+            "area": 6400.0
+          }
+        },
+        {
+          "case": "cubic_circle_fill",
+          "native": {
+            "medianUs": 11.875,
+            "p95Us": 14.709,
+            "vertices": 128,
+            "triangles": 126,
+            "area": 7853.021998
+          },
+          "lyon": {
+            "medianUs": 5.417,
+            "p95Us": 5.625,
+            "vertices": 76,
+            "triangles": 74,
+            "area": 7847.221857
+          }
+        },
+        {
+          "case": "cubic_circle_stroke",
+          "native": {
+            "medianUs": 15.791,
+            "p95Us": 19.334,
+            "vertices": 256,
+            "triangles": 256,
+            "area": 628.343502
+          },
+          "lyon": {
+            "medianUs": 4.333,
+            "p95Us": 4.375,
+            "vertices": 154,
+            "triangles": 152,
+            "area": 628.227261
+          }
+        },
+        {
+          "case": "overlap_nonzero_fill",
+          "native": {
+            "medianUs": 9.333,
+            "p95Us": 9.875,
+            "vertices": 10,
+            "triangles": 6,
+            "area": 5100.0
+          },
+          "lyon": {
+            "medianUs": 1.375,
+            "p95Us": 1.417,
+            "vertices": 10,
+            "triangles": 10,
+            "area": 5100.0
+          }
+        },
+        {
+          "case": "bowtie_evenodd_fill",
+          "native": {
+            "medianUs": 5.583,
+            "p95Us": 7.25,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          },
+          "lyon": {
+            "medianUs": 0.583,
+            "p95Us": 0.625,
+            "vertices": 5,
+            "triangles": 2,
+            "area": 3200.0
+          }
+        },
+        {
+          "case": "open_cubic_stroke",
+          "native": {
+            "medianUs": 11.542,
+            "p95Us": 11.709,
+            "vertices": 110,
+            "triangles": 108,
+            "area": 331.700296
+          },
+          "lyon": {
+            "medianUs": 3.791,
+            "p95Us": 3.875,
+            "vertices": 138,
+            "triangles": 136,
+            "area": 331.706768
+          }
+        },
+        {
+          "case": "curvex_sampled_gradient_stroke",
+          "native": {
+            "medianUs": 4.916,
+            "p95Us": 6.833,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211429
+          },
+          "lyon": {
+            "medianUs": 2.125,
+            "p95Us": 2.167,
+            "vertices": 58,
+            "triangles": 56,
+            "area": 949.211445
+          }
+        },
+        {
+          "case": "polyline_1200_stroke",
+          "native": {
+            "medianUs": 73.875,
+            "p95Us": 74.5,
+            "vertices": 2400,
+            "triangles": 2400,
+            "area": 1256.635699
+          },
+          "lyon": {
+            "medianUs": 79.583,
+            "p95Us": 80.5,
+            "vertices": 2402,
+            "triangles": 2400,
+            "area": 1256.635669
+          }
+        },
+        {
+          "case": "polyline_4096_fill",
+          "native": {
+            "medianUs": 133.291,
+            "p95Us": 149.041,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.914207
+          },
+          "lyon": {
+            "medianUs": 323.875,
+            "p95Us": 348.458,
+            "vertices": 4096,
+            "triangles": 4094,
+            "area": 31415.913548
+          }
+        }
+      ]
+    }
+  ]
+}

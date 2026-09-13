@@ -1,0 +1,27 @@
+{
+  "scope": "Signed partial analytic-wire revolution with rational planar caps; not full B-rep completion",
+  "tests": {
+    "core": 86,
+    "integration": 60,
+    "vueTypecheck": "passed"
+  },
+  "volumeOracle": "Torus-sector analytic volume at +90,-90,+210,-210 degrees",
+  "displayCase": "Quarter torus with six retained native faces",
+  "dist": {
+    "status": "failed",
+    "bytes": 4700639,
+    "budget": 4700000,
+    "excessBytes": 639
+  },
+  "sha256": {
+    "crates/brep-core/src/analytic.rs": "5941c6668c8939529dadef2eeee670e6651edea545dca642365de4057bd645b2",
+    "crates/geometry-bridge/src/brep_semantic.rs": "c30c0d8fe0b5ba033bd287d9c1c7ce573ac8e71a913cf25693d5db811981f7f7",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "66bbffeb82f4c5d48316054a75f82e63a517e71664c4729b791752e33f0fd7bb",
+    "src/generated/geometry-kernels/bytes.ts": "33accde69d2abef78b5630d8c1262c2548ae8eecf9f67f8f97acfd79678252ff"
+  },
+  "limitations": [
+    "Multi-wire profiles and axis contacts unsupported",
+    "Shared SVG/own-CAD evidence not refreshed for this WASM",
+    "Distribution gate not yet passing"
+  ]
+}

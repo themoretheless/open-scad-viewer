@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-13",
+  "scope": "Native sketch local-to-world point placement with batch transport",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 78,
+    "testFiles": 6,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4615605
+  },
+  "coverage": [
+    "2D and 3D placement in scaled skew basis, default XY and empty batch",
+    "Malformed, nonfinite and overflow requests refuse before returning partial geometry",
+    "Recovery after refusal and unchanged source arrays",
+    "Batch placement integrated with extrusion, loft paths, sweep paths and mesh cutters"
+  ],
+  "limitations": [
+    "Basis semantics retain existing scale/skew behavior; no orthonormal workplane certification",
+    "Other vector computations, frontend semantics and general B-rep completion remain open",
+    "Shared qualification refresh remains open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sketch.rs": "476227bebfea33e452ca3cd0889178ac71d9ea6c9f5d879d8ae180e1d604307c",
+    "crates/geometry-bridge/src/lib.rs": "2780f878bcf43e1057a9065124dc59fac2ee4f01e189ca92f7127534f84a7ae6",
+    "src/services/directSketchGeometry.ts": "1e814b38adc825bc5585f236f367ad4457f2773264558a62d7e43c34921663b2",
+    "src/services/directModeling.ts": "1b511a51767f09c9f94cc58d38aa74e8bd7c729891aaeac934bb3709f3d212ca",
+    "src/services/cadWorkbench.ts": "3e07ec1a0a7de80ed70812a21d177c944d5f18d8c53e0254962e78154dbe64ce",
+    "tests/nativeSketchGeometry.test.ts": "b10f0e9437f9f4190ace89b86f6893bef978b475621dbbb3557d745fa52a2737",
+    "src/generated/geometry-kernels/bytes.ts": "f628573cb8db1499a4d72107eb7034314cd730e1cd6314a91d42fdba18015302"
+  }
+}

@@ -8,6 +8,7 @@ import {
 } from './openScadProject'
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
+import { readSvgDocument, type SvgOptions } from './svgDocument'
 
 export const OPENSCAD_IMPORT_MAX_TRIANGLES = 250_000
 export const OPENSCAD_IMPORT_MAX_VERTICES = 750_000
@@ -1925,572 +1926,22 @@ function transform2(matrix: Matrix2, point: OpenScadImportPoint2): OpenScadImpor
   ]
 }
 
-interface SvgSubpath {
-  readonly points: readonly OpenScadImportPoint2[]
-  readonly closed: boolean
-}
-
-interface SvgStyle {
-  readonly fill: string
-  readonly stroke: string
-  readonly strokeWidth: number
-  readonly fillRule: OpenScadImportFillRule
-  readonly lineCap: 'butt' | 'round' | 'square'
-  readonly lineJoin: 'miter' | 'round' | 'bevel'
-  readonly hidden: boolean
-}
-
-const SVG_DEFAULT_STYLE: SvgStyle = Object.freeze({
-  fill: 'black',
-  stroke: 'none',
-  strokeWidth: 1,
-  fillRule: 'nonzero',
-  lineCap: 'butt',
-  lineJoin: 'miter',
-  hidden: false,
-})
-
-const SVG_NUMBER_TOKEN = /[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?/y
-
-type SvgPathToken =
-  | { readonly kind: 'command'; readonly value: string }
-  | { readonly kind: 'number'; readonly value: number }
-
-function svgPathTokens(value: string): SvgPathToken[] {
-  const tokens: SvgPathToken[] = []
-  let cursor = 0
-  while (cursor < value.length) {
-    if (/[\s,]/u.test(value[cursor])) {
-      cursor++
-      continue
-    }
-    if (/[A-Za-z]/u.test(value[cursor])) {
-      const command = value[cursor++]
-      if (!/[MmLlHhVvCcSsQqTtAaZz]/u.test(command)) {
-        return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG path command ${command} is unsupported.`, 'svg')
-      }
-      tokens.push({ kind: 'command', value: command })
-      continue
-    }
-    SVG_NUMBER_TOKEN.lastIndex = cursor
-    const match = SVG_NUMBER_TOKEN.exec(value)
-    if (!match) return dataError('E_IMPORT_INVALID_DATA', `SVG path data is invalid near byte ${cursor}.`, 'svg')
-    tokens.push({ kind: 'number', value: finiteNumber(match[0], 'SVG path coordinate', 'svg') })
-    cursor = SVG_NUMBER_TOKEN.lastIndex
-    if (tokens.length > OPENSCAD_IMPORT_MAX_2D_POINTS * 8) {
-      return dataError(
-        'E_IMPORT_LIMIT',
-        'SVG path token limit exceeded.',
-        'svg',
-        OPENSCAD_IMPORT_MAX_2D_POINTS * 8,
-        tokens.length,
-      )
-    }
+/** SVG geometry in the captured OpenSCAD millimeter/DPI coordinate convention. */
+export function parseOpenScadSvg(file: OpenScadProjectFile, dpi = 72, options: SvgOptions = {}): OpenScadImportGeometry2D {
+  try {
+    const parsed = readSvgDocument(textOf(file, 'svg'), { ...options, dpi }, 'parse', true)
+    return geometry2D('svg', parsed.regions)
+  } catch (error) {
+    if (error instanceof OpenScadImportDataError) throw error
+    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
+    const message = error instanceof Error ? error.message : 'SVG conversion failed.'
+    return dataError(
+      ['E_IMPORT_FORMAT_UNSUPPORTED', 'E_IMPORT_ENCODING', 'E_IMPORT_INVALID_DATA', 'E_IMPORT_UNSUPPORTED_FEATURE', 'E_IMPORT_LIMIT', 'E_IMPORT_EMPTY'].includes(code)
+        ? code as OpenScadImportDataError['code']
+        : /limit|exceeds/i.test(message) ? 'E_IMPORT_LIMIT' : 'E_IMPORT_INVALID_DATA',
+      message, 'svg',
+    )
   }
-  return tokens
-}
-
-function svgArcTo(
-  start: OpenScadImportPoint2,
-  end: OpenScadImportPoint2,
-  sourceRx: number,
-  sourceRy: number,
-  rotationDegrees: number,
-  largeArc: boolean,
-  sweepPositive: boolean,
-): OpenScadImportPoint2[] {
-  let rx = Math.abs(sourceRx), ry = Math.abs(sourceRy)
-  if (rx === 0 || ry === 0 || (start[0] === end[0] && start[1] === end[1])) return [end]
-  const angle = rotationDegrees * Math.PI / 180
-  const cosine = Math.cos(angle), sine = Math.sin(angle)
-  const dx = (start[0] - end[0]) / 2, dy = (start[1] - end[1]) / 2
-  const xPrime = cosine * dx + sine * dy
-  const yPrime = -sine * dx + cosine * dy
-  const radiusRatio = xPrime * xPrime / (rx * rx) + yPrime * yPrime / (ry * ry)
-  if (radiusRatio > 1) {
-    const correction = Math.sqrt(radiusRatio)
-    rx *= correction
-    ry *= correction
-  }
-  const numerator = Math.max(0, rx * rx * ry * ry - rx * rx * yPrime * yPrime - ry * ry * xPrime * xPrime)
-  const denominator = rx * rx * yPrime * yPrime + ry * ry * xPrime * xPrime
-  const sign = largeArc === sweepPositive ? -1 : 1
-  const factor = denominator === 0 ? 0 : sign * Math.sqrt(numerator / denominator)
-  const cxPrime = factor * rx * yPrime / ry
-  const cyPrime = factor * -ry * xPrime / rx
-  const center: OpenScadImportPoint2 = [
-    cosine * cxPrime - sine * cyPrime + (start[0] + end[0]) / 2,
-    sine * cxPrime + cosine * cyPrime + (start[1] + end[1]) / 2,
-  ]
-  const vectorAngle = (ux: number, uy: number, vx: number, vy: number): number => (
-    Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy)
-  )
-  const ux = (xPrime - cxPrime) / rx, uy = (yPrime - cyPrime) / ry
-  const vx = (-xPrime - cxPrime) / rx, vy = (-yPrime - cyPrime) / ry
-  const startAngle = Math.atan2(uy, ux)
-  let sweep = vectorAngle(ux, uy, vx, vy)
-  if (!sweepPositive && sweep > 0) sweep -= Math.PI * 2
-  if (sweepPositive && sweep < 0) sweep += Math.PI * 2
-  const steps = Math.max(4, Math.floor(Math.abs(sweep) * 180 / Math.PI * 10 / 180) + 4)
-  const points: OpenScadImportPoint2[] = []
-  for (let index = 1; index <= steps; index++) {
-    const current = startAngle + sweep * index / steps
-    const x = rx * Math.cos(current), y = ry * Math.sin(current)
-    points.push([
-      center[0] + cosine * x - sine * y,
-      center[1] + sine * x + cosine * y,
-    ])
-  }
-  points[points.length - 1] = end
-  return points
-}
-
-function parseSvgPath(value: string): SvgSubpath[] {
-  const tokens = svgPathTokens(value)
-  const output: SvgSubpath[] = []
-  let cursor = 0
-  let command = ''
-  let current: OpenScadImportPoint2 = [0, 0]
-  let start: OpenScadImportPoint2 = [0, 0]
-  let points: OpenScadImportPoint2[] = []
-  let closed = false
-  let previousCommand = ''
-  let cubicControl: OpenScadImportPoint2 | null = null
-  let quadraticControl: OpenScadImportPoint2 | null = null
-  const finish = (): void => {
-    if (points.length) output.push({ points, closed })
-    points = []
-    closed = false
-  }
-  const hasNumber = (): boolean => tokens[cursor]?.kind === 'number'
-  const take = (): number => {
-    const token = tokens[cursor++]
-    if (!token || token.kind !== 'number') return dataError('E_IMPORT_INVALID_DATA', `SVG path command ${command} is missing a number.`, 'svg')
-    return token.value
-  }
-  const point = (relative: boolean): OpenScadImportPoint2 => {
-    const x = take(), y = take()
-    return relative ? [current[0] + x, current[1] + y] : [x, y]
-  }
-  const append = (value: OpenScadImportPoint2): void => {
-    points.push(value)
-    current = value
-    if (points.length > OPENSCAD_IMPORT_MAX_2D_POINTS) {
-      return dataError('E_IMPORT_LIMIT', 'SVG path point limit exceeded.', 'svg', OPENSCAD_IMPORT_MAX_2D_POINTS, points.length)
-    }
-  }
-  while (cursor < tokens.length) {
-    const possibleCommand = tokens[cursor]
-    if (possibleCommand.kind === 'command') {
-      command = possibleCommand.value
-      cursor++
-    }
-    else if (!command) return dataError('E_IMPORT_INVALID_DATA', 'SVG path must begin with a command.', 'svg')
-    const relative = command === command.toLowerCase()
-    const upper = command.toUpperCase()
-    if (upper === 'Z') {
-      if (!points.length) return dataError('E_IMPORT_INVALID_DATA', 'SVG close-path has no active subpath.', 'svg')
-      closed = true
-      current = start
-      cubicControl = quadraticControl = null
-      previousCommand = upper
-      command = ''
-      continue
-    }
-    if (upper === 'M') {
-      if (!hasNumber()) return dataError('E_IMPORT_INVALID_DATA', 'SVG move command is missing coordinates.', 'svg')
-      finish()
-      const first = point(relative)
-      points = [first]
-      current = start = first
-      cubicControl = quadraticControl = null
-      previousCommand = upper
-      command = relative ? 'l' : 'L'
-      while (hasNumber()) append(point(relative))
-      continue
-    }
-    if (!points.length) return dataError('E_IMPORT_INVALID_DATA', `SVG path command ${command} precedes the first move.`, 'svg')
-    if (!hasNumber()) return dataError('E_IMPORT_INVALID_DATA', `SVG path command ${command} is missing coordinates.`, 'svg')
-    while (hasNumber()) {
-      if (upper === 'L') {
-        append(point(relative))
-        cubicControl = quadraticControl = null
-      } else if (upper === 'H') {
-        const x = take()
-        append([relative ? current[0] + x : x, current[1]])
-        cubicControl = quadraticControl = null
-      } else if (upper === 'V') {
-        const y = take()
-        append([current[0], relative ? current[1] + y : y])
-        cubicControl = quadraticControl = null
-      } else if (upper === 'C' || upper === 'S') {
-        const control1: OpenScadImportPoint2 = upper === 'C'
-          ? point(relative)
-          : previousCommand === 'C' || previousCommand === 'S'
-            ? [current[0] * 2 - cubicControl![0], current[1] * 2 - cubicControl![1]]
-            : current
-        const control2 = point(relative)
-        const end = point(relative)
-        const from = current
-        for (let index = 1; index <= 20; index++) {
-          const t = index / 20, inverse = 1 - t
-          append([
-            inverse ** 3 * from[0] + 3 * inverse ** 2 * t * control1[0] + 3 * inverse * t ** 2 * control2[0] + t ** 3 * end[0],
-            inverse ** 3 * from[1] + 3 * inverse ** 2 * t * control1[1] + 3 * inverse * t ** 2 * control2[1] + t ** 3 * end[1],
-          ])
-        }
-        cubicControl = control2
-        quadraticControl = null
-      } else if (upper === 'Q' || upper === 'T') {
-        const control: OpenScadImportPoint2 = upper === 'Q'
-          ? point(relative)
-          : previousCommand === 'Q' || previousCommand === 'T'
-            ? [current[0] * 2 - quadraticControl![0], current[1] * 2 - quadraticControl![1]]
-            : current
-        const end = point(relative)
-        const from = current
-        for (let index = 1; index <= 20; index++) {
-          const t = index / 20, inverse = 1 - t
-          append([
-            inverse * inverse * from[0] + 2 * inverse * t * control[0] + t * t * end[0],
-            inverse * inverse * from[1] + 2 * inverse * t * control[1] + t * t * end[1],
-          ])
-        }
-        quadraticControl = control
-        cubicControl = null
-      } else if (upper === 'A') {
-        const rx = take(), ry = take(), rotation = take(), large = take(), sweep = take()
-        if ((large !== 0 && large !== 1) || (sweep !== 0 && sweep !== 1)) {
-          return dataError('E_IMPORT_INVALID_DATA', 'SVG arc flags must be 0 or 1.', 'svg')
-        }
-        const end = point(relative)
-        for (const arcPoint of svgArcTo(current, end, rx, ry, rotation, large === 1, sweep === 1)) append(arcPoint)
-        cubicControl = quadraticControl = null
-      } else {
-        return dataError('E_IMPORT_INVALID_DATA', `SVG path command ${command} cannot be repeated here.`, 'svg')
-      }
-      previousCommand = upper
-    }
-  }
-  finish()
-  return output
-}
-
-function svgCoordinate(value: string | undefined, fallback: number, dpi: number): number {
-  if (value === undefined || value.trim() === '') return fallback
-  const match = /^([+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?)\s*(mm|cm|in|pt|pc|px)?$/iu.exec(value.trim())
-  if (!match) return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG length ${JSON.stringify(value)} is unsupported.`, 'svg')
-  const amount = finiteNumber(match[1], 'SVG length', 'svg')
-  const millimetres: Record<string, number> = {
-    '': 25.4 / dpi,
-    mm: 1,
-    cm: 10,
-    in: 25.4,
-    pt: 25.4 / 72,
-    pc: 25.4 / 6,
-    px: 25.4 / 96,
-  }
-  return amount * millimetres[(match[2] ?? '').toLowerCase()] / (25.4 / dpi)
-}
-
-function svgRootLength(value: string | undefined, fallbackPx: number, dpi: number): number {
-  if (value === undefined || value.trim() === '') return fallbackPx * 25.4 / 96
-  const match = /^([+]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?)\s*(mm|cm|in|pt|pc|px)?$/iu.exec(value.trim())
-  if (!match) return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG viewport length ${JSON.stringify(value)} is unsupported.`, 'svg')
-  const amount = finiteNumber(match[1], 'SVG viewport length', 'svg')
-  if (!(amount > 0)) return dataError('E_IMPORT_INVALID_DATA', 'SVG viewport dimensions must be positive.', 'svg')
-  const unit = (match[2] ?? '').toLowerCase()
-  const factor: Record<string, number> = {
-    '': 25.4 / dpi,
-    mm: 1,
-    cm: 10,
-    in: 25.4,
-    pt: 25.4 / 72,
-    pc: 25.4 / 6,
-    px: 25.4 / 96,
-  }
-  return amount * factor[unit]
-}
-
-function parseSvgNumbers(value: string, label: string): number[] {
-  const tokens = value.trim().split(/[\s,]+/u).filter(Boolean)
-  return tokens.map(token => finiteNumber(token, label, 'svg'))
-}
-
-function parseSvgTransform(value: string | undefined): Matrix2 {
-  if (!value || !value.trim()) return IDENTITY_2
-  let cursor = 0
-  let matrix = IDENTITY_2
-  const skip = (): void => { while (cursor < value.length && /[\s,]/u.test(value[cursor])) cursor++ }
-  while (cursor < value.length) {
-    skip()
-    const nameStart = cursor
-    while (cursor < value.length && /[A-Za-z]/u.test(value[cursor])) cursor++
-    const name = value.slice(nameStart, cursor).toLowerCase()
-    skip()
-    if (!name || value[cursor++] !== '(') return dataError('E_IMPORT_INVALID_DATA', 'SVG transform list is malformed.', 'svg')
-    const end = value.indexOf(')', cursor)
-    if (end < 0) return dataError('E_IMPORT_INVALID_DATA', 'SVG transform is unterminated.', 'svg')
-    const args = parseSvgNumbers(value.slice(cursor, end), 'SVG transform parameter')
-    cursor = end + 1
-    let next: Matrix2
-    if (name === 'matrix' && args.length === 6) next = args as unknown as Matrix2
-    else if (name === 'translate' && (args.length === 1 || args.length === 2)) next = [1, 0, 0, 1, args[0], args[1] ?? 0]
-    else if (name === 'scale' && (args.length === 1 || args.length === 2)) next = [args[0], 0, 0, args[1] ?? args[0], 0, 0]
-    else if (name === 'rotate' && (args.length === 1 || args.length === 3)) {
-      const radians = args[0] * Math.PI / 180, cosine = Math.cos(radians), sine = Math.sin(radians)
-      const rotation: Matrix2 = [cosine, sine, -sine, cosine, 0, 0]
-      next = args.length === 1
-        ? rotation
-        : multiply2([1, 0, 0, 1, args[1], args[2]], multiply2(rotation, [1, 0, 0, 1, -args[1], -args[2]]))
-    } else if (name === 'skewx' && args.length === 1) next = [1, 0, Math.tan(args[0] * Math.PI / 180), 1, 0, 0]
-    else if (name === 'skewy' && args.length === 1) next = [1, Math.tan(args[0] * Math.PI / 180), 0, 1, 0, 0]
-    else return dataError('E_IMPORT_INVALID_DATA', `SVG transform ${name || '(empty)'} has invalid parameters.`, 'svg')
-    matrix = multiply2(matrix, next)
-    skip()
-  }
-  return matrix
-}
-
-function svgStyle(element: XmlElement, inherited: SvgStyle, dpi: number): SvgStyle {
-  const declarations: Record<string, string> = {}
-  for (const [key, value] of Object.entries(element.attributes)) {
-    if (['fill', 'stroke', 'stroke-width', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'display', 'visibility'].includes(key)) {
-      declarations[key] = value.trim()
-    }
-  }
-  const inline = attribute(element, 'style')
-  if (inline) {
-    for (const declaration of inline.split(';')) {
-      if (!declaration.trim()) continue
-      const colon = declaration.indexOf(':')
-      if (colon <= 0) return dataError('E_IMPORT_INVALID_DATA', 'SVG style declaration is malformed.', 'svg')
-      declarations[declaration.slice(0, colon).trim().toLowerCase()] = declaration.slice(colon + 1).trim()
-    }
-  }
-  const fill = declarations.fill ?? inherited.fill
-  const stroke = declarations.stroke ?? inherited.stroke
-  if (/url\s*\(/iu.test(fill) || /url\s*\(/iu.test(stroke)) {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', 'SVG paint-server references are unsupported.', 'svg')
-  }
-  const width = declarations['stroke-width'] === undefined
-    ? inherited.strokeWidth
-    : svgCoordinate(declarations['stroke-width'], inherited.strokeWidth, dpi)
-  if (width < 0) return dataError('E_IMPORT_INVALID_DATA', 'SVG stroke-width cannot be negative.', 'svg')
-  const rule = (declarations['fill-rule'] ?? inherited.fillRule).toLowerCase()
-  if (rule !== 'evenodd' && rule !== 'nonzero') return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG fill-rule ${rule} is unsupported.`, 'svg')
-  const lineCap = (declarations['stroke-linecap'] ?? inherited.lineCap).toLowerCase()
-  if (lineCap !== 'butt' && lineCap !== 'round' && lineCap !== 'square') {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG stroke-linecap ${lineCap} is unsupported.`, 'svg')
-  }
-  const lineJoin = (declarations['stroke-linejoin'] ?? inherited.lineJoin).toLowerCase()
-  if (lineJoin !== 'miter' && lineJoin !== 'round' && lineJoin !== 'bevel') {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG stroke-linejoin ${lineJoin} is unsupported.`, 'svg')
-  }
-  return Object.freeze({
-    fill,
-    stroke,
-    strokeWidth: width,
-    fillRule: rule,
-    lineCap,
-    lineJoin,
-    hidden: inherited.hidden || declarations.display === 'none' || declarations.visibility === 'hidden',
-  })
-}
-
-function svgCircle(center: OpenScadImportPoint2, rx: number, ry = rx): OpenScadImportPoint2[] {
-  if (!(rx > 0) || !(ry > 0)) return []
-  const points: OpenScadImportPoint2[] = []
-  for (let index = 0; index < OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS; index++) {
-    const angle = index * Math.PI * 2 / OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS
-    points.push([center[0] + rx * Math.cos(angle), center[1] + ry * Math.sin(angle)])
-  }
-  return points
-}
-
-function svgStrokeRegions(
-  subpath: SvgSubpath,
-  style: SvgStyle,
-  matrix: Matrix2,
-): OpenScadImportRegion2D[] {
-  const points = cleanContour(subpath.points)
-  if (points.length < 2 || !(style.strokeWidth > 0)) return []
-  const half = style.strokeWidth / 2
-  const regions: OpenScadImportRegion2D[] = []
-  const pairs = subpath.closed ? points.length : points.length - 1
-  for (let index = 0; index < pairs; index++) {
-    const start = points[index], end = points[(index + 1) % points.length]
-    const dx = end[0] - start[0], dy = end[1] - start[1], length = Math.hypot(dx, dy)
-    if (!(length > 0)) continue
-    const tangent: OpenScadImportPoint2 = [dx / length, dy / length]
-    const normal: OpenScadImportPoint2 = [-tangent[1] * half, tangent[0] * half]
-    let startExtension = 0, endExtension = 0
-    if (!subpath.closed && style.lineCap === 'square') {
-      if (index === 0) startExtension = half
-      if (index === pairs - 1) endExtension = half
-    }
-    const ax = start[0] - tangent[0] * startExtension, ay = start[1] - tangent[1] * startExtension
-    const bx = end[0] + tangent[0] * endExtension, by = end[1] + tangent[1] * endExtension
-    regions.push({
-      contours: [[
-        transform2(matrix, [ax + normal[0], ay + normal[1]]),
-        transform2(matrix, [bx + normal[0], by + normal[1]]),
-        transform2(matrix, [bx - normal[0], by - normal[1]]),
-        transform2(matrix, [ax - normal[0], ay - normal[1]]),
-      ]],
-      fillRule: 'nonzero',
-    })
-  }
-  const firstJoin = subpath.closed ? 0 : 1
-  const lastJoin = subpath.closed ? points.length : points.length - 1
-  for (let index = firstJoin; index < lastJoin; index++) {
-    const center = points[index % points.length]
-    if (style.lineJoin === 'round') {
-      regions.push({ contours: [svgCircle(center, half).map(point => transform2(matrix, point))], fillRule: 'nonzero' })
-      continue
-    }
-    const before = points[(index + points.length - 1) % points.length]
-    const after = points[(index + 1) % points.length]
-    const incoming = [center[0] - before[0], center[1] - before[1]] as const
-    const outgoing = [after[0] - center[0], after[1] - center[1]] as const
-    const inLength = Math.hypot(...incoming), outLength = Math.hypot(...outgoing)
-    if (!(inLength > 0) || !(outLength > 0)) continue
-    const n1: OpenScadImportPoint2 = [-incoming[1] / inLength * half, incoming[0] / inLength * half]
-    const n2: OpenScadImportPoint2 = [-outgoing[1] / outLength * half, outgoing[0] / outLength * half]
-    for (const sign of [-1, 1]) {
-      const contour = [
-        center,
-        [center[0] + n1[0] * sign, center[1] + n1[1] * sign] as const,
-        [center[0] + n2[0] * sign, center[1] + n2[1] * sign] as const,
-      ].map(point => transform2(matrix, point))
-      regions.push({ contours: [contour], fillRule: 'nonzero' })
-    }
-  }
-  if (!subpath.closed && style.lineCap === 'round') {
-    for (const endpoint of [points[0], points.at(-1)!]) {
-      regions.push({ contours: [svgCircle(endpoint, half).map(point => transform2(matrix, point))], fillRule: 'nonzero' })
-    }
-  }
-  return regions
-}
-
-function svgElementSubpaths(element: XmlElement, dpi: number): SvgSubpath[] {
-  const length = (name: string, fallback = 0): number => svgCoordinate(attribute(element, name), fallback, dpi)
-  if (element.localName === 'path') return parseSvgPath(requiredAttribute(element, 'd', 'svg'))
-  if (element.localName === 'rect') {
-    const x = length('x'), y = length('y'), width = length('width'), height = length('height')
-    if (width < 0 || height < 0) return dataError('E_IMPORT_INVALID_DATA', 'SVG rect dimensions cannot be negative.', 'svg')
-    if (width === 0 || height === 0) return []
-    let rx = length('rx', Number.NaN), ry = length('ry', Number.NaN)
-    if (Number.isNaN(rx) && Number.isNaN(ry)) rx = ry = 0
-    else if (Number.isNaN(rx)) rx = ry
-    else if (Number.isNaN(ry)) ry = rx
-    if (rx < 0 || ry < 0) return dataError('E_IMPORT_INVALID_DATA', 'SVG rect corner radii cannot be negative.', 'svg')
-    rx = Math.min(rx, width / 2); ry = Math.min(ry, height / 2)
-    if (rx === 0 || ry === 0) return [{ points: [[x, y], [x + width, y], [x + width, y + height], [x, y + height]], closed: true }]
-    const points: OpenScadImportPoint2[] = [[x + rx, y], [x + width - rx, y]]
-    const corners = [
-      [[x + width - rx, y + ry], -Math.PI / 2, Math.PI / 2],
-      [[x + width - rx, y + height - ry], 0, Math.PI / 2],
-      [[x + rx, y + height - ry], Math.PI / 2, Math.PI / 2],
-      [[x + rx, y + ry], Math.PI, Math.PI / 2],
-    ] as const
-    for (const [center, start, sweep] of corners) points.push(...arcPoints(center, rx, ry, start, sweep))
-    return [{ points, closed: true }]
-  }
-  if (element.localName === 'circle') return [{ points: svgCircle([length('cx'), length('cy')], length('r')), closed: true }]
-  if (element.localName === 'ellipse') return [{ points: svgCircle([length('cx'), length('cy')], length('rx'), length('ry')), closed: true }]
-  if (element.localName === 'line') return [{ points: [[length('x1'), length('y1')], [length('x2'), length('y2')]], closed: false }]
-  if (element.localName === 'polygon' || element.localName === 'polyline') {
-    const numbers = parseSvgNumbers(requiredAttribute(element, 'points', 'svg'), 'SVG point')
-    if (numbers.length % 2 !== 0) return dataError('E_IMPORT_INVALID_DATA', `SVG ${element.localName} has an odd coordinate count.`, 'svg')
-    const points: OpenScadImportPoint2[] = []
-    for (let index = 0; index < numbers.length; index += 2) points.push([numbers[index], numbers[index + 1]])
-    return [{ points, closed: element.localName === 'polygon' }]
-  }
-  return []
-}
-
-function svgViewportMatrix(root: XmlElement, dpi: number): Matrix2 {
-  const viewBoxValue = attribute(root, 'viewbox')
-  const viewBox = viewBoxValue === undefined ? null : parseSvgNumbers(viewBoxValue, 'SVG viewBox')
-  if (viewBox !== null && (viewBox.length !== 4 || !(viewBox[2] > 0) || !(viewBox[3] > 0))) {
-    return dataError('E_IMPORT_INVALID_DATA', 'SVG viewBox must contain min-x, min-y and positive width/height.', 'svg')
-  }
-  const width = svgRootLength(attribute(root, 'width'), viewBox?.[2] ?? 300, dpi)
-  const height = svgRootLength(attribute(root, 'height'), viewBox?.[3] ?? 150, dpi)
-  let userToViewport: Matrix2
-  if (viewBox === null) {
-    const scale = 25.4 / dpi
-    userToViewport = [scale, 0, 0, scale, 0, 0]
-  } else {
-    let sx = width / viewBox[2], sy = height / viewBox[3]
-    let tx = -viewBox[0] * sx, ty = -viewBox[1] * sy
-    const preserve = (attribute(root, 'preserveaspectratio') ?? 'xMidYMid meet').trim().split(/\s+/u)
-    if (preserve[0].toLowerCase() !== 'none') {
-      const align = preserve[0]
-      if (!/^x(?:Min|Mid|Max)Y(?:Min|Mid|Max)$/u.test(align)) {
-        return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG preserveAspectRatio ${JSON.stringify(align)} is unsupported.`, 'svg')
-      }
-      const mode = preserve[1]?.toLowerCase() ?? 'meet'
-      if (mode !== 'meet' && mode !== 'slice') return dataError('E_IMPORT_INVALID_DATA', 'SVG preserveAspectRatio mode is invalid.', 'svg')
-      const uniform = mode === 'meet' ? Math.min(sx, sy) : Math.max(sx, sy)
-      sx = sy = uniform
-      const extraX = width - viewBox[2] * uniform, extraY = height - viewBox[3] * uniform
-      const xFactor = align.startsWith('xMin') ? 0 : align.startsWith('xMid') ? 0.5 : 1
-      const yFactor = align.includes('YMin') ? 0 : align.includes('YMid') ? 0.5 : 1
-      tx = -viewBox[0] * uniform + extraX * xFactor
-      ty = -viewBox[1] * uniform + extraY * yFactor
-    }
-    userToViewport = [sx, 0, 0, sy, tx, ty]
-  }
-  return multiply2([1, 0, 0, -1, 0, height], userToViewport)
-}
-
-/** Parse secure, bounded SVG 1.1 geometry in OpenSCAD 2021.01 millimetre coordinates. */
-export function parseOpenScadSvg(file: OpenScadProjectFile, dpi = 72): OpenScadImportGeometry2D {
-  if (!(dpi > 0) || !Number.isFinite(dpi)) return dataError('E_IMPORT_INVALID_DATA', 'SVG dpi must be positive and finite.', 'svg')
-  const root = parseXml(textOf(file, 'svg'), 'svg')
-  if (root.localName !== 'svg') return dataError('E_IMPORT_INVALID_DATA', 'SVG root element must be <svg>.', 'svg')
-  const rootMatrix = svgViewportMatrix(root, dpi)
-  const regions: OpenScadImportRegion2D[] = []
-  const geometryNames = new Set(['path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line'])
-  const containers = new Set(['svg', 'g', 'a', 'switch'])
-  const ignored = new Set(['title', 'desc', 'metadata', 'defs', 'style'])
-  const forbidden = new Set(['use', 'image', 'text', 'clippath', 'mask', 'filter', 'foreignobject'])
-  const visit = (element: XmlElement, parentMatrix: Matrix2, parentStyle: SvgStyle, isRoot = false): void => {
-    if (!isRoot && element.localName === 'svg') return dataError('E_IMPORT_UNSUPPORTED_FEATURE', 'Nested SVG viewports are unsupported.', 'svg')
-    if (ignored.has(element.localName)) return
-    if (forbidden.has(element.localName)) return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG <${element.localName}> is unsupported.`, 'svg')
-    for (const key of ['clip-path', 'mask', 'filter']) {
-      const value = attribute(element, key)
-      if (value !== undefined && value !== 'none') {
-        return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG ${key} is unsupported.`, 'svg')
-      }
-    }
-    const style = svgStyle(element, parentStyle, dpi)
-    if (style.hidden) return
-    const matrix = multiply2(parentMatrix, parseSvgTransform(attribute(element, 'transform')))
-    if (geometryNames.has(element.localName)) {
-      const subpaths = svgElementSubpaths(element, dpi)
-      if (style.fill.toLowerCase() !== 'none' && element.localName !== 'line') {
-        const contours = subpaths
-          .filter(subpath => subpath.points.length >= 3)
-          .map(subpath => subpath.points.map(point => transform2(matrix, point)))
-        if (contours.length) regions.push({ contours, fillRule: style.fillRule })
-      }
-      if (style.stroke.toLowerCase() !== 'none') {
-        for (const subpath of subpaths) regions.push(...svgStrokeRegions(subpath, style, matrix))
-      }
-      return
-    }
-    if (!containers.has(element.localName)) {
-      return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `SVG element <${element.localName}> is unsupported.`, 'svg')
-    }
-    for (const child of element.children) visit(child, matrix, style)
-  }
-  visit(root, rootMatrix, SVG_DEFAULT_STYLE, true)
-  return geometry2D('svg', regions)
 }
 
 interface DxfPair { readonly code: number; readonly value: string }
@@ -3003,6 +2454,7 @@ async function prepareOpenScadImportAsset(
   file: OpenScadProjectFile,
   format: OpenScadImportFormat,
   budget: OpenScadImportPreparationBudget,
+  svgOptions: SvgOptions = {},
 ): Promise<PreparedImportDecode> {
   if (format === 'dxf') {
     let intermediate: OpenScadDxfIntermediate
@@ -3033,7 +2485,9 @@ async function prepareOpenScadImportAsset(
   }
 
   try {
-    const asset = await parseOpenScadImportFile(file, format, 72, budget)
+    const asset = format === 'svg'
+      ? parseOpenScadSvg(file, 72, svgOptions)
+      : await parseOpenScadImportFile(file, format, 72, budget)
     reservePreparedGeometry(budget, asset)
     return Object.freeze({ asset })
   } catch (error) {
@@ -3046,6 +2500,17 @@ function forcedImportAssetKey(path: string, format: OpenScad2021LegacyImportForm
   return `${format}\0${path}`
 }
 
+/** SVG text uses only bundled or explicitly supplied project fonts. */
+function svgProjectOptions(project: OpenScadProject): SvgOptions {
+  const fonts: Uint8Array[] = []
+  for (const summary of project.list()) {
+    if (summary.kind !== 'blob' || !/\.(ttf|otf|ttc)$/i.test(summary.path)) continue
+    const file = project.read(summary.path)
+    if (file?.kind === 'blob') fonts.push(file.data)
+  }
+  return { fonts }
+}
+
 /** Decode every supported project asset once, without consulting the host filesystem. */
 export async function prepareOpenScadImportAssets(
   project: OpenScadProject,
@@ -3054,6 +2519,7 @@ export async function prepareOpenScadImportAssets(
   const assets = new Map<string, OpenScadImportGeometry | OpenScadImportDataError>()
   const forcedAssets = new Map<string, OpenScadImportGeometry | OpenScadImportDataError>()
   const dxfQueryMetadata = new Map<string, OpenScadDxfQueryMetadata | OpenScadImportDataError>()
+  const svgOptions = project.list().some(file => /\.svg$/i.test(file.path)) ? svgProjectOptions(project) : {}
   const budget: OpenScadImportPreparationBudget = {
     vertices: 0,
     triangles: 0,
@@ -3065,7 +2531,7 @@ export async function prepareOpenScadImportAssets(
     const format = formatOfPath(summary.path)
     if (format === null) continue
     const file = project.read(summary.path)!
-    const prepared = await prepareOpenScadImportAsset(file, format, budget)
+    const prepared = await prepareOpenScadImportAsset(file, format, budget, svgOptions)
     assets.set(summary.path, prepared.asset)
     if (prepared.dxfQueryMetadata !== undefined) {
       dxfQueryMetadata.set(summary.path, prepared.dxfQueryMetadata)
@@ -3271,7 +2737,7 @@ export function loadPreparedOpenScadImport(
       ?? (formatOfPath(assetPath) === options.forcedFormat ? prepared.assets.get(assetPath) : undefined)
   if (format === 'svg' && validated.dpi !== 72) {
     try {
-      decoded = parseOpenScadSvg(file, validated.dpi)
+      decoded = parseOpenScadSvg(file, validated.dpi, svgProjectOptions(project))
     } catch (error) {
       if (!(error instanceof OpenScadImportDataError)) throw error
       throw contextualImportError(error, sourcePath, specifier, assetPath, format)

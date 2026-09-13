@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-13",
+  "scope": "Solid editor retained ruled loft preview, commit and undo",
+  "fullGoalComplete": false,
+  "checks": {
+    "integrationTests": 62,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4622408
+  },
+  "coverage": [
+    "Native ordered sketch selection, world placement and ruled model/mesh construction",
+    "Solid editor command previews without modifying stored document",
+    "Apply persists six-face retained B-rep with independently checked volume and unchanged sketches",
+    "Undo restores the exact preceding document",
+    "Reverse selection order disables Apply without modifying stored geometry"
+  ],
+  "limitations": [
+    "Requires closed polygon sketches with matching vertex counts and admitted parallel convex correspondence; analytic sketch descriptors refuse",
+    "Headless Vue interaction test, not a browser visual or performance qualification",
+    "Retained model is stored in Solid document/history; SCAD mesh export and permanent provider integration remain separate incomplete work",
+    "General loft/B-rep completion and shared qualification refresh remain open"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/cad_sections.rs": "81a38aaf9b36e0b6c5aa8f80e0e537edb4d70fb14fa8a2c232ea7fa86190eeaf",
+    "crates/geometry-bridge/src/lib.rs": "88128f4bbf705a15fe2c0937dd5295ce413a00e4e14f16590cf54011f072a385",
+    "src/services/geometry/brep.ts": "d97249440189446d78c0524666614e8e90b7779dffddd81367197ae2ef41ef55",
+    "src/features/DirectModeler.vue": "1edb0390408021cb6842e222b013ca6710c35ae191554351514353b6c14e8986",
+    "tests/directModelerUi.test.ts": "46385f3500db59f9b5dffdfa9a79f5fd7b9df70fec5fad0067bde3c874634a31",
+    "src/generated/geometry-kernels/bytes.ts": "5a2c0260208f7ba1abbebae39758e2d1656cf174846eab9960519599314a6edc"
+  }
+}

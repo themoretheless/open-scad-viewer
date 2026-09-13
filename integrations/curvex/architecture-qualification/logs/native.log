@@ -1,0 +1,273 @@
+   Compiling planar-geometry v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry)
+   Compiling polygon-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/polygon-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.35s
+     Running unittests src/lib.rs (crates/target/debug/build/planar-geometry/d8eaafcb8c8b8827/out/planar_geometry-d8eaafcb8c8b8827)
+
+running 147 tests
+test curve::tests::exact_subdivision_and_reversal ... ok
+test curve::tests::closed_area_remains_accurate_far_from_origin ... ok
+test corners::tests::rounded_rect_styles ... ok
+test curve::tests::compounds_convert_without_losing_closures_or_curves ... ok
+test attribute_mesh::tests::linear_values_need_no_refinement ... ok
+test attribute_mesh::tests::invalid_samples_and_exhaustion_are_explicit ... ok
+test corners::tests::round_corners_square ... ok
+test curve::tests::cubic_with_two_y_extrema_uses_every_monotone_piece ... ok
+test curve::tests::invalid_geometry_is_an_explicit_conversion_error ... ok
+test curve::tests::polynomial_area_and_bounds_are_analytic ... ok
+test curve::tests::quadratic_promotion_preserves_the_curve ... ok
+test attribute_mesh::tests::repeated_linear_seams_are_sharp_without_excessive_triangles ... ok
+test curve::tests::signed_winding_distinguishes_holes_and_double_winding ... ok
+test curve::tests::tangencies_and_shared_vertices_do_not_create_crossings ... ok
+test curve::tests::stroke_uses_native_width_caps_and_contour_holes ... ok
+test curve_boolean::tests::cubic_equivalent_of_a_line_can_share_polygon_edges ... ok
+test attribute_mesh::tests::radial_center_is_represented_for_either_diagonal ... ok
+test curve_boolean::tests::almost_axis_aligned_edges_keep_crossings_on_both_axes ... ok
+test curve_boolean::tests::stationary_cubic_midpoint_does_not_drop_a_valid_region ... ok
+test curve_boolean::tests::four_rectangle_arrangement_is_a_complete_disjoint_partition ... ok
+test curve_boolean::tests::self_intersecting_cubic_normalizes_each_fill_rule ... ok
+test curve_boolean::tests::rounded_protrusion_preserves_original_controls ... ok
+test curve_boolean::tests::shared_span_still_intersects_a_different_part_of_a_loop ... ok
+test edit::tests::align_and_distribute ... ok
+test edit::tests::angle_snap_and_guides ... ok
+test edit::tests::measure_segment ... ok
+test edit::tests::scissors_and_knife ... ok
+test edit::tests::snap_grid_and_intersection ... ok
+test effects::tests::arc_and_star ... ok
+test effects::tests::arrays_and_hatch ... ok
+test effects::tests::blend_aligns_both_seam_and_winding_before_interpolation ... ok
+test effects::tests::concentric_offset_rings ... ok
+test effects::tests::concentric_offsets_preserve_evenodd_holes_and_reject_invalid_options ... ok
+test effects::tests::distortions_and_blend ... ok
+test effects::tests::effects_reject_unbounded_and_non_finite_inputs ... ok
+test effects::tests::free_distort_uses_the_editable_control_bounds_and_handles_flat_axes ... ok
+test effects::tests::grouped_repeats_omit_sources_and_support_upright_orbits ... ok
+test effects::tests::hatch_path_and_cross ... ok
+test effects::tests::hatch_skips_donut_hole ... ok
+test effects::tests::partial_and_negative_arc_sweeps_follow_the_ellipse ... ok
+test effects::tests::pucker_bloat_bows_rectangle_sides_and_uses_anchor_centroid ... ok
+test effects::tests::roughen_closed_contour_has_one_consistent_seam ... ok
+test effects::tests::roughen_densifies_pins_open_ends_and_can_smooth ... ok
+test effects::tests::scatter_preserves_group_geometry_with_scale_rotation_and_seed ... ok
+test effects::tests::spiral_and_polar_grid ... ok
+test effects::tests::stipple_bounds_candidate_work_even_when_no_mark_would_survive ... ok
+test effects::tests::stipple_jitter_is_deterministic ... ok
+test effects::tests::twist_bends_straight_edges_and_rotates_the_outer_radius_by_full_angle ... ok
+test effects::tests::zig_zag_closed_seam_has_the_same_treatment_as_other_corners ... ok
+test effects::tests::zig_zag_creates_ridges_on_a_straight_line_and_pins_endpoints ... ok
+test measure::tests::indexed_projection_matches_exhaustive_search_and_retracing_ties ... ok
+test path::tests::average_and_handle_link ... ok
+test path::tests::convert_shapes_to_path ... ok
+test path::tests::de_casteljau_insert_preserves_endpoints ... ok
+test path::tests::delete_segment_splits_open ... ok
+test path::tests::ellipse_flattens_and_closes ... ok
+test curve_boolean::tests::overlapping_ellipses_preserve_cubic_boundaries_and_region ... ok
+test path::tests::flatten_preserves_collinear_overshoot_and_rejects_invalid_options ... ok
+test path::tests::join_welds_coincident_ends ... ok
+test path::tests::offset_closed_grows_area ... ok
+test path::tests::open_path_drops_close ... ok
+test path::tests::outline_stroke_closed_rect ... ok
+test path::tests::reverse_roundtrip_endpoints ... ok
+test path::tests::simplify_reduces_collinear ... ok
+test path::tests::smooth_makes_cubics ... ok
+test path::tests::split_closed_opens_at_node ... ok
+test path_offset::tests::donut_outset_shrinks_hole ... ok
+test path_offset::tests::inset_square_shrinks ... ok
+test path_offset::tests::inset_too_far_collapses ... ok
+test path_offset::tests::offset_honors_fill_rule_and_reversed_sources ... ok
+test path_offset::tests::offset_miter_limit_changes_acute_corner ... ok
+test path_offset::tests::offset_rejects_invalid_tolerance_and_arc_budget ... ok
+test path_offset::tests::outset_square_grows ... ok
+test path_offset::tests::round_join_outset_ok ... ok
+test pathfinder::tests::compound_with_hole ... ok
+test pathfinder::tests::crop_keeps_overlap_only ... ok
+test pathfinder::tests::divide_two_squares_three_cells ... ok
+test pathfinder::tests::merge_by_color_unions_same_fill ... ok
+test pathfinder::tests::minus_back_keeps_front ... ok
+test pathfinder::tests::minus_front_keeps_back ... ok
+test pathfinder::tests::shape_builder_extract_and_delete ... ok
+test pathfinder::tests::trim_cuts_back_by_front ... ok
+test pathfinder::tests::xor_two_overlapping_squares ... ok
+test render::tess::conversion_overflow_is_rejected_before_calling_vertex_constructor ... ok
+test render::tests::closed_stroke_renders_ribbon_with_empty_center ... ok
+test render::tests::complex_closed_stroke_is_not_limited_by_temporary_join_polygons ... ok
+test render::tests::compound_render_fill_preserves_holes_under_selected_rule ... ok
+test render::tests::custom_gradient_vertices_receive_document_positions_and_append_indices ... ok
+test render::tests::failed_paths_and_options_leave_existing_buffers_untouched ... ok
+test render::tests::imported_five_thousand_point_contour_renders_completely ... ok
+test render::tests::translated_and_extreme_finite_f32_compound_fills_preserve_holes ... ok
+test curve_boolean::tests::partial_coincident_arc_preserves_the_remaining_regions ... ok
+test rings::tests::booleans_allow_a_different_fill_rule_for_each_operand ... ok
+test rings::tests::clockwise_and_cancelled_inputs_are_valid_fills ... ok
+test rings::tests::compound_normalization_is_independent_of_document_units ... ok
+test rings::tests::convex_fast_route_requires_hull_order_not_only_turn_signs ... ok
+test rings::tests::curvex_open_gradient_stroke_polyline_remains_closed_region ... ok
+test rings::tests::fill_rules_combine_winding_across_nested_rings ... ok
+test rings::tests::normalization_preserves_small_translated_regions_and_rejects_invalid_coordinates ... ok
+test rings::tests::normalization_resolves_overlap_and_zero_signed_area_crossing ... ok
+test rings::tests::planar_overlap_and_hole ... ok
+test rings::tests::planar_xor ... ok
+test curve_boolean::tests::subdivided_coincident_cubic_spans_do_not_double_the_boundary ... ok
+test scissors::tests::knife_hits_cubic ... ok
+test scissors::tests::knife_open_line ... ok
+test scissors::tests::knife_split_rect ... ok
+test scissors::tests::knife_split_rejects_open ... ok
+test scissors::tests::scissors_open_polyline ... ok
+test scissors::tests::scissors_opens_closed_loop ... ok
+test scissors::tests::scissors_preserves_cubic ... ok
+test rings::winding::tests::contour_index_matches_signed_exhaustive_winding_for_both_operands ... ok
+test stroke::simple::tests::convex_mesh_has_two_triangles_per_edge_and_preserves_translated_area ... ok
+test stroke::simple::tests::crossing_touching_retraced_and_consumed_strokes_use_general_solver ... ok
+test stroke::tests::acute_miter_is_clipped_to_bevel_at_limit ... ok
+test stroke::tests::arrow_and_bar_are_closed ... ok
+test stroke::tests::caps_have_correct_area_and_round_chord_accuracy ... ok
+test stroke::tests::chevron_marker_is_closed ... ok
+test stroke::tests::closed_stroke_keeps_hole_and_has_no_seam_gap ... ok
+test curve_boolean::tests::translated_geometry_beyond_former_coordinate_limit_is_preserved ... ok
+test stroke::tests::dash_closed_seam_joins_without_extra_caps ... ok
+test stroke::tests::dash_keeps_intermediate_corners_and_repeats_odd_pattern ... ok
+test curve_boolean::tests::evenodd_compound_keeps_holes_and_nested_islands ... ok
+test stroke::tests::dash_spans_alternate_on_line ... ok
+test stroke::tests::convex_route_matches_general_union_for_all_join_styles ... ok
+test stroke::tests::invalid_dash_options_fail_before_sampling ... ok
+test stroke::tests::dashed_produces_multiple ... ok
+test stroke::tests::round_cap_closed_ok ... ok
+test stroke::tests::joins_distinguish_bevel_round_and_miter ... ok
+test stroke::tests::solid_rect_stroke_area ... ok
+test tessellation::tests::empty_and_degenerate_fills_are_empty_but_invalid_coordinates_fail ... ok
+test tessellation::tests::bowtie_keeps_both_lobes_despite_zero_signed_area ... ok
+test tessellation::tests::open_path_rejected ... ok
+test tessellation::tests::disjoint_and_point_touching_regions_do_not_overlap ... ok
+test tessellation::tests::overlapping_and_coincident_rings_apply_combined_winding ... ok
+test tessellation::tests::tessellate_cubic_closed ... ok
+test tessellation::tests::tessellate_unit_square ... ok
+test tessellation::tests::tessellate_with_hole ... ok
+test triangulation::tests::concave_caps_with_holes_preserve_area_in_all_orientations ... ok
+test tessellation::tests::same_winding_inner_ring_is_only_a_hole_under_evenodd ... ok
+test tessellation::tests::holes_and_nested_islands_have_exactly_once_coverage ... ok
+test curve_boolean::tests::contained_disjoint_equal_and_reversed_curves ... ok
+test path::tests::flatten_meets_small_tolerance_beyond_old_sample_cap ... ok
+test render::tests::varied_curvex_f32_open_strokes_cover_their_centerlines ... ok
+test curve_boolean::tests::tangent_and_nearly_coincident_inputs_remain_closed ... ok
+test curve_boolean::tests::five_thousand_simple_vertices_are_not_rejected_by_old_segment_cap ... ok
+test stroke::simple::tests::certified_ribbons_match_strip_union_for_open_closed_and_reversed_paths ... ok
+test curve_boolean::tests::varied_curved_arrangements_match_independent_input_winding ... ok
+
+test result: ok. 147 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.26s
+
+     Running tests/curvex_parity.rs (crates/target/debug/build/planar-geometry/dbbecf822af2def2/out/curvex_parity-dbbecf822af2def2)
+
+running 18 tests
+test handle_link_validates_index_and_keeps_single_endpoint_handle ... ok
+test angular_snap_projects_only_inside_tolerance ... ok
+test alignment_guides_only_describe_the_returned_translation ... ok
+test degenerate_ellipse_axis_still_builds_finite_polar_grid ... ok
+test crossing_directions_keep_crossing_points_but_merge_opposite_angles ... ok
+test compound_scissors_hits_holes_and_keeps_survivors_grouped ... ok
+test closed_simplify_removes_collinear_seam_without_changing_square ... ok
+test joins_preserve_custom_curves_and_ignore_connector_for_welded_endpoints ... ok
+test open_corner_styles_match_signed_radii_and_pin_endpoints ... ok
+test open_parallel_offset_preserves_translated_interior_coordinates ... ok
+test round_corners_uses_cubic_anchors_and_pins_open_endpoints ... ok
+test compound_knife_assigns_untouched_holes_to_the_containing_side ... ok
+test semantic_drag_snap_ties_and_distance_marks_match_visible_neighbors ... ok
+test compound_knife_hole_only_cut_stays_one_compound_with_same_fill ... ok
+test semantic_snap_has_real_anchors_perpendicular_feet_and_kind_priority ... ok
+test semantic_snap_preserves_primitive_centers_and_closed_vertices ... ok
+test tangent_join_extends_forward_rays_and_rejects_backward_intersections ... ok
+test closed_simplify_matches_farthest_pair_reference_on_irregular_rings ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/stroke_robustness.rs (crates/target/debug/build/planar-geometry/67bc39078717ecbd/out/stroke_robustness-67bc39078717ecbd)
+
+running 4 tests
+test invalid_and_over_budget_inputs_return_errors_without_panics ... ok
+test dense_coincident_input_stops_before_quadratic_pair_processing ... ok
+test tiny_translated_retraced_capsules_keep_closed_boundaries ... ok
+test retraced_crossing_band_does_not_emit_negative_roundoff_triangle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running unittests src/lib.rs (crates/target/debug/build/polygon-core/ac5851e7abd1221d/out/polygon_core-ac5851e7abd1221d)
+
+running 46 tests
+test appearance::tests::spread_modes ... ok
+test appearance::tests::recolor_preserves_alpha ... ok
+test appearance::tests::copy_appearance_clones ... ok
+test appearance::tests::linear_midpoint ... ok
+test gradient_mesh::tests::stroke_along_path_colors_endpoints ... ok
+test gradient_mesh::tests::linear_fill_mesh_has_vertex_colors ... ok
+test gradient_mesh::tests::direct_gradient_stroke_keeps_hole_and_spatial_colors ... ok
+test solid::boolean::tests::coordinate_normalization_preserves_scale_and_translation ... ok
+test solid::boolean::tests::coincident_coplanar_and_empty_cases ... ok
+test gradient_mesh::tests::radial_fill_samples_interior_instead_of_only_saturated_corners ... ok
+test solid::boolean::tests::coincident_solids_with_different_triangulations ... ok
+test solid::boolean::tests::rejects_invalid_solids_and_exhausted_budget ... ok
+test solid::brep::holes_test::annular_polygon_retains_inner_loop ... ok
+test solid::brep::tests::corrupted_polygon_boundary_is_rejected ... ok
+test solid::bvh::tests::next_power_of_two_matches_log2_ceil ... ok
+test solid::brep::tests::grouped_polygon_face_has_one_boundary ... ok
+test solid::bvh::tests::omits_invalid_and_degenerate_triangles ... ok
+test solid::bvh::tests::builds_deterministic_balanced_hierarchy ... ok
+test solid::brep::tests::closed_mesh_forms_a_body ... ok
+test solid::edges::tests::hypot3_matches_reference_values ... ok
+test solid::boolean::tests::rejects_crossing_shells_and_incorrect_component_orientation ... ok
+test solid::boolean::tests::overlapping_boxes_all_operations ... ok
+test solid::edges::tests::keeps_twelve_creases_of_a_cube ... ok
+test solid::edges::tests::ignores_degenerate_triangles ... ok
+test solid::edges::tests::reconstructs_topology_from_duplicated_property_vertices ... ok
+test solid::lineage::tests::split_is_ambiguous_and_merge_follows ... ok
+test solid::boolean::tests::disjoint_and_nested_solids_with_cavity ... ok
+test solid::modeling::tests::loft_concave_sections ... ok
+test solid::edges::tests::removes_coplanar_diagonal_from_triangulated_quad ... ok
+test solid::modeling::tests::sweep_straight_and_curved ... ok
+test solid::modeling::tests::extrude_rings_difference_volume ... ok
+test solid::primitives::tests::hull_box ... ok
+test solid::modeling::tests::extrude_hole_and_oblique_vector ... ok
+test solid::proximity::tests::nearest_regions ... ok
+test tests::affine_reflection_preserves_outward_orientation ... ok
+test tests::mesher_accepts_an_unrelated_analytic_surface ... ok
+test solid::edges::tests::welds_minus_zero_to_plus_zero ... ok
+test tests::polygon_library_works_without_a_surface_definition ... ok
+test tests::rejects_bad_indices_bad_uv_and_ambiguous_boundaries ... ok
+test solid::boolean::tests::face_contact_is_regularized_and_edge_contact_fails_closed ... ok
+test solid::modeling::tests::revolve_full_and_partial ... ok
+test solid::primitives::tests::primitives_closed ... ok
+test solid::edges::tests::crease_threshold_is_strict_and_deterministic ... ok
+test solid::boolean::tests::coplanar_partial_overlap_and_rotated_boxes ... ok
+test tests::imported_mesh_budget_is_separate_from_tessellation_budget ... ok
+test solid::boolean::tests::analytic_box_sweep_and_chained_nonconvex_result ... ok
+
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/sections.rs (crates/target/debug/build/polygon-core/ebd7e1e5ec357a9d/out/sections-ebd7e1e5ec357a9d)
+
+running 13 tests
+test invalid_inputs_fail_before_slicing_and_empty_mesh_is_supported ... ok
+test exact_triangle_soup_seams_and_signed_zero_share_identity ... ok
+test duplicate_and_touching_boundaries_are_explicitly_ambiguous ... ok
+test large_translation_does_not_saturate_coordinate_quantization ... ok
+test box_uses_documented_half_open_rule_at_horizontal_faces ... ok
+test open_boundary_is_an_error_instead_of_a_repaired_ring ... ok
+test overflowing_interpolation_fails_with_a_numeric_diagnostic ... ok
+test island_inside_a_hole_remains_a_separate_oriented_contour ... ok
+test gap_smaller_than_old_welding_epsilon_is_preserved ... ok
+test shared_plane_vertices_and_edges_do_not_create_double_segments ... ok
+test hollow_extrusion_preserves_hole_winding ... ok
+test cylinder_section_matches_its_polygon_not_the_analytic_circle ... ok
+test reusable_index_restricts_candidates_to_the_current_height ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests planar_geometry
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests polygon_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

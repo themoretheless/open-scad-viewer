@@ -1,0 +1,32 @@
+{
+  "scope": "Native independently retained ruled section segments in either surface axis with global trace fractions",
+  "tests": {
+    "brepCore": 95,
+    "integrationPacking": 66,
+    "vueTypecheck": "passed",
+    "mcpTypecheck": "passed",
+    "viteBuild": "passed"
+  },
+  "dist": {
+    "status": "passed",
+    "artifacts": 68,
+    "bytes": 4586020,
+    "budget": 4700000
+  },
+  "limits": {
+    "ruledSourceDegree": 12,
+    "totalSegmentControlPoints": 256
+  },
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "24b500bb57feeb245d878ad9153170d852c777002c4d35eeb03cc3e907ce0eb2",
+    "tests/brepIntersections.test.ts": "62685b58b852c8b822a423efaa303a0992e1029a12ecdb85c27936cb9cace9fa",
+    "src/services/geometry/intersections.ts": "c06de47a0d5a62ad1d7720851248624a7a0d5682a17c747277f603f19cccc235",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "eb79b09052d687b68ad748dab0104620343693ddec8e8634b8b6ba56e5500683"
+  },
+  "limitations": [
+    "Numerical representation only; no whole-domain intersection certificate",
+    "No welding or topology-change permission",
+    "Shared qualification predates this WASM",
+    "Full B-rep completion unproved"
+  ]
+}

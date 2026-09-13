@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-13",
+  "scope": "Prism draft identity and direct native geometry regressions",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBrepTests": 101,
+    "integrationTests": 58,
+    "testFiles": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4615510
+  },
+  "coverage": [
+    "Zero-angle draft preserves full authored model rather than reconstructing topology",
+    "Native signed draft checks all eight vertex coordinates and six surviving faces",
+    "Axis magnitude 1e300 produces normalized draft; collapse and incompatible axis refuse",
+    "WASM zero-angle retained model equality and existing editor regressions"
+  ],
+  "limitations": [
+    "Convex planar prism subset only; general B-rep requirements remain incomplete",
+    "Numerical validation does not certify global solid validity",
+    "Shared qualification predates these changes"
+  ],
+  "sha256": {
+    "crates/brep-core/src/operations.rs": "7237d39206131b3dcd08f75694991718c84874755316767f8e2d7998e44fb76b",
+    "tests/cadWorkbench.test.ts": "cb44127f6639ae64dfd99626c319e78bdc087a7e29cb84a0ce0af52ec9b82800",
+    "src/generated/geometry-kernels/bytes.ts": "227585be3aaf0cb443460421c24d02d3ce5a5c766b2dfe1d935646d9a3db30f7"
+  }
+}

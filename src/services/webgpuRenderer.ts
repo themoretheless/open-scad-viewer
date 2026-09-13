@@ -5,7 +5,6 @@ import {remapNativeFaceSelection} from './nativeFaceSelection'
  */
 import {
   invert,
-  transformPoint, unprojectRay,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
 import {
@@ -14,7 +13,10 @@ import {
   type CameraHistorySnapshot,
   type CameraState,
 } from './cameraHistory'
-import { raycastMeshBvh, type MeshBvh, type MeshBvhHit } from './meshBvh'
+import type { MeshBvh, MeshBvhHit } from './meshBvh'
+import { NativePickingCache } from './nativePickingCache'
+import { warmGeometryKernel } from './geometry/kernel'
+import { clientRayInKernel, projectPointInKernel, selectedCornerInKernel } from './geometry/viewport'
 import {
   buildFaceOverlayGeometry,
   buildFaceTriangleIndex,
@@ -73,6 +75,7 @@ import {
 } from './selectionCycling'
 import {
   buildSceneAabbIndex,
+  disposeSceneAabbIndex,
   querySceneAabbIndex,
   type SceneAabbIndex,
 } from './sceneAabbIndex'
@@ -284,6 +287,7 @@ export class WebGPURenderer {
   private depthView: GPUTextureView | null = null
 
   private meshes: GMesh[] = []
+  private readonly nativePicking = new NativePickingCache()
   private geometryFade: { started: number; progress: number } | null = null
   private geometryGhosts: Array<{ meshes: GMesh[]; started: number; alphas: number[] }> = []
   private sceneAabbIndex: SceneAabbIndex = buildSceneAabbIndex([])
@@ -424,6 +428,8 @@ export class WebGPURenderer {
         return false
       }
 
+      await warmGeometryKernel()
+      if (!this.isCurrentInit(generation, canvas)) return false
       const device = await adapter.requestDevice()
       if (!this.isCurrentInit(generation, canvas)) {
         device.destroy()
@@ -732,6 +738,7 @@ export class WebGPURenderer {
     }
     const retainedGeometryBuffers = new Set<GPUBuffer>()
     const next: GMesh[] = []
+    let nextSceneIndex: SceneAabbIndex
     try {
       for (const m of meshes) {
         if (!m.indices.length && !m.vertices.length) continue
@@ -834,6 +841,9 @@ export class WebGPURenderer {
           throw error
         }
       }
+      nextSceneIndex = buildSceneAabbIndex(next.map((mesh, id) => ({
+        id, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max },
+      })))
     } catch (error) {
       this.destroyMeshes(next, retainedGeometryBuffers)
       throw error
@@ -847,7 +857,9 @@ export class WebGPURenderer {
     this.rebuildEdgeBufferCache()
     this.pendingFrameToken = options.frameToken ?? null
     this.uploadMetrics = metrics
-    this.rebuildSceneAabbIndex()
+    disposeSceneAabbIndex(this.sceneAabbIndex)
+    this.sceneAabbIndex = nextSceneIndex
+    this.sceneAabbIndexDirty = false
     this.bounds = nextBounds
     this.selected = null
     this.selectedHit = null
@@ -1841,10 +1853,8 @@ export class WebGPURenderer {
   /** CSS-pixel projection shared by interactive tools drawn over the native viewport. */
   projectWorldPoint(point: readonly number[]): [number, number] | null {
     if(!this.canvas)return null
-    const m=this.cameraState().viewProjection
-    const q=[0,1,2,3].map(r=>m[r*4]*point[0]+m[r*4+1]*point[1]+m[r*4+2]*point[2]+m[r*4+3])
-    if(q[3]<=1e-8)return null
-    return [(q[0]/q[3]+1)*this.canvas.clientWidth/2,(1-q[1]/q[3])*this.canvas.clientHeight/2]
+    return projectPointInKernel(this.cameraState().viewProjection, point,
+      [this.canvas.clientWidth, this.canvas.clientHeight])
   }
   worldRay(clientX:number,clientY:number){return this.rayForClientPoint(clientX,clientY)}
 
@@ -1852,12 +1862,8 @@ export class WebGPURenderer {
     const canvas = this.canvas
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
-    if (!(rect.width > 0) || !(rect.height > 0)) return null
-    const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1
-    const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2
-    if (!Number.isFinite(ndcX) || !Number.isFinite(ndcY)) return null
-    const { viewProjection } = this.cameraState()
-    return unprojectRay(invert(viewProjection), ndcX, ndcY)
+    return clientRayInKernel(this.cameraState().viewProjection,
+      [rect.left, rect.top, rect.width, rect.height], [clientX, clientY])
   }
 
   private sourceForTriangle(mesh: GMesh, triangleIndex: number): MeshProvenanceRun | null {
@@ -1873,20 +1879,17 @@ export class WebGPURenderer {
     return null
   }
 
-  private pickHitFromBvh(meshIndex: number, mesh: GMesh, hit: MeshBvhHit): PickHit {
+  private pickHitFromBvh(meshIndex: number, mesh: GMesh, hit: MeshBvhHit): PickHit | null {
     const run = this.sourceForTriangle(mesh, hit.triangleIndex)
     let point = hit.worldPoint as Vec3
     if (this.selectionMode === 'point') {
-      let corner = 0
-      if (hit.barycentric[1] > hit.barycentric[corner]) corner = 1
-      if (hit.barycentric[2] > hit.barycentric[corner]) corner = 2
-      const vertexIndex = hit.triangleVertexIndices[corner]
-      const offset = vertexIndex * 6
-      point = transformPoint(mesh.transform, [
-        mesh.vertices[offset],
-        mesh.vertices[offset + 1],
-        mesh.vertices[offset + 2],
-      ])
+      const vertices = hit.triangleVertexIndices.map(index => {
+        const offset = index * mesh.bvh.vertexStride
+        return [mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]] as Vec3
+      })
+      const corner = selectedCornerInKernel(mesh.transform, vertices, hit.barycentric)
+      if (!corner) return null
+      point = corner
     }
     return {
       meshIndex,
@@ -1986,7 +1989,7 @@ export class WebGPURenderer {
       const index = candidate.id
       if (!this.isMeshVisible(index)) return true
       const mesh = this.meshes[index]
-      const hit = raycastMeshBvh(mesh.bvh, mesh.vertices, mesh.indices, ray, {
+      const hit = this.nativePicking.query(mesh.vb, mesh.vertices, mesh.indices, mesh.bvh.vertexStride, mesh.bvh.leafSize, ray, {
         localFromWorld: mesh.inverseTransform,
       })
       if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Set() })
@@ -2014,8 +2017,8 @@ export class WebGPURenderer {
       if (!clipped) {
         const { meshIndex, mesh, hit } = cursor
         const value = this.pickHitFromBvh(meshIndex, mesh, hit)
-        const key = this.selectionCandidateKey(value)
-        if (!seen.has(key)) {
+        const key = value ? this.selectionCandidateKey(value) : null
+        if (value && key !== null && !seen.has(key)) {
           seen.add(key)
           candidates.push({ key, distance: hit.t, value })
         }
@@ -2025,7 +2028,7 @@ export class WebGPURenderer {
       if (!needsContinuation || continuations >= MAX_DEPTH_CONTINUATIONS || candidates.length >= limit) continue
       continuations++
       cursor.excludedTriangles.add(cursor.hit.triangleIndex)
-      const next = raycastMeshBvh(cursor.mesh.bvh, cursor.mesh.vertices, cursor.mesh.indices, ray, {
+      const next = this.nativePicking.query(cursor.mesh.vb, cursor.mesh.vertices, cursor.mesh.indices, cursor.mesh.bvh.vertexStride, cursor.mesh.bvh.leafSize, ray, {
         minT: cursor.hit.t,
         excludedTriangles: cursor.excludedTriangles,
         localFromWorld: cursor.mesh.inverseTransform,
@@ -2535,6 +2538,7 @@ export class WebGPURenderer {
       buffer.destroy()
     }
     for (const g of meshes) {
+      if (!preserved.has(g.vb)) this.nativePicking.release(g.vb)
       destroy(g.edgeIB)
       destroy(g.vb); destroy(g.ib); destroy(g.ub)
     }
@@ -2589,8 +2593,10 @@ export class WebGPURenderer {
     this.geometryGhosts = []
     this.geometryFade = null
     this.destroyMeshes(this.meshes)
+    this.nativePicking.clear()
     this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []
+    disposeSceneAabbIndex(this.sceneAabbIndex)
     this.sceneAabbIndex = buildSceneAabbIndex([])
     this.sceneAabbIndexDirty = false
     this.gridVB?.destroy()
@@ -2631,11 +2637,13 @@ export class WebGPURenderer {
   get currentStatus(): RendererLifecycleEvent { return this.status }
 
   private rebuildSceneAabbIndex() {
-    this.sceneAabbIndex = buildSceneAabbIndex(this.meshes.flatMap((mesh, index) => (
+    const replacement = buildSceneAabbIndex(this.meshes.flatMap((mesh, index) => (
       mesh.visible
         ? [{ id: index, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max } }]
         : []
     )))
+    disposeSceneAabbIndex(this.sceneAabbIndex)
+    this.sceneAabbIndex = replacement
     this.sceneAabbIndexDirty = false
   }
 

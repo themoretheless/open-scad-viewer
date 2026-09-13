@@ -1,0 +1,35 @@
+[
+  {
+    "shapes": 100,
+    "size": [
+      2000,
+      2000
+    ],
+    "before_after_max_channel_difference": 0,
+    "before_after_differing_pixels": 0,
+    "after_pan_restore_max_channel_difference": 0,
+    "after_pan_restore_differing_pixels": 0
+  },
+  {
+    "shapes": 1000,
+    "size": [
+      2000,
+      2000
+    ],
+    "before_after_max_channel_difference": 0,
+    "before_after_differing_pixels": 0,
+    "after_pan_restore_max_channel_difference": 0,
+    "after_pan_restore_differing_pixels": 0
+  },
+  {
+    "shapes": 5000,
+    "size": [
+      2000,
+      2000
+    ],
+    "before_after_max_channel_difference": 0,
+    "before_after_differing_pixels": 0,
+    "after_pan_restore_max_channel_difference": 0,
+    "after_pan_restore_differing_pixels": 0
+  }
+]

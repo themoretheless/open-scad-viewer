@@ -1,0 +1,922 @@
+{
+  "benchmarks": [
+    {
+      "area": 4501.297800898206,
+      "case": "crossing_80",
+      "median_us": 2067.75,
+      "samples_us": [
+        1791.6670000000001,
+        1797.833,
+        1904.041,
+        1929.1670000000001,
+        1962.292,
+        1974.291,
+        2041.625,
+        2067.75,
+        2099.0840000000003,
+        2122.875,
+        2130.875,
+        2252.0,
+        2418.417,
+        2469.125,
+        2502.958
+      ],
+      "triangles": 1874,
+      "vertices": 1878
+    },
+    {
+      "area": 31782.257111447463,
+      "case": "crossing_240_wide",
+      "median_us": 11163.709,
+      "samples_us": [
+        8955.084,
+        9151.708999999999,
+        9306.583,
+        9523.25,
+        9895.791,
+        10331.958,
+        11082.542000000001,
+        11163.709,
+        11563.542,
+        11899.917,
+        11952.25,
+        12031.167000000001,
+        12089.375,
+        12249.542000000001,
+        14843.25
+      ],
+      "triangles": 3226,
+      "vertices": 3230
+    },
+    {
+      "area": 35496.36010230232,
+      "case": "wide_wave_400",
+      "median_us": 69691.959,
+      "samples_us": [
+        62815.58299999999,
+        64578.5,
+        65279.541999999994,
+        67312.833,
+        68759.667,
+        68904.5,
+        69368.583,
+        69691.959,
+        72855.209,
+        78798.792,
+        83880.0,
+        84265.333,
+        101588.625,
+        102570.58300000001,
+        1526760.125
+      ],
+      "triangles": 13048,
+      "vertices": 13060
+    },
+    {
+      "area": 62090.566494559134,
+      "case": "consumed_square",
+      "median_us": 439.792,
+      "samples_us": [
+        296.625,
+        297.375,
+        320.95799999999997,
+        325.208,
+        329.959,
+        346.41700000000003,
+        430.292,
+        439.792,
+        527.6659999999999,
+        555.667,
+        599.333,
+        629.042,
+        751.875,
+        3032.416,
+        4037.542
+      ],
+      "triangles": 135,
+      "vertices": 137
+    },
+    {
+      "area": 12391.609745316226,
+      "case": "retraced_200",
+      "median_us": 87785.25,
+      "samples_us": [
+        52259.5,
+        61422.791999999994,
+        73402.209,
+        74522.042,
+        80250.833,
+        83009.333,
+        85237.416,
+        87785.25,
+        104106.875,
+        115654.958,
+        119208.458,
+        120117.5,
+        124897.75,
+        138299.0,
+        154102.333
+      ],
+      "triangles": 842,
+      "vertices": 844
+    },
+    {
+      "area": 8547.672704813762,
+      "case": "dashed_wave",
+      "median_us": 23079.417,
+      "samples_us": [
+        15484.583,
+        15883.624999999998,
+        17927.0,
+        17932.625,
+        18883.667,
+        20796.25,
+        20865.458,
+        23079.417,
+        27832.25,
+        30990.833,
+        33488.875,
+        35000.041000000005,
+        38282.75,
+        41412.417,
+        45277.167
+      ],
+      "triangles": 14748,
+      "vertices": 14776
+    }
+  ],
+  "oracle": {
+    "cases": 832,
+    "failures": [
+      {
+        "case": 0,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 5,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 10,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 15,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 20,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 25,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 35,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 45,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 50,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 55,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 60,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 65,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 70,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 75,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 85,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 90,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 95,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 100,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 105,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 115,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 120,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 125,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 130,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 135,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 140,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 145,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 155,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 160,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 165,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 170,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 175,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 180,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 185,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 195,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 200,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 205,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 210,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 215,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 220,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 225,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 230,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 235,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 240,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 245,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 250,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 255,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 260,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 265,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 275,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 280,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 285,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 290,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 295,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 300,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 305,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 310,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 315,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 320,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 325,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 330,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 335,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 340,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 345,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 350,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 355,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 360,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 365,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 370,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 375,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 380,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 385,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 390,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 395,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 400,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 405,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 410,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 415,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 420,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 425,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 430,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 434,
+        "error": "Invalid fill triangle"
+      },
+      {
+        "case": 435,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 440,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 445,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 450,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 455,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 460,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 465,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 475,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 480,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 485,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 490,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 495,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 500,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 505,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 510,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 515,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 520,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 525,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 530,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 535,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 540,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 545,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 550,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 555,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 560,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 565,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 570,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 575,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 580,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 585,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 595,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 600,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 605,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 610,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 615,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 620,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 625,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 630,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 635,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 640,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 645,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 650,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 655,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 660,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 665,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 675,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 680,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 685,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 690,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 695,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 700,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 705,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 715,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 720,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 725,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 730,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 735,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 740,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 745,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 750,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 755,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 760,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 765,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 770,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 775,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 780,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 785,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 790,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 795,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 800,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 805,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 810,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 815,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 820,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 825,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 835,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 840,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 845,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 850,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 855,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 860,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 865,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 870,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 875,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 880,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 885,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 890,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 895,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 900,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 905,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 910,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 915,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 920,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 925,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 930,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 935,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 940,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 945,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 955,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 960,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 965,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 970,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 975,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 980,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 985,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 995,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 1000,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 1005,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 1010,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 1015,
+        "error": "Open planar arrangement boundary"
+      },
+      {
+        "case": 1020,
+        "error": "Open planar arrangement boundary"
+      }
+    ],
+    "probes": 212864
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "scope": "Renderer native picking and GPU-buffer lifecycle integration; not full B-rep qualification",
+  "tests": {
+    "pickingRendererSelection": 73,
+    "vueTypecheck": "passed"
+  },
+  "latency": {
+    "triangles": 20000,
+    "queries": 300,
+    "coldNativeMs": 228.43229099999996,
+    "native": {
+      "medianMs": 0.03624999999999545,
+      "p95Ms": 0.05329099999994469
+    },
+    "hostReference": {
+      "medianMs": 0.010542000000100415,
+      "p95Ms": 0.02287499999999909
+    }
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4706876,
+    "budget": 4700000
+  },
+  "sha256": {
+    "src/services/nativePickingCache.ts": "338d6a79da04e528275beecd6b6fcd564d35fdcba69fef38dfa97f2e2e678e2e",
+    "src/services/webgpuRenderer.ts": "9a5f046767704672ab8f3016f320fa5a919ce9b6d68afb8d11dcaf78f75d86c0",
+    "tests/nativePickingCache.test.ts": "611cb5ec4e5b3a6b5193f2fa1c1d27485c50a8684b22968a8ac58b5b5f255a08",
+    "tests/webgpuRendererResources.test.ts": "8f495351d8b83e635af637080c7c05c7426c9b05e1ea1b14bc0adf0b71893eb3",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "0db5387263fc9a33ddfe422add02cdb0b5b977b7e4100471e1abed1bc3fe6e08"
+  },
+  "limitations": [
+    "Cold native initialization is still on the first query path",
+    "Node timings are not browser interaction qualification",
+    "Large-scene cache-pressure performance not qualified",
+    "Shared SVG/own-CAD source evidence not refreshed"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "scope": "Rust retained scene broadphase migration; not full B-rep qualification",
+  "verification": {
+    "applicationAndPackingTests": 90,
+    "polygonCoreTests": 53,
+    "bridgeLifecycleTests": 1,
+    "vueTypecheck": "passed",
+    "viteBuild": "passed",
+    "independentBruteForceRays": 500,
+    "objectsInReferenceScene": 257,
+    "consecutiveRendererPublications": 80
+  },
+  "dist": {
+    "status": "failed",
+    "bytes": 4717536,
+    "budget": 4700000
+  },
+  "sha256": {
+    "crates/polygon-core/src/solid/scene_bvh.rs": "c5828f7f517b83dfc62b6cb117ab3b5f6205d0309f266d11f1c13fc5c694dd77",
+    "crates/geometry-bridge/src/scene_picking.rs": "ce7a9dc24f12fcc97166b955fa6dbd0104bfe5861db952f12498371e3006bf7d",
+    "src/services/sceneAabbIndex.ts": "6b48ee9efc4508781705aaf0d0b08c2daaf6158097e3d05255f35098aac7ef8a",
+    "src/services/webgpuRenderer.ts": "4d3c0663b08ef6a237b37992051dfaa2594d43898e104f8539c13b139586ca9c",
+    "tests/sceneAabbIndex.test.ts": "79264d87d0bbb20a6aab110036b17993f01388693512fca9013228e715aa4853",
+    "tests/webgpuRendererResources.test.ts": "a8f0a6682a7c32d5dde2c1c715f17ec0ca3f0fec9ab028d844f1ee0815ac29a9",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "18ef6332408cb2e00b081498059aa8a207fe5ed130b9f4e13ce58ccc679a138b"
+  },
+  "limits": {
+    "retainedIndexes": 64,
+    "aggregateAdmittedItems": 100000
+  },
+  "limitations": [
+    "Browser latency not measured",
+    "Shared source qualification not refreshed",
+    "Camera and point-selection computation remains in TypeScript",
+    "Full B-rep completion not proved"
+  ]
+}
