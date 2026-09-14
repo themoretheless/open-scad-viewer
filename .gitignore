@@ -14,6 +14,9 @@ coverage
 tools/manifold-bench/tmp/
 tools/manifold-bench/historical/
 
+# Machine-local rbench experiment trees (HTML/JSON reports).
+.rbench/
+
 # Machine-specific generated MCP client configurations
 .local-integrations/
 

@@ -16,6 +16,7 @@
 pub mod backend;
 pub mod bambu;
 pub mod creality;
+pub mod discovery;
 pub mod hash;
 pub mod http;
 pub mod job;
@@ -32,7 +33,18 @@ pub use bambu::{BambuLanBackend, BambuLanClient, BambuLanConfig, BambuPrintOptio
 #[cfg(feature = "network")]
 pub use bambu::{lan_client_config, BambuLanTransport};
 pub use creality::{CrealityBackend, CrealityConfig};
+pub use discovery::{
+    CompositeDiscovery, DiscoveredPrinter, DiscoveryOptions, DiscoveryVendor, MockDiscovery,
+    PrinterDiscovery,
+};
+#[cfg(feature = "network")]
+pub use discovery::live::{
+    default_live_discovery, parse_bambu_ssdp, parse_snapmaker_udp, BambuSsdpDiscovery,
+    SnapmakerUdpDiscovery,
+};
 pub use http::{HttpRequest, HttpResponse, HttpTransport, MockHttpTransport};
+#[cfg(feature = "network")]
+pub use http::live::UreqHttpTransport;
 pub use job::{
     ArtifactKind, JobState, JobStatus, PrintArtifact, PrintJob, PrinterId, map_vendor_state,
 };

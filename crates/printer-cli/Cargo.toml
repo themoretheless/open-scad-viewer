@@ -1,0 +1,19 @@
+[package]
+name = "printer-cli"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Native CLI and loopback companion for printer-core LAN submit/discovery"
+
+[[bin]]
+name = "printer-cli"
+path = "src/main.rs"
+
+[dependencies]
+base64 = "0.22"
+clap = { version = "4", features = ["derive"] }
+printer-core = { path = "../printer-core", features = ["network"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tiny_http = "0.12"

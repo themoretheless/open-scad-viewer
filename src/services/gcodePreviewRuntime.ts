@@ -1,4 +1,4 @@
-import { emitPolygonMeshGcode, GCODE_PREVIEW_DIALECT, parseGcodePreview } from './geometry/polygon'
+import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, GCODE_PREVIEW_DIALECT, parseGcodePreview } from './geometry/polygon'
 import { flattenGroupGeometry } from './meshFlatten'
 import { checkGcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
 
@@ -12,6 +12,20 @@ export function executeGcodePreview(request: GcodePreviewRequest): GcodePreviewR
       return { version: 1, id: request.id, ok: true, result: { gcode: job.gcode, preview, dialect: GCODE_PREVIEW_DIALECT } }
     }
     const mesh = flattenGroupGeometry([job.mesh])
+    if (job.kind === 'job') {
+      const result = emitPolygonMeshGcodeJob(mesh, job.zMin, job.zMax, job.settings)
+      return {
+        version: 1,
+        id: request.id,
+        ok: true,
+        result: {
+          gcode: result.gcode,
+          preview: result.preview,
+          dialect: result.dialect,
+          gcode3mfBase64: result.gcode3mfBase64,
+        },
+      }
+    }
     const result = emitPolygonMeshGcode(mesh, job.zMin, job.zMax, job.settings)
     return { version: 1, id: request.id, ok: true, result }
   } catch (error) {

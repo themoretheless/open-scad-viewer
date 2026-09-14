@@ -2,6 +2,7 @@
 
 Library contract for sending a ready print artifact to a LAN host. Not a slicer
 and not G-code generation. Implementation: [`crates/printer-core`](../../crates/printer-core).
+Native CLI / Vue companion: [`crates/printer-cli`](../../crates/printer-cli).
 
 ## Backends
 
@@ -15,6 +16,37 @@ and not G-code generation. Implementation: [`crates/printer-core`](../../crates/
 | Snapmaker | `.gcode` | `POST /api/v1/connect`, multipart `POST /api/v1/upload`, `POST /api/v1/start_print` (token query, port `8080`) |
 
 These are **observed** integrations, not vendor-guaranteed API contracts.
+
+## Discovery (in scope)
+
+| Vendor | Mechanism |
+| --- | --- |
+| Bambu | SSDP multicast (`PrinterDiscovery` / `BambuSsdpDiscovery`) |
+| Snapmaker | UDP broadcast probe (`SnapmakerUdpDiscovery`) |
+| Moonraker / OctoPrint / Prusa / Creality | Manual URL only (mDNS deferred) |
+
+Discovery returns host/serial/model hints; callers fill config and call
+`connect_*`. It does not auto-submit jobs.
+
+## CLI + UI send path
+
+```mermaid
+flowchart LR
+  Mesh[Mesh] --> Worker[WASM mesh_gcode_job]
+  Worker --> Artifact[".gcode / .gcode.3mf"]
+  Artifact --> CLI[printer-cli]
+  Artifact --> UI[GcodePanel]
+  UI -->|"POST localhost"| Host[printer-cli serve]
+  Host --> Backend[PrinterBackend]
+  CLI --> Backend
+  Disc[PrinterDiscovery] --> CLI
+  Disc --> Host
+```
+
+- Artifact generation stays in the Worker / WASM (`kind: 'job'`).
+- Browser **must not** open FTPS/MQTT/raw printer sockets.
+- Submit runs native: `printer-cli send` or `printer-cli serve` on `127.0.0.1`
+  (`GET /health`, `GET /discover`, `POST /send`, `POST /control`).
 
 ## Bambu notes
 
@@ -43,16 +75,17 @@ These are **observed** integrations, not vendor-guaranteed API contracts.
 - Always `connect` before upload/status/control; HTTP 204 means waiting for
   on-controller confirmation.
 - Upload is multipart `file=`; start is a separate `start_print` call.
-- UDP discovery / first-time pairing UI are out of scope.
+- First-time on-controller pairing UI remains out of scope.
 
 ## Shared surface
 
 `PrinterBackend`: `submit_job` → `SubmitOutcome`, plus `pause` / `resume` /
 `stop` / `status` (`JobState` + vendor string). Feature `network` enables live
-sockets; default builds use mock transports.
+sockets and live discovery; default builds use mocks.
 
 ## Non-goals
 
-Cloud accounts, AMS mapping UI, camera streams, SSDP/UDP discovery, browser/WASM
-send, CLI host, Prusa Digest auth, stock Creality websocket start, Snapmaker
-on-screen pairing flow, claiming slicer or firmware parity.
+Cloud accounts, AMS mapping UI, camera streams, mDNS for HTTP hosts,
+in-browser FTPS/MQTT, full Tauri desktop shell, Prusa Digest auth, stock
+Creality websocket start, Snapmaker on-screen pairing flow, claiming slicer or
+firmware parity.

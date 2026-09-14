@@ -87,8 +87,35 @@ printer-core = { path = "../printer-core", features = ["network"] }
 TLS for Bambu accepts the printer's self-signed X.509 v1 certificate. Access
 codes, API keys, and Snapmaker tokens are scrubbed from error messages.
 
+## Discovery
+
+Default builds expose [`PrinterDiscovery`] + [`MockDiscovery`]. With `network`:
+
+- [`BambuSsdpDiscovery`] — SSDP M-SEARCH / notify parse (host, serial, model)
+- [`SnapmakerUdpDiscovery`] — Luban-style UDP broadcast probe
+- [`default_live_discovery`] — composite of both
+
+Discover fills config; it does **not** auto-connect. Moonraker / OctoPrint /
+Prusa / Creality stay **manual URL** (no mDNS in this crate). CLI/UI entry:
+[`printer-cli`](../printer-cli).
+
+## Benchmarks (`rbench`)
+
+```sh
+cd crates
+cargo build --release -p gcode-core --example bench_print_export
+cargo build --release -p printer-core --example bench_printer_lan --features network
+cd ..
+cargo rbench run --program crates/target/release/examples/bench_print_export --protocol \
+  --repetitions 6 -o .rbench/print-export -- --profile quick --json
+cargo rbench run --program crates/target/release/examples/bench_printer_lan --protocol \
+  --repetitions 6 -o .rbench/printer-lan -- --profile quick --json
+cargo rbench report .rbench --title "Print pipeline" -o .rbench/print-pipeline.html
+cargo rbench serve .rbench --port 8787
+```
+
 ## Limits / non-goals
 
 64 MiB artifact, basename-only remote names, no cloud, no AMS UI, no camera,
-no SSDP discovery, no browser/WASM send path, no Prusa Digest auth, no stock
-Creality websocket print start, no Snapmaker UDP discovery / on-screen pairing UI.
+no mDNS for HTTP hosts, no browser/WASM FTPS/MQTT, no Prusa Digest auth, no stock
+Creality websocket print start, no Snapmaker on-screen pairing UI.

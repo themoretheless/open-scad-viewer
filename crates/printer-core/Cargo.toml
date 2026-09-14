@@ -25,3 +25,11 @@ rustls-pki-types = { version = "1", optional = true }
 suppaftp = { version = "8", default-features = false, features = ["rustls-ring", "deprecated"], optional = true }
 tokio = { version = "1", default-features = false, features = ["rt", "time", "macros"], optional = true }
 ureq = { version = "2", default-features = false, features = ["tls"], optional = true }
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_printer_lan"
+path = "examples/bench_printer_lan.rs"
+required-features = ["network"]
