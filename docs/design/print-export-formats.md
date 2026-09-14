@@ -15,10 +15,11 @@ live printer transport in this contract.
 
 Happy path after slicing:
 
-`ToolpathLayer` → `gcode_optimize::from_toolpaths` → `emit_optimized_job` or
-`emit_optimized_gcode_3mf_job`.
+`ToolpathLayer` → `slicer_core::emit_optimized_gcode` (preview) or
+`emit_job_gcode` / `emit_job_gcode_3mf` (machine job).
 
-Mesh path: `Mesh` → `export_print_mesh` for STL / OBJ / mesh 3MF.
+Host ops: `mesh_gcode` (preview) and `mesh_gcode_job` (job text +
+`gcode3mfBase64`). Mesh path: `Mesh` → `export_print_mesh` for STL / OBJ / mesh 3MF.
 
 ## Dialects
 
@@ -30,6 +31,7 @@ Mesh path: `Mesh` → `export_print_mesh` for STL / OBJ / mesh 3MF.
 
 ## Non-goals
 
-LAN FTPS/MQTT, AMS, multi-plate UI, “true Bambu slicer” parity, and expanding
-the print-mesh set beyond STL/OBJ/3MF (AMF/PLY/OFF remain available on
-`mesh_export::export` but are not part of this five-format surface).
+AMS UI, multi-plate UI, “true Bambu slicer” parity, and expanding the print-mesh
+set beyond STL/OBJ/3MF (AMF/PLY/OFF remain available on `mesh_export::export`
+but are not part of this five-format surface). Live LAN FTPS/MQTT lives in
+`printer-core` (`network` feature), not in these export APIs.

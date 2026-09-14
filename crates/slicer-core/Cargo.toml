@@ -8,7 +8,9 @@ publish.workspace = true
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
 gcode-core = { path = "../gcode-core" }
+gcode-optimize = { path = "../gcode-optimize" }
 planar-geometry = { path = "../planar-geometry" }
 
 [dev-dependencies]
 polygon-core = { path = "../polygon-core" }
+gcode-core = { path = "../gcode-core" }

@@ -20,7 +20,11 @@ use planar_geometry::{
     stroke::{self, StrokeOptions},
 };
 
-pub use gcode_core::{DIALECT as GCODE_DIALECT, GcodeBounds, GcodeMove, GcodePreview};
+pub use gcode_core::{
+    DIALECT as GCODE_DIALECT, JOB_DIALECT as GCODE_JOB_DIALECT, GcodeBounds, GcodeMove,
+    GcodePreview, JobProfile, MeshBody,
+};
+pub use gcode_optimize::OptimizeSettings;
 pub use math_core::{Error, Result};
 pub use planar_geometry::{LayerSection, MAX_LAYERS};
 
@@ -478,8 +482,72 @@ pub fn emit_gcode(layers: &[ToolpathLayer], settings: &ToolpathSettings) -> Resu
     gcode_core::emit(&planned_layers(layers)?, &machine_profile(settings)).map_err(gcode_error)
 }
 
+fn optimize_input(layers: &[ToolpathLayer]) -> Result<gcode_optimize::OptimizeInput> {
+    Ok(gcode_optimize::from_toolpaths(layers.iter().map(|layer| {
+        (
+            layer.z_mm,
+            layer
+                .paths
+                .iter()
+                .map(|path| (path.points.clone(), path.closed))
+                .collect::<Vec<_>>(),
+        )
+    })))
+}
+
+/// Preview dialect after path optimization (still not a printer job).
+pub fn emit_optimized_gcode(
+    layers: &[ToolpathLayer],
+    settings: &ToolpathSettings,
+    optimize: &OptimizeSettings,
+) -> Result<String> {
+    require_settings(settings)?;
+    let input = optimize_input(layers)?;
+    gcode_optimize::emit_optimized(input, &machine_profile(settings), optimize).map_err(gcode_error)
+}
+
+/// Machine job dialect: heat, retract, start/end after path optimization.
+pub fn emit_job_gcode(
+    layers: &[ToolpathLayer],
+    job: &JobProfile,
+    optimize: &OptimizeSettings,
+) -> Result<String> {
+    require_settings_from_job(job)?;
+    let input = optimize_input(layers)?;
+    gcode_optimize::emit_optimized_job(input, job, optimize).map_err(gcode_error)
+}
+
+/// Thick `.gcode.3mf` with job G-code and optional mesh body.
+pub fn emit_job_gcode_3mf(
+    layers: &[ToolpathLayer],
+    job: &JobProfile,
+    optimize: &OptimizeSettings,
+    mesh: Option<&MeshBody>,
+) -> Result<Vec<u8>> {
+    require_settings_from_job(job)?;
+    let input = optimize_input(layers)?;
+    gcode_optimize::emit_optimized_gcode_3mf_job(input, job, optimize, mesh).map_err(gcode_error)
+}
+
+fn require_settings_from_job(job: &JobProfile) -> Result<()> {
+    job.validate().map_err(gcode_error)
+}
+
+/// Build a [`JobProfile`] from toolpath settings and optional job overrides already validated.
+pub fn job_profile(settings: &ToolpathSettings, job: JobProfile) -> Result<JobProfile> {
+    require_settings(settings)?;
+    let mut profile = job;
+    profile.machine = machine_profile(settings);
+    profile.validate().map_err(gcode_error)?;
+    Ok(profile)
+}
+
 pub fn parse_gcode_preview(gcode: &str) -> Result<GcodePreview> {
     gcode_core::parse(gcode).map_err(gcode_error)
+}
+
+pub fn parse_gcode_job(gcode: &str) -> Result<GcodePreview> {
+    gcode_core::parse_job(gcode).map_err(gcode_error)
 }
 
 /// Nominal volume estimate; returns NaN for invalid settings or oversized plans.

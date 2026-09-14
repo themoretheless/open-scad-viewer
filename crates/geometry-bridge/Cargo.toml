@@ -42,3 +42,6 @@ image-webp = "0.2.4"
 zune-jpeg = "0.5.8"
 simplecss = "0.2.2"
 ttf-parser = "0.25.1"
+
+[dev-dependencies]
+gcode-core = { path = "../gcode-core" }

@@ -94,6 +94,7 @@ export interface GcodePreviewMove {
   layerIndex: number
 }
 export const GCODE_PREVIEW_DIALECT = 'open-scad-viewer/print-preview 2'
+export const GCODE_JOB_DIALECT = 'open-scad-viewer/print-job 1'
 export interface GcodePreviewResult {
   layers: number
   extrusionMm: number
@@ -111,6 +112,22 @@ export interface GcodeExportResult {
   layerCount: number
   preview: GcodePreviewResult
 }
+export interface GcodeJobExportResult extends GcodeExportResult {
+  /** Stored OPC `.gcode.3mf` bytes, standard base64. */
+  gcode3mfBase64: string
+}
+export interface JobSettingsInput extends ToolpathSettingsInput {
+  nozzleTempC?: number
+  bedTempC?: number
+  retractLengthMm?: number
+  retractFeedrateMmS?: number
+  unretractFeedrateMmS?: number
+  retractMinTravelMm?: number
+  fanSpeed?: number
+  homeAxes?: boolean
+  simplifyToleranceMm?: number
+  max2optSwaps?: number
+}
 
 // Explicit fields preserve the operation and mesh even for untyped callers.
 function toolpathArguments(settings: ToolpathSettingsInput): ToolpathSettingsInput {
@@ -124,6 +141,21 @@ function toolpathArguments(settings: ToolpathSettingsInput): ToolpathSettingsInp
     filamentDiameterMm: settings.filamentDiameterMm,
   }
 }
+function jobArguments(settings: JobSettingsInput): JobSettingsInput {
+  return {
+    ...toolpathArguments(settings),
+    nozzleTempC: settings.nozzleTempC,
+    bedTempC: settings.bedTempC,
+    retractLengthMm: settings.retractLengthMm,
+    retractFeedrateMmS: settings.retractFeedrateMmS,
+    unretractFeedrateMmS: settings.unretractFeedrateMmS,
+    retractMinTravelMm: settings.retractMinTravelMm,
+    fanSpeed: settings.fanSpeed,
+    homeAxes: settings.homeAxes,
+    simplifyToleranceMm: settings.simplifyToleranceMm,
+    max2optSwaps: settings.max2optSwaps,
+  }
+}
 /** Samples Z = zMin + i * layerHeightMm below zMax, preserving model coordinates. */
 export function planPolygonMeshToolpaths(
   mesh: PolygonMesh,
@@ -133,6 +165,7 @@ export function planPolygonMeshToolpaths(
 ): ToolpathPlanResult {
   return callGeometryRust('mesh_toolpaths', { mesh, zMin, zMax, ...toolpathArguments(settings) })
 }
+/** Preview dialect after slicer → optimize → emit. */
 export function emitPolygonMeshGcode(
   mesh: PolygonMesh,
   zMin: number,
@@ -141,8 +174,17 @@ export function emitPolygonMeshGcode(
 ): GcodeExportResult {
   return callGeometryRust('mesh_gcode', { mesh, zMin, zMax, ...toolpathArguments(settings) })
 }
+/** Machine job + thick `.gcode.3mf` after slicer → optimize → emit_job. */
+export function emitPolygonMeshGcodeJob(
+  mesh: PolygonMesh,
+  zMin: number,
+  zMax: number,
+  settings: JobSettingsInput = {},
+): GcodeJobExportResult {
+  return callGeometryRust('mesh_gcode_job', { mesh, zMin, zMax, ...jobArguments(settings) })
+}
 
-/** Parses the versioned viewer preview dialect; unsupported machine commands fail. */
+/** Parses preview or job dialect; unsupported commands fail. */
 export function parseGcodePreview(gcode: string): GcodePreviewResult {
   return callGeometryRust('gcode_preview', { gcode })
 }

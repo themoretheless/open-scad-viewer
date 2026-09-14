@@ -410,6 +410,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         }
         "mesh_toolpaths" => gcode::toolpaths(&v),
         "mesh_gcode" => gcode::export(&v),
+        "mesh_gcode_job" => gcode::export_job(&v),
         "gcode_preview" => gcode::parse(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;

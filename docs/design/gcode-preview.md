@@ -15,7 +15,8 @@ worker. A completed result is downloadable only while its inputs remain current.
 Errors return without publishing a partial file.
 
 The native pipeline is `polygon-core::MeshSectionIndex` → `slicer-core` →
-`gcode-core`. `geometry-bridge` exposes `mesh_toolpaths`, `mesh_gcode` and
+`gcode-optimize` → `gcode-core`. `geometry-bridge` exposes `mesh_toolpaths`,
+`mesh_gcode` (preview dialect), `mesh_gcode_job` (job + `.gcode.3mf`), and
 `gcode_preview`; their typed host functions live in
 `src/services/geometry/polygon.ts`. `mesh_gcode` independently parses its output
 before returning the text, layer count, dialect and movement statistics.
