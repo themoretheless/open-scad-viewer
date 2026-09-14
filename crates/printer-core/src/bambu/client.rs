@@ -1,21 +1,29 @@
+use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::bambu::config::{BambuLanConfig, BambuPrintOptions};
 use crate::bambu::messages::{
-    pause_payload, project_file_payload, pushall_payload, report_topic, request_topic,
+    artifact_md5, pause_payload, project_file_payload, pushall_payload, report_topic, request_topic,
     resume_payload, stop_payload,
 };
+use crate::bambu::status::parse_bambu_report;
 use crate::job::{ArtifactKind, JobStatus, PrintJob, PrinterId};
+use crate::scrub::scrub_secrets;
 use crate::transport::{MqttMessage, Transport};
 use crate::{invalid, Result};
 
-/// Orchestrates Bambu LAN upload + MQTT print commands over a [`Transport`].
-pub struct BambuLanClient<T> {
+/// Bambu Lab LAN backend over a pluggable FTPS/MQTT [`Transport`].
+pub struct BambuLanBackend<T> {
     pub config: BambuLanConfig,
     pub options: BambuPrintOptions,
     pub transport: T,
     sequence: u64,
+    /// When false, `project_file` sends `md5:""` (legacy skip).
+    pub send_md5: bool,
 }
 
-impl<T: Transport> BambuLanClient<T> {
+/// Alias kept for earlier call sites.
+pub type BambuLanClient<T> = BambuLanBackend<T>;
+
+impl<T: Transport> BambuLanBackend<T> {
     pub fn new(config: BambuLanConfig, transport: T) -> Result<Self> {
         config.validate()?;
         Ok(Self {
@@ -23,12 +31,38 @@ impl<T: Transport> BambuLanClient<T> {
             options: BambuPrintOptions::default(),
             transport,
             sequence: 1,
+            send_md5: true,
         })
     }
 
     pub fn with_options(mut self, options: BambuPrintOptions) -> Self {
         self.options = options;
         self
+    }
+
+    pub fn without_md5(mut self) -> Self {
+        self.send_md5 = false;
+        self
+    }
+
+    /// Connect with the live FTPS/MQTT transport (`network` feature).
+    #[cfg(feature = "network")]
+    pub fn connect_lan(config: BambuLanConfig) -> Result<BambuLanBackend<crate::bambu::BambuLanTransport>> {
+        let transport = crate::bambu::BambuLanTransport::new(config.clone())?;
+        BambuLanBackend::new(config, transport)
+    }
+
+    /// Like [`connect_lan`], but if `serial` is empty, read it from the printer TLS cert CN.
+    #[cfg(feature = "network")]
+    pub fn connect_lan_discover(
+        mut config: BambuLanConfig,
+    ) -> Result<BambuLanBackend<crate::bambu::BambuLanTransport>> {
+        config.validate_for_tls_serial()?;
+        if config.serial.trim().is_empty() {
+            let serial = crate::bambu::BambuLanTransport::fetch_serial_from_tls(&config)?;
+            config.serial = serial;
+        }
+        Self::connect_lan(config)
     }
 
     pub fn printer_id(&self) -> PrinterId {
@@ -44,11 +78,63 @@ impl<T: Transport> BambuLanClient<T> {
         id.to_string()
     }
 
-    /// Upload the artifact to FTPS root, then publish `print.project_file`.
-    ///
-    /// Requires LAN Mode + Developer Mode on the printer for control writes.
-    /// Does not open sockets itself.
-    pub fn submit_job(&mut self, job: &PrintJob) -> Result<()> {
+    fn wrap_err(&self, err: crate::Error) -> crate::Error {
+        crate::Error::new(
+            err.code,
+            scrub_secrets(&err.message, &[self.config.access_code.as_str()]),
+        )
+    }
+
+    fn command(&mut self, build: fn(&str) -> String) -> Result<()> {
+        let sequence = self.next_sequence();
+        self.transport
+            .publish(&MqttMessage {
+                topic: request_topic(&self.config.serial),
+                payload: build(&sequence),
+            })
+            .map_err(|e| self.wrap_err(e))
+    }
+
+    fn verify_start(&mut self) -> Result<Option<String>> {
+        // Poll up to a few reports for prepare/running or print_error.
+        for _ in 0..4 {
+            let sequence = self.next_sequence();
+            let raw = self
+                .transport
+                .request_report(
+                    &request_topic(&self.config.serial),
+                    &report_topic(&self.config.serial),
+                    &pushall_payload(&sequence),
+                )
+                .map_err(|e| self.wrap_err(e))?;
+            let report = parse_bambu_report(&raw);
+            if report.has_print_error() {
+                return Err(invalid(
+                    "PRINTER_START_FAILED",
+                    &format!(
+                        "Bambu print_error={} gcode_state={}",
+                        report.print_error.unwrap_or(0),
+                        report.gcode_state
+                    ),
+                ));
+            }
+            if report.is_start_like() {
+                return Ok(Some(report.gcode_state));
+            }
+        }
+        Err(invalid(
+            "PRINTER_START_FAILED",
+            "Bambu did not enter prepare/running after project_file",
+        ))
+    }
+}
+
+impl<T: Transport> PrinterBackend for BambuLanBackend<T> {
+    fn id(&self) -> PrinterId {
+        self.printer_id()
+    }
+
+    fn submit_job(&mut self, job: &PrintJob) -> Result<SubmitOutcome> {
         job.validate()?;
         if job.printer.serial != self.config.serial {
             return Err(invalid(
@@ -65,84 +151,75 @@ impl<T: Transport> BambuLanClient<T> {
                 ));
             }
         }
+        if job.plate_gcode_path.is_empty() {
+            return Err(invalid(
+                "PRINTER_PLATE_PATH",
+                "Bambu submit_job requires plate_gcode_path",
+            ));
+        }
         self.transport
-            .upload(&job.artifact.file_name, &job.artifact.bytes)?;
+            .upload(&job.artifact.file_name, &job.artifact.bytes)
+            .map_err(|e| self.wrap_err(e))?;
         let sequence = self.next_sequence();
+        let md5 = if self.send_md5 {
+            artifact_md5(&job.artifact.bytes)
+        } else {
+            String::new()
+        };
         let payload = project_file_payload(
             &sequence,
             &job.artifact.file_name,
             &job.plate_gcode_path,
             &self.options,
+            &md5,
         )?;
-        self.transport.publish(&MqttMessage {
-            topic: request_topic(&self.config.serial),
-            payload,
-        })
+        self.transport
+            .publish(&MqttMessage {
+                topic: request_topic(&self.config.serial),
+                payload,
+            })
+            .map_err(|e| self.wrap_err(e))?;
+        let mut outcome = SubmitOutcome {
+            remote_name: job.artifact.file_name.clone(),
+            verified: false,
+            gcode_state: None,
+        };
+        if job.verify_start {
+            outcome.gcode_state = self.verify_start()?;
+            outcome.verified = true;
+        }
+        Ok(outcome)
     }
 
-    pub fn pause(&mut self) -> Result<()> {
+    fn pause(&mut self) -> Result<()> {
         self.command(pause_payload)
     }
 
-    pub fn resume(&mut self) -> Result<()> {
+    fn resume(&mut self) -> Result<()> {
         self.command(resume_payload)
     }
 
-    pub fn stop(&mut self) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         self.command(stop_payload)
     }
 
+    fn status(&mut self) -> Result<JobStatus> {
+        let sequence = self.next_sequence();
+        let raw = self
+            .transport
+            .request_report(
+                &request_topic(&self.config.serial),
+                &report_topic(&self.config.serial),
+                &pushall_payload(&sequence),
+            )
+            .map_err(|e| self.wrap_err(e))?;
+        Ok(parse_bambu_report(&raw).to_status())
+    }
+}
+
+/// Convenience methods mirroring the trait (keep older call style).
+impl<T: Transport> BambuLanBackend<T> {
     pub fn push_status(&mut self) -> Result<JobStatus> {
-        let sequence = self.next_sequence();
-        let raw = self.transport.request_report(
-            &request_topic(&self.config.serial),
-            &report_topic(&self.config.serial),
-            &pushall_payload(&sequence),
-        )?;
-        Ok(parse_status_report(&raw))
+        self.status()
     }
-
-    fn command(&mut self, build: fn(&str) -> String) -> Result<()> {
-        let sequence = self.next_sequence();
-        self.transport.publish(&MqttMessage {
-            topic: request_topic(&self.config.serial),
-            payload: build(&sequence),
-        })
-    }
-}
-
-fn parse_status_report(raw: &str) -> JobStatus {
-    JobStatus {
-        gcode_state: find_string_field(raw, "gcode_state").unwrap_or_default(),
-        percent: find_number_field(raw, "mc_percent").and_then(|v| {
-            if (0.0..=100.0).contains(&v) {
-                Some(v as u8)
-            } else {
-                None
-            }
-        }),
-        layer: find_number_field(raw, "layer_num").map(|v| v as u32),
-        raw: raw.to_owned(),
-    }
-}
-
-fn find_string_field(json: &str, key: &str) -> Option<String> {
-    let needle = format!("\"{key}\"");
-    let start = json.find(&needle)? + needle.len();
-    let rest = json[start..].trim_start();
-    let rest = rest.strip_prefix(':')?.trim_start();
-    let rest = rest.strip_prefix('"')?;
-    let end = rest.find('"')?;
-    Some(rest[..end].to_owned())
-}
-
-fn find_number_field(json: &str, key: &str) -> Option<f64> {
-    let needle = format!("\"{key}\"");
-    let start = json.find(&needle)? + needle.len();
-    let rest = json[start..].trim_start();
-    let rest = rest.strip_prefix(':')?.trim_start();
-    let end = rest
-        .find(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-' || c == '+'))
-        .unwrap_or(rest.len());
-    rest[..end].parse().ok()
 }

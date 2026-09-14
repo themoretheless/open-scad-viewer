@@ -1,4 +1,5 @@
 use crate::bambu::BambuPrintOptions;
+use crate::hash::md5_hex_upper;
 use crate::job::admit_remote_name;
 use crate::{invalid, Result};
 
@@ -41,11 +42,13 @@ pub fn stop_payload(sequence_id: &str) -> String {
 /// Build `print.project_file` for a root FTPS upload.
 ///
 /// `url` is `ftp:///<file_name>` (three slashes) as observed for LAN jobs.
+/// `md5` should be uppercase hex of the uploaded bytes (or empty to skip).
 pub fn project_file_payload(
     sequence_id: &str,
     remote_file_name: &str,
     plate_gcode_path: &str,
     options: &BambuPrintOptions,
+    md5: &str,
 ) -> Result<String> {
     admit_remote_name(remote_file_name)?;
     if plate_gcode_path.is_empty() {
@@ -59,7 +62,7 @@ pub fn project_file_payload(
         concat!(
             r#"{{"print":{{"#,
             r#""sequence_id":"{seq}","command":"project_file","param":"{param}","url":"{url}","#,
-            r#""project_id":"0","profile_id":"0","task_id":"0","subtask_id":"0","md5":"","#,
+            r#""project_id":"0","profile_id":"0","task_id":"0","subtask_id":"0","md5":"{md5}","#,
             r#""timelapse":{timelapse},"bed_type":"{bed}","bed_levelling":{bed_levelling},"#,
             r#""flow_cali":{flow},"vibration_cali":{vib},"layer_inspect":{inspect},"use_ams":{ams}"#,
             r#"}}}}"#
@@ -67,6 +70,7 @@ pub fn project_file_payload(
         seq = escape_json(sequence_id),
         param = escape_json(plate_gcode_path),
         url = escape_json(&url),
+        md5 = escape_json(md5),
         timelapse = bool_json(options.timelapse),
         bed = escape_json(&options.bed_type),
         bed_levelling = bool_json(options.bed_levelling),
@@ -75,6 +79,10 @@ pub fn project_file_payload(
         inspect = bool_json(options.layer_inspect),
         ams = bool_json(options.use_ams),
     ))
+}
+
+pub fn artifact_md5(bytes: &[u8]) -> String {
+    md5_hex_upper(bytes)
 }
 
 fn bool_json(value: bool) -> &'static str {
@@ -86,22 +94,7 @@ fn bool_json(value: bool) -> &'static str {
 }
 
 fn escape_json(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if c.is_control() => {
-                use std::fmt::Write;
-                let _ = write!(out, "\\u{:04x}", c as u32);
-            }
-            c => out.push(c),
-        }
-    }
-    out
+    crate::http::escape_json(value)
 }
 
 #[cfg(test)]
@@ -109,17 +102,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn project_file_uses_root_ftp_url() {
+    fn project_file_includes_md5() {
         let payload = project_file_payload(
             "1",
             "box.gcode.3mf",
             "Metadata/plate_1.gcode",
             &BambuPrintOptions::default(),
+            "AABBCC",
         )
         .unwrap();
         assert!(payload.contains(r#""command":"project_file""#));
         assert!(payload.contains(r#""url":"ftp:///box.gcode.3mf""#));
-        assert!(payload.contains(r#""param":"Metadata/plate_1.gcode""#));
+        assert!(payload.contains(r#""md5":"AABBCC""#));
         assert!(payload.contains(r#""use_ams":false"#));
     }
 }

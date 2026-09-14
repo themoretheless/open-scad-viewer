@@ -32,12 +32,10 @@ impl PrintArtifact {
         }
         admit_remote_name(&self.file_name)?;
         match self.kind {
-            ArtifactKind::Gcode if !self.file_name.ends_with(".gcode") => {
-                Err(invalid(
-                    "PRINTER_ARTIFACT_NAME",
-                    "G-code artifact file_name must end with .gcode",
-                ))
-            }
+            ArtifactKind::Gcode if !self.file_name.ends_with(".gcode") => Err(invalid(
+                "PRINTER_ARTIFACT_NAME",
+                "G-code artifact file_name must end with .gcode",
+            )),
             ArtifactKind::Gcode3mf
                 if !(self.file_name.ends_with(".gcode.3mf") || self.file_name.ends_with(".3mf")) =>
             {
@@ -55,7 +53,28 @@ impl PrintArtifact {
 pub struct PrintJob {
     pub printer: PrinterId,
     pub artifact: PrintArtifact,
+    /// Relative OPC path for Bambu `project_file.param` (ignored by HTTP hosts).
     pub plate_gcode_path: String,
+    /// When true (default), Bambu waits for start/error after `project_file`.
+    pub verify_start: bool,
+}
+
+impl Default for PrintJob {
+    fn default() -> Self {
+        Self {
+            printer: PrinterId {
+                vendor: String::new(),
+                serial: String::new(),
+            },
+            artifact: PrintArtifact {
+                kind: ArtifactKind::Gcode,
+                bytes: Vec::new(),
+                file_name: String::new(),
+            },
+            plate_gcode_path: "Metadata/plate_1.gcode".into(),
+            verify_start: true,
+        }
+    }
 }
 
 impl PrintJob {
@@ -67,13 +86,13 @@ impl PrintJob {
                 "Printer serial must be non-empty",
             ));
         }
-        if self.plate_gcode_path.is_empty()
-            || self.plate_gcode_path.starts_with('/')
-            || self.plate_gcode_path.contains('\\')
-            || self
-                .plate_gcode_path
-                .split('/')
-                .any(|part| part.is_empty() || part == "." || part == "..")
+        if !self.plate_gcode_path.is_empty()
+            && (self.plate_gcode_path.starts_with('/')
+                || self.plate_gcode_path.contains('\\')
+                || self
+                    .plate_gcode_path
+                    .split('/')
+                    .any(|part| part.is_empty() || part == "." || part == ".."))
         {
             return Err(invalid(
                 "PRINTER_PLATE_PATH",
@@ -84,12 +103,37 @@ impl PrintJob {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JobState {
+    Idle,
+    Preparing,
+    Running,
+    Paused,
+    Complete,
+    Failed,
+    Unknown,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JobStatus {
-    pub gcode_state: String,
+    pub state: JobState,
+    /// Vendor-specific state string (e.g. Bambu `gcode_state`, Klipper `print_stats.state`).
+    pub vendor_state: String,
     pub percent: Option<u8>,
     pub layer: Option<u32>,
     pub raw: String,
+}
+
+impl JobStatus {
+    pub fn unknown(raw: impl Into<String>) -> Self {
+        Self {
+            state: JobState::Unknown,
+            vendor_state: String::new(),
+            percent: None,
+            layer: None,
+            raw: raw.into(),
+        }
+    }
 }
 
 pub fn admit_remote_name(name: &str) -> Result<()> {
@@ -107,4 +151,29 @@ pub fn admit_remote_name(name: &str) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+/// Map common vendor state strings into [`JobState`].
+pub fn map_vendor_state(vendor: &str) -> JobState {
+    let s = vendor.trim();
+    let upper = s.to_ascii_uppercase();
+    match upper.as_str() {
+        "IDLE" | "STANDBY" | "READY" | "OPERATIONAL" => JobState::Idle,
+        "PREPARE" | "PREPAREING" | "PREPARING" | "SLICING" | "OPENING_SERIAL" | "CONNECTING"
+        | "STARTING" => JobState::Preparing,
+        "RUNNING" | "PRINTING" | "BUSY" | "WORKING" => JobState::Running,
+        "PAUSE" | "PAUSED" => JobState::Paused,
+        "FINISH" | "FINISHED" | "COMPLETE" | "COMPLETED" | "DONE" | "SUCCESS" => JobState::Complete,
+        "FAILED" | "ERROR" | "FAIL" | "CANCELLED" | "CANCELED" => JobState::Failed,
+        _ => {
+            let lower = s.to_ascii_lowercase();
+            match lower.as_str() {
+                "standby" | "complete" | "cancelled" | "error" | "printing" | "paused" => {
+                    map_vendor_state(&lower.to_ascii_uppercase())
+                }
+                _ if lower.contains("print") && !lower.contains("pause") => JobState::Running,
+                _ => JobState::Unknown,
+            }
+        }
+    }
 }

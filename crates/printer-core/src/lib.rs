@@ -1,9 +1,8 @@
-//! Printer job transport. Not a slicer and not G-code generation.
+//! Multi-vendor LAN printer job transport. Not a slicer and not G-code generation.
 //!
-//! Default surface is protocol orchestration over a pluggable [`Transport`].
-//! Bambu Lab LAN (FTPS upload + MQTT control) is the first backend. Live TLS
-//! sockets are out of this crate until a `network` adapter is wired; tests use
-//! [`mock::MockTransport`].
+//! Public surface is [`PrinterBackend`] (Bambu / Moonraker / OctoPrint / PrusaLink /
+//! Creality / Snapmaker). Enable the `network` feature for live sockets; default builds stay
+//! offline with mocks.
 #![feature(
     try_blocks,
     gen_blocks,
@@ -14,14 +13,35 @@
 )]
 #![allow(unused_features)]
 
+pub mod backend;
 pub mod bambu;
+pub mod creality;
+pub mod hash;
+pub mod http;
 pub mod job;
 pub mod mock;
+pub mod moonraker;
+pub mod octoprint;
+pub mod prusa;
+pub mod scrub;
+pub mod snapmaker;
 pub mod transport;
 
-pub use bambu::{BambuLanClient, BambuLanConfig, BambuPrintOptions};
-pub use job::{ArtifactKind, JobStatus, PrintArtifact, PrintJob, PrinterId};
+pub use backend::{PrinterBackend, SubmitOutcome};
+pub use bambu::{BambuLanBackend, BambuLanClient, BambuLanConfig, BambuPrintOptions};
+#[cfg(feature = "network")]
+pub use bambu::{lan_client_config, BambuLanTransport};
+pub use creality::{CrealityBackend, CrealityConfig};
+pub use http::{HttpRequest, HttpResponse, HttpTransport, MockHttpTransport};
+pub use job::{
+    ArtifactKind, JobState, JobStatus, PrintArtifact, PrintJob, PrinterId, map_vendor_state,
+};
 pub use mock::MockTransport;
+pub use moonraker::{MoonrakerBackend, MoonrakerConfig};
+pub use octoprint::{OctoPrintBackend, OctoPrintConfig};
+pub use prusa::{PrusaLinkBackend, PrusaLinkConfig};
+pub use scrub::scrub_secrets;
+pub use snapmaker::{SnapmakerBackend, SnapmakerConfig};
 pub use transport::{MqttMessage, Transport};
 
 pub use math_core::{Error, Result};

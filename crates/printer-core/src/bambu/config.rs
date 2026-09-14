@@ -21,6 +21,21 @@ impl BambuLanConfig {
     }
 
     pub fn validate(&self) -> Result<()> {
+        self.validate_host_and_code()?;
+        self.validate_serial(false)
+    }
+
+    /// Validate host/code; serial may be filled later from the TLS certificate CN.
+    pub fn validate_for_tls_serial(&self) -> Result<()> {
+        self.validate_host_and_code()?;
+        if self.serial.trim().is_empty() {
+            Ok(())
+        } else {
+            self.validate_serial(false)
+        }
+    }
+
+    fn validate_host_and_code(&self) -> Result<()> {
         if self.host.trim().is_empty() {
             return Err(invalid("PRINTER_HOST", "Bambu LAN host must be non-empty"));
         }
@@ -39,7 +54,23 @@ impl BambuLanConfig {
                 "Bambu LAN access code must be ASCII alphanumeric",
             ));
         }
-        if self.serial.trim().is_empty() || self.serial.len() > 64 {
+        if self.mqtt_port == 0 || self.ftps_port == 0 {
+            return Err(invalid("PRINTER_PORT", "Bambu ports must be non-zero"));
+        }
+        Ok(())
+    }
+
+    fn validate_serial(&self, allow_empty: bool) -> Result<()> {
+        if self.serial.trim().is_empty() {
+            if allow_empty {
+                return Ok(());
+            }
+            return Err(invalid(
+                "PRINTER_SERIAL",
+                "Bambu serial must be 1..64 characters",
+            ));
+        }
+        if self.serial.len() > 64 {
             return Err(invalid(
                 "PRINTER_SERIAL",
                 "Bambu serial must be 1..64 characters",
@@ -54,9 +85,6 @@ impl BambuLanConfig {
                 "PRINTER_SERIAL",
                 "Bambu serial must be ASCII alphanumeric/-/_",
             ));
-        }
-        if self.mqtt_port == 0 || self.ftps_port == 0 {
-            return Err(invalid("PRINTER_PORT", "Bambu ports must be non-zero"));
         }
         Ok(())
     }

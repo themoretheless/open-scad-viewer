@@ -19,7 +19,7 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 | `slicer-core` | Walls/infill from already-cut contours |
 | `gcode-core` | G-code encode/preview and G-code 3MF package |
 | `gcode-optimize` | Toolpath order/seam/simplify/comb + emit |
-| `printer-core` | Printer LAN job transport (Bambu FTPS/MQTT orchestration) |
+| `printer-core` | Multi-vendor LAN job transport (Bambu / Moonraker / OctoPrint / Prusa / Creality / Snapmaker) |
 | `mechanics-core` | Section properties / beam estimates |
 | `openscad-core` | OpenSCAD frontend |
 | `modelgraph-text` | ModelGraph Text frontend |

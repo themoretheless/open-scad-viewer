@@ -1,13 +1,22 @@
 use crate::job::admit_remote_name;
 use crate::transport::{MqttMessage, Transport};
 use crate::{invalid, Result, MAX_ARTIFACT_BYTES};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Clone, Debug, Default)]
 pub struct MockTransport {
     pub files: BTreeMap<String, Vec<u8>>,
     pub published: Vec<MqttMessage>,
+    /// Single fallback report when `report_queue` is empty.
     pub next_report: String,
+    /// FIFO reports consumed by `request_report`.
+    pub report_queue: VecDeque<String>,
+}
+
+impl MockTransport {
+    pub fn push_report(&mut self, report: impl Into<String>) {
+        self.report_queue.push_back(report.into());
+    }
 }
 
 impl Transport for MockTransport {
@@ -44,6 +53,9 @@ impl Transport for MockTransport {
             topic: request_topic.to_owned(),
             payload: payload.to_owned(),
         })?;
+        if let Some(report) = self.report_queue.pop_front() {
+            return Ok(report);
+        }
         if self.next_report.is_empty() {
             return Err(invalid(
                 "PRINTER_REPORT",
