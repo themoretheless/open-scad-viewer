@@ -264,6 +264,7 @@ fn machine_profile(settings: &ToolpathSettings) -> gcode_core::MachineProfile {
         print_feedrate_mm_s: settings.feedrate_mm_s,
         travel_feedrate_mm_s: settings.travel_feedrate_mm_s,
         filament_diameter_mm: settings.filament_diameter_mm,
+        ..gcode_core::MachineProfile::default()
     }
 }
 
