@@ -1,0 +1,63 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic sphere/sphere surface-surface intersection (first analytic SS cell): native intersect_sphere_sphere in crates/brep-core/src/intersections/sphere_sphere.rs, bridge op brep_intersect_sphere_sphere, typed TS adapter intersectSphereSphere — canonical stereographic-sphere recognition (eight rational biquadratic patches, exact quarter-disk trim pcurves, per-patch frame recovery with global pole/quadrant tiling certification, rigid affine placements admitted), outward binary64 interval classification of the center distance against radius sum/difference, exact rational circle (four 90-degree arcs, weights cos(pi/4)) with binary64 center/radius/normal, exact per-patch UV lifts (planar sections of stereographic patches are UV circles, or UV lines when the plane contains the patch pole, clipped to the quarter-disk), and explicit unresolved regions for coincident spheres, tangency bands and unsupported operands",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 226,
+    "nativeTestsRelease": 226,
+    "nativeIntersectionTests": 88,
+    "nativeIntersectionTestsAdded": 9,
+    "bridgeTests": 204,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 67,
+    "vitestIntersectionTests": 46,
+    "vitestIntersectionTestsAdded": 3,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4726482
+  },
+  "coverage": [
+    "RESOLVED equal spheres r=2 at d=2: circle radius sqrt(r^2-d^2/4)=sqrt(3) to 1e-12, center [1,0,0] and axis [1,0,0] to 1e-12, exact 4-arc rational circle with weights cos(pi/4), 16 samples on both sphere equations to 1e-12, operand swap flips the axis and swaps the UV roles",
+    "RESOLVED axis-aligned equal spheres r=3 at d=[0,0,2]: parallel at t=1 lifts to north patches 0..3 of the first sphere and south patches 4..7 of the second, UV circle radius sqrt((r-t)/(r+t)) matching the asin-based oracle tan(pi/4-asin(t/r)/2) to 1e-15, one exact 90-degree arc per patch with endpoint moduli rho to 1e-12",
+    "RESOLVED rotated and translated unequal spheres (r=2 vs r=1.5, 0.5 rad about X): recognizer certifies the rotated frame, radius and center match the independent binary64 oracle to 1e-12, 16 circle samples and all lifted UV arc samples satisfy both sphere equations to 1e-12",
+    "RESOLVED separate (d=5, r=2+2), concentric unequal (r=2 vs r=3) and contained-without-contact (r=1 inside r=3 at d=1) pairs: empty components with numerically_resolved coverage and no unresolved regions",
+    "RESOLVED just outside the outward tangency band (d=4+1e-12): empty resolved; just inside (d=4-1e-12): a circle whose squared radius matches the cancellation-limited oracle to 2e-15",
+    "UNRESOLVED exact external tangency (d=r1+r2) and d within the outward classification band: tangency_or_multiple_root over both UV domains, no point component — house tangency discipline, tangent contacts are never reported as points",
+    "UNRESOLVED exact internal tangency (d=|r1-r2|): tangency_or_multiple_root; concentric equal spheres (and concentric near-equal within the band): coincident_trim, never a fabricated curve",
+    "REFUSED non-canonical operands (cylinder, frustum, cuboid) in either order: explicit unsupported_surface region over the concatenated UV box, never a numerical fallback; a structurally perturbed sphere fails model validation as a hard input error",
+    "WASM roundtrip: bridge report carries kind=circle, exact weights, per-patch UV lifts with face indices, maxSampleResidual <= 1e-12; JSON roundtrip preserves the component; coverage, permitsTopologyChange=false and evidence=numerical_uncertified serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectSphereSphere/brep_intersect_sphere_sphere; no existing query, op, or adapter behavior changed. The geometry chunk budget rose 2,405,000 to 2,410,000 and the total budget 4,720,000 to 4,730,000 (measured +6,560 bytes packed for the recognizer, classification, circle and UV lifts); all other budgets unchanged",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "recognition deviation + 16 binary64 epsilons of the distance/radius scale",
+    "uvLineThreshold": 1e-12,
+    "quarterDiskMargin": 1e-12,
+    "uvMergeAngle": 1e-9,
+    "circleArcs": 4,
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical spheres only: the exact eight-patch stereographic construction from analytic::sphere under rigid affine placement (uniform scaling and shears are rejected by the recognizer); every other operand is an explicit unsupported_surface region, and no general NURBS SS path exists",
+    "Tangency is never a point: exact and within-band external/internal tangencies report tangency_or_multiple_root regions, and concentric equal (or inseparable near-equal) spheres report coincident_trim; tangency certification to a point remains open",
+    "The classification band widens with recognition deviation, so near-tangent configurations below ~1e-13 of the radius scale stay unresolved rather than guessed",
+    "UV lifts are per-patch pieces with patch-local knots [0,1]; no cross-patch sewing, no shared knot vector, and equator circles appear once per adjacent patch (eight arcs at t=0)",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these circles in Booleans, the remaining analytic SS pairs (cylinder/cone/torus families), and general curved CS/SS stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "9fd46e3db584432855c142e0372958cee30c44897f91bc3395d1e8378c925b18",
+    "crates/brep-core/src/intersections/sphere_sphere.rs": "71e3c3d93f535f4be4c4c4e24ca38a95b2c1d0db51c00810c16f932afd08d673",
+    "crates/geometry-bridge/src/intersections.rs": "d1b0fdedbb18b175d49f406ea4d88d70b76278636b98c053245464d4dde6dda4",
+    "crates/geometry-bridge/src/lib.rs": "19b16ca5fcfd06566b6dd66776447307fc5b5247e8c694261685993828b96525",
+    "src/services/geometry/intersections.ts": "efa2f7eac6486d5c273ce0b242fc6ff81c78cad8d44a2d59dd2937d488dccc72",
+    "tests/brepIntersections.test.ts": "2641f9d6a7564ef2d6e5ada4ec178dc616aae178ff412159f78e2a1a9cedf9b8",
+    "scripts/verify-dist.mjs": "4f8ac8182a4a696a4077f94b4cdf728175ed05789dac7104e58c008dd0b41135",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "b4f416e2239f83d6955f2c94cad165438eb2815338242e6128d6f4cde2de9093",
+    "src/generated/geometry-kernels/bytes.ts": "6fa047971f52e5362782b9bed863079c689ec17f9b36b29687acbe929d49edbe"
+  }
+}

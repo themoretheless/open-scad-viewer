@@ -5,10 +5,10 @@ import type {GeometryEvaluationResult, GeometryQuality} from '../core/build'
 import type {MeshData} from '../core/mesh'
 import {createNativeGeometryArtifact, MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import {geometryAssetId} from '../core/scene'
-import {sha256Hex} from '../core/sha256'
 import {type SemanticOccurrenceId, type SemanticOperationId} from '../core/semanticProgram'
 import {executeBrepNativeProgram} from './brepNativeExecutor'
 import {prepareBrepDisplay} from './geometry/brep'
+import {callGeometryRust} from './geometry/kernel'
 import {buildMeshBvh} from './meshBvh'
 import {extractSemanticEdges} from './meshTopology'
 import {SemanticProgramExecutionError, type SemanticExecutionControl} from './semanticProgramExecutor'
@@ -69,6 +69,9 @@ export async function buildBrepSemanticScene(
     || (policy.quality !== 'preview' && policy.quality !== 'full')) {
     throw new RangeError('B-rep display requires preview/full quality and 1..32 segments')
   }
+  // Display-policy identity is derived natively; the diagnostic lane re-derives
+  // it host-side so a worker cannot self-certify its own policy.
+  const displayPlan = callGeometryRust<{policy: string; displayPolicyHash: string}>('brep_scene_plan', policy)
   const displayPolicy = Object.freeze({version: 1, sampling: 'uniform-patch' as const, quality: policy.quality, segments: policy.segments})
   const start = performance.now()
   const execution = await executeBrepNativeProgram(trusted, control)
@@ -126,7 +129,7 @@ export async function buildBrepSemanticScene(
       result: {meshes, warnings: [...trusted.warnings], volume, surfaceArea, quality: displayPolicy.quality, reduced: false,
         timings: {parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: evaluated - start, analyzeMs: performance.now() - evaluated}},
       attestation: execution.attestation,
-      displayPolicyHash: sha256Hex('brep-display-policy-v1\n' + JSON.stringify(displayPolicy)),
+      displayPolicyHash: displayPlan.displayPolicyHash,
       outputs: Object.freeze(outputs), metrics: 'display_mesh_estimates', deviationStatus: 'not_certified',
     })
   } finally {

@@ -1,0 +1,67 @@
+{
+  "date": "2026-09-14",
+  "scope": "General NURBS curve/curve intersection query (requirement row 8a, first CC cell): native curve_curve in crates/brep-core/src/intersections.rs, bridge op brep_intersect_curve_curve, typed TS adapter intersectNurbsCurveCurve — knot-span rational-Bezier decomposition of both curves, homogeneous Bernstein subdivision under one FIFO queue across span pairs, outward-rounded control-hull exclusion, Newton-refined in-box root certification, exact knot-corner endpoint ownership, collinear and proportional-polygon coincidence clipping with trim intervals on both curves, and explicit unresolved regions for tangency, near-coincidence, ambiguous coincidence clipping and budget exhaustion",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 194,
+    "nativeTestsRelease": 194,
+    "nativeIntersectionTests": 57,
+    "nativeIntersectionTestsAdded": 13,
+    "bridgeTests": 201,
+    "vitestSuites": 4,
+    "vitestTests": 56,
+    "vitestIntersectionTests": 35,
+    "vitestIntersectionTestsAdded": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4695432
+  },
+  "coverage": [
+    "RESOLVED two crossing degree-1 lines: single transverse point, parameters match the independent Bernstein oracle (t=u=1/2) to 1e-10, residual <= 1e-9, contact transverse",
+    "RESOLVED line x rational quarter circle: line parameter 1/sqrt(2) and arc parameter 1/2 recovered to 1e-9, point on the unit circle to 1e-10",
+    "RESOLVED parabola vs horizontal line y=3/8: both crossings t=1/4 and 3/4 in parameter order, two events only",
+    "RESOLVED parallel-disjoint and skew pairs: empty components with numerically_resolved coverage",
+    "RESOLVED coincident collinear segments: overlap interval [1/2,1] on the first and [0,1/2] on the second curve, reversed flag under operand reversal; rational weighted line x(t)=3t/(1+2t) clips geometric [1/2,1] to source [1/4,1] by Mobius inversion oracle",
+    "RESOLVED shared endpoint: exactly one boundary event with exact knot parameters (t=1, u=0) in both operand orders",
+    "RESOLVED curved full coincidence: quarter circle vs knot-shifted (3+2k) and reversed copies report full-domain overlap intervals on both curves with correct direction flag",
+    "RESOLVED internal-knot crossing of a two-span line reported exactly once with exact dyadic parameters",
+    "RESOLVED knot shift/scale (t: 0.5 -> 5 on [3,7], u: 0.5 -> -1 on [-2,0]) and uniform weight scaling leave geometry and mapped parameters invariant",
+    "RESOLVED operand swap maps event parameters first<->second exactly",
+    "UNRESOLVED tangent parabola vs tangent line: no point components, explicit tangency_or_multiple_root bands, coverage incomplete",
+    "UNRESOLVED tight budget (maxBoxes 1 or 2 with four span pairs): pending pairs preserved as budget_exceeded regions with 4-parameter boxes, coverage incomplete",
+    "REFUSED non-3D curve input and invalid options (maxDepth 0) with BREP_INTERSECTION_INVALID_INPUT"
+  ],
+  "behaviorChange": "New read-only query intersectNurbsCurveCurve/brep_intersect_curve_curve; no existing query, op, or adapter behavior changed. Reports carry paired source parameters, isolating intervals, residuals, coverage=numerically_resolved|incomplete, permitsTopologyChange=false and evidence=numerical_uncertified",
+  "limits": {
+    "distanceTolerance": 1e-9,
+    "parameterTolerance": 1e-10,
+    "maxDepth": 48,
+    "maxDepthRange": "1..64",
+    "maxBoxes": 8192,
+    "maxBoxesRange": "1..65536",
+    "transverseSineThreshold": 1e-6,
+    "coincidenceElevationDegreeCap": 25,
+    "weightResidualTolerance": 1e-9,
+    "newtonIterations": 16
+  },
+  "limitations": [
+    "Tangency and multiple-root regions are unresolved by design (tangency_or_multiple_root): crossings with unit-tangent sine <= 1e-6 are never reported as points",
+    "Partial curved coincidence (shared sub-arcs without proportional homogeneous polygons and non-monotone collinear parameterizations) stays explicit coincident_trim/near_coincidence bands; only whole-span proportional polygons and monotone collinear pairs clip to trim intervals",
+    "Crossings at shallow transverse angles consume halo boxes down to parameter tolerance; below roughly a few degrees of crossing angle the default 8192-box budget exhausts and the query stays incomplete rather than guessing",
+    "Near-tangent knot-boundary contacts can surface as resolution-limited adjacent unresolved bands instead of a single event; events merge only by touching parameter intervals, never by spatial proximity",
+    "Queries don't prove Boolean completion: NumericallyResolved is not certified complete-domain coverage, and permitsTopologyChange stays false; CS/SS general pairs, parameter correspondences for overlaps beyond interval pairs, and certified tangency remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "a1801b032ad70e0966948be04db0f542a478835c1438737a923f585bb19f1ad3",
+    "crates/geometry-bridge/src/intersections.rs": "63da0f0d9f10dd672d4ffd0d64b5e3584d83e67850834f00d2cd73095b7e1074",
+    "crates/geometry-bridge/src/lib.rs": "798e842c7004f8a834f532b35ec191f58c457e340d6b014b98386701111a2129",
+    "src/services/geometry/intersections.ts": "7308a706ddb2c19a7269eb472816a7381d7bc4a5cc87f3c2f0419a780333421f",
+    "tests/brepIntersections.test.ts": "e44267ce7a5f7fc5e7360493d4ea62cc9b01f7fe4617a66eca53b88411b53c36",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "4cc542a334d9dae04823014b944eac9119abc4683ae513de305c2a81aeb2b60a",
+    "src/generated/geometry-kernels/bytes.ts": "a6cae3e41e25db6974b82c0a089e88517016794b9adf5b61d3fcfd8ffcab2662"
+  }
+}

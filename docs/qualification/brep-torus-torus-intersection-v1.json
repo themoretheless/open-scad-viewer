@@ -1,0 +1,65 @@
+{
+ "date": "2026-09-14",
+ "scope": "Analytic torus/torus surface-surface intersection in the coaxial configuration (twelfth and last canonical-primitive analytic SS slice, one cell): native intersect_torus_torus in crates/brep-core/src/intersections/torus_torus.rs, bridge op brep_intersect_torus_torus, typed TS adapter intersectTorusTorus. The cell reuses the existing recognizer and lift helpers unchanged (plane_torus::recognize_torus for both operands — the exact sixteen-patch strict ring-torus solid with tensor-product weights [[1,w,1],[w,w^2,w],[1,w,1]], w = cos(pi/4), R - r >= 1e-5, rigid affine placements admitted; plane_torus::lift_parallel and torus_residual; sphere_sphere::circle_curve and the exact rational 90-degree-arc parameter map). Coaxiality is certified, never forced: a pure-rounding axis tilt (64 binary64 epsilons plus the recognition-error angular allowances of both tori) or center-line offset (64 epsilons of the axial/radius terms plus both recognition deviations) snaps to coaxial, a recognition-scale tilt or offset (1e-9) reports near_coincidence, and a clearly tilted or off-axis pair is unsupported_surface (the general torus/torus pair is a quartic, out of scope — no numerical fallback). Either axis orientation is admitted (the torus surface is symmetric about its center plane, so the axis sign is irrelevant to the section and enters only the second torus's profile-angle map). Both surfaces are surfaces of revolution about the shared axis, so the section reduces to circle/circle in the meridian half-plane (rho >= 0, z along the first torus's axis): (rho - R_1)^2 + z^2 = r_1^2 against (rho - R_2)^2 + (z - h)^2 = r_2^2 with h the axial offset of the second center plane — the same closed form as sphere_torus (a = (d^2 + r_1^2 - r_2^2)/(2d), l^2 = r_1^2 - a^2, d the meridian center distance between (R_1, 0) and (R_2, h)): two distinct roots revolve into two exact circles (radius rho*, height z*, sorted by height then radius), the double-root tangencies (external d == r_1+r_2, internal d == |r_1-r_2|) stay tangency_or_multiple_root, the rho* collapse guard is the pole degeneracy (structurally unreachable for strict ring tori), equal meridian circles within the bands report coincident_trim, and provably separate or contained meridian circles resolve empty by the outward interval signs. Resolved contacts are exact rational circles (four 90-degree arcs, weights cos(pi/4)) with UV lifts on BOTH tori: iso-v parallels at the exact profile angle phi = atan2(z*, rho* - R) through the exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one degree-1 line per revolution quadrant patch of the profile row on both 4x4 tilings (the second torus's profile angle measured in its own frame, anti-parallel axes admitted).",
+ "fullGoalComplete": false,
+ "checks": {
+  "nativeTestsDebug": 355,
+  "nativeTestsRelease": 355,
+  "nativeIntersectionTests": 217,
+  "nativeIntersectionTestsAdded": 12,
+  "bridgeTests": 228,
+  "bridgeTestsAdded": 2,
+  "vitestSuites": 4,
+  "vitestTests": 92,
+  "vitestIntersectionTests": 71,
+  "vitestIntersectionTestsAdded": 2,
+  "vueTypes": "passed",
+  "mcpTypes": "passed",
+  "wasmBuild": "passed",
+  "viteBuild": "passed",
+  "failures": 0,
+  "distArtifacts": 68,
+  "distBytes": 4777922
+ },
+ "coverage": [
+  "RESOLVED coaxial two-circle sections: torus R=3 r=1 at the origin against torus R=3 r=sqrt(5.2) lifted to z=3 — the meridian centers (3,0) and (3,3) sit at d=3, a=0.8, l=0.6, yielding the exact circle pair of radii 2.4 and 3.6, both at z=0.8 (radii and centers to 1e-12 against the circle/circle oracle, 16 curve samples on both unscaled torus implicit quartics (x^2+y^2+z^2+R^2-r^2)^2 = 4R^2(x^2+y^2) to 1e-10), each with four iso-v lifts per torus at the exact rational-arc v parameter (verified against the angle oracles atan2(0.8, rho-3) and atan2(0.8-3, rho-3) to 1e-12), all lifts evaluated through their own patch surfaces onto both implicit equations to 1e-9",
+  "RESOLVED equal-minor-radii pair: torus R=3 r=1 at the origin against torus R=3 r=1 lifted to z=1 — d=1, a=1/2, l=sqrt(3)/2, the exact circles of radii 3 -+ sqrt(3)/2, both at z=1/2 (oracles to 1e-12, both-implicit samples to 1e-10, lifts through both surfaces to 1e-9)",
+  "RESOLVED generic configuration: torus R=3 r=1 against torus R=2.5 r=1.2 lifted to z=0.7, both roots matched against the independent meridian circle/circle oracle to 1e-12 with four lifts per torus",
+  "RESOLVED anti-axial second torus (axis -z, center plane unchanged): the exact circles are unchanged and the second lift follows its own frame (profile angle atan2(-(z-3), rho-3) to 1e-12, surface-evaluated lifts to 1e-9)",
+  "RESOLVED rigid placement: the whole coaxial two-circle configuration rotated about X by 0.5 and translated by (0.3, -0.2, 1.1) keeps the exact radii, centers and axis normal to 1e-12 against the placed-frame oracle, with lift sampling through both placed surfaces to 1e-9",
+  "UNRESOLVED external meridian tangency: torus R=3 r=1 at z=2 touches the first tube (d = 2 = r_1 + r_2) at rho=3, z=1 — tangency_or_multiple_root at z=2 and z=2 -+ 2e-15, never a guessed circle; just clear (z=2+1e-9) resolves empty, just across (z=2-1e-9) resolves two circles",
+  "UNRESOLVED internal meridian tangency: torus R=3 r=2 at z=1 (d = 1 = |r_1 - r_2|, touch at rho=3, z=-1) — tangency_or_multiple_root at r=2 and r=2 -+ 2e-15; just larger (r=2+1e-9) resolves empty (contained), just smaller (r=2-1e-9) resolves two circles",
+  "UNRESOLVED coincident tori: the identical torus twice (R_1 == R_2, h == 0, r_1 == r_2 within the bands) reports coincident_trim, never a guessed curve",
+  "RESOLVED empty: concentric containment within the d <= band branch (R=3, r=0.5), nested without contact (R=3.2 r=2.5 contains the first tube; R=2.7 r=0.4 inside it), separate far along the axis (z=10) — all numerically_resolved with no components and no unresolved regions",
+  "UNRESOLVED near-coaxial bands: a 1e-10 center-line offset and a 1e-10 axis tilt both report near_coincidence, never snapped",
+  "REFUSED clearly off-axis (0.5) or tilted (0.3) pairs: unsupported_surface (the general torus/torus pair is a quartic), no numerical fallback",
+  "REFUSED non-canonical operands on either side (sphere, cuboid, cylinder, frustum, a structurally perturbed torus with one moved control point): explicit unsupported_surface regions"
+ ],
+ "behaviorChange": "New read-only query intersectTorusTorus (brep_intersect_torus_torus); the recognizer and lift helpers are reused unchanged (no edits to plane_torus.rs, sphere_sphere.rs or any other prior SS module); no existing query, op, or adapter behavior changed. Dist budgets unchanged with measured justification: the geometry chunk is 2,459,388 bytes (measured, +635 over 2,458,753; budget 2,460,000) and the total is 4,777,922 bytes (measured, +635 over 4,777,287; budget 4,780,000), both recorded in scripts/verify-dist.mjs.",
+ "limits": {
+  "recognitionToleranceRelative": 1e-09,
+  "classificationBand": "both recognition deviations + 16 binary64 epsilons of the axial/radius terms",
+  "axialSnapBand": "axis tilt: 64 binary64 epsilons plus both recognition-error angular allowances (error/(2R) per torus); center-line offset: 64 binary64 epsilons of the axial/radius terms plus both recognition deviations (pure-rounding only); recognition-scale tilts/offsets report near_coincidence",
+  "isoParameterMap": "exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) (discriminant exactly 2); seam contacts snap at 64 epsilons of the unit parameter interval",
+  "circleSamples": 16
+ },
+ "limitations": [
+  "Canonical operands only: both tori are the exact canonical strict ring-torus solid (R - r >= 1e-5; horn and spindle tori are refused at construction); everything else is an explicit unsupported_surface region, never a numerical fallback",
+  "Coaxial configuration only (either axis orientation): the two axes must be certified parallel and coincident; clearly tilted or off-axis pairs are honest unsupported_surface regions (the general torus/torus pair is a quartic) with a near_coincidence band at recognition scale, never forced coaxial",
+  "Resolved sections are the two-circle family only: two distinct meridian roots revolve into two exact circles; a one-circle resolved configuration is structurally unreachable for a strict ring-torus pair (every meridian root keeps rho* >= R - r >= 1e-5, far beyond the band) and is documented honestly rather than tested",
+  "The meridian tangencies (double roots, external d == r_1+r_2 or internal d == |r_1-r_2|) and the pole-collapse guard (rho* within the band — structurally unreachable for a strict ring torus) stay tangency_or_multiple_root — tangent contacts are never guessed circles; the pole guard is documented honestly rather than tested",
+  "Equal meridian circles (R_1 == R_2, h == 0, r_1 == r_2 within the bands) report coincident_trim — coincident surfaces are never guessed curves",
+  "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans, tangency certification, the non-axial quartic configurations (Villarceau circles among them) and the general NURBS SS research spike stay open"
+ ],
+ "sha256": {
+  "crates/brep-core/src/intersections.rs": "464064f948e44853a3d4114677c07f0e4328e1e1dd9adcb9b35efbb4a5cfab15",
+  "crates/brep-core/src/intersections/torus_torus.rs": "9fd6c57805f3a3cc00ebc25106ab9f9aebf9ec41f20f936a6bcc53d1504c7152",
+  "crates/geometry-bridge/src/intersections.rs": "918a13ee6efb94ed782a38205aa056eaa46d654df28952f2dea8e2da177dc281",
+  "crates/geometry-bridge/src/lib.rs": "7f726ad7c9da17c4ddc5f593280ea3fb6328adc4ec1ece49bd6dee9ac662f304",
+  "src/services/geometry/intersections.ts": "50da717ea3762fd07eb11fff57d06790843b9a327bf3630b343e73eb35c6d74f",
+  "tests/brepIntersections.test.ts": "3d1538b8032f829b8960f79a6d687a368be4d40ed1ab93a035dbff1b08dc81d4",
+  "scripts/verify-dist.mjs": "04fb1493c236cb7f8cb3e0bae9c7f89b46c8b15976a33ccf62a35f0afb7b13ad",
+  "src/generated/geometry-kernels/kernel_bg.wasm": "e9cea41d0191c0f84611dc1e58df95c206623c33af2cb03ff600a7e955afe5e2",
+  "src/generated/geometry-kernels/bytes.ts": "647138e90d0450053881fc18f87845de3e3aaed060a7ba60f943b2e688edcf87"
+ }
+}

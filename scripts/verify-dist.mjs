@@ -27,8 +27,26 @@ const limits = new Map([
 // and bound this feature addition; the complete distribution stays below 4.7 MB.
 // The native occurrence-production replay + $expansion/module-activation
 // anchoring port (brep_production.rs, brep_identity.rs) adds ~16 kB packed
-// (2365958 bytes measured).
-const geometryChunkBudget = 2_400_000
+// (2365958 bytes measured). Newton one-sided C0-knot jets and half-open
+// boundary ownership in brep-core intersections add ~4.8 kB packed
+// (2401388 bytes measured). The analytic sphere/sphere SS cell (canonical
+// sphere recognizer, outward classification, exact circle + UV lifts) adds
+// ~6.6 kB packed (2407948 bytes measured). The axial analytic
+// sphere/cylinder SS cell (canonical cylinder recognizer, band
+// classification, side/cap circles + both UV lifts) adds ~7.4 kB packed
+// (2415328 bytes measured). The analytic plane/sphere + plane/cylinder SS
+// cells (canonical planar patch recognizer, certified angle classification,
+// exact circle/ruling/ellipse + UV lifts, null oblique cylinder-side lift)
+// add ~8.6 kB packed (2425233 bytes measured). The analytic plane/cone
+// (frustum) SS cell (canonical frustum recognizer, certified angle
+// classification, exact circle/ruling/ellipse/parabola/hyperbola + UV lifts,
+// null cone-side lift for the oblique conics) adds ~12.5 kB packed (2437723
+// bytes measured). The analytic plane/torus SS cell (canonical ring-torus
+// recognizer, certified axial angle classification, exact parallel/meridian
+// circle pairs + iso-u/iso-v torus lifts and plane-UV ellipse lifts, honest
+// Cassini/Villarceau refusals) adds ~8.6 kB packed (2439918 -> 2448493 bytes
+// measured).
+const geometryChunkBudget = 2_460_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
@@ -99,6 +117,32 @@ for (const [name, artifact, compression] of [
 // budget raised to 1200000) and ~110 kB to the total (3225631 bytes measured).
 // SVG runtime, panel and complete font/dependency notices bring the measured
 // distribution to ~4.5 MB. Keep the shared-code and per-artifact checks intact.
-const totalBudget = 4_700_000
+// The curve/ruled-surface intersection query (brep-core intersections.rs:
+// 3x3 Newton (t,u,v) isolation, ruling/iso-v coincidence lifting) adds ~28 kB
+// to the packed geometry chunk (2365958 -> 2393603 bytes; chunk budget
+// unchanged at 2400000) and ~17 kB to the total (4695432 -> 4712137 bytes).
+// The analytic sphere/sphere SS cell adds ~6.6 kB packed and the same to the
+// total (4719922 -> 4726482 bytes measured), so both budgets move once.
+// The axial analytic sphere/cylinder SS cell adds ~7.4 kB packed and the
+// same to the total (4726482 -> 4733862 bytes measured).
+// The parallel-axis analytic cylinder/cylinder SS cell adds ~1.3 kB packed
+// and the same to the total (4733862 -> 4735172 bytes measured); both
+// budgets unchanged.
+// The analytic plane/sphere + plane/cylinder SS cells add ~8.6 kB packed and
+// the same to the total (4735172 -> 4743767 bytes measured), so both
+// budgets move once.
+// The analytic plane/cone (frustum) SS cell adds ~12.5 kB packed and the
+// same to the total (4743767 -> 4756257 bytes measured), so both budgets
+// move once.
+// The analytic plane/torus SS cell adds ~8.6 kB packed and the same to the
+// total (4758452 -> 4767027 bytes measured), so both budgets move once.
+// The coaxial analytic cone/torus SS cell adds ~5.7 kB packed and the same
+// to the total (4771577 -> 4777287 bytes measured; chunk 2453043 ->
+// 2458753 bytes), so both budgets move once.
+// The coaxial analytic torus/torus SS cell (the last canonical-primitive
+// analytic SS cell) adds ~0.6 kB packed and the same to the total
+// (4777287 -> 4777922 bytes measured; chunk 2458753 -> 2459388 bytes);
+// both budgets unchanged.
+const totalBudget = 4_780_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

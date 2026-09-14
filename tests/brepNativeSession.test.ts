@@ -2,8 +2,7 @@ import {expect,it} from 'vitest'
 import {callGeometryRust} from '../src/services/geometry/kernel'
 import {semanticResultItems} from '../src/core/semanticProgram'
 import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
-import {executeSemanticProgram} from '../src/services/semanticProgramExecutor'
-import {createBrepSemanticBackend,inspectBrepSemanticPayload} from '../src/services/brepSemanticBackend'
+import {analyzeNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
 const run=(args:Record<string,unknown>)=>callGeometryRust<Record<string,unknown>>('brep_session',args)
 const solidType={space:'d3',geometryKind:'solid',representation:'analytic-brep',evidence:{tag:'representation-preserving'}}
 const node={id:0,kind:'box',valueType:solidType,size:[1,1,1],center:false}
@@ -41,18 +40,14 @@ it('selects authored SemanticResult outputs and metadata inside Rust',()=>{
  expect(failed).toMatchObject({tag:'failed',completedNodes:0,code:'BREP_SEMANTIC_CONTRACT'})
  expect(failed).not.toHaveProperty('outcomes')
 })
-it('executes an authored SemanticProgram plan natively and matches the existing executor',async()=>{
+it('executes an authored SemanticProgram plan natively with exact geometry',()=>{
  const lowered=lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\ndifference(){cube(3);cube(1);}')
  const core=lowered.program.core
  const outputs=semanticResultItems(core.result).map(item=>item.node)
- const native=callGeometryRust<{tag:string;outcomes:{geometry:{model:unknown}}[]}>('brep_graph_report',{maxNodes:core.nodes.length,maxBytes:8_000_000,nodes:core.nodes,outputs,execution:core.execution})
+ const native=callGeometryRust<{tag:string;outcomes:{geometry:{model:NurbsBrep}}[]}>('brep_graph_report',{maxNodes:core.nodes.length,maxBytes:8_000_000,nodes:core.nodes,outputs,execution:core.execution})
  expect(native.tag).toBe('committed')
- const previous=await executeSemanticProgram(lowered,createBrepSemanticBackend())
- try{
-  const value=previous.outputs[0].value
-  if(value.tag!=='value')throw new Error('Expected nonempty solid')
-  expect(native.outcomes[0].geometry.model).toEqual(inspectBrepSemanticPayload(value.payload).model)
- }finally{await previous.dispose()}
+ expect(native.outcomes[0].geometry.model.bodies).toHaveLength(1)
+ expect(analyzeNurbsBrep(native.outcomes[0].geometry.model).signedVolumeMm3).toBeCloseTo(26,6)
  const rejected=callGeometryRust<Record<string,unknown>>('brep_graph_report',{maxNodes:core.nodes.length,maxBytes:8_000_000,nodes:core.nodes,outputs,execution:{...core.execution,evaluationOrder:[...core.execution.evaluationOrder].reverse()}})
  expect(rejected).toMatchObject({tag:'failed',completedNodes:0,node:null,code:'BREP_SEMANTIC_CONTRACT'})
  expect(rejected).not.toHaveProperty('outcomes')

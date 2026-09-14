@@ -8,6 +8,35 @@
 //! fitted curves, snapping, or tessellation participate in these queries.
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 
+mod cone_cone;
+mod cone_torus;
+mod cylinder_cylinder;
+mod cylinder_torus;
+mod plane_cone;
+mod plane_cylinder;
+mod plane_sphere;
+mod plane_torus;
+mod sphere_cone;
+mod sphere_cylinder;
+pub(crate) mod sphere_sphere;
+mod sphere_torus;
+mod torus_torus;
+pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
+pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
+pub use cylinder_cylinder::{CylinderCylinderComponent, intersect_cylinder_cylinder};
+pub use cylinder_torus::{CylinderTorusComponent, intersect_cylinder_torus};
+pub use plane_cone::{PlaneConeComponent, intersect_plane_cone};
+pub use plane_cylinder::{PlaneCylinderComponent, intersect_plane_cylinder};
+pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sphere};
+pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
+pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
+pub use sphere_cylinder::{
+    CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder,
+};
+pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
+pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
+pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
+
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {
     /// The equation is normal.dot(point) = offset; need not be normalized.
@@ -321,6 +350,32 @@ fn spans(knots: &[f64], degree: usize, count: usize) -> Vec<[f64; 2]> {
         .collect()
 }
 
+/// Half-open box ownership shared by every subdivision query in this file:
+/// each box owns its interior and its lower-parameter face; the domain's
+/// upper end is owned by the last box. Exactly one box therefore owns any
+/// parameter, so a root sitting bitwise on a shared subdivision face is
+/// reported once by its owning box and halo boxes stay silent.
+fn owns_parameter(lo: f64, hi: f64, domain_hi: f64, x: f64) -> bool {
+    lo <= x && (x < hi || (x == hi && hi == domain_hi))
+}
+/// Snap a converged parameter onto a box face when it rounds within two
+/// binary64 steps of it. Adjacent boxes share faces bitwise, so Newton images
+/// that disagree by one rounding step resolve to the same owned face
+/// parameter. This reconciles rounding at a shared face only — it is not a
+/// spatial tolerance and never merges distinct parameters.
+fn snap_to_face(x: f64, face: f64) -> f64 {
+    let near = if x < face {
+        [face.next_down(), face.next_down().next_down()]
+    } else {
+        [face.next_up(), face.next_up().next_up()]
+    };
+    if x == face || near.contains(&x) {
+        face
+    } else {
+        x
+    }
+}
+
 /// Isolate intersections of any validated positive-weight 3D NURBS curve with
 /// a plane, over the curve's entire active knot domain. Multiple/tangent roots,
 /// precision bands and work exhaustion stay explicit instead of becoming empty.
@@ -373,10 +428,15 @@ pub fn curve_plane(
                 let jet = curve.evaluate(parameter)?;
                 let point = point3(&jet.point);
                 if plane.distance(point).abs() <= options.distance_tolerance {
-                    let derivative = jet.d1.map(|v| dot(plane.normal, point3(&v)));
+                    // At a C0 knot the two-sided jet does not exist; screen
+                    // transversality with the one-sided span jets and accept
+                    // either side that confirms a transverse crossing.
+                    let transverse = curve_tangents(curve, parameter)?
+                        .iter()
+                        .any(|d| dot(plane.normal, *d).abs() > options.distance_tolerance);
                     if parameter != curve.domain()[0]
                         && parameter != curve.domain()[1]
-                        && derivative.is_none_or(|d| d.abs() <= options.distance_tolerance)
+                        && !transverse
                     {
                         report.unresolved(interval, UnresolvedReason::TangencyOrMultipleRoot);
                     } else if !report.components.iter().any(
@@ -399,6 +459,50 @@ pub fn curve_plane(
         }
         let variations = sign_variations(&values);
         if variations == 0 {
+            // A root bitwise on a shared box face leaves no sign variation:
+            // decide both faces by exact evaluation, but only where the
+            // face's own coefficient bound cannot exclude zero — a strict
+            // bound proves the face value is no rounding-scale contact.
+            // Half-open ownership makes exactly one box report the face;
+            // the halo box stays silent.
+            let domain_hi = curve.domain()[1];
+            let mut handled = false;
+            for (face, coefficient) in [
+                (interval[0], values[0]),
+                (interval[1], *values.last().unwrap()),
+            ] {
+                if coefficient.bound.sign() != 0 {
+                    continue;
+                }
+                match plane_face_root(curve, plane, interval, face, options)? {
+                    FaceRoot::Root(point) => {
+                        if owns_parameter(interval[0], interval[1], domain_hi, face)
+                            && !report.components.iter().any(
+                                |c| matches!(c, CurvePlaneComponent::Point(p) if p.parameter == point.parameter),
+                            )
+                        {
+                            report.components.push(CurvePlaneComponent::Point(point));
+                        }
+                        handled = true;
+                    }
+                    FaceRoot::Ambiguous => {
+                        report.unresolved(interval, UnresolvedReason::TangencyOrMultipleRoot);
+                        handled = true;
+                    }
+                    FaceRoot::Miss => {}
+                }
+            }
+            if handled {
+                // Interior coefficients with zero-containing bounds keep
+                // their explicit band; a confirmed face does not clear them.
+                if values[1..values.len() - 1]
+                    .iter()
+                    .any(|c| c.value != 0. && c.bound.sign() == 0)
+                {
+                    report.unresolved(interval, UnresolvedReason::NearCoincidence);
+                }
+                continue;
+            }
             // Numerically one-sided Bernstein coefficients. This is not an
             // interval exclusion if zero-containing coefficient intervals
             // remain; coverage is deliberately only numerical throughout.
@@ -414,9 +518,50 @@ pub fn curve_plane(
             || midpoint == interval[0]
             || midpoint == interval[1]
         {
+            // Terminal boxes compare the midpoint candidate against exact
+            // face evaluations: a face whose residual is not beaten by the
+            // midpoint carries the root — report it at the exact face
+            // parameter with this box as the isolating interval. Exact
+            // parameters dedup against the neighbor's own face report, and
+            // the final touching-interval merge absorbs any remaining
+            // midpoint/face pair beside a shared face.
             let point = point3(&curve.evaluate(midpoint)?.point);
             let residual = plane.distance(point).abs();
-            if variations == 1 && residual <= options.distance_tolerance {
+            let midpoint_confirms = variations == 1 && residual <= options.distance_tolerance;
+            let mut best_face: Option<(f64, f64)> = None;
+            for &face in &[interval[0], interval[1]] {
+                let face_residual =
+                    plane.distance(point3(&curve.evaluate(face)?.point)).abs();
+                if face_residual <= options.distance_tolerance {
+                    best_face = Some(match best_face {
+                        Some((f, r)) if r <= face_residual => (f, r),
+                        _ => (face, face_residual),
+                    });
+                }
+            }
+            if let Some((face, face_residual)) = best_face {
+                if !midpoint_confirms || face_residual <= residual {
+                    match plane_face_root(curve, plane, interval, face, options)? {
+                        FaceRoot::Root(mut point) => {
+                            point.parameter_interval = interval;
+                            if !report.components.iter().any(
+                                |c| matches!(c, CurvePlaneComponent::Point(p) if p.parameter == point.parameter),
+                            ) {
+                                report.components.push(CurvePlaneComponent::Point(point));
+                            }
+                        }
+                        FaceRoot::Ambiguous => {
+                            report.unresolved(interval, UnresolvedReason::TangencyOrMultipleRoot)
+                        }
+                        FaceRoot::Miss => {}
+                    }
+                    if variations > 1 {
+                        report.unresolved(interval, UnresolvedReason::TangencyOrMultipleRoot);
+                    }
+                    continue;
+                }
+            }
+            if midpoint_confirms {
                 report
                     .components
                     .push(CurvePlaneComponent::Point(CurvePoint {
@@ -435,6 +580,7 @@ pub fn curve_plane(
         pending.push_back(([interval[0], midpoint], Some(left), depth + 1));
         pending.push_back(([midpoint, interval[1]], Some(right), depth + 1));
     }
+    merge_plane_points(&mut report);
     report.components.sort_by(|a, b| {
         let parameter = |c: &CurvePlaneComponent| match c {
             CurvePlaneComponent::Point(p) => p.parameter,
@@ -445,6 +591,91 @@ pub fn curve_plane(
         parameter(a).total_cmp(&parameter(b))
     });
     Ok(report)
+}
+/// Merge curve/plane point events whose isolating intervals touch in
+/// parameter space — the same subdivision-tiling adjacency rule as
+/// merge_curve_points, never spatial proximity. The merged event keeps the
+/// lowest-residual parameter and the union of the isolating intervals, so a
+/// root sitting on a shared box face is reported exactly once.
+fn merge_plane_points(report: &mut Report<CurvePlaneComponent>) {
+    let interval = |c: &CurvePlaneComponent| match c {
+        CurvePlaneComponent::Point(p) => Some(p.parameter_interval),
+        _ => None,
+    };
+    let n = report.components.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn find(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    for i in 0..n {
+        for j in i + 1..n {
+            let (Some(a), Some(b)) = (interval(&report.components[i]), interval(&report.components[j]))
+            else {
+                continue;
+            };
+            if a[0] <= b[1] && b[0] <= a[1] {
+                let (ri, rj) = (find(&mut parent, i), find(&mut parent, j));
+                if ri != rj {
+                    parent[ri] = rj;
+                }
+            }
+        }
+    }
+    let mut merged: Vec<Option<CurvePlaneComponent>> = (0..n).map(|_| None).collect();
+    let mut order: Vec<usize> = Vec::new();
+    for i in 0..n {
+        let Some(iv) = interval(&report.components[i]) else {
+            continue;
+        };
+        let root = find(&mut parent, i);
+        if merged[root].is_none() {
+            order.push(root);
+        }
+        let CurvePlaneComponent::Point(member) = &report.components[i] else {
+            continue;
+        };
+        match &mut merged[root] {
+            None => merged[root] = Some(CurvePlaneComponent::Point(member.clone())),
+            Some(CurvePlaneComponent::Point(point)) => {
+                if member.plane_residual < point.plane_residual {
+                    point.parameter = member.parameter;
+                    point.point = member.point;
+                    point.plane_residual = member.plane_residual;
+                }
+                if member.contact == Contact::Boundary {
+                    point.contact = Contact::Boundary;
+                }
+                point.parameter_interval[0] = point.parameter_interval[0].min(iv[0]);
+                point.parameter_interval[1] = point.parameter_interval[1].max(iv[1]);
+            }
+            _ => unreachable!(),
+        }
+    }
+    let mut components = Vec::new();
+    let mut index = 0;
+    for root in order {
+        while index < root {
+            if interval(&report.components[index]).is_none() {
+                components.push(report.components[index].clone());
+            }
+            index += 1;
+        }
+        if let Some(c) = merged[root].take() {
+            components.push(c);
+        }
+        index = root + 1;
+    }
+    while index < n {
+        if interval(&report.components[index]).is_none() {
+            components.push(report.components[index].clone());
+        }
+        index += 1;
+    }
+    report.components = components;
 }
 
 #[derive(Clone, Debug)]
@@ -2534,6 +2765,2404 @@ pub fn curve_segment(
     Ok(report)
 }
 
+/// Numerical curve/curve correspondence for positive-weight 3D NURBS pairs.
+/// Points retain both source parameters and their isolating boxes; overlaps
+/// retain ascending source intervals on both curves plus the run direction.
+#[derive(Clone, Debug)]
+pub enum CurveCurveComponent {
+    Point {
+        first: f64,
+        first_interval: [f64; 2],
+        second: f64,
+        second_interval: [f64; 2],
+        point: [f64; 3],
+        residual: f64,
+        contact: Contact,
+    },
+    /// Whole coincident span pair or clipped collinear coincidence. Intervals
+    /// ascend in each source knot domain; `reversed` marks opposite runs.
+    Overlap {
+        first_interval: [f64; 2],
+        second_interval: [f64; 2],
+        reversed: bool,
+        max_control_residual: f64,
+    },
+}
+
+/// Crossings below this unit-tangent sine stay explicitly unresolved:
+/// near-parallel contacts cannot be certified transverse numerically.
+const TRANSVERSE_SINE: f64 = 1e-6;
+
+fn homogeneous4(curve: &Curve) -> Vec<[f64; 4]> {
+    curve
+        .control_points
+        .iter()
+        .zip(&curve.weights)
+        .map(|(p, w)| [p[0] * w, p[1] * w, p[2] * w, *w])
+        .collect()
+}
+fn split_homogeneous(h: &[[f64; 4]]) -> (Vec<[f64; 4]>, Vec<[f64; 4]>) {
+    let mut row = h.to_vec();
+    let mut left = vec![row[0]];
+    let mut right = vec![*row.last().unwrap()];
+    while row.len() > 1 {
+        row = row
+            .windows(2)
+            .map(|p| std::array::from_fn(|i| (p[0][i] + p[1][i]) * 0.5))
+            .collect();
+        left.push(row[0]);
+        right.push(*row.last().unwrap());
+    }
+    right.reverse();
+    (left, right)
+}
+/// Outward-rounded Cartesian control ranges of a positive-weight homogeneous
+/// Bezier piece. Convex-hull containment makes axis gaps strict exclusions.
+fn hull_ranges(h: &[[f64; 4]]) -> [[f64; 2]; 3] {
+    std::array::from_fn(|axis| {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for p in h {
+            let x = p[axis] / p[3];
+            lo = lo.min(x.next_down());
+            hi = hi.max(x.next_up());
+        }
+        [lo, hi]
+    })
+}
+fn hulls_excluded(a: &[[f64; 4]], b: &[[f64; 4]]) -> bool {
+    let ra = hull_ranges(a);
+    let rb = hull_ranges(b);
+    (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
+}
+fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let d = sub(a, b);
+    d[0].hypot(d[1]).hypot(d[2])
+}
+/// One-sided first derivatives at a parameter where the two-sided jet may not
+/// exist (a C0 knot): the left jet from the Bézier span ending at t and the
+/// right jet from the span starting at t. Entries outside the active domain
+/// stay None.
+fn one_sided_curve_d1(curve: &Curve, t: f64) -> Result<[Option<Vec<f64>>; 2]> {
+    let domain = curve.domain();
+    let mut jets = [None, None];
+    if t > domain[0] {
+        if let Some(a) = curve
+            .knots
+            .iter()
+            .copied()
+            .filter(|&k| k < t)
+            .max_by(f64::total_cmp)
+        {
+            jets[0] = curve.trim(a, t)?.evaluate(t)?.d1;
+        }
+    }
+    if t < domain[1] {
+        if let Some(b) = curve
+            .knots
+            .iter()
+            .copied()
+            .filter(|&k| k > t)
+            .min_by(f64::total_cmp)
+        {
+            jets[1] = curve.trim(t, b)?.evaluate(t)?.d1;
+        }
+    }
+    Ok(jets)
+}
+/// Tangent vectors at t: the two-sided derivative when it exists, otherwise
+/// every available one-sided span derivative at a C0 knot, in [left, right]
+/// order. An empty result means no usable jet exists at all.
+fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
+    let jet = curve.evaluate(t)?;
+    if let Some(d1) = &jet.d1 {
+        return Ok(vec![point3(d1)]);
+    }
+    Ok(one_sided_curve_d1(curve, t)?
+        .into_iter()
+        .flatten()
+        .map(|d| point3(&d))
+        .collect())
+}
+/// Surface tangent vectors at (u,v): the two-sided jets when they exist,
+/// otherwise the available one-sided span jets across C0 knots in U and V.
+fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>, Vec<[f64; 3]>)> {
+    let jet = surface.evaluate(u, v)?;
+    if let Some((du, dv)) = jet.first_derivatives() {
+        return Ok((vec![du], vec![dv]));
+    }
+    let d = surface_domain(surface);
+    let mut us = Vec::new();
+    let mut vs = Vec::new();
+    if u > d[0] {
+        if let Some(a) = surface
+            .knots_u
+            .iter()
+            .copied()
+            .filter(|&k| k < u)
+            .max_by(f64::total_cmp)
+        {
+            if let Some((du, dv)) = surface.trim([a, u, d[2], d[3]])?.evaluate(u, v)?.first_derivatives() {
+                us.push(du);
+                vs.push(dv);
+            }
+        }
+    }
+    if u < d[1] {
+        if let Some(b) = surface
+            .knots_u
+            .iter()
+            .copied()
+            .filter(|&k| k > u)
+            .min_by(f64::total_cmp)
+        {
+            if let Some((du, dv)) = surface.trim([u, b, d[2], d[3]])?.evaluate(u, v)?.first_derivatives() {
+                us.push(du);
+                vs.push(dv);
+            }
+        }
+    }
+    if vs.is_empty() && v > d[2] {
+        if let Some(a) = surface
+            .knots_v
+            .iter()
+            .copied()
+            .filter(|&k| k < v)
+            .max_by(f64::total_cmp)
+        {
+            if let Some((du, dv)) = surface.trim([d[0], d[1], a, v])?.evaluate(u, v)?.first_derivatives() {
+                us.push(du);
+                vs.push(dv);
+            }
+        }
+    }
+    if vs.is_empty() && v < d[3] {
+        if let Some(b) = surface
+            .knots_v
+            .iter()
+            .copied()
+            .filter(|&k| k > v)
+            .min_by(f64::total_cmp)
+        {
+            if let Some((du, dv)) = surface.trim([d[0], d[1], v, b])?.evaluate(u, v)?.first_derivatives() {
+                us.push(du);
+                vs.push(dv);
+            }
+        }
+    }
+    Ok((us, vs))
+}
+/// Unit-tangent sine at a parameter pair; zero/invalid tangents stay 0. At a
+/// C0 knot every one-sided side pair is screened and the largest sine counts:
+/// a crossing transverse from either side is resolvable.
+fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
+    let mut best: f64 = 0.;
+    for va in curve_tangents(first, t)? {
+        for vb in curve_tangents(second, u)? {
+            let la = distance(va, [0.; 3]);
+            let lb = distance(vb, [0.; 3]);
+            if !(la > 0.) || !(lb > 0.) || !la.is_finite() || !lb.is_finite() {
+                continue;
+            }
+            let c = cross(va.map(|x| x / la), vb.map(|x| x / lb));
+            best = best.max(distance(c, [0.; 3]));
+        }
+    }
+    Ok(best)
+}
+/// Outcome of an exact evaluation at a box face shared with the adjacent box.
+enum FaceRoot {
+    /// No confirmed root at the face.
+    Miss,
+    /// A confirmed transverse root at the face.
+    Root(CurvePoint),
+    /// A confirmed contact without a transverse one-sided jet.
+    Ambiguous,
+}
+/// Exact curve/plane evaluation at a box face. Transversality is screened
+/// with the one-sided jet interior to this box (the right side at the lower
+/// face, the left side at the upper face), so a C0 knot root resolves when
+/// its one-sided geometry is transverse. Ownership of shared faces is the
+/// caller's decision (see `owns_parameter`).
+fn plane_face_root(
+    curve: &Curve,
+    plane: Plane,
+    interval: [f64; 2],
+    face: f64,
+    options: Options,
+) -> Result<FaceRoot> {
+    let domain = curve.domain();
+    let point = point3(&curve.evaluate(face)?.point);
+    let residual = plane.distance(point).abs();
+    if residual > options.distance_tolerance {
+        return Ok(FaceRoot::Miss);
+    }
+    let at_end = face == domain[0] || face == domain[1];
+    let tangents = curve_tangents(curve, face)?;
+    let side = if face == interval[0] {
+        tangents.last()
+    } else {
+        tangents.first()
+    };
+    let transverse =
+        side.is_some_and(|d| dot(plane.normal, *d).abs() > options.distance_tolerance);
+    if !at_end && !transverse {
+        return Ok(FaceRoot::Ambiguous);
+    }
+    Ok(FaceRoot::Root(CurvePoint {
+        parameter: face,
+        parameter_interval: [face, face],
+        point,
+        plane_residual: residual,
+        contact: if at_end || curve.knots.contains(&face) {
+            Contact::Boundary
+        } else {
+            Contact::Transverse
+        },
+    }))
+}
+/// Push a point event, deduplicating by exact parameter pair only — never by
+/// spatial proximity, so repeated visits to one location stay distinct.
+fn push_curve_point(
+    report: &mut Report<CurveCurveComponent>,
+    first: f64,
+    first_interval: [f64; 2],
+    second: f64,
+    second_interval: [f64; 2],
+    point: [f64; 3],
+    residual: f64,
+    contact: Contact,
+) {
+    let duplicate = report.components.iter().any(|c| {
+        matches!(c, CurveCurveComponent::Point { first: f, second: s, .. }
+            if *f == first && *s == second)
+    });
+    if duplicate {
+        return;
+    }
+    report.components.push(CurveCurveComponent::Point {
+        first,
+        first_interval,
+        second,
+        second_interval,
+        point,
+        residual,
+        contact,
+    });
+}
+/// Exact knot-corner contact admission. Interior corners need a transverse
+/// crossing; domain-boundary corners are admitted on distance alone, matching
+/// the curve/plane endpoint rule. Corners covered by an existing overlap are
+/// owned by its interval, not reported again.
+fn admit_curve_corner(
+    first: &Curve,
+    second: &Curve,
+    t: f64,
+    u: f64,
+    options: Options,
+    report: &mut Report<CurveCurveComponent>,
+) -> Result<bool> {
+    let covered = report.components.iter().any(|c| {
+        matches!(c, CurveCurveComponent::Overlap { first_interval, second_interval, .. }
+            if first_interval[0] <= t && t <= first_interval[1]
+                && second_interval[0] <= u && u <= second_interval[1])
+    });
+    if covered {
+        return Ok(true);
+    }
+    let pa = point3(&first.evaluate(t)?.point);
+    let pb = point3(&second.evaluate(u)?.point);
+    let residual = distance(pa, pb);
+    if residual > options.distance_tolerance {
+        return Ok(false);
+    }
+    let at_boundary = t == first.domain()[0]
+        || t == first.domain()[1]
+        || u == second.domain()[0]
+        || u == second.domain()[1];
+    if !at_boundary && tangent_sine(first, second, t, u)? <= TRANSVERSE_SINE {
+        return Ok(false);
+    }
+    let contact = if at_boundary || first.knots.contains(&t) || second.knots.contains(&u) {
+        Contact::Boundary
+    } else {
+        Contact::Transverse
+    };
+    push_curve_point(
+        report,
+        t,
+        [t, t],
+        u,
+        [u, u],
+        std::array::from_fn(|i| (pa[i] + pb[i]) * 0.5),
+        residual,
+        contact,
+    );
+    Ok(true)
+}
+
+#[derive(Debug)]
+enum Refinement {
+    /// Converged inside the isolating box: parameters, point, residual.
+    Root(f64, f64, [f64; 3], f64),
+    /// The Newton image left the box; the root's own box reports it.
+    Outside,
+    /// Degenerate tangent basis, nonfinite step, or stalled residual.
+    Failed,
+}
+/// Newton refinement of a transverse midpoint candidate on the two dominant
+/// cross-product axes. Only iterates that stay inside the isolating box are
+/// reported by that box; halo boxes whose image lands elsewhere stay silent
+/// instead of duplicating the root with shifted parameters.
+fn refine_curve_root(
+    first: &Curve,
+    second: &Curve,
+    ta: [f64; 2],
+    tb: [f64; 2],
+    tm: f64,
+    um: f64,
+    options: Options,
+) -> Result<Refinement> {
+    let (mut t, mut u) = (tm, um);
+    let width_t = ta[1] - ta[0];
+    let width_u = tb[1] - tb[0];
+    for _ in 0..16 {
+        if !(ta[0] <= t && t <= ta[1] && tb[0] <= u && u <= tb[1]) {
+            return Ok(Refinement::Outside);
+        }
+        let ja = first.evaluate(t)?;
+        let jb = second.evaluate(u)?;
+        let r = sub(point3(&ja.point), point3(&jb.point));
+        if distance(r, [0.; 3]) <= options.distance_tolerance * 1e-3 {
+            // Converged; knots with discontinuous derivatives may have no
+            // d1 here, and the box midpoint already screened transversality.
+            break;
+        }
+        // At a C0 knot the two-sided jet does not exist: step with the
+        // one-sided span jets, preferring the side the iterate came from,
+        // and accept either side that yields a valid step.
+        let mut a_sides = curve_tangents(first, t)?;
+        if a_sides.len() == 2 && tm > t {
+            a_sides.swap(0, 1);
+        }
+        let mut b_sides = curve_tangents(second, u)?;
+        if b_sides.len() == 2 && um > u {
+            b_sides.swap(0, 1);
+        }
+        let mut step = None;
+        'sides: for va in &a_sides {
+            for vb in &b_sides {
+                let la = distance(*va, [0.; 3]);
+                let lb = distance(*vb, [0.; 3]);
+                let c = cross(*va, *vb);
+                let dominant = c.map(|x| x.abs()).into_iter().fold(0., f64::max);
+                if !(dominant > TRANSVERSE_SINE * la * lb) || !dominant.is_finite() {
+                    continue;
+                }
+                // Solve A(t)-B(u)=0 on the two axes with the best-conditioned minor.
+                let drop = if c[0].abs() == dominant {
+                    0
+                } else if c[1].abs() == dominant {
+                    1
+                } else {
+                    2
+                };
+                let keep: [usize; 2] = match drop {
+                    0 => [1, 2],
+                    1 => [0, 2],
+                    _ => [0, 1],
+                };
+                // va[k]*dt - vb[k]*du = -r[k] on both kept axes.
+                let (a, b, e0) = (va[keep[0]], -vb[keep[0]], -r[keep[0]]);
+                let (c2, d2, e1) = (va[keep[1]], -vb[keep[1]], -r[keep[1]]);
+                let det = a * d2 - b * c2;
+                if !(det.abs() > 0.) {
+                    continue;
+                }
+                let dt = (e0 * d2 - b * e1) / det;
+                let du = (a * e1 - e0 * c2) / det;
+                if !dt.is_finite() || !du.is_finite() {
+                    continue;
+                }
+                step = Some((dt, du));
+                break 'sides;
+            }
+        }
+        let Some((dt, du)) = step else {
+            return Ok(Refinement::Failed);
+        };
+        t += dt;
+        u += du;
+        if dt.abs() <= width_t * 1e-6 && du.abs() <= width_u * 1e-6 {
+            break;
+        }
+    }
+    // Half-open ownership: reconcile the converged image with the bitwise
+    // shared faces, then exactly one box — interior and lower face, plus the
+    // domain's upper end for the last box — reports a boundary-sitting root.
+    let t = snap_to_face(snap_to_face(t, ta[0]), ta[1]);
+    let u = snap_to_face(snap_to_face(u, tb[0]), tb[1]);
+    if !owns_parameter(ta[0], ta[1], first.domain()[1], t)
+        || !owns_parameter(tb[0], tb[1], second.domain()[1], u)
+    {
+        return Ok(Refinement::Outside);
+    }
+    let ja = first.evaluate(t)?;
+    let jb = second.evaluate(u)?;
+    let pa = point3(&ja.point);
+    let pb = point3(&jb.point);
+    let residual = distance(pa, pb);
+    if residual > options.distance_tolerance {
+        return Ok(Refinement::Failed);
+    }
+    // One-sided jets screen a converged C0-knot root: it resolves when either
+    // side is transverse, and stays unresolved when both sides are tangent.
+    if tangent_sine(first, second, t, u)? <= TRANSVERSE_SINE {
+        return Ok(Refinement::Failed);
+    }
+    Ok(Refinement::Root(
+        t,
+        u,
+        std::array::from_fn(|i| (pa[i] + pb[i]) * 0.5),
+        residual,
+    ))
+}
+/// Terminal box resolution. The hull-diagonal lower bound separates provably
+/// disjoint pieces; ambiguous residual bands stay unresolved; transverse
+/// midpoint candidates must refine to a certified in-box root. Tangent or
+/// multiple-root regions are never collapsed to a guessed point.
+#[allow(clippy::too_many_arguments)]
+fn resolve_curve_box(
+    first: &Curve,
+    second: &Curve,
+    ta: [f64; 2],
+    tb: [f64; 2],
+    tm: f64,
+    um: f64,
+    ha: &[[f64; 4]],
+    hb: &[[f64; 4]],
+    options: Options,
+    report: &mut Report<CurveCurveComponent>,
+) -> Result<()> {
+    let box4 = || vec![ta[0], ta[1], tb[0], tb[1]];
+    let diagonal = |h: &[[f64; 4]]| {
+        hull_ranges(h)
+            .iter()
+            .map(|r| {
+                let w = r[1] - r[0];
+                w * w
+            })
+            .sum::<f64>()
+            .sqrt()
+    };
+    let diag = diagonal(ha) + diagonal(hb);
+    let pa = point3(&first.evaluate(tm)?.point);
+    let pb = point3(&second.evaluate(um)?.point);
+    let residual = distance(pa, pb);
+    // |A(t)-B(u)| >= residual - diag everywhere in the box (triangle bound).
+    if residual - diag > options.distance_tolerance {
+        return Ok(());
+    }
+    if residual > options.distance_tolerance {
+        report.unresolved(box4(), UnresolvedReason::NearCoincidence);
+        return Ok(());
+    }
+    if tangent_sine(first, second, tm, um)? <= TRANSVERSE_SINE {
+        report.unresolved(box4(), UnresolvedReason::TangencyOrMultipleRoot);
+        return Ok(());
+    }
+    match refine_curve_root(first, second, ta, tb, tm, um, options)? {
+        Refinement::Root(t, u, point, residual) => push_curve_point(
+            report,
+            t,
+            ta,
+            u,
+            tb,
+            point,
+            residual,
+            Contact::Transverse,
+        ),
+        Refinement::Outside => (),
+        Refinement::Failed => {
+            report.unresolved(box4(), UnresolvedReason::TangencyOrMultipleRoot)
+        }
+    }
+    Ok(())
+}
+/// Merge point events whose isolating intervals touch in parameter space.
+/// Subdivision tiles parameter space with exactly shared binary64 boundaries,
+/// so adjacency is decided on interval endpoints — never on spatial
+/// proximity. The merged event keeps the lowest-residual parameter pair.
+fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
+    let intervals = |c: &CurveCurveComponent| match c {
+        CurveCurveComponent::Point {
+            first_interval,
+            second_interval,
+            ..
+        } => Some((*first_interval, *second_interval)),
+        _ => None,
+    };
+    let n = report.components.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn find(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    for i in 0..n {
+        for j in i + 1..n {
+            let (Some((af, as_)), Some((bf, bs))) =
+                (intervals(&report.components[i]), intervals(&report.components[j]))
+            else {
+                continue;
+            };
+            if af[0] <= bf[1] && bf[0] <= af[1] && as_[0] <= bs[1] && bs[0] <= as_[1] {
+                let (ri, rj) = (find(&mut parent, i), find(&mut parent, j));
+                if ri != rj {
+                    parent[ri] = rj;
+                }
+            }
+        }
+    }
+    let mut merged: Vec<Option<CurveCurveComponent>> = (0..n).map(|_| None).collect();
+    let mut order: Vec<usize> = Vec::new();
+    for i in 0..n {
+        let Some((fi, si)) = intervals(&report.components[i]) else {
+            continue;
+        };
+        let root = find(&mut parent, i);
+        if merged[root].is_none() {
+            order.push(root);
+        }
+        let CurveCurveComponent::Point {
+            first,
+            second,
+            point,
+            residual,
+            contact,
+            ..
+        } = &report.components[i]
+        else {
+            continue;
+        };
+        let member = (
+            *first,
+            *second,
+            *point,
+            *residual,
+            *contact,
+            (fi, si),
+        );
+        match &mut merged[root] {
+            None => {
+                merged[root] = Some(CurveCurveComponent::Point {
+                    first: member.0,
+                    first_interval: fi,
+                    second: member.1,
+                    second_interval: si,
+                    point: member.2,
+                    residual: member.3,
+                    contact: member.4,
+                });
+            }
+            Some(CurveCurveComponent::Point {
+                first,
+                first_interval,
+                second,
+                second_interval,
+                point,
+                residual,
+                contact,
+            }) => {
+                if member.3 < *residual {
+                    *first = member.0;
+                    *second = member.1;
+                    *point = member.2;
+                    *residual = member.3;
+                }
+                if member.4 == Contact::Boundary {
+                    *contact = Contact::Boundary;
+                }
+                first_interval[0] = first_interval[0].min(member.5 .0[0]);
+                first_interval[1] = first_interval[1].max(member.5 .0[1]);
+                second_interval[0] = second_interval[0].min(member.5 .1[0]);
+                second_interval[1] = second_interval[1].max(member.5 .1[1]);
+            }
+            _ => unreachable!(),
+        }
+    }
+    let mut components = Vec::new();
+    let mut index = 0;
+    for root in order {
+        while index < root {
+            if intervals(&report.components[index]).is_none() {
+                components.push(report.components[index].clone());
+            }
+            index += 1;
+        }
+        if let Some(c) = merged[root].take() {
+            components.push(c);
+        }
+        index = root + 1;
+    }
+    while index < n {
+        if intervals(&report.components[index]).is_none() {
+            components.push(report.components[index].clone());
+        }
+        index += 1;
+    }
+    report.components = components;
+}
+
+enum LineInversion {
+    Root(f64),
+    Ambiguous,
+    BudgetExhausted,
+}
+/// Invert the rational line support of a collinear span at one line offset
+/// through the shared-budget curve/plane isolator. Multiple or uncertain
+/// roots keep the coincidence clip ambiguous rather than guessed.
+fn invert_line_parameter(
+    piece: &Curve,
+    direction: [f64; 3],
+    offset: f64,
+    options: Options,
+    report: &mut Report<CurveCurveComponent>,
+) -> Result<LineInversion> {
+    if report.boxes_visited >= options.max_boxes {
+        return Ok(LineInversion::BudgetExhausted);
+    }
+    let roots = curve_plane(
+        piece,
+        Plane {
+            normal: direction,
+            offset,
+        },
+        Options {
+            max_boxes: options.max_boxes - report.boxes_visited,
+            ..options
+        },
+    )?;
+    report.boxes_visited += roots.boxes_visited;
+    report.bernstein_excluded += roots.bernstein_excluded;
+    if !roots.unresolved.is_empty() {
+        return Ok(LineInversion::Ambiguous);
+    }
+    let mut found = None;
+    for component in roots.components {
+        match component {
+            CurvePlaneComponent::Point(point) => {
+                if found.is_some() {
+                    return Ok(LineInversion::Ambiguous);
+                }
+                found = Some(point.parameter);
+            }
+            CurvePlaneComponent::Overlap { .. } => return Ok(LineInversion::Ambiguous),
+        }
+    }
+    Ok(found.map_or(LineInversion::Ambiguous, LineInversion::Root))
+}
+/// Coincidence admission for one source span pair. Collinear pairs clip the
+/// shared line interval by inverting both rational parameterizations; curved
+/// pairs coincide only under proportional homogeneous polygons after degree
+/// elevation. Anything else returns false so subdivision can isolate points.
+/// Returns true when the pair is fully handled (component, empty, or an
+/// explicit unresolved region) and must not enter point subdivision.
+fn curve_coincidence(
+    piece_a: &Curve,
+    piece_b: &Curve,
+    ta: [f64; 2],
+    tb: [f64; 2],
+    options: Options,
+    report: &mut Report<CurveCurveComponent>,
+) -> Result<bool> {
+    let box4 = || vec![ta[0], ta[1], tb[0], tb[1]];
+    let a0 = point3(piece_a.control_points.first().unwrap());
+    let a1 = point3(piece_a.control_points.last().unwrap());
+    let d = sub(a1, a0);
+    let length = d[0].hypot(d[1]).hypot(d[2]);
+    if !(length > 0.) {
+        // Degenerate span: no support line; leave it to point isolation.
+        return Ok(false);
+    }
+    let direction = d.map(|x| x / length);
+    let off_line = |c: &[f64]| {
+        let v = cross(direction, sub(point3(c), a0));
+        v[0].hypot(v[1]).hypot(v[2])
+    };
+    let residual_a = piece_a
+        .control_points
+        .iter()
+        .map(|c| off_line(c))
+        .fold(0., f64::max);
+    let residual_b = piece_b
+        .control_points
+        .iter()
+        .map(|c| off_line(c))
+        .fold(0., f64::max);
+    let max_control_residual = residual_a.max(residual_b);
+    if max_control_residual <= options.distance_tolerance {
+        // Both spans numerically lie on one support line, so their
+        // intersection is exactly the shared line interval (possibly empty).
+        let projections = |piece: &Curve| {
+            piece
+                .control_points
+                .iter()
+                .map(|c| dot(direction, point3(c)))
+                .collect::<Vec<_>>()
+        };
+        let sa = projections(piece_a);
+        let sb = projections(piece_b);
+        let monotone = |s: &[f64]| {
+            s.windows(2).all(|w| w[1] >= w[0]) || s.windows(2).all(|w| w[1] <= w[0])
+        };
+        if !monotone(&sa) || !monotone(&sb) {
+            report.unresolved(box4(), UnresolvedReason::CoincidentTrim);
+            return Ok(true);
+        }
+        let (sa0, sa1) = (*sa.first().unwrap(), *sa.last().unwrap());
+        let (sb0, sb1) = (*sb.first().unwrap(), *sb.last().unwrap());
+        let lo = sa0.max(sb0.min(sb1));
+        let hi = sa1.min(sb0.max(sb1));
+        if hi < lo {
+            return Ok(true);
+        }
+        let mut parameters = [0.; 4];
+        for (index, (piece, s)) in [(piece_a, lo), (piece_a, hi), (piece_b, lo), (piece_b, hi)]
+            .into_iter()
+            .enumerate()
+        {
+            match invert_line_parameter(piece, direction, s, options, report)? {
+                LineInversion::Root(parameter) => parameters[index] = parameter,
+                LineInversion::Ambiguous => {
+                    report.unresolved(box4(), UnresolvedReason::CoincidentTrim);
+                    return Ok(true);
+                }
+                LineInversion::BudgetExhausted => {
+                    report.unresolved(box4(), UnresolvedReason::BudgetExceeded);
+                    return Ok(true);
+                }
+            }
+        }
+        let [ta_lo, ta_hi, tb_lo, tb_hi] = parameters;
+        if hi == lo {
+            let point_a = point3(&piece_a.evaluate(ta_lo)?.point);
+            let point_b = point3(&piece_b.evaluate(tb_lo)?.point);
+            let residual = distance(point_a, point_b);
+            if residual > options.distance_tolerance {
+                report.unresolved(box4(), UnresolvedReason::NearCoincidence);
+                return Ok(true);
+            }
+            admit_curve_corner(piece_a, piece_b, ta_lo, tb_lo, options, report)?;
+            return Ok(true);
+        }
+        if ta_lo == ta_hi || tb_lo == tb_hi {
+            report.unresolved(box4(), UnresolvedReason::NearCoincidence);
+            return Ok(true);
+        }
+        let reversed = (ta_lo < ta_hi) != (tb_lo < tb_hi);
+        push_curve_overlap(
+            [ta_lo.min(ta_hi), ta_lo.max(ta_hi)],
+            [tb_lo.min(tb_hi), tb_lo.max(tb_hi)],
+            reversed,
+            max_control_residual,
+            report,
+        );
+        return Ok(true);
+    }
+    // Curved spans coincide only with proportional homogeneous polygons after
+    // elevation; other partial curved coincidences stay with point isolation
+    // and remain explicit unresolved bands where they cannot be separated.
+    let degree = piece_a.degree.max(piece_b.degree);
+    if degree > 25 {
+        return Ok(false);
+    }
+    let ea = piece_a.elevate(degree)?;
+    let eb = piece_b.elevate(degree)?;
+    for reversed in [false, true] {
+        let lambda = {
+            let index = ea
+                .weights
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.total_cmp(b.1))
+                .map(|(i, _)| i)
+                .unwrap();
+            let j = if reversed { degree - index } else { index };
+            eb.weights[j] / ea.weights[index]
+        };
+        if !(lambda > 0.) || !lambda.is_finite() {
+            continue;
+        }
+        let weight_scale = eb.weights.iter().copied().fold(0., f64::max);
+        let weight_residual = ea
+            .weights
+            .iter()
+            .enumerate()
+            .map(|(i, wa)| {
+                let j = if reversed { degree - i } else { i };
+                (eb.weights[j] - lambda * wa).abs()
+            })
+            .fold(0., f64::max)
+            / weight_scale;
+        let control_residual = ea
+            .control_points
+            .iter()
+            .enumerate()
+            .map(|(i, pa)| {
+                let j = if reversed { degree - i } else { i };
+                distance(point3(pa), point3(&eb.control_points[j]))
+            })
+            .fold(0., f64::max);
+        if weight_residual <= 1e-9 && control_residual <= options.distance_tolerance {
+            push_curve_overlap(ta, tb, reversed, control_residual, report);
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+/// Push an overlap and drop corner events covered by both intervals. The
+/// overlap owns its boundary contacts; containment is by parameter, never
+/// by spatial proximity.
+fn push_curve_overlap(
+    first_interval: [f64; 2],
+    second_interval: [f64; 2],
+    reversed: bool,
+    max_control_residual: f64,
+    report: &mut Report<CurveCurveComponent>,
+) {
+    let covered = |c: &CurveCurveComponent| {
+        matches!(c, CurveCurveComponent::Point { first, second, .. }
+            if first_interval[0] <= *first && *first <= first_interval[1]
+                && second_interval[0] <= *second && *second <= second_interval[1])
+    };
+    report.components.retain(|c| !covered(c));
+    report.components.push(CurveCurveComponent::Overlap {
+        first_interval,
+        second_interval,
+        reversed,
+        max_control_residual,
+    });
+}
+
+/// Intersect two retained positive-weight 3D NURBS curves over their entire
+/// active knot domains. Knot spans decompose into homogeneous rational Bezier
+/// pieces traversed by one FIFO queue across all span pairs and subdivisions;
+/// positive-weight control hulls exclude disjoint boxes with outward rounding.
+/// Transverse points carry both source parameters and their isolating boxes,
+/// exact knot corners own boundary contacts (dedup by parameter pair only),
+/// and coincident spans retain explicit trim intervals on both curves.
+/// Tangencies, ambiguous coincidence clipping and exhausted budgets stay
+/// unresolved; results never authorize topology changes.
+pub fn curve_curve(
+    first: &Curve,
+    second: &Curve,
+    options: Options,
+) -> Result<Report<CurveCurveComponent>> {
+    first.validate()?;
+    second.validate()?;
+    if first.control_points[0].len() != 3 || second.control_points[0].len() != 3 {
+        return Err(invalid("Curve/curve requires two 3D curves"));
+    }
+    let options = options.validate()?;
+    let mut report = Report::default();
+    let mut pending: std::collections::VecDeque<(
+        [f64; 2],
+        [f64; 2],
+        Option<Vec<[f64; 4]>>,
+        Option<Vec<[f64; 4]>>,
+        usize,
+    )> = spans(&first.knots, first.degree, first.control_points.len())
+        .into_iter()
+        .flat_map(|ta| {
+            spans(&second.knots, second.degree, second.control_points.len())
+                .into_iter()
+                .map(move |tb| (ta, tb, None, None, 0))
+        })
+        .collect();
+    while let Some((ta, tb, ha, hb, depth)) = pending.pop_front() {
+        if report.boxes_visited >= options.max_boxes {
+            report.unresolved(
+                vec![ta[0], ta[1], tb[0], tb[1]],
+                UnresolvedReason::BudgetExceeded,
+            );
+            continue;
+        }
+        report.boxes_visited += 1;
+        let (pieces, ha, hb) = match (ha, hb) {
+            (Some(ha), Some(hb)) => (None, ha, hb),
+            _ => {
+                let pa = first.trim(ta[0], ta[1])?;
+                let pb = second.trim(tb[0], tb[1])?;
+                let (ha, hb) = (homogeneous4(&pa), homogeneous4(&pb));
+                (Some((pa, pb)), ha, hb)
+            }
+        };
+        if let Some((pa, pb)) = &pieces {
+            for &t in &ta {
+                for &u in &tb {
+                    admit_curve_corner(first, second, t, u, options, &mut report)?;
+                }
+            }
+            if !hulls_excluded(&ha, &hb)
+                && curve_coincidence(pa, pb, ta, tb, options, &mut report)?
+            {
+                continue;
+            }
+        }
+        if hulls_excluded(&ha, &hb) {
+            report.bernstein_excluded += 1;
+            continue;
+        }
+        let width_a = ta[1] - ta[0];
+        let width_b = tb[1] - tb[0];
+        let tm = ta[0] + width_a * 0.5;
+        let um = tb[0] + width_b * 0.5;
+        let can_a = tm > ta[0] && tm < ta[1];
+        let can_b = um > tb[0] && um < tb[1];
+        if (width_a <= options.parameter_tolerance && width_b <= options.parameter_tolerance)
+            || depth == options.max_depth
+            || (!can_a && !can_b)
+        {
+            resolve_curve_box(first, second, ta, tb, tm, um, &ha, &hb, options, &mut report)?;
+            continue;
+        }
+        // Bisect both sides per depth level so depth 48 bounds each width by
+        // 2^-48 of the source span; four children keep the FIFO fair order.
+        let (al, ar) = split_homogeneous(&ha);
+        let (bl, br) = split_homogeneous(&hb);
+        let a_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_a {
+            vec![([ta[0], tm], al), ([tm, ta[1]], ar)]
+        } else {
+            vec![(ta, ha.clone())]
+        };
+        let b_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_b {
+            vec![([tb[0], um], bl), ([um, tb[1]], br)]
+        } else {
+            vec![(tb, hb.clone())]
+        };
+        for (ta2, h) in &a_side {
+            for (tb2, g) in &b_side {
+                pending.push_back((*ta2, *tb2, Some(h.clone()), Some(g.clone()), depth + 1));
+            }
+        }
+    }
+    merge_curve_points(&mut report);
+    report.components.sort_by(|a, b| {
+        let parameters = |c: &CurveCurveComponent| match c {
+            CurveCurveComponent::Point {
+                first, second, ..
+            } => (*first, *second),
+            CurveCurveComponent::Overlap {
+                first_interval,
+                second_interval,
+                ..
+            } => (first_interval[0], second_interval[0]),
+        };
+        let (af, as_) = parameters(a);
+        let (bf, bs) = parameters(b);
+        af.total_cmp(&bf).then(as_.total_cmp(&bs))
+    });
+    Ok(report)
+}
+
+#[derive(Clone, Debug)]
+pub enum CurveRuledSurfaceComponent {
+    /// Newton-confirmed root of C(t) = S(u,v) inside its isolating box.
+    Point {
+        t: f64,
+        t_interval: [f64; 2],
+        uv: [f64; 2],
+        /// Isolating surface box [u0,u1,v0,v1]; V never subdivides on a ruling.
+        uv_box: [f64; 4],
+        point: [f64; 3],
+        residual: f64,
+        contact: Contact,
+    },
+    /// Curve span lying on the ruled surface: a ruling (constant U) or an
+    /// iso-V directrix blend. The lifted UV path is the UV segment from
+    /// uv_start to uv_end; its endpoints correspond to the curve interval
+    /// ends. `correspondence` carries three (t,u,v) samples at the curve
+    /// interval fractions 0, 1/2 and 1, sufficient to reconstruct the exact
+    /// per-parameter map: a Möbius t->v map along a ruling (unequal endpoint
+    /// weights make V a cross-ratio function of t) or an affine t->u map
+    /// along an iso-V directrix. It is None only where no single map covers
+    /// the merged interval (seam-joined pieces). `seam_wrap` marks a
+    /// component unified across an exactly closed U seam: the canonical
+    /// representative sits at u = u_min and the u_max-side copy is folded
+    /// in, or an iso-V path leaves the domain at u_max and re-enters at
+    /// u_min.
+    Overlap {
+        curve_interval: [f64; 2],
+        uv_start: [f64; 2],
+        uv_end: [f64; 2],
+        max_control_residual: f64,
+        seam_wrap: bool,
+        correspondence: Option<OverlapCorrespondence>,
+    },
+}
+
+/// Per-parameter map samples along a curve/ruled-surface overlap. `samples`
+/// are exact (t,u,v) triples at curve-interval fractions 0, 1/2, 1.
+#[derive(Clone, Debug)]
+pub struct OverlapCorrespondence {
+    pub kind: OverlapCorrespondenceKind,
+    pub samples: [[f64; 3]; 3],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverlapCorrespondenceKind {
+    /// Ruling overlap: u is constant; v(t) is the unique Möbius map through
+    /// the three (t,v) samples, reconstructed by the cross-ratio identity
+    /// (v-v0)(v1-v2)/((v-v2)(v1-v0)) = (t-t0)(t1-t2)/((t-t2)(t1-t0)).
+    MobiusV,
+    /// Iso-V overlap: v is constant; u(t) is the affine map through the
+    /// three (t,u) samples.
+    AffineU,
+}
+
+/// Homogeneous control net of a ruled patch, indexed [u][v] with two V rows.
+type HomogeneousGrid = Vec<Vec<[f64; 4]>>;
+fn homogeneous_grid(surface: &Surface) -> HomogeneousGrid {
+    surface
+        .control_points
+        .iter()
+        .zip(&surface.weights)
+        .map(|(points, weights)| {
+            points
+                .iter()
+                .zip(weights)
+                .map(|(p, w)| [p[0] * w, p[1] * w, p[2] * w, *w])
+                .collect()
+        })
+        .collect()
+}
+/// de Casteljau split of both V rows at the U midpoint of a Bezier patch.
+fn split_grid_u(grid: &HomogeneousGrid) -> (HomogeneousGrid, HomogeneousGrid) {
+    let columns: Vec<Vec<[f64; 4]>> = (0..grid[0].len())
+        .map(|j| grid.iter().map(|row| row[j]).collect())
+        .collect();
+    let mut left: HomogeneousGrid = vec![Vec::new(); grid.len()];
+    let mut right: HomogeneousGrid = vec![Vec::new(); grid.len()];
+    for (j, column) in columns.iter().enumerate() {
+        let (l, r) = split_homogeneous(column);
+        for (i, row) in left.iter_mut().enumerate() {
+            row.push(l[i]);
+        }
+        for (i, row) in right.iter_mut().enumerate() {
+            row.push(r[i]);
+        }
+        let _ = j;
+    }
+    (left, right)
+}
+fn grid_ranges(grid: &HomogeneousGrid) -> [[f64; 2]; 3] {
+    hull_ranges(&grid.iter().flatten().copied().collect::<Vec<_>>())
+}
+fn grids_excluded(a: &[[f64; 4]], b: &HomogeneousGrid) -> bool {
+    let ra = hull_ranges(a);
+    let rb = grid_ranges(b);
+    (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
+}
+/// Seam state of the U direction of a canonical ruled-in-V surface. Closure
+/// is geometric: the two seam ruling curves (the first and last homogeneous
+/// control rows) must coincide as rational curves, i.e. be exactly
+/// proportional with a positive ratio. Merging is never by tolerance: only a
+/// bitwise-exact proportionality closes the seam; a near-proportional seam
+/// (relative mismatch within 1e-6) stays duplicate and is reported as
+/// explicit near_coincidence bands at both domain ends instead of a guess.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum RuledSeam {
+    Open,
+    Closed,
+    Uncertain,
+}
+fn ruled_seam_state(surface: &Surface) -> RuledSeam {
+    let grid = homogeneous_grid(surface);
+    let (first, last) = (&grid[0], &grid[grid.len() - 1]);
+    let anchor = (0..4)
+        .max_by(|&a, &b| first[0][a].abs().total_cmp(&first[0][b].abs()))
+        .unwrap();
+    if !(first[0][anchor].abs() > 0.) {
+        return RuledSeam::Open;
+    }
+    let ratio = last[0][anchor] / first[0][anchor];
+    if !(ratio > 0.) || !ratio.is_finite() {
+        return RuledSeam::Open;
+    }
+    let scale = first
+        .iter()
+        .flatten()
+        .map(|x| x.abs())
+        .fold(0., f64::max)
+        .max(1.);
+    let mismatch = |row: &[[f64; 4]], other: &[[f64; 4]]| {
+        row.iter().zip(other).fold(0_f64, |m, (a, b)| {
+            m.max((0..4).fold(0_f64, |m2, k| m2.max((b[k] - ratio * a[k]).abs())))
+        })
+    };
+    let delta = mismatch(first, last);
+    if delta == 0. {
+        RuledSeam::Closed
+    } else if delta <= 1e-6 * scale {
+        RuledSeam::Uncertain
+    } else {
+        RuledSeam::Open
+    }
+}
+/// Unit-column determinant of (C'(t), S_u, S_v); zero/invalid jets stay 0.
+/// This vanishes exactly when the curve direction lies in the surface tangent
+/// plane, so small values mark tangency rather than transverse crossings.
+fn cs_transversality(curve: &Curve, surface: &Surface, t: f64, u: f64, v: f64) -> Result<f64> {
+    let (us, vs) = surface_tangents(surface, u, v)?;
+    let mut best: f64 = 0.;
+    for a in curve_tangents(curve, t)? {
+        for b in &us {
+            for c in &vs {
+                let (la, lb, lc) = (
+                    distance(a, [0.; 3]),
+                    distance(*b, [0.; 3]),
+                    distance(*c, [0.; 3]),
+                );
+                if !(la > 0.) || !(lb > 0.) || !(lc > 0.) || !(la * lb * lc).is_finite() {
+                    continue;
+                }
+                best = best.max(
+                    dot(
+                        a.map(|x| x / la),
+                        cross(b.map(|x| x / lb), c.map(|x| x / lc)),
+                    )
+                    .abs(),
+                );
+            }
+        }
+    }
+    Ok(best)
+}
+/// 3x3 solve with partial pivoting; ill-conditioned systems return None.
+fn solve3(a: [[f64; 3]; 3], b: [f64; 3]) -> Option<[f64; 3]> {
+    let scale = a.iter().flatten().fold(0_f64, |m, x| m.max(x.abs()));
+    if !(scale > 0.) || !scale.is_finite() {
+        return None;
+    }
+    let mut m = a;
+    let mut r = b;
+    for col in 0..3 {
+        let pivot = (col..3).max_by(|&i, &j| m[i][col].abs().total_cmp(&m[j][col].abs()))?;
+        if !(m[pivot][col].abs() > 1e-14 * scale) {
+            return None;
+        }
+        m.swap(col, pivot);
+        r.swap(col, pivot);
+        for row in col + 1..3 {
+            let f = m[row][col] / m[col][col];
+            for k in col..3 {
+                m[row][k] -= f * m[col][k];
+            }
+            r[row] -= f * r[col];
+        }
+    }
+    let mut x = [0.; 3];
+    for i in (0..3).rev() {
+        x[i] = (r[i] - (i + 1..3).map(|k| m[i][k] * x[k]).sum::<f64>()) / m[i][i];
+    }
+    if x.iter().all(|v| v.is_finite()) {
+        Some(x)
+    } else {
+        None
+    }
+}
+/// The overlap UV path is a UV segment; coverage is bounding-box containment
+/// of the event parameters, never spatial proximity.
+fn cs_overlap_covers(report: &Report<CurveRuledSurfaceComponent>, t: f64, uv: [f64; 2]) -> bool {
+    report.components.iter().any(|c| {
+        matches!(c, CurveRuledSurfaceComponent::Overlap { curve_interval, uv_start, uv_end, .. }
+            if curve_interval[0] <= t && t <= curve_interval[1]
+                && uv_start[0].min(uv_end[0]) <= uv[0] && uv[0] <= uv_start[0].max(uv_end[0])
+                && uv_start[1].min(uv_end[1]) <= uv[1] && uv[1] <= uv_start[1].max(uv_end[1]))
+    })
+}
+fn push_cs_point(
+    report: &mut Report<CurveRuledSurfaceComponent>,
+    t: f64,
+    t_interval: [f64; 2],
+    uv: [f64; 2],
+    uv_box: [f64; 4],
+    point: [f64; 3],
+    residual: f64,
+    contact: Contact,
+) {
+    let duplicate = report.components.iter().any(|c| {
+        matches!(c, CurveRuledSurfaceComponent::Point { t: et, uv: euv, .. }
+            if *et == t && *euv == uv)
+    });
+    if duplicate || cs_overlap_covers(report, t, uv) {
+        return;
+    }
+    report.components.push(CurveRuledSurfaceComponent::Point {
+        t,
+        t_interval,
+        uv,
+        uv_box,
+        point,
+        residual,
+        contact,
+    });
+}
+fn push_cs_overlap(
+    curve_interval: [f64; 2],
+    uv_start: [f64; 2],
+    uv_end: [f64; 2],
+    max_control_residual: f64,
+    seam_wrap: bool,
+    correspondence: Option<OverlapCorrespondence>,
+    report: &mut Report<CurveRuledSurfaceComponent>,
+) {
+    report.components.push(CurveRuledSurfaceComponent::Overlap {
+        curve_interval,
+        uv_start,
+        uv_end,
+        max_control_residual,
+        seam_wrap,
+        correspondence,
+    });
+    let (umin, umax) = (uv_start[0].min(uv_end[0]), uv_start[0].max(uv_end[0]));
+    let (vmin, vmax) = (uv_start[1].min(uv_end[1]), uv_start[1].max(uv_end[1]));
+    report.components.retain(|c| {
+        !matches!(c, CurveRuledSurfaceComponent::Point { t, uv, .. }
+            if curve_interval[0] <= *t && *t <= curve_interval[1]
+                && umin <= uv[0] && uv[0] <= umax
+                && vmin <= uv[1] && uv[1] <= vmax)
+    });
+}
+/// Exact parameter-corner contact admission for curve/ruled-surface boxes.
+/// Curve-domain endpoints are admitted on distance alone; interior contacts
+/// need a transverse crossing so grazing corner touches stay unresolved.
+#[allow(clippy::too_many_arguments)]
+fn admit_cs_corner(
+    curve: &Curve,
+    surface: &Surface,
+    t: f64,
+    u: f64,
+    v: f64,
+    options: Options,
+    report: &mut Report<CurveRuledSurfaceComponent>,
+) -> Result<bool> {
+    if cs_overlap_covers(report, t, [u, v]) {
+        return Ok(true);
+    }
+    let pc = point3(&curve.evaluate(t)?.point);
+    let ps = surface.evaluate(u, v)?.point;
+    let residual = distance(pc, ps);
+    if residual > options.distance_tolerance {
+        return Ok(false);
+    }
+    let curve_end = t == curve.domain()[0] || t == curve.domain()[1];
+    if !curve_end && cs_transversality(curve, surface, t, u, v)? <= TRANSVERSE_SINE {
+        return Ok(false);
+    }
+    push_cs_point(
+        report,
+        t,
+        [t, t],
+        [u, v],
+        [u, u, v, v],
+        std::array::from_fn(|i| (pc[i] + ps[i]) * 0.5),
+        residual,
+        Contact::Boundary,
+    );
+    Ok(true)
+}
+/// Evaluated boundary weight of a positive-weight curve at a parameter.
+fn curve_weight_at(curve: &Curve, u: f64) -> Result<f64> {
+    let basis = nurbs_core::curve::basis(
+        curve.degree,
+        &curve.knots,
+        curve.control_points.len(),
+        u,
+        curve.periodic,
+    )?;
+    Ok(basis
+        .basis
+        .iter()
+        .zip(&curve.weights)
+        .map(|(b, w)| b * w)
+        .sum())
+}
+/// Curve-on-surface admission for one (curve span, surface U-span) pair in the
+/// canonical ruled-in-V orientation. Two algebraically exact families are
+/// admitted: the piece is collinear with a ruling (constant U, Möbius-lifted
+/// V endpoints), or its homogeneous polygon is a proportional blend of the two
+/// boundary polygons (constant V). Anything ambiguous is an explicit
+/// unresolved region; non-coincident pairs return false for point isolation.
+#[allow(clippy::too_many_arguments)]
+fn ruled_coincidence(
+    piece: &Curve,
+    patch: &Surface,
+    ta: [f64; 2],
+    ua: [f64; 2],
+    vd: [f64; 2],
+    seam_u: Option<[f64; 2]>,
+    options: Options,
+    report: &mut Report<CurveRuledSurfaceComponent>,
+) -> Result<bool> {
+    let box6 = || vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]];
+    let b0 = patch.iso(nurbs_core::surface::Axis::V, vd[0])?;
+    let b1 = patch.iso(nurbs_core::surface::Axis::V, vd[1])?;
+    let a0 = point3(piece.control_points.first().unwrap());
+    let a1 = point3(piece.control_points.last().unwrap());
+    let chord = sub(a1, a0);
+    let length = chord[0].hypot(chord[1]).hypot(chord[2]);
+    let mut boundary_on_line = false;
+    if length > 0. {
+        let dir = chord.map(|x| x / length);
+        let off_line = |p: [f64; 3]| {
+            let v = cross(dir, sub(p, a0));
+            v[0].hypot(v[1]).hypot(v[2])
+        };
+        let control_residual = piece
+            .control_points
+            .iter()
+            .map(|c| off_line(point3(c)))
+            .fold(0., f64::max);
+        if control_residual <= options.distance_tolerance {
+            // A straight piece lies on the ruled surface only as a ruling:
+            // find U where both boundary points sit on the support line.
+            // Candidates are certified plane roots of B0 near the line;
+            // halo bands touching a certified root are absorbed, bands that
+            // provably stay off the second plane are dropped, and anything
+            // else keeps the coincidence ambiguous instead of guessed.
+            let axis = (0..3)
+                .min_by(|a, b| dir[*a].abs().total_cmp(&dir[*b].abs()))
+                .unwrap();
+            let mut basis = [0.; 3];
+            basis[axis] = 1.;
+            let n = cross(dir, basis);
+            let plane1 = Plane {
+                normal: n,
+                offset: dot(n, a0),
+            }
+            .normalized()?;
+            let n = cross(dir, plane1.normal);
+            let plane2 = Plane {
+                normal: n,
+                offset: dot(n, a0),
+            }
+            .normalized()?;
+            if report.boxes_visited >= options.max_boxes {
+                report.unresolved(box6(), UnresolvedReason::BudgetExceeded);
+                return Ok(true);
+            }
+            let roots = curve_plane(
+                &b0,
+                plane1,
+                Options {
+                    max_boxes: options.max_boxes - report.boxes_visited,
+                    ..options
+                },
+            )?;
+            report.boxes_visited += roots.boxes_visited;
+            report.bernstein_excluded += roots.bernstein_excluded;
+            let mut line_points = Vec::new();
+            let mut certified: Vec<[f64; 2]> = Vec::new();
+            let mut bands: Vec<[f64; 2]> = Vec::new();
+            let mut joint_bands: Vec<[f64; 2]> = Vec::new();
+            for component in roots.components {
+                match component {
+                    CurvePlaneComponent::Point(point) => {
+                        certified.push(point.parameter_interval);
+                        if plane2.distance(point.point).abs() <= options.distance_tolerance {
+                            line_points.push(point.parameter);
+                        }
+                    }
+                    // B0 lies in the first plane over this interval: isolate
+                    // its second-plane crossings through one more shared-budget
+                    // query instead of assuming a line coincidence.
+                    CurvePlaneComponent::Overlap {
+                        parameter_interval, ..
+                    } => {
+                        if report.boxes_visited >= options.max_boxes {
+                            report.unresolved(box6(), UnresolvedReason::BudgetExceeded);
+                            return Ok(true);
+                        }
+                        let piece0 = b0.trim(parameter_interval[0], parameter_interval[1])?;
+                        let second = curve_plane(
+                            &piece0,
+                            plane2,
+                            Options {
+                                max_boxes: options.max_boxes - report.boxes_visited,
+                                ..options
+                            },
+                        )?;
+                        report.boxes_visited += second.boxes_visited;
+                        report.bernstein_excluded += second.bernstein_excluded;
+                        for nested in second.components {
+                            match nested {
+                                CurvePlaneComponent::Point(point) => {
+                                    certified.push(point.parameter_interval);
+                                    line_points.push(point.parameter);
+                                }
+                                CurvePlaneComponent::Overlap { .. } => boundary_on_line = true,
+                            }
+                        }
+                        for pending in second.unresolved {
+                            joint_bands.push([pending.parameter_box[0], pending.parameter_box[1]]);
+                        }
+                    }
+                }
+            }
+            for pending in roots.unresolved {
+                bands.push([pending.parameter_box[0], pending.parameter_box[1]]);
+            }
+            let mut ambiguous = false;
+            for band in bands {
+                // A band provably staying off the second plane cannot hide a
+                // ruling candidate; outward-rounded Bernstein bounds decide.
+                let clear = if band[0] == band[1] {
+                    let p = point3(&b0.evaluate(band[0])?.point);
+                    plane2.distance(p).abs() > options.distance_tolerance
+                } else {
+                    let piece = b0.trim(band[0], band[1])?;
+                    let values = coefficients(&piece, plane2);
+                    values
+                        .iter()
+                        .all(|c| c.bound.lo > options.distance_tolerance)
+                        || values
+                            .iter()
+                            .all(|c| c.bound.hi < -options.distance_tolerance)
+                };
+                if clear {
+                    continue;
+                }
+                joint_bands.push(band);
+            }
+            // Remaining bands touching a certified root are its rounding halo;
+            // isolated ones keep the coincidence ambiguous, never guessed.
+            for band in joint_bands {
+                if certified
+                    .iter()
+                    .any(|iv| iv[0] <= band[1] && band[0] <= iv[1])
+                {
+                    continue;
+                }
+                ambiguous = true;
+            }
+            // A line point of B0 is a ruling candidate only if the other
+            // boundary point at the same U also sits on the support line.
+            let mut candidates = Vec::new();
+            for u in line_points {
+                if off_line(point3(&b1.evaluate(u)?.point)) <= options.distance_tolerance {
+                    candidates.push(u);
+                }
+            }
+            candidates.dedup_by(|a, b| *a == *b);
+            // An exactly closed seam makes the u_min and u_max rulings the
+            // same curve: fold the u_max candidate into the canonical u_min
+            // representative (exact parameter correspondence only).
+            if let Some([s0, s1]) = seam_u {
+                if candidates.contains(&s0) && candidates.contains(&s1) {
+                    candidates.retain(|&u| u != s1);
+                }
+            }
+            if candidates.len() > 1 {
+                report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                return Ok(true);
+            }
+            if candidates.is_empty() && ambiguous {
+                report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                return Ok(true);
+            }
+            if let [u] = candidates[..] {
+                if ambiguous {
+                    report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                    return Ok(true);
+                }
+                let r0 = point3(&b0.evaluate(u)?.point);
+                let r1 = point3(&b1.evaluate(u)?.point);
+                let ruling = sub(r1, r0);
+                let dd = dot(ruling, ruling);
+                let w0 = curve_weight_at(&b0, u)?;
+                let w1 = curve_weight_at(&b1, u)?;
+                if !(dd > 0.) || !(w0 > 0.) || !(w1 > 0.) {
+                    report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                    return Ok(true);
+                }
+                // Möbius lift of a Cartesian line fraction s to ruling V:
+                // s = λw1/((1-λ)w0+λw1) inverts to λ = s·w0/(w1-s(w1-w0)).
+                let lift = |p: [f64; 3]| {
+                    let s = dot(sub(p, r0), ruling) / dd;
+                    let denominator = w1 - s * (w1 - w0);
+                    if !(denominator > 0.) {
+                        return None;
+                    }
+                    let lambda = s * w0 / denominator;
+                    (lambda.is_finite()).then(|| vd[0] + lambda * (vd[1] - vd[0]))
+                };
+                let mut lifts = Vec::new();
+                for control in &piece.control_points {
+                    let Some(v) = lift(point3(control)) else {
+                        report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                        return Ok(true);
+                    };
+                    lifts.push(v);
+                }
+                // The piece image lies inside its control polygon, so the whole
+                // span stays on the surface exactly when every lift does.
+                let vtol = options.parameter_tolerance;
+                if lifts
+                    .iter()
+                    .any(|v| *v < vd[0] - vtol || *v > vd[1] + vtol)
+                {
+                    report.unresolved(box6(), UnresolvedReason::CoincidentTrim);
+                    return Ok(true);
+                }
+                let clamp = |v: f64| v.max(vd[0]).min(vd[1]);
+                let uv_start = [u, clamp(lifts[0])];
+                let uv_end = [u, clamp(*lifts.last().unwrap())];
+                let mut max_residual = control_residual;
+                for (t, uv) in [(ta[0], uv_start), (ta[1], uv_end)] {
+                    let pc = point3(&piece.evaluate(t)?.point);
+                    let ps = patch.evaluate(uv[0], uv[1])?.point;
+                    let residual = distance(pc, ps);
+                    if residual > options.distance_tolerance {
+                        report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                        return Ok(true);
+                    }
+                    max_residual = max_residual.max(residual);
+                }
+                // The Möbius t->v correspondence along the ruling, sampled at
+                // the interval fractions 0, 1/2, 1: three samples determine
+                // the cross-ratio map exactly.
+                let mut samples = [[0.; 3]; 3];
+                let mut sampled = true;
+                for (i, s) in samples.iter_mut().enumerate() {
+                    let t = ta[0] + (ta[1] - ta[0]) * (i as f64) * 0.5;
+                    let p = point3(&piece.evaluate(t)?.point);
+                    match lift(p) {
+                        Some(v) => *s = [t, u, clamp(v)],
+                        None => {
+                            sampled = false;
+                            break;
+                        }
+                    }
+                }
+                let correspondence = sampled.then(|| OverlapCorrespondence {
+                    kind: OverlapCorrespondenceKind::MobiusV,
+                    samples,
+                });
+                push_cs_overlap(ta, uv_start, uv_end, max_residual, false, correspondence, report);
+                return Ok(true);
+            }
+        }
+    }
+    // Iso-V coincidence: the elevated homogeneous polygon must be a positive
+    // proportional blend (1-λ)H0 + λH1 of the two boundary polygons.
+    let degree = piece.degree.max(patch.degree_u);
+    if degree > 25 {
+        return Ok(false);
+    }
+    let ec = homogeneous4(&piece.elevate(degree)?);
+    let e0 = homogeneous4(&b0.elevate(degree)?);
+    let e1 = homogeneous4(&b1.elevate(degree)?);
+    let weight_scale = ec.iter().map(|h| h[3].abs()).fold(0., f64::max);
+    for reversed in [false, true] {
+        let at = |row: &[[f64; 4]], i: usize| row[if reversed { degree - i } else { i }];
+        let i0 = ec
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1[3].abs().total_cmp(&b.1[3].abs()))
+            .map(|(i, _)| i)
+            .unwrap();
+        let (a, b, c) = (at(&e0, i0), at(&e1, i0), ec[i0]);
+        let d = std::array::from_fn::<_, 4, _>(|k| b[k] - a[k]);
+        // α·H0 + β·(H1-H0) = Hc is linear in (α, β); solve from the dominant
+        // polygon row by 2x2 normal equations, then verify every row.
+        let (aa, ad, dd) = (dot4(a, a), dot4(a, d), dot4(d, d));
+        let determinant = aa * dd - ad * ad;
+        if !(determinant > 0.) {
+            continue;
+        }
+        let alpha = (dd * dot4(a, c) - ad * dot4(d, c)) / determinant;
+        let beta = (aa * dot4(d, c) - ad * dot4(a, c)) / determinant;
+        if !(alpha > 0.) || !alpha.is_finite() || !beta.is_finite() {
+            continue;
+        }
+        let lambda = beta / alpha;
+        if !(lambda >= -1e-9 && lambda <= 1. + 1e-9) {
+            continue;
+        }
+        let mut weight_residual = 0_f64;
+        let mut control_residual = 0_f64;
+        let mut valid = true;
+        for (i, c) in ec.iter().enumerate() {
+            let (a, b) = (at(&e0, i), at(&e1, i));
+            let h = std::array::from_fn::<_, 4, _>(|k| alpha * a[k] + beta * (b[k] - a[k]));
+            if !(h[3] > 0.) {
+                valid = false;
+                break;
+            }
+            weight_residual = weight_residual.max((h[3] - c[3]).abs() / weight_scale);
+            let ph = std::array::from_fn(|k| h[k] / h[3]);
+            let pc = std::array::from_fn(|k| c[k] / c[3]);
+            control_residual = control_residual.max(distance(ph, pc));
+        }
+        if !valid || weight_residual > 1e-9 || control_residual > options.distance_tolerance {
+            continue;
+        }
+        let v = vd[0] + lambda.clamp(0., 1.) * (vd[1] - vd[0]);
+        let (uv_start, uv_end) = if reversed {
+            ([ua[1], v], [ua[0], v])
+        } else {
+            ([ua[0], v], [ua[1], v])
+        };
+        let mut endpoint_residual = 0_f64;
+        for (t, uv) in [(ta[0], uv_start), (ta[1], uv_end)] {
+            let pc = point3(&piece.evaluate(t)?.point);
+            let ps = patch.evaluate(uv[0], uv[1])?.point;
+            let residual = distance(pc, ps);
+            if residual > options.distance_tolerance {
+                report.unresolved(box6(), UnresolvedReason::NearCoincidence);
+                return Ok(true);
+            }
+            endpoint_residual = endpoint_residual.max(residual);
+        }
+        push_cs_overlap(
+            ta,
+            uv_start,
+            uv_end,
+            control_residual.max(endpoint_residual),
+            false,
+            // Affine t->u correspondence at constant v, sampled at the
+            // interval fractions 0, 1/2, 1.
+            Some(OverlapCorrespondence {
+                kind: OverlapCorrespondenceKind::AffineU,
+                samples: std::array::from_fn(|i| {
+                    let f = (i as f64) * 0.5;
+                    [
+                        ta[0] + (ta[1] - ta[0]) * f,
+                        uv_start[0] + (uv_end[0] - uv_start[0]) * f,
+                        v,
+                    ]
+                }),
+            }),
+            report,
+        );
+        return Ok(true);
+    }
+    if boundary_on_line {
+        report.unresolved(box6(), UnresolvedReason::CoincidentTrim);
+        return Ok(true);
+    }
+    Ok(false)
+}
+fn dot4(a: [f64; 4], b: [f64; 4]) -> f64 {
+    (0..4).map(|i| a[i] * b[i]).sum()
+}
+
+enum CsRefinement {
+    Root(f64, [f64; 2], [f64; 3], f64),
+    Outside,
+    Failed,
+}
+/// Newton refinement of C(t)-S(u,v)=0 inside [ta]x[ua]x[vd]. Only iterates
+/// that stay inside the isolating box are reported by that box.
+#[allow(clippy::too_many_arguments)]
+fn refine_cs_root(
+    curve: &Curve,
+    surface: &Surface,
+    ta: [f64; 2],
+    ua: [f64; 2],
+    vd: [f64; 2],
+    tm: f64,
+    um: f64,
+    vm: f64,
+    options: Options,
+) -> Result<CsRefinement> {
+    let (mut t, mut u, mut v) = (tm, um, vm);
+    let (wt, wu, wv) = (ta[1] - ta[0], ua[1] - ua[0], vd[1] - vd[0]);
+    let inside = |t: f64, u: f64, v: f64| {
+        ta[0] <= t && t <= ta[1] && ua[0] <= u && u <= ua[1] && vd[0] <= v && v <= vd[1]
+    };
+    for _ in 0..16 {
+        if !inside(t, u, v) {
+            return Ok(CsRefinement::Outside);
+        }
+        let jc = curve.evaluate(t)?;
+        let js = surface.evaluate(u, v)?;
+        let r = sub(point3(&jc.point), js.point);
+        if distance(r, [0.; 3]) <= options.distance_tolerance * 1e-3 {
+            break;
+        }
+        // C0 knots have no two-sided jets: step with one-sided span jets,
+        // preferring the sides the iterate came from; any confirming side
+        // combination is accepted.
+        let mut c_sides = curve_tangents(curve, t)?;
+        if c_sides.len() == 2 && tm > t {
+            c_sides.swap(0, 1);
+        }
+        let (mut u_sides, mut v_sides) = surface_tangents(surface, u, v)?;
+        if u_sides.len() == 2 && um > u {
+            u_sides.swap(0, 1);
+        }
+        if v_sides.len() == 2 && vm > v {
+            v_sides.swap(0, 1);
+        }
+        let mut step = None;
+        'sides: for dc in &c_sides {
+            for du in &u_sides {
+                for dv in &v_sides {
+                    let rows = [
+                        [dc[0], -du[0], -dv[0]],
+                        [dc[1], -du[1], -dv[1]],
+                        [dc[2], -du[2], -dv[2]],
+                    ];
+                    if let Some(s) = solve3(rows, [-r[0], -r[1], -r[2]]) {
+                        step = Some(s);
+                        break 'sides;
+                    }
+                }
+            }
+        }
+        let Some(step) = step else {
+            return Ok(CsRefinement::Failed);
+        };
+        t += step[0];
+        u += step[1];
+        v += step[2];
+        if step[0].abs() <= wt * 1e-6 && step[1].abs() <= wu * 1e-6 && step[2].abs() <= wv * 1e-6
+        {
+            break;
+        }
+    }
+    // Half-open ownership in t and u; V never subdivides, so both V faces
+    // remain owned by the only V band.
+    let t = snap_to_face(snap_to_face(t, ta[0]), ta[1]);
+    let u = snap_to_face(snap_to_face(u, ua[0]), ua[1]);
+    let v = snap_to_face(snap_to_face(v, vd[0]), vd[1]);
+    let sd = surface_domain(surface);
+    if !owns_parameter(ta[0], ta[1], curve.domain()[1], t)
+        || !owns_parameter(ua[0], ua[1], sd[1], u)
+        || !(vd[0] <= v && v <= vd[1])
+    {
+        return Ok(CsRefinement::Outside);
+    }
+    let jc = curve.evaluate(t)?;
+    let js = surface.evaluate(u, v)?;
+    let pc = point3(&jc.point);
+    let ps = js.point;
+    let residual = distance(pc, ps);
+    if residual > options.distance_tolerance {
+        return Ok(CsRefinement::Failed);
+    }
+    // One-sided jets screen a converged C0-knot root: it resolves when any
+    // side combination is transverse and stays unresolved when none is.
+    if cs_transversality(curve, surface, t, u, v)? <= TRANSVERSE_SINE {
+        return Ok(CsRefinement::Failed);
+    }
+    Ok(CsRefinement::Root(
+        t,
+        [u, v],
+        std::array::from_fn(|i| (pc[i] + ps[i]) * 0.5),
+        residual,
+    ))
+}
+/// Terminal curve/ruled-surface box resolution, mirroring the curve/curve
+/// rule: provable separation by hull diagonals, ambiguous bands stay
+/// unresolved, tangencies are never collapsed to guessed points.
+#[allow(clippy::too_many_arguments)]
+fn resolve_cs_box(
+    curve: &Curve,
+    surface: &Surface,
+    ta: [f64; 2],
+    ua: [f64; 2],
+    vd: [f64; 2],
+    hc: &[[f64; 4]],
+    hs: &HomogeneousGrid,
+    options: Options,
+    report: &mut Report<CurveRuledSurfaceComponent>,
+) -> Result<()> {
+    let box6 = || vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]];
+    let diagonal = |ranges: [[f64; 2]; 3]| {
+        ranges
+            .iter()
+            .map(|r| {
+                let w = r[1] - r[0];
+                w * w
+            })
+            .sum::<f64>()
+            .sqrt()
+    };
+    let diag = diagonal(hull_ranges(hc)) + diagonal(grid_ranges(hs));
+    let tm = ta[0] + (ta[1] - ta[0]) * 0.5;
+    let um = ua[0] + (ua[1] - ua[0]) * 0.5;
+    let vm = vd[0] + (vd[1] - vd[0]) * 0.5;
+    let pc = point3(&curve.evaluate(tm)?.point);
+    let ps = surface.evaluate(um, vm)?.point;
+    let residual = distance(pc, ps);
+    // |C(t)-S(u,v)| >= residual - diag everywhere in the box (triangle bound).
+    if residual - diag > options.distance_tolerance {
+        return Ok(());
+    }
+    // V never subdivides on a ruling, so the midpoint's V coordinate is not
+    // converged: a large midpoint residual does not disprove an in-box root.
+    // Newton runs either way; only a converged, in-box, low-residual,
+    // transverse iterate is reported by this box.
+    if residual <= options.distance_tolerance
+        && cs_transversality(curve, surface, tm, um, vm)? <= TRANSVERSE_SINE
+    {
+        report.unresolved(box6(), UnresolvedReason::TangencyOrMultipleRoot);
+        return Ok(());
+    }
+    let near_midpoint = residual <= options.distance_tolerance;
+    match refine_cs_root(curve, surface, ta, ua, vd, tm, um, vm, options)? {
+        CsRefinement::Root(t, uv, point, residual) => {
+            let td = curve.domain();
+            let sd = surface_domain(surface);
+            let boundary = t == td[0]
+                || t == td[1]
+                || curve.knots.contains(&t)
+                || uv[0] == sd[0]
+                || uv[0] == sd[1]
+                || surface.knots_u.contains(&uv[0])
+                || uv[1] == sd[2]
+                || uv[1] == sd[3];
+            push_cs_point(
+                report,
+                t,
+                ta,
+                uv,
+                [ua[0], ua[1], vd[0], vd[1]],
+                point,
+                residual,
+                if boundary {
+                    Contact::Boundary
+                } else {
+                    Contact::Transverse
+                },
+            );
+        }
+        CsRefinement::Outside => (),
+        CsRefinement::Failed => {
+            // A box whose midpoint was already a contact candidate fails as a
+            // tangency; a far midpoint that Newton could not bring in-box is a
+            // near-surface band. Both stay explicit.
+            report.unresolved(
+                box6(),
+                if near_midpoint {
+                    UnresolvedReason::TangencyOrMultipleRoot
+                } else {
+                    UnresolvedReason::NearCoincidence
+                },
+            )
+        }
+    }
+    Ok(())
+}
+/// Merge point events whose isolating intervals touch in the (t,u) plane.
+/// Subdivision tiles exactly, so adjacency uses interval endpoints only.
+fn merge_cs_points(report: &mut Report<CurveRuledSurfaceComponent>) {
+    let intervals = |c: &CurveRuledSurfaceComponent| match c {
+        CurveRuledSurfaceComponent::Point {
+            t_interval, uv_box, ..
+        } => Some((*t_interval, [uv_box[0], uv_box[1]])),
+        _ => None,
+    };
+    let n = report.components.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn find(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    for i in 0..n {
+        for j in i + 1..n {
+            let (Some((at, au)), Some((bt, bu))) =
+                (intervals(&report.components[i]), intervals(&report.components[j]))
+            else {
+                continue;
+            };
+            if at[0] <= bt[1] && bt[0] <= at[1] && au[0] <= bu[1] && bu[0] <= au[1] {
+                let (ri, rj) = (find(&mut parent, i), find(&mut parent, j));
+                if ri != rj {
+                    parent[ri] = rj;
+                }
+            }
+        }
+    }
+    let mut merged: Vec<Option<CurveRuledSurfaceComponent>> = (0..n).map(|_| None).collect();
+    let mut order: Vec<usize> = Vec::new();
+    for i in 0..n {
+        let Some((ti, ui)) = intervals(&report.components[i]) else {
+            continue;
+        };
+        let root = find(&mut parent, i);
+        if merged[root].is_none() {
+            order.push(root);
+        }
+        let CurveRuledSurfaceComponent::Point {
+            t,
+            uv,
+            uv_box,
+            point,
+            residual,
+            contact,
+            ..
+        } = &report.components[i]
+        else {
+            continue;
+        };
+        let member = (*t, *uv, *point, *residual, *contact, (ti, ui), *uv_box);
+        match &mut merged[root] {
+            None => {
+                merged[root] = Some(CurveRuledSurfaceComponent::Point {
+                    t: member.0,
+                    t_interval: ti,
+                    uv: member.1,
+                    uv_box: member.6,
+                    point: member.2,
+                    residual: member.3,
+                    contact: member.4,
+                });
+            }
+            Some(CurveRuledSurfaceComponent::Point {
+                t,
+                t_interval,
+                uv,
+                uv_box,
+                point,
+                residual,
+                contact,
+            }) => {
+                if member.3 < *residual {
+                    *t = member.0;
+                    *uv = member.1;
+                    *point = member.2;
+                    *residual = member.3;
+                }
+                if member.4 == Contact::Boundary {
+                    *contact = Contact::Boundary;
+                }
+                t_interval[0] = t_interval[0].min(member.5 .0[0]);
+                t_interval[1] = t_interval[1].max(member.5 .0[1]);
+                uv_box[0] = uv_box[0].min(member.6[0]);
+                uv_box[1] = uv_box[1].max(member.6[1]);
+            }
+            _ => unreachable!(),
+        }
+    }
+    let mut components = Vec::new();
+    let mut index = 0;
+    for root in order {
+        while index < root {
+            if intervals(&report.components[index]).is_none() {
+                components.push(report.components[index].clone());
+            }
+            index += 1;
+        }
+        if let Some(c) = merged[root].take() {
+            components.push(c);
+        }
+        index = root + 1;
+    }
+    while index < n {
+        if intervals(&report.components[index]).is_none() {
+            components.push(report.components[index].clone());
+        }
+        index += 1;
+    }
+    report.components = components;
+}
+
+/// Seam unification on an exactly closed ruled U direction. Point events at
+/// the two seam sides merge only when their curve-parameter isolating
+/// intervals touch and their V boxes overlap — parameter-based, never a
+/// spatial tolerance. The canonical representative sits at u = u_min and
+/// keeps the better-residual witness. Overlaps unify when their curve
+/// intervals touch and their UV paths meet exactly at the seam: a ruling
+/// pair at u_min/u_max folds to the u_min copy (identical lifted V
+/// endpoints), and an iso-V chain leaving at u_max re-enters at u_min with
+/// the wrap marked; merged pieces keep one correspondence map only when a
+/// single map spans the whole merged interval.
+fn unify_cs_seam(report: &mut Report<CurveRuledSurfaceComponent>, su: [f64; 2]) {
+    let point_key = |c: &CurveRuledSurfaceComponent| match c {
+        CurveRuledSurfaceComponent::Point {
+            t_interval, uv_box, ..
+        } => Some((*t_interval, *uv_box)),
+        _ => None,
+    };
+    let mut dropped: Vec<usize> = Vec::new();
+    let n = report.components.len();
+    for i in 0..n {
+        if dropped.contains(&i) {
+            continue;
+        }
+        let Some((at, abox)) = point_key(&report.components[i]) else {
+            continue;
+        };
+        if abox[0] != su[0] {
+            continue;
+        }
+        for j in i + 1..n {
+            if dropped.contains(&j) {
+                continue;
+            }
+            let Some((bt, bbox)) = point_key(&report.components[j]) else {
+                continue;
+            };
+            if bbox[1] != su[1] {
+                continue;
+            }
+            let touch = at[0] <= bt[1] && bt[0] <= at[1];
+            let v_overlap = abox[2] <= bbox[3] && bbox[2] <= abox[3];
+            if !touch || !v_overlap {
+                continue;
+            }
+            let (a, b) = {
+                let (head, tail) = report.components.split_at_mut(j);
+                (&mut head[i], &tail[0])
+            };
+            let (
+                CurveRuledSurfaceComponent::Point {
+                    t,
+                    t_interval,
+                    uv,
+                    uv_box,
+                    point,
+                    residual,
+                    contact,
+                },
+                CurveRuledSurfaceComponent::Point {
+                    t: bt2,
+                    t_interval: bt_interval,
+                    uv: buv,
+                    uv_box: buv_box,
+                    point: bpoint,
+                    residual: bresidual,
+                    contact: bcontact,
+                },
+            ) = (a, b)
+            else {
+                unreachable!()
+            };
+            if *bresidual < *residual {
+                *t = *bt2;
+                uv[1] = buv[1];
+                *point = *bpoint;
+                *residual = *bresidual;
+            }
+            if *bcontact == Contact::Boundary {
+                *contact = Contact::Boundary;
+            }
+            uv[0] = su[0];
+            t_interval[0] = t_interval[0].min(bt_interval[0]);
+            t_interval[1] = t_interval[1].max(bt_interval[1]);
+            uv_box[0] = su[0];
+            uv_box[2] = uv_box[2].min(buv_box[2]);
+            uv_box[3] = uv_box[3].max(buv_box[3]);
+            dropped.push(j);
+            break;
+        }
+    }
+    // Overlap unification across the seam.
+    let overlap_key = |c: &CurveRuledSurfaceComponent| match c {
+        CurveRuledSurfaceComponent::Overlap {
+            curve_interval,
+            uv_start,
+            uv_end,
+            ..
+        } => Some((*curve_interval, *uv_start, *uv_end)),
+        _ => None,
+    };
+    loop {
+        let mut merged = false;
+        'outer: for i in 0..report.components.len() {
+            if dropped.contains(&i) {
+                continue;
+            }
+            for j in 0..report.components.len() {
+                if j == i || dropped.contains(&j) {
+                    continue;
+                }
+                let (Some((aci, aus, aue)), Some((bci, bus, bue))) = (
+                    overlap_key(&report.components[i]),
+                    overlap_key(&report.components[j]),
+                )
+                else {
+                    continue;
+                };
+                // Ruling pair: same lifted V endpoints, touching intervals.
+                let ruling_pair = aus[0] == aue[0]
+                    && aus[0] == su[0]
+                    && bus[0] == bue[0]
+                    && bus[0] == su[1]
+                    && aus[1] == bus[1]
+                    && aue[1] == bue[1]
+                    && aci[0] <= bci[1]
+                    && bci[0] <= aci[1];
+                // Iso-V chain crossing the seam: A ends at u_max exactly where
+                // B begins at u_min, with touching curve intervals.
+                let iso_cross = aue[0] == su[1]
+                    && bus[0] == su[0]
+                    && aue[1] == bus[1]
+                    && aus[1] == aue[1]
+                    && bus[1] == bue[1]
+                    && aci[1] == bci[0];
+                if !ruling_pair && !iso_cross {
+                    continue;
+                }
+                let same_interval = aci == bci;
+                let (lo, hi) = if i < j { (i, j) } else { (j, i) };
+                let (head, tail) = report.components.split_at_mut(hi);
+                let (first, second) = (&mut head[lo], &mut tail[0]);
+                let (a, b) = if i < j { (first, second) } else { (second, first) };
+                let CurveRuledSurfaceComponent::Overlap {
+                    curve_interval,
+                    uv_end,
+                    max_control_residual,
+                    seam_wrap,
+                    correspondence,
+                    ..
+                } = a
+                else {
+                    unreachable!()
+                };
+                let CurveRuledSurfaceComponent::Overlap {
+                    max_control_residual: bres,
+                    correspondence: bcorr,
+                    ..
+                } = b
+                else {
+                    unreachable!()
+                };
+                let bres = *bres;
+                let bcorr = bcorr.clone();
+                if iso_cross {
+                    *uv_end = bue;
+                    *correspondence = None;
+                } else if !same_interval {
+                    *correspondence = None;
+                } else if correspondence.is_none() {
+                    *correspondence = bcorr;
+                }
+                curve_interval[0] = curve_interval[0].min(bci[0]);
+                curve_interval[1] = curve_interval[1].max(bci[1]);
+                *max_control_residual = max_control_residual.max(bres);
+                *seam_wrap = true;
+                dropped.push(j);
+                merged = true;
+                break 'outer;
+            }
+        }
+        if !merged {
+            break;
+        }
+    }
+    if !dropped.is_empty() {
+        let mut index = 0;
+        report.components.retain(|_| {
+            let keep = !dropped.contains(&index);
+            index += 1;
+            keep
+        });
+    }
+}
+
+/// Intersect a retained positive-weight 3D NURBS curve with a ruled NURBS
+/// surface: rational in one direction (any degree, multiple knot spans) and
+/// linear with positive, possibly unequal endpoint weights in the other.
+/// Curve spans and surface U-spans decompose into homogeneous rational Bezier
+/// pieces traversed by one FIFO queue; outward-rounded control hulls exclude
+/// separated boxes. Terminal boxes confirm C(t)=S(u,v) by 3x3 Newton with the
+/// root required inside its own box; exact parameter corners own boundary
+/// contacts (dedup by exact (t,u,v) only). Ruling and iso-V coincidences lift
+/// to explicit UV path endpoints with sampled per-parameter correspondence
+/// (Möbius in V along a ruling, affine in U along an iso-V); exactly closed
+/// U seams unify seam-side contacts and wrap overlaps canonically at u_min,
+/// while near-closed seams stay duplicate behind explicit near_coincidence
+/// bands; tangencies, near-surface bands, partial ruling trims and exhausted
+/// budgets stay unresolved. Reports never authorize topology changes.
+pub fn curve_ruled_surface(
+    curve: &Curve,
+    surface: &Surface,
+    options: Options,
+) -> Result<Report<CurveRuledSurfaceComponent>> {
+    curve.validate()?;
+    if curve.control_points[0].len() != 3 {
+        return Err(invalid("Curve/ruled-surface requires a 3D curve"));
+    }
+    surface.validate()?;
+    let options = options.validate()?;
+    let mut report = Report::default();
+    let unsupported = |report: &mut Report<CurveRuledSurfaceComponent>| {
+        let d = surface_domain(surface);
+        report.unresolved(
+            vec![curve.domain()[0], curve.domain()[1], d[0], d[1], d[2], d[3]],
+            UnresolvedReason::UnsupportedSurface,
+        );
+    };
+    // Canonical orientation is ruled in V: linear V with exactly two rows.
+    let swapped = if surface.degree_v == 1
+        && surface.control_points[0].len() == 2
+        && !surface.periodic_v
+    {
+        false
+    } else if surface.degree_u == 1 && surface.control_points.len() == 2 && !surface.periodic_u {
+        true
+    } else {
+        unsupported(&mut report);
+        return Ok(report);
+    };
+    let canonical = if swapped {
+        transpose_surface(surface)
+    } else {
+        surface.clone()
+    };
+    let domain = surface_domain(&canonical);
+    let vd = [domain[2], domain[3]];
+    // Geometric U-seam closure of the canonical orientation: an exactly
+    // proportional seam unifies contacts across u_min/u_max; a near-closed
+    // seam stays duplicate and both seam bands are explicit unresolved
+    // regions (merging is never by tolerance).
+    let seam = ruled_seam_state(&canonical);
+    let seam_u = (seam == RuledSeam::Closed).then_some([domain[0], domain[1]]);
+    if seam == RuledSeam::Uncertain {
+        let td = curve.domain();
+        for &u in &domain[..2] {
+            report.unresolved(
+                vec![td[0], td[1], u, u, vd[0], vd[1]],
+                UnresolvedReason::NearCoincidence,
+            );
+        }
+    }
+    let mut pending: std::collections::VecDeque<(
+        [f64; 2],
+        [f64; 2],
+        Option<Vec<[f64; 4]>>,
+        Option<HomogeneousGrid>,
+        usize,
+    )> = spans(&curve.knots, curve.degree, curve.control_points.len())
+        .into_iter()
+        .flat_map(|ta| {
+            spans(
+                &canonical.knots_u,
+                canonical.degree_u,
+                canonical.control_points.len(),
+            )
+            .into_iter()
+            .map(move |ua| (ta, ua, None, None, 0))
+        })
+        .collect();
+    while let Some((ta, ua, hc, hs, depth)) = pending.pop_front() {
+        if report.boxes_visited >= options.max_boxes {
+            report.unresolved(
+                vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]],
+                UnresolvedReason::BudgetExceeded,
+            );
+            continue;
+        }
+        report.boxes_visited += 1;
+        let (pieces, hc, hs) = match (hc, hs) {
+            (Some(hc), Some(hs)) => (None, hc, hs),
+            _ => {
+                let pc = curve.trim(ta[0], ta[1])?;
+                let ps = canonical.trim([ua[0], ua[1], vd[0], vd[1]])?;
+                let (hc, hs) = (homogeneous4(&pc), homogeneous_grid(&ps));
+                (Some((pc, ps)), hc, hs)
+            }
+        };
+        if let Some((pc, ps)) = &pieces {
+            for &t in &ta {
+                for &u in &ua {
+                    for &v in &vd {
+                        admit_cs_corner(curve, &canonical, t, u, v, options, &mut report)?;
+                    }
+                }
+            }
+            if !grids_excluded(&hc, &hs)
+                && ruled_coincidence(pc, ps, ta, ua, vd, seam_u, options, &mut report)?
+            {
+                continue;
+            }
+        }
+        if grids_excluded(&hc, &hs) {
+            report.bernstein_excluded += 1;
+            continue;
+        }
+        let width_t = ta[1] - ta[0];
+        let width_u = ua[1] - ua[0];
+        let tm = ta[0] + width_t * 0.5;
+        let um = ua[0] + width_u * 0.5;
+        let can_t = tm > ta[0] && tm < ta[1];
+        let can_u = um > ua[0] && um < ua[1];
+        if (width_t <= options.parameter_tolerance && width_u <= options.parameter_tolerance)
+            || depth == options.max_depth
+            || (!can_t && !can_u)
+        {
+            resolve_cs_box(curve, &canonical, ta, ua, vd, &hc, &hs, options, &mut report)?;
+            continue;
+        }
+        let c_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_t {
+            let (l, r) = split_homogeneous(&hc);
+            vec![([ta[0], tm], l), ([tm, ta[1]], r)]
+        } else {
+            vec![(ta, hc.clone())]
+        };
+        let s_side: Vec<([f64; 2], HomogeneousGrid)> = if can_u {
+            let (l, r) = split_grid_u(&hs);
+            vec![([ua[0], um], l), ([um, ua[1]], r)]
+        } else {
+            vec![(ua, hs.clone())]
+        };
+        for (ta2, h) in &c_side {
+            for (ua2, g) in &s_side {
+                pending.push_back((*ta2, *ua2, Some(h.clone()), Some(g.clone()), depth + 1));
+            }
+        }
+    }
+    merge_cs_points(&mut report);
+    if let Some(su) = seam_u {
+        unify_cs_seam(&mut report, su);
+    }
+    report.components.sort_by(|a, b| {
+        let key = |c: &CurveRuledSurfaceComponent| match c {
+            CurveRuledSurfaceComponent::Point { t, uv, .. } => (*t, uv[0], uv[1]),
+            CurveRuledSurfaceComponent::Overlap {
+                curve_interval,
+                uv_start,
+                ..
+            } => (curve_interval[0], uv_start[0], uv_start[1]),
+        };
+        let (x, y) = (key(a), key(b));
+        x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)).then(x.2.total_cmp(&y.2))
+    });
+    if swapped {
+        for pending in &mut report.unresolved {
+            pending.parameter_box.swap(2, 4);
+            pending.parameter_box.swap(3, 5);
+        }
+        for component in &mut report.components {
+            match component {
+                CurveRuledSurfaceComponent::Point { uv, uv_box, .. } => {
+                    uv.swap(0, 1);
+                    uv_box.swap(0, 2);
+                    uv_box.swap(1, 3);
+                }
+                CurveRuledSurfaceComponent::Overlap {
+                    uv_start, uv_end, ..
+                } => {
+                    uv_start.swap(0, 1);
+                    uv_end.swap(0, 1);
+                }
+            }
+        }
+    }
+    Ok(report)
+}
+
 fn point3(p: &[f64]) -> [f64; 3] {
     [p[0], p[1], p[2]]
 }
@@ -2764,6 +5393,39 @@ impl value_codec::Serialize for CurveSegmentComponent {
         }
     }
 }
+impl value_codec::Serialize for CurveCurveComponent {
+    fn to_value(&self) -> value_codec::Value {
+        match self {
+            Self::Point {
+                first,
+                first_interval,
+                second,
+                second_interval,
+                point,
+                residual,
+                contact,
+            } => {
+                let contact = match contact {
+                    Contact::Transverse => "transverse",
+                    Contact::Boundary => "boundary",
+                };
+                value_codec::json!({"kind":"point","first":first,"firstInterval":first_interval,
+                    "second":second,"secondInterval":second_interval,"point":point,
+                    "residual":residual,"contact":contact})
+            }
+            Self::Overlap {
+                first_interval,
+                second_interval,
+                reversed,
+                max_control_residual,
+            } => {
+                value_codec::json!({"kind":"overlap","firstInterval":first_interval,
+                    "secondInterval":second_interval,"reversed":reversed,
+                    "maxControlResidual":max_control_residual})
+            }
+        }
+    }
+}
 impl value_codec::Serialize for CurveSurfaceComponent {
     fn to_value(&self) -> value_codec::Value {
         match self {
@@ -2778,6 +5440,52 @@ impl value_codec::Serialize for CurveSurfaceComponent {
                 value_codec::json!({"kind":"overlap","curveInterval":curve_interval})
             }
         }
+    }
+}
+
+impl value_codec::Serialize for CurveRuledSurfaceComponent {
+    fn to_value(&self) -> value_codec::Value {
+        match self {
+            Self::Point {
+                t,
+                t_interval,
+                uv,
+                uv_box,
+                point,
+                residual,
+                contact,
+            } => {
+                let contact = match contact {
+                    Contact::Transverse => "transverse",
+                    Contact::Boundary => "boundary",
+                };
+                value_codec::json!({"kind":"point","t":t,"tInterval":t_interval,
+                    "uv":uv,"uvBox":uv_box,"point":point,
+                    "residual":residual,"contact":contact})
+            }
+            Self::Overlap {
+                curve_interval,
+                uv_start,
+                uv_end,
+                max_control_residual,
+                seam_wrap,
+                correspondence,
+            } => {
+                value_codec::json!({"kind":"overlap","curveInterval":curve_interval,
+                    "uvStart":uv_start,"uvEnd":uv_end,
+                    "maxControlResidual":max_control_residual,
+                    "seamWrap":seam_wrap,"correspondence":correspondence})
+            }
+        }
+    }
+}
+impl value_codec::Serialize for OverlapCorrespondence {
+    fn to_value(&self) -> value_codec::Value {
+        let kind = match self.kind {
+            OverlapCorrespondenceKind::MobiusV => "mobius_v",
+            OverlapCorrespondenceKind::AffineU => "affine_u",
+        };
+        value_codec::json!({"kind":kind,"samples":self.samples})
     }
 }
 
@@ -4829,5 +7537,1147 @@ mod tests {
             UnresolvedReason::UnsupportedSurface
         );
         assert!(!report.permits_topology_change());
+    }
+
+    fn line3(a: [f64; 3], b: [f64; 3]) -> Curve {
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights: vec![1., 1.],
+            periodic: false,
+        }
+    }
+    fn quarter_circle() -> Curve {
+        let w = std::f64::consts::FRAC_1_SQRT_2;
+        Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0., 0.], vec![1., 1., 0.], vec![0., 1., 0.]],
+            weights: vec![1., w, 1.],
+            periodic: false,
+        }
+    }
+    fn cc_points(report: &Report<CurveCurveComponent>) -> Vec<(f64, f64)> {
+        report
+            .components
+            .iter()
+            .filter_map(|c| match c {
+                CurveCurveComponent::Point {
+                    first, second, ..
+                } => Some((*first, *second)),
+                _ => None,
+            })
+            .collect()
+    }
+    #[test]
+    fn crossing_lines_resolve_one_transverse_point() {
+        let a = line3([0., 0., 0.], [2., 0., 0.]);
+        let b = line3([1., -1., 0.], [1., 1., 0.]);
+        let report = curve_curve(&a, &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(!report.permits_topology_change());
+        let CurveCurveComponent::Point {
+            first,
+            second,
+            point,
+            residual,
+            contact,
+            ..
+        } = &report.components[0]
+        else {
+            panic!("Expected one point: {report:?}")
+        };
+        assert_eq!(report.components.len(), 1, "{report:?}");
+        // Independent Bernstein oracle: A(t)=(2t,0,0), B(u)=(1,2u-1,0).
+        assert!((*first - 0.5).abs() <= 1e-10, "{report:?}");
+        assert!((*second - 0.5).abs() <= 1e-10, "{report:?}");
+        assert!(distance(*point, [1., 0., 0.]) <= 1e-9);
+        assert!(*residual <= 1e-9);
+        assert_eq!(*contact, Contact::Transverse);
+    }
+    #[test]
+    fn rational_quarter_circle_crosses_diagonal_line() {
+        let arc = quarter_circle();
+        let diagonal = line3([0., 0., 0.], [1., 1., 0.]);
+        let report = curve_curve(&diagonal, &arc, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert_eq!(report.components.len(), 1, "{report:?}");
+        let CurveCurveComponent::Point {
+            first,
+            second,
+            point,
+            residual,
+            ..
+        } = &report.components[0]
+        else {
+            panic!("Expected point")
+        };
+        // Line point (t,t,0) on x^2+y^2=1 gives t=1/sqrt(2); the symmetric
+        // rational quarter circle reaches 45 degrees at u=1/2.
+        assert!((*first - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-9, "{report:?}");
+        assert!((*second - 0.5).abs() < 1e-9, "{report:?}");
+        assert!((point[0] * point[0] + point[1] * point[1] - 1.).abs() < 1e-10);
+        assert!(*residual <= 1e-9);
+    }
+    #[test]
+    fn two_beziers_resolve_two_crossings_in_parameter_order() {
+        // A: x=2t, y=2t(1-t); B: y=3/8. 2t(1-t)=3/8 gives t=1/4 and 3/4.
+        let parabola = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 1., 0.], vec![2., 0., 0.]],
+            weights: vec![1., 1., 1.],
+            periodic: false,
+        };
+        let line = line3([0., 0.375, 0.], [2., 0.375, 0.]);
+        let report = curve_curve(&parabola, &line, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cc_points(&report);
+        assert_eq!(roots.len(), 2, "{report:?}");
+        for ((t, u), expected) in roots.iter().zip([0.25, 0.75]) {
+            assert!((t - expected).abs() < 1e-9, "{report:?}");
+            assert!((u - expected).abs() < 1e-9, "{report:?}");
+        }
+    }
+    #[test]
+    fn parallel_disjoint_and_skew_pairs_are_empty_and_resolved() {
+        let a = line3([0., 0., 0.], [1., 0., 0.]);
+        let parallel = line3([0., 1., 0.], [1., 1., 0.]);
+        let report = curve_curve(&a, &parallel, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.components.is_empty());
+        let skew = line3([0., 0., 1.], [1., 1., 1.]);
+        let report = curve_curve(&a, &skew, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.components.is_empty());
+    }
+    #[test]
+    fn coincident_collinear_segments_clip_both_trim_intervals() {
+        let a = line3([0., 0., 0.], [1., 0., 0.]);
+        for reversed in [false, true] {
+            let b = if reversed {
+                line3([1.5, 0., 0.], [0.5, 0., 0.])
+            } else {
+                line3([0.5, 0., 0.], [1.5, 0., 0.])
+            };
+            let report = curve_curve(&a, &b, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveCurveComponent::Overlap {
+                first_interval,
+                second_interval,
+                reversed: run_reversed,
+                max_control_residual,
+            } = &report.components[0]
+            else {
+                panic!("Expected overlap: {report:?}")
+            };
+            assert_eq!(*first_interval, [0.5, 1.]);
+            assert_eq!(*second_interval, if reversed { [0.5, 1.] } else { [0., 0.5] });
+            assert_eq!(*run_reversed, reversed);
+            assert_eq!(*max_control_residual, 0.);
+        }
+        // Weighted rational line x(t)=3t/(1+2t): geometric [1/2,1] maps to
+        // [1/4,1] in source parameters (independent Möbius inversion oracle).
+        let mut weighted = line3([0., 0., 0.], [1., 0., 0.]);
+        weighted.weights = vec![1., 3.];
+        let b = line3([0.5, 0., 0.], [1.5, 0., 0.]);
+        let report = curve_curve(&weighted, &b, Options::default()).unwrap();
+        let CurveCurveComponent::Overlap { first_interval, .. } = &report.components[0] else {
+            panic!("Expected weighted overlap: {report:?}")
+        };
+        assert!((first_interval[0] - 0.25).abs() < 1e-12, "{report:?}");
+        assert!((first_interval[1] - 1.).abs() < 1e-12, "{report:?}");
+    }
+    #[test]
+    fn shared_endpoint_is_one_boundary_event_with_exact_parameters() {
+        let a = line3([0., 0., 0.], [1., 0., 0.]);
+        let b = line3([1., 0., 0.], [2., 1., 0.]);
+        for (first, second, t, u) in [(&a, &b, 1., 0.), (&b, &a, 0., 1.)] {
+            let report = curve_curve(first, second, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveCurveComponent::Point {
+                first: p,
+                second: q,
+                contact,
+                residual,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected endpoint event")
+            };
+            assert_eq!(*p, t);
+            assert_eq!(*q, u);
+            assert_eq!(*contact, Contact::Boundary);
+            assert_eq!(*residual, 0.);
+        }
+    }
+    #[test]
+    fn tangent_curves_stay_unresolved_without_a_guessed_point() {
+        let parabola = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 1., 0.], vec![2., 0., 0.]],
+            weights: vec![1., 1., 1.],
+            periodic: false,
+        };
+        let tangent_line = line3([0., 0.5, 0.], [2., 0.5, 0.]);
+        let report = curve_curve(&parabola, &tangent_line, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        assert!(
+            report.components.is_empty()
+                || report
+                    .components
+                    .iter()
+                    .all(|c| matches!(c, CurveCurveComponent::Overlap { .. })),
+            "{report:?}"
+        );
+        assert!(
+            report
+                .unresolved
+                .iter()
+                .any(|u| u.reason == UnresolvedReason::TangencyOrMultipleRoot),
+            "{report:?}"
+        );
+    }
+    #[test]
+    fn tight_budget_preserves_pending_parameter_regions() {
+        // Two-span curves: four span pairs; two boxes process, the remaining
+        // pairs stay explicit pending regions in source knot coordinates.
+        let two_span = |x: f64| Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.],
+            control_points: vec![
+                vec![x - 1., 0., 0.],
+                vec![x, 0., 0.],
+                vec![x + 1., 0., 0.],
+            ],
+            weights: vec![1., 1., 1.],
+            periodic: false,
+        };
+        let mut b = two_span(3.);
+        for point in &mut b.control_points {
+            point[1] = point[0] - 3.;
+            point[0] = 3.;
+        }
+        let report = curve_curve(
+            &two_span(0.),
+            &b,
+            Options {
+                max_boxes: 2,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        assert!(report.boxes_visited <= 2);
+        assert!(
+            report
+                .unresolved
+                .iter()
+                .all(|u| u.reason == UnresolvedReason::BudgetExceeded && u.parameter_box.len() == 4),
+            "{report:?}"
+        );
+        assert!(report.unresolved.len() >= 2, "{report:?}");
+    }
+    #[test]
+    fn operand_swap_maps_event_parameters() {
+        let a = line3([0., 0., 0.], [2., 0., 0.]);
+        let b = line3([1., -1., 0.], [1., 1., 0.]);
+        let forward = curve_curve(&a, &b, Options::default()).unwrap();
+        let swapped = curve_curve(&b, &a, Options::default()).unwrap();
+        let forward_points = cc_points(&forward);
+        let swapped_points = cc_points(&swapped);
+        assert_eq!(forward_points.len(), swapped_points.len());
+        for ((t, u), (v, s)) in forward_points.iter().zip(&swapped_points) {
+            assert_eq!(t, s);
+            assert_eq!(u, v);
+        }
+    }
+    #[test]
+    fn knot_shift_scale_and_weight_scaling_leave_geometry_invariant() {
+        let mut a = line3([0., 0., 0.], [2., 0., 0.]);
+        a.knots = vec![3., 3., 7., 7.];
+        a.weights = vec![7., 7.];
+        let mut b = line3([1., -1., 0.], [1., 1., 0.]);
+        b.knots = vec![-2., -2., 0., 0.];
+        b.weights = vec![0.5, 0.5];
+        let report = curve_curve(&a, &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cc_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        // t: 0.5 -> 3+4*0.5 = 5; u: 0.5 -> -2+2*0.5 = -1.
+        assert!((roots[0].0 - 5.).abs() <= 4e-10, "{report:?}");
+        assert!((roots[0].1 + 1.).abs() <= 2e-10, "{report:?}");
+    }
+    #[test]
+    fn curved_full_coincidence_reports_both_domains_under_knot_shift() {
+        let arc = quarter_circle();
+        let mut shifted = quarter_circle();
+        shifted.knots = shifted.knots.iter().map(|k| 3. + 2. * k).collect();
+        for (first, second, expected) in [
+            (&arc, &shifted, ([0., 1.], [3., 5.])),
+            (&shifted, &arc, ([3., 5.], [0., 1.])),
+        ] {
+            let report = curve_curve(first, second, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveCurveComponent::Overlap {
+                first_interval,
+                second_interval,
+                reversed,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected overlap: {report:?}")
+            };
+            assert_eq!(*first_interval, expected.0);
+            assert_eq!(*second_interval, expected.1);
+            assert!(!reversed);
+        }
+        let reversed_arc = arc.reverse().unwrap();
+        let report = curve_curve(&arc, &reversed_arc, Options::default()).unwrap();
+        let CurveCurveComponent::Overlap { reversed, .. } = &report.components[0] else {
+            panic!("Expected reversed overlap: {report:?}")
+        };
+        assert!(reversed);
+    }
+    #[test]
+    fn internal_knot_crossing_is_reported_once() {
+        // Two-span line crossed exactly at its internal knot t=0.5.
+        let a = Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]],
+            weights: vec![1., 1., 1.],
+            periodic: false,
+        };
+        let b = line3([1., -1., 0.], [1., 1., 0.]);
+        let report = curve_curve(&a, &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cc_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].0, 0.5);
+        assert!((roots[0].1 - 0.5).abs() <= 1e-10, "{report:?}");
+    }
+    #[test]
+    fn curve_curve_rejects_non_3d_and_invalid_options() {
+        let flat = Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 0.]],
+            weights: vec![1., 1.],
+            periodic: false,
+        };
+        let line = line3([0., 0., 0.], [1., 0., 0.]);
+        assert!(curve_curve(&flat, &line, Options::default()).is_err());
+        assert!(
+            curve_curve(
+                &line,
+                &line,
+                Options {
+                    max_depth: 0,
+                    ..Options::default()
+                }
+            )
+            .is_err()
+        );
+        assert!(curve_curve(&line, &line, Options::default()).unwrap().permits_topology_change() == false);
+    }
+
+    /// Full-circle ruled cylinder: radius 2 around the Z axis, z in [0,4].
+    /// The top boundary weights are `top` times the bottom weights, so
+    /// unequal endpoint weights give rational (Möbius) rulings in V.
+    fn ruled_cylinder(top: f64) -> Surface {
+        let w = std::f64::consts::FRAC_1_SQRT_2;
+        let ring = [
+            [2., 0.],
+            [2., 2.],
+            [0., 2.],
+            [-2., 2.],
+            [-2., 0.],
+            [-2., -2.],
+            [0., -2.],
+            [2., -2.],
+            [2., 0.],
+        ];
+        let weights = [1., w, 1., w, 1., w, 1., w, 1.];
+        Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: ring
+                .iter()
+                .map(|p| vec![vec![p[0], p[1], 0.], vec![p[0], p[1], 4.]])
+                .collect(),
+            weights: weights.iter().map(|w| vec![*w, *w * top]).collect(),
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+    fn cs_points(report: &Report<CurveRuledSurfaceComponent>) -> Vec<(f64, [f64; 2])> {
+        report
+            .components
+            .iter()
+            .filter_map(|c| match c {
+                CurveRuledSurfaceComponent::Point { t, uv, .. } => Some((*t, *uv)),
+                _ => None,
+            })
+            .collect()
+    }
+    /// Unique Möbius map through three (t,v) samples, by the cross-ratio
+    /// identity (v-v0)(v1-v2)/((v-v2)(v1-v0)) = (t-t0)(t1-t2)/((t-t2)(t1-t0)).
+    fn mobius_through(samples: &[[f64; 3]; 3], t: f64) -> f64 {
+        let (t0, v0) = (samples[0][0], samples[0][2]);
+        let (t1, v1) = (samples[1][0], samples[1][2]);
+        let (t2, v2) = (samples[2][0], samples[2][2]);
+        let k = (t - t0) * (t1 - t2) / ((t - t2) * (t1 - t0));
+        (v0 * (v1 - v2) - k * v2 * (v1 - v0)) / ((v1 - v2) - k * (v1 - v0))
+    }
+    #[test]
+    fn seam_crossing_on_closed_cylinder_reports_one_event_at_canonical_u() {
+        let r3 = 3_f64.sqrt();
+        for top in [1., 3.] {
+            let surface = ruled_cylinder(top);
+            // Chord through the seam point (2,0,2) and the 30-degree point
+            // (sqrt3,1,2), offset by non-dyadic thirds/sevenths so both
+            // crossings land strictly inside subdivision boxes: seam crossing
+            // at t=7/31, second crossing at t=28/31.
+            let d = [r3 - 2., 1., 0.];
+            let curve = line3(
+                [2. - d[0] / 3., -d[1] / 3., 2.],
+                [r3 + d[0] / 7., 1. + d[1] / 7., 2.],
+            );
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            let points = cs_points(&report);
+            // One event for the seam contact (not one per seam side), one for
+            // the 30-degree crossing.
+            assert_eq!(points.len(), 2, "{report:?}");
+            // The Möbius v of the z=2 slice: s=1/2, v = s/(top-s(top-1)).
+            let v2 = 0.5 / (top - 0.5 * (top - 1.));
+            let (t0, uv0) = points[0];
+            assert!((t0 - 7. / 31.).abs() < 1e-9, "{report:?}");
+            assert!(uv0[0] < 1e-6 || uv0[0] > 1. - 1e-6, "{report:?}");
+            assert!((uv0[1] - v2).abs() < 1e-9, "{report:?}");
+            let (t1, uv1) = points[1];
+            assert!((t1 - 28. / 31.).abs() < 1e-9, "{report:?}");
+            assert!(uv1[0] > 0.08 && uv1[0] < 0.09, "{report:?}");
+            assert!((uv1[1] - v2).abs() < 1e-9, "{report:?}");
+            // The seam contact is a single event — never one per seam side.
+            // A one-sided Newton resolution keeps its resolving-side
+            // parameter; confirmed two-sided contacts fold to u=0.
+            let seam_side = points
+                .iter()
+                .filter(|(_, uv)| uv[0] < 1e-6 || uv[0] > 1. - 1e-6)
+                .count();
+            assert_eq!(seam_side, 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Point { point, .. } = &report.components[1] else {
+                panic!("Expected point: {report:?}")
+            };
+            assert!(distance(*point, [r3, 1., 2.]) < 1e-9, "{report:?}");
+        }
+    }
+    #[test]
+    fn seam_endpoint_contact_merges_to_one_canonical_event() {
+        for top in [1., 3.] {
+            let surface = ruled_cylinder(top);
+            // Line in the z=0 plane ending exactly on the seam directrix point
+            // (2,0,0): x^2+y^2=4 along the line only at t=1, so the endpoint
+            // owns the contact; it is admitted from BOTH seam sides
+            // (u=0 and u=1 corners) and must unify to one canonical u=0 event.
+            let curve = line3([4., -2., 0.], [2., 0., 0.]);
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Point {
+                t,
+                uv,
+                point,
+                residual,
+                contact,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected seam endpoint event: {report:?}")
+            };
+            assert_eq!(*t, 1., "{report:?}");
+            assert_eq!(uv[0], 0., "{report:?}");
+            assert_eq!(uv[1], 0., "{report:?}");
+            assert!(distance(*point, [2., 0., 0.]) <= 1e-9);
+            assert!(*residual <= 1e-9);
+            assert_eq!(*contact, Contact::Boundary);
+            let _ = top;
+        }
+    }
+    #[test]
+    fn seam_ruling_reports_single_wrapped_overlap_with_mobius_correspondence() {
+        for top in [1., 3.] {
+            let surface = ruled_cylinder(top);
+            // The seam ruling itself: x=2, y=0, z from 1 to 3.
+            let curve = line3([2., 0., 1.], [2., 0., 3.]);
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Overlap {
+                curve_interval,
+                uv_start,
+                uv_end,
+                seam_wrap,
+                correspondence,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected seam ruling overlap: {report:?}")
+            };
+            assert_eq!(*curve_interval, [0., 1.]);
+            assert_eq!(uv_start[0], 0., "{report:?}");
+            assert_eq!(uv_end[0], 0., "{report:?}");
+            assert!(seam_wrap, "{report:?}");
+            let Some(correspondence) = correspondence else {
+                panic!("Expected correspondence: {report:?}")
+            };
+            assert_eq!(correspondence.kind, OverlapCorrespondenceKind::MobiusV);
+            let lift = |z: f64| {
+                let s = z / 4.;
+                s / (top - s * (top - 1.))
+            };
+            assert!((correspondence.samples[0][2] - lift(1.)).abs() < 1e-9, "{report:?}");
+            assert!((correspondence.samples[2][2] - lift(3.)).abs() < 1e-9, "{report:?}");
+            assert!(correspondence.samples.iter().all(|s| s[1] == 0.), "{report:?}");
+            // The reconstructed Möbius t->v map matches direct evaluation at
+            // seven interior parameters.
+            for i in 1..=7 {
+                let t = i as f64 / 8.;
+                let v = mobius_through(&correspondence.samples, t);
+                let p = surface.evaluate(0., v).unwrap().point;
+                let q = curve.evaluate(t).unwrap().point;
+                assert!(distance(p, point3(&q)) < 1e-9, "{report:?}");
+            }
+        }
+    }
+    #[test]
+    fn near_closed_seam_keeps_duplicates_behind_unresolved_bands() {
+        let mut surface = ruled_cylinder(1.);
+        // Perturb the seam's last control column: the seam rulings no longer
+        // coincide exactly, so nothing merges by tolerance.
+        surface.control_points[8][0][0] += 1e-7;
+        surface.control_points[8][1][0] += 1e-7;
+        let curve = line3([3., 0., 2.], [-3., 0., 2.]);
+        let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        for u in [0., 1.] {
+            assert!(
+                report.unresolved.iter().any(|band| {
+                    band.reason == UnresolvedReason::NearCoincidence
+                        && band.parameter_box[2] == u
+                        && band.parameter_box[3] == u
+                }),
+                "{report:?}"
+            );
+        }
+        // No unification: the two seam-side contacts survive as separate
+        // events instead of one canonical u=0 event.
+        let points = cs_points(&report);
+        let seam_side: Vec<_> = points
+            .iter()
+            .filter(|(_, uv)| uv[0] < 0.01 || uv[0] > 0.99)
+            .collect();
+        assert_eq!(seam_side.len(), 2, "{report:?}");
+        assert!(points.iter().any(|(t, uv)| (*t - 5. / 6.).abs() < 1e-9 && (uv[0] - 0.5).abs() < 1e-9), "{report:?}");
+    }
+    #[test]
+    fn iso_v_overlap_carries_affine_u_correspondence() {
+        let w = std::f64::consts::FRAC_1_SQRT_2;
+        let bottom = [vec![2., 0., 0.], vec![2., 2., 0.], vec![0., 2., 0.]];
+        let top = [vec![2., 0., 4.], vec![2., 2., 4.], vec![0., 2., 4.]];
+        let surface = Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..3).map(|i| vec![bottom[i].clone(), top[i].clone()]).collect(),
+            weights: vec![[1., 1.], [w, w], [1., 1.]]
+                .iter()
+                .map(|r| r.to_vec())
+                .collect(),
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let curve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: bottom.to_vec(),
+            weights: vec![1., w, 1.],
+            periodic: false,
+        };
+        let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert_eq!(report.components.len(), 1, "{report:?}");
+        let CurveRuledSurfaceComponent::Overlap {
+            seam_wrap,
+            correspondence,
+            ..
+        } = &report.components[0]
+        else {
+            panic!("Expected iso-v overlap: {report:?}")
+        };
+        assert!(!seam_wrap, "{report:?}");
+        let Some(correspondence) = correspondence else {
+            panic!("Expected correspondence: {report:?}")
+        };
+        assert_eq!(correspondence.kind, OverlapCorrespondenceKind::AffineU);
+        let s = &correspondence.samples;
+        assert!(s.iter().all(|s| s[2] == 0.), "{report:?}");
+        // Affine u(t) through the samples matches direct evaluation at five
+        // interior parameters.
+        for i in 1..=5 {
+            let t = i as f64 / 6.;
+            let u = s[0][1]
+                + (s[2][1] - s[0][1]) * (t - s[0][0]) / (s[2][0] - s[0][0]);
+            let p = surface.evaluate(u, s[0][2]).unwrap().point;
+            let q = curve.evaluate(t).unwrap().point;
+            assert!(distance(p, point3(&q)) < 1e-9, "{report:?}");
+        }
+    }
+
+    #[test]
+    fn line_through_ruled_plane_resolves_exact_parameters() {
+        let surface = flat();
+        let curve = line3([0.25, 0.25, -1.], [0.25, 0.25, 1.]);
+        let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(!report.permits_topology_change());
+        assert_eq!(report.components.len(), 1, "{report:?}");
+        let CurveRuledSurfaceComponent::Point {
+            t,
+            uv,
+            point,
+            residual,
+            contact,
+            ..
+        } = &report.components[0]
+        else {
+            panic!("Expected point: {report:?}")
+        };
+        // Independent oracle: C(t)=(1/4,1/4,2t-1), z=0 at t=1/2, S(u,v)=(u,v,0).
+        assert!((*t - 0.5).abs() <= 1e-10, "{report:?}");
+        assert!((uv[0] - 0.25).abs() <= 1e-10, "{report:?}");
+        assert!((uv[1] - 0.25).abs() <= 1e-10, "{report:?}");
+        assert!(distance(*point, [0.25, 0.25, 0.]) <= 1e-9);
+        assert!(*residual <= 1e-9);
+        assert_eq!(*contact, Contact::Transverse);
+    }
+    #[test]
+    fn line_pierces_ruled_cylinder_twice_at_known_parameters() {
+        let surface = ruled_cylinder(1.);
+        // Line y=x at z=2 crosses the circle at 45 and 225 degrees: those are
+        // the midpoints of quadratic spans 0 and 2, so u = 1/8 and 5/8, v = 1/2.
+        let curve = line3([-3., -3., 2.], [3., 3., 2.]);
+        for surface in [surface.clone(), transpose_surface(&surface)] {
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            let points = cs_points(&report);
+            assert_eq!(points.len(), 2, "{report:?}");
+            let s2 = std::f64::consts::SQRT_2;
+            // Ascending t: (-sqrt2,-sqrt2) at 225 degrees is u=5/8 (span 2
+            // midpoint); (sqrt2,sqrt2) at 45 degrees is u=1/8 (span 0 midpoint).
+            let oracle = [((3. - s2) / 6., 0.625), ((3. + s2) / 6., 0.125)];
+            for ((t, uv), (et, eu)) in points.iter().zip(oracle) {
+                assert!((t - et).abs() < 1e-9, "{report:?}");
+                let (uu, vv) = if surface.degree_v == 1 {
+                    (uv[0], uv[1])
+                } else {
+                    (uv[1], uv[0])
+                };
+                assert!((uu - eu).abs() < 1e-9, "{report:?}");
+                assert!((vv - 0.5).abs() < 1e-9, "{report:?}");
+            }
+            for component in &report.components {
+                let CurveRuledSurfaceComponent::Point {
+                    point,
+                    residual,
+                    contact,
+                    ..
+                } = component
+                else {
+                    panic!("Expected points only: {report:?}")
+                };
+                assert!((point[0] * point[0] + point[1] * point[1] - 4.).abs() < 1e-9);
+                assert!((point[2] - 2.).abs() < 1e-9);
+                assert!(*residual <= 1e-9);
+                assert_eq!(*contact, Contact::Transverse);
+            }
+        }
+    }
+    #[test]
+    fn ruling_coincidence_reports_overlap_with_lifted_uv_path() {
+        for top in [1., 3.] {
+            let surface = ruled_cylinder(top);
+            // Ruling at 45 degrees (u=1/8): x=y=sqrt(2), z from 1 to 3.
+            // z(v) = 4·s with s = v·top/(1-v+v·top): z=1 -> v=1/(2+2top)... solve
+            // 4·top·v/(1-v+top·v) = z  =>  v = z/(4top - z(top-1)).
+            let lift = |z: f64| z / (4. * top - z * (top - 1.));
+            let curve = line3(
+                [std::f64::consts::SQRT_2, std::f64::consts::SQRT_2, 1.],
+                [std::f64::consts::SQRT_2, std::f64::consts::SQRT_2, 3.],
+            );
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Overlap {
+                curve_interval,
+                uv_start,
+                uv_end,
+                max_control_residual,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected ruling overlap: {report:?}")
+            };
+            assert_eq!(*curve_interval, [0., 1.]);
+            assert!((uv_start[0] - 0.125).abs() < 1e-9, "{report:?}");
+            assert!((uv_end[0] - 0.125).abs() < 1e-9, "{report:?}");
+            assert!((uv_start[1] - lift(1.)).abs() < 1e-9, "{report:?}");
+            assert!((uv_end[1] - lift(3.)).abs() < 1e-9, "{report:?}");
+            assert!(*max_control_residual <= 1e-9);
+            // The lifted path endpoints re-evaluate to the curve ends on the
+            // source surface; along an unequal-weight ruling the parameter
+            // correspondence is Möbius: with w1/w0 = top uniformly and
+            // Cartesian fraction s along the ruling, v = s/(top-s(top-1)).
+            let c = std::f64::consts::SQRT_2;
+            for i in 0..=20 {
+                let f = i as f64 / 20.;
+                let expected = curve.evaluate(f).unwrap().point;
+                let s = (1. + 2. * f) / 4.;
+                let v = s / (top - s * (top - 1.));
+                let p = surface.evaluate(uv_start[0], v).unwrap().point;
+                assert!(distance(p, point3(&expected)) < 1e-9, "{report:?}");
+                assert!((expected[0] - c).abs() < 1e-12);
+                assert!((expected[2] - (1. + 2. * f)).abs() < 1e-12);
+            }
+        }
+    }
+    #[test]
+    fn iso_v_coincidence_reports_overlap_in_both_orientations() {
+        // Open ruled patch between a quarter arc at z=0 and its lift at z=4.
+        // (A closed-in-U surface would legitimately report seam-duplicate
+        // contacts at u=0/1; that double cover is out of scope.)
+        let w = std::f64::consts::FRAC_1_SQRT_2;
+        let bottom = [vec![2., 0., 0.], vec![2., 2., 0.], vec![0., 2., 0.]];
+        let top = [vec![2., 0., 4.], vec![2., 2., 4.], vec![0., 2., 4.]];
+        let surface = Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..3).map(|i| vec![bottom[i].clone(), top[i].clone()]).collect(),
+            weights: vec![[1., 1.], [w, w], [1., 1.]]
+                .iter()
+                .map(|r| r.to_vec())
+                .collect(),
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let arc = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: bottom.to_vec(),
+            weights: vec![1., w, 1.],
+            periodic: false,
+        };
+        for reversed in [false, true] {
+            let curve = if reversed {
+                arc.reverse().unwrap()
+            } else {
+                arc.clone()
+            };
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Overlap {
+                curve_interval,
+                uv_start,
+                uv_end,
+                max_control_residual,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected iso-v overlap: {report:?}")
+            };
+            assert_eq!(*curve_interval, [0., 1.]);
+            let (start_u, end_u) = if reversed { (1., 0.) } else { (0., 1.) };
+            assert_eq!(*uv_start, [start_u, 0.]);
+            assert_eq!(*uv_end, [end_u, 0.]);
+            assert!(*max_control_residual <= 1e-9);
+        }
+    }
+    #[test]
+    fn missing_and_grazing_lines_are_empty_or_unresolved_never_guessed() {
+        let surface = ruled_cylinder(1.);
+        let outside = line3([-3., -3., 6.], [3., 3., 6.]);
+        let report = curve_ruled_surface(&outside, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.components.is_empty());
+        // Tangent to the cylinder along the y direction at x=2, z=2.
+        let tangent = line3([2., -1., 2.], [2., 1., 2.]);
+        let report = curve_ruled_surface(&tangent, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        assert!(
+            !report
+                .components
+                .iter()
+                .any(|c| matches!(c, CurveRuledSurfaceComponent::Point { .. })),
+            "{report:?}"
+        );
+        assert!(
+            report
+                .unresolved
+                .iter()
+                .any(|u| u.reason == UnresolvedReason::TangencyOrMultipleRoot
+                    && u.parameter_box.len() == 6),
+            "{report:?}"
+        );
+    }
+    #[test]
+    fn ruled_surface_budget_exhaustion_preserves_pending_boxes() {
+        let surface = ruled_cylinder(1.);
+        let curve = line3([-3., -3., 2.], [3., 3., 2.]);
+        let report = curve_ruled_surface(
+            &curve,
+            &surface,
+            Options {
+                max_boxes: 2,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        assert!(report.boxes_visited <= 2);
+        assert!(
+            report
+                .unresolved
+                .iter()
+                .all(|u| u.reason == UnresolvedReason::BudgetExceeded && u.parameter_box.len() == 6),
+            "{report:?}"
+        );
+        assert!(!report.unresolved.is_empty());
+    }
+    #[test]
+    fn curve_endpoints_own_contacts_at_all_four_patch_corners() {
+        let surface = flat();
+        for (corner, start) in [
+            ([0., 0.], [-1., -1., 1.]),
+            ([1., 0.], [2., -1., 1.]),
+            ([1., 1.], [2., 2., 1.]),
+            ([0., 1.], [-1., 2., 1.]),
+        ] {
+            let end = [corner[0], corner[1], 0.];
+            let curve = line3(start, end);
+            let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.components.len(), 1, "{report:?}");
+            let CurveRuledSurfaceComponent::Point {
+                t,
+                uv,
+                point,
+                residual,
+                contact,
+                ..
+            } = &report.components[0]
+            else {
+                panic!("Expected corner contact: {report:?}")
+            };
+            assert_eq!(*t, 1.);
+            assert_eq!(*uv, corner);
+            assert!(distance(*point, end) <= 1e-9);
+            assert!(*residual <= 1e-9);
+            assert_eq!(*contact, Contact::Boundary);
+        }
+    }
+    #[test]
+    fn ruled_query_invariant_under_knot_shift_scale_and_weight_scaling() {
+        let mut surface = flat();
+        surface.knots_u = vec![3., 3., 7., 7.];
+        surface.knots_v = vec![-2., -2., 0., 0.];
+        surface.weights = vec![vec![5., 5.]; 2];
+        let mut curve = line3([0.25, 0.25, -1.], [0.25, 0.25, 1.]);
+        curve.knots = vec![10., 10., 14., 14.];
+        curve.weights = vec![0.25, 0.25];
+        let report = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let points = cs_points(&report);
+        assert_eq!(points.len(), 1, "{report:?}");
+        // t: 0.5 -> 10+4*0.5 = 12; u: 0.25 -> 3+4*0.25 = 4; v: 0.25 -> -1.5.
+        assert!((points[0].0 - 12.).abs() <= 4e-10, "{report:?}");
+        assert!((points[0].1[0] - 4.).abs() <= 4e-10, "{report:?}");
+        assert!((points[0].1[1] + 1.5).abs() <= 2e-10, "{report:?}");
+    }
+    #[test]
+    fn ruled_query_reversal_maps_curve_parameter_and_keeps_uv() {
+        let surface = ruled_cylinder(1.);
+        let curve = line3([-3., -3., 2.], [3., 3., 2.]);
+        let forward = curve_ruled_surface(&curve, &surface, Options::default()).unwrap();
+        let reversed =
+            curve_ruled_surface(&curve.reverse().unwrap(), &surface, Options::default()).unwrap();
+        let (a, b) = (cs_points(&forward), cs_points(&reversed));
+        assert_eq!(a.len(), 2, "{forward:?}");
+        assert_eq!(b.len(), 2, "{reversed:?}");
+        // Reversal flips event order: first reversed event is the last forward one.
+        for ((t, uv), (rt, ruv)) in a.iter().zip(b.iter().rev()) {
+            assert!((1. - t - rt).abs() < 1e-9, "{forward:?} {reversed:?}");
+            assert!((uv[0] - ruv[0]).abs() < 1e-12, "{forward:?} {reversed:?}");
+            assert!((uv[1] - ruv[1]).abs() < 1e-12, "{forward:?} {reversed:?}");
+        }
+    }
+    #[test]
+    fn ruled_query_refuses_unsupported_surfaces_and_invalid_inputs() {
+        // A biquadratic tensor patch is not a ruled surface in either direction.
+        let curved = Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points: (0..3)
+                .map(|i| {
+                    (0..3)
+                        .map(|j| vec![i as f64, j as f64, (i * j) as f64 * 0.25])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 3]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let curve = line3([0.25, 0.25, -1.], [0.25, 0.25, 1.]);
+        let report = curve_ruled_surface(&curve, &curved, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::Incomplete, "{report:?}");
+        assert_eq!(report.unresolved.len(), 1);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
+        assert_eq!(report.unresolved[0].parameter_box.len(), 6);
+        assert!(!report.permits_topology_change());
+        let flat2d = Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 0.]],
+            weights: vec![1., 1.],
+            periodic: false,
+        };
+        assert!(curve_ruled_surface(&flat2d, &flat(), Options::default()).is_err());
+        assert!(
+            curve_ruled_surface(
+                &curve,
+                &flat(),
+                Options {
+                    max_boxes: 0,
+                    ..Options::default()
+                }
+            )
+            .is_err()
+        );
+    }
+
+    fn debug_refine() {
+        let a = Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]],
+            weights: vec![1., 1., 1.],
+            periodic: false,
+        };
+        let b = line3([1., -1., 0.], [1., 1., 0.]);
+        let ta = [0.49999999997089617, 0.5];
+        let tb = [0.49999999994179234, 0.5];
+        let tm = ta[0] + (ta[1]-ta[0])*0.5;
+        let um = tb[0] + (tb[1]-tb[0])*0.5;
+        eprintln!("tm={tm} um={um}");
+        let ja = a.evaluate(tm).unwrap();
+        let jb = b.evaluate(um).unwrap();
+        eprintln!("ja={:?} jb={:?}", ja.point, jb.point);
+        eprintln!("d1a={:?} d1b={:?}", ja.d1, jb.d1);
+        eprintln!("sine={:?}", tangent_sine(&a, &b, tm, um));
+        eprintln!("refine={:?}", refine_curve_root(&a, &b, ta, tb, tm, um, Options::default()));
+    }
+
+    /// Piecewise-linear curve through a C0 kink at (1,1,0) on the plane z=0;
+    /// both one-sided tangents leave the plane transversally.
+    fn kink_curve() -> Curve {
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 2.],
+            control_points: vec![
+                vec![0., 0., -1.],
+                vec![1., 1., 0.],
+                vec![2., 0., 1.],
+            ],
+            weights: vec![1.; 3],
+            periodic: false,
+        }
+    }
+    /// Ruled plane z=0 over x in [-1,3], y in [-1,2] (canonical ruled-in-V).
+    fn wide_ruled_plane() -> Surface {
+        Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![-1., -1., 0.], vec![-1., 2., 0.]],
+                vec![vec![3., -1., 0.], vec![3., 2., 0.]],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+    /// Cubic with a single transverse root of z=0 exactly at t=1/2 whose de
+    /// Casteljau split value is not a bitwise zero (thirds in the polygon).
+    fn dyadic_root_cubic() -> Curve {
+        bezier(&[-2., -1. / 3., 2. / 3., 1.])
+    }
+    #[test]
+    fn c0_knot_plane_crossing_resolves_with_one_sided_jets() {
+        let report = curve_plane(&kink_curve(), plane(0.), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        let roots = points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].parameter, 1.);
+        assert_eq!(roots[0].point, [1., 1., 0.]);
+        assert_eq!(roots[0].contact, Contact::Boundary);
+        assert!(roots[0].plane_residual <= 1e-9);
+    }
+    #[test]
+    fn c0_knot_curve_curve_crossing_resolves_with_one_sided_jets() {
+        // The kink at t=1 is crossed at u=1/2 by a line transverse to both
+        // one-sided tangents; the knot-aligned root must not collapse into
+        // an unresolved band.
+        let b = line3([1., 0., -1.], [1., 2., 1.]);
+        let report = curve_curve(&kink_curve(), &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cc_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].0, 1.);
+        assert_eq!(roots[0].1, 0.5);
+    }
+    #[test]
+    fn c0_knot_ruled_surface_crossing_resolves_with_one_sided_jets() {
+        // The kink at t=1 pierces the ruled plane z=0 at (u,v)=(1/2,2/3).
+        let report =
+            curve_ruled_surface(&kink_curve(), &wide_ruled_plane(), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cs_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].0, 1.);
+        assert!((roots[0].1[0] - 0.5).abs() <= 1e-12, "{report:?}");
+        assert!((roots[0].1[1] - 2. / 3.).abs() <= 1e-12, "{report:?}");
+    }
+    #[test]
+    fn dyadic_boundary_root_is_reported_once_at_the_exact_parameter() {
+        // Root bitwise on the depth-1 subdivision face t=1/2 of [0,1].
+        let report = curve_plane(&dyadic_root_cubic(), plane(0.), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        let roots = points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].parameter, 0.5);
+        assert!(roots[0].plane_residual <= 1e-9);
+        assert!(
+            roots[0].parameter_interval[0] <= 0.5 && 0.5 <= roots[0].parameter_interval[1],
+            "{report:?}"
+        );
+    }
+    #[test]
+    fn dyadic_boundary_curve_curve_root_is_reported_once() {
+        // Both parameters land bitwise on subdivision faces: t=u=1/2.
+        let b = line3([0.5, -1., -1.], [0.5, 1., 1.]);
+        let report = curve_curve(&dyadic_root_cubic(), &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        let roots = cc_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0], (0.5, 0.5));
+        // Reversed operand order owns the same boundary root exactly once.
+        let swapped = curve_curve(&b, &dyadic_root_cubic(), Options::default()).unwrap();
+        let swapped_roots = cc_points(&swapped);
+        assert_eq!(swapped_roots.len(), 1, "{swapped:?}");
+        assert_eq!(swapped_roots[0], (0.5, 0.5));
+    }
+    #[test]
+    fn dyadic_boundary_ruled_surface_root_is_reported_once() {
+        // The cubic pierces the ruled plane z=0 at t=1/2, u=3/8, v=1/3.
+        let report =
+            curve_ruled_surface(&dyadic_root_cubic(), &wide_ruled_plane(), Options::default())
+                .unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        let roots = cs_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].0, 0.5);
+        assert!((roots[0].1[0] - 0.375).abs() <= 1e-12, "{report:?}");
+        assert!((roots[0].1[1] - 1. / 3.).abs() <= 1e-12, "{report:?}");
+    }
+    #[test]
+    fn domain_end_root_is_owned_exactly_once_across_queries() {
+        // Cubic ending on the plane: C(1)=0 with a transverse derivative and
+        // a strictly negative interior (no other roots).
+        let ending = bezier(&[-2., -1., -1. / 3., 0.]);
+        let report = curve_plane(&ending, plane(0.), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].parameter, 1.);
+        assert_eq!(roots[0].contact, Contact::Boundary);
+        // Curve/curve at the shared domain end (1,1).
+        let b = line3([1., -1., -1.], [1., 1., 1.]);
+        let report = curve_curve(&ending, &b, Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert_eq!(cc_points(&report), vec![(1., 0.5)], "{report:?}");
+        // Curve/ruled-surface at the curve's domain end.
+        let report =
+            curve_ruled_surface(&ending, &wide_ruled_plane(), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        let roots = cs_points(&report);
+        assert_eq!(roots.len(), 1, "{report:?}");
+        assert_eq!(roots[0].0, 1.);
+    }
+    #[test]
+    fn full_sweep_over_knot_dyadic_and_domain_end_roots_has_no_dupes_or_misses() {
+        // Degree-1 curve with a C0 kink root at the knot t=1/2, a dyadic
+        // mid-span root at t=5/4 and a domain-end root at t=2; all crossings
+        // lie on the x-axis segment from (0,0,0) to (4,0,0).
+        let curve = Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.5, 2., 2.],
+            control_points: vec![
+                vec![0., 0., -1.],
+                vec![1., 0., 0.],
+                vec![2., 0., 2.],
+                vec![3., 0., -2.],
+                vec![4., 0., 0.],
+            ],
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let report = curve_plane(&curve, plane(0.), Options::default()).unwrap();
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        let parameters: Vec<f64> = points(&report).iter().map(|p| p.parameter).collect();
+        assert_eq!(parameters, vec![0.5, 1.25, 2.], "{report:?}");
+        // The same sweep through curve/segment keeps one event per root.
+        let report = curve_segment(&curve, [0., 0., 0.], [4., 0., 0.], Options::default()).unwrap();
+        let hits = report
+            .components
+            .iter()
+            .filter(|c| matches!(c, CurveSegmentComponent::Point { .. }))
+            .count();
+        assert_eq!(hits, 3, "{report:?}");
+        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
     }
 }

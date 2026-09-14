@@ -43,7 +43,7 @@ fn bounds(model: &Model) -> [[f64; 3]; 2] {
 
 /// Concatenate independently owned topology after proving spatial separation.
 /// No coordinate weld, surface fitting or mesh reconstruction is involved.
-fn separated_union(a: &Model, b: &Model) -> Result<Model> {
+pub(crate) fn separated_union(a: &Model, b: &Model) -> Result<Model> {
     let mut result = a.clone();
     result.tolerance_mm = a.tolerance_mm.max(b.tolerance_mm);
     let (v, e, l, f, s) = (

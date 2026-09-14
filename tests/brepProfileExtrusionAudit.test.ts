@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest'
-import { createBrepSemanticBackend, inspectBrepSemanticPayload } from '../src/services/brepSemanticBackend'
-import { executeSemanticProgram } from '../src/services/semanticProgramExecutor'
+import { executeBrepNativeProgram } from '../src/services/brepNativeExecutor'
 import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
 import {
   analyzeNurbsBrep,
@@ -24,12 +23,12 @@ function circle(): NurbsCurve {
 const lower = (source: string) => lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n' + source)
 
 async function solid(source: string): Promise<NurbsBrep> {
-  const run = await executeSemanticProgram(lower(source), createBrepSemanticBackend())
+  const run = await executeBrepNativeProgram(lower(source))
   try {
     expect(run.outputs).toHaveLength(1)
     const output = run.outputs[0].value
-    if (output.tag !== 'value') throw new Error('Expected a nonempty solid')
-    return inspectBrepSemanticPayload(output.payload).model
+    if (output.tag !== 'value' || output.geometry.kind !== 'solid') throw new Error('Expected a nonempty solid')
+    return output.geometry.model
   } finally {
     await run.dispose()
   }

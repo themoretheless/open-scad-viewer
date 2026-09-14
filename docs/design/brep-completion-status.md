@@ -103,7 +103,10 @@ replacement for the requested scope. The implementation is substantial, but
 full completion is **not proved**. A successful primitive, mesh validation, or
 test run is evidence only for the behavior it actually exercises.
 
-The scope comes from [the 14-stage master plan](brep-nurbs-14-stage-master-plan.md)
+The forward-looking work plan lives in
+[rust-migration-forward-plan.md](rust-migration-forward-plan.md); this document
+remains the evidence trail. The scope comes from
+[the 14-stage master plan](brep-nurbs-14-stage-master-plan.md)
 and [the kernel design](rust-brep-nurbs-kernel.md), including their later feature
 contracts. Their historical implementation stop instructions do not supersede
 the user's current explicit implementation request. Their geometric, numerical,
@@ -2760,3 +2763,839 @@ terminal prefix equality) remain host-side because execution-plan admission
 refuses non-null terminals and non-empty discardedEffects before the replay,
 and the application executor replacement remains open; this is scoped
 evidence, not full completion.
+
+### Native application executor replacement
+
+The last per-node TypeScript executor is gone. The audit showed
+BrepSemanticBackend (src/services/brepSemanticBackend.ts, 329 lines) had no
+production caller left: the scene path already ran fully native through
+executeBrepNativeProgram, so the class only served tests while duplicating
+native session ownership host-side — the payloadEntries WeakMap of frozen
+geometry snapshots, the entries/issued/localPayloads lease maps and sets, the
+nativeLease translation table, the programHash/languageContract/carrierKey/
+nodeIndex consistency checks, and the retained-set commit re-validation. All
+of it is deleted, not wrapped: Rust now owns every lease, snapshot, commit and
+disposal decision, and TS keeps transport plus UI bookkeeping only (selection,
+entity IDs, display mesh assembly, presentation metadata). With it went the
+payload symbol-brand, BREP_SEMANTIC_CARRIERS, both inspect* snapshot views and
+the test-only maxRetainedGeometryCharacters knob; brepSemanticErrors.ts stays
+as the host diagnostic shape for native failure reports. displayPolicyHash was
+genuine derivation, so it moved behind the WASM ABI as the new brep_scene_plan
+op (quality/segments admission plus the byte-identical
+brep-display-policy-v1 sha256, pinned against the retired host value);
+brepSemanticScene.ts consumes the native hash while the diagnostic lane
+deliberately re-derives it host-side so a worker cannot self-certify.
+Mesh-span/provenance mapping stayed host-side as pure bookkeeping: spans are
+copied verbatim from the admitted envelope and entity IDs come from natively
+admitted occurrence.sceneEntityId. The error surface is unchanged — the brep-1
+contract refusal carries backendCause E_BREP_SEMANTIC_UNSUPPORTED as before,
+and native failure reports reconstruct GeometryKernelError as
+backendCause.kernelCause. The retired 18-test backend suite was ported, not
+dropped: tests/brepNativeProgramSemantics.test.ts (17 tests) repeats every
+geometry/behavior assertion through executeBrepNativeProgram, brepNativeSession
+now asserts exact geometry instead of cross-checking the legacy executor, and
+the profile-extrusion audit runs natively with identical mass/centroid/refusal
+checks; lease-lifecycle cases live in the native session tests and Rust
+suites. Two new brep_scene_plan native tests pin the hash and refusals; 193
+native bridge tests and 126 integration tests across twelve files pass.
+[Scoped evidence](../qualification/brep-native-executor-replacement-v1.json)
+Type checking and packed-byte verification pass with 68 dist artifacts
+(4,685,177 bytes). The mid-graph per-node incremental API surface is retired
+by design (native brep_session begin/evaluate/snapshot/commit remains for any
+future consumer), character-budget exhaustion is exercised only at the fixed
+4 MiB native bound, display tessellation/BVH/geometryAssetId stay host-side
+presentation concerns, the hull/curved-Boolean evaluation gap is unchanged,
+and the generic executeSemanticProgram host executor remains for the Manifold
+backend; this is scoped evidence, not full completion.
+
+### NURBS curve/curve intersection query
+
+Added curve_curve in brep-core, the brep_intersect_curve_curve bridge op and
+the intersectNurbsCurveCurve adapter, closing the first curve/curve cell of
+the row-8a pair matrix. Both positive-weight 3D NURBS operands decompose into
+knot-span rational Bezier pieces; one FIFO queue fairly traverses all span
+pairs and their homogeneous midpoint subdivisions, outward-rounded
+control-hull ranges exclude disjoint boxes, and terminal boxes pass a
+hull-diagonal separation bound before midpoint candidates are admitted. A
+transverse candidate must Newton-refine on the two dominant cross-product
+axes to a root inside its own isolating box — halo boxes whose refinement
+image lands elsewhere stay silent instead of duplicating the root with
+shifted parameters, and point events merge only by touching parameter
+intervals, never by spatial proximity. Exact knot-corner evaluation owns
+endpoint and shared-knot contacts (boundary contacts at domain ends admit on
+distance alone, interior corners require a transverse tangent pair), and
+events dedup by exact parameter pair. Coincident span pairs resolve in two
+honest ways: numerically collinear spans clip the shared support-line
+interval by inverting both rational parameterizations through the
+shared-budget curve/plane isolator, retaining ascending trim intervals on
+both curves plus a direction flag, while curved spans coincide only under
+proportional homogeneous polygons after degree elevation. Tangency and
+multiple-root regions (unit-tangent sine at most 1e-6), near-coincidence
+bands, non-monotone or otherwise ambiguous coincidence clipping and budget
+exhaustion remain explicit unresolved regions with paired parameter boxes.
+
+Native oracles cover crossing lines, a line against a rational quarter
+circle, two parabola/line crossings in parameter order, disjoint parallel and
+skew pairs, collinear coincidence clipping in both directions including the
+weighted Mobius inversion mapping geometric [1/2,1] to source [1/4,1], a
+single boundary event at a shared endpoint, curved full-span coincidence
+under knot shift and reversal, a single report at an internal-knot crossing,
+operand-swap parameter mapping, knot shift/scale and weight-scaling
+invariance, tangency refusal without a guessed point, and budget exhaustion
+preserving pending regions. All 194 native workspace tests pass in debug and
+release (57 intersection tests, 13 new), 201 geometry-bridge tests pass, the
+rebuilt packed WASM passes 35 adapter tests (4 new) and 56 tests across the
+four brep vitest suites, and vue-tsc --noEmit passes. The production build
+ships 68 dist artifacts (4,695,432 bytes; the kernel chunk budget was not
+raised). [Scoped evidence](../qualification/brep-curve-curve-intersection-v1.json)
+This is a numerical, uncertified query: tangency certification, general
+curved partial-coincidence clipping, CS/SS pairs, richer parameter
+correspondences for overlaps, and any topology-changing consumption of these
+reports remain open.
+
+### NURBS curve/ruled-surface intersection query
+
+Added curve_ruled_surface in brep-core, the brep_intersect_curve_ruled_surface
+bridge op and the intersectNurbsCurveRuledSurface adapter, closing the ruled
+cell of the row-8b CS pair matrix. The surface is admitted only in canonical
+ruled form (degree 1 with two control rows and positive, possibly unequal,
+endpoint weights in one direction, any positive-weight rational multi-span in
+the other, non-periodic in the ruling direction; a linear-in-U patch is
+transposed to ruled-in-V and its answers swapped back). Curve knot spans and
+surface ruling-direction spans decompose into homogeneous rational Bezier
+pieces under one FIFO fair queue; outward-rounded control-hull ranges plus a
+hull-diagonal triangle lower bound exclude disjoint boxes, and because V
+never subdivides a terminal box tries its 3x3 Newton confirmation of
+C(t)=S(u,v) even above the residual gate — an admitted root must land inside
+its own [t]x[u]x[v] box with a unit-column determinant
+|det(C',S_u,S_v)| > 1e-6, so halo boxes whose refinement image leaves the box
+stay silent. Exact parameter-corner evaluation owns boundary contacts
+(domain-end curve contacts admit on distance alone, interior corners require
+transversality), events dedup by exact (t,u,v), and point events merge only
+by touching (t,u) intervals. Curve-on-surface coincidence resolves in two
+algebraically exact families: a collinear span lying on a ruling clips the
+ruling interval through the shared-budget curve/plane isolator (candidate u
+values filtered by the second control-row plane, halo bands touching
+certified roots absorbed, provably off-plane bands discarded) and lifts its V
+range through the weighted Mobius map, recursing the off-surface piece
+against the second plane; an iso-V span coincides only under proportional
+homogeneous polygons after degree elevation to a common degree capped at 25.
+
+Native oracles cover a line through a ruled plane with exact parameters, a
+line piercing a full-circle rational ruled cylinder twice with both
+orientations (ruled-in-V and transposed linear-in-U), ruling overlaps with
+equal and 3x unequal endpoint weights whose lifted V endpoints match the
+independent Mobius lift, an iso-V quarter-arc overlap on an open patch in
+both curve directions, a clean miss, four exact patch-corner boundary events,
+knot shift/scale and weight-scaling invariance, curve reversal, tangency
+refusal with explicit 6-parameter bands, budget exhaustion preserving pending
+span pairs, and refusal of a biquadratic patch plus invalid inputs. All 205
+native workspace tests pass in debug and release (67 intersection tests, 10
+new), 202 geometry-bridge tests pass (1 new serialization pin), the rebuilt
+packed WASM passes 39 adapter tests (4 new) and 60 tests across the four
+brep vitest suites, and vue-tsc --noEmit passes. The production build ships
+68 dist artifacts (4,712,137 bytes; the verify-dist total budget was raised
+4,700,000 -> 4,720,000 with a recorded justification: the query adds 27,645
+packed bytes to the geometry chunk, which stays within its unchanged
+2,400,000-byte budget, and per-artifact limits are untouched).
+[Scoped evidence](../qualification/brep-curve-ruled-surface-v1.json)
+This remains a numerical, uncertified query: general CS against arbitrary
+NURBS surfaces, analytic SS pairs, tangency certification, seam unification
+for geometrically closed ruled surfaces, per-parameter correspondence along
+overlaps (the unequal-weight Mobius correspondence in V), and partial ruling
+trims as clipped coincident_trim intervals stay open, and
+permitsTopologyChange remains false.
+
+### Curve/ruled-surface seam unification and overlap correspondence
+
+The curve/ruled-surface query closed its two recorded gaps. Geometric U-seam
+closure is now detected on the canonical ruled-in-V orientation by exact
+homogeneous proportionality of the two seam ruling polygons (bitwise after
+the dominant-component ratio, positive scale only); a near-proportional seam
+(relative mismatch within 1e-6) is never merged by tolerance — both seam
+bands are reported as explicit near_coincidence 6-parameter regions and
+duplicates are kept, while clearly open surfaces are untouched. On an
+exactly closed seam, point events whose isolating boxes touch the two domain
+ends merge into one event when their curve-parameter intervals touch and
+their V boxes overlap (parameter-based, never spatial): the canonical
+representative sits at u = u_min and keeps the better-residual witness;
+events resolved from only one seam side keep their resolving-side parameter.
+Ruling overlaps at u_min/u_max with identical lifted V endpoints and
+touching curve intervals fold into a single wrapped component at u_min, and
+iso-V chains leaving the domain at u_max re-enter at u_min with the wrap
+marked (`seamWrap`); overlaps now also carry a sampled per-parameter
+correspondence — three exact (t,u,v) triples at the curve-interval fractions
+0, 1/2, 1 reconstructing the Möbius t->v cross-ratio map along a ruling
+(`mobius_v`) or the affine t->u map along an iso-V directrix (`affine_u`),
+null only where a seam merge joins pieces with different maps. Serialization
+is additive only (`seamWrap`, `correspondence`); existing fields, budgets
+(tol 1e-9, parameter tol 1e-10, maxDepth 48, maxBoxes 8192), source-knot
+parameters, parameter-based dedup and permitsTopologyChange=false are
+unchanged. Native oracles: a chord through the seam of a full rational
+cylinder (equal and 3x unequal endpoint weights) reports one seam event, not
+two; a curve ending exactly on the seam directrix admits from both seam
+sides and unifies to one canonical u=0 boundary event; a curve on the seam
+ruling yields one wrapped overlap whose reconstructed Möbius map matches
+direct surface evaluation at seven interior parameters to 1e-9; an iso-V
+overlap's affine map matches at five interior parameters to 1e-9; a 1e-7
+perturbed seam stays duplicate behind explicit near_coincidence bands with
+incomplete coverage. All 209 native workspace tests pass in debug and
+release (71 intersection tests, 5 new), 202 geometry-bridge tests pass
+(unchanged), the rebuilt packed WASM passes 62 tests across the four brep
+vitest suites (41 intersection tests, 2 new — seam unification through WASM
+and correspondence roundtrip), and vue-tsc --noEmit passes. The production
+build ships 68 dist artifacts (4,715,127 bytes, +2,990 over the previous
+slice; the geometry chunk is 2,396,593 bytes — within the unchanged
+2,400,000 chunk budget and the unchanged 4,720,000 total budget, so no
+budget change was needed).
+[Scoped evidence](../qualification/brep-cs-seam-correspondence-v1.json)
+This remains a numerical, uncertified query: general CS against arbitrary
+NURBS surfaces, analytic SS pairs and tangency certification stay open, as
+do partial ruling trims; one-sided seam resolutions keep their side
+parameter, and the pre-existing Newton limits stand — iterates landing
+bitwise on a C0 knot with missing one-sided jets fail the box into an
+explicit near_coincidence band, and a transverse root bitwise on a
+subdivision boundary can be left silent by every adjacent terminal box.
+
+### Newton C0-knot jets and boundary ownership
+
+The two documented Newton limits are closed. One-sided jets from the
+adjacent Bézier spans now stand in wherever the two-sided jet is missing at
+a C0 knot: the curve/plane endpoint screen accepts either transverse side,
+the curve/curve and curve/ruled-surface transversality screens take the
+largest sine over every one-sided side pair, and both Newton refiners step
+with the came-from side's jet (any confirming side is accepted) and
+re-screen a converged C0 root one-sidedly — transverse kink roots resolve,
+roots tangent from both sides stay explicitly unresolved. Half-open box
+ownership is documented and applied uniformly across curve/plane,
+curve/segment, curve/curve and curve/ruled-surface: every subdivision box
+owns its interior and its lower-parameter face, the domain's upper end
+belongs to the last box, and converged Newton images within two binary64
+steps of a shared face snap onto it bitwise, so a root sitting on a box
+boundary is reported exactly once at the exact face parameter while halo
+boxes stay silent. Curve/plane terminal and zero-variation boxes decide
+shared faces by exact evaluation with the box-side one-sided jet, and
+curve/plane point events whose isolating intervals touch now merge keeping
+the lowest-residual parameter, mirroring the curve/curve rule; dedup stays
+by exact parameters only, no tolerance grew, and curve/segment inherits the
+curve/plane behavior. All 217 native workspace tests pass in debug and
+release (79 intersection tests, 8 new — five fail against the pre-fix
+behavior; the dyadic curve/curve, dyadic curve/ruled-surface and domain-end
+fixtures also pass pre-fix and guard the latent one-ulp silence window),
+202 geometry-bridge tests pass unchanged, the rebuilt packed WASM passes 64
+tests across the four brep vitest suites (43 intersection tests, 2 new —
+knot-aligned and boundary-exact fixtures), and vue-tsc --noEmit passes. The
+production build ships 68 dist artifacts (4,719,922 bytes, +4,795 over the
+previous slice; the geometry chunk is 2,401,388 bytes, so the chunk budget
+rose 2,400,000 to 2,405,000 while the total stays within the unchanged
+4,720,000 budget).
+[Scoped evidence](../qualification/brep-newton-boundary-ownership-v1.json)
+This remains a numerical, uncertified query: general CS against arbitrary
+NURBS surfaces, analytic SS pairs and tangency certification stay open, as
+do partial ruling trims and one-sided seam resolutions. Newton images that
+leave a box by more than the two-step face-snap window still stay silent
+outside, a rounding-scale transverse near-pass exactly on a shared face can
+now report a contact point with its true residual instead of a
+near_coincidence band, and NumericallyResolved is still not certified
+complete-domain coverage with permitsTopologyChange false.
+
+### Analytic sphere/sphere intersection
+
+The first analytic surface/surface cell landed: `intersect_sphere_sphere`
+accepts two canonical sphere solids — the exact eight-patch stereographic
+construction from `analytic::sphere`, optionally carried through a rigid
+affine placement — and refuses everything else with an explicit
+unsupported_surface region, never a numerical fallback. Recognition is a
+full structural certificate, not a shape guess: exact quarter-disk trim
+pcurves, exact patch weights, every control point verified against the
+stereographic construction in the recovered per-patch frame, and a global
+pole/quadrant tiling check (each hemisphere/quadrant pair exactly once).
+Center-distance classification runs on outward binary64 intervals widened
+by the observed recognition deviation: separate and
+contained-without-contact pairs (including concentric unequal radii)
+resolve empty, concentric equal spheres report a coincident_trim region
+instead of a fabricated curve, and every exact or within-band tangency —
+external or internal — reports tangency_or_multiple_root with no point
+component, matching the numerical queries' discipline that tangent
+contacts are never points. A transverse pair yields the exact rational
+circle (four 90-degree arcs, weights cos(pi/4), center/radius/normal in
+binary64 from the two sphere definitions) plus the circle's exact lifts
+into both spheres' UV: planar sections of a stereographic patch are exact
+UV circles — or UV lines through the origin when the section plane
+contains the patch pole — clipped to the patch quarter-disk and emitted
+as per-patch rational quadratic arcs with face indices. All 226 native
+workspace tests pass in debug and release (88 intersection tests, 9 new —
+equal and unequal pairs against sqrt(r^2-d^2/4) and polar tan/asin UV
+oracles to 1e-12, both-tangency bands, coincidence, containment,
+rotated/translated frames, refusal paths), 204 geometry-bridge tests pass
+(2 new — serialization and classification regions), the rebuilt packed
+WASM passes 67 tests across the four brep vitest suites (46 intersection
+tests, 3 new — WASM fixtures with UV evaluation through patch surfaces and
+JSON roundtrip), and vue-tsc --noEmit passes. The production build ships
+68 dist artifacts (4,726,482 bytes, +6,560 over the previous slice; the
+geometry chunk is 2,407,948 bytes, so the chunk budget rose 2,405,000 to
+2,410,000 and the total budget 4,720,000 to 4,730,000 — the only budget
+change, justified by the packed recognizer/classification/lift code).
+[Scoped evidence](../qualification/brep-sphere-sphere-intersection-v1.json)
+This remains a canonical-only, uncertified query: the other analytic SS
+pairs (cylinder, cone/frustum, torus families) and general curved CS/SS
+stay open, tangency certification to a point is unresolved by design, UV
+lifts are per-patch pieces with no cross-patch sewing (an equator circle
+appears once per adjacent patch), NumericallyResolved is still not
+certified complete-domain coverage with permitsTopologyChange false, and
+nothing here is yet consumed by the Boolean pipeline.
+
+### Analytic sphere/cylinder intersection
+
+Added the second analytic SS cell: `intersect_sphere_cylinder` in
+`crates/brep-core/src/intersections/sphere_cylinder.rs`, bridged as
+`brep_intersect_sphere_cylinder` with the typed `intersectSphereCylinder`
+adapter — canonical stereographic spheres (recognizer shared with the
+sphere/sphere cell) against canonical six-face cylinders under rigid
+affine placement, axial configuration only. The new cylinder recognizer
+is a full structural certificate: exact side-patch weights and
+unit-square trims, inscribed quarter-circle cap trims, every control
+point verified against the exact construction in the recovered ring
+frame, a global quadrant tiling check, and both ring vertex sets.
+Axiality is certified, never forced: perpendicular offsets at pure
+rounding scale snap to the axis, recognition-scale offsets report a
+near_coincidence region, and clearly off-axis pairs — the general
+sphere/cylinder pair is a quartic — are explicit unsupported_surface
+regions, never a numerical fallback. Classification runs on outward
+binary64 bands widened by the observed recognition deviation: provably
+separated, strictly contained and swallowing configurations resolve
+empty; r < R yields cap-plane circles of radius sqrt(r^2-d^2) inside the
+cap disks; r > R yields side circles at s +/- sqrt(r^2-R^2) clipped by
+the finite height plus cap circles when the sphere pokes through a cap
+within the disk; the r == R band reports coincident_trim, and every rim
+or cap-plane tangency reports tangency_or_multiple_root — tangent
+contacts are never points or guessed circles, matching the house
+discipline. Resolved contacts are exact rational circles (four 90-degree
+arcs, weights cos(pi/4)) with UV lifts on both surfaces: iso-v lines on
+all four side patches, an exact UV circle of radius rho/(2R) about
+[1/2,1/2] on a cap face, and per-patch UV circles/lines on the sphere.
+All 238 native workspace tests pass in debug and release (100
+intersection tests, 12 new — sqrt(r^2-R^2) and cap sqrt(r^2-d^2) oracles
+to 1e-12, height clipping, zero-circle cases, coincident/tangency bands,
+near-axial and off-axis refusals, non-canonical refusals,
+rotated/translated placements, UV lifts verified through both surfaces
+to 1e-9), 206 geometry-bridge tests pass (2 new — serialization and
+classification regions), the rebuilt packed WASM passes 70 tests across
+the four brep vitest suites (49 intersection tests, 3 new — WASM
+fixtures with UV evaluation through patch surfaces and JSON roundtrip),
+and vue-tsc --noEmit passes. The production build ships 68 dist
+artifacts (4,733,862 bytes, +7,380 over the previous slice; the geometry
+chunk is 2,415,328 bytes, so the chunk budget rose 2,410,000 to 2,420,000
+and the total budget 4,730,000 to 4,740,000 — the only budget change,
+justified by the packed recognizer/classification/lift code).
+[Scoped evidence](../qualification/brep-sphere-cylinder-intersection-v1.json)
+This remains an axial-only, canonical-only, uncertified query: the
+non-axial sphere/cylinder case and the remaining analytic SS pairs
+(cone/torus families) stay open, tangency certification to a point is
+unresolved by design, cylinder side lifts are per-patch iso-v segments
+with no cross-patch sewing, NumericallyResolved is still not certified
+complete-domain coverage with permitsTopologyChange false, and nothing
+here is yet consumed by the Boolean pipeline.
+
+### Analytic cylinder/cylinder intersection
+
+intersect_cylinder_cylinder (brep-core intersections/cylinder_cylinder.rs,
+bridge op brep_intersect_cylinder_cylinder, TS adapter
+intersectCylinderCylinder) closed the third analytic surface/surface cell:
+two canonical cylinders with parallel axes. The strict canonical-cylinder
+recognizer from the sphere/cylinder cell was reused unchanged (its fields
+widened to pub(crate) only); anything else is an explicit
+unsupported_surface region, never a numerical fallback. Parallelism and
+coaxiality were certified, never forced, on outward binary64 bands widened
+by the observed recognition deviation: pure-rounding tilt or center-line
+offsets snapped, recognition-scale offsets reported near_coincidence, and
+clearly non-parallel pairs reported unsupported_surface (the general pair
+is a quartic; even the equal-radius perpendicular ellipse pair stays out of
+scope). A transverse parallel pair reduced to a planar circle/circle
+section in the common perpendicular plane and yielded two exact straight
+rulings (degree-1 lines) clipped by both finite heights in a common axial
+coordinate, with per-patch iso-u lifts on both side walls using the exact
+rational-arc parameter of the ruling angle (a quadratic solve in
+tan(theta), not a linear angle fraction) and seam rulings duplicated on
+both adjacent patches. External and internal tangencies (d == r1+r2,
+d == |r1-r2|), band-thin height clips, the coaxial equal-radius coincident
+side band (coincident_trim), and stacked equal-radius cap-plane
+coincidences (tangency_or_multiple_root) all stayed unresolved — tangent
+contacts were never guessed; coaxial unequal radii without a coincident cap
+plane resolved empty, while a coincident cap plane of nested coaxial
+cylinders honestly reported coincident_trim for the shared cap disk. All
+247 native workspace tests pass in debug and release (109 intersection
+tests, 9 new — circle/circle oracles to 1e-12, seam duplication, height
+clipping and degenerate clips, coaxial coincident/tangency/empty cases,
+tangent external/internal bands, near-parallel and non-parallel refusals,
+rotated/translated placements, UV lifts verified through both side surfaces
+to 1e-9, non-canonical refusals), 208 geometry-bridge tests pass (2 new —
+serialization and classification regions), the rebuilt packed WASM passes
+73 tests across the four brep vitest suites (52 intersection tests, 3 new —
+WASM fixtures with UV evaluation through patch surfaces and JSON
+roundtrip), and vue-tsc --noEmit passes. The production build ships 68 dist
+artifacts (4,735,172 bytes, +1,310 over the previous slice; the geometry
+chunk is 2,416,638 bytes, so both budgets — 2,420,000 chunk and 4,740,000
+total — held unchanged).
+[Scoped evidence](../qualification/brep-cylinder-cylinder-intersection-v1.json)
+This remains a parallel-axis, canonical-only, uncertified query: the
+non-parallel cylinder/cylinder case and the remaining analytic SS pairs
+(cone/torus families) stay open, tangency certification to a point or line
+is unresolved by design, side lifts are per-patch iso-u segments with no
+cross-patch sewing, NumericallyResolved is still not certified
+complete-domain coverage with permitsTopologyChange false, and nothing here
+is yet consumed by the Boolean pipeline.
+
+### Analytic plane/quadric intersections
+The fourth analytic surface/surface slice adds two cells: plane/sphere and
+plane/cylinder, both against a new shared canonical planar-patch operand —
+the strict recognizer admits only a one-face open model (no bodies) with an
+exact bilinear affine surface over the unit square, unit weights, four
+unit-square trims, four corner vertices and orthogonal edge vectors within
+the 1e-9 recognition scale, rigid affine placements admitted; the plane is
+always the first operand and a swapped pair is an explicit
+unsupported_surface region. Plane/sphere yields the exact circle of radius
+sqrt(r^2-d^2) with exact lifts both ways (ellipse arcs in the plane UV —
+the circle is axis-aligned in the rectangular patch frame — and clipped
+stereographic arcs on the sphere patches via the patchSections/lift split
+of the sphere/sphere cell). Plane/cylinder certifies the axis/plane angle,
+never forces it: pure-rounding tilts snap, recognition-scale tilts report
+near_coincidence, and clear cases are exact — the perpendicular section is
+the radius-R circle with iso-v side lifts, the parallel section two exact
+degree-1 rulings at chord distance with iso-u side lifts (clipped by the
+finite height and the patch rectangle in one closed-form line clip), and
+the oblique section the exact ellipse with semi-minor R and semi-major
+R/|axis.n|, clipped by the patch rectangle and both cap planes in one exact
+eccentric-angle clip (phi = atan2(Q,P) +- acos(-f0/hypot(P,Q)) per
+half-plane, extrema within a boundary band are tangencies and are never
+clipped through, surviving spans decided by exact midpoint evaluation). The
+oblique ellipse's cylinder-side lift is null — the unrolled ellipse is a
+cosine curve with no low-degree exact rational UV representation — so the
+3D ellipse and the plane-UV lift stay exact while no numerical fit is
+shipped; cap-plane coincidence reports coincident_trim, every distance,
+rim, boundary-line and cap-tangent contact stays tangency_or_multiple_root,
+and misses resolve empty. The bridge exposes
+brep_intersect_plane_sphere/brep_intersect_plane_cylinder and the typed TS
+adapters intersectPlaneSphere/intersectPlaneCylinder are transport-only.
+The slice adds 18 native intersection tests (127 total; full battery 265
+debug and release), 4 bridge serialization tests (212 total) and 3 packed
+WASM roundtrip suites cases (55 in the intersection suite, 76 across the
+four-suite battery), and vue-tsc --noEmit passes. The production build
+ships 68 dist artifacts (4,743,767 bytes, +8,595 over the previous slice;
+the geometry chunk is 2,425,233 bytes), so both budgets moved once —
+2,430,000 chunk and 4,750,000 total.
+[Scoped evidence](../qualification/brep-plane-quadric-intersection-v1.json)
+This remains a canonical-only, uncertified, side-contact-only query: the
+plane/cylinder report covers side-surface contacts (cap-disk chords in the
+parallel/oblique cases are not components), the oblique cylinder-side lift
+is out of scope, tangency certification to a point, line or circle is
+unresolved by design, NumericallyResolved is still not certified
+complete-domain coverage with permitsTopologyChange false, nothing here is
+yet consumed by the Boolean pipeline, and the remaining analytic SS pairs
+(cone/torus families) stay open.
+
+### Analytic plane/cone intersection
+The fifth analytic surface/surface slice adds the plane/cone (frustum) cell
+against the same canonical planar-patch operand (plane first, swapped order
+an explicit unsupported_surface region). A new strict recognizer admits only
+the exact canonical conical-frustum solid, certifying the four ruled
+rational-quadratic side patches against the linear radius taper between the
+two ring centers with the height counted exactly once (rigid affine
+placements admitted; a true-apex cone is admitted, an equal-radius frustum
+is a cylinder and is refused). In the apex frame the section is the exact
+conic A2 x^2 - L x + y^2 + C = 0 with A2 = K(g^2 - sigma^2), K = 1 + m^2,
+sigma = |m|/sqrt(K), g = axis.n: perpendicular planes yield the exact circle
+of linearly interpolated ring radius with iso-v lifts on the four side
+patches, through-axis planes yield two exact degree-1 rulings through the
+apex with iso-u side lifts, and oblique planes yield the exact ellipse
+(|g| > sigma), parabola (|g| = sigma within a pure-rounding angular snap —
+all weights 1) or hyperbola arcs, every clip against the ring planes and the
+patch rectangle a closed-form rational-quadratic half-plane cut in the exact
+curve parameter, never iterated. The cone-side lift of the oblique conics is
+null — on the ruled side patches they have no exact low-degree rational UV
+form (the plane/cylinder oblique-ellipse precedent) — while the 3D curve and
+the plane-UV lift stay exact; the ellipse matches an independent vertex
+oracle (semi-major 250/91 for the r 3->1, h 5 frustum at normal
+(0,0.6,0.8), offset 2) and the parabola the exact focal relation
+|L| = 1.1 sin(alpha). Ring-plane coincidence reports coincident_trim, the
+apex contact and the parabola threshold band stay tangency_or_multiple_root,
+recognition-scale tilts report near_coincidence, and misses resolve empty.
+The bridge exposes brep_intersect_plane_cone and the typed TS adapter
+intersectPlaneCone is transport-only. The slice adds 11 native intersection
+tests (138 total; full battery 276 debug and release), 2 bridge
+serialization tests (214 total) and 2 packed WASM roundtrip cases (57 in the
+intersection suite, 78 across the four-suite battery), and vue-tsc --noEmit
+passes. The production build ships 68 dist artifacts (4,756,257 bytes,
++12,490 over the previous slice; the geometry chunk is 2,437,723 bytes), so
+both budgets moved once — 2,445,000 chunk and 4,765,000 total.
+[Scoped evidence](../qualification/brep-plane-cone-intersection-v1.json)
+This remains a canonical-only, uncertified, side-contact-only query: cap-disk
+chords are not components, the cone-side lift of the oblique conics is out of
+scope by design, tangency certification to a point, line or circle is
+unresolved by design, NumericallyResolved is still not certified
+complete-domain coverage with permitsTopologyChange false, nothing here is
+yet consumed by the Boolean pipeline, and the remaining analytic SS pairs
+(torus family, non-parallel cylinder/cylinder, cone/cone) stay open.
+
+### Analytic sphere/cone intersection
+
+The sixth analytic SS cell paired the canonical stereographic sphere with
+the canonical conical frustum (both recognizers reused unchanged — the
+plane/cone frustum recognizer admits the true apex and refuses the
+equal-radius frustum as a cylinder; rigid affine placements admitted) in
+the axial configuration only: the sphere center is certified on the cone
+axis with the sphere/cylinder snap discipline (pure-rounding offsets snap,
+recognition-scale offsets report near_coincidence, clearly off-axis pairs
+are an explicit unsupported_surface region — the general pair is a quartic
+and stays out of scope, with no numerical fallback). Side contacts solve
+the single exact quadratic (1+m^2) q^2 + 2 rho_c m q + (rho_c^2 - r^2) = 0
+in the axial offset, whose discriminant compares r against the side-line
+distance |rho_c|/sqrt(1+m^2): two distinct in-height roots yield exact
+rational circles of linearly interpolated ring radius (iso-v lifts on all
+four side patches, per-patch UV lifts on the sphere, 16 samples on both
+implicit equations to 1e-12 against the closed-form root oracle), cap-plane
+crossings strictly inside a ring disk yield the exact cap-plane circle with
+the exact UV-circle cap lift, and provable misses (sphere axially beyond
+the solid, side line unreachable, cap circles provably outside the disks)
+resolve empty on the interval signs. The double-root side tangency, rim
+contacts (a root on a ring plane, a cap circle of ring radius, or the whole
+rim circle on the sphere), apex contacts (a root radius collapsing into the
+band — the sphere through the singular apex point) and cap-plane touches
+all stayed tangency_or_multiple_root, never points or guessed circles, with
+a coexisting transverse circle still reporting beside the explicit region;
+classification used outward binary64 bands widened by both recognition
+deviations. The slice also fixed a latent wraparound bug in the shared
+sphere_sphere::clip_circle span merge: spans crossing the angle origin were
+emitted with end < start, breaking the swept-interval contract and letting
+circle_arcs emit complementary negative-weight arcs that Curve::evaluate
+rejects (small wrapped spans silently lifted the complementary arc); the
+merge now unwraps the end past TAU. The bridge exposes
+brep_intersect_sphere_cone and the typed TS adapter intersectSphereCone is
+transport-only. The slice adds 13 native intersection tests (151 total;
+full battery 289 debug and release), 2 bridge serialization tests (216
+total) and 2 packed WASM roundtrip cases (59 in the intersection suite, 80
+across the four-suite battery), and vue-tsc --noEmit passes. The production
+build ships 68 dist artifacts (4,757,897 bytes, +1,640 over the previous
+slice; the geometry chunk is 2,439,363 bytes), so both budgets hold —
+2,445,000 chunk and 4,765,000 total unchanged.
+[Scoped evidence](../qualification/brep-sphere-cone-intersection-v1.json)
+This remains a canonical-only, axial-only, uncertified query: non-axial
+sphere/cone pairs are refused (the quartic is out of scope), tangency
+certification to a point or circle is unresolved by design, there is no
+sphere/cone coincidence case to certify, NumericallyResolved is still not
+certified complete-domain coverage with permitsTopologyChange false,
+nothing here is yet consumed by the Boolean pipeline, and the remaining
+analytic SS pairs (torus family, non-parallel cylinder/cylinder, cone/cone)
+stay open.
+
+### Analytic cone/cone intersection
+
+The seventh analytic surface/surface cell added
+intersect_cone_cone for the canonical conical frustum solids in the
+coaxial configuration, reusing plane_cone::recognize_cone unchanged for
+both operands (true apex admitted, equal-radius frustum refused as a
+cylinder, rigid affine placements admitted). Coaxiality was certified,
+never forced: parallelism on the axis cross-product magnitude and
+axiality on the perpendicular offset followed the sphere/cylinder snap
+discipline — pure-rounding tilts and offsets snapped, recognition-scale
+ones reported near_coincidence, and clearly non-parallel or off-axis
+pairs were explicit unsupported_surface regions (the general pair is a
+quartic, out of scope; no numerical fallback exists). Anti-axial pairs
+(apex-to-apex, base-to-base) were oriented by the sign of the axes' dot
+product and classified identically. In the shared axial coordinate each
+side carried the linear radius profile between its rings, so the side
+contact solved the single linear equation rho_1(s) == rho_2(s):
+different tapers admitted at most one height s*, reported as the exact
+rational circle of radius rho(s*) (four 90-degree arcs, weights
+cos(pi/4), iso-v lifts on all four side patches of both cones) only when
+s* was certified strictly inside both height ranges — a root clipped by
+either finite height was honestly absent. Roots within the band of any
+of the four ring planes (rim contacts), a root radius collapsing into
+the band (apex meeting), any two ring planes coinciding within the band
+(rim/rim, rim-on-cap, apex-on-cap boundary contacts) and ill-conditioned
+near-equal-taper crossings all stayed tangency_or_multiple_root, never
+guessed circles; equal-taper profiles coincident over the overlap
+reported coincident_trim (never a surface), clearly distinct profiles
+resolved empty, and equality at a single ring plane only stayed the rim
+tangency. The bridge exposes brep_intersect_cone_cone and the typed TS
+adapter intersectConeCone is transport-only. The slice adds 13 native
+intersection tests (164 total; full battery 302 debug and release), 2
+bridge serialization tests (218 total) and 2 packed WASM roundtrip cases
+(61 in the intersection suite, 82 across the four-suite battery), and
+vue-tsc --noEmit passes. The production build ships 68 dist artifacts
+(4,758,452 bytes, +555 over the previous slice; the geometry chunk is
+2,439,918 bytes), so both budgets hold — 2,445,000 chunk and 4,765,000
+total unchanged.
+[Scoped evidence](../qualification/brep-cone-cone-intersection-v1.json)
+This remains a canonical-only, coaxial-only, uncertified query:
+non-coaxial cone/cone pairs are refused (the quartic is out of scope),
+tangency certification to a point or circle is unresolved by design,
+profile coincidence reports coincident_trim without a trimmed surface,
+cap/cap coincidence is detected only as a ring-plane tangency region,
+NumericallyResolved is still not certified complete-domain coverage with
+permitsTopologyChange false, nothing here is yet consumed by the Boolean
+pipeline, and the remaining analytic SS pairs (torus family, non-coaxial
+cone/cone, non-parallel cylinder/cylinder) stay open.
+
+### Analytic plane/torus intersection
+
+The eighth analytic surface/surface cell paired the canonical planar patch
+with a new strict canonical ring-torus recognizer: the exact sixteen-patch
+solid of `analytic::torus` (4 profile quadrants x 4 revolution quadrants of
+rational biquadratic patches, exact tensor-product weights [[1,w,1],
+[w,w^2,w],[1,w,1]] with w = cos(pi/4), exact unit-square boundary trims and
+sixteen ring/quadrant vertices certified radially and axially against the
+exact profile, rigid affine placements admitted). Only strict ring tori
+exist canonically — horn and spindle tori stay constructor errors, so the
+recognizer never certifies a self-intersecting torus. Perpendicular planes
+resolve empty beyond the minor radius, stay tangency_or_multiple_root at
+|h| == r, and otherwise yield the two exact circles R +- sqrt(r^2 - h^2)
+(the equator pair R +- r at h == 0, landing exactly on profile seams);
+through-axis planes yield the two exact meridian circles of radius r at +-R.
+Both families are exact rational sweeps clipped in closed form by the patch
+rectangle, with iso-v (parallel) and iso-u (meridian) degree-1 torus lifts
+whose constant coordinate uses the exact rational 90-degree-arc parameter
+map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — derived with
+discriminant exactly 2, never fitted — and exact plane-UV ellipse arcs.
+Axis-parallel offset planes (Cassini ovals) and oblique planes (the quartic
+with Villarceau degeneracies) are honest unsupported_surface regions with
+near_coincidence bands at recognition scale; coincident_trim is deliberately
+unused (a plane never coincides with a curved torus patch). The bridge
+exposes brep_intersect_plane_torus and the typed TS adapter
+intersectPlaneTorus is transport-only. The slice adds 8 native intersection
+tests (172 total; full battery 310 debug and release), 2 bridge
+serialization tests (220 total) and 2 packed WASM roundtrip cases (63 in
+the intersection suite, 84 across the four-suite battery), and vue-tsc
+--noEmit passes. The production build ships 68 dist artifacts (4,767,027
+bytes, +8,575 over the previous slice; the geometry chunk is 2,448,493
+bytes), so both budgets move once — 2,455,000 chunk and 4,775,000 total.
+[Scoped evidence](../qualification/brep-plane-torus-intersection-v1.json)
+This remains a canonical-only, axial-only, uncertified query: oblique and
+Cassini plane sections are refused (no numerical fallback), tangency
+certification to a point or circle is unresolved by design,
+NumericallyResolved is still not certified complete-domain coverage with
+permitsTopologyChange false, nothing here is yet consumed by the Boolean
+pipeline, and the remaining analytic SS pairs (sphere/torus, torus/torus,
+the Villarceau oblique plane/torus section, non-parallel cylinder/cylinder)
+stay open.
+
+### Analytic sphere/torus intersection
+
+The ninth analytic surface/surface cell paired the canonical stereographic
+sphere with the canonical strict ring-torus solid in the axial
+configuration, reusing both recognizers unchanged (`plane_torus.rs` changed
+only by promoting `torus_residual` and `lift_parallel` to `pub(crate)`).
+Both surfaces are surfaces of revolution about the shared axis, so the
+section reduces to circle/circle in the meridian half-plane: the torus side
+(rho - R)^2 + z^2 = r_t^2 against the sphere rho^2 + (z - h)^2 = r_s^2 with
+h the sphere center height above the torus center plane. Provably separate
+(d > r_t + r_s) or contained (d < |r_t - r_s|) meridian circles resolve
+empty by the outward interval signs; the meridian tangencies (double roots
+at d == r_t + r_s and d == |r_t - r_s|, equator and off-center) stay
+tangency_or_multiple_root — the tangent contact revolves into a circle but
+is never guessed; a root whose revolved radius collapses into the band is
+the pole degeneracy and stays unresolved (unreachable for a strict ring
+torus, whose roots keep rho >= R - r_t >= 1e-5 — an honest guard, never
+guessed through). For a strict ring torus both roots always revolve, so the
+resolved family is exactly two circles (radius rho*, height z*): exact
+rational circles (four 90-degree arcs, weights cos(pi/4)) with iso-v torus
+lifts at the exact profile angle through the rational-arc parameter map
+t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — one degree-1 line
+per revolution quadrant patch — and per-patch stereographic sphere lifts.
+Axiality is certified, never forced: pure-rounding offsets snap,
+recognition-scale offsets report near_coincidence, and clearly off-axis
+pairs are unsupported_surface (the general pair is a quartic, out of
+scope). The bridge exposes brep_intersect_sphere_torus and the typed TS
+adapter intersectSphereTorus is transport-only. The slice adds 10 native
+intersection tests (182 total; full battery 320 debug and release), 2
+bridge serialization tests (222 total) and 2 packed WASM roundtrip cases
+(65 in the intersection suite, 86 across the four-suite battery), and
+vue-tsc --noEmit passes. The production build ships 68 dist artifacts
+(4,767,677 bytes, +650 over the previous slice; the geometry chunk is
+2,449,143 bytes), so both budgets stay unchanged (2,455,000 chunk and
+4,775,000 total).
+[Scoped evidence](../qualification/brep-sphere-torus-intersection-v1.json)
+This remains a canonical-only, axial-only, uncertified query: off-axis
+sphere/torus pairs are refused (no numerical fallback), tangency
+certification to a circle is unresolved by design, coincident_trim is
+deliberately unused (a sphere never coincides with a curved torus patch),
+NumericallyResolved is still not certified complete-domain coverage with
+permitsTopologyChange false, nothing here is yet consumed by the Boolean
+pipeline, and the remaining analytic SS pairs (torus/torus, cylinder/torus,
+cone/torus, the Villarceau oblique plane/torus section, non-parallel
+cylinder/cylinder) stay open.
+
+### Analytic cylinder/torus intersection
+
+The tenth analytic surface/surface cell paired the canonical six-face
+cylinder with the canonical strict ring-torus solid in the coaxial
+configuration, reusing both recognizers unchanged (no edits to
+`sphere_cylinder.rs`, `plane_torus.rs` or `sphere_sphere.rs`). Both
+surfaces are surfaces of revolution about the shared axis, so the section
+reduces to line/circle in the meridian half-plane: the cylinder side
+rho = R_c against the torus meridian circle (rho - R)^2 + z^2 = r^2. A
+provable miss (|R_c - R| > r + band) resolves empty by the outward interval
+signs; the tangent line (|R_c - R| == r within the band, the double root at
+z == 0 and the only configuration where the roots would coincide) stays
+tangency_or_multiple_root — never a guessed circle; otherwise
+z = +-sqrt(r^2 - (R_c - R)^2) are two distinct exact circles of radius R_c
+(a resolved branch always yields exactly two circles — the single-circle
+meridian resolution is structurally unreachable and is documented rather
+than tested), clipped by the finite height: a circle provably beyond a cap
+plane is absent, a circle on a cap plane within the band is the rim
+tangency. Cap planes crossing the tube (|h_c| < r provable) cut the exact
+circle pair R +- sqrt(r^2 - h_c^2): radii inside the cap disk are cap
+circle components, a radius equal to R_c within the band is the rim
+tangency, |h_c| == r within the band is the plane/tube tangency, and the
+inner-radius collapse guard is unreachable for a strict ring torus (an
+honest guard, never guessed through). Resolved contacts are exact rational
+circles (four 90-degree arcs, weights cos(pi/4)) with exact lifts: iso-v
+degree-1 lines at the exact height fraction on all four side patches, the
+exact UV circle of radius rho/(2R_c) about [1/2, 1/2] on a cap face, and
+iso-v torus parallels at the exact profile angle through the rational-arc
+parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — one
+degree-1 line per revolution quadrant patch. Coaxiality is certified, never
+forced: pure-rounding tilts and center-line offsets snap, recognition-scale
+tilts and offsets report near_coincidence, and clearly tilted or off-axis
+pairs are unsupported_surface (the general pair is a quartic, out of
+scope). The bridge exposes brep_intersect_cylinder_torus and the typed TS
+adapter intersectCylinderTorus is transport-only. The slice adds 11 native
+intersection tests (193 total; full battery 331 debug and release), 2
+bridge serialization tests (224 total) and 2 packed WASM roundtrip cases
+(67 in the intersection suite, 88 across the four-suite battery), and
+vue-tsc --noEmit passes. The production build ships 68 dist artifacts
+(4,771,577 bytes, +3,900 over the previous slice; the geometry chunk is
+2,453,043 bytes), so both budgets stay unchanged (2,455,000 chunk and
+4,775,000 total).
+[Scoped evidence](../qualification/brep-cylinder-torus-intersection-v1.json)
+This remains a canonical-only, coaxial-only, uncertified query: tilted and
+off-axis cylinder/torus pairs are refused (no numerical fallback), tangency
+certification to a circle is unresolved by design, coincident_trim is
+deliberately unused (a cylinder side never coincides with a curved torus
+patch), NumericallyResolved is still not certified complete-domain coverage
+with permitsTopologyChange false, nothing here is yet consumed by the
+Boolean pipeline, and the remaining analytic SS pairs (cone/torus,
+torus/torus, the Villarceau oblique plane/torus section, non-parallel
+cylinder/cylinder) stay open.
+
+### Analytic cone/torus intersection
+
+The eleventh analytic surface/surface cell paired the canonical conical
+frustum (true apex admitted; an equal-radius frustum refused as a cylinder)
+with the canonical strict ring-torus solid in the coaxial configuration —
+either axis orientation, the anti-axial pair oriented by the sign of the
+axes' dot product as in cone/cone — reusing both recognizers unchanged (no
+edits to `plane_cone.rs`, `plane_torus.rs`, `sphere_cylinder.rs` or
+`sphere_sphere.rs`). Both surfaces are surfaces of revolution about the
+shared axis, so the section reduces to line/circle in the meridian
+half-plane: the cone side is the slanted line (rho, z) = (r_b + m t,
+z_b + s t) in the cone's own axial parameter against the torus meridian
+circle (rho - R)^2 + z^2 = r^2 — one exact quadratic in t whose
+discriminant r^2 (1+m^2) - D^2 compares the tube radius against the
+line/circle-center distance |D|/sqrt(1+m^2). A provable miss resolves empty
+by the outward interval signs; the tangent line (double root, foot on the
+finite side segment) stays tangency_or_multiple_root — never a guessed
+circle; distinct roots revolve into the exact circles (rho* = r_b + m t*,
+z* = z_b + s t*), clipped by the finite height (a root provably beyond a
+ring plane honestly absent, a root on a ring plane within the band the rim
+contact, unresolved). Rim circles lying on the torus within the band
+((r_ring - R)^2 + h_q^2 == r^2, including the zero-radius apex ring) stay
+unresolved independent of the side classification, and ring planes with
+|h_c| < r provable cut the cap circle pair R +- sqrt(r^2 - h_c^2) reduced
+to the ring disk — inside the disk a component, equal to the ring radius
+the rim tangency, beyond it absent, |h_c| == r the plane/tube tangency. The
+apex/pole side-root guard (rho* collapsing into the band) and the
+inner-radius collapse guard are structurally unreachable for a strict ring
+torus (rho >= R - r >= 1e-5) and are documented honestly rather than
+tested; coincident_trim is deliberately unused (a cone side never coincides
+with a curved torus patch). Resolved contacts are exact rational circles
+(four 90-degree arcs, weights cos(pi/4)) with UV lifts on both surfaces:
+iso-v side lines at the exact height fraction on all four cone side
+patches, exact four-arc UV circles of radius rho/(2 r_ring) about
+[1/2, 1/2] on ring caps, and torus iso-v parallels at the exact profile
+angle phi = atan2(z, rho - R) through the exact rational 90-degree-arc
+parameter map. Twelve native tests (debug and release; 205 intersection
+tests total, 343 crate tests) pinned the exact two-circle quadratic oracle
+(5 t^2 - 33 t + 54 = 0, roots t = 3 and 3.6), the height-clipped
+single-side-circle configuration with the exact (129 -+ 3 sqrt(39))/20
+roots, the cap circle pair 3 +- sqrt(0.75), the anti-axial mirrored pair,
+the meridian tangency at z = 6 - sqrt(10) with its just-clear and
+just-across companions, the rim contact with the surviving transverse
+circle, the cap-plane tube tangency, the empty branches, the
+near_coincidence bands, the off-axis/tilted refusals, the non-canonical
+refusals and the rigid placement; two bridge tests and two packed-WASM TS
+tests (90 vitest tests across the four suites) carried the serialization.
+Scoped evidence: `docs/qualification/brep-cone-torus-intersection-v1.json`
+(sha256-pinned sources and WASM; the measured +5,710 packed bytes moved the
+geometry chunk budget to 2,460,000 and the total budget to 4,780,000, both
+recorded in `scripts/verify-dist.mjs`; 68 dist artifacts at 4,777,287
+bytes). permitsTopologyChange stays false, NumericallyResolved is still not
+certified complete-domain coverage, nothing here is yet consumed by the
+Boolean pipeline, and the remaining analytic SS pairs (torus/torus, the
+Villarceau oblique plane/torus section, non-parallel cylinder/cylinder)
+stay open.
+
+### Analytic torus/torus intersection
+
+The twelfth analytic surface/surface cell — the last cell of the
+canonical-primitive analytic SS family — paired two canonical strict
+ring-torus solids in the coaxial configuration (axes certified parallel
+and coincident, either orientation — the torus surface is symmetric about
+its center plane, so the axis sign is irrelevant to the section and enters
+only the second torus's profile-angle map; the two center planes may
+differ by an axial offset h), reusing the recognizer and lift helpers
+unchanged (no edits to `plane_torus.rs`, `sphere_sphere.rs` or any other
+prior SS module). Both surfaces are surfaces of revolution about the
+shared axis, so the section reduces to circle/circle in the meridian
+half-plane (rho >= 0, z along the first torus's axis): (rho - R_1)^2 +
+z^2 = r_1^2 against (rho - R_2)^2 + (z - h)^2 = r_2^2 — the same closed
+form as sphere/torus (a = (d^2 + r_1^2 - r_2^2)/(2d), l^2 = r_1^2 - a^2,
+d the meridian center distance between (R_1, 0) and (R_2, h)). Two
+distinct roots revolve into two exact circles (radius rho*, height z*,
+sorted by height then radius); a one-circle resolved configuration is
+structurally unreachable for a strict ring-torus pair (every meridian
+root keeps rho* >= R - r >= 1e-5, far beyond the band) and is documented
+honestly rather than tested. The double-root tangencies (external
+d == r_1 + r_2, internal d == |r_1 - r_2|) stay
+tangency_or_multiple_root — the tangent contact revolves into a circle
+but is never a guessed circle; the rho*-collapse pole guard is likewise
+unreachable for a strict ring torus and kept as an honest guard, never
+guessed through; equal meridian circles (R_1 == R_2, h == 0, r_1 == r_2
+within the bands) report coincident_trim; provably separate
+(d > r_1 + r_2) or contained (d + min < max) meridian circles resolve
+empty by the outward interval signs, including the concentric
+d <= band branch. Resolved contacts are exact rational circles (four
+90-degree arcs, weights cos(pi/4)) with UV lifts on BOTH tori: iso-v
+parallels at the exact profile angle phi = atan2(z*, rho* - R) through
+the exact rational 90-degree-arc parameter map t = s/(1+s),
+s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one degree-1 line per revolution
+quadrant patch of the profile row on both 4x4 tilings, the second torus's
+profile angle measured in its own frame (anti-parallel axes admitted).
+Coaxiality is certified, never forced: pure-rounding tilts and offsets
+snap, recognition-scale ones report near_coincidence, and clearly tilted
+or off-axis pairs are unsupported_surface (the general torus/torus pair
+is a quartic — no numerical fallback). Twelve native tests (debug and
+release; 217 intersection tests total, 355 crate tests) pinned the exact
+two-circle oracle (meridian centers (3,0) and (3,3) at d=3, a=0.8,
+l=0.6 — radii 2.4 and 3.6, both at z=0.8), the equal-minor-radii pair
+(3 -+ sqrt(3)/2 at z=1/2), the generic configuration against the
+independent meridian oracle, the anti-axial second torus, the external
+and internal meridian tangencies with their just-clear and just-across
+companions, coincident_trim, the empty branches (concentric, nested,
+separate), the near_coincidence bands, the off-axis/tilted refusals, the
+non-canonical refusals and the rigid placement; two bridge tests and two
+packed-WASM TS tests (92 vitest tests across the four suites) carried the
+serialization. Scoped evidence:
+`docs/qualification/brep-torus-torus-intersection-v1.json`
+(sha256-pinned sources and WASM; the measured +635 packed bytes left the
+geometry chunk at 2,459,388 and the total at 4,777,922 bytes, both
+budgets unchanged, recorded in `scripts/verify-dist.mjs`; 68 dist
+artifacts). permitsTopologyChange stays false, NumericallyResolved is
+still not certified complete-domain coverage, nothing here is yet
+consumed by the Boolean pipeline. This completes the canonical-primitive
+analytic SS family (all fifteen pairs of plane/sphere/cylinder/cone/torus
+in their axial configurations); the remaining work is the non-axial
+quartic configurations (the Villarceau oblique plane/torus section and
+the non-parallel cylinder/cylinder and tilted torus pairs among them),
+Boolean consumption of the sections, tangency certification, and the
+general NURBS SS research spike.

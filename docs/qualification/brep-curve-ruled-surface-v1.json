@@ -1,0 +1,71 @@
+{
+  "date": "2026-09-14",
+  "scope": "NURBS curve/ruled-surface intersection query (requirement row 8b, CS cell against ruled surfaces): native curve_ruled_surface in crates/brep-core/src/intersections.rs, bridge op brep_intersect_curve_ruled_surface, typed TS adapter intersectNurbsCurveRuledSurface — curve knot spans x surface ruling-direction knot spans decompose into homogeneous rational Bezier pieces under one FIFO fair queue, outward-rounded control-hull exclusion plus a hull-diagonal triangle lower bound, terminal-box 3x3 Newton confirmation of C(t)=S(u,v) with the root required inside its own [t]x[u]x[v] box, exact parameter-corner boundary ownership (dedup by exact (t,u,v) only, interval-touch merging), ruling and iso-V curve-on-surface coincidence with lifted UV path endpoints, and explicit unresolved regions for tangency, near-surface bands, partial ruling trims, ambiguous coincidence and budget exhaustion",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 205,
+    "nativeTestsRelease": 205,
+    "nativeIntersectionTests": 67,
+    "nativeIntersectionTestsAdded": 10,
+    "bridgeTests": 202,
+    "bridgeTestsAdded": 1,
+    "vitestSuites": 4,
+    "vitestTests": 60,
+    "vitestIntersectionTests": 39,
+    "vitestIntersectionTestsAdded": 4,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4712137,
+    "distBudgetChange": "total budget 4700000 -> 4720000 in scripts/verify-dist.mjs: the new query adds 27645 packed bytes to the shared geometry kernel chunk (2365958 -> 2393603, within the unchanged 2400000 chunk budget) and 16705 bytes to the total over the previous 4695432-byte build; per-artifact limits unchanged"
+  },
+  "coverage": [
+    "RESOLVED line through a ruled plane: single transverse point, parameters match the independent oracle (t=1/2, u=v=1/4) to 1e-10, residual <= 1e-9",
+    "RESOLVED line y=x at z=2 piercing a full-circle rational ruled cylinder (radius 2): two roots at t=(3-+sqrt2)/6 to 1e-9 with u=5/8 and 1/8 (quadratic span midpoints at 225/45 degrees) and v=1/2 to 1e-9, points on the circle to 1e-9, both transverse; identical result for the transposed (linear-in-U) orientation with swapped UV",
+    "RESOLVED line lying on a ruling with equal and with 3x unequal endpoint weights: overlap component with the full curve trim [0,1] and lifted UV path endpoints u=1/8, v=.1 and .5 matching the independent Mobius lift z(v)=12v/(1+2v) to 1e-9; lifted endpoints re-evaluate on the source surface to 1e-9",
+    "RESOLVED curve along an iso-V directrix (bottom quarter arc of an open ruled patch): overlap with uv path [0,0]->[1,0] in source UV, and [1,0]->[0,0] for the reversed curve, max control residual <= 1e-9",
+    "RESOLVED curve missing the cylinder: empty components with numerically_resolved coverage",
+    "RESOLVED curve endpoints touching all four patch corners: exactly one boundary event per corner with exact knot parameters (t=1) and exact UV corners, residual <= 1e-9, after the boundary curve lay in the support plane (two-plane candidate isolation, no coincidence guessed)",
+    "RESOLVED knot shift/scale (curve knots [10,14], surface U [3,7], V [-2,0]) and uniform weight scaling leave geometry and mapped parameters invariant (t=12, u=4, v=-1.5)",
+    "RESOLVED curve reversal maps t -> t0+t1-t and keeps UV/points to 1e-12",
+    "UNRESOLVED tangent line grazing the cylinder at (2,0,2): no point components, explicit tangency_or_multiple_root 6-parameter bands, coverage incomplete",
+    "UNRESOLVED tight budget (maxBoxes 2): pending span pairs preserved as budget_exceeded regions with 6-parameter boxes, coverage incomplete, boxes_visited <= 2",
+    "REFUSED biquadratic tensor patch as an explicit unsupported_surface 6-parameter region; non-3D curve input and maxBoxes 0 rejected with BREP_INTERSECTION_INVALID_INPUT"
+  ],
+  "behaviorChange": "New read-only query intersectNurbsCurveRuledSurface/brep_intersect_curve_ruled_surface; no existing query, op, or adapter behavior changed. Reports carry (t,u,v) source parameters with isolating boxes, residuals, coverage=numerically_resolved|incomplete, permitsTopologyChange=false and evidence=numerical_uncertified",
+  "limits": {
+    "distanceTolerance": 1e-9,
+    "parameterTolerance": 1e-10,
+    "maxDepth": 48,
+    "maxDepthRange": "1..64",
+    "maxBoxes": 8192,
+    "maxBoxesRange": "1..65536",
+    "transverseDeterminantThreshold": 1e-6,
+    "coincidenceElevationDegreeCap": 25,
+    "weightResidualTolerance": 1e-9,
+    "newtonIterations": 16,
+    "admittedSurface": "ruled only: linear with two control rows and positive (possibly unequal) endpoint weights in one direction, any positive-weight rational multi-span in the other; non-periodic in the ruling direction"
+  },
+  "limitations": [
+    "Only ruled surfaces are admitted; general tensor NURBS surfaces report explicit unsupported_surface regions (general CS remains open)",
+    "Tangency and multiple-root regions are unresolved by design: crossings whose unit-column determinant |det(C',S_u,S_v)| <= 1e-6 are never reported as points",
+    "Curve-on-surface overlaps are admitted only for the two algebraically exact families (a collinear span on a ruling with a Mobius-lifted V range, or an iso-V proportional homogeneous blend after degree elevation, cap 25); general on-surface curves stay explicit unresolved bands. Overlaps carry UV path endpoints only: no per-parameter correspondence is claimed (unequal-weight rulings induce a Mobius correspondence along V)",
+    "Partial ruling trims (curve span extending past the surface V range) report explicit coincident_trim regions instead of clipped intervals; coincidence candidate finding absorbs only halo bands touching certified roots, and ambiguous bands stay near_coincidence",
+    "Geometrically closed ruled surfaces (coincident U domain ends, e.g. a full cylinder seam) can report seam-duplicate boundary contacts at u=0 and u=1 plus halo bands; seam unification is out of scope",
+    "V never subdivides (a ruling is one knot span): terminal boxes refine V only through Newton from the span midpoint, and boxes whose Newton image leaves the box stay silent exactly as in the curve/curve query",
+    "Queries don't prove Boolean completion: NumericallyResolved is not certified complete-domain coverage, and permitsTopologyChange stays false; CS against arbitrary NURBS surfaces, analytic SS pairs and certified tangency remain open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "e8625a27c026afa9e70447fe16f2e3d56f822b155176ed795110589084c25d43",
+    "crates/geometry-bridge/src/intersections.rs": "9de487c36db780f4bbfdd6dc0fa3a0b33063327e3a3a51a74aed2a7d87a3990a",
+    "crates/geometry-bridge/src/lib.rs": "2c3172cb7c993b548e0f7a0df01819c7653707fc17ee91107522f7781b11565f",
+    "src/services/geometry/intersections.ts": "9084a0f9396363dffa10e2727b9e0bb1927503f398bb207e395e9e3e75e55b67",
+    "tests/brepIntersections.test.ts": "1ea7f2e7dca8819b963297a5acebd2a1530b2699598fb792d6b469645c86cffe",
+    "scripts/verify-dist.mjs": "89ae130bfb5de3f8d7fa4bc1c885208392c2f1c08c9fddcef6fba51470a0e822",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "2eb6cb23b7b21445d7c1ff0575d88c0bfab02aa2ac9cbd7274acc4ff9de43f7d",
+    "src/generated/geometry-kernels/bytes.ts": "c32724d6cebfc277928fc23e14166557cfca099c0b2f8acfae7e78861fb3b938"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic sphere/torus surface-surface intersection in the axial configuration (ninth analytic SS slice, one cell): native intersect_sphere_torus in crates/brep-core/src/intersections/sphere_torus.rs, bridge op brep_intersect_sphere_torus, typed TS adapter intersectSphereTorus. The cell reuses both existing recognizers unchanged (sphere_sphere::recognize for the canonical stereographic sphere, plane_torus::recognize_torus for the exact sixteen-patch strict ring-torus solid with tensor-product weights [[1,w,1],[w,w^2,w],[1,w,1]], w = cos(pi/4), rigid affine placements admitted); plane_torus.rs changes are visibility-only (torus_residual and lift_parallel promoted to pub(crate)). The sphere operand is always first — swapped order is an explicit unsupported_surface region. Axiality is certified, never forced: a perpendicular offset of the sphere center at pure rounding scale (64 binary64 epsilons of the axial/radius terms) snaps to the torus axis, an offset inside the recognition-scale band (1e-9 of the radius sum) reports near_coincidence, and a clearly off-axis pair is unsupported_surface (the general sphere/torus pair is a quartic, out of scope — no numerical fallback). Both surfaces are surfaces of revolution about the shared axis, so the section reduces to circle/circle in the meridian half-plane (rho >= 0, z): the torus side (rho - R)^2 + z^2 = r_t^2 against the sphere rho^2 + (z - h)^2 = r_s^2 with h the sphere center height above the torus center plane. Classification uses outward binary64 bands widened by both recognition deviations: provably separate (d > r_t + r_s + band) or provably contained (d + band < |r_t - r_s|) meridian circles resolve empty by the interval signs; the meridian tangencies (double roots, d == r_t + r_s externally or d == |r_t - r_s| internally) stay tangency_or_multiple_root — the tangent contact revolves into a circle but is never a guessed circle; a root whose revolved radius collapses into the band degenerates to a pole point on the axis and stays unresolved (unreachable for a canonical strict ring torus, whose roots keep rho >= R - r_t >= 1e-5 — kept as an honest guard, never guessed through). For a strict ring torus every meridian root sits on the torus meridian circle, whose rho is clearly positive, so both roots always revolve: resolved configurations are exactly the two-circle family (a one-circle configuration would require rho* <= 0, i.e. a horn/spindle torus refused at construction). Resolved contacts are exact rational circles (four 90-degree arcs, weights cos(pi/4), knots 0..=4) with UV lifts on both surfaces: on the torus, iso-v parallels at the exact profile angle phi = atan2(z*, rho* - R) mapped through the exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — one degree-1 line per revolution quadrant patch of the profile row; on the sphere, the per-patch stereographic UV circles/lines of sphere_sphere::lift. There is no sphere/torus surface coincidence, so coincident_trim does not arise. Nothing here authorizes a topology change (permitsTopologyChange stays false).",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 320,
+    "nativeTestsRelease": 320,
+    "nativeIntersectionTests": 182,
+    "nativeIntersectionTestsAdded": 10,
+    "bridgeTests": 222,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 86,
+    "vitestIntersectionTests": 65,
+    "vitestIntersectionTestsAdded": 2,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4767677
+  },
+  "coverage": [
+    "RESOLVED sphere/torus axial two-circle sections: torus R=3 r=1 against the sphere r=sqrt(5.2) centered at the torus center yields the exact circle pair of radius 2.2 at z = +-0.6 (radii and centers to 1e-12 against the meridian circle/circle oracle, 16 curve samples on the sphere equation to 1e-12 and the torus implicit (x^2+y^2+z^2+R^2-r^2)^2 = 4R^2(x^2+y^2) to 1e-10), each with four iso-v torus lifts at the exact rational-arc v parameter (verified against the angle oracle to 1e-12) and per-patch stereographic sphere lifts, all lifts verified through the patch surfaces on both implicit equations to 1e-9",
+    "RESOLVED off-center and generic-height pairs: the sphere r=sqrt(26) at z=-4 yields the exact circles of radii 3.8 at z=-0.6 and 2.2 at z=+0.6 (clean closed-form oracle to 1e-12), and the sphere r=2.2 at z=0.5 matches the independently computed meridian circle/circle roots to 1e-12 — both roots always revolve for a strict ring torus, no one-circle configuration exists",
+    "RESOLVED empty branches: a small sphere floating in the hole (d > r_t + r_s), a far axial sphere, and a huge sphere swallowing the whole torus (d < |r_t - r_s|) all resolve numerically_resolved with no components and no unresolved regions, certified by the outward interval signs",
+    "RESOLVED just-across configurations: spheres at r = 2 + 1e-9 and r = 4 - 1e-9 (clear of both tangency bands) resolve the two transverse circle pairs around the inner and outer equators; rigid placement of the whole axial configuration rotated about X by 0.5 and translated keeps the exact circle pair against the placed oracles to 1e-12 with UV lifts verified through the placed patch surfaces to 1e-9",
+    "UNRESOLVED meridian tangencies: inner-equator external tangency (r == R - r_t == 2, d == r_t + r_s), outer-equator internal tangency (r == R + r_t == 4, d == |r_t - r_s|) and an off-center external tangency (r_s == hypot(R, h) - r_t at h = 0.5) all stay tangency_or_multiple_root with no components, within the outward band on both sides — tangent contacts are never guessed circles; the pole-collapse guard (root radius within the band) is unreachable for a canonical strict ring torus and stays an honest unresolved guard, never guessed through",
+    "UNRESOLVED near-axial band: a sphere center offset of 1e-10 across the axis reports near_coincidence, never snapped to axial",
+    "REFUSED non-analytic configurations: a clearly off-axis sphere center (0.5 across the axis) is an explicit unsupported_surface region — the general sphere/torus pair is a quartic, out of scope, never a numerical fallback",
+    "REFUSED non-canonical operands (cylinder/sphere/torus/cuboid as either operand, swapped operand order, a control-point-perturbed torus failing the exact sixteen-patch certification): explicit unsupported_surface region over the concatenated UV box",
+    "WASM roundtrip: bridge reports carry kind=circle with exact curves and oracle fields, sphereUv/torusUv lifts, maxSampleResidual <= 1e-10; JSON roundtrip preserves the components and regions; coverage, permitsTopologyChange=false and evidence serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectSphereTorus (brep_intersect_sphere_torus); plane_torus.rs changes are visibility-only (torus_residual, lift_parallel promoted to pub(crate)); no existing query, op, or adapter behavior changed. Dist budgets unchanged: the geometry chunk is 2,449,143 bytes (measured, +650 over 2,448,493) and the total is 4,767,677 bytes (measured, +650 over 4,767,027) — both stay within the existing budgets (2,455,000 chunk, 4,775,000 total).",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the axial/radius terms",
+    "axialSnapBand": "64 binary64 epsilons of the axial/radius terms (pure-rounding offset only); recognition-scale offsets report near_coincidence",
+    "isoParameterMap": "exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) (discriminant exactly 2); seam contacts snap at 64 epsilons of the unit parameter interval",
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical operands only: the sphere is the exact canonical stereographic sphere solid; the torus is the exact canonical strict ring-torus solid (R - r >= 1e-5; horn and spindle tori are refused at construction); everything else is an explicit unsupported_surface region, never a numerical fallback",
+    "Axial configuration only: the sphere center must be certified on the torus axis; clearly off-axis pairs are honest unsupported_surface regions (the general sphere/torus pair is a quartic) with a near_coincidence band at recognition scale, never forced axial",
+    "Resolved sections are exactly the two-circle family: for a strict ring torus both meridian roots revolve (a one-circle configuration would require a horn/spindle torus); the meridian tangencies (double roots at both equators and off-center) stay tangency_or_multiple_root, and the pole-collapse guard is unreachable-but-honest — tangent contacts are never guessed circles or points",
+    "coincident_trim is deliberately unused: a sphere can never coincide with a curved torus patch",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (torus/torus, cylinder/torus, cone/torus) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "48ab45c077ae64ccc60520ca26bd1a16279836c3dba4ad37edbdb8f9f1f8ba41",
+    "crates/brep-core/src/intersections/plane_torus.rs": "18a3168982040a08f5199187be4762b14d98cbc373874e5daa9205188f3c790f",
+    "crates/brep-core/src/intersections/sphere_torus.rs": "f13ee284f8240853071ad4f830ea4fde31d457bdf0037e423ac0d0624e8e4eba",
+    "crates/geometry-bridge/src/intersections.rs": "883d016fa6b8f849708f1493c465a26fa86f79e2a059368c48aac5c39069a5e1",
+    "crates/geometry-bridge/src/lib.rs": "6eaffb79d1ae46b3d3438bad9a08210b475c545b64dd5b8b22d4fb5dc4764842",
+    "src/services/geometry/intersections.ts": "e73b18fa2737fc41f13dc7980f8b29150dd49b8877fb82b638f5588d63d7377e",
+    "tests/brepIntersections.test.ts": "7000c1c5b4288efac1324606ec96b9b5377b6f064cc5d9656ac2531ed3eadd70",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "4ec3cb5f166a8821691261f7439d99e20ac6aeba0c5cadba5f2aad2b6d200591",
+    "src/generated/geometry-kernels/bytes.ts": "c8f4d45b8c69e40906da3514a147c9e0d0d2c8c05f77a303bc547f8e80a014ac"
+  }
+}

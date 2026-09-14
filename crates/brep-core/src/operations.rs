@@ -1471,6 +1471,10 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     if let Some(result) = crate::boolean_support::simplify(a, b, operation)? {
         return Ok(result);
     }
+    // Canonical sphere/sphere pairs: exact regularized curved closure.
+    if let Some(result) = crate::sphere_boolean::boolean(a, b, operation)? {
+        return Ok(result);
+    }
     if a.edges
         .iter()
         .chain(&b.edges)

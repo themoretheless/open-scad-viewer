@@ -1,0 +1,64 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic plane/torus surface-surface intersection in the axial configurations (eighth analytic SS slice, one cell): native intersect_plane_torus in crates/brep-core/src/intersections/plane_torus.rs, bridge op brep_intersect_plane_torus, typed TS adapter intersectPlaneTorus. A new strict canonical ring-torus recognizer (the exact sixteen-patch solid of analytic::torus: 4 profile quadrants x 4 revolution quadrants of rational biquadratic patches, exact tensor-product weights [[1,w,1],[w,w^2,w],[1,w,1]] with w = cos(pi/4) and w^2 computed as the constructor's own product, exact unit-square boundary trims, sixteen ring/quadrant vertices each certified radially and axially against the exact profile, a globally consistent 4x4 quadrant tiling, rigid affine placements admitted) pairs with the canonical planar-patch recognizer of the plane/quadric cells, unchanged. The canonical constructor admits only strict ring tori (R - r >= 1e-5): horn and spindle tori are refused at construction, so the recognizer never certifies a self-intersecting torus. The plane operand is always first — swapped order is an explicit unsupported_surface region. Axial angle classification follows the plane/cylinder discipline: pure-rounding tilts snap (64 binary64 epsilons plus the recognition-error angular allowances), recognition-scale tilts (1e-9) report near_coincidence, clearly oblique planes are unsupported_surface (the general plane/torus section is a quartic with Villarceau degeneracies, out of scope). Perpendicular planes at axial height h resolve empty for |h| > r beyond the outward band, stay tangency_or_multiple_root at |h| == r within the band (never a guessed point or circle), and yield the two exact circles of radii R +- sqrt(r^2 - h^2) otherwise (h == 0 is the equator pair R +- r of the same branch); an inner radius collapsing into the band would be an inner-tangency/horn configuration and stays unresolved (unreachable for a canonical strict ring torus, kept as an honest guard). Through-axis planes (center in the plane at pure-rounding scale) yield the two exact meridian circles of radius r centered at +-R; an axis-parallel plane at a certified nonzero offset cuts a Cassini oval and is unsupported_surface, inside the recognition-scale band near_coincidence. Every circle is clipped by the patch's finite rectangular domain in closed form (eccentric-angle half-plane clip, the plane/sphere cell's clip_ellipse); domain-edge tangencies stay unresolved. Resolved circles are exact rational sweeps (full: four 90-degree arcs, weights cos(pi/4), knots 0..=4) with exact UV lifts on both operands: on the torus the parallels are iso-v lines and the meridians iso-u lines (degree-1 segments, one per covered patch quadrant) whose constant coordinate uses the exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — derived in closed form with discriminant exactly 2, never fitted; on the plane exact rational quadratic ellipse arcs per the recognize_plane metric. Plane/torus coincidence cannot arise (the patches are curved), so coincident_trim is deliberately unused. Nothing here authorizes a topology change.",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 310,
+    "nativeTestsRelease": 310,
+    "nativeIntersectionTests": 172,
+    "nativeIntersectionTestsAdded": 8,
+    "bridgeTests": 220,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 84,
+    "vitestIntersectionTests": 63,
+    "vitestIntersectionTestsAdded": 2,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4767027
+  },
+  "coverage": [
+    "RESOLVED plane/torus perpendicular two-circle section: torus R=3 r=1 against the plane z=0.4 patch [-5,5]^2 yields the exact parallels of radii 3+-sqrt(0.84) (radii and centers to 1e-12, 16 curve samples on the torus implicit (x^2+y^2+z^2+R^2-r^2)^2 = 4R^2(x^2+y^2) and the plane equation to 1e-10), each with four iso-v torus lifts at the exact rational-arc v parameter (verified against the angle oracle to 1e-12) and four exact plane-UV ellipse arcs, all lifts verified through the patch surfaces to 1e-9",
+    "RESOLVED symmetry-plane equator pair: the plane z=0 yields the exact circles R+r=4 and R-r=2 landing exactly on profile quadrant seams (v=0 on rows 0 and 2 exactly), and the near-horn constructor limit R-r=1e-5 still resolves the inner equator circle of radius 1e-5 clearly above the classification band; torus(2,2) and torus(1,2) stay constructor errors so the recognizer can never certify a horn or spindle torus",
+    "RESOLVED through-axis meridian pair: the plane y=0 containing the Z axis yields the exact circles of radius r=1 centered at (+-3,0,0) (to 1e-12, samples on both implicit equations to 1e-10), each with four iso-u torus lifts spanning the full profile quadrant v sweep and exact plane-UV arcs, lifts verified through the patch surfaces to 1e-9",
+    "RESOLVED domain clipping: a half-covering patch (x>=0) clips both parallels to their exact half arcs swept [3pi/2, 5pi/2] with endpoints exactly at (0,+-rho,0.4), torus lifts restricted to the two covered revolution quadrant patches with exact sub-parameter trims, plane-UV trims exact; circles provably outside the rectangle resolve empty",
+    "RESOLVED rigid placement: the perpendicular configuration rotated about X by 0.5 and translated keeps the exact circle pair against the placed oracles to 1e-12 (the recognizer recovers the placed axis, center and radii to 1e-12), with UV lifts verified through the placed patch surfaces to 1e-9",
+    "RESOLVED empty and snap cases: planes at |h| > r resolve numerically_resolved with no components; a pure-rounding through-axis offset (1e-16) snaps and resolves the meridian pair; a thin parallel pair just clear of the tangency band (|h| = r - 1e-9) resolves with radii matching the sqrt oracle to 1e-12",
+    "UNRESOLVED tangencies: |h| == r exactly and within the outward band (both signs) and the domain-edge tangency stay tangency_or_multiple_root with no components — tangent contacts are never guessed circles or points",
+    "UNRESOLVED recognition-scale bands: axis-parallel offsets and tilts inside the 1e-9 recognition-scale bands off either axial configuration report near_coincidence, never forced axial",
+    "REFUSED non-analytic configurations: axis-parallel planes at a certified nonzero offset (Cassini-oval sections) and oblique planes (the quartic with Villarceau degeneracies) are explicit unsupported_surface regions — never a numerical fallback",
+    "REFUSED non-canonical operands (sphere/cylinder/cuboid as the torus operand, a solid or a skewed patch as the plane operand, a control-point-perturbed torus failing exact certification): explicit unsupported_surface region over the concatenated UV box",
+    "WASM roundtrip: bridge reports carry kind=circle with exact curves and oracle fields, planeUv/torusUv lifts, maxSampleResidual <= 1e-10; JSON roundtrip preserves the components and regions; coverage, permitsTopologyChange=false and evidence serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectPlaneTorus (brep_intersect_plane_torus); no existing query, op, or adapter behavior changed. Both dist budgets move once (geometry chunk 2,439,918 to 2,448,493 bytes measured, +8,575 for the ring-torus recognizer, axial classification, exact circle pairs and the iso-parameter lifts — budget now 2,455,000; total 4,758,452 to 4,767,027 bytes measured — budget now 4,775,000)",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the radius/patch/offset scale",
+    "angularSnapBand": "64 binary64 epsilons plus recognition-error angular allowances (pure-rounding tilt only) around the perpendicular and axis-parallel configurations",
+    "isoParameterMap": "exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) (discriminant exactly 2); seam contacts snap at 64 epsilons of the unit parameter interval",
+    "conicClip": "closed-form eccentric-angle half-plane cuts per patch edge; extrema within the band of a boundary line are tangencies, never clipped through",
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical operands only: the planar patch is the one-face open exact bilinear affine rectangle (plane operand first); the torus is the exact canonical strict ring-torus solid (R - r >= 1e-5; horn and spindle tori are refused at construction); everything else is an explicit unsupported_surface region, never a numerical fallback",
+    "Axial configurations only: perpendicular planes (parallel circle pair) and through-axis planes (meridian circle pair) are analytic; axis-parallel offset planes cut Cassini ovals and oblique planes cut a quartic with Villarceau degeneracies — both are honest unsupported_surface regions (near-axial bands report near_coincidence), with no numerical fallback",
+    "Tangency is never a point or a guessed circle: |h| == r, domain-edge touches and the inner-radius collapse band all stay unresolved, and the classification band widens with recognition deviation so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "coincident_trim is deliberately unused: a plane can never coincide with a curved torus patch",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (sphere/torus, torus/torus, Villarceau oblique plane/torus, non-parallel cylinder/cylinder) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "73e43aa4572930b1276e755e26c45f880a648904fca50539c53a24d7f797fb57",
+    "crates/brep-core/src/intersections/plane_torus.rs": "9e6ad4e6fb9baff7c3c42a790860872dbaf2ad033c6df089a11f4638d7c67a19",
+    "crates/geometry-bridge/src/intersections.rs": "a3be2cb18951f5266fbaa698b40bd88f3a0f0b11b38139a920ed1d1ad8985571",
+    "crates/geometry-bridge/src/lib.rs": "a8e50ec950449d0152bf1cafe6e74f90255b1bc2af9e3e5f0ee7a6c11b5ddd5f",
+    "src/services/geometry/intersections.ts": "45ec1c8ad6c94efc1a08531ff27fe8e5b5e7637268086b9b8f403956b702e58c",
+    "tests/brepIntersections.test.ts": "7550cac417640567ccf36e1d9f6eaab88202e6cb174b1ff3db6b54ecbb766d1b",
+    "scripts/verify-dist.mjs": "dd5491201b5ab83f42ab8f942f4aef02f6d539fb115e1ae111e9f101cf284c97",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "7e31f8298defc1934e4df7f27a9ff07eaca94d1ae8fbd712e8d9fea0a09ba2d1",
+    "src/generated/geometry-kernels/bytes.ts": "116156120e7c43e27d7a6036e4cb95b353fc0d40f1845a8c3e9ea8828e3a7aeb"
+  }
+}

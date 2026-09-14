@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic cylinder/torus surface-surface intersection in the coaxial configuration (tenth analytic SS slice, one cell): native intersect_cylinder_torus in crates/brep-core/src/intersections/cylinder_torus.rs, bridge op brep_intersect_cylinder_torus, typed TS adapter intersectCylinderTorus. The cell reuses both existing recognizers unchanged (sphere_cylinder::recognize_cylinder for the exact canonical six-face cylinder solid — four rational circular side patches with weights [1, cos(pi/4), 1] and two bilinear caps with inscribed quarter-circle trims; plane_torus::recognize_torus for the exact sixteen-patch strict ring-torus solid with tensor-product weights [[1,w,1],[w,w^2,w],[1,w,1]], w = cos(pi/4), R - r >= 1e-5; rigid affine placements admitted). The cylinder operand is always first — swapped order is an explicit unsupported_surface region. Coaxiality is certified, never forced: a pure-rounding axis tilt (64 binary64 epsilons plus the recognition-error angular allowances) or center-line offset (64 epsilons of the axial/radius terms plus both recognition deviations) snaps to coaxial, a recognition-scale tilt or offset (1e-9) reports near_coincidence, and a clearly tilted or off-axis pair is unsupported_surface (the general cylinder/torus pair is a quartic, out of scope — no numerical fallback). Both surfaces are surfaces of revolution about the shared axis, so the section reduces to line/circle in the meridian half-plane (rho >= 0, z): the cylinder side rho = R_c against the torus meridian circle (rho - R)^2 + z^2 = r^2. Classification uses outward binary64 bands widened by both recognition deviations: |R_c - R| > r + band is a provable miss (resolves empty); |R_c - R| == r within the band is the tangent line (double root at z == 0 — the only configuration where the two roots would coincide) and stays tangency_or_multiple_root, never a guessed circle; otherwise z = +-sqrt(r^2 - (R_c - R)^2) are two distinct exact circles of radius R_c (a resolved branch therefore always yields exactly two circles — a single-circle meridian resolution is structurally unreachable, documented rather than tested), clipped by the cylinder's finite height (a circle provably beyond a cap plane is absent; a circle landing on a cap plane within the band is the rim tangency, unresolved). Cap-plane contacts: the cap plane at cylinder axial position q crosses the torus at torus-axial height h_c; |h_c| > r + band resolves empty, |h_c| == r within the band is the plane/tube tangency (unresolved), otherwise the two exact circles of radii R +- sqrt(r^2 - h_c^2) are admitted when provably inside the cap disk (radius < R_c - band), refused beyond it, and a radius equal to R_c within the band is the rim tangency (unresolved); the inner-radius collapse guard (R - sqrt(r^2 - h_c^2) <= band) is unreachable for a strict ring torus and kept as an honest guard. Resolved contacts are exact rational circles (degree 2, knots 0..=4, four 90-degree arcs, weights cos(pi/4)) with UV lifts on both surfaces: iso-v degree-1 lines at the exact height fraction on all four cylinder side patches, an exact UV circle (four arcs, radius rho/(2R_c) about [1/2, 1/2]) on a cap face, and iso-v torus parallels at the exact profile angle phi = atan2(z, rho - R) through the exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) — one degree-1 line per revolution quadrant patch of the profile row. Every component carries a 16-sample residual bound against the cylinder side or cap plane equation and the scaled torus implicit equation. coincident_trim is deliberately unused (a cylinder side never coincides with a curved torus patch). Nothing here authorizes a topology change: permitsTopologyChange stays false and even numerically_resolved reports are numerical_uncertified.",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 331,
+    "nativeTestsRelease": 331,
+    "nativeIntersectionTests": 193,
+    "nativeIntersectionTestsAdded": 11,
+    "bridgeTests": 224,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 88,
+    "vitestIntersectionTests": 67,
+    "vitestIntersectionTestsAdded": 2,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4771577
+  },
+  "coverage": [
+    "RESOLVED coaxial two-circle side sections: torus R=3 r=1 against the cylinder R_c=2.2 spanning z in -4..4 yields the exact circle pair of radius 2.2 at z = +-sqrt(1 - 0.64) = +-0.6 (radii and centers to 1e-12 against the sqrt oracle, 16 curve samples on the cylinder radial equation to 1e-12 and the torus implicit (x^2+y^2+z^2+R^2-r^2)^2 = 4R^2(x^2+y^2) to 1e-10), each with the exact iso-v line on all four side patches (height fraction to 1e-12) and four iso-v torus lifts at the exact rational-arc v parameter (verified against the angle oracle to 1e-12), all lifts verified through the patch surfaces on both implicit equations to 1e-9",
+    "RESOLVED height clipping: the cylinder R_c=2.2 spanning 0.3..8.3 drops the z=-0.6 side circle provably beyond the bottom cap and keeps the z=+0.6 circle, alongside the bottom-cap inner circle of radius 3 - sqrt(1 - 0.09) inside the disk (the outer one beyond it) — two components, oracles to 1e-12, sorted by torus-axial height then radius",
+    "RESOLVED cap-circle pairs: the short wide cylinder R_c=4.5 spanning -0.25..0.25 (|a|=1.5 > 1, no side contact) yields four cap circles of radii 3 +- sqrt(1 - 0.0625) at h_c = +-0.25 (oracles to 1e-12), each with the exact four-arc UV circle of radius rho/(2R_c) about [1/2, 1/2] on the cap face and the torus iso-v lifts at the exact profile angle",
+    "RESOLVED empty branches: the thin cylinder in the hole (line rho=1 misses the meridian circle), the short narrow cylinder R_c=1.5 spanning -0.5..0.5 (no side contact and both cap circle radii 3 +- sqrt(0.75) outside the disks), and the huge cylinder swallowing the whole torus all resolve numerically_resolved with no components and no unresolved regions, certified by the outward interval signs",
+    "RESOLVED just-across and placement configurations: R_c = 2 + 1e-9 resolves two small transverse circles around the inner equator; a cap plane just across the tube tangency (h_c = -(1 - 1e-9)) resolves two small cap circles; rigid placement of the whole coaxial configuration rotated about X by 0.5 and translated keeps the exact circle pair against the placed oracles to 1e-12 with UV lifts verified through the placed patch surfaces to 1e-9",
+    "UNRESOLVED tangencies: the meridian line/circle tangencies R_c == R - r = 2 and R_c == R + r = 4 (and within the band, 2 +- 2e-15, 4 +- 2e-15) stay tangency_or_multiple_root with no components — the double root at z == 0 is the only coincident-root configuration and is never guessed; the rim tangency (R_c = 2.5, half height sqrt(0.75): both side circles land on the cap planes and the inner cap circle radius equals R_c) stays unresolved with no components; the cap-plane tube tangency (|h_c| == r) stays unresolved; a miss just clear of the tangency band (R_c = 2 - 1e-9, caps 2 + 1e-9 beyond the tube) resolves empty",
+    "UNRESOLVED near-coaxial bands: a center-line offset of 1e-10 and a 1e-10 rad axis tilt report near_coincidence, never forced coaxial; a clearly off-axis pair (0.5 offset) and a clearly tilted pair (0.3 rad) are unsupported_surface with the full 8-number parameter box",
+    "REFUSED non-canonical operands: sphere/torus, cuboid/torus, torus/torus, swapped order (torus first), cylinder/sphere and a structurally perturbed torus (one moved control point) are explicit unsupported_surface regions, never a numerical fallback; a canonical pair through the same path still resolves",
+    "UNVERIFIED by construction: the single-circle meridian resolution is structurally unreachable (roots coincide only at the tangent double root, which is always unresolved) and is documented rather than tested; the inner-radius collapse guard is unreachable for a canonical strict ring torus (R - r >= 1e-5) and kept as an honest guard"
+  ],
+  "behaviorChange": "New read-only query intersectCylinderTorus (brep_intersect_cylinder_torus); all recognizers and helpers are reused unchanged (no edits to sphere_cylinder.rs, plane_torus.rs or sphere_sphere.rs); no existing query, op, or adapter behavior changed. Dist budgets unchanged: the geometry chunk is 2,453,043 bytes (measured, +3,900 over 2,449,143) and the total is 4,771,577 bytes (measured, +3,900 over 4,767,677) — both stay within the existing budgets (2,455,000 chunk, 4,775,000 total).",
+  "limits": {
+    "recognitionToleranceRelative": 1e-09,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the axial/radius terms",
+    "axialSnapBand": "axis tilt: 64 binary64 epsilons plus the recognition-error angular allowances; center-line offset: 64 binary64 epsilons of the axial/radius terms plus both recognition deviations (pure-rounding only); recognition-scale tilts/offsets report near_coincidence",
+    "isoParameterMap": "exact rational 90-degree-arc parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)) (discriminant exactly 2); seam contacts snap at 64 epsilons of the unit parameter interval",
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical operands only: the cylinder is the exact canonical six-face cylinder solid; the torus is the exact canonical strict ring-torus solid (R - r >= 1e-5; horn and spindle tori are refused at construction); everything else is an explicit unsupported_surface region, never a numerical fallback",
+    "Coaxial configuration only: the cylinder axis must be certified coincident with the torus axis; clearly tilted or off-axis pairs are honest unsupported_surface regions (the general cylinder/torus pair is a quartic) with a near_coincidence band at recognition scale, never forced coaxial",
+    "Resolved sections are the two-circle side family (the single-circle meridian resolution is structurally unreachable — the roots coincide only at the tangent) plus the cap-circle pairs R +- sqrt(r^2 - h_c^2) clipped to the cap disks; the meridian tangency (double root at z == 0), rim contacts (a side circle on a cap plane, or a cap circle radius equal to R_c) and the cap-plane tube tangency (|h_c| == r) stay tangency_or_multiple_root — tangent contacts are never guessed circles",
+    "coincident_trim is deliberately unused: a cylinder side can never coincide with a curved torus patch",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (cone/torus, torus/torus) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "92174261bbd86fd2b0da1dcfcd8e0a8b33508c0754240e75a510a471813fccdb",
+    "crates/brep-core/src/intersections/cylinder_torus.rs": "4533c2769fba38cd1ab82ba9bf8d97de3f6f48dd1f0090adb73260babf57e870",
+    "crates/geometry-bridge/src/intersections.rs": "2d4b8cf6c333a8e3d22f09998724594aa522f2e8f36acb8069b2bb8bbfc9ed65",
+    "crates/geometry-bridge/src/lib.rs": "0001e5e9c30c80fe552b8d1e0dd7c600f5605d54428f47bb3bcbd92298c488bf",
+    "src/services/geometry/intersections.ts": "652337992c3c4201cdc7437417645222c9427fd4857e542acf2c4b53521a47da",
+    "tests/brepIntersections.test.ts": "c80ae252078f11eaac0db70e93bab44129482bc76944b365cb8c3798ff660e96",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "8ab3d006eeb409e8bc646786da58ff4bf8fe9331b529ac4bb9f87c33bee7b032",
+    "src/generated/geometry-kernels/bytes.ts": "cad9d8850ac1319ade39dc9aaac8ee710bd462f8e4dbe5138b6e158a9a0b252a"
+  }
+}

@@ -1,0 +1,65 @@
+{
+ "date": "2026-09-14",
+ "scope": "Newton refinement robustness in brep-core intersections (follow-up to brep-cs-seam-correspondence-v1, closing its two documented Newton limits): (1) one-sided jets at C0 knots — the curve/plane endpoint screen, the curve/curve and curve/ruled-surface transversality screens, and both Newton refiners now use left/right derivatives from the adjacent Bézier spans (came-from side preferred, either confirming side accepted) so a transverse root bitwise on a C0 knot resolves instead of collapsing into a near_coincidence/tangency band; (2) half-open box ownership — every subdivision box owns its interior and its lower-parameter face, the domain's upper end belongs to the last box, converged Newton images within two binary64 steps of a shared face snap onto it bitwise, curve/plane terminal and zero-variation boxes decide shared faces by exact evaluation, and curve/plane point events with touching isolating intervals merge keeping the lowest-residual parameter, so a boundary-sitting root is reported exactly once at the exact face parameter; curve/segment inherits the curve/plane behavior; additive test coverage only, no adapter, op or signature change",
+ "fullGoalComplete": false,
+ "checks": {
+  "nativeTestsDebug": 217,
+  "nativeTestsRelease": 217,
+  "nativeIntersectionTests": 79,
+  "nativeIntersectionTestsAdded": 8,
+  "bridgeTests": 202,
+  "bridgeTestsAdded": 0,
+  "vitestSuites": 4,
+  "vitestTests": 64,
+  "vitestIntersectionTests": 43,
+  "vitestIntersectionTestsAdded": 2,
+  "vueTypes": "passed",
+  "mcpTypes": "passed",
+  "wasmBuild": "passed",
+  "viteBuild": "passed",
+  "failures": 0,
+  "distArtifacts": 68,
+  "distBytes": 4719922,
+  "distBudgetChange": "geometry chunk budget raised 2400000 -> 2405000: the one-sided jet helpers, ownership/snap logic and the curve/plane merge add 4795 packed bytes (chunk 2401388 measured, previous 2396593); the total 4719922 bytes stays within the unchanged 4720000 total budget; per-artifact limits otherwise untouched",
+  "nativeTestsNote": "previous slice reported 209 native tests for the same command; 217 = 209 + 8 new intersection regression tests. All pre-existing tests pass unchanged, including the 71 intersection tests of the previous slice"
+ },
+ "coverage": [
+  "RESOLVED piecewise-linear curve through a C0 kink at (1,1,0) crossing the plane z=0 at the knot t=1: exactly one boundary point event at the exact parameter 1 with point (1,1,0), coverage numerically_resolved, no unresolved regions (pre-fix: tangency_or_multiple_root band)",
+  "RESOLVED the same kink curve crossed at t=1 by a line transverse to both one-sided tangents (curve/curve): one event at (1, 1/2) exactly, coverage numerically_resolved (pre-fix: Newton iterate on the C0 knot failed the box into an unresolved band)",
+  "RESOLVED the same kink piercing a ruled plane z=0 patch (curve/ruled-surface): one event at t=1, uv=(1/2,2/3) to 1e-12, contact boundary (pre-fix: unresolved band)",
+  "RESOLVED cubic with a transverse root bitwise on the depth-1 subdivision face t=1/2 of [0,1] (thirds in the polygon defeat a bitwise-zero split coefficient): exactly one point event at parameter 0.5 exactly with the face inside its isolating interval, coverage numerically_resolved, no unresolved (pre-fix: silent or shifted-midpoint event beside the face)",
+  "RESOLVED curve/curve with both parameters bitwise on subdivision faces (t=u=1/2): exactly one event at (0.5, 0.5) exactly in both operand orders (also passes pre-fix — guards the latent one-ulp silence window in which both adjacent boxes could stay silent)",
+  "RESOLVED curve/ruled-surface piercing at t=1/2, u=3/8, v=1/3: exactly one event at t=0.5 exactly (also passes pre-fix — same latent-window guard)",
+  "RESOLVED domain-end ownership: cubic ending transversally on the plane reports t=1 exactly once across curve/plane, curve/curve (shared end (1,1/2)) and curve/ruled-surface (also passes pre-fix — ownership keeps it singular under the new face paths)",
+  "RESOLVED full sweep over a degree-1 curve with a C0 kink root at the knot t=1/2, a dyadic mid-span root at t=5/4 and a domain-end root at t=2: exactly the parameters [0.5, 1.25, 2] with no duplicates and no misses, coverage numerically_resolved; the same sweep through curve/segment yields exactly three point events (pre-fix: the kink root collapsed to an unresolved band)",
+  "WASM roundtrip: the knot-aligned kink fixture reports one boundary point at parameter 1 through the packed kernel (curve/plane and curve/curve), and the boundary-exact cubic fixture reports one point at parameter 0.5 exactly (curve/plane and curve/curve at (1/2,1/2)), both numerically_resolved with no unresolved regions",
+  "REGRESSION all 71 pre-existing intersection tests pass unchanged, including the dyadic-boundary root oracle (t=0.5 in a cubic), the internal-knot crossing, the tangent/near-coincidence refusal suites, the budget suites and the full seam-correspondence suite of the previous slice"
+ ],
+ "behaviorChange": "Two defect fixes, no signature or budget changes. (1) At a C0 knot the two-sided jet no longer decides alone: endpoint and corner tangency screens accept either transverse one-sided span jet, and the Newton refiners step with the came-from side's jet and re-screen converged C0 roots one-sidedly — transverse kink roots that previously became tangency_or_multiple_root/near_coincidence bands now resolve as point events, while roots tangent from both sides stay unresolved. (2) Box-boundary ownership is now half-open and documented: a converged Newton image within two binary64 steps of a shared face snaps onto it bitwise and only the owning box (interior + lower face, domain upper end in the last box) reports it; curve/plane zero-variation and terminal boxes evaluate shared faces exactly (zero-variation faces only where the face coefficient's own bound cannot exclude zero) and the owning box reports at the exact parameter; curve/plane point events with touching isolating intervals merge keeping the lowest-residual parameter, mirroring the long-standing curve/curve rule. Side effects: a rounding-scale transverse near-pass exactly on a shared face can now report a contact point with its true residual instead of a near_coincidence band, and a converged C0-knot root that is tangent from both sides now fails its box explicitly instead of skipping the re-screen. No existing test encoded the defective behavior, so no test was weakened; three of the eight new fixtures also pass pre-fix and act as guards",
+ "limits": {
+  "distanceTolerance": 1e-09,
+  "parameterTolerance": 1e-10,
+  "maxDepth": 48,
+  "maxBoxes": 8192,
+  "boxOwnership": "half-open: each subdivision box owns its interior and its lower-parameter face; the domain's upper end is owned by the last box; exactly one box owns any parameter",
+  "faceSnap": "a converged Newton parameter within two binary64 next_up/next_down steps of a box face resolves to the face bitwise — rounding reconciliation at a bitwise shared face, not a spatial tolerance and never a merge of distinct parameters",
+  "oneSidedJets": "left/right first derivatives from the adjacent Bézier spans via exact knot-insertion trims; the came-from side is preferred in Newton steps, either confirming side is accepted; converged C0 roots resolve when any side combination is transverse and stay unresolved when none is",
+  "curvePlaneFaces": "zero-variation boxes confirm a shared face only when its endpoint coefficient bound contains zero and the exact evaluation is within distance tolerance and the box-side one-sided jet is transverse; terminal boxes report the midpoint candidate unless a face's residual is not beaten by it; touching-interval point events merge keeping the lowest-residual parameter",
+  "dedup": "exact parameters only; no spatial-tolerance merging and no tolerance growth anywhere"
+ },
+ "limitations": [
+  "Only ruled surfaces are admitted for curve/surface; general CS against arbitrary NURBS surfaces, analytic SS pairs, certified tangency and partial ruling trims remain open (unchanged from the previous slice)",
+  "Newton images that leave their box by more than the two-step face-snap window still stay silent outside and trust the neighboring box; a pathological rounding disagreement wider than two ulp at a shared face could still leave a boundary root silent",
+  "A rounding-scale transverse near-pass whose closest point lands bitwise on a shared face can now be reported as a contact point with its true residual instead of a near_coincidence band",
+  "The dyadic curve/curve and curve/ruled-surface boundary fixtures pass on the pre-fix behavior as well; the pre-fix failure for those queries was a latent one-ulp window and is guarded rather than reproduced deterministically",
+  "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false"
+ ],
+ "sha256": {
+  "crates/brep-core/src/intersections.rs": "1276b7e7eb49bfc6a777bc44fc0d57486b24a28dbaab90c8bf60e8212d3dc2d8",
+  "tests/brepIntersections.test.ts": "c640afdf8eca6aa439bdccf5ca76523e12664217c042a06ecd1ce9ed3b0333ac",
+  "scripts/verify-dist.mjs": "71c36241dbf490c894469ce668e20f8262e144a5b2d243331cd695ca3c50ce2f",
+  "docs/design/brep-completion-status.md": "862c7d73c4049fed4da2a4750cbb77f9a1d4870569853e41409fd6eb881dcdce",
+  "src/generated/geometry-kernels/kernel_bg.wasm": "cfd1fc2ef0b0e6e25af9da492de44c72443a50af30c618765fc666e832e7f55c",
+  "src/generated/geometry-kernels/bytes.ts": "d3e12b805671fbfe5cb9b9d668d63b098f4fce1b50bef97b96063effde7767ce"
+ }
+}

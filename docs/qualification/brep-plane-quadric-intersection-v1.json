@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic plane/sphere and plane/cylinder surface-surface intersections (fourth analytic SS slice, two cells): native intersect_plane_sphere in crates/brep-core/src/intersections/plane_sphere.rs and intersect_plane_cylinder in crates/brep-core/src/intersections/plane_cylinder.rs, bridge ops brep_intersect_plane_sphere / brep_intersect_plane_cylinder, typed TS adapters intersectPlaneSphere / intersectPlaneCylinder. A new strict canonical planar-patch recognizer (one-face open model without bodies, exact bilinear affine surface over the unit square, unit weights, four unit-square trims and four corner vertices, orthogonal edge vectors within the 1e-9 recognition scale, rigid affine placements admitted) is shared by both cells; the canonical sphere and cylinder recognizers are reused unchanged. The plane operand is always first — swapped order is an explicit unsupported_surface region. The sphere section is the exact circle of radius sqrt(r^2-d^2), the perpendicular cylinder section the exact circle of radius R, the parallel cylinder section two exact degree-1 rulings at chord distance, and the oblique cylinder section the exact ellipse (semi-minor R, semi-major R/|axis.n|) — all rational quadratic/linear NURBS with exact weights, clipped by the finite patch rectangle (and the finite height, as two half-planes linear in the plane UV) in one exact eccentric-angle/line clip solved in closed form (phi = atan2(Q,P) +- acos(-f0/hypot(P,Q))), never iterated. Lifts are exact: ellipse arcs in the plane UV, clipped stereographic arcs on the sphere patches (patchSections + lift refactor of sphere_sphere.rs), iso-v circle arcs / iso-u rulings on the cylinder side patches with the exact rational-arc angle parameter; the oblique ellipse cylinder-side lift is null because the unrolled ellipse is a cosine curve with no low-degree exact rational UV representation. Classification uses outward binary64 bands widened by both recognition deviations; the axis/plane angle is certified never forced (pure-rounding tilts snap, recognition-scale tilts report near_coincidence, clearly oblique configurations are exact)",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 265,
+    "nativeTestsRelease": 265,
+    "nativeIntersectionTests": 127,
+    "nativeIntersectionTestsAdded": 18,
+    "bridgeTests": 212,
+    "bridgeTestsAdded": 4,
+    "vitestSuites": 4,
+    "vitestTests": 76,
+    "vitestIntersectionTests": 55,
+    "vitestIntersectionTestsAdded": 3,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4743767
+  },
+  "coverage": [
+    "RESOLVED plane/sphere full section: plane z=1 patch [-3,3]^2 against sphere r=2 yields the exact circle of radius sqrt(3) at z=1 (four 90-degree arcs, weights cos(pi/4), knots 0..4), center/normal to 1e-12, 16 samples on both implicit equations to 1e-12, maxSampleResidual <= 1e-12; the plane UV lift is the exact axis-aligned ellipse (four arcs, endpoints at radius sqrt(3)/6 of the UV center to 1e-12) and the sphere UV lifts evaluate through the stereographic patches onto both surfaces to 1e-9",
+    "RESOLVED plane/sphere boundary clipping: patch x in [0,3] clips the circle to its x>=0 half with exact trim parameters (swept [3pi/2, 5pi/2], endpoints (0,+-sqrt(3),1) to 1e-12, knots [0,0,0,1,1,2,2,2]); the clipped plane-UV arcs end exactly on u=0 at v = 1/2 +- sqrt(3)/6 and meet at the exact phi=0 seam, and the clipped sphere lifts evaluate onto both surfaces to 1e-9",
+    "RESOLVED plane/cylinder perpendicular full circle: plane z=4 patch [-3,3]^2 against cylinder r=2, z in [0,8] yields the exact radius-2 circle at mid-height with iso-v lifts on all four side patches (u 0->1 at v=0.5 exactly) and the exact plane-UV ellipse, all verified through the patch surfaces to 1e-9",
+    "RESOLVED plane/cylinder perpendicular clipped circle: patch x in [0,3] clips the circle to its x>=0 half (endpoints (0,-+2,4) to 1e-12) with iso-v sub-u lifts on the two swept side patches (v = 0.5 exactly) and exact plane-UV trims on u=0 at v = 1/6, 5/6",
+    "RESOLVED plane/cylinder parallel rulings: plane x=1 yields the two exact degree-1 lines (1,+-sqrt(3),z), z in 0..8 (clipped by the caps, contact=boundary), direction the unit axis, maxSampleResidual <= 1e-12; plane-UV segments at constant u with v 0->0.8 and iso-u side lifts both evaluate onto their surfaces to 1e-9; a ruling exactly on the patch boundary is a tangency region while the second ruling stays resolved with exact trims",
+    "RESOLVED plane/cylinder oblique full ellipse (beta=30 deg): center (0,0,4), semi-major 4/sqrt(3) along (0,cos,sin), semi-major endpoint (0,2,4+2/sqrt(3)) at phi=0 to 1e-12, semi-minor 2 along (-1,0,0), full=true, cylinder_uv=null; 16 samples satisfy the side and plane equations to 1e-12 and the plane-UV lift evaluates through the patch to 1e-9",
+    "RESOLVED plane/cylinder oblique clipped ellipse (beta=75 deg): the axial semi-extent 2*tan(beta) exceeds the half height, so the ellipse is clipped by both cap planes in the same exact eccentric-angle clip into two arcs whose endpoints sit exactly on z=0 and z=8 (radial residual 1e-12)",
+    "RESOLVED rigid placement: the sphere and the oblique cylinder configurations rotated 0.5 rad about X and translated keep the exact circle/ellipse against an independent binary64 oracle to 1e-12, with UV lifts verified through the placed patch surfaces to 1e-9",
+    "RESOLVED empty cases: plane/sphere misses (d>r+band, circle provably outside the patch rectangle), plane/cylinder sections provably beyond both cap planes, parallel misses (d>R+band), all numerically_resolved with no regions",
+    "UNRESOLVED plane/sphere tangencies: plane at distance r exactly or within the band, and the section circle touching a patch edge within the band (including the fully-outside tangent contact), stay tangency_or_multiple_root — never a point or a clipped-through sliver; a tangent-full circle is withheld while resolved arcs coexist with the unresolved region",
+    "UNRESOLVED plane/cylinder tangencies: plane coincident with a cap plane within the band reports coincident_trim (the coincident cap/rim region, never a guessed circle); the tangent parallel plane (d==R within the band), boundary-coincident rulings, band-thin line clips, patch-corner touches, cap-plane ellipse tangencies (tan(beta)=half_height/R exactly) and domain-edge ellipse tangencies stay tangency_or_multiple_root",
+    "UNRESOLVED recognition-scale tilts (1e-6 rad off perpendicular, 5e-10 rad off parallel): near_coincidence — perpendicularity/parallelism is certified against both recognition deviations, never forced",
+    "REFUSED non-canonical operands (cuboid, sphere or cylinder as the plane operand, frustum as the cylinder, skewed non-rectangular affine patch): explicit unsupported_surface region over the concatenated UV box, never a numerical fallback; a structurally perturbed patch (non-unit weight) fails model validation as a hard input error",
+    "WASM roundtrip: bridge reports carry kind=circle/line/ellipse with exact curves, oracle fields, planeUv/sphereUv/cylinderUv lifts (ellipse cylinderUv=null), maxSampleResidual <= 1e-12; JSON roundtrip preserves the components; coverage, permitsTopologyChange=false and evidence=numerical_uncertified serialize identically"
+  ],
+  "behaviorChange": "New read-only queries intersectPlaneSphere/intersectPlaneCylinder (brep_intersect_plane_sphere/brep_intersect_plane_cylinder); no existing query, op, or adapter behavior changed. In sphere_sphere.rs the lift helper was split into patchSections + lift and ccw_intersect/invert_patch/lift_clipped were added (refactor, no behavior change; the one clip_ellipse extremum-band fix withholds band-touching cuts that previously produced sliver arcs, which only affects the new cells). In cylinder_cylinder.rs arc_parameter and lift_line were widened to pub(crate) for reuse (no behavior change). Both dist budgets move once (geometry chunk 2,416,638 to 2,425,233 bytes measured, +8,595 for the planar-patch recognizer, angle certification, exact conic clips and lifts — budget now 2,430,000; total 4,735,172 to 4,743,767 bytes measured — budget now 4,750,000)",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the radius/height/patch/offset scale",
+    "angularSnapBand": "64 binary64 epsilons plus recognition-error angular allowances (pure-rounding tilt only)",
+    "nearBand": "1e-9 recognition-relative on |axis.normal| for tilt certification",
+    "ellipseClip": "closed-form eccentric-angle cuts per half-plane; extrema within the band of a boundary line are tangencies, never clipped through; surviving spans decided by exact midpoint evaluation",
+    "lineSamples": 9,
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical operands only: the planar patch is the one-face open exact bilinear affine rectangle (plane operand first); the sphere/cylinder are the exact canonical solids of the earlier cells; everything else, including skewed patches and frusta, is an explicit unsupported_surface region, never a numerical fallback",
+    "The oblique ellipse cylinder-side lift is null: on the rational side patches the ellipse unrolls to a cosine curve with no low-degree exact rational UV representation, so cylinder_uv ships null rather than a numerical fit — the 3D ellipse and the plane-UV lift stay exact",
+    "Side-surface contacts only for plane/cylinder (shared with the cylinder/cylinder cell): where the plane patch crosses a cap disk in the parallel/oblique cases, the cap chord is not a component and coverage stays numerically_resolved, never certified complete",
+    "Tangency is never a point, a guessed line, or a guessed circle: plane/sphere distance and domain-edge tangencies, cap-plane coincidence (coincident_trim), tangent parallel planes, boundary-coincident rulings, cap-tangent ellipses and band-thin clips all stay unresolved, and the classification band widens with recognition deviation so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (cone/torus families) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "6656d3f42911145f2706948dfb33f63a2ef155c66b29ac3faca89e6d95c06fb9",
+    "crates/brep-core/src/intersections/sphere_sphere.rs": "cdfe8c2f0896794a4225ae115cb2288fb9180f986b66a0ad2548f8fa98fe2def",
+    "crates/brep-core/src/intersections/sphere_cylinder.rs": "e3e4a6c798f03dbb67a139f5e96e3498dae3e8aa577ec5678f733452ebdd8a05",
+    "crates/brep-core/src/intersections/cylinder_cylinder.rs": "a481d841ebb87cb13212d1bcc93f539f6d64266a128a0a6ffa9fe439eb39d8e0",
+    "crates/brep-core/src/intersections/plane_sphere.rs": "5cf0979c602aa32c9c0d6954cb1af3ee5847a806febe360b933af4aa22b2efb4",
+    "crates/brep-core/src/intersections/plane_cylinder.rs": "cff24f8129706877421ebb2ae01510c9428613a32592294a9e8550d67d2d0458",
+    "crates/geometry-bridge/src/intersections.rs": "11adb558683a783dc2b5bd9695c585a6f74cd32d0049f2dc06a0be94ca674e37",
+    "crates/geometry-bridge/src/lib.rs": "22d0b300915c73ce3341eec41e6cd99dd050513e02ffd8cfc6abd54ad32dda9a",
+    "src/services/geometry/intersections.ts": "f2f1febdff800b1a795c4fb9336a2434502a900bec776a795ace64c4a81ae854",
+    "tests/brepIntersections.test.ts": "d52b2a07e4463f67886cb88ec802d2cf72e1e33de0cde329aa8773ade6aa42da",
+    "scripts/verify-dist.mjs": "adab01962d62bc197436f1e2e9d0c61362300cc9feb039b82a72eb46ffafa8c8",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "2664938172be8f09913676775d4668071569a84ee4d1436d2f901afe0153b7bf",
+    "src/generated/geometry-kernels/bytes.ts": "b23bb80438c99edcf0bc6e07a856fd1eef0afd0112b467c90ce31d7f70fe8981"
+  }
+}

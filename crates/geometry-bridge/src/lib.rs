@@ -26,6 +26,7 @@ pub mod brep_profile;
 pub mod brep_production;
 pub mod brep_provenance;
 pub mod brep_result;
+mod brep_scene_plan;
 mod brep_semantic;
 pub mod brep_session;
 mod brep_session_abi;
@@ -217,6 +218,21 @@ pub fn dispatch(v: Value) -> Result<Value> {
         | "brep_intersect_curve_plane"
         | "brep_intersect_surface_plane"
         | "brep_intersect_curve_surface"
+        | "brep_intersect_curve_ruled_surface"
+        | "brep_intersect_curve_curve"
+        | "brep_intersect_sphere_sphere"
+        | "brep_intersect_sphere_cylinder"
+        | "brep_intersect_sphere_cone"
+        | "brep_intersect_cone_cone"
+        | "brep_intersect_cylinder_cylinder"
+        | "brep_intersect_plane_sphere"
+        | "brep_intersect_plane_cylinder"
+        | "brep_intersect_plane_cone"
+        | "brep_intersect_plane_torus"
+        | "brep_intersect_sphere_torus"
+        | "brep_intersect_cylinder_torus"
+        | "brep_intersect_cone_torus"
+        | "brep_intersect_torus_torus"
         | "brep_intersection_trace_curve"
         | "brep_intersection_trace_curve_segments"
         | "brep_intersection_trace_evaluate" => intersections::dispatch(v),
@@ -228,6 +244,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "mesh_export_file" => mesh_export_file::dispatch(v),
         "brep_graph" => brep_graph::dispatch(v),
         "brep_graph_report" => Ok(brep_graph::report(v)),
+        "brep_scene_plan" => brep_scene_plan::plan(&v),
         "brep_semantic_geometry" => brep_semantic::execute(v),
         "brep_profile_transform"
         | "brep_profile_author"

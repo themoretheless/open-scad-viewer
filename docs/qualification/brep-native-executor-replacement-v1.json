@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-14",
+  "scope": "Native application executor replacement: the per-node TypeScript BrepSemanticBackend (src/services/brepSemanticBackend.ts, 329 lines) is deleted; the native graph/session executor (brepNativeExecutor.ts -> brep_session graph-begin/graph-advance/graph-commit) is the only B-rep execution path, and the displayPolicyHash derivation moves behind the WASM ABI as the new brep_scene_plan op",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeBridgeTests": 193,
+    "integrationTests": 126,
+    "testFiles": 12,
+    "failures": 0,
+    "pending": 0,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "distArtifacts": 68,
+    "distBytes": 4685177
+  },
+  "coverage": [
+    "Deleted TypeScript executor state, all of it duplicated by the native session: the payloadEntries WeakMap with frozen host geometry snapshots, the per-session entries/issued/localPayloads lease maps and sets, the host-side nativeLease translation table, the host-side programHash/languageContract/carrierKey/nodeIndex consistency checks (Rust already re-derives carrier/evidence admission and input order per node), the retained-set commit re-validation (duplicates/foreign/released refused natively at commit), and the abort-on-failure session disposal chain; Rust owns every lease, snapshot, commit, and disposal decision",
+    "Deleted with it: the BrepSemanticPayload symbol-brand, BREP_SEMANTIC_CARRIERS, inspectBrepSemanticPayload/inspectBrepSemanticProfilePayload snapshot views, and the maxRetainedGeometryCharacters host knob (a test-only lowering of the 4 MiB bound; the native session enforces maxCharacters itself and the graph path always uses MAX_NATIVE_GEOMETRY_CHARACTERS)",
+    "Audit result: no production src/ caller of createBrepSemanticBackend existed; the scene path (brepSemanticScene.ts -> executeBrepNativeProgram) was already fully native, so only tests consumed the legacy backend. BrepSemanticBackendError stays in brepSemanticErrors.ts as the host diagnostic shape for native failure reports",
+    "displayPolicyHash migrated natively: new brep_scene_plan op (brep_scene_plan.rs) validates quality in {preview,full} and segments in 1..32 and derives sha256('brep-display-policy-v1\\n' + canonical policy JSON) byte-identically to the retired host derivation (pinned hash test: preview/4 = ec733240...a97b); brepSemanticScene.ts consumes displayPlan.displayPolicyHash and keeps its RangeError guard so the public error surface is unchanged. The diagnostic lane (brepDiagnosticProtocol.ts diagnosticDisplayPolicyHash) deliberately keeps its host-side re-derivation so a compromised worker cannot self-certify its own policy",
+    "Mesh-span/provenance mapping in brepSemanticScene.ts stays host-side as pure bookkeeping: spans are copied verbatim from the admitted envelope (provenanceByOperation lookup), entity IDs come from natively admitted occurrence.sceneEntityId, and no arithmetic is involved",
+    "brepNativeExecutor.ts error surface preserved: the brep-1 contract refusal now carries backendCause E_BREP_SEMANTIC_UNSUPPORTED exactly as the legacy backend did, and native failure reports reconstruct GeometryKernelError as backendCause.kernelCause so kernel-failure consumers observe the identical shape",
+    "NativeValue now exposes valueType (already present on the wire) so consumers can assert representation-preserving evidence without a host payload view",
+    "Test migration, no assertions weakened: tests/brepNativeProgramSemantics.test.ts (17 tests) ports every geometry and behavior assertion of the retired 18-test brepSemanticBackend suite to executeBrepNativeProgram — exact primitives/transforms/booleans/profiles/extrusions, deep-freeze and mutation refusal, empty-typing, facet-intent independence, unsupported-carrier/operation refusals with mapped backendCause codes, abort-between-steps with unrelated-snapshot preservation, structuredClone minted-artifact refusal, and the node-budget refusal; the two backend-independent brep_semantic_geometry endpoint tests carry over verbatim; lease-lifecycle cases that tested deleted TS APIs are covered natively by brepNativeSession.test.ts (foreign/released/swapped handles, commit retention, disposal revocation) and the brep_session/brep_session_abi Rust suites (budget restoration, foreign sessions, duplicate handles)",
+    "tests/brepNativeSession.test.ts no longer cross-checks against the legacy executor; it asserts exact geometry instead (difference(){cube(3);cube(1);} -> one body, volume 26 mm3). tests/brepProfileExtrusionAudit.test.ts runs its five audit cases through executeBrepNativeProgram with identical mass/centroid/refusal assertions"
+  ],
+  "behaviorChange": "All B-rep semantics execute in one native graph/session pass with Rust-owned leases; the host keeps transport plus UI bookkeeping only (selection, entity IDs, display mesh assembly, presentation metadata). Public behavior is unchanged: identical scene output, identical mapped error codes (E_SEMANTIC_BACKEND_FAILURE/BEGIN/BUDGET/ABORTED with BrepSemanticBackendError causes), identical refusal cases, identical displayPolicyHash values",
+  "limits": {
+    "nodes": 25000,
+    "operations": 50000,
+    "occurrences": 100000,
+    "outputs": 1000,
+    "diagnostics": 10000,
+    "discardedEffects": 25000,
+    "tessellationIntents": 50000,
+    "declaredCapabilities": 32,
+    "capabilityClosure": 128,
+    "sourceCodeUnits": 250000,
+    "stringCodeUnits": 1000000,
+    "diagnosticMessageCodeUnits": 1000000,
+    "canonicalStringBytes": 16777216,
+    "snapshotValues": 1000000,
+    "snapshotDepth": 256,
+    "identityValueDepth": 32,
+    "sourceUtf8Bytes": 4000000,
+    "abiRequestBytes": 33554432,
+    "routingRequiredCapabilities": 32,
+    "scheduleReplayEvents": 150000,
+    "displayPolicySegments": 32,
+    "displayTriangles": 20000
+  },
+  "limitations": [
+    "The per-node incremental API surface (evaluate/releasePayload/validatePayload per node with mid-session snapshot inspection) is gone by design: no production caller used it, and the native session covers the same lifecycle rules at the wire level; any future consumer needing mid-graph snapshots must use brep_session begin/evaluate/snapshot/commit directly, not a host payload cache",
+    "The maxRetainedGeometryCharacters test knob is retired; character-budget exhaustion is now exercised only at the native fixed 4 MiB bound (covered by Rust session tests, not reachable through executeBrepNativeProgram without an oversized program)",
+    "Display tessellation (prepareBrepDisplay), BVH/edge extraction, geometryAssetId, and the 20,000-triangle display budget remain host-side presentation concerns; brep_scene_plan owns only policy admission and hash derivation",
+    "The native executor still cannot evaluate hull nodes or curved booleans (pre-existing gap, unchanged): admitted hull programs refuse with E_BREP_SEMANTIC_UNSUPPORTED",
+    "The generic executeSemanticProgram host executor remains in place for the Manifold backend (manifoldPlanBackend.ts), which is out of scope for the B-rep migration"
+  ],
+  "sha256": {
+    "crates/geometry-bridge/src/brep_scene_plan.rs": "284737126fb606aa0115ff696c72789178aed4992a539affaaf2dffa7bfaf445",
+    "crates/geometry-bridge/src/lib.rs": "98ae89375640b98dbeb9e42a0b5fb96e85096ece0340625c6cb7b9512b25d09a",
+    "src/services/brepNativeExecutor.ts": "e230c0511f5540dbf473e874f35f5417f173682aa5ad363b602d5e2781db21e4",
+    "src/services/brepSemanticScene.ts": "42eb4ddfca436339d7dff088b47feea1e0cb94f1ad3471c7f386e35bd1bb7bd9",
+    "tests/brepNativeProgramSemantics.test.ts": "8aafc013fa960c0a4708fff8537cb72adebd05524c5bafa28223aa02f2efbd7e",
+    "tests/brepNativeSession.test.ts": "46266400aea66342d42789936fab2ec6e91761d1221305a3ae2e6dc780ba8e1c",
+    "tests/brepProfileExtrusionAudit.test.ts": "261c26901f32b2d0163c1e32c261b414ff13728373e12d81f8c1a46442ce232d",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "e31b84ba33aa144eba64f4e84621bc27bf804e793eeefb1cb82f053b0aa6b54b",
+    "src/generated/geometry-kernels/bytes.ts": "903ab16e47191410e128f044627dec12f004006a4ded2c16714e92151875c596"
+  }
+}

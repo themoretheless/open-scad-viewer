@@ -1,0 +1,66 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic plane/cone (frustum) surface-surface intersection (fifth analytic SS slice, one cell): native intersect_plane_cone in crates/brep-core/src/intersections/plane_cone.rs, bridge op brep_intersect_plane_cone, typed TS adapter intersectPlaneCone. A new strict canonical conical-frustum recognizer (exact canonical solid, side surface certified as four ruled rational quadratic patches whose control points lie exactly on the linear radius taper between the two rings — certified against the ring centers with the height counted once, rigid affine placements admitted; a true-apex cone is admitted, an equal-radius frustum is a cylinder and is refused) pairs with the canonical planar-patch recognizer of the plane/quadric cells, unchanged. The plane operand is always first — swapped order is an explicit unsupported_surface region. In the apex frame the section satisfies the exact conic A2 x^2 - L x + y^2 + C = 0 with A2 = K(g^2 - sigma^2), K = 1 + m^2, sigma = |m|/sqrt(K), g = axis.n: perpendicular planes yield the exact circle of linearly interpolated ring radius with iso-v side lifts on the four side patches; through-axis planes yield two exact degree-1 rulings through the apex with iso-u side lifts; oblique planes yield the exact ellipse (|g| > sigma, clipped in the UV parameter), parabola (|g| = sigma within a pure-rounding angular snap, all weights 1) or hyperbola arcs (x = x_c +- a(1+t^2)/(1-t^2), y = 2bt/(1-t^2)) — every clip of the conic against the height ring planes and the patch rectangle is a closed-form rational-quadratic half-plane clip in the exact curve parameter, never iterated. The cone-side lift of the ellipse/parabola/hyperbola is null (no exact low-degree rational UV form on the ruled side, the plane/cylinder precedent); the 3D curve and the plane-UV lift stay exact. Classification uses outward binary64 bands widened by both recognition deviations; ring-plane coincidence reports coincident_trim, the apex contact and the parabola threshold band stay tangency_or_multiple_root, misses resolve empty. No numerical fallback anywhere; never authorizes topology changes.",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 276,
+    "nativeTestsRelease": 276,
+    "nativeIntersectionTests": 138,
+    "nativeIntersectionTestsAdded": 11,
+    "bridgeTests": 214,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 78,
+    "vitestIntersectionTests": 57,
+    "vitestIntersectionTestsAdded": 2,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4756257
+  },
+  "coverage": [
+    "RESOLVED plane/cone perpendicular full circle: plane z=2.5 patch [-3,3]^2 against the frustum r 3->1 over z 0..5 yields the exact circle of linearly interpolated radius 2 at z=2.5 (center/normal to 1e-12, 16 samples on both implicit equations to 1e-12), with iso-v lifts at v=0.5 exactly on all four side patches and the exact plane-UV ellipse, both verified through the patch surfaces to 1e-9",
+    "RESOLVED plane/cone perpendicular clipped circle: a half-covering patch clips the circle to exact eccentric-angle trims whose endpoints sit exactly on the patch boundary, with sub-u iso-v side lifts and exact plane-UV trims",
+    "RESOLVED plane/cone through-axis rulings: the axis-containing plane yields the two exact degree-1 rulings through the apex (direction exactly along the side taper, endpoints clipped by both ring planes, contact=boundary), with iso-u side lifts and exact plane-UV segments",
+    "RESOLVED plane/cone parallel-offset hyperbola: an axis-parallel plane at chord distance yields the exact hyperbola arcs (x = x_c +- a(1+t^2)/(1-t^2), y = 2bt/(1-t^2)) clipped in closed form by both ring planes; the two components carry opposite world-x signs within one arc and matching signs across the pair, samples on the cone and plane equations to 1e-12, cone_uv=null",
+    "RESOLVED plane/cone oblique ellipse against the independent vertex oracle: frustum r 3->1 over z 0..5 with normal (0,0.6,0.8) at offset 2 yields the exact ellipse whose vertices (0,20/7,5/14) and (0,-20/13,95/26) and semi-major 250/91 match the closed-form oracle to 1e-12, full ellipse clipped exactly by the UV half-planes when the patch cuts it, cone_uv=null",
+    "RESOLVED plane/cone ruling-parallel parabola: normal (0,cos,sin) with sin = 0.4/sqrt(1.16) through (0,0,2) yields the exact degree-2 parabola with all weights 1 (pure-rounding snap to the ruling-parallel angle), focal length exactly 1.1 sin(alpha), direction (0,sin,-cos) to 1e-12, both clip endpoints exactly on the bottom ring plane z=0 at radius 3, cone_uv=null",
+    "RESOLVED rigid placement: the oblique ellipse configuration rotated about X and translated keeps the exact conic against the independent binary64 oracle to 1e-12, with UV lifts verified through the placed patch surfaces to 1e-9",
+    "RESOLVED empty cases: planes provably beyond both ring planes and circles/sections provably outside the patch rectangle resolve numerically_resolved with no components and no regions",
+    "UNRESOLVED plane/cone ring-plane coincidence: a plane coincident with a ring plane within the band reports coincident_trim (the coincident ring/cap-trim region, never a guessed circle)",
+    "UNRESOLVED plane/cone apex and threshold tangencies: the plane through the true apex, ring-tangent sections and the parabola threshold band (|g| within the recognition-widened angular snap of sigma but not a pure-rounding tilt) stay tangency_or_multiple_root — tangent contacts are never points or guessed lines",
+    "UNRESOLVED recognition-scale tilts: near_coincidence for tilts inside the 1e-9 recognition-relative band off perpendicular/parallel — the angle classification is certified against both recognition deviations, never forced",
+    "REFUSED non-canonical operands (equal-radius frustum i.e. cylinder as the cone operand, frustum as the plane operand, skewed non-rectangular patch): explicit unsupported_surface region over the concatenated UV box, never a numerical fallback",
+    "WASM roundtrip: bridge reports carry kind=circle/line/ellipse/parabola/hyperbola with exact curves and oracle fields, planeUv/coneUv lifts (coneUv null for the oblique conics), maxSampleResidual <= 1e-12; JSON roundtrip preserves the components and regions; coverage, permitsTopologyChange=false and evidence serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectPlaneCone (brep_intersect_plane_cone); no existing query, op, or adapter behavior changed. Both dist budgets move once (geometry chunk 2,425,233 to 2,437,723 bytes measured, +12,490 for the frustum recognizer, conic classification, exact rational-quadratic clips and lifts — budget now 2,445,000; total 4,743,767 to 4,756,257 bytes measured — budget now 4,765,000)",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the radius/height/patch/offset scale",
+    "angularSnapBand": "64 binary64 epsilons plus recognition-error angular allowances (pure-rounding tilt only) around the ruling-parallel angle sigma = |m|/sqrt(1+m^2)",
+    "conicClip": "closed-form rational-quadratic half-plane cuts per ring plane and per patch edge in the exact curve parameter (eccentric angle for the ellipse, line parameter for the circle/rulings, t of the (1+t^2)/(1-t^2) form for the hyperbola); extrema within the band of a boundary line are tangencies, never clipped through",
+    "lineSamples": 9,
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical operands only: the planar patch is the one-face open exact bilinear affine rectangle (plane operand first); the cone is the exact canonical conical frustum solid (true apex admitted, equal-radius frustum refused as a cylinder); everything else is an explicit unsupported_surface region, never a numerical fallback",
+    "The cone-side lift of the oblique ellipse/parabola/hyperbola is null: on the ruled rational side patches those conics have no exact low-degree rational UV representation, so cone_uv ships null rather than a numerical fit — the 3D conic and the plane-UV lift stay exact (the plane/cylinder oblique-ellipse precedent)",
+    "Side-surface contacts only (shared with the plane/cylinder cell): where the plane patch crosses a ring cap disk, the cap chord is not a component and coverage stays numerically_resolved, never certified complete",
+    "Tangency is never a point, a guessed line, or a guessed circle: the apex contact, ring-plane coincidence (coincident_trim), the parabola threshold band, ring-tangent conics and band-thin clips all stay unresolved, and the classification band widens with recognition deviation so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (torus family, non-parallel cylinder/cylinder, cone/cone) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "1b6dde62266b545d1bf15175473fa306c39dcc5944a2035ae7f9dcf0b4d4dba2",
+    "crates/brep-core/src/intersections/plane_cone.rs": "9b61619684650a00f9a5aa6bd9bc20840f876cdb51ca3c2a87cb1167a4e46346",
+    "crates/geometry-bridge/src/intersections.rs": "3916ea849f0c673c1bf1ebc55feb02f951304aba8c160fab43133b9588308a0b",
+    "crates/geometry-bridge/src/lib.rs": "991a9fe019dbab0be2770ad3c43f81e079b7145b7c18604fa669d904be5e5f4e",
+    "src/services/geometry/intersections.ts": "7a39c072e9519ab80d7cb570f9b7c3f8d0236aea3b63eb5f2c3c5c46aef06eea",
+    "tests/brepIntersections.test.ts": "754844b4db2cb75ed6eb4c71435c5b461fae3bf02546bf61ea908df5e4307bc5",
+    "scripts/verify-dist.mjs": "92be3b6aaeff2b8e5d9321636df014aaf657ad92b7ed5a23d91cd6a0a392d349",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "b339531ea18a9a3ba75f8dc1a7e459dde40041693e207a2ceda5e67aee9d7b0b",
+    "src/generated/geometry-kernels/bytes.ts": "347fb7291a4d7b6bc2db03c0e820c7a32064f31ac056e5fb8de16e8782c62384"
+  }
+}

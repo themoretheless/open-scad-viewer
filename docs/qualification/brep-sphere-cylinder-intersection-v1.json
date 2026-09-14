@@ -1,0 +1,65 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic sphere/cylinder surface-surface intersection in the axial configuration (second analytic SS cell): native intersect_sphere_cylinder in crates/brep-core/src/intersections/sphere_cylinder.rs, bridge op brep_intersect_sphere_cylinder, typed TS adapter intersectSphereCylinder — canonical stereographic-sphere recognition reused from the sphere/sphere cell, a new strict canonical-cylinder recognizer (four rational circular side patches with exact weights and unit-square trims, two bilinear caps with inscribed quarter-circle trims, every control point certified against the exact construction in the recovered ring frame, global quadrant tiling, both ring vertex sets, rigid affine placements admitted), certified axiality (pure-rounding perpendicular offsets snap to the axis, recognition-scale offsets report near_coincidence, clearly off-axis pairs are unsupported_surface — the general sphere/cylinder pair is a quartic, out of scope), outward binary64 band classification widened by the observed recognition deviation, exact rational circles (four 90-degree arcs, weights cos(pi/4)) with UV lifts on both surfaces (iso-v lines on all four side patches, an exact UV circle on a cap face, per-patch UV circles/lines on the sphere), and explicit unresolved regions for the r == R coincident band, rim and cap-plane tangencies — tangent contacts are never reported as point or guessed-circle components",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 238,
+    "nativeTestsRelease": 238,
+    "nativeIntersectionTests": 100,
+    "nativeIntersectionTestsAdded": 12,
+    "bridgeTests": 206,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 70,
+    "vitestIntersectionTests": 49,
+    "vitestIntersectionTestsAdded": 3,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4733862
+  },
+  "coverage": [
+    "RESOLVED axial sphere r=3 at the midpoint of cylinder R=2 h=8: two side circles at z = 4 +- sqrt(r^2-R^2) = 4 +- sqrt(5) to 1e-12, radius R to 1e-12, exact 4-arc rational circles with weights cos(pi/4), 16 samples on both the sphere and the cylinder side implicit equations to 1e-12, side lifts are iso-v lines on all four side patches at v = z/h",
+    "RESOLVED clipping by the finite height: sphere r=3 centered on the bottom cap plane yields only the upper side circle at z = sqrt(5) (the lower crossing is outside the height, the bottom cap-plane circle of radius 3 lies outside the cap disk), resolved with one component",
+    "RESOLVED cap circles: sphere r=1.5 < R=2 poking through either cap plane while radially inside yields the exact circle of radius sqrt(r^2-d^2) = sqrt(2) in the cap plane, inside the disk; the cap lift is the exact UV circle of radius sqrt(2)/(2R) about [1/2,1/2] (four 90-degree arcs), evaluated through the cap surface onto both equations to 1e-9",
+    "RESOLVED zero-circle configurations: small sphere strictly inside, sphere beyond the caps with no reach back, and a large sphere swallowing the whole cylinder (side crossings beyond the height, cap circles outside the disks) all resolve empty with numerically_resolved coverage",
+    "RESOLVED rigid placement: the whole axial configuration rotated 0.5 rad about X and translated keeps both exact circles against an independent binary64 oracle to 1e-12, with UV lifts on both surfaces verified through the patch surfaces to 1e-9",
+    "UNRESOLVED r == R exactly or within the outward band (including a sphere reaching back over a cap): coincident_trim region, never a guessed circle; the sphere recognizer's shared recognition band makes the radius equality inseparable from coincidence",
+    "UNRESOLVED cap-plane tangency (sphere tangent to a cap plane from inside) and rim tangency (sqrt(r^2-R^2) == h/2 lands both side crossings on the cap planes): tangency_or_multiple_root regions, no point or circle components — house tangency discipline; just clear of the cap band resolves empty, just across yields the transverse cap circle",
+    "UNRESOLVED near-axial offsets within the recognition band (1e-10 of the scale): near_coincidence, axiality is certified, never forced; clearly off-axis pairs (0.5 of the radius) are explicit unsupported_surface regions",
+    "REFUSED non-canonical operands (frustum, tube, cuboid, torus as either operand): explicit unsupported_surface region over the concatenated UV box, never a numerical fallback; a structurally perturbed cylinder fails model validation as a hard input error",
+    "WASM roundtrip: bridge report carries kind=circle, exact weights, center/radius/normal, sphereUv and cylinderUv lifts with face indices, maxSampleResidual <= 1e-12; JSON roundtrip preserves the components; coverage, permitsTopologyChange=false and evidence=numerical_uncertified serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectSphereCylinder/brep_intersect_sphere_cylinder; no existing query, op, or adapter behavior changed. The geometry chunk budget rose 2,410,000 to 2,420,000 and the total budget 4,730,000 to 4,740,000 (measured +7,380 bytes packed: 2,407,948 to 2,415,328 chunk, 4,726,482 to 4,733,862 total, for the cylinder recognizer, band classification and both UV lifts); all other budgets unchanged",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "recognition deviation + 16 binary64 epsilons of the axial/radius scale",
+    "axialSnapBand": "64 binary64 epsilons of the axial/radius scale (pure-rounding offsets only)",
+    "nearAxialBand": "1e-9 of the radius/height scale (recognition-relative)",
+    "circleArcs": 4,
+    "circleSamples": 16,
+    "capUvMap": "u = 1/2 + x/(2R), v = 1/2 + y/(2R)"
+  },
+  "limitations": [
+    "Axial configuration only: the sphere center must be certified on the cylinder axis (rigid affine placements admitted); near-axial offsets inside the recognition band stay near_coincidence and the general off-axis sphere/cylinder pair (a quartic) is an explicit unsupported_surface region, not a numerical fallback",
+    "Canonical operands only: the exact eight-patch stereographic sphere and the exact six-face cylinder from analytic::cylinder; frusta, tubes, tori and every other solid are explicit unsupported_surface regions",
+    "Tangency is never a point or a guessed circle: the r == R band reports coincident_trim, rim and cap-plane tangencies report tangency_or_multiple_root, and the classification band widens with recognition deviation so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "Cylinder side lifts are per-patch iso-v segments (one per quadrant patch, no cross-patch sewing); cap lifts are exact UV circles inside the inscribed-circle trim; sphere lifts remain per-patch pieces as in the sphere/sphere cell",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these circles in Booleans, the non-axial sphere/cylinder case, and the remaining analytic SS pairs (cone/torus families) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "e6dc527d09b22a7a2d96b45c44ef0da9ad9622ab41e53f9d88d571e1594fb5c1",
+    "crates/brep-core/src/intersections/sphere_sphere.rs": "4c8c86013de8650f1f0eb0a288f8d3acd8aa45fc0ba389115a840e2d5877528a",
+    "crates/brep-core/src/intersections/sphere_cylinder.rs": "514aa9d88cba514bcdb985d6212f7398c762be176545a798ad56777dd8b0e678",
+    "crates/geometry-bridge/src/intersections.rs": "db8fcc733d4625bbdc5e3ec5d0e8537ed0f8fc7d65684dfea53d24113c8710df",
+    "crates/geometry-bridge/src/lib.rs": "f97d8b3c46af2bb8ee1c7b2a6fa5d65eab557c256da89f4cb989d5e2d1bd4ee4",
+    "src/services/geometry/intersections.ts": "26f5d6b8d7c148946df8ec6dc5cce1c32012676678285538fa6376a91d545a9c",
+    "tests/brepIntersections.test.ts": "d725ca4948de8e0dc79e35362c7feaabf8c6aa62851869528bb07a6c5e5725f0",
+    "scripts/verify-dist.mjs": "1fce190aa682dd6ffa5b1e374bf66683d3a2c9c83174804f78347dc7f190e9ea",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "19a2da225fac526daa887ab1e9e9457eb725feb3a22cfc468c7d7d2ae326619a",
+    "src/generated/geometry-kernels/bytes.ts": "10be108c81ba770532d34066e63309e193ccc5fac93c635dec6fc17d495a0731"
+  }
+}

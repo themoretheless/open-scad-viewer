@@ -22,6 +22,7 @@ pub mod prism;
 pub mod prism_frame;
 mod prismatic_boolean;
 pub mod sketch;
+mod sphere_boolean;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;

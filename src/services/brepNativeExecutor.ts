@@ -1,5 +1,5 @@
 /** Host transport and UI snapshots; Rust owns graph execution and result selection. */
-import type {SemanticColor, SemanticOccurrence, SemanticOutputRef} from '../core/semanticProgram'
+import type {SemanticColor, SemanticOccurrence, SemanticOutputRef, SemanticValueType} from '../core/semanticProgram'
 import {MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import {callGeometryRust,GeometryKernelError} from './geometry/kernel'
 import type {NurbsBrep} from './geometry/brep'
@@ -9,7 +9,7 @@ import {requireTrustedSemanticLowering,type SemanticLoweringSuccess} from './sem
 import {checkSemanticExecutionControl,SemanticProgramExecutionError,type SemanticExecutionControl} from './semanticProgramExecutor'
 
 type Geometry={kind:'solid';model:NurbsBrep}|{kind:'profile';profile:BrepProfile}
-type NativeValue={tag:'empty'}|{tag:'value';geometry:Geometry}
+type NativeValue={tag:'empty';valueType:SemanticValueType}|{tag:'value';valueType:SemanticValueType;geometry:Geometry}
 type NativeFailure={tag:'failed';node:number|null;code:string;message:string}
 interface NativeCommit {tag:'committed';outcomes:NativeValue[];resultItems:{reference:SemanticOutputRef;outcomeIndex:number}[]}
 export interface BrepNativeOutput {readonly reference:SemanticOutputRef;readonly value:NativeValue;readonly occurrence:SemanticOccurrence;readonly color:SemanticColor}
@@ -22,7 +22,7 @@ function freeze<T>(value:T):T {
 }
 function failure(report:NativeFailure):never {
  const error=new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_FAILURE',report.node,report.message)
- error.backendCause=new BrepSemanticBackendError(report.code.startsWith('BREP_UNSUPPORTED_')?'E_BREP_SEMANTIC_UNSUPPORTED':report.code==='BREP_SEMANTIC_BUDGET'?'E_BREP_SEMANTIC_BUDGET':report.code==='BREP_SEMANTIC_CONTRACT'?'E_BREP_SEMANTIC_CONTRACT':'E_BREP_SEMANTIC_KERNEL',report.message)
+ error.backendCause=new BrepSemanticBackendError(report.code.startsWith('BREP_UNSUPPORTED_')?'E_BREP_SEMANTIC_UNSUPPORTED':report.code==='BREP_SEMANTIC_BUDGET'?'E_BREP_SEMANTIC_BUDGET':report.code==='BREP_SEMANTIC_CONTRACT'?'E_BREP_SEMANTIC_CONTRACT':'E_BREP_SEMANTIC_KERNEL',report.message,new GeometryKernelError(report.code,report.message))
  throw error
 }
 export async function executeBrepNativeProgram(input:SemanticLoweringSuccess,control:SemanticExecutionControl={}) {
@@ -30,7 +30,11 @@ export async function executeBrepNativeProgram(input:SemanticLoweringSuccess,con
  const maxNodes=control.maxNodes??core.nodes.length
  if(!Number.isSafeInteger(maxNodes)||maxNodes<0||core.nodes.length>maxNodes)throw new SemanticProgramExecutionError('E_SEMANTIC_BUDGET',null,'Semantic node budget exceeded')
  checkSemanticExecutionControl(control,null)
- if(core.language.contract!=='openscad-viewer/brep-1')throw new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_BEGIN',null,'Native B-rep execution requires brep-1')
+ if(core.language.contract!=='openscad-viewer/brep-1'){
+  const error=new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_BEGIN',null,'Native B-rep execution requires brep-1')
+  error.backendCause=new BrepSemanticBackendError('E_BREP_SEMANTIC_UNSUPPORTED','B-rep semantic backend requires openscad-viewer/brep-1')
+  throw error
+ }
  let session:string|undefined,active:number|null=null
  let primary:SemanticProgramExecutionError|undefined
  try{

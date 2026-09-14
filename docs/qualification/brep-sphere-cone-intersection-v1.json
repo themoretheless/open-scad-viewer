@@ -1,0 +1,64 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic sphere/cone (frustum) surface-surface intersection (sixth analytic SS slice, one cell): native intersect_sphere_cone in crates/brep-core/src/intersections/sphere_cone.rs, bridge op brep_intersect_sphere_cone, typed TS adapter intersectSphereCone (transport-only). Both recognizers are reused unchanged: the canonical stereographic sphere of sphere_sphere::recognize and the canonical conical-frustum recognizer of plane_cone::recognize_cone (four ruled rational-quadratic side patches on the linear radius taper, a bilinear cap per nonzero ring, true apex admitted, equal-radius frustum refused as a cylinder; rigid affine placements admitted). Axial configuration only: the sphere center must be certified on the cone axis with the sphere/cylinder snap discipline (pure-rounding offsets snap, recognition-scale offsets report near_coincidence, clearly off-axis pairs are unsupported_surface — the general sphere/cone pair is a quartic, out of scope, and there is no numerical fallback). In the axial coordinate the side contact solves the single exact quadratic (1+m^2) q^2 + 2 rho_c m q + (rho_c^2 - r^2) = 0 with m the taper slope and rho_c the cone radius at the sphere-center height; its discriminant compares r against the side-line distance |rho_c|/sqrt(1+m^2), so two distinct in-height roots yield the exact rational circles of linearly interpolated radius rho(t) (iso-v lifts on all four side patches, per-patch UV lifts on the sphere), cap-plane crossings strictly inside a ring disk yield the exact cap-plane circle (UV-circle lift on the cap face), and provable misses (sphere axially beyond the solid, side line unreachable, cap circles provably outside the disks) resolve empty certified by the interval signs. The double-root side tangency, rim contacts (root on a ring plane, cap circle of ring radius, or the whole rim circle on the sphere), apex contacts (a root whose radius collapses into the band — the sphere through the singular apex point) and cap-plane touches all stay tangency_or_multiple_root, never points or guessed circles; a transverse circle coexisting with a tangency still reports alongside the explicit region. Classification uses outward binary64 bands widened by both recognition deviations (16 epsilons of the axial/radius scale, axial snap at 64 epsilons). This slice also fixes a latent wraparound bug in the shared sphere_sphere::clip_circle span merge: a span crossing the angle origin was emitted with end < start, breaking the swept-interval contract and letting circle_arcs emit complementary negative-weight arcs that Curve::evaluate rejects (small wrapped spans silently lifted the complementary arc); the merge now unwraps the end past TAU. Nothing here authorizes a topology change.",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 289,
+    "nativeTestsRelease": 289,
+    "nativeIntersectionTests": 151,
+    "nativeIntersectionTestsAdded": 13,
+    "bridgeTests": 216,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 80,
+    "vitestIntersectionTests": 59,
+    "vitestIntersectionTestsAdded": 2,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4757897
+  },
+  "coverage": [
+    "RESOLVED sphere/cone two side circles: frustum r 1->3 over z 0..6 with sphere r=2 centered on the axis at z=3 solves the side quadratic (roots q = (-2/3 +- 2/3) * 9/10) into the exact circles at z = 1.8 (radius 1.6) and z = 3 (radius 2), center/radius to 1e-12 against the closed-form oracle, 16 samples on both implicit equations to 1e-12, iso-v lifts at v = z/6 exactly on all four side patches and per-patch sphere lifts, every lifted UV point verified through the placed patch surfaces to 1e-9",
+    "RESOLVED sphere/cone one circle clipped by the finite height: frustum r 2->4 over z 0..6 with sphere r=2.5 at z=0.5 keeps only the in-range root t = 1.2 (radius 2.4); the lower root falls below the bottom ring and the bottom cap circle radius sqrt(6) lies outside the disk",
+    "RESOLVED sphere/cone cap circles: sphere r=1.5 centered 0.5 below the top ring plane of frustum r 2->4 over z 0..6 yields the exact circle of radius sqrt(2) in the cap plane with the exact UV-circle lift of radius sqrt(2)/8 about [1/2,1/2] on the top cap face; the mirrored bottom-cap case lifts onto the bottom cap face — both verified through the cap surfaces to 1e-9",
+    "RESOLVED empty cases: a small sphere strictly inside the side wall, a sphere provably beyond the top ring plane and a large sphere swallowing the whole frustum (side roots beyond the height, cap circles outside the disks) all resolve numerically_resolved with no components and no regions",
+    "RESOLVED rigid placement: the two-circle configuration rotated about X and translated keeps the exact circles against the independent binary64 oracle to 1e-12 with UV lifts verified through the placed surfaces to 1e-9",
+    "UNRESOLVED side tangency: r == rho_c/sqrt(1+m^2) = 6/sqrt(10) (double root), exactly and within the band both ways, stays tangency_or_multiple_root — never a guessed circle; 1e-9 clear of the band on either side resolves (provable miss below, two small transverse circles above)",
+    "UNRESOLVED rim contact: the sphere centered on the bottom ring plane with r == r_bottom (the whole rim circle on the sphere) stays tangency_or_multiple_root, never a guessed circle",
+    "UNRESOLVED apex contact: the sphere through the true apex of the r 0->3 cone stays tangency_or_multiple_root while the coexisting transverse side circle (t = 50/17, radius 30/17, oracle to 1e-12) still reports; the sphere with the apex strictly inside stays resolved",
+    "UNRESOLVED cap-plane touch: the r=1.5 sphere tangent to the top cap plane stays tangency_or_multiple_root; 1e-9 clear resolves empty, 1e-9 across resolves a small transverse cap circle",
+    "UNRESOLVED near-axial offsets: a 1e-10 perpendicular offset inside the recognition band reports near_coincidence, never forced axial",
+    "REFUSED non-canonical operands and off-axis pairs: an equal-radius frustum (a cylinder) as the cone operand, tube/cuboid/torus operands, swapped operand order, and a 0.5 off-axis pair are explicit unsupported_surface regions over the concatenated UV box, never a numerical fallback; a structurally perturbed cone is a hard validation error",
+    "WASM roundtrip: bridge reports carry kind=circle with exact curves and oracle fields, sphereUv/coneUv lifts, maxSampleResidual <= 1e-12; JSON roundtrip preserves the components and regions; coverage, permitsTopologyChange=false and evidence serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectSphereCone (brep_intersect_sphere_cone); no existing query, op, or adapter behavior changed, except the shared sphere_sphere::clip_circle wraparound span merge fix (spans crossing the angle origin now keep the ccw swept-interval contract with positive-weight arcs instead of emitting complementary negative-weight arcs Curve::evaluate rejects). Both dist budgets hold (geometry chunk 2,437,723 to 2,439,363 bytes measured, +1,640 for the axial classification and exact circle/cap components reusing both recognizers — budget stays 2,445,000; total 4,756,257 to 4,757,897 bytes measured — budget stays 4,765,000).",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the axial/height/radius scale",
+    "axialSnap": "64 binary64 epsilons of the scale (pure-rounding offset only); recognition-scale offsets report near_coincidence, larger offsets are unsupported_surface",
+    "sideClassification": "one exact quadratic in the axial offset q: r vs the side-line distance |rho_c|/sqrt(1+m^2) classified on the outward band; double root within the band of the finite side segment is tangency_or_multiple_root; roots within the band of a ring plane or with radius collapsing into the band (apex) stay tangency_or_multiple_root",
+    "capClassification": "sphere/cylinder cap discipline: plane touch or rim equality stays tangency_or_multiple_root, circles provably outside the ring disk are skipped, provable misses resolve empty",
+    "circleSamples": 16
+  },
+  "limitations": [
+    "Canonical axial operands only: the sphere is the exact canonical stereographic sphere and the cone the exact canonical conical frustum solid (true apex admitted, equal-radius frustum refused as a cylinder), sphere center certified on the cone axis under rigid affine placement; everything else — including any non-axial sphere/cone pair (a quartic) — is an explicit unsupported_surface region, never a numerical fallback",
+    "Tangency is never a point or a guessed circle: the side double root, rim contacts, apex contacts and cap-plane touches all stay tangency_or_multiple_root, and the classification band widens with both recognition deviations so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "There is no sphere/cone surface coincidence case; every degeneracy here is reported as an explicit tangency region (coincident_trim does not arise)",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these sections in Booleans and the remaining analytic SS pairs (torus family, non-parallel cylinder/cylinder, cone/cone) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "a93076f6e68fdcb559f9438f64767f0386c03f5b38e135484514a12d1260f779",
+    "crates/brep-core/src/intersections/sphere_cone.rs": "f7c41131486bb4a20a05b542febc0da65d9d96a841a7d610493930c94515cf31",
+    "crates/brep-core/src/intersections/sphere_sphere.rs": "7f22f4e3799f202da57f4ea1f9f0a80fc591e92e7d90d6c4f1d99bfe5a2dce56",
+    "crates/geometry-bridge/src/intersections.rs": "ffdf124cc3e7d3658bdba639538688e1dbee933d3c06413b87597e88e1cd1c7a",
+    "crates/geometry-bridge/src/lib.rs": "d9cdb2dbc0a5d81e7df31de604a642990b90e760587728ad1f3443c8686c3428",
+    "src/services/geometry/intersections.ts": "df3e50814259d157acef2c155935c7b1346493bb079d9f8efd90b73e7c06354a",
+    "tests/brepIntersections.test.ts": "f9ca1d9b8f5e4dd5e1f8bf298e311802e10c1fb4ba17f73c2f89027b2619304f",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "3e4e80a13e89dfff8529707dc68d154c64a2dbb46a270b1a28ccb2e1c2ca9059",
+    "src/generated/geometry-kernels/bytes.ts": "4e63a96450f2cc336d262182800ac6043c4948d8b16a5662157f50c02d38252a"
+  }
+}

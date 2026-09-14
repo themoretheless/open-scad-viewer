@@ -1,0 +1,67 @@
+{
+  "date": "2026-09-14",
+  "scope": "Analytic cylinder/cylinder surface-surface intersection for parallel axes (third analytic SS cell): native intersect_cylinder_cylinder in crates/brep-core/src/intersections/cylinder_cylinder.rs, bridge op brep_intersect_cylinder_cylinder, typed TS adapter intersectCylinderCylinder — the strict canonical-cylinder recognizer from the sphere/cylinder cell is reused unchanged (four rational circular side patches with exact weights and unit-square trims, two bilinear caps with inscribed quarter-circle trims, rigid affine placements admitted), axis parallelism and coaxiality are certified never forced (pure-rounding tilt or center-line offsets snap, recognition-scale offsets report near_coincidence, clearly non-parallel pairs are unsupported_surface — the general cylinder/cylinder pair is a quartic and even the equal-radius perpendicular ellipse pair is out of scope), classification uses outward binary64 bands widened by the observed recognition deviation, a transverse parallel pair reduces to a planar circle/circle section in the common perpendicular plane and yields two exact straight rulings (degree-1 lines) clipped by both finite heights in a common axial coordinate, with per-patch iso-u lifts on both side walls using the exact rational-arc parameter of the ruling angle (the Bezier parameter of the canonical quarter arc at angle theta solves beta(m-1)u^2 + (2c + m(1-beta))u - m = 0, m = tan(theta), beta = sqrt(2)-1, c = cos(pi/4)) and seam rulings duplicated on both adjacent patches",
+  "fullGoalComplete": false,
+  "checks": {
+    "nativeTestsDebug": 247,
+    "nativeTestsRelease": 247,
+    "nativeIntersectionTests": 109,
+    "nativeIntersectionTestsAdded": 9,
+    "bridgeTests": 208,
+    "bridgeTestsAdded": 2,
+    "vitestSuites": 4,
+    "vitestTests": 73,
+    "vitestIntersectionTests": 52,
+    "vitestIntersectionTestsAdded": 3,
+    "vueTypes": "passed",
+    "mcpTypes": "passed",
+    "wasmBuild": "passed",
+    "viteBuild": "passed",
+    "failures": 0,
+    "distArtifacts": 68,
+    "distBytes": 4735172
+  },
+  "coverage": [
+    "RESOLVED transverse parallel pair r1=2, r2=3, axis distance d=3.5: two exact degree-1 lines at x = (d^2+r1^2-r2^2)/(2d), y = +-sqrt(r1^2-x^2) to 1e-12, 9 samples per line satisfy both implicit cylinder equations to 1e-12, maxSampleResidual <= 1e-12, lifts are iso-u segments on one side patch per cylinder with v sweeping the full height, verified through the patch surfaces against both side equations to 1e-9",
+    "RESOLVED seam ruling: with the offset chosen from the recognized ring frame so one ruling lands exactly on a quadrant seam, the lift is duplicated on both adjacent patches at u = 0 and u = 1 (the angle rem_euclid(TAU) rounding edge u_global == 4 is handled by flooring before the quadrant mod), and both seam lifts evaluate onto both cylinder walls to 1e-9",
+    "RESOLVED height clipping: a second cylinder spanning z in 5..9 clips both rulings to z in 5..8 (its own lift spans v in 0..3/4); heights disjoint beyond the band resolve empty with numerically_resolved coverage; heights touching at one cap plane give a band-thin clip that degenerates to tangency_or_multiple_root",
+    "RESOLVED rigid placement: the whole parallel configuration rotated 0.5 rad about X and translated keeps both exact lines against an independent binary64 oracle to 1e-12, with UV lifts verified through the patch surfaces to 1e-9",
+    "RESOLVED empty cases: parallel separate (d > r1+r2 + band), radially nested (d < |r1-r2| - band), coaxial unequal radii with no coincident cap plane, and coaxial equal radii with heights disjoint beyond the band all resolve empty",
+    "UNRESOLVED coaxial equal radii within the band and a clear height overlap: coincident_trim (the side surfaces coincide, never geometry); stacked equal-radius cylinders sharing a cap plane within the band: tangency_or_multiple_root (the coincident rim circle is a tangency contact, never a guessed circle)",
+    "UNRESOLVED coaxial unequal radii sharing a cap plane (nested same-height or stacked): the coincident smaller cap disk is an honest coincident_trim region rather than a resolved-empty report — a deliberate strengthening over the minimal side-contact reading, documented in the module",
+    "UNRESOLVED external tangency (d == r1+r2) and internal tangency (d == |r1-r2|) exactly or within the band: tangency_or_multiple_root, never a guessed tangent line; just clear of the external band resolves empty, just across yields the two-line case",
+    "UNRESOLVED near-parallel tilt (1e-10 rad) and near-coaxial offsets (1e-10 of the scale) inside the recognition bands: near_coincidence, parallelism/coaxiality is certified never forced; a clearly non-parallel pair (0.3 rad) is an explicit unsupported_surface region",
+    "REFUSED non-canonical operands (frustum, tube, sphere, cuboid as either operand): explicit unsupported_surface region over the concatenated UV box, never a numerical fallback; a structurally perturbed cylinder fails model validation as a hard input error",
+    "WASM roundtrip: bridge report carries kind=line, exact degree-1 curves, start/end/direction, contact=boundary, firstUv/secondUv iso-u lifts with face indices, maxSampleResidual <= 1e-12; JSON roundtrip preserves the components; coverage, permitsTopologyChange=false and evidence=numerical_uncertified serialize identically"
+  ],
+  "behaviorChange": "New read-only query intersectCylinderCylinder/brep_intersect_cylinder_cylinder; no existing query, op, or adapter behavior changed. The recognizer struct fields in sphere_cylinder.rs were widened to pub(crate) for reuse (no behavior change). Both dist budgets unchanged (geometry chunk 2,415,328 to 2,416,638 bytes, total 4,733,862 to 4,735,172 bytes measured, +1,310 for the parallel-axis classification, circle/circle section, clip and iso-u lifts — within the existing 2,420,000 / 4,740,000 budgets)",
+  "limits": {
+    "recognitionToleranceRelative": 1e-9,
+    "classificationBand": "both recognition deviations + 16 binary64 epsilons of the radius/height/offset scale",
+    "axisSnapBand": "64 binary64 epsilons plus recognition-error angular allowances (pure-rounding tilt only)",
+    "coaxialSnapBand": "64 binary64 epsilons of the scale plus both recognition deviations",
+    "nearBand": "1e-9 of the scale (recognition-relative) for tilt and center-line distance",
+    "seamBand": "1e-12 of the quadrant in u",
+    "lineSamples": 9
+  },
+  "limitations": [
+    "Parallel axes only: the axes must be certified parallel (rigid affine placements admitted); near-parallel tilts inside the recognition band stay near_coincidence and the general non-parallel cylinder/cylinder pair (a quartic; even the equal-radius perpendicular ellipse pair) is an explicit unsupported_surface region, not a numerical fallback",
+    "Canonical operands only: the exact six-face cylinder from analytic::cylinder; frusta, tubes, tori and every other solid are explicit unsupported_surface regions",
+    "Tangency is never a point or a guessed line: external/internal tangencies, band-thin height clips, the coaxial equal-radius coincident side band and stacked rim coincidences stay unresolved, and the classification band widens with recognition deviation so near-tangent configurations below ~1e-13 of the scale stay unresolved rather than guessed",
+    "Resolved lines are clipped segments whose endpoints always sit on cap planes (contact=boundary); side lifts are per-patch iso-u segments using the exact rational-arc angle parameter, duplicated across the quadrant seam, with no cross-patch sewing",
+    "NumericallyResolved is not certified complete-domain coverage and permitsTopologyChange stays false; consuming these rulings in Booleans, the non-parallel cylinder/cylinder case, and the remaining analytic SS pairs (cone/torus families) stay open"
+  ],
+  "sha256": {
+    "crates/brep-core/src/intersections.rs": "607e96ed11fbb229626e09c860e6313b8c916350c38d575e92e938e22576b199",
+    "crates/brep-core/src/intersections/sphere_sphere.rs": "4c8c86013de8650f1f0eb0a288f8d3acd8aa45fc0ba389115a840e2d5877528a",
+    "crates/brep-core/src/intersections/sphere_cylinder.rs": "e3e4a6c798f03dbb67a139f5e96e3498dae3e8aa577ec5678f733452ebdd8a05",
+    "crates/brep-core/src/intersections/cylinder_cylinder.rs": "30e0b990519d067e56b3a71ad64ba7a7607110165073032452d3f48bba5e342b",
+    "crates/geometry-bridge/src/intersections.rs": "c0ee255b108ac34afe39b4b1df3d70b6b950e9f37f7cb980c70624e327cea6ce",
+    "crates/geometry-bridge/src/lib.rs": "87d78707ddbd80be3342bd501e324eef001575ac8c3d370514fd5a7d5b66e186",
+    "src/services/geometry/intersections.ts": "11fe2740aa10bdbd6f072f83b483bccec5ae7c0f1268ef2211a1cffeaeff6aa3",
+    "tests/brepIntersections.test.ts": "9c13379010ff7c3133f119d334146058db42b6bb06b61fb829158d2389397ece",
+    "scripts/verify-dist.mjs": "4f2217fe496ffd0bd4740876bed27ee604b6ed153900284bb6b81aa36c9972eb",
+    "src/generated/geometry-kernels/kernel_bg.wasm": "c30ef3546516b9e53a7d83140942d38246b8febf80120e46dbbe6b4573537d58",
+    "src/generated/geometry-kernels/bytes.ts": "2f5620f5dc5b9134389203def52a3811bf0c9278ce9e03b0fa0b563cb2211c2c"
+  }
+}
