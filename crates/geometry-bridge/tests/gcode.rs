@@ -11,6 +11,10 @@ fn export_is_verified_and_preview_is_independently_readable() {
     let result = dispatch(request("mesh_gcode")).unwrap();
     assert_eq!(result["layerCount"], 5);
     assert_eq!(result["preview"]["layers"], 5);
+    assert_eq!(
+        result["dialect"].as_str().unwrap(),
+        "open-scad-viewer/print-preview 2"
+    );
     let preview = dispatch(json!({"op": "gcode_preview", "gcode": result["gcode"]})).unwrap();
     assert_eq!(preview, result["preview"]);
     assert!(preview["extrusionMm"].as_f64().unwrap() > 0.);
@@ -23,8 +27,31 @@ fn export_is_verified_and_preview_is_independently_readable() {
 }
 
 #[test]
+fn job_export_returns_print_job_and_gcode_3mf() {
+    use base64::Engine;
+    let result = dispatch(request("mesh_gcode_job")).unwrap();
+    assert_eq!(
+        result["dialect"].as_str().unwrap(),
+        "open-scad-viewer/print-job 1"
+    );
+    let gcode = result["gcode"].as_str().unwrap();
+    assert!(gcode.contains("M109"));
+    assert!(gcode.contains("M190"));
+    let preview = dispatch(json!({"op": "gcode_preview", "gcode": gcode})).unwrap();
+    assert_eq!(preview["layers"], result["preview"]["layers"]);
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(result["gcode3mfBase64"].as_str().unwrap())
+        .unwrap();
+    assert!(bytes.starts_with(b"PK"));
+    let extracted = gcode_core::extract_gcode_3mf(&bytes).unwrap();
+    assert_eq!(extracted, gcode);
+    let model = gcode_core::extract_member_3mf(&bytes, "3D/3dmodel.model").unwrap();
+    assert!(model.contains("<triangle"));
+}
+
+#[test]
 fn invalid_explicit_options_never_fall_back_to_defaults() {
-    for op in ["mesh_toolpaths", "mesh_gcode"] {
+    for op in ["mesh_toolpaths", "mesh_gcode", "mesh_gcode_job"] {
         for key in [
             "layerHeightMm",
             "lineWidthMm",
@@ -54,10 +81,12 @@ fn invalid_explicit_options_never_fall_back_to_defaults() {
 
 #[test]
 fn no_downloadable_job_is_returned_for_an_empty_range() {
-    let mut req = request("mesh_gcode");
-    req["zMin"] = json!(20.);
-    req["zMax"] = json!(21.);
-    assert_eq!(dispatch(req).unwrap_err().code, "GCODE_EMPTY_PLAN");
+    for op in ["mesh_gcode", "mesh_gcode_job"] {
+        let mut req = request(op);
+        req["zMin"] = json!(20.);
+        req["zMax"] = json!(21.);
+        assert_eq!(dispatch(req).unwrap_err().code, "GCODE_EMPTY_PLAN");
+    }
 }
 
 #[test]

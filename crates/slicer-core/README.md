@@ -59,13 +59,19 @@ its own path, move, coordinate precision and 4 MiB output limits. Caller-supplie
 `deposited_volume_mm3` returns NaN for invalid settings or oversized plans; callers
 must supply geometrically valid paths for this analytic estimate.
 
-## Preview scope
+## Preview and job encoding
 
-The output is a geometric preview with nominal extrusion estimates. The planner has
-no top/bottom solid-layer strategy, supports, adaptive layers, retractions, pressure
-advance, temperature or printer-profile scheduling. Machine execution requires a
-separate printing workflow. `GCODE_DIALECT`, `GcodeBounds`, `GcodePreview` and
-`GcodeMove` are reexported for consumers of the preview format.
+`emit_gcode` still writes the raw preview dialect without reordering paths.
+`emit_optimized_gcode` runs `gcode-optimize` then preview emit.
+`emit_job_gcode` / `emit_job_gcode_3mf` run the same optimize pass into the
+machine job dialect (and thick `.gcode.3mf` with optional `MeshBody`).
+`parse_gcode_preview` / `parse_gcode_job` validate those dialects.
+`GCODE_DIALECT`, `GCODE_JOB_DIALECT`, `JobProfile`, `OptimizeSettings`,
+`GcodeBounds`, `GcodePreview` and `GcodeMove` are reexported for consumers.
+
+The planner itself has no top/bottom solid-layer strategy, supports, adaptive
+layers, pressure advance, or printer-profile scheduling beyond what `JobProfile`
+encodes at emit time.
 
 Run the regression suite with:
 

@@ -1,10 +1,31 @@
 # gcode-core
 
-Bounded serialization and independent parsing of model-space toolpath previews.
-This crate does not section meshes, plan walls/infill, or communicate with a
-printer. Its output is a preview artifact, not a printer-ready job: there is no
-machine placement, startup, heating, homing, shutdown, or machine compatibility
-claim. Negative model coordinates, including Z, remain valid.
+Bounded serialization and independent parsing of model-space toolpath previews
+and a separate machine **job** dialect. This crate does not section meshes, plan
+walls/infill, or communicate with a printer.
+
+## Five print/export formats
+
+| Format | Owner | Role |
+|---|---|---|
+| STL | `polygon-core::mesh_export::export_print_mesh` | Closed mesh |
+| OBJ | same | Mesh interchange (open surfaces allowed) |
+| mesh 3MF | same (`"3mf"`) | Closed mesh OPC package |
+| `.gcode` job | `emit_job` / `parse_job` | Heat, retract, start/end |
+| `.gcode.3mf` | `emit_gcode_3mf_job` / `package_job_3mf` | Job G-code + plate JSON + optional mesh |
+
+Preview `.gcode` / thin `emit_3mf` remain available for UI previews and are not
+printer jobs.
+
+## Preview vs job
+
+| | Preview (`print-preview 2`) | Job (`print-job 1`) |
+|---|---|---|
+| First line | `; open-scad-viewer/print-preview 2` | `; open-scad-viewer/print-job 1` |
+| Heat / home / fan | Forbidden | `M140`/`M104`/`M190`/`M109`, optional `G28`, `M106`/`M107` |
+| Retract | Forbidden (E never decreases) | Absolute-E `G1 E…` retract / unretract |
+| Prologue | `G21` `G90` `M82` `M200 D0` `G92 E0` | Same after heat |
+| Package | Empty `3D/3dmodel.model` | Optional mesh body + `Metadata/plate_1.json` (MD5) |
 
 ## Preview contract
 
@@ -50,6 +71,15 @@ layer metadata fail with a typed `GCODE_*` error. In-file errors include their
 one-based line number. Blank lines, semicolon comments, Unicode inside ordinary
 comments, and CRLF are supported. Malformed Unicode command words return errors.
 
+## Job contract
+
+`JobProfile` wraps `MachineProfile` plus nozzle/bed temperatures, retract
+length/speeds, fan PWM, and optional homing. `emit_job` writes heat, optional
+`G28`, the same units/modes prologue, layer motion with retract on long travels,
+then fan off, optional `G28 X Y`, and `M104`/`M140` cooldown. `parse_job` accepts
+that dialect for round-trip checks and returns the same `GcodePreview` totals
+shape (peak absolute E for volume).
+
 ## Preview data
 
 `parse` returns `GcodePreview`:
@@ -89,7 +119,20 @@ accumulation, and preview totals must remain finite. Consecutive layer heights
 must remain distinct at the 0.00001 mm export resolution. Public constants
 expose these shared limits for callers.
 
-Run the parser, numeric, round-trip, and resource-limit regressions with:
+## G-code 3MF
+
+`package_gcode_3mf` / `emit_3mf` write a stored OPC ZIP with
+`Metadata/plate_1.gcode` plus an empty millimeter `3D/3dmodel.model`.
+`package_job_3mf` / `emit_gcode_3mf_job` add `Metadata/plate_1.json` (temps,
+filament placeholder, G-code MD5) and may embed a non-empty model from
+`MeshBody`. `extract_gcode_3mf` / `parse_3mf` read the plate G-code back
+(`parse_3mf` dispatches preview vs job by dialect line). This is a file
+container, not LAN upload and not a Bambu machine-job certificate.
+
+## Non-goals
+
+Live FTPS/MQTT, AMS, multi-plate UI, Worker download buttons, and full Bambu
+slicer parity are out of scope for this crate.
 
 ```sh
 cargo test --locked --manifest-path crates/Cargo.toml -p gcode-core

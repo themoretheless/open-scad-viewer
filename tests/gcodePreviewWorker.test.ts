@@ -4,8 +4,16 @@ import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocumen
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/services/gcodePreviewGeometry'
 import { executeGcodePreview } from '../src/services/gcodePreviewRuntime'
 
-const geometry = vi.hoisted(() => ({ emit: vi.fn(), parse: vi.fn() }))
-vi.mock('../src/services/geometry/polygon', () => ({ emitPolygonMeshGcode: geometry.emit, parseGcodePreview: geometry.parse, GCODE_PREVIEW_DIALECT: 'open-scad-viewer/print-preview 2' }))
+const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn() }))
+vi.mock('../src/services/geometry/polygon', () => ({
+  emitPolygonMeshGcode: geometry.emit,
+  emitPolygonMeshGcodeJob: geometry.emitJob,
+  parseGcodePreview: geometry.parse,
+  GCODE_PREVIEW_DIALECT: 'open-scad-viewer/print-preview 2',
+}))
+vi.mock('../src/services/meshFlatten', () => ({
+  flattenGroupGeometry: (...args: unknown[]) => geometry.flatten(...args),
+}))
 const identity = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
 const mesh = () => ({ vertices: new Float32Array([0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 1, 0, 5, 2, 0, 0, 1]), indices: new Uint32Array([0, 1, 2]), transform: identity.slice() })
 const job = (): GcodePreviewJob => ({ kind: 'slice', mesh: mesh(), zMin: 0, zMax: 2, settings: { layerHeightMm: .2 } })
@@ -37,7 +45,11 @@ function setup(timeout = 120000) {
   clients.push(client)
   return { client, workers }
 }
-beforeEach(() => { vi.useFakeTimers(); vi.clearAllMocks() })
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.clearAllMocks()
+  geometry.flatten.mockImplementation(() => ({ positions: [0, 0, 0, 5, 0, 0, 0, 5, 2], indices: [0, 1, 2] }))
+})
 afterEach(() => { clients.splice(0).forEach(client => client.dispose()); vi.useRealTimers() })
 
 describe('G-code worker lifecycle', () => {
@@ -150,6 +162,7 @@ describe('G-code worker boundary and scene geometry', () => {
     if (input.kind !== 'slice') throw new Error('Expected slice')
     input.mesh.transform = new Float32Array([-1, 0, 0, 20, 0, 0, -1, 30, 0, 1, 0, -4, 0, 0, 0, 1])
     expect(gcodeMeshBounds(input.mesh)).toEqual({ min: [15, 28, -4], max: [20, 30, 1] })
+    geometry.flatten.mockReturnValue({ positions: [20, 30, -4, 15, 30, -4, 20, 28, 1], indices: [0, 2, 1] })
     geometry.emit.mockReturnValue({ ...result(), layerCount: 2 })
     const response = executeGcodePreview({ version: 1, id: 1, job: input })
     expect(response.ok).toBe(true)
@@ -165,6 +178,31 @@ describe('G-code worker boundary and scene geometry', () => {
     expect(response).toEqual({ version: 1, id: 3, ok: true, result: { ...result(), gcode: '; file' } })
     expect(geometry.parse).toHaveBeenCalledWith('; file')
     expect(geometry.emit).not.toHaveBeenCalled()
+  })
+
+  it('exports job dialect gcode and gcode.3mf without network', () => {
+    const input = job()
+    if (input.kind !== 'slice') throw new Error('Expected slice')
+    geometry.emitJob.mockReturnValue({
+      ...result(),
+      dialect: 'open-scad-viewer/print-job 1',
+      layerCount: 2,
+      gcode3mfBase64: 'UEsDBBQAAAA=',
+    })
+    const response = executeGcodePreview({
+      version: 1,
+      id: 4,
+      job: { kind: 'job', mesh: input.mesh, zMin: 0, zMax: 2, settings: { layerHeightMm: 0.2, nozzleTempC: 210, homeAxes: true } },
+    })
+    expect(response.ok).toBe(true)
+    if (!response.ok) throw new Error('expected ok')
+    expect(response.result.gcode3mfBase64).toBe('UEsDBBQAAAA=')
+    expect(response.result.dialect).toBe('open-scad-viewer/print-job 1')
+    expect(geometry.emitJob).toHaveBeenCalledOnce()
+    expect(geometry.emit).not.toHaveBeenCalled()
+    const checked = checkGcodePreviewJob({ kind: 'job', mesh: input.mesh, zMin: 0, zMax: 2, settings: { fanSpeed: 0, homeAxes: false } })
+    expect(checked).toMatchObject({ kind: 'job', settings: { fanSpeed: 0, homeAxes: false } })
+    expect(() => checkGcodePreviewJob({ kind: 'job', mesh: input.mesh, zMin: 0, zMax: 2, settings: { homeAxes: 'yes' as unknown as boolean } })).toThrow('boolean')
   })
 
   it('indexes layers and draws travel and extrusion without inventing an origin segment', () => {

@@ -89,6 +89,28 @@ pub fn export(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
     Ok(out.0)
 }
 
+/// Print-mesh trio: STL, OBJ, and mesh 3MF. Other mesh codecs stay on [`export`].
+pub fn export_print_mesh(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
+    match format {
+        "stl" | "stl_binary" | "obj" => export(mesh, format),
+        "3mf" => {
+            let report = mesh.inspect()?;
+            check(
+                report.closed
+                    && report.signed_volume_mm3 > 0.
+                    && report.degenerate_triangles == 0
+                    && report.non_manifold_edges == 0
+                    && report.orientation_conflicts == 0,
+                "Printing export requires a closed oriented mesh with positive volume.",
+            )?;
+            crate::package_3mf::export(mesh, &[], false)
+        }
+        _ => Err(error(
+            "Unsupported print mesh format; use stl, stl_binary, obj, or 3mf.",
+        )),
+    }
+}
+
 fn binary_stl(mesh: &Mesh) -> Result<Vec<u8>> {
     let size = 84 + mesh.indices.len() / 3 * 50;
     check(size <= MAX_BYTES, "Export exceeds 4 MiB.")?;
@@ -190,5 +212,20 @@ mod tests {
         out.write_str("x").unwrap();
         assert!(out.write_str("x").is_err());
         assert_eq!(out.0.len(), MAX_BYTES);
+    }
+    #[test]
+    fn print_mesh_trio_covers_stl_obj_and_3mf() {
+        let mesh = square().thicken([0., 0., 4.]).unwrap().mesh;
+        for format in ["stl", "obj", "3mf"] {
+            let bytes = export_print_mesh(&mesh, format).unwrap();
+            assert!(!bytes.is_empty());
+        }
+        assert!(
+            export_print_mesh(&square(), "stl")
+                .unwrap_err()
+                .message
+                .contains("closed")
+        );
+        assert!(export_print_mesh(&mesh, "ply").is_err());
     }
 }

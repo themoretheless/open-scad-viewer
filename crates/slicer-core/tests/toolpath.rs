@@ -118,6 +118,32 @@ fn gcode_is_one_encoding_of_the_plan() {
     assert!((from_e - volume).abs() / volume < 0.15);
 }
 
+#[test]
+fn optimized_job_pipeline_emits_heat_and_package() {
+    use slicer_core::{
+        JobProfile, MeshBody, OptimizeSettings, emit_job_gcode, emit_job_gcode_3mf,
+        emit_optimized_gcode, parse_gcode_job, job_profile,
+    };
+    let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
+    let index = MeshSectionIndex::new(&mesh).unwrap();
+    let settings = settings();
+    let layers = schedule_layers(|z| section_at(&index, z), 0.0, 4.0, &settings).unwrap();
+    let optimize = OptimizeSettings::default();
+    let preview = emit_optimized_gcode(&layers, &settings, &optimize).unwrap();
+    assert!(preview.starts_with("; open-scad-viewer/print-preview 2\n"));
+    let job = job_profile(&settings, JobProfile::default()).unwrap();
+    let gcode = emit_job_gcode(&layers, &job, &optimize).unwrap();
+    assert!(gcode.contains("M109"));
+    assert_eq!(parse_gcode_job(&gcode).unwrap().layers, layers.len());
+    let body = MeshBody {
+        positions: mesh.positions.clone(),
+        indices: mesh.indices.clone(),
+    };
+    let packaged = emit_job_gcode_3mf(&layers, &job, &optimize, Some(&body)).unwrap();
+    assert!(packaged.starts_with(b"PK"));
+    assert_eq!(gcode_core::extract_gcode_3mf(&packaged).unwrap(), gcode);
+}
+
 fn rectangle(min: [f64; 2], max: [f64; 2]) -> Vec<[f64; 2]> {
     vec![min, [max[0], min[1]], max, [min[0], max[1]]]
 }

@@ -7,3 +7,10 @@ publish.workspace = true
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_print_export"
+path = "examples/bench_print_export.rs"

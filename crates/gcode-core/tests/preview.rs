@@ -1,7 +1,7 @@
 use gcode_core::{
     COORDINATE_RESOLUTION_MM, DIALECT, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
-    MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, PlannedPath, deposited_volume_mm3, emit, parse,
-    path_length_mm,
+    MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, PlannedPath, deposited_volume_mm3, emit,
+    emit_3mf, parse, parse_3mf, path_length_mm,
 };
 
 fn machine() -> MachineProfile {
@@ -78,6 +78,10 @@ fn preview_round_trips_filament_volume_and_nominal_time() {
         preview.deposited_volume_mm3,
         deposited_volume_mm3(&layers, &machine),
     );
+    let packaged = emit_3mf(&layers, &machine).unwrap();
+    let from_3mf = parse_3mf(&packaged).unwrap();
+    assert_eq!(from_3mf.layers, preview.layers);
+    close(from_3mf.deposited_volume_mm3, preview.deposited_volume_mm3);
     close(
         preview.extrusion_mm * machine.filament_area_mm2(),
         preview.deposited_volume_mm3,

@@ -4,10 +4,17 @@ import GcodePanel from '../src/features/GcodePanel.vue'
 import type { MeshData } from '../src/core/mesh'
 import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/services/gcodePreviewProtocol'
 
-const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn() }))
+const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn(), health: vi.fn(), discover: vi.fn(), send: vi.fn() }))
 vi.mock('../src/services/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
 vi.mock('../src/services/cadDrawing', () => ({ downloadCad: service.download }))
 vi.mock('../src/services/gcodePreviewGeometry', async importOriginal => ({ ...await importOriginal<object>(), drawGcodeLayer: service.draw }))
+vi.mock('../src/services/printerCompanion', () => ({
+  PRINTER_COMPANION_DEFAULT_URL: 'http://127.0.0.1:17890',
+  companionHealth: (...args: unknown[]) => service.health(...args),
+  companionDiscover: (...args: unknown[]) => service.discover(...args),
+  companionSend: (...args: unknown[]) => service.send(...args),
+  utf8ToBase64: (text: string) => Buffer.from(text, 'utf8').toString('base64'),
+}))
 
 class Node {
   parent: Node | null = null
@@ -28,7 +35,16 @@ const renderer = createRenderer<Node, Node>({
   patchProp: (node, key, _old, value) => { node.props[key] = value; if (key === 'value') node.value = value },
   insert: (node, parent, anchor) => { if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node); node.parent = parent; const index = anchor ? parent.children.indexOf(anchor) : -1; index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node) },
   remove: node => { if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node) },
-  setScopeId: () => {}, insertStaticContent: () => { throw new Error('Unexpected static content') },
+  setScopeId: () => {},
+  insertStaticContent: (content, parent, anchor) => {
+    const node = new Node('#static')
+    node.text = String(content)
+    if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
+    node.parent = parent
+    const index = anchor ? parent.children.indexOf(anchor) : -1
+    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    return [node, node]
+  },
 })
 const result = (): GcodePreviewDocument => ({
   dialect: 'open-scad-viewer/print-preview 2', gcode: '; validated preview',
@@ -40,6 +56,7 @@ const result = (): GcodePreviewDocument => ({
       { x: 7, y: 3, z: .4, e: 2, extruded: true, feedrateMmS: 50, layerIndex: 1 },
     ] },
 })
+const jobResult = (): GcodePreviewDocument => ({ ...result(), dialect: 'open-scad-viewer/print-job 1', gcode: '; job', gcode3mfBase64: 'UEsDBBQAAAA=' })
 function mesh(z = 12): MeshData {
   return { vertices: new Float32Array([0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 1, 0, 5, 2, 0, 0, 1]), indices: new Uint32Array([0, 1, 2]), transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, z, 0, 0, 0, 1]) } as MeshData
 }
@@ -47,9 +64,14 @@ const unmounts: Array<() => void> = []
 beforeEach(() => {
   vi.clearAllMocks()
   service.run.mockReset().mockImplementation(async job => { checkGcodePreviewJob(job); return result() })
+  service.health.mockReset().mockResolvedValue(false)
+  service.discover.mockReset().mockResolvedValue([])
+  service.send.mockReset().mockResolvedValue({ remoteName: 'part.gcode', verified: false })
   vi.stubGlobal('Document', class {})
   vi.stubGlobal('ShadowRoot', class {})
-  vi.stubGlobal('document', { activeElement: null })
+  vi.stubGlobal('document', { activeElement: null, createElement: () => ({ click() {}, set href(_v: string) {}, set download(_v: string) {} }) })
+  vi.stubGlobal('URL', { createObjectURL: () => 'blob:mock', revokeObjectURL() {} })
+  vi.stubGlobal('atob', (value: string) => Buffer.from(value, 'base64').toString('binary'))
 })
 afterEach(() => { unmounts.splice(0).forEach(unmount => unmount()); vi.unstubAllGlobals() })
 
@@ -83,7 +105,7 @@ it('uses the single selected body’s transformed range, exposes all settings, p
   expect(service.run).toHaveBeenCalledWith({ kind: 'slice', mesh: ui.props.meshes[1], zMin: -5, zMax: -3,
     settings: { layerHeightMm: .3, lineWidthMm: .6, wallCount: 3, infillSpacingMm: 4, feedrateMmS: 70, travelFeedrateMmS: 180, filamentDiameterMm: 2.85 } })
   expect(ui.text()).toContain('open-scad-viewer/print-preview 2')
-  expect(ui.text()).toContain('No heating, homing')
+  expect(ui.text()).toContain('localhost companion')
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(true)
   expect(service.draw).toHaveBeenLastCalledWith(expect.anything(), result().preview, 0, true)
   await ui.edit('Preview layer', 1)
@@ -197,4 +219,39 @@ it('cancels work when the section closes and disposes its worker when the CAD pa
   expect(service.dispose).toHaveBeenCalledOnce()
   finish(result()); await closing; await nextTick()
   expect(service.draw).not.toHaveBeenCalled()
+})
+
+it('disables Send without companion and sends via localhost after a print job', async () => {
+  service.health.mockResolvedValue(false)
+  const ui = await mount()
+  service.run.mockResolvedValueOnce(jobResult())
+  await ui.click('Generate print job')
+  expect(service.run).toHaveBeenCalledWith(expect.objectContaining({ kind: 'job' }))
+  expect(ui.button('Send').props.disabled).toBe(true)
+  expect(ui.text()).toContain('printer-cli serve')
+  service.health.mockResolvedValue(true)
+  await ui.click('Check companion')
+  await ui.edit('Host / URL', '192.168.1.20:7125')
+  expect(ui.button('Send').props.disabled).toBeFalsy()
+  await ui.click('Send')
+  expect(service.send).toHaveBeenCalledWith(
+    'moonraker',
+    expect.objectContaining({ host: '192.168.1.20:7125' }),
+    'body-1-job.gcode',
+    Buffer.from('; job', 'utf8').toString('base64'),
+    'http://127.0.0.1:17890',
+  )
+  expect(ui.text()).toContain('Sent: part.gcode')
+})
+
+it('fills discovery results into the printer form', async () => {
+  service.health.mockResolvedValue(true)
+  service.discover.mockResolvedValueOnce([{ vendor: 'bambu', host: '192.168.1.50', serial: '01P00A', model: 'N1' }])
+  const ui = await mount()
+  service.run.mockResolvedValueOnce(jobResult())
+  await ui.click('Generate print job')
+  await ui.click('Discover')
+  await ui.click('bambu · 192.168.1.50 · 01P00A')
+  expect(ui.input('Host / URL').value).toBe('192.168.1.50')
+  expect(ui.input('Serial').value).toBe('01P00A')
 })

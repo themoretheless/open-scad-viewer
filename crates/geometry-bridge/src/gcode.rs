@@ -1,6 +1,9 @@
-//! Bounded host adapter for mesh toolpaths and the versioned G-code preview.
+//! Bounded host adapter for mesh toolpaths, preview G-code, and print jobs.
 use crate::{Error, Mesh, Result, field, input};
-use slicer_core::{GcodePreview, ToolpathLayer, ToolpathSettings};
+use base64::Engine;
+use slicer_core::{
+    GcodePreview, JobProfile, MeshBody, OptimizeSettings, ToolpathLayer, ToolpathSettings,
+};
 use value_codec::{Value, json};
 
 const MAX_SLICE_TRIANGLES: usize = polygon_core::MAX_MESH_TRIANGLES;
@@ -13,6 +16,16 @@ fn setting(v: &Value, key: &str, default: f64) -> Result<f64> {
             .as_f64()
             .filter(|n| n.is_finite() && *n > 0.0)
             .ok_or_else(|| input(format!("{key} must be a finite positive number"))),
+    }
+}
+
+fn optional_non_negative(v: &Value, key: &str, default: f64) -> Result<f64> {
+    match v.get(key) {
+        None => Ok(default),
+        Some(value) => value
+            .as_f64()
+            .filter(|n| n.is_finite() && *n >= 0.0)
+            .ok_or_else(|| input(format!("{key} must be a finite non-negative number"))),
     }
 }
 
@@ -33,7 +46,79 @@ fn settings(v: &Value) -> Result<ToolpathSettings> {
     })
 }
 
-fn plan(v: &Value) -> Result<(Vec<ToolpathLayer>, ToolpathSettings)> {
+fn optimize_settings(v: &Value) -> Result<OptimizeSettings> {
+    let defaults = OptimizeSettings::default();
+    Ok(OptimizeSettings {
+        simplify_tolerance_mm: optional_non_negative(
+            v,
+            "simplifyToleranceMm",
+            defaults.simplify_tolerance_mm,
+        )?,
+        retract_min_travel_mm: optional_non_negative(
+            v,
+            "retractMinTravelMm",
+            defaults.retract_min_travel_mm,
+        )?,
+        max_2opt_swaps: match v.get("max2optSwaps") {
+            None => defaults.max_2opt_swaps,
+            Some(value) => {
+                let n = value
+                    .as_f64()
+                    .filter(|n| n.is_finite() && *n >= 0.0 && n.fract() == 0.0 && *n <= 10_000.0)
+                    .ok_or_else(|| input("max2optSwaps must be an integer 0..10000"))?;
+                n as usize
+            }
+        },
+        ..defaults
+    })
+}
+
+fn job_profile(v: &Value, toolpath: &ToolpathSettings) -> Result<JobProfile> {
+    let defaults = JobProfile::default();
+    let fan = match v.get("fanSpeed") {
+        None => defaults.fan_speed,
+        Some(value) => {
+            let n = value
+                .as_f64()
+                .filter(|n| n.is_finite() && (0.0..=255.0).contains(n) && n.fract() == 0.0)
+                .ok_or_else(|| input("fanSpeed must be an integer 0..255"))?;
+            n as u8
+        }
+    };
+    let home_axes = match v.get("homeAxes") {
+        None => defaults.home_axes,
+        Some(Value::Bool(flag)) => *flag,
+        Some(_) => return Err(input("homeAxes must be a boolean")),
+    };
+    slicer_core::job_profile(
+        toolpath,
+        JobProfile {
+            machine: Default::default(),
+            nozzle_temp_c: setting(v, "nozzleTempC", defaults.nozzle_temp_c)?,
+            bed_temp_c: setting(v, "bedTempC", defaults.bed_temp_c)?,
+            retract_length_mm: setting(v, "retractLengthMm", defaults.retract_length_mm)?,
+            retract_feedrate_mm_s: setting(
+                v,
+                "retractFeedrateMmS",
+                defaults.retract_feedrate_mm_s,
+            )?,
+            unretract_feedrate_mm_s: setting(
+                v,
+                "unretractFeedrateMmS",
+                defaults.unretract_feedrate_mm_s,
+            )?,
+            retract_min_travel_mm: optional_non_negative(
+                v,
+                "retractMinTravelMm",
+                defaults.retract_min_travel_mm,
+            )?,
+            fan_speed: fan,
+            home_axes,
+        },
+    )
+}
+
+fn plan(v: &Value) -> Result<(Vec<ToolpathLayer>, ToolpathSettings, Mesh)> {
     let settings = settings(v)?;
     let z_min = field(v, "zMin")?;
     let z_max = field(v, "zMax")?;
@@ -69,11 +154,21 @@ fn plan(v: &Value) -> Result<(Vec<ToolpathLayer>, ToolpathSettings)> {
         z_max,
         &settings,
     )?;
-    Ok((layers, settings))
+    Ok((layers, settings, mesh))
+}
+
+fn require_extrusion(layers: &[ToolpathLayer]) -> Result<()> {
+    if !layers.iter().any(|layer| !layer.paths.is_empty()) {
+        return Err(Error::new(
+            "GCODE_EMPTY_PLAN",
+            "No toolpaths in the selected height range; check the model, range and line width",
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn toolpaths(v: &Value) -> Result<Value> {
-    let (layers, _) = plan(v)?;
+    let (layers, _, _) = plan(v)?;
     Ok(json!({
         "layers": layers.iter().map(|layer| json!({
             "z_mm": layer.z_mm,
@@ -107,26 +202,53 @@ fn preview_value(preview: GcodePreview) -> Value {
     })
 }
 
-pub(crate) fn export(v: &Value) -> Result<Value> {
-    let (layers, settings) = plan(v)?;
-    if !layers.iter().any(|layer| !layer.paths.is_empty()) {
-        return Err(Error::new(
-            "GCODE_EMPTY_PLAN",
-            "No toolpaths in the selected height range; check the model, range and line width",
-        ));
-    }
-    let gcode = slicer_core::emit_gcode(&layers, &settings)?;
-    // Validate the actual file before publishing it or displaying its statistics.
-    let preview = slicer_core::parse_gcode_preview(&gcode)?;
+fn require_positive_extrusion(preview: &GcodePreview) -> Result<()> {
     if preview.print_distance_mm <= 0.0 || preview.extrusion_mm <= 0.0 {
         return Err(Error::new(
             "GCODE_EMPTY_PLAN",
             "No extrusion remains at G-code output precision",
         ));
     }
+    Ok(())
+}
+
+/// Preview dialect after `slicer-core` → `gcode-optimize` → `emit`.
+pub(crate) fn export(v: &Value) -> Result<Value> {
+    let (layers, settings, _) = plan(v)?;
+    require_extrusion(&layers)?;
+    let optimize = optimize_settings(v)?;
+    let gcode = slicer_core::emit_optimized_gcode(&layers, &settings, &optimize)?;
+    let preview = slicer_core::parse_gcode_preview(&gcode)?;
+    require_positive_extrusion(&preview)?;
     Ok(json!({
         "gcode": gcode,
         "dialect": slicer_core::GCODE_DIALECT,
+        "layerCount": layers.len(),
+        "preview": preview_value(preview),
+    }))
+}
+
+fn mesh_body(mesh: &Mesh) -> MeshBody {
+    MeshBody {
+        positions: mesh.positions.clone(),
+        indices: mesh.indices.clone(),
+    }
+}
+
+/// Job dialect + thick `.gcode.3mf` after optimize.
+pub(crate) fn export_job(v: &Value) -> Result<Value> {
+    let (layers, settings, mesh) = plan(v)?;
+    require_extrusion(&layers)?;
+    let optimize = optimize_settings(v)?;
+    let job = job_profile(v, &settings)?;
+    let gcode = slicer_core::emit_job_gcode(&layers, &job, &optimize)?;
+    let preview = slicer_core::parse_gcode_job(&gcode)?;
+    require_positive_extrusion(&preview)?;
+    let packaged = slicer_core::emit_job_gcode_3mf(&layers, &job, &optimize, Some(&mesh_body(&mesh)))?;
+    Ok(json!({
+        "gcode": gcode,
+        "gcode3mfBase64": base64::engine::general_purpose::STANDARD.encode(packaged),
+        "dialect": slicer_core::GCODE_JOB_DIALECT,
         "layerCount": layers.len(),
         "preview": preview_value(preview),
     }))
@@ -137,5 +259,9 @@ pub(crate) fn parse(v: &Value) -> Result<Value> {
         .get("gcode")
         .and_then(Value::as_str)
         .ok_or_else(|| input("gcode must be a string"))?;
-    Ok(preview_value(slicer_core::parse_gcode_preview(text)?))
+    if text.lines().next() == Some(format!("; {}", slicer_core::GCODE_JOB_DIALECT).as_str()) {
+        Ok(preview_value(slicer_core::parse_gcode_job(text)?))
+    } else {
+        Ok(preview_value(slicer_core::parse_gcode_preview(text)?))
+    }
 }
