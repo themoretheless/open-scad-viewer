@@ -24,12 +24,14 @@ mod travel;
 
 pub use from_gcode::{from_gcode, from_preview};
 pub use pipeline::{
-    emit_optimized, emit_optimized_3mf, from_planned, from_toolpaths, optimize,
+    emit_optimized, emit_optimized_3mf, emit_optimized_gcode_3mf_job, emit_optimized_job,
+    from_planned, from_toolpaths, optimize,
 };
 pub use travel::{path_end, path_start, travel_after_path_mm, travel_mm};
 
 pub use gcode_core::{
-    MachineProfile, PlannedLayer, PlannedPath, emit, emit_3mf, parse, MAX_LAYERS, MAX_MOVES,
+    emit, emit_3mf, emit_gcode_3mf_job, emit_job, parse, parse_job, JobProfile, MachineProfile,
+    MeshBody, PlannedLayer, PlannedPath, JOB_DIALECT, MAX_LAYERS, MAX_MOVES,
 };
 pub use math_core::{Error, Result};
 

@@ -178,3 +178,40 @@ fn simplify_volume_stays_within_tolerance_on_a_square() {
     let after = gcode_core::deposited_volume_mm3(&layers, &machine());
     assert!((after - before).abs() / before < 0.05);
 }
+
+#[test]
+fn emit_optimized_job_uses_print_job_dialect() {
+    use gcode_core::{parse_job, JobProfile, JOB_DIALECT};
+    use gcode_optimize::{emit_optimized_gcode_3mf_job, emit_optimized_job, MeshBody};
+
+    let input = from_planned(&[layer(
+        0.2,
+        vec![
+            closed(vec![[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]),
+            closed(vec![[20.0, 0.0], [30.0, 0.0], [30.0, 10.0], [20.0, 10.0]]),
+        ],
+    )]);
+    let job = JobProfile::default();
+    let gcode = emit_optimized_job(input.clone(), &job, &OptimizeSettings::default()).unwrap();
+    assert!(gcode.starts_with(&format!("; {JOB_DIALECT}\n")));
+    assert!(gcode.contains("M109"));
+    assert_eq!(parse_job(&gcode).unwrap().layers, 1);
+
+    let mesh = MeshBody {
+        positions: vec![
+            0., 0., 0., 1., 0., 0., 1., 1., 0., 0., 1., 0., 0., 0., 1., 1., 0., 1., 1., 1., 1., 0.,
+            1., 1.,
+        ],
+        indices: vec![
+            0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7,
+            3, 3, 7, 4, 3, 4, 0,
+        ],
+    };
+    let packaged =
+        emit_optimized_gcode_3mf_job(input, &job, &OptimizeSettings::default(), Some(&mesh))
+            .unwrap();
+    assert!(packaged.starts_with(b"PK"));
+    assert!(gcode_core::extract_member_3mf(&packaged, "3D/3dmodel.model")
+        .unwrap()
+        .contains("<triangle"));
+}

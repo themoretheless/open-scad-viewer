@@ -1,4 +1,4 @@
-use gcode_core::{MachineProfile, PlannedLayer, PlannedPath};
+use gcode_core::{JobProfile, MachineProfile, MeshBody, PlannedLayer, PlannedPath};
 
 use crate::comb::comb_layer;
 use crate::retract::virtual_retracts;
@@ -109,4 +109,25 @@ pub fn emit_optimized_3mf(
 ) -> Result<Vec<u8>> {
     let (layers, _) = optimize(input, settings)?;
     gcode_core::emit_3mf(&layers, machine)
+}
+
+/// Optimize then emit the machine job dialect (heat + retract).
+pub fn emit_optimized_job(
+    input: OptimizeInput,
+    job: &JobProfile,
+    settings: &OptimizeSettings,
+) -> Result<String> {
+    let (layers, _) = optimize(input, settings)?;
+    gcode_core::emit_job(&layers, job)
+}
+
+/// Optimize then package a thick `.gcode.3mf` job with optional mesh body.
+pub fn emit_optimized_gcode_3mf_job(
+    input: OptimizeInput,
+    job: &JobProfile,
+    settings: &OptimizeSettings,
+    mesh: Option<&MeshBody>,
+) -> Result<Vec<u8>> {
+    let (layers, _) = optimize(input, settings)?;
+    gcode_core::emit_gcode_3mf_job(&layers, job, mesh)
 }

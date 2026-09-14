@@ -13,10 +13,15 @@ pub const COORDINATE_RESOLUTION_MM: f64 = 0.00001;
 const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
+mod job;
 mod package_3mf;
 
+pub use job::{emit_job, parse_job, JobProfile, JOB_DIALECT};
 pub use math_core::{Error, Result};
-pub use package_3mf::{emit_3mf, extract_gcode_3mf, package_gcode_3mf, parse_3mf};
+pub use package_3mf::{
+    emit_3mf, emit_gcode_3mf_job, extract_gcode_3mf, extract_member_3mf, package_gcode_3mf,
+    package_job_3mf, parse_3mf, MeshBody, PLATE_JSON_PATH,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MachineProfile {
@@ -132,19 +137,19 @@ pub(crate) fn invalid(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
 
-fn valid_dimension(value: f64) -> bool {
+pub(crate) fn valid_dimension(value: f64) -> bool {
     value.is_finite() && (COORDINATE_RESOLUTION_MM..=MAX_COORDINATE_MM).contains(&value)
 }
 
-fn valid_coordinate(value: f64) -> bool {
+pub(crate) fn valid_coordinate(value: f64) -> bool {
     value.is_finite() && value.abs() <= MAX_COORDINATE_MM
 }
 
-fn rounded_coordinate(value: f64) -> f64 {
+pub(crate) fn rounded_coordinate(value: f64) -> f64 {
     (value * 100_000.0).round() / 100_000.0
 }
 
-fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
+pub(crate) fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
     if layers.len() > MAX_LAYERS {
         return Err(invalid(
             "GCODE_LAYER_LIMIT",
@@ -238,7 +243,7 @@ pub fn deposited_volume_mm3(layers: &[PlannedLayer], machine: &MachineProfile) -
 }
 
 /// Fails before an append would take the string length past the public output limit.
-struct BoundedOutput(String);
+pub(crate) struct BoundedOutput(pub(crate) String);
 
 impl Write for BoundedOutput {
     fn write_str(&mut self, text: &str) -> fmt::Result {
@@ -250,7 +255,7 @@ impl Write for BoundedOutput {
     }
 }
 
-fn output_limit(_: fmt::Error) -> Error {
+pub(crate) fn output_limit(_: fmt::Error) -> Error {
     invalid("GCODE_OUTPUT_LIMIT", "G-code preview exceeds 4 MiB")
 }
 
@@ -322,15 +327,15 @@ pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String>
 }
 
 #[derive(Default)]
-struct MoveWords {
-    x: Option<f64>,
-    y: Option<f64>,
-    z: Option<f64>,
-    e: Option<f64>,
-    f: Option<f64>,
+pub(crate) struct MoveWords {
+    pub(crate) x: Option<f64>,
+    pub(crate) y: Option<f64>,
+    pub(crate) z: Option<f64>,
+    pub(crate) e: Option<f64>,
+    pub(crate) f: Option<f64>,
 }
 
-fn number(text: &str) -> Result<f64> {
+pub(crate) fn number(text: &str) -> Result<f64> {
     text.parse::<f64>()
         .ok()
         .filter(|v| v.is_finite())
@@ -342,7 +347,7 @@ fn number(text: &str) -> Result<f64> {
         })
 }
 
-fn words<'a>(tokens: impl Iterator<Item = &'a str>) -> Result<MoveWords> {
+pub(crate) fn words<'a>(tokens: impl Iterator<Item = &'a str>) -> Result<MoveWords> {
     let mut words = MoveWords::default();
     let mut count = 0;
     for token in tokens {
