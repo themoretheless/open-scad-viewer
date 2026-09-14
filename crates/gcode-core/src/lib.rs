@@ -13,7 +13,10 @@ pub const COORDINATE_RESOLUTION_MM: f64 = 0.00001;
 const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
+mod package_3mf;
+
 pub use math_core::{Error, Result};
+pub use package_3mf::{emit_3mf, extract_gcode_3mf, package_gcode_3mf, parse_3mf};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MachineProfile {
@@ -125,7 +128,7 @@ impl GcodePreview {
     }
 }
 
-fn invalid(code: &'static str, message: &str) -> Error {
+pub(crate) fn invalid(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
 

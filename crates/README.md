@@ -17,7 +17,9 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 | `sdf-core` | Implicit fields and extraction |
 | `sketch-core` | 2D constraints |
 | `slicer-core` | Walls/infill from already-cut contours |
-| `gcode-core` | G-code encode/preview |
+| `gcode-core` | G-code encode/preview and G-code 3MF package |
+| `gcode-optimize` | Toolpath order/seam/simplify/comb + emit |
+| `printer-core` | Printer LAN job transport (Bambu FTPS/MQTT orchestration) |
 | `mechanics-core` | Section properties / beam estimates |
 | `openscad-core` | OpenSCAD frontend |
 | `modelgraph-text` | ModelGraph Text frontend |

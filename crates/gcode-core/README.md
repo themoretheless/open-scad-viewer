@@ -89,6 +89,13 @@ accumulation, and preview totals must remain finite. Consecutive layer heights
 must remain distinct at the 0.00001 mm export resolution. Public constants
 expose these shared limits for callers.
 
+## G-code 3MF
+
+`package_gcode_3mf` / `emit_3mf` write a stored OPC ZIP with
+`Metadata/plate_1.gcode` plus a empty millimeter `3D/3dmodel.model`.
+`extract_gcode_3mf` / `parse_3mf` read that member back. This is a file
+container, not LAN upload and not a Bambu machine-job certificate.
+
 Run the parser, numeric, round-trip, and resource-limit regressions with:
 
 ```sh
