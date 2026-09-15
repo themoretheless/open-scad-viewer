@@ -1,0 +1,26 @@
+{
+  "gate": "G8",
+  "planId": "brep-capability-registry-release-v1",
+  "registry": "src/services/geometry/brepCapability.ts",
+  "capabilities": [
+    "planar-csg/1",
+    "analytic-constructors/1",
+    "analytic-boolean/1",
+    "intersection-queries/1",
+    "nurbs-ss-transverse-bicubic/1",
+    "analytic-fillet/1",
+    "analytic-shell/1",
+    "analytic-solid-loft/1",
+    "step-interchange/1"
+  ],
+  "oracles": [
+    "crates/brep-core/src/coverage_verifier.rs",
+    "crates/brep-core/src/uv_arrangement.rs::assert_missed_branch_detected"
+  ],
+  "rollbackDrills": [
+    "assertNoManifoldFallbackOnBrepFailure",
+    "kernelLeases cancel marks LKG stale"
+  ],
+  "sbom": "docs/qualification/sbom/",
+  "unresolvedInShippedMatrix": []
+}

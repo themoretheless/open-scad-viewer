@@ -45,7 +45,7 @@ pub struct Plane {
 }
 
 impl Plane {
-    fn normalized(self) -> Result<Self> {
+    pub(crate) fn normalized(self) -> Result<Self> {
         if !self.normal.iter().all(|v| v.is_finite()) || !self.offset.is_finite() {
             return Err(invalid(
                 "Plane needs a finite, nonzero normal and finite offset",
@@ -80,7 +80,7 @@ impl Plane {
         }
         Ok(plane)
     }
-    fn distance(self, point: [f64; 3]) -> f64 {
+    pub(crate) fn distance(self, point: [f64; 3]) -> f64 {
         dot(self.normal, point) - self.offset
     }
 }
@@ -105,7 +105,7 @@ impl Default for Options {
     }
 }
 impl Options {
-    fn validate(self) -> Result<Self> {
+    pub(crate) fn validate(self) -> Result<Self> {
         if !self.distance_tolerance.is_finite()
             || self.distance_tolerance <= 0.
             || !self.parameter_tolerance.is_finite()
@@ -123,6 +123,8 @@ impl Options {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Coverage {
+    /// Domain partition certified for the frozen analytic/affine matrix only.
+    Complete,
     /// All parameter regions were handled numerically. NOT certified complete.
     NumericallyResolved,
     Incomplete,
@@ -167,7 +169,7 @@ impl<T> Report<T> {
     pub fn permits_topology_change(&self) -> bool {
         false
     }
-    fn unresolved(&mut self, domain: impl Into<Vec<f64>>, reason: UnresolvedReason) {
+    pub(crate) fn unresolved(&mut self, domain: impl Into<Vec<f64>>, reason: UnresolvedReason) {
         self.coverage = Coverage::Incomplete;
         self.unresolved.push(Unresolved {
             parameter_box: domain.into(),
@@ -2118,8 +2120,25 @@ pub fn surface_surface(
     let mut report = Report::default();
     let domain = [surface_domain(first), surface_domain(second)].concat();
     let (Some(a), Some(b)) = (affine_frame(first), affine_frame(second)) else {
-        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
-        return Ok(report);
+        // G6 narrow bicubic path (Complete-empty or Incomplete); never topology change.
+        match crate::nurbs_ss_g6::narrow_transverse_bicubic(first, second, options) {
+            Ok(g6) => {
+                let mut report = Report::default();
+                report.coverage = g6.coverage;
+                report.boxes_visited = g6.boxes_visited;
+                report.bernstein_excluded = g6.bernstein_excluded;
+                for pending in g6.unresolved {
+                    report.unresolved(pending.parameter_box, pending.reason);
+                }
+                // Curve Complete stays inside nurbs_ss_g6; surface_surface only
+                // forwards empty Complete / typed Incomplete without fake UV traces.
+                return Ok(report);
+            }
+            Err(_) => {
+                report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                return Ok(report);
+            }
+        }
     };
     let normal = cross(b.u, b.v);
     let plane_b = Plane {
@@ -2395,12 +2414,18 @@ pub fn surface_surface(
             });
         }
     }
+    if report.unresolved.is_empty() {
+        // Affine×affine pairs above are algebraically partitioned; promote only
+        // when every retained contact survived residual checks with no bands left.
+        report.coverage = Coverage::Complete;
+    }
     Ok(report)
 }
 
 fn invalid(message: &str) -> Error {
     Error::new("BREP_INTERSECTION_INVALID_INPUT", message)
 }
+
 /// Numerical curve/finite-segment correspondence. Overlaps retain the original
 /// curve interval; degree-one coincidences are clipped in source parameters.
 /// Higher-degree clipping isolates segment-boundary roots and retains unresolved bands.
@@ -5236,12 +5261,18 @@ impl value_codec::Serialize for Unresolved {
 impl<T: value_codec::Serialize> value_codec::Serialize for Report<T> {
     fn to_value(&self) -> value_codec::Value {
         let coverage = match self.coverage {
+            Coverage::Complete => "complete",
             Coverage::NumericallyResolved => "numerically_resolved",
+            Coverage::Incomplete => "incomplete",
+        };
+        let evidence = match self.coverage {
+            Coverage::Complete => "analytic_coverage_certified",
+            Coverage::NumericallyResolved => "numerical_uncertified",
             Coverage::Incomplete => "incomplete",
         };
         value_codec::json!({"components":self.components,"unresolved":self.unresolved,"boxesVisited":self.boxes_visited,
             "bernsteinExcluded":self.bernstein_excluded,"coverage":coverage,"permitsTopologyChange":false,
-            "evidence":"numerical_uncertified"})
+            "evidence":evidence})
     }
 }
 impl value_codec::Serialize for CurvePoint {
@@ -6591,7 +6622,8 @@ mod tests {
         };
         for (first, second) in [(&a, &b), (&b, &a)] {
             let report = surface_surface(first, second, Options::default()).unwrap();
-            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.coverage, Coverage::Complete, "{report:?}");
+            assert!(!report.permits_topology_change());
             assert_eq!(report.components.len(), 1);
             let SurfaceSurfaceComponent::Curve { first, second, .. } = &report.components[0] else {
                 panic!("Expected intersection segment")
@@ -6614,7 +6646,7 @@ mod tests {
             surface_surface(&a, &a, Options::default())
                 .unwrap()
                 .coverage,
-            Coverage::NumericallyResolved
+            Coverage::Complete
         );
         let limited = surface_surface(
             &a,
@@ -6651,7 +6683,8 @@ mod tests {
             ..square.clone()
         };
         let report = surface_surface(&square, &diamond, Options::default()).unwrap();
-        assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+        assert_eq!(report.coverage, Coverage::Complete, "{report:?}");
+        assert!(!report.permits_topology_change());
         let SurfaceSurfaceComponent::Overlap {
             points,
             first_boundary,
@@ -6680,7 +6713,8 @@ mod tests {
                 p[1] += dy;
             }
             let report = surface_surface(&square, &target, Options::default()).unwrap();
-            assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
+            assert_eq!(report.coverage, Coverage::Complete, "{report:?}");
+            assert!(!report.permits_topology_change());
             match kind {
                 1 => assert!(matches!(
                     report.components[0],
@@ -6754,9 +6788,10 @@ mod tests {
                     let report = surface_surface(&a, &b, Options::default()).unwrap();
                     assert_eq!(
                         report.coverage,
-                        Coverage::NumericallyResolved,
+                        Coverage::Complete,
                         "swap={swap} reverse={reverse} transpose={transpose}: {report:?}"
                     );
+                    assert!(!report.permits_topology_change());
                     let SurfaceSurfaceComponent::Overlap {
                         first_boundary,
                         second_boundary,

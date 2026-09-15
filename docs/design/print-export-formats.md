@@ -1,7 +1,11 @@
 # Print export formats (five)
 
-Production artifact surface for mesh + toolpath export. No Worker/UI and no
-live printer transport in this contract.
+Production artifact surface for mesh + toolpath export.
+
+**Status (2026-09-15):** crate APIs and geometry-bridge ops are shipped.
+Worker/`GcodePanel` now expose job download (`.gcode` / `.gcode.3mf`). Live
+LAN submit is **not** in these export APIs — see
+[`printer-lan.md`](printer-lan.md) (`printer-cli` companion).
 
 ## Formats
 
@@ -21,6 +25,9 @@ Happy path after slicing:
 Host ops: `mesh_gcode` (preview) and `mesh_gcode_job` (job text +
 `gcode3mfBase64`). Mesh path: `Mesh` → `export_print_mesh` for STL / OBJ / mesh 3MF.
 
+UI: GcodePanel `Generate print job` → Worker `kind: 'job'` → download and/or
+companion Send.
+
 ## Dialects
 
 - **Preview** (`open-scad-viewer/print-preview 2`): model-space motion only.
@@ -34,4 +41,4 @@ Host ops: `mesh_gcode` (preview) and `mesh_gcode_job` (job text +
 AMS UI, multi-plate UI, “true Bambu slicer” parity, and expanding the print-mesh
 set beyond STL/OBJ/3MF (AMF/PLY/OFF remain available on `mesh_export::export`
 but are not part of this five-format surface). Live LAN FTPS/MQTT lives in
-`printer-core` (`network` feature), not in these export APIs.
+`printer-core` (`network` feature) and `printer-cli`, not in these export APIs.

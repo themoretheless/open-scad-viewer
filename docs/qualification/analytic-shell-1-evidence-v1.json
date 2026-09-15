@@ -1,0 +1,12 @@
+{
+  "capability": "analytic-shell/1",
+  "maturity": "AnalyticComplete",
+  "planId": "analytic-shell-1-evidence-v1",
+  "seedPlan": "docs/design/qualification/analytic-shell-1.md",
+  "positiveCorpus": ["AS-01"],
+  "negativeCorpus": ["AS-N1"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/analytic_features.rs"]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

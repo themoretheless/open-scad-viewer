@@ -1,0 +1,34 @@
+{
+  "capability": "analytic-boolean/1",
+  "maturity": "Qualified",
+  "gate": "G5e",
+  "planId": "analytic-boolean-1-evidence-v1",
+  "matrixHashSeed": "cylinder-imprint+listed-analytic-ss+uv-missed-branch",
+  "positiveCorpus": [
+    "disjoint",
+    "contained",
+    "identical",
+    "shared-face",
+    "cavity",
+    "empty",
+    "multi-body"
+  ],
+  "negativeCorpus": ["tangent", "coincident", "sphere", "torus", "general-nurbs"],
+  "invariants": [
+    "fail-closed typed refuse",
+    "operands unchanged on refuse",
+    "no mesh fallback",
+    "no Manifold cross-route",
+    "topology only from all-Complete BooleanCertificate"
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/analytic_boolean.rs",
+      "crates/brep-core/src/analytic_ss.rs",
+      "crates/brep-core/src/uv_arrangement.rs"
+    ],
+    "product": ["src/services/geometry/brepCapability.ts"]
+  },
+  "resetPolicy": "false-Complete freezes capability to Unavailable",
+  "sbomNote": "See docs/qualification/sbom/ full SPDX fingerprints; this evidence binds corpus identity only"
+}

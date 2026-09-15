@@ -1,0 +1,12 @@
+{
+  "capability": "analytic-solid-loft/1",
+  "maturity": "AnalyticComplete",
+  "planId": "analytic-solid-loft-1-evidence-v1",
+  "seedPlan": "docs/design/qualification/analytic-solid-loft-1.md",
+  "positiveCorpus": ["ASL-01"],
+  "negativeCorpus": ["surface-as-solid"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/analytic_features.rs"]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

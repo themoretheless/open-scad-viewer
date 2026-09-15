@@ -222,3 +222,183 @@ fn reindexing_and_cyclic_loop_rotation_preserve_geometry_identities() {
     assert_eq!(ids(&reordered.1.loops), ids(&source.1.loops));
     assert_eq!(ids(&reordered.1.faces), ids(&source.1.faces));
 }
+
+fn reindex_clone(source: &Model) -> Model {
+    let mut reordered = source.clone();
+    let vertices = reordered.vertices.len();
+    reordered.vertices.reverse();
+    for edge in &mut reordered.edges {
+        edge.vertices = edge.vertices.map(|index| vertices - 1 - index);
+    }
+    let edges = reordered.edges.len();
+    reordered.edges.reverse();
+    for wire in &mut reordered.loops {
+        for coedge in &mut wire.coedges {
+            coedge.edge = edges - 1 - coedge.edge;
+        }
+        if !wire.coedges.is_empty() {
+            wire.coedges.rotate_left(1);
+        }
+    }
+    reordered.rebuild_topology_ids();
+    reordered
+}
+
+#[test]
+fn cone_apex_edge_and_vertex_ids_survive_reindex() {
+    for model in [
+        brep_core::frustum(3., 0., 5.).unwrap(),
+        brep_core::frustum(0., 3., 5.).unwrap(),
+    ] {
+        assert!(model.edges.iter().any(|edge| edge.degenerate));
+        let reordered = reindex_clone(&model);
+        reordered.validate().unwrap();
+        assert_eq!(ids(&reordered.1.vertices), ids(&model.1.vertices));
+        assert_eq!(ids(&reordered.1.edges), ids(&model.1.edges));
+        let apex_edges: BTreeSet<_> = model
+            .edges
+            .iter()
+            .zip(model.1.edges.iter())
+            .filter(|(edge, _)| edge.degenerate)
+            .map(|(_, id)| id.clone())
+            .collect();
+        let reordered_apex: BTreeSet<_> = reordered
+            .edges
+            .iter()
+            .zip(reordered.1.edges.iter())
+            .filter(|(edge, _)| edge.degenerate)
+            .map(|(_, id)| id.clone())
+            .collect();
+        assert_eq!(apex_edges, reordered_apex);
+        assert!(!apex_edges.is_empty());
+    }
+}
+
+#[test]
+fn sphere_ordinary_poles_survive_reindex_without_degenerate_edges() {
+    let source = brep_core::sphere(3.).unwrap();
+    assert!(source.edges.iter().all(|edge| !edge.degenerate));
+    let poles: Vec<_> = source
+        .vertices
+        .iter()
+        .enumerate()
+        .filter(|(_, v)| v.point[0].abs() < 1e-12 && v.point[1].abs() < 1e-12)
+        .map(|(i, v)| (source.1.vertices[i].clone(), v.point[2].signum()))
+        .collect();
+    assert_eq!(poles.len(), 2);
+    let reordered = reindex_clone(&source);
+    reordered.validate().unwrap();
+    assert!(reordered.edges.iter().all(|edge| !edge.degenerate));
+    assert_eq!(ids(&reordered.1.vertices), ids(&source.1.vertices));
+    assert_eq!(ids(&reordered.1.edges), ids(&source.1.edges));
+}
+
+#[test]
+fn torus_shared_seam_edge_ids_stable_under_cyclic_rotation() {
+    let source = brep_core::torus(4., 1.).unwrap();
+    let reordered = reindex_clone(&source);
+    reordered.validate().unwrap();
+    assert_eq!(ids(&reordered.1.edges), ids(&source.1.edges));
+    assert_eq!(ids(&reordered.1.faces), ids(&source.1.faces));
+}
+
+#[test]
+fn degenerate_flag_participates_in_edge_identity() {
+    let mut model = brep_core::frustum(3., 0., 5.).unwrap();
+    let apex = model
+        .edges
+        .iter()
+        .position(|edge| edge.degenerate)
+        .expect("cone apex");
+    let before = model.1.edges[apex].clone();
+    model.edges[apex].degenerate = false;
+    model.rebuild_topology_ids();
+    assert_ne!(model.1.edges[apex], before);
+}
+
+#[test]
+fn cone_apex_lineage_does_not_false_persist_across_height_change() {
+    let short = brep_core::frustum(3., 0., 4.).unwrap();
+    let mut tall = brep_core::frustum(3., 0., 6.).unwrap();
+    tall.inherit_topology_ids(&[&short]);
+    tall.validate().unwrap();
+    let short_apex: BTreeSet<_> = short
+        .edges
+        .iter()
+        .zip(short.1.edges.iter())
+        .filter(|(edge, _)| edge.degenerate)
+        .map(|(_, id)| id.clone())
+        .collect();
+    let tall_apex: BTreeSet<_> = tall
+        .edges
+        .iter()
+        .zip(tall.1.edges.iter())
+        .filter(|(edge, _)| edge.degenerate)
+        .map(|(_, id)| id.clone())
+        .collect();
+    assert!(short_apex.is_disjoint(&tall_apex));
+}
+
+#[test]
+fn tube_inner_and_outer_walls_keep_distinct_face_identities() {
+    let tube = brep_core::tube(4., 2., 5.).unwrap();
+    tube.validate().unwrap();
+    assert!(tube.faces.len() >= 8);
+    let face_ids = ids(&tube.1.faces);
+    assert_eq!(face_ids.len(), tube.faces.len());
+    let reordered = reindex_clone(&tube);
+    reordered.validate().unwrap();
+    assert_eq!(ids(&reordered.1.faces), face_ids);
+    assert_eq!(ids(&reordered.1.edges), ids(&tube.1.edges));
+}
+
+#[test]
+fn revolve_axis_touching_profile_poles_survive_reindex() {
+    let profile = [[0., 0.], [2., 0.], [2., 3.], [0., 3.]];
+    let source = brep_core::revolve(&profile).unwrap();
+    source.validate().unwrap();
+    let poles: Vec<_> = source
+        .vertices
+        .iter()
+        .enumerate()
+        .filter(|(_, v)| v.point[0].abs() < 1e-12 && v.point[1].abs() < 1e-12)
+        .map(|(i, _)| source.1.vertices[i].clone())
+        .collect();
+    assert!(!poles.is_empty(), "axis-touching revolve must author poles");
+    let reordered = reindex_clone(&source);
+    reordered.validate().unwrap();
+    assert_eq!(ids(&reordered.1.vertices), ids(&source.1.vertices));
+    assert_eq!(ids(&reordered.1.faces), ids(&source.1.faces));
+}
+
+#[test]
+fn frozen_constructor_matrix_validates_and_has_stable_identity_cardinality() {
+    // Frozen Phase A constructor admission matrix (positive cases only).
+    let cases: Vec<(&str, Model)> = vec![
+        ("cylinder", cylinder(2., 4.).unwrap()),
+        ("frustum", brep_core::frustum(3., 1., 5.).unwrap()),
+        ("cone", brep_core::frustum(3., 0., 5.).unwrap()),
+        ("tube", brep_core::tube(3., 1., 4.).unwrap()),
+        ("sphere", brep_core::sphere(2.5).unwrap()),
+        ("torus", brep_core::torus(4., 1.).unwrap()),
+        (
+            "revolve",
+            brep_core::revolve(&[[1., 0.], [2., 0.], [2., 2.], [1., 2.]]).unwrap(),
+        ),
+    ];
+    for (name, model) in cases {
+        model
+            .validate()
+            .unwrap_or_else(|e| panic!("{name} validate: {e}"));
+        assert_eq!(
+            model.1.vertices.len(),
+            model.vertices.len(),
+            "{name} vertex ids"
+        );
+        assert_eq!(model.1.edges.len(), model.edges.len(), "{name} edge ids");
+        assert_eq!(model.1.faces.len(), model.faces.len(), "{name} face ids");
+        let again = reindex_clone(&model);
+        again.validate().unwrap_or_else(|e| panic!("{name} reindex: {e}"));
+        assert_eq!(ids(&again.1.faces), ids(&model.1.faces), "{name} face stability");
+    }
+}

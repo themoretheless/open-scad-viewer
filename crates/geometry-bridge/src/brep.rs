@@ -994,4 +994,43 @@ mod registry_tests {
         assert!(built.face_ids.is_empty());
         assert!(built.topology_face_ids.unwrap().is_empty());
     }
+
+    #[test]
+    fn shared_edge_registry_gives_identical_indices_to_adjacent_faces() {
+        let model = brep_core::cylinder(2., 4.).unwrap();
+        let built = nurbs(&model, 8).unwrap();
+        assert!(
+            !built.built.report.closed || built.built.report.non_manifold_edges == 0,
+            "shared-edge tess must remain manifold: {:?}",
+            built.built.report
+        );
+        // Adjacent wall/cap triangles must share exact vertex indices along the
+        // circular rim — not merely coincident coordinates.
+        let positions = &built.built.mesh.positions;
+        let indices = &built.built.mesh.indices;
+        let mut edge_uses: std::collections::BTreeMap<(usize, usize), usize> =
+            std::collections::BTreeMap::new();
+        for tri in indices.chunks_exact(3) {
+            for [a, b] in [[tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]]] {
+                let key = if a < b { (a, b) } else { (b, a) };
+                *edge_uses.entry(key).or_default() += 1;
+            }
+        }
+        let shared = edge_uses.values().filter(|&&n| n == 2).count();
+        let boundary = edge_uses.values().filter(|&&n| n == 1).count();
+        assert!(shared > 0, "expected dual-face shared mesh edges");
+        assert_eq!(
+            boundary, 0,
+            "closed cylinder tess must not leave singleton mesh edges"
+        );
+        // Spot-check: every shared edge endpoint has finite coords (no NaN weld).
+        for &(a, b) in edge_uses.iter().filter(|(_, n)| **n == 2).map(|(k, _)| k) {
+            for i in [a, b] {
+                for c in 0..3 {
+                    assert!(positions[i * 3 + c].is_finite());
+                }
+            }
+        }
+        let _ = positions;
+    }
 }

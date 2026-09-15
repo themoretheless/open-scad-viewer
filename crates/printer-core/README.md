@@ -3,6 +3,10 @@
 Multi-vendor **LAN** printer job transport. This crate does **not** slice meshes,
 emit G-code, or talk to vendor clouds. Hosts implement [`PrinterBackend`].
 
+**Status (2026-09-15):** backends + Bambu/Snapmaker discovery shipped; CLI/UI
+path via [`printer-cli`](../printer-cli). Next queue in
+[`docs/design/printer-lan.md`](../../docs/design/printer-lan.md).
+
 | Backend | Artifact | Wire |
 | --- | --- | --- |
 | Bambu Lab | `.gcode.3mf` | FTPS `:990` + MQTT/TLS `:8883` |

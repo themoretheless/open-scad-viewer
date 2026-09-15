@@ -4,6 +4,10 @@ Native CLI and **loopback companion** for [`printer-core`](../printer-core)
 LAN submit / discovery. The Vue app must not open FTPS/MQTT/raw printer
 sockets; this binary is the bridge (`serve` binds `127.0.0.1` only).
 
+**Status (2026-09-15):** shipped on `origin/main` (`e4fb4c5`). Next: hardware
+soak, then mDNS / persisted printer form / panel control / Tauri — see
+[`docs/design/printer-lan.md`](../../docs/design/printer-lan.md).
+
 ```bash
 cargo run -p printer-cli -- discover
 cargo run -p printer-cli -- send --vendor moonraker --host http://192.168.1.20:7125 --file part.gcode

@@ -203,6 +203,7 @@ name = "brep-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
+ "cad-predicates",
  "nurbs-core",
  "planar-geometry",
  "value-codec",

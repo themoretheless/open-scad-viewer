@@ -2,6 +2,7 @@
 import type {SemanticColor, SemanticOccurrence, SemanticOutputRef, SemanticValueType} from '../core/semanticProgram'
 import {MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import {callGeometryRust,GeometryKernelError} from './geometry/kernel'
+import {assertBrepCapabilityAllowsTopology} from './geometry/brepCapability'
 import type {NurbsBrep} from './geometry/brep'
 import type {BrepProfile} from './geometry/brepProfile'
 import {BrepSemanticBackendError} from './brepSemanticErrors'
@@ -34,6 +35,15 @@ export async function executeBrepNativeProgram(input:SemanticLoweringSuccess,con
   const error=new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_BEGIN',null,'Native B-rep execution requires brep-1')
   error.backendCause=new BrepSemanticBackendError('E_BREP_SEMANTIC_UNSUPPORTED','B-rep semantic backend requires openscad-viewer/brep-1')
   throw error
+ }
+ try{
+  assertBrepCapabilityAllowsTopology('planar-csg/1')
+  assertBrepCapabilityAllowsTopology('analytic-boolean/1')
+ }catch(error){
+  const message=error instanceof Error?error.message:'B-rep capability refused'
+  const fail=new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_BEGIN',null,message)
+  fail.backendCause=new BrepSemanticBackendError('E_BREP_SEMANTIC_UNSUPPORTED',message)
+  throw fail
  }
  let session:string|undefined,active:number|null=null
  let primary:SemanticProgramExecutionError|undefined

@@ -10,3 +10,4 @@ value-codec = { path = "../value-codec" }
 nurbs-core = { path = "../nurbs-core" }
 brep-topology = { path = "../brep-topology" }
 planar-geometry = { path = "../planar-geometry" }
+cad-predicates = { path = "../cad-predicates" }

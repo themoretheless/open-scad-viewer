@@ -83,6 +83,18 @@ agreement; it does not claim general solid-geometric certification.
   estimate, not an exact-arithmetic certificate. No mesh authors this topology.
   Separate exterior components may meet at isolated profile endpoints; they
   retain separate vertex/edge ownership. Hole-boundary contacts are refused.
+- `analytic_boolean` changes topology only with an all-Complete
+  `BooleanCertificate` on the frozen analytic cylinder corpus. Individual
+  intersection reports still report `permitsTopologyChange: false`.
+- `analytic_ss` / `coverage_verifier` publish finite Complete plane↔quadric
+  contacts; out-of-matrix pairs refuse. `nurbs_ss_g6` is R1-narrow only.
+- `trim_sew` provides chart classification + exact sew without auto-heal.
+- `analytic_features` keeps fillet/shell/solid-loft/STEP at Unavailable until
+  per-capability QualificationPlan release (faceted ≠ analytic).
+  and bounded coordinate-roundoff normalization; its adjustment report is an
+  estimate, not an exact-arithmetic certificate. No mesh authors this topology.
+  Separate exterior components may meet at isolated profile endpoints; they
+  retain separate vertex/edge ownership. Hole-boundary contacts are refused.
 - `prism::extrude(loops, z_min, z_max)` accepts material-left 2D NURBS loops:
   CCW outer boundaries, CW holes, and nested islands. Active knots split retained
   curves into individual edges so a closed multi-span curve does not collapse

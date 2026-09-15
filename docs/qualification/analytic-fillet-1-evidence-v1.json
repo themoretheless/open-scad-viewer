@@ -1,0 +1,12 @@
+{
+  "capability": "analytic-fillet/1",
+  "maturity": "AnalyticComplete",
+  "planId": "analytic-fillet-1-evidence-v1",
+  "seedPlan": "docs/design/qualification/analytic-fillet-1.md",
+  "positiveCorpus": ["AF-01"],
+  "negativeCorpus": ["AF-N1"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/analytic_features.rs"]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

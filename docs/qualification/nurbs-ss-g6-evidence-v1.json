@@ -1,0 +1,13 @@
+{
+  "capability": "nurbs-ss-transverse-bicubic/1",
+  "maturity": "AnalyticComplete",
+  "planId": "nurbs-ss-g6-evidence-v1",
+  "seedPlan": "docs/design/r1-nurbs-ss-spike-adr.md",
+  "positiveCorpus": ["R1-04-complete-empty", "R1-01-planar-transverse-line"],
+  "negativeCorpus": ["R1-02-coincident", "R1-03-near-tangent", "rational-weights", "non-bicubic"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/nurbs_ss_g6.rs", "crates/brep-core/src/intersections.rs"]
+  },
+  "booleanImprint": false,
+  "resetPolicy": "false-Complete freezes Unavailable / stop"
+}

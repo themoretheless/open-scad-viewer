@@ -40,6 +40,20 @@ export function parseDirectDocument(text: string): DirectDocument {
     if (b.brep) {
       inspectNurbsBrep(b.brep)
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
+      if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
+      const meshAabb = aabbFromPositions(m.positions)
+      const brepAabb = aabbFromBrep(b.brep)
+      const diag = Math.hypot(
+        Math.max(meshAabb[1] - meshAabb[0], brepAabb[1] - brepAabb[0]),
+        Math.max(meshAabb[3] - meshAabb[2], brepAabb[3] - brepAabb[2]),
+        Math.max(meshAabb[5] - meshAabb[4], brepAabb[5] - brepAabb[4]),
+      )
+      const slack = Math.max(1e-3, 1e-4 * Math.max(diag, 1))
+      for (let i = 0; i < 6; i++) {
+        if (Math.abs(meshAabb[i] - brepAabb[i]) > slack) {
+          throw new Error('Displayed body B-rep and mesh AABBs disagree; refuse stale mesh pairing.')
+        }
+      }
     }
   }
   for (const item of d.curves) validateNurbsCurve(item.curve)
@@ -49,6 +63,31 @@ export function parseDirectDocument(text: string): DirectDocument {
     validateNurbsSurface(item.surface)
   }
   return clone(d)
+}
+
+const aabbFromPositions = (positions: number[]): [number, number, number, number, number, number] => {
+  let minX = positions[0], maxX = positions[0], minY = positions[1], maxY = positions[1], minZ = positions[2], maxZ = positions[2]
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i], y = positions[i + 1], z = positions[i + 2]
+    if (x < minX) minX = x; if (x > maxX) maxX = x
+    if (y < minY) minY = y; if (y > maxY) maxY = y
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+  }
+  return [minX, maxX, minY, maxY, minZ, maxZ]
+}
+
+const aabbFromBrep = (brep: NurbsBrep): [number, number, number, number, number, number] => {
+  if (!brep.vertices.length) throw new Error('B-rep vertices are required for mesh correspondence.')
+  let minX = brep.vertices[0].point[0], maxX = minX
+  let minY = brep.vertices[0].point[1], maxY = minY
+  let minZ = brep.vertices[0].point[2], maxZ = minZ
+  for (const vertex of brep.vertices) {
+    const [x, y, z] = vertex.point
+    if (x < minX) minX = x; if (x > maxX) maxX = x
+    if (y < minY) minY = y; if (y > maxY) maxY = y
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+  }
+  return [minX, maxX, minY, maxY, minZ, maxZ]
 }
 
 /** Snapshots contain independent geometry, never sketch references or a feature tree. */

@@ -4,6 +4,33 @@ Library contract for sending a ready print artifact to a LAN host. Not a slicer
 and not G-code generation. Implementation: [`crates/printer-core`](../../crates/printer-core).
 Native CLI / Vue companion: [`crates/printer-cli`](../../crates/printer-cli).
 
+**Status (2026-09-15, `origin/main` @ `e4fb4c5`):** multi-vendor LAN submit,
+Bambu/Snapmaker discovery, `printer-cli`, Worker job export, and GcodePanel
+Send-via-companion are **shipped**. Hardware soak and the queue below are open.
+
+## Shipped
+
+| Area | Where |
+| --- | --- |
+| Backends (Bambu / Moonraker / OctoPrint / Prusa / Creality / Snapmaker) | `printer-core` + `network` |
+| Discovery (Bambu SSDP, Snapmaker UDP) | `PrinterDiscovery` / live scanners |
+| Native CLI (`discover` / `send` / control / `serve`) | `printer-cli` |
+| Job dialect + `.gcode.3mf` in Worker | `kind: 'job'` → `mesh_gcode_job` |
+| GcodePanel download + Discover/Send | localhost companion only |
+| rbench suites | `bench_print_export`, `bench_printer_lan` |
+
+## Next (priority order)
+
+1. **Hardware soak** — run `printer-cli serve` + UI Send against real Moonraker /
+   Bambu / Snapmaker firmware; fix wire mismatches.
+2. **mDNS for HTTP hosts** — auto-find Moonraker / OctoPrint / Prusa / Creality
+   (today: manual URL only).
+3. **Persist printer form** — vendor / host / credentials across sessions.
+4. **Status / pause / resume / stop in GcodePanel** — `/control` exists; UI is
+   Send-only.
+5. **Tauri / desktop shell** — embed companion; drop the separate `serve`
+   process for end users.
+
 ## Backends
 
 | Vendor | Artifact | Observed wire |
@@ -17,13 +44,13 @@ Native CLI / Vue companion: [`crates/printer-cli`](../../crates/printer-cli).
 
 These are **observed** integrations, not vendor-guaranteed API contracts.
 
-## Discovery (in scope)
+## Discovery
 
-| Vendor | Mechanism |
-| --- | --- |
-| Bambu | SSDP multicast (`PrinterDiscovery` / `BambuSsdpDiscovery`) |
-| Snapmaker | UDP broadcast probe (`SnapmakerUdpDiscovery`) |
-| Moonraker / OctoPrint / Prusa / Creality | Manual URL only (mDNS deferred) |
+| Vendor | Mechanism | Status |
+| --- | --- | --- |
+| Bambu | SSDP multicast (`BambuSsdpDiscovery`) | Shipped |
+| Snapmaker | UDP broadcast probe (`SnapmakerUdpDiscovery`) | Shipped |
+| Moonraker / OctoPrint / Prusa / Creality | Manual URL | Open → mDNS (Next #2) |
 
 Discovery returns host/serial/model hints; callers fill config and call
 `connect_*`. It does not auto-submit jobs.
@@ -85,7 +112,7 @@ sockets and live discovery; default builds use mocks.
 
 ## Non-goals
 
-Cloud accounts, AMS mapping UI, camera streams, mDNS for HTTP hosts,
-in-browser FTPS/MQTT, full Tauri desktop shell, Prusa Digest auth, stock
-Creality websocket start, Snapmaker on-screen pairing flow, claiming slicer or
-firmware parity.
+Cloud accounts, AMS mapping UI, camera streams, in-browser FTPS/MQTT,
+Prusa Digest auth, stock Creality websocket start, Snapmaker on-screen pairing
+flow, claiming slicer or firmware parity. (mDNS and Tauri remain **deferred
+next**, not permanent non-goals.)

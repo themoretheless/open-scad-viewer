@@ -3,6 +3,37 @@ import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
 import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
+import {
+  assertGeometryLeaseCurrent,
+  bumpGeometryKernelEpoch,
+  cancelGeometryKernel,
+  geometryKernelEpoch,
+  isGeometryKernelCancelled,
+  issueGeometryLease,
+  publishLastKnownGood,
+  readLastKnownGood,
+  releaseGeometryLease,
+  resetGeometryKernelCancel,
+  GeometryLeaseError,
+  type GeometryLease,
+  type LastKnownGoodSnapshot,
+} from './kernelLeases'
+
+export {
+  assertGeometryLeaseCurrent,
+  bumpGeometryKernelEpoch,
+  cancelGeometryKernel,
+  geometryKernelEpoch,
+  isGeometryKernelCancelled,
+  issueGeometryLease,
+  publishLastKnownGood,
+  readLastKnownGood,
+  releaseGeometryLease,
+  resetGeometryKernelCancel,
+  GeometryLeaseError,
+  type GeometryLease,
+  type LastKnownGoodSnapshot,
+}
 
 export class GeometryKernelError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = 'GeometryKernelError' }
@@ -74,8 +105,12 @@ export function decodeNurbsResult<T>(result:unknown):T{
  return envelope.value
 }
 export function callGeometryRust<T>(op:string,args:object):T{
+  if (isGeometryKernelCancelled()) {
+    throw new GeometryLeaseError('Geometry kernel cancelled; refuse WASM request')
+  }
   return decodeNurbsResult<T>(request(0,{op,...args}))
 }
+
 export function createRustSurfaceEvaluator(surface:object){
  const id=decodeNurbsResult<number>(request(6,surface));let disposed=false
  return {evaluate(u:number,v:number){if(disposed)throw new Error('NURBS surface evaluator is disposed.');return request(7,{id,u,v})},free(){if(!disposed){request(8,{id});disposed=true}}}

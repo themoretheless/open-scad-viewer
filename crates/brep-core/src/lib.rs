@@ -14,10 +14,16 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub mod analysis;
 pub mod analytic;
+pub mod analytic_boolean;
+pub mod analytic_features;
+pub mod analytic_ss;
 mod boolean_support;
+pub mod coverage_verifier;
 pub mod intersections;
+pub mod nurbs_ss_g6;
 pub mod operations;
 pub mod planar_trim;
+pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod prismatic_boolean;
@@ -26,9 +32,16 @@ mod sphere_boolean;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
+pub mod trim_sew;
+pub mod uv_arrangement;
 pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
     revolve_wire_angle, ruled_loft, sphere, torus, tube,
+};
+pub use analytic_boolean::{analytic_boolean, BooleanCertificate};
+pub use analytic_features::{
+    analytic_fillet, analytic_shell, analytic_solid_loft, export_step, import_step,
+    FeatureCertificate,
 };
 pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
@@ -537,7 +550,19 @@ impl Model {
         let mut edges: Vec<_> = self
             .edges
             .iter()
-            .map(|edge| format!("e:{}", Self::hash([Self::curve_key(&edge.curve)])))
+            .map(|edge| {
+                format!(
+                    "e:{}",
+                    Self::hash([
+                        Self::curve_key(&edge.curve),
+                        if edge.degenerate {
+                            "deg:1".into()
+                        } else {
+                            "deg:0".into()
+                        },
+                    ])
+                )
+            })
             .collect();
         let mut loops: Vec<_> = self
             .loops

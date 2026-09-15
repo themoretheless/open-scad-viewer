@@ -8,6 +8,26 @@ import type { MeshObject, MeshWorkspaceDocument } from './meshEditing'
 import { emptyMeshDocument } from './meshEditing'
 import { tessellateSolidNurbsSurface } from './solidNurbs'
 import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
+import { createSelectionTransferService } from './geometry/selectionTransfer'
+import { isTopoId, type TopoId } from '../core/topologyLineage'
+
+/** N1: transfer a Solid selection across a rebuild using durable lineage only. */
+export function transferSolidSelection(selection: string, lineageJson?: string): string | null {
+  if (!isTopoId(selection)) return null
+  const service = createSelectionTransferService()
+  if (lineageJson) {
+    try {
+      service.restore(JSON.parse(lineageJson))
+    } catch {
+      return null
+    }
+  } else {
+    service.introduce(selection as TopoId, 'face')
+  }
+  const result = service.transfer(selection as TopoId)
+  if (result.status === 'persistent' || result.status === 'followed') return result.id
+  return null
+}
 
 /** Convert the scene while retaining authored B-rep carriers and display placement. */
 export function sceneMeshesToSolidDocument(meshes: readonly MeshData[], namePrefix = 'Body'): DirectDocument {
