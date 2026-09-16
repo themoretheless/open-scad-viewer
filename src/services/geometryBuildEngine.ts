@@ -5,7 +5,7 @@ import {
   type GeometryEngineManifest,
   type GeometryEngineRegistrySnapshot,
   type GeometryExecutionDescriptor,
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   freezeGeometryExecutionDescriptor,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
@@ -40,13 +40,13 @@ export function geometryExecutionForError(error: unknown): GeometryExecutionDesc
 }
 
 const MESH_MANIFEST: GeometryEngineManifest = Object.freeze({
-  ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
+  ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh],
   availability: 'available',
   unavailableReason: null,
 } satisfies GeometryEngineManifest)
 
 const BREP_MANIFEST: GeometryEngineManifest = Object.freeze({
-  ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep],
+  ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep],
   availability: 'available',
   unavailableReason: null,
 } satisfies GeometryEngineManifest)
@@ -327,7 +327,7 @@ export class GeometryBuildEngine {
     for (const provider of providers) {
       const manifest = MANIFESTS[provider.engineClass]
       const archivedManifest = GEOMETRY_MANIFEST_ARCHIVE[
-        CURRENT_GEOMETRY_MANIFEST_VERSIONS[provider.engineClass]
+        ACTIVE_GEOMETRY_MANIFEST_VERSIONS[provider.engineClass]
       ]
       const admission = geometryProviderAdmissionForManifest(archivedManifest)
       if (!admission.allowed || manifest.availability !== 'available') {

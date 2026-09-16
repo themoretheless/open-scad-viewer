@@ -64,8 +64,14 @@ fn matches_host_digests_for_hand_built_paths_and_chains() {
         .unwrap()
         .clone();
     assert_eq!(derive_operation_id(&unicode_path), OP_UNICODE);
-    assert_eq!(derive_ambiguity_group_id(&root_path(), "geometry", "cube"), AMB_CUBE);
-    assert_eq!(derive_ambiguity_group_id(&[], "transform", "translate"), AMB_EMPTY);
+    assert_eq!(
+        derive_ambiguity_group_id(&root_path(), "geometry", "cube"),
+        AMB_CUBE
+    );
+    assert_eq!(
+        derive_ambiguity_group_id(&[], "transform", "translate"),
+        AMB_EMPTY
+    );
     assert_eq!(derive_occurrence_id(None, None, OP_ROOT, &[]), OCC_ROOT);
     assert_eq!(
         derive_occurrence_id(Some(OCC_ROOT), Some(OCC_ROOT), OP_CUBE, &[]),
@@ -171,10 +177,46 @@ fn operation(
 fn operations() -> Vec<Value> {
     let group = derive_ambiguity_group_id(&root_path(), "geometry", "cube");
     vec![
-        operation(0, Value::Null, 0, "$root", "module", &root_path(), "structural-unique", Value::Null),
-        operation(1, json!(0), 0, "cube", "geometry", &cube_path(0), "same-name-positional", json!(group.clone())),
-        operation(2, json!(1), 0, "translate", "transform", &body_path(), "structural-unique", Value::Null),
-        operation(3, json!(0), 1, "cube", "geometry", &cube_path(1), "same-name-positional", json!(group)),
+        operation(
+            0,
+            Value::Null,
+            0,
+            "$root",
+            "module",
+            &root_path(),
+            "structural-unique",
+            Value::Null,
+        ),
+        operation(
+            1,
+            json!(0),
+            0,
+            "cube",
+            "geometry",
+            &cube_path(0),
+            "same-name-positional",
+            json!(group.clone()),
+        ),
+        operation(
+            2,
+            json!(1),
+            0,
+            "translate",
+            "transform",
+            &body_path(),
+            "structural-unique",
+            Value::Null,
+        ),
+        operation(
+            3,
+            json!(0),
+            1,
+            "cube",
+            "geometry",
+            &cube_path(1),
+            "same-name-positional",
+            json!(group),
+        ),
     ]
 }
 
@@ -254,8 +296,11 @@ fn refuses_wrong_by_one_operation_mutations() {
     // Positional evidence without same-name siblings.
     let mut claimed = valid.clone();
     claimed[2]["identityEvidence"] = json!("same-name-positional");
-    claimed[2]["ambiguityGroup"] =
-        json!(derive_ambiguity_group_id(&cube_path(0), "transform", "translate"));
+    claimed[2]["ambiguityGroup"] = json!(derive_ambiguity_group_id(
+        &cube_path(0),
+        "transform",
+        "translate"
+    ));
     assert!(validate_operations(&claimed).is_err());
     // structural-unique claiming a group.
     let mut claimed_unique = valid.clone();
@@ -350,7 +395,17 @@ fn admits_a_valid_occurrence_identity_chain() {
         {"name":"$fn","value":{"tag":"number","value":0.5},"duplicateOrdinal":0},
         {"name":"$preview","value":{"tag":"boolean","value":true},"duplicateOrdinal":0},
     ]);
-    let mut slotted = occurrence(1, OCC_SLOTS, 1, json!(0), json!(0), slots, json!(0), json!(0), Value::Null);
+    let mut slotted = occurrence(
+        1,
+        OCC_SLOTS,
+        1,
+        json!(0),
+        json!(0),
+        slots,
+        json!(0),
+        json!(0),
+        Value::Null,
+    );
     // Scene identity for the slotted occurrence derives from OCC_SLOTS.
     slotted["sceneEntityId"] = json!(derive_scene_entity_id(OCC_SLOTS, 0));
     let occurrences = vec![occurrences[0].clone(), slotted];
@@ -422,7 +477,8 @@ fn refuses_wrong_by_one_occurrence_mutations() {
     assert!(validate_occurrence_identity(&root_static, &ops, 1).is_err());
     // Rows sharing an ID must describe the same logical evaluation.
     let mut diverged = occurrences.clone();
-    diverged[2]["dynamicSlots"] = json!([{"name":"v","value":{"tag":"number","value":7},"duplicateOrdinal":0}]);
+    diverged[2]["dynamicSlots"] =
+        json!([{"name":"v","value":{"tag":"number","value":7},"duplicateOrdinal":0}]);
     diverged[2]["occurrenceId"] = json!(OCC_CUBE);
     assert!(validate_occurrence_identity(&diverged, &ops, 1).is_err());
     // Non-producing occurrence owning an output identity.
@@ -452,16 +508,54 @@ fn refuses_wrong_by_one_occurrence_mutations() {
 #[test]
 fn refuses_duplicate_ordinal_disorder_across_rows() {
     let ops = operations();
-    let frame = occurrence(0, OCC_ROOT, 0, Value::Null, Value::Null, json!([]), Value::Null, Value::Null, Value::Null);
-    let slot = |ordinal: u64| {
-        json!([{"name":"v","value":{"tag":"number","value":7},"duplicateOrdinal":ordinal}])
-    };
+    let frame = occurrence(
+        0,
+        OCC_ROOT,
+        0,
+        Value::Null,
+        Value::Null,
+        json!([]),
+        Value::Null,
+        Value::Null,
+        Value::Null,
+    );
+    let slot = |ordinal: u64| json!([{"name":"v","value":{"tag":"number","value":7},"duplicateOrdinal":ordinal}]);
     // Two rows with equal dynamic values need dense ordinals 0 then 1.
-    let first = occurrence(1, OCC_DUP0, 3, json!(0), json!(0), slot(0), Value::Null, Value::Null, Value::Null);
-    let second = occurrence(2, OCC_DUP1, 3, json!(0), json!(0), slot(1), Value::Null, Value::Null, Value::Null);
+    let first = occurrence(
+        1,
+        OCC_DUP0,
+        3,
+        json!(0),
+        json!(0),
+        slot(0),
+        Value::Null,
+        Value::Null,
+        Value::Null,
+    );
+    let second = occurrence(
+        2,
+        OCC_DUP1,
+        3,
+        json!(0),
+        json!(0),
+        slot(1),
+        Value::Null,
+        Value::Null,
+        Value::Null,
+    );
     validate_occurrence_identity(&[frame.clone(), first.clone(), second.clone()], &ops, 1).unwrap();
     // Skipping ordinal 0 is refused.
-    let skipped = occurrence(1, OCC_DUP1, 3, json!(0), json!(0), slot(1), Value::Null, Value::Null, Value::Null);
+    let skipped = occurrence(
+        1,
+        OCC_DUP1,
+        3,
+        json!(0),
+        json!(0),
+        slot(1),
+        Value::Null,
+        Value::Null,
+        Value::Null,
+    );
     assert!(validate_occurrence_identity(&[frame.clone(), skipped], &ops, 1).is_err());
     // Two rows with the same ordinal must carry the same occurrence ID; here
     // the second row repeats the first row's exact identity as a frame row.

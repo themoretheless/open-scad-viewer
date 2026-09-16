@@ -1,0 +1,174 @@
+{
+  "schema": "open-scad-viewer/qualification-plan-index",
+  "schemaVersion": 2,
+  "gate": "G8-full",
+  "matrix": "docs/qualification/brep-full-closed-matrix-v2.json",
+  "registry": "docs/qualification/brep-capability-registry-release-full-v2.json",
+  "capabilities": [
+    {
+      "id": "planar-csg/1",
+      "plan": "docs/qualification/plans/planar-csg-1.json",
+      "evidence": "docs/qualification/brep-native-workbench-boolean-v1.json",
+      "dependencies": [],
+      "maturity": "Qualified",
+      "releaseState": "shipped"
+    },
+    {
+      "id": "analytic-boolean/1",
+      "plan": "docs/qualification/plans/analytic-boolean-1.json",
+      "evidence": "docs/qualification/analytic-boolean-1-evidence-v1.json",
+      "dependencies": [],
+      "maturity": "Qualified",
+      "releaseState": "shipped"
+    },
+    {
+      "id": "numeric-evidence-curved-brep/1",
+      "plan": "docs/qualification/plans/numeric-evidence-curved-brep-1.json",
+      "evidence": "docs/qualification/numeric-evidence-curved-brep-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": []
+    },
+    {
+      "id": "boundary-correspondence/1",
+      "plan": "docs/qualification/plans/boundary-correspondence-1.json",
+      "evidence": "docs/qualification/boundary-correspondence-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1"
+      ]
+    },
+    {
+      "id": "exact-sew/1",
+      "plan": "docs/qualification/plans/exact-sew-1.json",
+      "evidence": "docs/qualification/exact-sew-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "boundary-correspondence/1"
+      ]
+    },
+    {
+      "id": "global-solid-audit/1",
+      "plan": "docs/qualification/plans/global-solid-audit-1.json",
+      "evidence": "docs/qualification/global-solid-audit-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "exact-sew/1"
+      ]
+    },
+    {
+      "id": "persistent-naming/1",
+      "plan": "docs/qualification/plans/persistent-naming-1.json",
+      "evidence": "docs/qualification/persistent-naming-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "exact-sew/1"
+      ]
+    },
+    {
+      "id": "authorized-heal-gap-le1/1",
+      "plan": "docs/qualification/plans/authorized-heal-gap-le1-1.json",
+      "evidence": "docs/qualification/authorized-heal-gap-le1-1-evidence-v2.json",
+      "maturity": "Unavailable",
+      "releaseState": "candidate",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "boundary-correspondence/1",
+        "exact-sew/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "nurbs-boolean-bezier-le3/2",
+      "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-2.json",
+      "evidence": "docs/qualification/nurbs-boolean-bezier-le3-2-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "boundary-correspondence/1",
+        "exact-sew/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "step-interchange/2",
+      "plan": "docs/qualification/plans/step-interchange-2.json",
+      "evidence": "docs/qualification/step-interchange-2-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "analytic-multi-edge-fillet/1",
+      "plan": "docs/qualification/plans/analytic-multi-edge-fillet-1.json",
+      "evidence": "docs/qualification/analytic-multi-edge-fillet-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "boundary-correspondence/1",
+        "exact-sew/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "exact-parallel-frame-sweep/1",
+      "plan": "docs/qualification/plans/exact-parallel-frame-sweep-1.json",
+      "evidence": "docs/qualification/exact-parallel-frame-sweep-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "boundary-correspondence/1",
+        "exact-sew/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "certified-brep-tessellation/1",
+      "plan": "docs/qualification/plans/certified-brep-tessellation-1.json",
+      "evidence": "docs/qualification/certified-brep-tessellation-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "boundary-correspondence/1",
+        "exact-sew/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    },
+    {
+      "id": "certified-mass-properties/1",
+      "plan": "docs/qualification/plans/certified-mass-properties-1.json",
+      "evidence": "docs/qualification/certified-mass-properties-1-evidence-v2.json",
+      "maturity": "Qualified",
+      "releaseState": "shipped",
+      "dependencies": [
+        "numeric-evidence-curved-brep/1",
+        "global-solid-audit/1",
+        "persistent-naming/1"
+      ]
+    }
+  ],
+  "unresolvedInShippedMatrix": [],
+  "invariants": [
+    "only-Qualified-dependency-closure-ships",
+    "false-Complete-freezes-source-and-transitively-stales-dependents",
+    "no-fabricated-runs",
+    "no-manifold-cross-route"
+  ]
+}

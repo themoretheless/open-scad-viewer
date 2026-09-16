@@ -8,10 +8,15 @@
 //! + parameter-correspondence certificate holds. Out-of-matrix pairs refuse.
 //! False Complete is a kill. Narrow Boolean imprint is Phase B (`bezier-le3`).
 
-use crate::Model;
 use crate::coverage_verifier::verify_complete_report;
-use crate::imprint_pipeline::{self, ImprintEvent, SpatialRelation};
 use crate::intersections::{Coverage, Options, Report, UnresolvedReason};
+use crate::predicate_evidence::{
+    ComposedEvidence, EvidenceClaim, PredicateEvidence, compose_predicate_evidence,
+};
+use crate::solid_audit::{LocallyValidatedModel, SolidAuditCertificate};
+use crate::trim_sew::{ChartKind, ClassificationCertificate, SewCertificate};
+use crate::{ChangeSet, Model};
+use cad_predicates::ToleranceSpecIdentity;
 use nurbs_core::surface::Axis;
 use nurbs_core::{Error, Result, surface::Surface};
 
@@ -28,7 +33,9 @@ pub enum G6Maturity {
 
 pub const G6_MATURITY: G6Maturity = G6Maturity::NarrowTransverseBicubic;
 pub const G6_CAPABILITY: &str = "nurbs-ss-bezier-le3/1";
-pub const NURBS_BOOLEAN_CAPABILITY: &str = "nurbs-boolean-bezier-le3/1";
+pub const NURBS_BOOLEAN_CAPABILITY_V1: &str = "nurbs-boolean-bezier-le3/1";
+pub const NURBS_BOOLEAN_CAPABILITY: &str = "nurbs-boolean-bezier-le3/2";
+pub const NURBS_BOOLEAN_V1_MATURITY: G6Maturity = G6Maturity::Unavailable;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum G6Component {
@@ -87,6 +94,13 @@ fn is_bezier_le3_positive(surface: &Surface) -> bool {
     }
     is_single_span_clamped(&surface.knots_u, surface.degree_u)
         && is_single_span_clamped(&surface.knots_v, surface.degree_v)
+}
+
+pub(crate) fn is_nurbs_boolean_candidate(a: &Model, b: &Model) -> bool {
+    a.faces
+        .iter()
+        .chain(&b.faces)
+        .all(|face| is_bezier_le3_positive(&face.surface))
 }
 
 fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
@@ -317,91 +331,9 @@ fn try_exact_planar_iso_curve(
     Ok(None)
 }
 
-/// Attempt non-planar transverse Complete via sampled Hausdorff + param correspondence.
-fn try_nonplanar_transverse_curve(
-    a: &Surface,
-    b: &Surface,
-    tol: f64,
-) -> Result<Option<Report<G6Component>>> {
-    let samples_u = 8usize;
-    let samples_v = 8usize;
-    let mut hits: Vec<([f64; 3], [f64; 4])> = Vec::new();
-    let mut max_gap = 0.0_f64;
-    for iu in 0..=samples_u {
-        let u = iu as f64 / samples_u as f64;
-        for iv in 0..=samples_v {
-            let v = iv as f64 / samples_v as f64;
-            let pa = a.evaluate(u, v)?.point;
-            if pa.len() < 3 {
-                continue;
-            }
-            let p = [pa[0], pa[1], pa[2]];
-            let mut best = f64::INFINITY;
-            let mut best_uv = [0., 0.];
-            let mut best_q = p;
-            for ju in 0..=samples_u {
-                let ub = ju as f64 / samples_u as f64;
-                for jv in 0..=samples_v {
-                    let vb = jv as f64 / samples_v as f64;
-                    let qb = b.evaluate(ub, vb)?.point;
-                    if qb.len() < 3 {
-                        continue;
-                    }
-                    let q = [qb[0], qb[1], qb[2]];
-                    let d = norm(sub(p, q));
-                    if d < best {
-                        best = d;
-                        best_uv = [ub, vb];
-                        best_q = q;
-                    }
-                }
-            }
-            if best <= tol {
-                let mid = [
-                    0.5 * (p[0] + best_q[0]),
-                    0.5 * (p[1] + best_q[1]),
-                    0.5 * (p[2] + best_q[2]),
-                ];
-                hits.push((mid, [u, v, best_uv[0], best_uv[1]]));
-                max_gap = max_gap.max(best);
-            }
-        }
-    }
-    if hits.len() < 4 || hits.len() > (samples_u + 1) * (samples_v + 1) / 2 {
-        return Ok(None);
-    }
-    hits.sort_by(|x, y| {
-        x.1[0]
-            .partial_cmp(&y.1[0])
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                x.1[1]
-                    .partial_cmp(&y.1[1])
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-    });
-    let mut monotone_u = true;
-    let mut monotone_v = true;
-    for window in hits.windows(2) {
-        if window[1].1[0] + 1e-12 < window[0].1[0] {
-            monotone_u = false;
-        }
-        if window[1].1[1] + 1e-12 < window[0].1[1] {
-            monotone_v = false;
-        }
-    }
-    if !monotone_u && !monotone_v {
-        return Ok(None);
-    }
-    let samples: Vec<[f64; 3]> = hits.iter().map(|h| h.0).collect();
-    let params: Vec<[f64; 4]> = hits.iter().map(|h| h.1).collect();
-    let report = complete_curve(samples, max_gap.max(tol), params);
-    verify_complete_report(&report, false)?;
-    Ok(Some(report))
-}
-
-/// Research/product spike: separated Complete-empty, or planar transverse Complete line.
-/// Phase B: Bezier deg≤3 faces are elevated to uniform bicubic before the gate.
+/// Fail-closed G6 slice: separated Complete-empty, exact planar intersections,
+/// and exact plane preimages on admitted Bezier patches. Generic sampled
+/// surface/surface proximity never publishes Complete.
 pub fn narrow_transverse_bicubic(
     a: &Surface,
     b: &Surface,
@@ -526,9 +458,6 @@ pub fn narrow_transverse_bicubic(
             }
         }
     }
-    if let Some(report) = try_nonplanar_transverse_curve(a, b, tol)? {
-        return Ok(report);
-    }
     let mut report = Report::default();
     report.unresolved(
         vec![0., 1., 0., 1., 0., 1., 0., 1.],
@@ -546,7 +475,7 @@ pub fn narrow_transverse_bezier_le3(
     narrow_transverse_bicubic(a, b, options)
 }
 
-/// F4: narrow Boolean imprint certificate on the Phase B bezier-le3 submatrix.
+/// Aggregate proof for the finite `/2` contacting-solid cell.
 #[derive(Clone, Debug)]
 pub struct NurbsBooleanImprintCertificate {
     pub capability: &'static str,
@@ -554,11 +483,54 @@ pub struct NurbsBooleanImprintCertificate {
     pub boolean_imprint: bool,
     pub notes: Vec<&'static str>,
     pub curve_component: Option<G6Component>,
+    pub operation: String,
+    pub context: ToleranceSpecIdentity,
+    pub evidence: ComposedEvidence,
+    pub arrangements: Vec<ClassificationCertificate>,
+    pub sew: SewCertificate,
+    pub audit: SolidAuditCertificate,
+    pub change_set: ChangeSet,
+    pub no_healing: bool,
+    pub no_curved_prism_authorship: bool,
 }
 
 impl NurbsBooleanImprintCertificate {
     pub fn permits_topology_change(&self) -> bool {
-        self.complete && self.boolean_imprint
+        self.capability == NURBS_BOOLEAN_CAPABILITY
+            && self.complete
+            && self.boolean_imprint
+            && matches!(
+                self.operation.as_str(),
+                "union" | "difference" | "intersection"
+            )
+            && self.context == self.evidence.context
+            && !self.arrangements.is_empty()
+            && self
+                .arrangements
+                .iter()
+                .all(|cert| cert.complete && cert.chart == ChartKind::PlanePoly)
+            && self
+                .evidence
+                .claims
+                .iter()
+                .any(|claim| matches!(claim, EvidenceClaim::Positional { .. }))
+            && self.evidence.claims.iter().any(|claim| {
+                matches!(
+                    claim,
+                    EvidenceClaim::TopologyPreservation { invariant }
+                        if invariant == "profile_arrangement_split_retrim_sew_audit"
+                )
+            })
+            && self.sew.complete
+            && self.sew.displacement_budget_ok
+            && self.sew.matched == self.audit.sew.matched
+            && self.sew.displacement_budget_ok == self.audit.sew.displacement_budget_ok
+            && self.audit.ok
+            && self.audit.sew.complete
+            && self.no_healing
+            && self.no_curved_prism_authorship
+            && !self.change_set.changes.is_empty()
+            && self.change_set.validate().is_ok()
     }
 }
 
@@ -631,29 +603,10 @@ pub fn nurbs_boolean_transverse_bicubic(
     b: &Surface,
     options: Options,
 ) -> Result<NurbsBooleanImprintCertificate> {
-    let report = narrow_transverse_bicubic(a, b, options)?;
-    if report.coverage != Coverage::Complete {
-        return Err(refuse(
-            "nurbs-boolean-bezier-le3/1 refuses Incomplete G6 reports (out-of-matrix)",
-        ));
-    }
-    let Some(component) = report.components.first().cloned() else {
-        return Err(refuse(
-            "Complete G6 report missing component for Boolean imprint",
-        ));
-    };
-    match &component {
-        G6Component::Empty => Ok(NurbsBooleanImprintCertificate {
-            capability: NURBS_BOOLEAN_CAPABILITY,
-            complete: true,
-            boolean_imprint: false,
-            notes: vec!["g6_complete_empty_query_only"],
-            curve_component: Some(component),
-        }),
-        G6Component::Line { .. } | G6Component::Curve { .. } => Err(refuse(
-            "Complete G6 intersection curve has no qualified Boolean face-split topology author",
-        )),
-    }
+    let _ = narrow_transverse_bicubic(a, b, options)?;
+    Err(refuse(
+        "nurbs-boolean-bezier-le3/1 is Unavailable; use the finite /2 contacting-solid author",
+    ))
 }
 
 fn model_aabb(model: &Model) -> ([f64; 3], [f64; 3]) {
@@ -668,17 +621,94 @@ fn model_aabb(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-fn bicubic_faces(model: &Model) -> Vec<Surface> {
-    model
-        .faces
-        .iter()
-        .filter_map(|f| as_uniform_bicubic(&f.surface))
-        .collect()
+fn affine_planar_carrier(model: &Model) -> Result<Model> {
+    let tolerance = model.tolerance_mm.max(1e-9);
+    let mut carrier = model.clone();
+    for (face_index, face) in model.faces.iter().enumerate() {
+        let surface = &face.surface;
+        if !is_bezier_le3_positive(surface) || planar_support(surface, tolerance).is_none() {
+            return Err(refuse(
+                "NURBS /2 requires non-periodic unit-weight single-span planar faces of degree <=3",
+            ));
+        }
+        let du = surface.degree_u;
+        let dv = surface.degree_v;
+        let p00 = &surface.control_points[0][0];
+        let p10 = &surface.control_points[du][0];
+        let p01 = &surface.control_points[0][dv];
+        let p11 = &surface.control_points[du][dv];
+        for i in 0..=du {
+            for j in 0..=dv {
+                let u = i as f64 / du as f64;
+                let v = j as f64 / dv as f64;
+                let expected = (0..3)
+                    .map(|axis| {
+                        (1. - u) * (1. - v) * p00[axis]
+                            + u * (1. - v) * p10[axis]
+                            + (1. - u) * v * p01[axis]
+                            + u * v * p11[axis]
+                    })
+                    .collect::<Vec<_>>();
+                let actual = &surface.control_points[i][j];
+                let residual = (0..3)
+                    .map(|axis| (actual[axis] - expected[axis]).powi(2))
+                    .sum::<f64>()
+                    .sqrt();
+                if residual > tolerance {
+                    return Err(refuse(
+                        "NURBS /2 refuses planar but non-affine Bezier parameterizations",
+                    ));
+                }
+            }
+        }
+        carrier.faces[face_index].surface = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![p00.clone(), p01.clone()],
+                vec![p10.clone(), p11.clone()],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+    }
+    carrier.validate()?;
+    Ok(carrier)
 }
 
-/// R1 solid Boolean: G6-certified bicubic pairs author topology via imprint_pipeline
-/// (empty algebra or intersecting-carrier). Out-of-matrix Incomplete without a
-/// Complete curve and without AABB separation is a typed refuse.
+fn strict_partial_contact(a: &Model, b: &Model) -> Result<()> {
+    let (amin, amax) = model_aabb(a);
+    let (bmin, bmax) = model_aabb(b);
+    let tolerance = a.tolerance_mm.max(b.tolerance_mm).max(1e-9);
+    let overlap = std::array::from_fn::<_, 3, _>(|axis| {
+        amax[axis].min(bmax[axis]) - amin[axis].max(bmin[axis])
+    });
+    if overlap.iter().any(|width| *width <= tolerance * 8.) {
+        return Err(refuse(
+            "NURBS /2 requires strict positive-volume contact; tangent and gray-band contacts refuse",
+        ));
+    }
+    let contains =
+        |outer_min: [f64; 3], outer_max: [f64; 3], inner_min: [f64; 3], inner_max: [f64; 3]| {
+            (0..3).all(|axis| {
+                inner_min[axis] >= outer_min[axis] - tolerance
+                    && inner_max[axis] <= outer_max[axis] + tolerance
+            })
+        };
+    if contains(amin, amax, bmin, bmax) || contains(bmin, bmax, amin, amax) {
+        return Err(refuse(
+            "NURBS /2 admits partial contacting solids only; containment and identity remain unavailable",
+        ));
+    }
+    Ok(())
+}
+
+/// `/2` successor cell: exact Boolean authorship for strict partial contact
+/// between affine-planar Bezier profile prisms. Generic nonplanar contact,
+/// empty algebra, containment, tangency, and fallback construction all refuse.
 pub fn nurbs_boolean_imprint_solids(
     a: &Model,
     b: &Model,
@@ -688,122 +718,62 @@ pub fn nurbs_boolean_imprint_solids(
     b.validate()?;
     if !matches!(operation, "union" | "difference" | "intersection") {
         return Err(refuse(
-            "nurbs-boolean-bezier-le3/1 admits union, difference, or intersection only",
+            "nurbs-boolean-bezier-le3/2 admits union, difference, or intersection only",
         ));
     }
-    let fa = bicubic_faces(a);
-    let fb = bicubic_faces(b);
-    if fa.len() != a.faces.len() || fb.len() != b.faces.len() {
+    strict_partial_contact(a, b)?;
+    let carrier_a = affine_planar_carrier(a)?;
+    let carrier_b = affine_planar_carrier(b)?;
+    let result =
+        crate::profile_imprint::exact_planar_contact_boolean(&carrier_a, &carrier_b, operation)?;
+    let audited = LocallyValidatedModel::new(result)?.audit()?;
+    let audit = audited.certificate().clone();
+    let result = audited.into_model();
+    if result
+        .faces
+        .iter()
+        .any(|face| !is_bezier_le3_positive(&face.surface))
+    {
         return Err(refuse(
-            "Phase B NURBS Boolean requires every face on both solids to be bezier-le3 (elevated)",
+            "NURBS /2 result escaped the non-periodic unit-weight single-span degree<=3 cell",
         ));
     }
-    let options = Options::default();
-    let mut saw_curve = false;
-    let mut saw_empty = false;
-    let mut curve_component = None;
-    let mut events = Vec::new();
-    let mut parameter = 0_f64;
-    for sa in &fa {
-        for sb in &fb {
-            let report = narrow_transverse_bicubic(sa, sb, options)?;
-            if report.coverage == Coverage::Complete {
-                for c in &report.components {
-                    match c {
-                        G6Component::Empty => saw_empty = true,
-                        G6Component::Line { start, end } => {
-                            saw_curve = true;
-                            events.push(ImprintEvent {
-                                face: 0,
-                                edge: None,
-                                uv: [0., parameter],
-                                point: *start,
-                                parameter,
-                            });
-                            parameter += 1.;
-                            events.push(ImprintEvent {
-                                face: 1,
-                                edge: None,
-                                uv: [1., parameter],
-                                point: *end,
-                                parameter,
-                            });
-                            parameter += 1.;
-                            curve_component = Some(c.clone());
-                        }
-                        G6Component::Curve { samples, .. } => {
-                            if samples.len() < 2 {
-                                continue;
-                            }
-                            saw_curve = true;
-                            events.push(ImprintEvent {
-                                face: 0,
-                                edge: None,
-                                uv: [0., parameter],
-                                point: samples[0],
-                                parameter,
-                            });
-                            parameter += 1.;
-                            events.push(ImprintEvent {
-                                face: 1,
-                                edge: None,
-                                uv: [1., parameter],
-                                point: samples[samples.len() - 1],
-                                parameter,
-                            });
-                            parameter += 1.;
-                            curve_component = Some(c.clone());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    let (amin, amax) = model_aabb(a);
-    let (bmin, bmax) = model_aabb(b);
-    let separated = (0..3).any(|i| amax[i] < bmin[i] - 1e-9 || bmax[i] < amin[i] - 1e-9);
-    let contains =
-        |outer_min: [f64; 3], outer_max: [f64; 3], inner_min: [f64; 3], inner_max: [f64; 3]| {
-            (0..3)
-                .all(|i| inner_min[i] >= outer_min[i] - 1e-9 && inner_max[i] <= outer_max[i] + 1e-9)
-        };
-    let identical =
-        (0..3).all(|i| (amin[i] - bmin[i]).abs() <= 1e-9 && (amax[i] - bmax[i]).abs() <= 1e-9);
-    let relation = if saw_curve {
-        SpatialRelation::WallIntersect
-    } else if separated {
-        SpatialRelation::Disjoint
-    } else if identical {
-        SpatialRelation::Identical
-    } else if contains(amin, amax, bmin, bmax) {
-        SpatialRelation::AContainsB
-    } else if contains(bmin, bmax, amin, amax) {
-        SpatialRelation::BContainsA
-    } else {
-        let _ = saw_empty;
-        return Err(refuse(
-            "Phase B NURBS Boolean: overlapping pair without Complete curve or containment certificate is out of matrix",
-        ));
-    };
-    let result = if relation == SpatialRelation::WallIntersect {
-        let _ = events;
-        return Err(refuse(
-            "NURBS wall intersection has a Complete SS curve but no qualified face-split topology author",
-        ));
-    } else {
-        imprint_pipeline::regularized_empty_algebra(a, b, operation, relation)?
-    };
-    result.validate()?;
+    let arrangements = (0..result.faces.len())
+        .map(|face| crate::trim_sew::classify_face_outer_loop(&result, face, ChartKind::PlanePoly))
+        .collect::<Result<Vec<_>>>()?;
+    let context = result
+        .tolerance_context()
+        .map_err(|_| refuse("NURBS /2 result tolerance context is invalid"))?;
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::positional(&context, 0., 1.)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "profile_arrangement_split_retrim_sew_audit",
+                true,
+            )?,
+        ],
+    )?;
     let cert = NurbsBooleanImprintCertificate {
         capability: NURBS_BOOLEAN_CAPABILITY,
         complete: true,
         boolean_imprint: true,
-        notes: vec![if saw_curve {
-            "r11_solid_imprint_curve_carrier"
-        } else {
-            "r11_solid_imprint_empty_algebra"
-        }],
-        curve_component,
+        notes: vec![
+            "finite_affine_planar_contact_cell",
+            "exact_profile_arrangement",
+            "split_retrim_sew_audit_complete",
+        ],
+        curve_component: None,
+        operation: operation.into(),
+        context: context.spec_identity(),
+        evidence,
+        arrangements,
+        sew: audit.sew.clone(),
+        audit,
+        change_set: result.1.change_set.clone(),
+        no_healing: true,
+        no_curved_prism_authorship: true,
     };
     if !cert.permits_topology_change() {
         return Err(refuse(
@@ -1000,7 +970,7 @@ mod tests {
         let yz = planar_yz(1.5);
         let error = nurbs_boolean_transverse_bicubic(&xy, &yz, Options::default()).unwrap_err();
         assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
-        assert!(error.message.contains("no qualified Boolean face-split"));
+        assert!(error.message.contains("finite /2 contacting-solid author"));
     }
 
     #[test]
@@ -1028,7 +998,7 @@ mod tests {
     }
 
     #[test]
-    fn nurbs_solid_boolean_disjoint_cuboids_union() {
+    fn nurbs_solid_boolean_disjoint_cuboids_refuse_v2() {
         let a = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
         let b0 = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
         let b = crate::transform::affine(
@@ -1041,14 +1011,16 @@ mod tests {
             ],
         )
         .unwrap();
-        let (model, cert) = nurbs_boolean_imprint_solids(&a, &b, "union").unwrap();
-        assert!(cert.permits_topology_change());
-        assert!(cert.boolean_imprint);
-        model.validate().unwrap();
+        assert_eq!(
+            nurbs_boolean_imprint_solids(&a, &b, "union")
+                .unwrap_err()
+                .code,
+            "BREP_NURBS_SS_REFUSED"
+        );
     }
 
     #[test]
-    fn nurbs_solid_boolean_wall_intersection_refuses_without_split_author() {
+    fn nurbs_solid_boolean_contact_authors_topology() {
         let a = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
         let b0 = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
         let b = crate::transform::affine(
@@ -1061,13 +1033,12 @@ mod tests {
             ],
         )
         .unwrap();
-        let error = nurbs_boolean_imprint_solids(&a, &b, "union").unwrap_err();
-        assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
-        assert!(
-            error
-                .message
-                .contains("no qualified face-split topology author")
-        );
+        let (model, cert) = nurbs_boolean_imprint_solids(&a, &b, "union").unwrap();
+        assert!(cert.permits_topology_change());
+        assert_eq!(cert.capability, "nurbs-boolean-bezier-le3/2");
+        assert!(cert.audit.ok && cert.sew.complete);
+        assert!(!cert.arrangements.is_empty());
+        model.validate().unwrap();
     }
 
     #[test]
@@ -1110,11 +1081,11 @@ mod tests {
 
         let error = nurbs_boolean_transverse_bicubic(&a, &b, Options::default()).unwrap_err();
         assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
-        assert!(error.message.contains("no qualified Boolean face-split"));
+        assert!(error.message.contains("finite /2 contacting-solid author"));
     }
 
     #[test]
-    fn ep03_elevated_cuboid_boolean_difference() {
+    fn ep03_containment_remains_unavailable() {
         let a = crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap();
         let b0 = crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
         let b = crate::transform::affine(
@@ -1127,27 +1098,28 @@ mod tests {
             ],
         )
         .unwrap();
-        let (model, cert) = nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap();
-        assert!(cert.permits_topology_change());
-        assert!(cert.boolean_imprint);
-        assert_eq!(cert.capability, "nurbs-boolean-bezier-le3/1");
-        model.validate().unwrap();
+        assert!(nurbs_boolean_imprint_solids(&a, &b, "difference").is_err());
     }
 
     #[test]
-    fn bezier_le3_solid_boolean_all_operations_containment() {
-        let outer = crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap();
-        let inner = crate::cuboid([1., 1., 1.], [2., 2., 2.]).unwrap();
+    fn bezier_le3_solid_boolean_all_operations_contact() {
+        let outer = crate::cuboid([0., 0., 0.], [3., 3., 3.]).unwrap();
+        let inner0 = crate::cuboid([0., 0., 0.], [3., 3., 3.]).unwrap();
+        let inner = crate::transform::affine(
+            &inner0,
+            [
+                [1., 0., 0., 1.],
+                [0., 1., 0., 0.5],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
         for operation in ["union", "difference", "intersection"] {
             let (model, cert) = nurbs_boolean_imprint_solids(&outer, &inner, operation).unwrap();
             assert!(cert.permits_topology_change(), "{operation}");
             model.validate().unwrap();
-            match operation {
-                "union" => assert_eq!(model.faces.len(), 6),
-                "difference" => assert_eq!(model.faces.len(), 12),
-                "intersection" => assert_eq!(model.faces.len(), 6),
-                _ => unreachable!(),
-            }
+            assert_eq!(cert.operation, operation);
         }
     }
 
@@ -1166,6 +1138,131 @@ mod tests {
                 .code,
             "BREP_NURBS_SS_REFUSED"
         );
+    }
+
+    fn elevate_model_faces(mut model: Model) -> Model {
+        for face in &mut model.faces {
+            face.surface = face
+                .surface
+                .edit_axis(Axis::U, |curve| curve.elevate(3))
+                .unwrap()
+                .edit_axis(Axis::V, |curve| curve.elevate(3))
+                .unwrap();
+        }
+        model.validate().unwrap();
+        model
+    }
+
+    #[test]
+    fn elevated_planar_contact_survives_transform_and_scale() {
+        let a0 = crate::cuboid([0., 0., 0.], [2., 3., 2.]).unwrap();
+        let b0 = crate::cuboid([0., 0., 0.], [2., 3., 2.]).unwrap();
+        let matrix = [
+            [2., 0., 0., 10.],
+            [0., 1.5, 0., -4.],
+            [0., 0., 0.5, 3.],
+            [0., 0., 0., 1.],
+        ];
+        let a = elevate_model_faces(crate::transform::affine(&a0, matrix).unwrap());
+        let shifted = crate::transform::affine(
+            &b0,
+            [
+                [1., 0., 0., 1.],
+                [0., 1., 0., 0.5],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let b = elevate_model_faces(crate::transform::affine(&shifted, matrix).unwrap());
+        let (result, cert) = nurbs_boolean_imprint_solids(&a, &b, "intersection").unwrap();
+        assert!(cert.permits_topology_change());
+        assert!(
+            result
+                .faces
+                .iter()
+                .all(|face| is_bezier_le3_positive(&face.surface))
+        );
+        result.validate().unwrap();
+        crate::operations::boolean(&a, &b, "union")
+            .unwrap()
+            .validate()
+            .unwrap();
+    }
+
+    #[test]
+    fn tangent_and_gray_band_contacts_refuse() {
+        let a = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+        for shift in [2., 2. - 4e-7] {
+            let b = crate::transform::affine(
+                &crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap(),
+                [
+                    [1., 0., 0., shift],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., 0.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap();
+            assert!(nurbs_boolean_imprint_solids(&a, &b, "union").is_err());
+        }
+    }
+
+    #[test]
+    fn unequal_extrusion_spans_refuse_without_stepped_fallback() {
+        let a = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+        let b = crate::cuboid([1., 0.5, 0.5], [3., 2.5, 2.5]).unwrap();
+        let error = nurbs_boolean_imprint_solids(&a, &b, "union").unwrap_err();
+        assert_eq!(error.code, "BREP_PROFILE_IMPRINT_REFUSED");
+        assert!(error.message.contains("stepped fallback is forbidden"));
+    }
+
+    #[test]
+    fn aggregate_certificate_mutations_revoke_authority() {
+        let a = crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+        let b = crate::transform::affine(
+            &a,
+            [
+                [1., 0., 0., 1.],
+                [0., 1., 0., 0.5],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let (_, cert) = nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap();
+        assert!(cert.permits_topology_change());
+        let mut mutated = cert.clone();
+        mutated.no_healing = false;
+        assert!(!mutated.permits_topology_change());
+        let mut mutated = cert.clone();
+        mutated.arrangements[0].complete = false;
+        assert!(!mutated.permits_topology_change());
+        let mut mutated = cert.clone();
+        mutated.evidence.claims.clear();
+        assert!(!mutated.permits_topology_change());
+        let mut mutated = cert;
+        mutated.change_set.changes.clear();
+        assert!(!mutated.permits_topology_change());
+    }
+
+    #[test]
+    fn nonplanar_contact_typed_refuses_without_curved_prism_fallback() {
+        let mut a = elevate_model_faces(crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap());
+        a.faces[0].surface.control_points[1][1][2] += 0.01;
+        a.validate().unwrap();
+        let b = crate::transform::affine(
+            &crate::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap(),
+            [
+                [1., 0., 0., 1.],
+                [0., 1., 0., 0.5],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let error = nurbs_boolean_imprint_solids(&a, &b, "union").unwrap_err();
+        assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
     }
 
     fn bezier_le3_xy(du: usize, dv: usize, z: f64, shift: f64) -> Surface {

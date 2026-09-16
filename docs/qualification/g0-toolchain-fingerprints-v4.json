@@ -1,0 +1,83 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v4",
+  "recordedAt": "2026-09-16",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v3",
+  "purpose": "Re-freeze current repository and generated-kernel bytes in G0 v4 and start G1 v21 with no imported evidence.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v3 or G1 v1 through v20",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "e237f8637b562afa3a4826c314c752e4bf347ff5a5b30088dc9547bad39e9935",
+      "byteLength": 2800
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+      "byteLength": 5950
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "fe611e00ab8d0b92872f41ff627961d509d7803bd9ff8be224b12d5d6684dffe",
+      "byteLength": 1798
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "442bc0bd0cd87d3879451b39d09fa0493c420fabbe2bb9068d6dc429f3e4a2a5",
+      "byteLength": 72104
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v3.json",
+      "bindingId": "crates-workspace-manifest",
+      "note": "Current bytes are newly bound in v4; v3 remains archived. Re-freeze current repository and generated-kernel bytes in G0 v4 and start G1 v21 with no imported evidence."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v3.json",
+      "bindingId": "crates-lockfile",
+      "note": "Current bytes are newly bound in v4; v3 remains archived. Re-freeze current repository and generated-kernel bytes in G0 v4 and start G1 v21 with no imported evidence."
+    }
+  ],
+  "previousFingerprintSha256": "c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171"
+}

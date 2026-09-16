@@ -5,9 +5,10 @@
 
 use crate::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
-    StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs, invert_uv,
-    is_uniform_bicubic_positive, parse_b_spline_surface, parse_entities, refuse,
-    refuse_mesh_payloads_common, resolve_cartesian, split_top_args, step_header,
+    StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs, invert_uv,
+    is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common,
+    resolve_cartesian, split_top_args, step_header, surface_from_b_spline_args,
+    validate_linked_step_graph,
 };
 use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Result, surface::Surface};
@@ -247,55 +248,37 @@ fn refuse_trimmed_payloads(text: &str) -> Result<()> {
 fn parse_hole_uv_from_vertices(
     entities: &std::collections::BTreeMap<usize, (String, String)>,
     surface: &Surface,
+    vertex_ids: &[usize],
 ) -> Result<[[f64; 2]; 4]> {
-    // Collect VERTEX_POINT → CARTESIAN, skip outer corners by distance to S(0|1,0|1).
-    let mut pts = Vec::new();
-    for (_id, (ty, args)) in entities {
+    if vertex_ids.len() != 4 {
+        return Err(refuse(
+            "Trimmed STEP hole loop must link exactly four vertices",
+        ));
+    }
+    let mut hole_pts = Vec::with_capacity(4);
+    for vertex_id in vertex_ids {
+        let (ty, args) = entities
+            .get(vertex_id)
+            .ok_or_else(|| refuse("FACE_BOUND hole vertex reference broken"))?;
         if ty != "VERTEX_POINT" {
-            continue;
+            return Err(refuse("FACE_BOUND hole vertex has wrong type"));
         }
         let parts = split_top_args(args);
-        if parts.len() < 2 {
-            continue;
+        if parts.len() != 2 {
+            return Err(refuse("FACE_BOUND hole VERTEX_POINT malformed"));
         }
         let cid = parts[1]
             .trim()
             .trim_start_matches('#')
             .parse::<usize>()
-            .ok();
-        let Some(cid) = cid else { continue };
-        if let Some(p) = resolve_cartesian(entities, cid) {
-            pts.push(p);
-        }
+            .map_err(|_| refuse("FACE_BOUND hole point reference malformed"))?;
+        hole_pts.push(
+            resolve_cartesian(entities, cid)
+                .ok_or_else(|| refuse("FACE_BOUND hole point reference broken"))?,
+        );
     }
-    let outer = [
-        corner_xyz(surface, 0., 0.)?,
-        corner_xyz(surface, 1., 0.)?,
-        corner_xyz(surface, 1., 1.)?,
-        corner_xyz(surface, 0., 1.)?,
-    ];
-    let near_outer = |p: [f64; 3]| {
-        outer
-            .iter()
-            .any(|o| (o[0] - p[0]).hypot(o[1] - p[1]).hypot(o[2] - p[2]) < 1e-6)
-    };
-    let mut hole_pts: Vec<[f64; 3]> = pts.into_iter().filter(|p| !near_outer(*p)).collect();
-    // Dedup near-duplicates
-    hole_pts.sort_by(|a, b| {
-        a[0].partial_cmp(&b[0])
-            .unwrap()
-            .then(a[1].partial_cmp(&b[1]).unwrap())
-            .then(a[2].partial_cmp(&b[2]).unwrap())
-    });
-    hole_pts.dedup_by(|a, b| {
-        (a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-9 && (a[2] - b[2]).abs() < 1e-9
-    });
-    if hole_pts.len() < 4 {
-        return Err(refuse("Trimmed STEP missing four hole vertices"));
-    }
-    let hole_pts = &hole_pts[..4];
     let mut uvs = Vec::with_capacity(4);
-    for p in hole_pts {
+    for p in &hole_pts {
         uvs.push(invert_uv(surface, *p)?);
     }
     // Recover CCW UV order; bicubic_trimmed_face reverses the hole wire to CW.
@@ -313,8 +296,28 @@ fn parse_hole_uv_from_vertices(
 pub fn import_nurbs_step_trimmed(text: &str) -> Result<(Model, FeatureCertificate)> {
     refuse_trimmed_payloads(text)?;
     let entities = parse_entities(text);
-    let surface = parse_b_spline_surface(&entities)?;
-    let hole_uv = parse_hole_uv_from_vertices(&entities, &surface)?;
+    let graph = validate_linked_step_graph(&entities, StepGraphRoot::OpenShell)?;
+    if graph.faces.len() != 1
+        || graph.faces[0].outer_vertex_ids.len() != 4
+        || graph.faces[0].hole_vertex_ids.len() != 1
+    {
+        return Err(refuse(
+            "nurbs-step-trimmed-bicubic/1 requires one linked outer loop and one hole loop",
+        ));
+    }
+    let linked_face = &graph.faces[0];
+    let surface_args = &entities
+        .get(&linked_face.surface_id)
+        .ok_or_else(|| refuse("Linked face surface disappeared"))?
+        .1;
+    let surface = surface_from_b_spline_args(&entities, surface_args)?;
+    if !is_uniform_bicubic_positive(&surface) {
+        return Err(refuse(
+            "Imported surface outside freeform NURBS STEP (bicubic w≡1)",
+        ));
+    }
+    let hole_uv =
+        parse_hole_uv_from_vertices(&entities, &surface, &linked_face.hole_vertex_ids[0])?;
     let model = bicubic_trimmed_face(surface, hole_uv)?;
     Ok((
         model,
@@ -399,5 +402,57 @@ END-ISO-10303-21;
             import_nurbs_step_trimmed(text).unwrap_err().code,
             "BREP_NURBS_STEP_REFUSED"
         );
+    }
+
+    #[test]
+    fn refuses_orphan_vertex_and_broken_hole_loop_type() {
+        let hole = [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]];
+        let model = bicubic_trimmed_face(sample_bicubic(), hole).unwrap();
+        let (text, _) = export_nurbs_step_trimmed(&model).unwrap();
+
+        let with_orphan = text.replace(
+            "ENDSEC;\nEND-ISO-10303-21;",
+            "#999999=VERTEX_POINT('',#1);\nENDSEC;\nEND-ISO-10303-21;",
+        );
+        assert_eq!(
+            import_nurbs_step_trimmed(&with_orphan).unwrap_err().code,
+            "BREP_NURBS_STEP_REFUSED"
+        );
+
+        let bound_line = text
+            .lines()
+            .find(|line| line.contains("=FACE_BOUND("))
+            .unwrap();
+        let loop_id = bound_line
+            .split_once("',#")
+            .unwrap()
+            .1
+            .split(',')
+            .next()
+            .unwrap();
+        let broken = text.replacen(
+            &format!("#{loop_id}=EDGE_LOOP("),
+            &format!("#{loop_id}=DIRECTION("),
+            1,
+        );
+        assert_eq!(
+            import_nurbs_step_trimmed(&broken).unwrap_err().code,
+            "BREP_NURBS_STEP_REFUSED"
+        );
+    }
+
+    #[test]
+    fn refuses_broken_independent_pcurve_correspondence() {
+        let hole = [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]];
+        let model = bicubic_trimmed_face(sample_bicubic(), hole).unwrap();
+        let (text, _) = export_nurbs_step_trimmed(&model).unwrap();
+        let broken = text.replacen(
+            "CARTESIAN_POINT('',(0.000000000000000,0.000000000000000))",
+            "CARTESIAN_POINT('',(0.200000000000000,0.000000000000000))",
+            1,
+        );
+        let error = import_nurbs_step_trimmed(&broken).unwrap_err();
+        assert_eq!(error.code, "BREP_NURBS_STEP_REFUSED");
+        assert!(error.message.contains("correspondence") || error.message.contains("endpoints"));
     }
 }

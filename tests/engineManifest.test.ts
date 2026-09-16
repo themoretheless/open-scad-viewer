@@ -56,8 +56,13 @@ describe('immutable geometry manifest archive', () => {
       packages: Record<string, { version?: string }>
     }
 
-    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v1')
+    expect(manifest.capabilityManifestVersion).toBe('own-rust-node-v2')
     expect(manifest.engineClass).toBe('mesh')
+    expect(manifest.qualification).toMatchObject({
+      status: 'baseline-pending',
+      recordId: null,
+      corpusVersion: null,
+    })
     expect(sha256(notices)).toBe(manifest.dependency.sbomSha256)
     expect(sha256(lockfile)).toBe(manifest.dependency.lockfileSha256)
     expect(parsedLockfile.packages['node_modules/manifold-3d']).toBeUndefined()
@@ -69,6 +74,10 @@ describe('immutable geometry manifest archive', () => {
 
   it('resolves only archived version and engine-class pairs', () => {
     expect(archivedGeometryManifest('own-rust-node-v1')?.engineClass).toBe('mesh')
+    expect(archivedGeometryManifest('own-rust-node-v1')?.kernelFingerprint)
+      .toBe('sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6')
+    expect(archivedGeometryManifest('own-rust-node-v2')?.qualification.status)
+      .toBe('baseline-pending')
     expect(archivedGeometryManifest('missing-v1')).toBeNull()
     expect(immutableEngineManifestToWire('mesh', 'own-rust-node-v1')).toMatchObject({
       engine_class: 'mesh',

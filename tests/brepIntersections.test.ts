@@ -419,7 +419,8 @@ it('intersects finite affine surface pairs with corresponding retained UV traces
   controlPoints:[[[-1,-1,0],[-1,1,0]],[[1,-1,0],[1,1,0]]],weights:[[1,1],[1,1]]}
  const second={...first,controlPoints:[[[-.5,0,-1],[-.5,0,1]],[[.5,0,-1],[.5,0,1]]]}
  const report=intersectNurbsSurfaceSurface(first,second)
- expect(report.coverage).toBe('numerically_resolved')
+ expect(report.coverage).toBe('complete')
+ expect(report.evidence).toBe('analytic_coverage_certified')
  expect(report.permitsTopologyChange).toBe(false)
  expect(report.components).toHaveLength(1)
  const hit=report.components[0]
@@ -435,13 +436,13 @@ it('intersects finite affine surface pairs with corresponding retained UV traces
  expect(intersectNurbsSurfaceSurface(first,second,{maxBoxes:1}).coverage).toBe('incomplete')
  const touching={...second,controlPoints:second.controlPoints.map(row=>row.map(p=>[p[0]+1.5,p[1],p[2]]))}
  const contact=intersectNurbsSurfaceSurface(first,touching)
- expect(contact.coverage).toBe('numerically_resolved')
+ expect(contact.coverage).toBe('complete')
  expect(contact.components).toHaveLength(1)
  expect(contact.components[0].kind).toBe('point')
  const outside={...second,controlPoints:second.controlPoints.map(row=>row.map(p=>[p[0]+2.5,p[1],p[2]]))}
  expect(intersectNurbsSurfaceSurface(first,outside).components).toHaveLength(0)
  const parallel={...first,controlPoints:first.controlPoints.map(row=>row.map(p=>[p[0],p[1],1]))}
- expect(intersectNurbsSurfaceSurface(first,parallel).coverage).toBe('numerically_resolved')
+ expect(intersectNurbsSurfaceSurface(first,parallel).coverage).toBe('complete')
  expect(intersectNurbsSurfaceSurface(first,parallel).components).toHaveLength(0)
  const curved=createBrepCylinder(2,4).faces.find(f=>f.surface.degreeU===2)!.surface
  expect(intersectNurbsSurfaceSurface(first,curved).unresolved[0].reason).toBe('unsupported_surface')
@@ -453,7 +454,8 @@ it('retains the paired UV polygon of a coplanar affine overlap',()=>{
   controlPoints:[[[-1,-1,0],[-1,1,0]],[[1,-1,0],[1,1,0]]],weights:[[1,1],[1,1]]}
  const diamond={...square,controlPoints:[[[0,-1.5,0],[-1.5,0,0]],[[1.5,0,0],[0,1.5,0]]]}
  const report=intersectNurbsSurfaceSurface(square,diamond)
- expect(report.coverage).toBe('numerically_resolved')
+ expect(report.coverage).toBe('complete')
+ expect(report.evidence).toBe('analytic_coverage_certified')
  const overlap=report.components[0]
  if(overlap.kind!=='overlap')throw Error('Expected area')
  expect(overlap.points).toHaveLength(8)
@@ -464,7 +466,7 @@ it('retains the paired UV polygon of a coplanar affine overlap',()=>{
  for(const [dx,dy,kind] of [[2,0,'curve'],[2,2,'point'],[3,0,'empty']] as [number,number,string][]){
   const target={...square,controlPoints:square.controlPoints.map(row=>row.map(p=>[p[0]+dx,p[1]+dy,p[2]]))}
   const result=intersectNurbsSurfaceSurface(square,target)
-  expect(result.coverage).toBe('numerically_resolved')
+  expect(result.coverage).toBe('complete')
   if(kind==='empty')expect(result.components).toHaveLength(0)
   else expect(result.components[0].kind).toBe(kind)
  }
@@ -481,7 +483,8 @@ it('keeps coplanar area correspondence under operand and UV orientation changes'
   a.knotsU=a.knotsU.map(t=>-3+8*t);b.knotsV=b.knotsV.map(t=>10+4*t)
   b.weights=b.weights.map(row=>row.map(w=>32*w))
   const report=intersectNurbsSurfaceSurface(a,b)
-  expect(report.coverage).toBe('numerically_resolved')
+  expect(report.coverage).toBe('complete')
+  expect(report.evidence).toBe('analytic_coverage_certified')
   const hit=report.components[0]
   if(hit.kind!=='overlap')throw Error('Expected area')
   expect(hit.points).toHaveLength(8)

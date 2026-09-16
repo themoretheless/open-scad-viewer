@@ -1,0 +1,81 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "persistent-naming-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for persistent-naming/1: Opaque 128-bit topology IDs derived from operation, occurrence, capability, and private geometry signature",
+    "forbiddenClaims": [
+      "Legacy 64-bit IDs without explicit migration",
+      "Nearest-face identity inference",
+      "Cyclic or dangling lineage"
+    ]
+  },
+  "capability": "persistent-naming/1",
+  "dependencies": [
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Opaque 128-bit topology IDs derived from operation, occurrence, capability, and private geometry signature",
+      "Validated persist, split, merge, generated, and modified ChangeSet lineage with acyclic cardinality checks"
+    ],
+    "excluded": [
+      "Legacy 64-bit IDs without explicit migration",
+      "Nearest-face identity inference",
+      "Cyclic or dangling lineage"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NAME-OPAQUE-128",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NAME-CHANGESET-DAG",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NAME-LEGACY-NORMAL-PARSE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NAME-CARDINALITY-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-topology/src/persistent_naming.rs",
+      "crates/brep-core/src/lib.rs",
+      "src/core/topologyLineage.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/persistent-naming-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

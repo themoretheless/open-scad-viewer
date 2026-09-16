@@ -18,6 +18,44 @@ pub struct TessellationCertificate {
     pub complete: bool,
     pub notes: Vec<&'static str>,
 }
+
+pub const CERTIFIED_TESSELLATION_CAPABILITY: &str = "certified-brep-tessellation/1";
+
+pub struct CertifiedTessellation {
+    pub tessellation: Tessellation,
+    pub capability: &'static str,
+    pub context: cad_predicates::ToleranceSpecIdentity,
+    pub surface_to_mesh_deviation_mm: f64,
+    pub mesh_to_surface_deviation_mm: f64,
+    pub audit: brep_core::solid_audit::SolidAuditCertificate,
+    pub evidence: brep_core::predicate_evidence::ComposedEvidence,
+    pub change_set: brep_core::ChangeSet,
+    pub naming_complete: bool,
+}
+impl value_codec::Serialize for CertifiedTessellation {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::json!({
+            "capability":self.capability,
+            "tessellation":self.tessellation,
+            "context":self.context,
+            "surfaceToMeshDeviationMm":self.surface_to_mesh_deviation_mm,
+            "meshToSurfaceDeviationMm":self.mesh_to_surface_deviation_mm,
+            "coverage":{
+                "sharedEdgeIdentity":true,
+                "orientation":true,
+                "noTJunctions":true
+            },
+            "audit":{
+                "ok":self.audit.ok,
+                "bodyCount":self.audit.body_count,
+                "shellCount":self.audit.shell_count
+            },
+            "evidenceClaimCount":self.evidence.claims.len(),
+            "changeSet":self.change_set,
+            "namingComplete":self.naming_complete
+        })
+    }
+}
 impl value_codec::Serialize for Tessellation {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
@@ -90,7 +128,13 @@ fn finish(
     tolerance: f64,
     closed: bool,
 ) -> Result<Tessellation> {
-    finish_indexed(weld(mesh, tolerance)?, face_ids, topology_face_ids, closed, false)
+    finish_indexed(
+        weld(mesh, tolerance)?,
+        face_ids,
+        topology_face_ids,
+        closed,
+        false,
+    )
 }
 fn finish_indexed(
     mesh: Mesh,
@@ -432,7 +476,7 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
     registry.verify_boundary_uses(model, &face_ids)?;
     let topology_face_ids = face_ids
         .iter()
-        .map(|&face| model.1.faces[face].clone())
+        .map(|&face| model.1.faces[face].to_string())
         .collect();
     let freeform_faces = model
         .faces
@@ -445,6 +489,109 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
         !model.shells.is_empty() && model.shells.iter().all(|s| s.closed),
         freeform_faces,
     )
+}
+
+/// Certified finite tessellation for planar exact-profile solids and exact
+/// rational cylinders. Shared-edge registry incidence supplies the no-T-junction
+/// and orientation proof; curved deviation uses the analytic circular sagitta.
+pub fn certified_nurbs(
+    model: &brep_core::Model,
+    chord_tolerance_mm: f64,
+    max_triangles: usize,
+) -> Result<CertifiedTessellation> {
+    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
+        || !(12..=20_000).contains(&max_triangles)
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_TESSELLATION_OPTIONS_INVALID",
+            "Chord tolerance must be positive and triangle budget 12..20000",
+        ));
+    }
+    model.validate()?;
+    let audit = brep_core::solid_audit::audit_solid(model)?;
+    let all_planar = model
+        .faces
+        .iter()
+        .all(|face| is_affine_plane(&face.surface, model.tolerance_mm));
+    let (segments, deviation) = if all_planar {
+        (1, 0.)
+    } else if model.bodies.len() == 1 && model.bodies[0].inner_shells.is_empty() {
+        let radius = brep_core::analysis::certified_cylinder_radius(model)?.ok_or_else(|| {
+            nurbs_core::Error::new(
+                "BREP_CERTIFIED_TESSELLATION_REFUSED",
+                "Certified tessellation admits planar exact-profile solids and exact cylinders",
+            )
+        })?;
+        let selected = (1..=32).find(|segments| {
+            radius * (1. - (std::f64::consts::FRAC_PI_4 / *segments as f64).cos())
+                <= chord_tolerance_mm
+        }).ok_or_else(|| nurbs_core::Error::new(
+            "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+            "Requested two-sided deviation needs more than 32 circular subdivisions per quadrant",
+        ))?;
+        (
+            selected,
+            radius * (1. - (std::f64::consts::FRAC_PI_4 / selected as f64).cos()),
+        )
+    } else {
+        return Err(nurbs_core::Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Certified rational cavity tessellation awaits an exact shell recognizer",
+        ));
+    };
+    let tessellation = nurbs(model, segments)?;
+    if tessellation.built.mesh.indices.len() / 3 > max_triangles {
+        return Err(nurbs_core::Error::new(
+            "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+            "Certified tessellation exceeded its triangle budget",
+        ));
+    }
+    let certificate = tessellation.certificate.as_ref().ok_or_else(|| {
+        nurbs_core::Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Tessellation did not publish incidence coverage",
+        )
+    })?;
+    let naming_complete = model.persistent_naming_complete()
+        && model.1.faces.len() == model.faces.len()
+        && model.1.edges.len() == model.edges.len();
+    if !certificate.complete
+        || !certificate.closed_shells
+        || !tessellation.built.report.closed
+        || !naming_complete
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Coverage, audit, ChangeSet, or naming evidence is incomplete",
+        ));
+    }
+    let context = model.tolerance_context()?;
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            // The analytic sagitta is recorded separately as the two-sided
+            // tessellation enclosure. Predicate evidence binds exact authored
+            // edge correspondence to the model tolerance context.
+            PredicateEvidence::positional(&context, 0., chord_tolerance_mm)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "shared-edge identity, orientation, and no T-junction coverage",
+                true,
+            )?,
+        ],
+    )?;
+    Ok(CertifiedTessellation {
+        capability: CERTIFIED_TESSELLATION_CAPABILITY,
+        context: context.spec_identity(),
+        surface_to_mesh_deviation_mm: deviation,
+        mesh_to_surface_deviation_mm: deviation,
+        audit,
+        evidence,
+        change_set: model.1.change_set.clone(),
+        naming_complete,
+        tessellation,
+    })
 }
 fn rectangular_face(
     model: &brep_core::Model,
@@ -826,7 +973,7 @@ mod registry_tests {
                     result
                         .face_ids
                         .iter()
-                        .map(|&face| model.1.faces[face].clone())
+                        .map(|&face| model.1.faces[face].to_string())
                         .collect::<Vec<_>>()
                 );
             }
@@ -985,7 +1132,32 @@ mod registry_tests {
         });
         model.rebuild_topology_ids();
         if touching {
-            model.1.vertices[4] = "v:separate-touching-vertex".into();
+            let id = brep_core::TopoId::derive(
+                brep_core::TopoKind::Vertex,
+                "bridge-test",
+                "separate-touching-vertex",
+                "vertex",
+                b"separate-touching-vertex",
+            );
+            model.1.vertices[4] = id;
+            model
+                .1
+                .change_set
+                .nodes
+                .insert(id, brep_core::TopoKind::Vertex);
+            model.1.change_set.changes.push(brep_core::TopologyChange {
+                kind: brep_core::ChangeKind::Generated,
+                topo_kind: brep_core::TopoKind::Vertex,
+                parents: vec![],
+                children: vec![id],
+                provenance: brep_core::ChangeProvenance {
+                    operation: "bridge-test".into(),
+                    operand: None,
+                    occurrence: "separate-touching-vertex".into(),
+                },
+                role: "vertex".into(),
+                anchor: None,
+            });
         }
         model.validate().unwrap();
         model

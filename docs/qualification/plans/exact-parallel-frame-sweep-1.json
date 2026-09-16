@@ -1,0 +1,101 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "exact-parallel-frame-sweep-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for exact-parallel-frame-sweep/1: Finite simple polygon profile translated between collinear stations under fixed, rotation-minimizing, or rmf spelling",
+    "forbiddenClaims": [
+      "Bent paths",
+      "Frenet rotation",
+      "Twist or scale laws",
+      "Self-intersecting profiles",
+      "Faceted sweep relabeling"
+    ]
+  },
+  "capability": "exact-parallel-frame-sweep/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Finite simple polygon profile translated between collinear stations under fixed, rotation-minimizing, or rmf spelling",
+      "Constant parallel frame with audited closed solid and complete ChangeSet"
+    ],
+    "excluded": [
+      "Bent paths",
+      "Frenet rotation",
+      "Twist or scale laws",
+      "Self-intersecting profiles",
+      "Faceted sweep relabeling"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "SWEEP-STRAIGHT-RMF",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SWEEP-STRAIGHT-FIXED",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SWEEP-BENT-RMF",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "SWEEP-INVALID-FRAME-LAW",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-parallel-frame-sweep-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

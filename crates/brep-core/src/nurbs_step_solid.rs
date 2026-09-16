@@ -7,13 +7,15 @@
 use crate::Model;
 use crate::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
-    StepWriter, as_uniform_bicubic, emit_b_spline_surface, fmt_refs, is_planar_surface,
-    is_uniform_bicubic_positive, parse_b_spline_surfaces, parse_entities, refuse,
-    refuse_mesh_payloads_common, step_header, surface_aabb,
+    StepGraphRoot, StepWriter, as_uniform_bicubic, emit_b_spline_surface, fmt_refs,
+    is_planar_surface, is_uniform_bicubic_positive, parse_entities, refuse,
+    refuse_mesh_payloads_common, step_header, surface_aabb, surface_from_b_spline_args,
+    validate_linked_step_graph,
 };
 use nurbs_core::{Result, surface::Surface};
 
 pub const NURBS_STEP_SOLID_CAPABILITY: &str = "nurbs-step-solid/1";
+pub const NURBS_STEP_SOLID_V2_CAPABILITY: &str = "step-interchange/2";
 
 /// Cuboid with each face elevated to uniform bicubic (degree 3×3, w≡1) for STEP honesty.
 pub fn freeform_cuboid_solid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
@@ -92,7 +94,10 @@ fn admit_solid_for_export(model: &Model) -> Result<()> {
 }
 
 /// Export freeform solid: MANIFOLD_SOLID_BREP / BREP_WITH_VOIDS + CLOSED_SHELL + B_SPLINE faces.
-pub fn export_nurbs_step_solid(model: &Model) -> Result<(String, FeatureCertificate)> {
+fn export_nurbs_step_solid_impl(
+    model: &Model,
+    all_bodies: bool,
+) -> Result<(String, FeatureCertificate)> {
     admit_solid_for_export(model)?;
     let mut w = StepWriter::new();
     let mut out = step_header(
@@ -167,19 +172,29 @@ pub fn export_nurbs_step_solid(model: &Model) -> Result<(String, FeatureCertific
         shell_ids.push(w.emit(format!("CLOSED_SHELL('',({}))", fmt_refs(&refs))));
     }
 
-    let body = &model.bodies[0];
-    if body.inner_shells.is_empty() {
-        let _ = w.emit(format!(
-            "MANIFOLD_SOLID_BREP('body',#{})",
-            shell_ids[body.outer_shell]
-        ));
-    } else {
-        let voids: Vec<usize> = body.inner_shells.iter().map(|&i| shell_ids[i]).collect();
-        let _ = w.emit(format!(
-            "BREP_WITH_VOIDS('',#{},({}))",
-            shell_ids[body.outer_shell],
-            fmt_refs(&voids)
-        ));
+    for body in model
+        .bodies
+        .iter()
+        .take(if all_bodies { model.bodies.len() } else { 1 })
+    {
+        if body.inner_shells.is_empty() {
+            let _ = w.emit(format!(
+                "MANIFOLD_SOLID_BREP('body',#{})",
+                shell_ids[body.outer_shell]
+            ));
+        } else {
+            if all_bodies && body.inner_shells.len() != 1 {
+                return Err(refuse(
+                    "step-interchange/2 admits at most one cavity per body",
+                ));
+            }
+            let voids: Vec<usize> = body.inner_shells.iter().map(|&i| shell_ids[i]).collect();
+            let _ = w.emit(format!(
+                "BREP_WITH_VOIDS('',#{},({}))",
+                shell_ids[body.outer_shell],
+                fmt_refs(&voids)
+            ));
+        }
     }
 
     out.extend(w.lines);
@@ -201,6 +216,50 @@ pub fn export_nurbs_step_solid(model: &Model) -> Result<(String, FeatureCertific
     ))
 }
 
+pub fn export_nurbs_step_solid(model: &Model) -> Result<(String, FeatureCertificate)> {
+    export_nurbs_step_solid_impl(model, false)
+}
+
+pub fn export_nurbs_step_solid_v2(
+    model: &Model,
+) -> Result<(
+    String,
+    FeatureCertificate,
+    crate::step_interchange::StepIdentityReport,
+)> {
+    let (text, _) = export_nurbs_step_solid_impl(model, true)?;
+    let text = crate::step_interchange::attach_v2_identity(
+        &crate::step_interchange::add_v2_context(&text),
+        model,
+    )?;
+    let count = model.vertices.len()
+        + model.edges.len()
+        + model.loops.len()
+        + model.faces.len()
+        + model.shells.len()
+        + model.bodies.len();
+    Ok((
+        text,
+        FeatureCertificate {
+            capability: NURBS_STEP_SOLID_V2_CAPABILITY,
+            complete: true,
+            notes: vec![
+                "multi_body_brep",
+                "one_cavity_brep_with_voids",
+                "si_unit_context",
+                "topology_id_metadata",
+            ],
+        },
+        crate::step_interchange::StepIdentityReport {
+            preserved: true,
+            source: "internal-metadata",
+            preserved_count: count,
+            created_count: 0,
+            lost_count: 0,
+        },
+    ))
+}
+
 fn refuse_solid_payloads(text: &str) -> Result<()> {
     refuse_mesh_payloads_common(text)?;
     if text.contains("OSCAD_SOLID") || text.contains("AABB") {
@@ -216,105 +275,6 @@ fn refuse_solid_payloads(text: &str) -> Result<()> {
     }
     if text.contains("OPEN_SHELL") && !text.contains("CLOSED_SHELL") {
         return Err(refuse("Open-shell STEP is not nurbs-step-solid/1"));
-    }
-    Ok(())
-}
-
-fn entity_refs(token: &str) -> Vec<usize> {
-    token
-        .split(|c: char| !c.is_ascii_digit())
-        .filter(|s| !s.is_empty())
-        .filter_map(|s| s.parse().ok())
-        .collect()
-}
-
-fn validate_linked_solid_graph(
-    entities: &std::collections::BTreeMap<usize, (String, String)>,
-) -> Result<()> {
-    let surface_ids: std::collections::BTreeSet<usize> = entities
-        .iter()
-        .filter_map(|(id, (ty, _))| (ty == "B_SPLINE_SURFACE_WITH_KNOTS").then_some(*id))
-        .collect();
-    let mut face_ids = std::collections::BTreeSet::new();
-    let mut face_surface_ids = std::collections::BTreeSet::new();
-    for (id, (ty, args)) in entities {
-        if ty != "ADVANCED_FACE" {
-            continue;
-        }
-        let parts = crate::nurbs_step_shared::split_top_args(args);
-        if parts.len() < 4 {
-            return Err(refuse("ADVANCED_FACE argument graph incomplete"));
-        }
-        let bound_refs = entity_refs(&parts[1]);
-        if bound_refs.is_empty()
-            || !bound_refs.iter().any(|bound| {
-                entities
-                    .get(bound)
-                    .is_some_and(|(bound_ty, _)| bound_ty == "FACE_OUTER_BOUND")
-            })
-        {
-            return Err(refuse("ADVANCED_FACE missing linked FACE_OUTER_BOUND"));
-        }
-        for bound in bound_refs {
-            let Some((bound_ty, bound_args)) = entities.get(&bound) else {
-                return Err(refuse("ADVANCED_FACE bound reference broken"));
-            };
-            if bound_ty != "FACE_OUTER_BOUND" && bound_ty != "FACE_BOUND" {
-                return Err(refuse("ADVANCED_FACE references non-bound entity"));
-            }
-            let Some(loop_id) = entity_refs(bound_args).first().copied() else {
-                return Err(refuse("FACE_BOUND missing EDGE_LOOP reference"));
-            };
-            if !entities
-                .get(&loop_id)
-                .is_some_and(|(loop_ty, _)| loop_ty == "EDGE_LOOP")
-            {
-                return Err(refuse("FACE_BOUND EDGE_LOOP reference broken"));
-            }
-        }
-        let Some(surface_id) = entity_refs(&parts[2]).first().copied() else {
-            return Err(refuse("ADVANCED_FACE missing surface reference"));
-        };
-        if !surface_ids.contains(&surface_id) {
-            return Err(refuse("ADVANCED_FACE B-spline surface reference broken"));
-        }
-        face_ids.insert(*id);
-        face_surface_ids.insert(surface_id);
-    }
-    if face_ids.len() != surface_ids.len() || face_surface_ids != surface_ids {
-        return Err(refuse(
-            "Every B-spline surface must be linked by exactly one ADVANCED_FACE",
-        ));
-    }
-
-    let mut shell_face_ids = std::collections::BTreeSet::new();
-    let mut closed_shell_ids = std::collections::BTreeSet::new();
-    for (id, (ty, args)) in entities {
-        if ty == "CLOSED_SHELL" {
-            closed_shell_ids.insert(*id);
-            for face_id in entity_refs(args) {
-                if !face_ids.contains(&face_id) {
-                    return Err(refuse("CLOSED_SHELL face reference broken"));
-                }
-                shell_face_ids.insert(face_id);
-            }
-        }
-    }
-    if shell_face_ids != face_ids {
-        return Err(refuse(
-            "CLOSED_SHELL must link every ADVANCED_FACE in the solid",
-        ));
-    }
-    let body_shell_refs: std::collections::BTreeSet<usize> = entities
-        .values()
-        .filter(|(ty, _)| ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS")
-        .flat_map(|(_, args)| entity_refs(args))
-        .filter(|id| closed_shell_ids.contains(id))
-        .collect();
-    if body_shell_refs != closed_shell_ids {
-        return Err(refuse(
-            "Solid body must link every CLOSED_SHELL in the exchange graph",
-        ));
     }
     Ok(())
 }
@@ -475,11 +435,16 @@ fn rebuild_from_surfaces(surfaces: &[Surface]) -> Result<Model> {
 pub fn import_nurbs_step_solid(text: &str) -> Result<(Model, FeatureCertificate)> {
     refuse_solid_payloads(text)?;
     let entities = parse_entities(text);
-    validate_linked_solid_graph(&entities)?;
-    let surfs = parse_b_spline_surfaces(&entities)?;
-    let surfaces: Vec<Surface> = surfs
-        .into_iter()
-        .map(|(_, s)| {
+    let graph = validate_linked_step_graph(&entities, StepGraphRoot::Solid)?;
+    let surfaces: Vec<Surface> = graph
+        .faces
+        .iter()
+        .map(|face| {
+            let args = &entities
+                .get(&face.surface_id)
+                .ok_or_else(|| refuse("Linked face surface disappeared"))?
+                .1;
+            let s = surface_from_b_spline_args(&entities, args)?;
             as_uniform_bicubic(&s)
                 .ok_or_else(|| refuse("Imported solid face outside bicubic/elevatable matrix"))
         })
@@ -503,6 +468,132 @@ pub fn import_nurbs_step_solid(text: &str) -> Result<(Model, FeatureCertificate)
                 "no_aabb_oscad_solid",
             ],
         },
+    ))
+}
+
+fn append_model(target: &mut Model, source: Model) {
+    let vo = target.vertices.len();
+    let eo = target.edges.len();
+    let lo = target.loops.len();
+    let fo = target.faces.len();
+    let so = target.shells.len();
+    target.0.vertices.extend(source.vertices.iter().cloned());
+    target
+        .0
+        .edges
+        .extend(source.edges.iter().cloned().map(|mut edge| {
+            edge.vertices = [edge.vertices[0] + vo, edge.vertices[1] + vo];
+            edge
+        }));
+    target
+        .0
+        .loops
+        .extend(source.loops.iter().cloned().map(|mut loop_| {
+            for coedge in &mut loop_.coedges {
+                coedge.edge += eo;
+            }
+            loop_
+        }));
+    target
+        .0
+        .faces
+        .extend(source.faces.iter().cloned().map(|mut face| {
+            face.outer += lo;
+            for hole in &mut face.holes {
+                *hole += lo;
+            }
+            face
+        }));
+    target
+        .0
+        .shells
+        .extend(source.shells.iter().cloned().map(|mut shell| {
+            for face in &mut shell.faces {
+                face.face += fo;
+            }
+            shell
+        }));
+    target
+        .0
+        .bodies
+        .extend(source.bodies.iter().cloned().map(|mut body| {
+            body.outer_shell += so;
+            for shell in &mut body.inner_shells {
+                *shell += so;
+            }
+            body
+        }));
+    target.0.tolerance_mm = target.tolerance_mm.max(source.tolerance_mm);
+}
+
+pub fn import_nurbs_step_solid_v2(
+    text: &str,
+) -> Result<(
+    Model,
+    FeatureCertificate,
+    crate::step_interchange::StepIdentityReport,
+)> {
+    refuse_solid_payloads(text)?;
+    crate::step_interchange::validate_v2_finite_subset(text)?;
+    let scale = crate::step_interchange::v2_length_scale(text)?;
+    let placement = crate::step_interchange::v2_nested_placement(text)?;
+    let entities = parse_entities(text);
+    let graph = validate_linked_step_graph(&entities, StepGraphRoot::SolidMany)?;
+    if graph.body_face_ranges.len() > 32 {
+        return Err(refuse("step-interchange/2 admits at most 32 bodies"));
+    }
+    let mut combined: Option<Model> = None;
+    for range in graph.body_face_ranges {
+        let surfaces = graph.faces[range]
+            .iter()
+            .map(|face| {
+                let args = &entities
+                    .get(&face.surface_id)
+                    .ok_or_else(|| refuse("Linked face surface disappeared"))?
+                    .1;
+                let surface = surface_from_b_spline_args(&entities, args)?;
+                as_uniform_bicubic(&surface)
+                    .ok_or_else(|| refuse("Imported /2 face is outside the finite bicubic subset"))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let body = rebuild_from_surfaces(&surfaces)?;
+        if let Some(target) = &mut combined {
+            append_model(target, body);
+        } else {
+            combined = Some(body);
+        }
+    }
+    let mut model = combined.ok_or_else(|| refuse("STEP /2 contains no admitted body"))?;
+    model.rebuild_topology_ids();
+    if let Some(matrix) = placement {
+        model = crate::transform::affine(&model, matrix)?;
+    }
+    if (scale - 1.).abs() > f64::EPSILON {
+        model = crate::transform::affine(
+            &model,
+            [
+                [scale, 0., 0., 0.],
+                [0., scale, 0., 0.],
+                [0., 0., scale, 0.],
+                [0., 0., 0., 1.],
+            ],
+        )?;
+    }
+    let identity = crate::step_interchange::restore_v2_identity(text, &mut model)?;
+    model.validate()?;
+    Ok((
+        model,
+        FeatureCertificate {
+            capability: NURBS_STEP_SOLID_V2_CAPABILITY,
+            complete: true,
+            notes: vec![
+                "multi_body_brep",
+                "one_cavity_brep_with_voids",
+                "nested_rigid_placement",
+                "explicit_identity_report",
+            ],
+        },
+        identity,
     ))
 }
 
@@ -571,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    fn a4_boolean_difference_step_roundtrip() {
+    fn a4_contained_boolean_difference_refuses_v2() {
         let a = freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
         let b0 = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
         let b = crate::transform::affine(
@@ -584,18 +675,13 @@ mod tests {
             ],
         )
         .unwrap();
-        let (diff, cert) = crate::nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap();
-        assert!(cert.boolean_imprint);
-        let (text, ecert) = export_nurbs_step_solid(&diff).unwrap();
-        assert!(ecert.complete);
-        assert!(!text.contains("OSCAD_SOLID"));
-        assert!(!text.contains("AABB"));
-        assert!(text.contains("B_SPLINE_SURFACE_WITH_KNOTS"));
-        assert!(text.contains("BREP_WITH_VOIDS") || text.contains("MANIFOLD_SOLID_BREP"));
-        let (back, icert) = import_nurbs_step_solid(&text).unwrap();
-        assert!(icert.complete);
-        back.validate().unwrap();
-        assert!(!back.bodies.is_empty());
+        let error = crate::nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap_err();
+        assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
+        assert!(
+            error
+                .message
+                .contains("containment and identity remain unavailable")
+        );
     }
 
     #[test]
@@ -633,5 +719,34 @@ mod tests {
             export_nurbs_step_solid(&high_degree).unwrap_err().code,
             "BREP_NURBS_STEP_REFUSED"
         );
+    }
+
+    #[test]
+    fn successor_roundtrips_multi_body_and_one_cavity_rows() {
+        let mut multi = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let second = freeform_cuboid_solid([3., 0., 0.], [4., 1., 1.]).unwrap();
+        append_model(&mut multi, second);
+        multi.rebuild_topology_ids();
+        multi.validate().unwrap();
+        let (text, cert, _) = export_nurbs_step_solid_v2(&multi).unwrap();
+        assert_eq!(cert.capability, NURBS_STEP_SOLID_V2_CAPABILITY);
+        assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 2);
+        let (back, _, identity) = import_nurbs_step_solid_v2(&text).unwrap();
+        assert_eq!(back.bodies.len(), 2);
+        assert!(identity.preserved);
+        assert_eq!(back.1.bodies, multi.1.bodies);
+
+        let outer = crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap();
+        let inner = crate::cuboid([1., 1., 1.], [2., 2., 2.]).unwrap();
+        let mut cavity = crate::imprint_pipeline::cavity(&outer, &inner, 1e-7).unwrap();
+        for face in &mut cavity.faces {
+            face.surface = as_uniform_bicubic(&face.surface).unwrap();
+        }
+        cavity.validate().unwrap();
+        let (text, _, _) = export_nurbs_step_solid_v2(&cavity).unwrap();
+        assert_eq!(text.matches("BREP_WITH_VOIDS(").count(), 1);
+        let (back, _, _) = import_nurbs_step_solid_v2(&text).unwrap();
+        assert_eq!(back.bodies.len(), 1);
+        assert_eq!(back.bodies[0].inner_shells.len(), 1);
     }
 }

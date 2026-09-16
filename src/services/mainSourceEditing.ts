@@ -3,6 +3,9 @@ import {compileOpenSCAD} from './openscadCompiler'
 import {directBodiesScad} from './directBodiesScad'
 import type {DirectDocument} from './directModeling'
 import {sceneBody} from './meshFlatten'
+const sameNumbers=(a:number[],b:number[])=>a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]))
+const sameMesh=(a:{positions:number[];indices:number[]},b:{positions:number[];indices:number[]}|undefined)=>
+ !!b&&sameNumbers(a.positions,b.positions)&&sameNumbers(a.indices,b.indices)
 /** Replace only authored top-level calls owning changed bodies; keep declarations/comments intact. */
 export function patchMainSource(source:string,meshes:MeshData[],result:DirectDocument):string {
  const roots=compileOpenSCAD(source).filter(s=>s.type==='call')
@@ -12,7 +15,7 @@ export function patchMainSource(source:string,meshes:MeshData[],result:DirectDoc
   return candidates.length===1?candidates[0]:null
  })
  const old=meshes.map(sceneBody),byId=new Map(result.bodies.map(b=>[b.id,b]))
- const changed=old.map((b,i)=>({b,i})).filter(({b})=>JSON.stringify(b.mesh)!==JSON.stringify(byId.get(b.id)?.mesh))
+ const changed=old.map((b,i)=>({b,i})).filter(({b})=>!sameMesh(b.mesh,byId.get(b.id)?.mesh))
  const affected=new Set(changed.map(({i})=>{const root=ownership[i];if(!root)throw Error('Cannot safely map this body to a source expression. Export the result instead of replacing unrelated source.');return root}))
  const edits=[...affected].map(root=>({start:root.p,end:root.end,text:directBodiesScad({version:1,sketches:[],bodies:old.filter((_,i)=>ownership[i]===root).flatMap(b=>{const next=byId.get(b.id);return next?[next]:[]})})})).sort((a,b)=>b.start-a.start)
  let output=source

@@ -31,3 +31,48 @@ fn partial_supplied_identity_tables_are_not_silently_replaced() {
     value["topologyIds"]["vertices"] = json!([]);
     assert!(Model::from_value(value).unwrap().validate().is_err());
 }
+
+#[test]
+fn canonical_ids_and_change_set_round_trip_while_legacy_ids_require_migration() {
+    let model = cuboid([0.; 3], [2.; 3]).unwrap();
+    let canonical = model.to_value();
+    let face = canonical["topologyIds"]["faces"][0].as_str().unwrap();
+    assert_eq!(face.len(), 34);
+    assert!(face.starts_with("f:"));
+    assert_eq!(
+        canonical["topologyIds"]["changeSet"]["schema"].as_u64(),
+        Some(1)
+    );
+    let restored = Model::from_value(canonical.clone()).unwrap();
+    restored.validate().unwrap();
+
+    let mut rejected = canonical.clone();
+    rejected["topologyIds"]["faces"][0] = json!("f:0123456789abcdef");
+    assert!(Model::from_value(rejected).is_err());
+
+    let mut legacy = canonical;
+    legacy["topologyIds"]
+        .as_object_mut()
+        .unwrap()
+        .remove("changeSet");
+    for (field, prefix) in [
+        ("vertices", "v"),
+        ("edges", "e"),
+        ("loops", "l"),
+        ("faces", "f"),
+        ("shells", "s"),
+        ("bodies", "b"),
+    ] {
+        for (index, value) in legacy["topologyIds"][field]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .enumerate()
+        {
+            *value = json!(format!("{prefix}:{:016x}", index + 1));
+        }
+    }
+    let migrated = Model::from_legacy_topology_value(legacy).unwrap();
+    migrated.validate().unwrap();
+    assert!(migrated.1.faces.iter().all(|id| id.to_string().len() == 34));
+}

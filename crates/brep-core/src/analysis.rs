@@ -2,6 +2,341 @@
 //! UV trim; the divergence theorem integrates the oriented closed boundary.
 //! Convergence evidence is numerical, never a geometric solid certificate.
 use super::*;
+use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use crate::solid_audit::{SolidAuditCertificate, audit_solid};
+use cad_predicates::ToleranceSpecIdentity;
+
+pub const CERTIFIED_MASS_PROPERTIES_CAPABILITY: &str = "certified-mass-properties/1";
+
+/// Radius witness for the finite exact-cylinder tessellation cell. Kept here so
+/// bridge code cannot depend on private analytic recognizer internals.
+pub fn certified_cylinder_radius(model: &Model) -> Result<Option<f64>> {
+    Ok(crate::intersections::recognize_cylinder(model)?.map(|cylinder| cylinder.radius))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CertifiedInterval {
+    pub lower: f64,
+    pub upper: f64,
+}
+#[derive(Clone, Debug)]
+pub struct CertifiedMassProperties {
+    pub capability: &'static str,
+    pub surface_area_mm2: CertifiedInterval,
+    pub volume_mm3: CertifiedInterval,
+    pub centroid: [CertifiedInterval; 3],
+    pub inertia_mm5: [[CertifiedInterval; 3]; 3],
+    pub context: ToleranceSpecIdentity,
+    pub evidence: ComposedEvidence,
+    pub audit: SolidAuditCertificate,
+    pub change_set: ChangeSet,
+    pub naming_complete: bool,
+}
+impl value_codec::Serialize for CertifiedInterval {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::json!({"lower":self.lower,"upper":self.upper})
+    }
+}
+impl value_codec::Serialize for CertifiedMassProperties {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::json!({
+            "capability":self.capability,
+            "status":"certified_enclosure",
+            "surfaceAreaMm2":self.surface_area_mm2,
+            "volumeMm3":self.volume_mm3,
+            "centroid":self.centroid,
+            "inertiaMm5":self.inertia_mm5,
+            "context":self.context,
+            "evidenceClaimCount":self.evidence.claims.len(),
+            "audit":{
+                "ok":self.audit.ok,
+                "bodyCount":self.audit.body_count,
+                "shellCount":self.audit.shell_count,
+                "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
+            },
+            "changeSet":self.change_set,
+            "namingComplete":self.naming_complete
+        })
+    }
+}
+
+fn enclosure(value: f64, scale: f64) -> CertifiedInterval {
+    let error = (value.abs() + scale.abs() + 1.) * f64::EPSILON * 128.;
+    CertifiedInterval {
+        lower: value - error,
+        upper: value + error,
+    }
+}
+fn certified_tensor(value: [[f64; 3]; 3], scale: f64) -> [[CertifiedInterval; 3]; 3] {
+    value.map(|row| row.map(|entry| enclosure(entry, scale)))
+}
+fn axis_aligned_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
+    if model.vertices.len() != 8 || model.faces.len() != 6 || model.bodies.len() != 1 {
+        return None;
+    }
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for vertex in &model.vertices {
+        for axis in 0..3 {
+            min[axis] = min[axis].min(vertex.point[axis]);
+            max[axis] = max[axis].max(vertex.point[axis]);
+        }
+    }
+    let mut corners = BTreeSet::new();
+    for vertex in &model.vertices {
+        let mut bits = 0u8;
+        for axis in 0..3 {
+            if (vertex.point[axis] - max[axis]).abs() <= model.tolerance_mm {
+                bits |= 1 << axis;
+            } else if (vertex.point[axis] - min[axis]).abs() > model.tolerance_mm {
+                return None;
+            }
+        }
+        corners.insert(bits);
+    }
+    (corners.len() == 8).then_some((min, max))
+}
+fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
+    let axial = mass * radius2 / 2.;
+    let transverse = mass * (3. * radius2 + height * height) / 12.;
+    std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            (if i == j { transverse } else { 0. }) + (axial - transverse) * axis[i] * axis[j]
+        })
+    })
+}
+fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
+    if model.bodies.len() != 1
+        || !model.bodies[0].inner_shells.is_empty()
+        || model.faces.len() != 10
+    {
+        return None;
+    }
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for vertex in &model.vertices {
+        for i in 0..3 {
+            min[i] = min[i].min(vertex.point[i]);
+            max[i] = max[i].max(vertex.point[i]);
+        }
+    }
+    let center = [
+        (min[0] + max[0]) / 2.,
+        (min[1] + max[1]) / 2.,
+        (min[2] + max[2]) / 2.,
+    ];
+    let mut radii = model
+        .vertices
+        .iter()
+        .map(|v| (v.point[0] - center[0]).hypot(v.point[1] - center[1]))
+        .collect::<Vec<_>>();
+    radii.sort_by(f64::total_cmp);
+    radii.dedup_by(|a, b| (*a - *b).abs() <= model.tolerance_mm);
+    if radii.len() != 2
+        || radii[0] <= model.tolerance_mm
+        || radii[1] - radii[0] <= model.tolerance_mm
+        || model
+            .faces
+            .iter()
+            .filter(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1)
+            .count()
+            != 8
+    {
+        return None;
+    }
+    Some((radii[1], radii[0], max[2] - min[2], center))
+}
+
+fn exact_vertical_prism(model: &Model) -> Option<(f64, f64, [f64; 3], [[f64; 3]; 3], f64)> {
+    if model.faces.iter().any(|f| {
+        !f.surface
+            .weights
+            .iter()
+            .flatten()
+            .all(|w| *w == f.surface.weights[0][0])
+    }) || model.edges.iter().any(|edge| edge.curve.degree != 1)
+    {
+        return None;
+    }
+    let cap = model.faces.iter().find(|face| {
+        let points = face
+            .surface
+            .control_points
+            .iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        points
+            .iter()
+            .all(|p| (p[2] - points[0][2]).abs() <= model.tolerance_mm)
+            && face.holes.is_empty()
+    })?;
+    let wire = &model.loops[cap.outer];
+    let profile = wire
+        .coedges
+        .iter()
+        .map(|coedge| {
+            let edge = &model.edges[coedge.edge];
+            let vertex = if coedge.reversed {
+                edge.vertices[1]
+            } else {
+                edge.vertices[0]
+            };
+            let p = model.vertices[vertex].point;
+            [p[0], p[1]]
+        })
+        .collect::<Vec<_>>();
+    if profile.len() < 3 {
+        return None;
+    }
+    let mut cross_sum = 0.;
+    let mut cx_sum = 0.;
+    let mut cy_sum = 0.;
+    let mut ix = 0.;
+    let mut iy = 0.;
+    let mut ixy = 0.;
+    let mut perimeter = 0.;
+    for i in 0..profile.len() {
+        let a = profile[i];
+        let b = profile[(i + 1) % profile.len()];
+        let cross = a[0] * b[1] - b[0] * a[1];
+        cross_sum += cross;
+        cx_sum += (a[0] + b[0]) * cross;
+        cy_sum += (a[1] + b[1]) * cross;
+        ix += (a[1] * a[1] + a[1] * b[1] + b[1] * b[1]) * cross;
+        iy += (a[0] * a[0] + a[0] * b[0] + b[0] * b[0]) * cross;
+        ixy += (2. * a[0] * a[1] + a[0] * b[1] + b[0] * a[1] + 2. * b[0] * b[1]) * cross;
+        perimeter += (b[0] - a[0]).hypot(b[1] - a[1]);
+    }
+    let sign = cross_sum.signum();
+    let area = cross_sum.abs() / 2.;
+    if area <= model.tolerance_mm.powi(2) {
+        return None;
+    }
+    let cx = cx_sum / (3. * cross_sum);
+    let cy = cy_sum / (3. * cross_sum);
+    ix *= sign / 12.;
+    iy *= sign / 12.;
+    ixy *= sign / 24.;
+    let mut zmin = f64::INFINITY;
+    let mut zmax = f64::NEG_INFINITY;
+    for v in &model.vertices {
+        zmin = zmin.min(v.point[2]);
+        zmax = zmax.max(v.point[2]);
+    }
+    let h = zmax - zmin;
+    let volume = area * h;
+    let ix_c = ix - area * cy * cy;
+    let iy_c = iy - area * cx * cx;
+    let ixy_c = ixy - area * cx * cy;
+    let inertia = [
+        [h * ix_c + area * h.powi(3) / 12., -h * ixy_c, 0.],
+        [-h * ixy_c, h * iy_c + area * h.powi(3) / 12., 0.],
+        [0., 0., h * (ix_c + iy_c)],
+    ];
+    Some((
+        2. * area + perimeter * h,
+        volume,
+        [cx, cy, (zmin + zmax) / 2.],
+        inertia,
+        h.max(area.sqrt()),
+    ))
+}
+
+/// Independent analytic enclosures for the finite canonical mass matrix.
+/// General quadrature remains available through `mass_properties`, but never
+/// acquires certified status.
+pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassProperties> {
+    model.validate()?;
+    let audit = audit_solid(model)?;
+    let context = model.tolerance_context()?;
+    let (area, volume, centroid, inertia, scale) = if let Some((min, max)) = axis_aligned_box(model)
+    {
+        let d = std::array::from_fn::<_, 3, _>(|i| max[i] - min[i]);
+        let volume = d[0] * d[1] * d[2];
+        let area = 2. * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0]);
+        let centroid = std::array::from_fn(|i| (min[i] + max[i]) / 2.);
+        let inertia = [
+            [volume * (d[1] * d[1] + d[2] * d[2]) / 12., 0., 0.],
+            [0., volume * (d[0] * d[0] + d[2] * d[2]) / 12., 0.],
+            [0., 0., volume * (d[0] * d[0] + d[1] * d[1]) / 12.],
+        ];
+        (
+            area,
+            volume,
+            centroid,
+            inertia,
+            d.into_iter().fold(0., f64::max),
+        )
+    } else if let Some((outer, inner, height, centroid)) = canonical_tube(model) {
+        let radius2 = outer * outer + inner * inner;
+        let volume = std::f64::consts::PI * (outer * outer - inner * inner) * height;
+        let area =
+            2. * std::f64::consts::PI * ((outer + inner) * height + outer * outer - inner * inner);
+        (
+            area,
+            volume,
+            centroid,
+            axis_inertia(volume, radius2, height, [0., 0., 1.]),
+            height.max(outer),
+        )
+    } else if let Some(prism) = exact_vertical_prism(model) {
+        prism
+    } else if model.bodies.len() == 1 && model.bodies[0].inner_shells.is_empty() {
+        let cylinder = crate::intersections::recognize_cylinder(model)?.ok_or_else(|| {
+            Error::new(
+                "BREP_CERTIFIED_MASS_REFUSED",
+                "Certified mass admits boxes, exact profiles, cylinders, and canonical tubes",
+            )
+        })?;
+        let height = 2. * cylinder.half_height;
+        let volume = std::f64::consts::PI * cylinder.radius.powi(2) * height;
+        let area = 2. * std::f64::consts::PI * cylinder.radius * (height + cylinder.radius);
+        (
+            area,
+            volume,
+            cylinder.center,
+            axis_inertia(volume, cylinder.radius.powi(2), height, cylinder.axis),
+            height.max(cylinder.radius),
+        )
+    } else {
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Shape is outside the finite exact mass-property matrix; estimates remain non-certified",
+        ));
+    };
+    let naming_complete = model.persistent_naming_complete()
+        && model.1.faces.len() == model.faces.len()
+        && model.1.edges.len() == model.edges.len();
+    if !naming_complete {
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Certified mass lacks complete ChangeSet/naming evidence",
+        ));
+    }
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::positional(&context, 0., scale)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "analytic mass cell matches audited closed boundary",
+                audit.ok,
+            )?,
+        ],
+    )?;
+    Ok(CertifiedMassProperties {
+        capability: CERTIFIED_MASS_PROPERTIES_CAPABILITY,
+        surface_area_mm2: enclosure(area, scale * scale),
+        volume_mm3: enclosure(volume, scale.powi(3)),
+        centroid: centroid.map(|v| enclosure(v, scale)),
+        inertia_mm5: certified_tensor(inertia, scale.powi(5)),
+        context: context.spec_identity(),
+        evidence,
+        audit,
+        change_set: model.1.change_set.clone(),
+        naming_complete,
+    })
+}
 
 const GAUSS: [(f64, f64); 5] = [
     (-0.906179845938664, 0.236926885056189),
@@ -653,6 +988,68 @@ mod tests {
         assert_eq!(
             mass_properties(&m, 1e-7, 100).unwrap_err().code,
             "BREP_RESOURCE_LIMIT"
+        );
+    }
+
+    fn contains(interval: CertifiedInterval, value: f64) {
+        assert!(
+            interval.lower <= value && value <= interval.upper,
+            "{interval:?} excludes {value}"
+        );
+    }
+
+    #[test]
+    fn certified_mass_encloses_box_cylinder_tube_and_exact_profile() {
+        let box_mass =
+            certified_mass_properties(&cuboid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
+        contains(box_mass.volume_mm3, 48.);
+        contains(box_mass.surface_area_mm2, 88.);
+        assert!(box_mass.audit.ok && box_mass.naming_complete);
+        assert_eq!(box_mass.context, box_mass.evidence.context);
+
+        let cylinder_mass = certified_mass_properties(&cylinder(3., 8.).unwrap()).unwrap();
+        contains(cylinder_mass.volume_mm3, 72. * std::f64::consts::PI);
+        contains(cylinder_mass.inertia_mm5[2][2], 324. * std::f64::consts::PI);
+
+        let tube_mass = certified_mass_properties(&tube(3., 2., 8.).unwrap()).unwrap();
+        contains(tube_mass.volume_mm3, 40. * std::f64::consts::PI);
+        contains(tube_mass.surface_area_mm2, 90. * std::f64::consts::PI);
+
+        let prism = extrude_polygon(&[[0., 0.], [4., 0.], [1., 3.]], -2., 5.).unwrap();
+        let prism_mass = certified_mass_properties(&prism).unwrap();
+        contains(prism_mass.volume_mm3, 42.);
+    }
+
+    #[test]
+    fn certified_mass_is_scale_and_rigid_transform_stable_and_refuses_mutation() {
+        let large = certified_mass_properties(&cuboid([0.; 3], [1e4, 2e4, 3e4]).unwrap()).unwrap();
+        contains(large.volume_mm3, 6e12);
+
+        let placed = crate::transform::affine(
+            &cylinder(2., 6.).unwrap(),
+            [
+                [0., 0., 1., 7.],
+                [1., 0., 0., -3.],
+                [0., 1., 0., 5.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let transformed = certified_mass_properties(&placed).unwrap();
+        contains(transformed.volume_mm3, 24. * std::f64::consts::PI);
+        contains(transformed.centroid[0], 10.);
+
+        let mut mutated = cuboid([0.; 3], [1.; 3]).unwrap();
+        mutated.1.change_set.changes.clear();
+        assert_eq!(
+            certified_mass_properties(&mutated).unwrap_err().code,
+            "BREP_CERTIFIED_MASS_REFUSED"
+        );
+        assert_eq!(
+            certified_mass_properties(&sphere(2.).unwrap())
+                .unwrap_err()
+                .code,
+            "BREP_CERTIFIED_MASS_REFUSED"
         );
     }
 }

@@ -45,22 +45,26 @@ pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
     revolve_wire_angle, ruled_loft, sphere, torus, tube,
 };
-pub use analytic_boolean::{BooleanCertificate, analytic_boolean};
+pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
 pub use analytic_features::{
-    FeatureCertificate, analytic_chamfer, analytic_fillet, analytic_fillet_chain, analytic_shell,
-    analytic_solid_loft, export_iges, frame_law_ruled_sweep, import_iges,
+    AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult,
+    EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
+    analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_multi_edge_fillet,
+    audited_parallel_frame_sweep, export_iges, frame_law_ruled_sweep, import_iges,
 };
 pub use nurbs_ss_g6::{
     G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,
-    NurbsBooleanImprintCertificate, narrow_transverse_bezier_le3, narrow_transverse_bicubic,
-    nurbs_boolean_imprint_solids, nurbs_boolean_transverse_bicubic,
+    NURBS_BOOLEAN_CAPABILITY_V1, NURBS_BOOLEAN_V1_MATURITY, NurbsBooleanImprintCertificate,
+    narrow_transverse_bezier_le3, narrow_transverse_bicubic, nurbs_boolean_imprint_solids,
+    nurbs_boolean_transverse_bicubic,
 };
 pub use nurbs_step_interchange::{
     NURBS_STEP_BICUBIC_FACE_CAPABILITY, bicubic_open_face, export_nurbs_step, import_nurbs_step,
 };
 pub use nurbs_step_solid::{
-    NURBS_STEP_SOLID_CAPABILITY, export_nurbs_step_solid, freeform_cuboid_solid,
-    freeform_cuboid_with_bump_face, import_nurbs_step_solid,
+    NURBS_STEP_SOLID_CAPABILITY, NURBS_STEP_SOLID_V2_CAPABILITY, export_nurbs_step_solid,
+    export_nurbs_step_solid_v2, freeform_cuboid_solid, freeform_cuboid_with_bump_face,
+    import_nurbs_step_solid, import_nurbs_step_solid_v2,
 };
 pub use nurbs_step_trimmed::{
     NURBS_STEP_TRIMMED_BICUBIC_CAPABILITY, bicubic_trimmed_face, export_nurbs_step_trimmed,
@@ -70,29 +74,36 @@ pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
     faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
 };
-pub use step_interchange::{export_step, import_step};
+pub use step_interchange::{
+    STEP_INTERCHANGE_V2_CAPABILITY, StepIdentityReport, export_step, export_step_v2, import_step,
+    import_step_v2,
+};
 
-pub use brep_topology::{Body, FaceUse, Shell, Vertex};
+pub use brep_topology::{
+    Body, ChangeKind, ChangeProvenance, ChangeSet, FaceUse, Shell, TopoId, TopoKind,
+    TopologyChange, Vertex,
+};
 pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
 pub type Loop = brep_topology::Loop<Curve>;
 pub type Face = brep_topology::Face<Surface>;
 #[derive(Clone, Debug, Default)]
 pub struct TopologyIds {
-    pub vertices: Vec<String>,
-    pub edges: Vec<String>,
-    pub loops: Vec<String>,
-    pub faces: Vec<String>,
-    pub shells: Vec<String>,
-    pub bodies: Vec<String>,
+    pub vertices: Vec<TopoId>,
+    pub edges: Vec<TopoId>,
+    pub loops: Vec<TopoId>,
+    pub faces: Vec<TopoId>,
+    pub shells: Vec<TopoId>,
+    pub bodies: Vec<TopoId>,
     pub lineage: Vec<TopologyLineageRecord>,
+    pub change_set: ChangeSet,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TopologyLineageRecord {
     pub operation: String,
     pub entity_kind: String,
-    pub parents: Vec<String>,
-    pub children: Vec<String>,
+    pub parents: Vec<TopoId>,
+    pub children: Vec<TopoId>,
 }
 impl value_codec::Serialize for TopologyLineageRecord {
     fn to_value(&self) -> value_codec::Value {
@@ -121,6 +132,15 @@ impl<'de> value_codec::Deserialize<'de> for TopologyLineageRecord {
         let object = value
             .as_object()
             .ok_or_else(|| value_codec::error("Expected topology lineage record"))?;
+        if object.len() != 4
+            || ["operation", "entityKind", "parents", "children"]
+                .iter()
+                .any(|key| !object.contains_key(*key))
+        {
+            return Err(value_codec::error(
+                "Topology lineage fields do not match the schema",
+            ));
+        }
         let field = |key: &str| {
             object
                 .get(key)
@@ -166,6 +186,10 @@ impl value_codec::Serialize for TopologyIds {
             "lineage".into(),
             value_codec::Serialize::to_value(&self.lineage),
         );
+        object.insert(
+            "changeSet".into(),
+            value_codec::Serialize::to_value(&self.change_set),
+        );
         value_codec::Value::Object(object)
     }
 }
@@ -174,6 +198,21 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
         let object = value
             .as_object()
             .ok_or_else(|| value_codec::error("Expected topologyIds object"))?;
+        if object.keys().any(|key| {
+            ![
+                "vertices",
+                "edges",
+                "loops",
+                "faces",
+                "shells",
+                "bodies",
+                "lineage",
+                "changeSet",
+            ]
+            .contains(&key.as_str())
+        }) {
+            return Err(value_codec::error("Unknown topologyIds field"));
+        }
         let read = |key: &str| {
             object
                 .get(key)
@@ -191,6 +230,12 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
             bodies: read("bodies")?,
             lineage: object
                 .get("lineage")
+                .cloned()
+                .map(value_codec::Deserialize::from_value)
+                .transpose()?
+                .unwrap_or_default(),
+            change_set: object
+                .get("changeSet")
                 .cloned()
                 .map(value_codec::Deserialize::from_value)
                 .transpose()?
@@ -247,6 +292,10 @@ impl<'de> value_codec::Deserialize<'de> for Model {
                 face.surface.validate().map_err(decode_error)?;
             }
             model.rebuild_topology_ids();
+        } else if model.1.change_set.nodes.is_empty() && model.1.change_set.changes.is_empty() {
+            // Compatibility for canonical-ID snapshots written before the
+            // authoritative changeSet field was introduced.
+            model.refresh_change_set(&[]);
         }
         Ok(model)
     }
@@ -348,6 +397,57 @@ struct FaceIdentityRegion {
     bounds: [[f64; 2]; 2],
 }
 impl Model {
+    /// Explicit migration entry point for old `<prefix>:<16hex>` identity
+    /// tables. Normal deserialization intentionally rejects those values.
+    pub fn from_legacy_topology_value(mut value: value_codec::Value) -> value_codec::Result<Self> {
+        let ids = value
+            .get_mut("topologyIds")
+            .and_then(value_codec::Value::as_object_mut)
+            .ok_or_else(|| value_codec::error("Missing legacy topologyIds object"))?;
+        let mut migrated = BTreeMap::<String, String>::new();
+        for field in ["vertices", "edges", "loops", "faces", "shells", "bodies"] {
+            let values = ids
+                .get_mut(field)
+                .and_then(value_codec::Value::as_array_mut)
+                .ok_or_else(|| value_codec::error(format!("Missing legacy field {field}")))?;
+            for value in values {
+                let old = value
+                    .as_str()
+                    .ok_or_else(|| value_codec::error("Legacy topology ID must be a string"))?;
+                let id = TopoId::migrate_legacy(old).map_err(value_codec::error)?;
+                migrated.insert(old.into(), id.to_string());
+                *value = value_codec::Value::String(id.to_string());
+            }
+        }
+        if let Some(records) = ids
+            .get_mut("lineage")
+            .and_then(value_codec::Value::as_array_mut)
+        {
+            for record in records {
+                for endpoint in ["parents", "children"] {
+                    let values = record
+                        .get_mut(endpoint)
+                        .and_then(value_codec::Value::as_array_mut)
+                        .ok_or_else(|| value_codec::error("Invalid legacy lineage endpoints"))?;
+                    for value in values {
+                        let old = value.as_str().ok_or_else(|| {
+                            value_codec::error("Legacy lineage ID must be a string")
+                        })?;
+                        let replacement = match migrated.get(old) {
+                            Some(id) => id.clone(),
+                            None => TopoId::migrate_legacy(old)
+                                .map_err(value_codec::error)?
+                                .to_string(),
+                        };
+                        *value = value_codec::Value::String(replacement);
+                    }
+                }
+            }
+        }
+        ids.remove("changeSet");
+        <Self as value_codec::Deserialize>::from_value(value)
+    }
+
     /// Canonical regularized empty solid. It has no placeholder shell or body.
     pub fn empty(tolerance_mm: f64) -> Result<Self> {
         let model = Self(
@@ -385,6 +485,153 @@ impl Model {
             hash = hash.wrapping_mul(0x100000001b3);
         }
         format!("{hash:016x}")
+    }
+    fn authored_id(kind: TopoKind, role: &str, signature: &str) -> TopoId {
+        TopoId::derive(
+            kind,
+            "authored-geometry",
+            signature,
+            role,
+            signature.as_bytes(),
+        )
+    }
+    fn identity_groups(&self) -> [(TopoKind, &[TopoId]); 6] {
+        [
+            (TopoKind::Vertex, &self.1.vertices),
+            (TopoKind::Edge, &self.1.edges),
+            (TopoKind::Loop, &self.1.loops),
+            (TopoKind::Face, &self.1.faces),
+            (TopoKind::Shell, &self.1.shells),
+            (TopoKind::Body, &self.1.bodies),
+        ]
+    }
+
+    /// Complete naming evidence requires a valid ChangeSet node and an
+    /// authored/generated or lineage-producing change for every current
+    /// topology entity. This is derived, never trusted from a wire boolean.
+    pub fn persistent_naming_complete(&self) -> bool {
+        self.1.change_set.validate().is_ok()
+            && self.identity_groups().into_iter().all(|(kind, ids)| {
+                ids.iter().all(|id| {
+                    self.1.change_set.nodes.get(id) == Some(&kind)
+                        && self
+                            .1
+                            .change_set
+                            .changes
+                            .iter()
+                            .any(|change| change.children.contains(id))
+                })
+            })
+    }
+
+    fn refresh_change_set(&mut self, sources: &[&Model]) {
+        let mut change_set = ChangeSet::default();
+        for source in sources {
+            change_set.nodes.extend(
+                source
+                    .1
+                    .change_set
+                    .nodes
+                    .iter()
+                    .map(|(id, kind)| (*id, *kind)),
+            );
+            for change in &source.1.change_set.changes {
+                if !change_set.changes.contains(change) {
+                    change_set.changes.push(change.clone());
+                }
+            }
+        }
+        for (kind, ids) in self.identity_groups() {
+            for id in ids {
+                change_set.nodes.insert(*id, kind);
+            }
+        }
+        let lineage = self.1.lineage.clone();
+        let mut accepted_lineage = Vec::new();
+        for record in &lineage {
+            let Some(topo_kind) = TopoKind::parse(&record.entity_kind) else {
+                continue;
+            };
+            for id in record.parents.iter().chain(&record.children) {
+                change_set.nodes.insert(*id, topo_kind);
+            }
+            let kind = match record.operation.as_str() {
+                "split" => ChangeKind::Split,
+                "merge" => ChangeKind::Merge,
+                "persist" if record.parents == record.children => ChangeKind::Persisted,
+                "persist" => ChangeKind::Modified,
+                _ => continue,
+            };
+            let change = TopologyChange {
+                kind,
+                topo_kind,
+                parents: record.parents.clone(),
+                children: record.children.clone(),
+                provenance: ChangeProvenance {
+                    operation: record.operation.clone(),
+                    operand: None,
+                    occurrence: record
+                        .parents
+                        .first()
+                        .or(record.children.first())
+                        .map(ToString::to_string)
+                        .unwrap_or_else(|| "unknown".into()),
+                },
+                role: topo_kind.as_str().into(),
+                anchor: None,
+            };
+            if !change_set.changes.contains(&change) {
+                let mut candidate = change_set.clone();
+                candidate.changes.push(change.clone());
+                match candidate.validate() {
+                    Ok(()) => {
+                        change_set.changes.push(change);
+                        accepted_lineage.push(record.clone());
+                    }
+                    Err(error) if error.message == "Topology lineage must be acyclic" => {
+                        // A rebuild may return to an already persistent authored
+                        // identity. Reusing that node is persistence, not a new
+                        // backwards lineage edge.
+                    }
+                    Err(_) => {
+                        change_set.changes.push(change);
+                        accepted_lineage.push(record.clone());
+                    }
+                }
+            } else {
+                accepted_lineage.push(record.clone());
+            }
+        }
+        self.1.lineage = accepted_lineage;
+        let referenced_children: BTreeSet<_> = change_set
+            .changes
+            .iter()
+            .flat_map(|change| change.children.iter().copied())
+            .collect();
+        for (kind, ids) in self.identity_groups() {
+            for id in ids {
+                if !referenced_children.contains(id)
+                    && !change_set.changes.iter().any(|change| {
+                        change.kind == ChangeKind::Generated && change.children == [*id]
+                    })
+                {
+                    change_set.changes.push(TopologyChange {
+                        kind: ChangeKind::Generated,
+                        topo_kind: kind,
+                        parents: vec![],
+                        children: vec![*id],
+                        provenance: ChangeProvenance {
+                            operation: "authored-geometry".into(),
+                            operand: None,
+                            occurrence: id.to_string(),
+                        },
+                        role: kind.as_str().into(),
+                        anchor: None,
+                    });
+                }
+            }
+        }
+        self.1.change_set = change_set;
     }
     fn vector_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
         std::array::from_fn(|axis| a[axis] - b[axis])
@@ -569,35 +816,28 @@ impl Model {
         let mut vertices: Vec<_> = self
             .vertices
             .iter()
-            .map(|vertex| format!("v:{}", Self::hash([self.point_key(vertex.point)])))
+            .map(|vertex| Self::hash([self.point_key(vertex.point)]))
             .collect();
         let mut edges: Vec<_> = self
             .edges
             .iter()
             .map(|edge| {
-                format!(
-                    "e:{}",
-                    Self::hash([
-                        Self::curve_key(&edge.curve),
-                        if edge.degenerate {
-                            "deg:1".into()
-                        } else {
-                            "deg:0".into()
-                        },
-                    ])
-                )
+                Self::hash([
+                    Self::curve_key(&edge.curve),
+                    if edge.degenerate {
+                        "deg:1".into()
+                    } else {
+                        "deg:0".into()
+                    },
+                ])
             })
             .collect();
         let mut loops: Vec<_> = self
             .loops
             .iter()
-            .map(|wire| format!("l:{}", Self::hash([self.loop_key(wire)])))
+            .map(|wire| Self::hash([self.loop_key(wire)]))
             .collect();
-        let mut faces: Vec<_> = self
-            .faces
-            .iter()
-            .map(|face| format!("f:{}", self.face_key(face)))
-            .collect();
+        let mut faces: Vec<_> = self.faces.iter().map(|face| self.face_key(face)).collect();
         let shells: Vec<_> = self
             .shells
             .iter()
@@ -608,10 +848,10 @@ impl Model {
                     .map(|usage| format!("{}:{}", faces[usage.face], usage.reversed))
                     .collect();
                 members.sort();
-                format!("s:{}", Self::hash(members))
+                Self::hash(members)
             })
             .collect();
-        let bodies = self
+        let bodies: Vec<String> = self
             .bodies
             .iter()
             .map(|body| {
@@ -621,11 +861,8 @@ impl Model {
                     .map(|&shell| format!("inner:{}", shells[shell]))
                     .collect::<Vec<_>>();
                 inner.sort();
-                format!(
-                    "b:{}",
-                    Self::hash(
-                        std::iter::once(format!("outer:{}", shells[body.outer_shell])).chain(inner)
-                    )
+                Self::hash(
+                    std::iter::once(format!("outer:{}", shells[body.outer_shell])).chain(inner),
                 )
             })
             .collect();
@@ -674,14 +911,34 @@ impl Model {
             qualify(&mut faces, &face_owners);
         }
         self.1 = TopologyIds {
-            vertices,
-            edges,
-            loops,
-            faces,
-            shells,
-            bodies,
+            vertices: vertices
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Vertex, "vertex", signature))
+                .collect(),
+            edges: edges
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Edge, "edge", signature))
+                .collect(),
+            loops: loops
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Loop, "boundary", signature))
+                .collect(),
+            faces: faces
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Face, "face", signature))
+                .collect(),
+            shells: shells
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Shell, "shell", signature))
+                .collect(),
+            bodies: bodies
+                .iter()
+                .map(|signature| Self::authored_id(TopoKind::Body, "body", signature))
+                .collect(),
             lineage: vec![],
+            change_set: ChangeSet::default(),
         };
+        self.refresh_change_set(&[]);
     }
     fn edge_overlap(&self, target: &Edge, source: &Model, candidate: &Edge) -> bool {
         // Endpoint chords do not establish overlap between rational curves.
@@ -820,8 +1077,8 @@ impl Model {
     fn record_relations(
         records: &mut Vec<TopologyLineageRecord>,
         entity_kind: &str,
-        source_ids: &[String],
-        target_ids: &[String],
+        source_ids: &[TopoId],
+        target_ids: &[TopoId],
         relations: &[Vec<usize>],
     ) {
         for (parent_index, parent) in source_ids.iter().enumerate() {
@@ -829,28 +1086,25 @@ impl Model {
                 .iter()
                 .enumerate()
                 .filter(|(_, parents)| parents.contains(&parent_index))
-                .map(|(child, _)| target_ids[child].clone())
+                .map(|(child, _)| target_ids[child])
                 .collect();
             if children.len() > 1 {
                 records.push(TopologyLineageRecord {
                     operation: "split".into(),
                     entity_kind: entity_kind.into(),
-                    parents: vec![parent.clone()],
+                    parents: vec![*parent],
                     children,
                 });
             }
         }
         for (child_index, parents) in relations.iter().enumerate() {
-            let parent_ids: Vec<_> = parents
-                .iter()
-                .map(|&parent| source_ids[parent].clone())
-                .collect();
+            let parent_ids: Vec<_> = parents.iter().map(|&parent| source_ids[parent]).collect();
             if parent_ids.len() > 1 {
                 records.push(TopologyLineageRecord {
                     operation: "merge".into(),
                     entity_kind: entity_kind.into(),
                     parents: parent_ids,
-                    children: vec![target_ids[child_index].clone()],
+                    children: vec![target_ids[child_index]],
                 });
             } else if parent_ids.len() == 1
                 && parent_ids[0] != target_ids[child_index]
@@ -864,16 +1118,16 @@ impl Model {
                     operation: "persist".into(),
                     entity_kind: entity_kind.into(),
                     parents: parent_ids,
-                    children: vec![target_ids[child_index].clone()],
+                    children: vec![target_ids[child_index]],
                 });
             }
         }
     }
     fn preserve_unique_ids<'a>(
-        target: &mut [String],
-        sources: impl Iterator<Item = (&'a [String], &'a [String])>,
+        target: &mut [TopoId],
+        sources: impl Iterator<Item = (&'a [TopoId], &'a [TopoId])>,
     ) {
-        let mut matches = BTreeMap::<String, BTreeSet<String>>::new();
+        let mut matches = BTreeMap::<TopoId, BTreeSet<TopoId>>::new();
         for (geometry_ids, authored_ids) in sources {
             for (geometry, authored) in geometry_ids.iter().zip(authored_ids) {
                 matches
@@ -890,16 +1144,16 @@ impl Model {
                 })
             })
             .collect();
-        let mut counts = BTreeMap::<String, usize>::new();
+        let mut counts = BTreeMap::<TopoId, usize>::new();
         for id in candidates.iter().flatten() {
             *counts.entry(id.clone()).or_default() += 1;
         }
-        let mut occupied = target.iter().cloned().collect::<BTreeSet<_>>();
+        let mut occupied = target.iter().copied().collect::<BTreeSet<_>>();
         for (id, candidate) in target.iter_mut().zip(candidates) {
             if let Some(candidate) = candidate {
                 if counts[&candidate] == 1 && (candidate == *id || !occupied.contains(&candidate)) {
                     occupied.remove(id);
-                    occupied.insert(candidate.clone());
+                    occupied.insert(candidate);
                     *id = candidate;
                 }
             }
@@ -919,7 +1173,7 @@ impl Model {
             .faces
             .iter()
             .zip(&self.1.faces)
-            .map(|(face, key)| self.prepare_face_identity(face, key.clone()))
+            .map(|(face, key)| self.prepare_face_identity(face, key.to_string()))
             .collect();
         let geometries: Vec<_> = sources
             .iter()
@@ -953,7 +1207,7 @@ impl Model {
                 .faces
                 .iter()
                 .zip(&geometry.1.faces)
-                .map(|(face, key)| source.prepare_face_identity(face, key.clone()))
+                .map(|(face, key)| source.prepare_face_identity(face, key.to_string()))
                 .collect();
             for (target_index, target) in self.vertices.iter().enumerate() {
                 for (source_index, candidate) in source.vertices.iter().enumerate() {
@@ -988,7 +1242,7 @@ impl Model {
             let parent_ids: Vec<_> = parents
                 .iter()
                 .flatten()
-                .cloned()
+                .copied()
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect();
@@ -1016,6 +1270,7 @@ impl Model {
             }
         }
         self.1.lineage = unique;
+        self.refresh_change_set(sources);
     }
     pub fn loop_uv(&self, id: usize, segments: usize) -> Result<Vec<[f64; 2]>> {
         require((1..=64).contains(&segments), "Edge sampling must be 1..64")?;
@@ -1073,6 +1328,21 @@ impl Model {
             .chain(&self.1.bodies);
         let ids: BTreeSet<_> = all_ids.clone().collect();
         require(ids.len() == all_ids.count(), "Topology IDs must be unique")?;
+        for (kind, ids) in self.identity_groups() {
+            require(
+                ids.iter().all(|id| id.kind() == kind),
+                "Topology ID prefix does not match its entity kind",
+            )?;
+            require(
+                ids.iter()
+                    .all(|id| self.1.change_set.nodes.get(id) == Some(&kind)),
+                "Authoritative change set is missing a topology entity",
+            )?;
+        }
+        self.1.change_set.validate().map_err(|error| Error {
+            code: error.code,
+            message: error.message,
+        })?;
         let mut vertex_used = vec![false; self.vertices.len()];
         for v in &self.vertices {
             require(

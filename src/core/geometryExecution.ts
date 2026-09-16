@@ -254,29 +254,39 @@ export interface GeometryEngineManifest extends GeometryEngineStaticManifest {
 const ownRustCadManifest: GeometryEngineStaticManifest = {
   engineClass: 'mesh',
   displayName: 'Own Rust CAD', permanent: true, maturity: 'production',
-  engineKey: 'own-rust-cad-v1', kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
-  semanticProgramVersion: 'legacy-direct-evaluator-v1', capabilityManifestVersion: 'own-rust-node-v1',
+  engineKey: 'own-rust-cad-v2', kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
+  semanticProgramVersion: 'legacy-direct-evaluator-v1', capabilityManifestVersion: 'own-rust-node-v2',
   languageContracts: ['legacy/current'], inputContract: 'legacy-source-direct',
   capabilities: ['analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'geometry.mesh'],
   plannedCapabilities: ['provenance.source-ranges'], qualities: ['preview', 'full'],
   representations: ['mesh'], plannedRepresentations: [], exportFormats: ['stl', 'obj'], plannedExportFormats: [],
   limits: {sourceCharacters: 250_000, triangles: 750_000}, isolation: 'in-process-serialized', deployment: 'node-mcp',
-  qualification: {status: 'qualified', recordId: 'docs/qualification/own-rust-cad-v1.json', corpusVersion: 'own-rust-cad-v1', target: 'browser-worker/node-mcp'},
+  qualification: {status: 'baseline-pending', recordId: null, corpusVersion: null, target: 'browser-worker/node-mcp'},
   dependency: {packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md', sbomSha256: OWN_RUST_CAD_EVIDENCE.noticesSha256, lockfileSha256: OWN_RUST_CAD_EVIDENCE.lockfileSha256},
   rollbackCompatibility: {disableEngineCapability: true, sourceContractPreserved: true, crossEngineFallback: false, minimumCatalogSchema: 3},
   manifestDigest: '', automaticFallback: false,
 }
 ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadManifest)
 
+const ownRustCadManifestV1: GeometryEngineStaticManifest = {
+  ...ownRustCadManifest,
+  engineKey: 'own-rust-cad-v1',
+  kernelFingerprint: 'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
+  capabilityManifestVersion: 'own-rust-node-v1',
+  qualification: {status: 'qualified', recordId: 'docs/qualification/own-rust-cad-v1.json', corpusVersion: 'own-rust-cad-v1', target: 'browser-worker/node-mcp'},
+  manifestDigest: '',
+}
+ownRustCadManifestV1.manifestDigest = computeGeometryManifestDigest(ownRustCadManifestV1)
+
 const brepClosedManifest: GeometryEngineStaticManifest = {
   engineClass: 'brep',
   displayName: 'Rust B-rep/NURBS kernel (closed analytic peer)',
   permanent: true,
   maturity: 'production',
-  engineKey: 'rust-brep-closed-v1',
+  engineKey: 'rust-brep-closed-v2',
   kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
   semanticProgramVersion: 'semantic-program-contract-v1',
-  capabilityManifestVersion: 'brep-closed-v1',
+  capabilityManifestVersion: 'brep-closed-v2',
   languageContracts: ['openscad-viewer/brep-1'],
   inputContract: 'semantic-program-required',
   capabilities: [
@@ -300,9 +310,9 @@ const brepClosedManifest: GeometryEngineStaticManifest = {
   isolation: 'in-process-serialized',
   deployment: 'node-mcp',
   qualification: {
-    status: 'qualified',
-    recordId: 'docs/qualification/brep-closed-matrix-v1.json',
-    corpusVersion: 'brep-closed-matrix-v1',
+    status: 'baseline-pending',
+    recordId: null,
+    corpusVersion: null,
     target: 'browser-worker/node-mcp',
   },
   dependency: {
@@ -324,9 +334,26 @@ const brepClosedManifest: GeometryEngineStaticManifest = {
 }
 brepClosedManifest.manifestDigest = computeGeometryManifestDigest(brepClosedManifest)
 
+const brepClosedManifestV1: GeometryEngineStaticManifest = {
+  ...brepClosedManifest,
+  engineKey: 'rust-brep-closed-v1',
+  kernelFingerprint: 'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
+  capabilityManifestVersion: 'brep-closed-v1',
+  qualification: {
+    status: 'qualified',
+    recordId: 'docs/qualification/brep-closed-matrix-v1.json',
+    corpusVersion: 'brep-closed-matrix-v1',
+    target: 'browser-worker/node-mcp',
+  },
+  manifestDigest: '',
+}
+brepClosedManifestV1.manifestDigest = computeGeometryManifestDigest(brepClosedManifestV1)
+
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
-  'own-rust-node-v1': deepFreeze(ownRustCadManifest),
-  'brep-closed-v1': deepFreeze(brepClosedManifest),
+  'own-rust-node-v1': deepFreeze(ownRustCadManifestV1),
+  'own-rust-node-v2': deepFreeze(ownRustCadManifest),
+  'brep-closed-v1': deepFreeze(brepClosedManifestV1),
+  'brep-closed-v2': deepFreeze(brepClosedManifest),
   'brep-contract-v1': deepFreeze({
     engineClass: 'brep',
     displayName: 'Rust B-rep/NURBS kernel',
@@ -383,8 +410,8 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 } satisfies Record<string, GeometryEngineStaticManifest>)
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: 'own-rust-node-v1',
-  brep: 'brep-closed-v1',
+  mesh: 'own-rust-node-v2',
+  brep: 'brep-closed-v2',
 } as const)
 
 export type GeometryProviderAdmissionMode =
@@ -481,6 +508,32 @@ export function geometryProviderAdmissionForManifest(
   })
 }
 
+function qualifiedRuntimeManifestVersion(
+  engineClass: GeometryEngineClass,
+): keyof typeof GEOMETRY_MANIFEST_ARCHIVE {
+  const currentVersion = CURRENT_GEOMETRY_MANIFEST_VERSIONS[engineClass]
+  const current = GEOMETRY_MANIFEST_ARCHIVE[currentVersion]
+  if (geometryProviderAdmissionForManifest(current).allowed) return currentVersion
+
+  const fallback = Object.entries(GEOMETRY_MANIFEST_ARCHIVE)
+    .reverse()
+    .find(([, manifest]) => manifest.engineClass === engineClass
+      && geometryProviderAdmissionForManifest(manifest).allowed)
+  if (!fallback) {
+    throw new TypeError(`No qualified runtime manifest is available for ${engineClass}`)
+  }
+  return fallback[0] as keyof typeof GEOMETRY_MANIFEST_ARCHIVE
+}
+
+/**
+ * Runtime providers stay on the newest admitted manifest while a newer
+ * catalog entry is still baseline-pending.
+ */
+export const ACTIVE_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
+  mesh: qualifiedRuntimeManifestVersion('mesh'),
+  brep: qualifiedRuntimeManifestVersion('brep'),
+})
+
 export function planGeometrySourceExecution(
   source: string,
   request: { quality: GeometryQuality; purpose: GeometryBuildPurpose },
@@ -488,8 +541,8 @@ export function planGeometrySourceExecution(
   const header = parseGeometrySourceRoutingHeader(source)
   const engineClass = geometryEngineClassForLanguageContract(header.languageContract)
   const manifest = engineClass === 'mesh'
-    ? GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh]
-    : GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep]
+    ? GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh]
+    : GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep]
   return deepFreeze({
     languageContract: header.languageContract,
     requiredCapabilities: header.requiredCapabilities,

@@ -1,0 +1,104 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "step-interchange-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for step-interchange/2: Finite AP214/AP242 analytic and bicubic solid graph with explicit SI context and rigid placements",
+    "forbiddenClaims": [
+      "FACETED_BREP",
+      "STL or OBJ",
+      "More than 32 bodies",
+      "More than one cavity per body",
+      "Arbitrary third-party entity graphs",
+      "Silent identity preservation"
+    ]
+  },
+  "capability": "step-interchange/2",
+  "dependencies": [
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Finite AP214/AP242 analytic and bicubic solid graph with explicit SI context and rigid placements",
+      "At most 32 bodies and one cavity per body",
+      "Opaque topology metadata roundtrip or explicit identity-loss report for metadata-free input"
+    ],
+    "excluded": [
+      "FACETED_BREP",
+      "STL or OBJ",
+      "More than 32 bodies",
+      "More than one cavity per body",
+      "Arbitrary third-party entity graphs",
+      "Silent identity preservation"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "STEP2-SI-IDENTITY-ROUNDTRIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP2-METADATA-FREE-LOSS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP2-MULTIBODY-ONE-CAVITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP2-BODY-33",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP2-CAVITY-2",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP2-FACETED",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/step_interchange.rs",
+      "crates/brep-core/src/nurbs_step_solid.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/cadAnalyticStep.ts",
+      "src/services/cadNurbsStep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/step-interchange-2-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

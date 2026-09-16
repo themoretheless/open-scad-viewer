@@ -3,6 +3,7 @@ import {callGeometryRust} from './kernel'
 import type {NurbsCurve} from '../nurbsCurve'
 import type {NurbsSurface} from '../nurbsSurface'
 import type {PolygonMesh,PolygonBuild} from './polygon'
+import type {RustChangeSet,TopoId} from '../../core/topologyLineage'
 export interface BrepModel<C,S,P> {
  vertices:{point:[number,number,number]}[]
  edges:{vertices:[number,number];curve:C;degenerate?:boolean}[]
@@ -14,19 +15,20 @@ export interface BrepModel<C,S,P> {
  topologyIds?:BrepTopologyIds
 }
 export interface BrepTopologyIds {
- vertices:string[]
- edges:string[]
- loops:string[]
- faces:string[]
- shells:string[]
- bodies:string[]
+ vertices:TopoId[]
+ edges:TopoId[]
+ loops:TopoId[]
+ faces:TopoId[]
+ shells:TopoId[]
+ bodies:TopoId[]
  lineage?:BrepTopologyLineageRecord[]
+ changeSet?:RustChangeSet
 }
 export interface BrepTopologyLineageRecord {
  operation:'persist'|'split'|'merge'
  entityKind:'vertex'|'edge'|'face'|'loop'|'shell'|'body'
- parents:string[]
- children:string[]
+ parents:TopoId[]
+ children:TopoId[]
 }
 export type NurbsBrep=BrepModel<NurbsCurve,NurbsSurface,NurbsCurve>
 export type PolygonBrep=BrepModel<null,{mesh:PolygonMesh;sourceFaceId:number},null>
@@ -51,11 +53,26 @@ export interface BrepMassProperties {
  status:'converged_estimate'
  solidGeometryStatus:'not_certified'
 }
+export interface CertifiedInterval {lower:number;upper:number}
+export interface CertifiedBrepMassProperties {
+ capability:'certified-mass-properties/1'
+ status:'certified_enclosure'
+ surfaceAreaMm2:CertifiedInterval
+ volumeMm3:CertifiedInterval
+ centroid:[CertifiedInterval,CertifiedInterval,CertifiedInterval]
+ inertiaMm5:[[CertifiedInterval,CertifiedInterval,CertifiedInterval],[CertifiedInterval,CertifiedInterval,CertifiedInterval],[CertifiedInterval,CertifiedInterval,CertifiedInterval]]
+ context:{version:number;canonical:string}
+ evidenceClaimCount:number
+ audit:{ok:boolean;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
+ changeSet:RustChangeSet
+ namingComplete:true
+}
 /** Integrates authored NURBS and trim curves; independent of display tessellation. */
 export const pushNurbsBrepFace=(model:NurbsBrep,face:number,distance:number):NurbsBrep=>callGeometryRust('brep_nurbs_push_face',{model,face,distance})
 export const shellNurbsBrep=(model:NurbsBrep,openings:number[],thickness:number):NurbsBrep=>callGeometryRust('brep_nurbs_shell',{model,openings,thickness})
 export const splitNurbsBrep=(model:NurbsBrep,normal:[number,number,number],offset:number):[NurbsBrep,NurbsBrep]=>callGeometryRust('brep_nurbs_split',{model,normal,offset})
 export const analyzeNurbsBrep=(model:NurbsBrep,relativeTolerance=1e-7,maxEvaluations=300000):BrepMassProperties=>callGeometryRust('brep_nurbs_mass_properties',{model,relativeTolerance,maxEvaluations})
+export const analyzeCertifiedNurbsBrep=(model:NurbsBrep):CertifiedBrepMassProperties=>callGeometryRust('brep_nurbs_certified_mass_properties',{model})
 export const createBrepTube=(outerRadius:number,innerRadius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_tube',{outerRadius,innerRadius,height})
 /** Exact extrusion of oriented 2D NURBS line/circular-arc loops; outer CCW, holes CW. */
 export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_curves',{loops,zMin,zMax})
@@ -79,8 +96,32 @@ export const chamferNurbsBrep=(model:NurbsBrep,edge:number,size:number):NurbsBre
 export const chamferNurbsBrepEdges=(model:NurbsBrep,edges:number[],size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer_edges',{model,edges,size})
 export const filletNurbsBrep=(model:NurbsBrep,edge:number,radius:number,segments=12):NurbsBrep=>callGeometryRust('brep_nurbs_fillet',{model,edge,radius,segments})
 export const filletNurbsBrepEdges=(model:NurbsBrep,edges:number[],radius:number,segments=12):NurbsBrep=>callGeometryRust('brep_nurbs_fillet_edges',{model,edges,radius,segments})
+export interface AuditedBrepFeature {
+ model:NurbsBrep
+ certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1';complete:true;notes:string[]}
+ context:{version:number;canonical:string}
+ evidenceClaimCount:number
+ audit:{ok:true;bodyCount:number;shellCount:number}
+ changeSet:RustChangeSet
+ namingComplete:true
+}
+export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_edge_fillet',{model,edges,radius})
+export const auditedParallelFrameSweep=(profile:[number,number][],path:[number,number,number][],frameLaw:'fixed'|'rotation-minimizing'|'rmf'='rmf'):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_parallel_frame_sweep',{profile,path,frameLaw})
 export const inspectNurbsBrep=(model:NurbsBrep):BrepReport=>callGeometryRust('brep_nurbs_inspect',{model})
 export const tessellateNurbsBrep=(model:NurbsBrep,segments=4):BrepMesh=>callGeometryRust('brep_nurbs_tessellate',{model,segments})
+export interface CertifiedBrepTessellation {
+ capability:'certified-brep-tessellation/1'
+ tessellation:BrepMesh
+ context:{version:number;canonical:string}
+ surfaceToMeshDeviationMm:number
+ meshToSurfaceDeviationMm:number
+ coverage:{sharedEdgeIdentity:true;orientation:true;noTJunctions:true}
+ audit:{ok:boolean;bodyCount:number;shellCount:number}
+ evidenceClaimCount:number
+ changeSet:RustChangeSet
+ namingComplete:true
+}
+export const tessellateCertifiedNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedBrepTessellation=>callGeometryRust('brep_nurbs_certified_tessellate',{model,chordToleranceMm,maxTriangles})
 export const prepareBrepDisplay=(model:NurbsBrep,segments=4):Pick<BrepMesh,'report'|'faceIds'|'topologyFaceIds'>&{displayVertices:number[];displayIndices:number[];surfaceArea:number}=>callGeometryRust('brep_nurbs_display',{model,segments})
 export const nurbsBrepToPolygon=(model:NurbsBrep,segments=4):PolygonBrep=>callGeometryRust('brep_nurbs_to_polygon',{model,segments})
 export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBrep=>callGeometryRust('brep_polygon_from_mesh',{mesh,...(faceIds?{faceIds}:{})})

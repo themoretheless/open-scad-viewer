@@ -9,8 +9,8 @@ import { OpenSCADParseError } from '../src/services/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
 
 const parseOpenSCADMock = vi.hoisted(() => vi.fn())
-// The selected mesh provider warms through this loader. A B-rep or refused
-// source must leave it untouched.
+// Both qualified providers share the WASM kernel loader, while only the mesh
+// provider invokes parseOpenSCAD directly.
 const warmGeometryKernelMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
 vi.mock('../src/services/openscadParser', async importOriginal => {
@@ -307,7 +307,7 @@ describe('geometry Worker lifecycle', () => {
       && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status))).toHaveLength(1)
   })
 
-  it('refuses an unavailable B-rep source without invoking the mesh parser', async () => {
+  it('executes a B-rep source without invoking the mesh parser', async () => {
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
     await import('../src/workers/geometry.worker')
@@ -324,20 +324,20 @@ describe('geometry Worker lifecycle', () => {
     })
 
     await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({
-      status: 'failed',
+      status: 'succeeded',
       execution: {
         languageContract: 'openscad-viewer/brep-1',
         engineClass: 'brep',
-        evidence: 'planned',
+        semanticProgramVersion: 'semantic-program-contract-v1',
+        evidence: 'runtime',
         automaticFallback: false,
       },
-      error: { code: 'ENGINE_UNAVAILABLE' },
     }))
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
-    expect(warmGeometryKernelMock).not.toHaveBeenCalled()
+    expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
   })
 
-  it('reports a malformed header before stale queue state without warming the kernel', async () => {
+  it('reports a malformed header before stale queue state without rerouting providers', async () => {
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
     await import('../src/workers/geometry.worker')
@@ -348,7 +348,7 @@ describe('geometry Worker lifecycle', () => {
       type: 'build', documentRevision: 2, jobId: 2, source: newer,
       sourceSha256: sha256Hex(newer), quality: 'full',
     })
-    await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('failed'))
+    await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
 
     const malformed = '// @engine manifold\ncube(1);'
     scope.dispatchMessage({
@@ -362,7 +362,7 @@ describe('geometry Worker lifecycle', () => {
       error: { code: 'LANGUAGE_CONTRACT_UNSUPPORTED' },
     }))
     expect(scope.events.some(event => event.jobId === 3 && event.status === 'stale')).toBe(false)
-    expect(warmGeometryKernelMock).not.toHaveBeenCalled()
+    expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
   })
 

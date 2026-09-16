@@ -1,0 +1,78 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v6",
+  "recordedAt": "2026-09-16",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v5",
+  "purpose": "Bind release-qualified-v2 B-rep foundation and successor source, certificates, runtime registry, and release artifacts while preserving the finite G1 contract and resetting all clean-run work.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v5 or G1 v1 through v22",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "e237f8637b562afa3a4826c314c752e4bf347ff5a5b30088dc9547bad39e9935",
+      "byteLength": 2800
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+      "byteLength": 5950
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "fe611e00ab8d0b92872f41ff627961d509d7803bd9ff8be224b12d5d6684dffe",
+      "byteLength": 1798
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c",
+      "byteLength": 72167
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v5.json",
+      "bindingId": "crates-lockfile",
+      "note": "Current bytes are newly bound in v6; v5 remains archived. Bind release-qualified-v2 B-rep foundation and successor source, certificates, runtime registry, and release artifacts while preserving the finite G1 contract and resetting all clean-run work."
+    }
+  ],
+  "previousFingerprintSha256": "9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040"
+}

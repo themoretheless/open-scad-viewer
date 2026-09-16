@@ -1,9 +1,14 @@
 //! Native transactions retaining complete geometry and topology identity tables.
 //! Admission uses the existing kernel validator, not a certified solid proof.
 use crate::Model;
+use crate::solid_audit::{GloballyAuditedSolidSet, LocallyValidatedModel};
+use crate::trim_sew::{AuthorizedHealPlan, apply_authorized_heal};
 use brep_topology::RevisionState;
-use nurbs_core::Result;
-use std::sync::Arc;
+use nurbs_core::{Error, Result};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 #[derive(Clone, Debug)]
 pub struct ModelSnapshot {
@@ -37,6 +42,74 @@ impl RevisionState for ModelSnapshot {
 pub type ModelStore = brep_topology::RevisionStore<ModelSnapshot>;
 pub type ModelCheckout = brep_topology::RevisionCheckout<ModelSnapshot>;
 pub type ModelTransaction = brep_topology::RevisionTransaction<ModelSnapshot>;
+
+/// Cooperative hard-cancel for an authorized heal before publication.
+#[derive(Clone, Debug, Default)]
+pub struct HealCancellation {
+    cancelled: Arc<AtomicBool>,
+}
+impl HealCancellation {
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Release);
+    }
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Acquire)
+    }
+}
+
+/// Isolated heal transaction. The source snapshot is never mutated; failures,
+/// rollback, and cancellation discard the staged model.
+#[derive(Debug)]
+pub struct AuthorizedHealTransaction {
+    original: ModelSnapshot,
+    staged: Option<Model>,
+    cancellation: HealCancellation,
+}
+impl AuthorizedHealTransaction {
+    pub fn begin(original: ModelSnapshot, cancellation: HealCancellation) -> Self {
+        Self {
+            original,
+            staged: None,
+            cancellation,
+        }
+    }
+    pub fn apply(&mut self, plan: &AuthorizedHealPlan) -> Result<()> {
+        if self.cancellation.is_cancelled() {
+            return Err(Error::new(
+                "BREP_HEAL_CANCELLED",
+                "Authorized heal was cancelled",
+            ));
+        }
+        let staged = apply_authorized_heal(self.original.model(), plan)?;
+        if self.cancellation.is_cancelled() {
+            return Err(Error::new(
+                "BREP_HEAL_CANCELLED",
+                "Authorized heal was cancelled",
+            ));
+        }
+        self.staged = Some(staged);
+        Ok(())
+    }
+    pub fn rollback(&mut self) {
+        self.staged = None;
+    }
+    pub fn staged(&self) -> Option<&Model> {
+        self.staged.as_ref()
+    }
+    pub fn commit(mut self) -> Result<GloballyAuditedSolidSet> {
+        if self.cancellation.is_cancelled() {
+            return Err(Error::new(
+                "BREP_HEAL_CANCELLED",
+                "Authorized heal was cancelled",
+            ));
+        }
+        let model = self
+            .staged
+            .take()
+            .ok_or_else(|| Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal is staged"))?;
+        LocallyValidatedModel::new(model)?.audit()
+    }
+}
 
 /// Maximum encoded snapshot size; decoding checks this before JSON allocation.
 pub const MAX_MODEL_SNAPSHOT_BYTES: usize = 8 * 1024 * 1024;

@@ -1,4 +1,4 @@
-use brep_core::{frustum, revolve_angle, sphere};
+use brep_core::{cuboid, cylinder, frustum, revolve_angle, sphere};
 use geometry_bridge::brep::nurbs;
 
 #[test]
@@ -47,4 +47,48 @@ fn very_small_partial_revolve_fails_explicitly_when_display_tolerance_collapses_
         error.message.contains("manifold seams"),
         "Expected explicit display resolution refusal: {error:?}"
     );
+}
+
+#[test]
+fn certified_planar_and_rational_cells_publish_two_sided_coverage() {
+    for model in [
+        cuboid([0., 0., 0.], [3., 4., 5.]).unwrap(),
+        cylinder(3., 7.).unwrap(),
+    ] {
+        let certified = geometry_bridge::brep::certified_nurbs(&model, 0.02, 20_000).unwrap();
+        assert!(certified.surface_to_mesh_deviation_mm <= 0.02);
+        assert_eq!(
+            certified.surface_to_mesh_deviation_mm,
+            certified.mesh_to_surface_deviation_mm
+        );
+        assert!(certified.audit.ok);
+        assert!(certified.naming_complete);
+        assert_eq!(certified.context, certified.evidence.context);
+        let report = &certified.tessellation.built.report;
+        assert!(report.closed);
+        assert_eq!(report.orientation_conflicts, 0);
+        assert_eq!(report.non_manifold_edges, 0);
+    }
+}
+
+#[test]
+fn certified_tessellation_has_typed_budget_mutation_and_shape_refusals() {
+    let cylinder = cylinder(100., 10.).unwrap();
+    let error = match geometry_bridge::brep::certified_nurbs(&cylinder, 1e-12, 20_000) {
+        Ok(_) => panic!("tiny tolerance unexpectedly certified"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, "BREP_TESSELLATION_BUDGET_EXHAUSTED");
+    let mut mutated = cuboid([0.; 3], [1.; 3]).unwrap();
+    mutated.1.change_set.changes.clear();
+    let error = match geometry_bridge::brep::certified_nurbs(&mutated, 0.1, 20_000) {
+        Ok(_) => panic!("mutated naming unexpectedly certified"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, "BREP_CERTIFIED_TESSELLATION_REFUSED");
+    let error = match geometry_bridge::brep::certified_nurbs(&sphere(2.).unwrap(), 0.1, 20_000) {
+        Ok(_) => panic!("sphere unexpectedly entered finite tessellation matrix"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, "BREP_CERTIFIED_TESSELLATION_REFUSED");
 }

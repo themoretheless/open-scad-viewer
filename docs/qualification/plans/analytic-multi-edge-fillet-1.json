@@ -1,0 +1,103 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "analytic-multi-edge-fillet-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for analytic-multi-edge-fillet/1: One or more selected vertical edges of one audited axis-aligned cuboid",
+    "forbiddenClaims": [
+      "Curved source edges",
+      "Non-cuboids",
+      "Non-vertical edges",
+      "Variable radius",
+      "General corner transition networks",
+      "Mesh bevel relabeling"
+    ]
+  },
+  "capability": "analytic-multi-edge-fillet/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "One or more selected vertical edges of one audited axis-aligned cuboid",
+      "Finite positive constant radius with exact circular profile and complete ChangeSet"
+    ],
+    "excluded": [
+      "Curved source edges",
+      "Non-cuboids",
+      "Non-vertical edges",
+      "Variable radius",
+      "General corner transition networks",
+      "Mesh bevel relabeling"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "FILLET-MULTI-VERTICAL",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "FILLET-NONVERTICAL",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "FILLET-NONCUBOID",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "FILLET-RADIUS-COLLAPSE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/analytic-multi-edge-fillet-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -170,8 +170,7 @@ pub(crate) fn stable_json(value: &Value, out: &mut String) {
 pub fn identity_digest(domain: &str, payload: &Value) -> String {
     let mut canonical = String::new();
     stable_json(payload, &mut canonical);
-    let mut preimage =
-        Vec::with_capacity(8 + domain.len() + canonical.len());
+    let mut preimage = Vec::with_capacity(8 + domain.len() + canonical.len());
     preimage.extend_from_slice(&(domain.len() as u32).to_be_bytes());
     preimage.extend_from_slice(domain.as_bytes());
     preimage.extend_from_slice(&(canonical.len() as u32).to_be_bytes());
@@ -251,7 +250,9 @@ pub(crate) fn identity_value_key(value: &Value) -> Result<String> {
         "undefined" => "u".to_owned(),
         "null" => "n".to_owned(),
         "boolean" => {
-            if value["value"].as_bool().ok_or_else(|| invalid("Expected a boolean identity value"))?
+            if value["value"]
+                .as_bool()
+                .ok_or_else(|| invalid("Expected a boolean identity value"))?
             {
                 "b1".to_owned()
             } else {
@@ -305,9 +306,7 @@ pub(crate) fn validate_identity_value(value: &Value, depth: usize) -> Result<()>
         "number" => {
             exact(value, &["tag", "value"])?;
             match value.get("value") {
-                Some(Value::Number(Number::Float(v)))
-                    if *v == 0.0 && v.is_sign_negative() =>
-                {
+                Some(Value::Number(Number::Float(v))) if *v == 0.0 && v.is_sign_negative() => {
                     Err(invalid("Semantic identity number -0 is not canonical"))
                 }
                 Some(Value::Number(_)) => Ok(()),
@@ -500,7 +499,11 @@ pub fn validate_operations(operations: &[Value]) -> Result<()> {
         if index == 0 && parent.is_some() {
             return Err(invalid("The first semantic operation cannot have a parent"));
         }
-        while preorder_stack.last().copied().is_some_and(|top| Some(top) != parent) {
+        while preorder_stack
+            .last()
+            .copied()
+            .is_some_and(|top| Some(top) != parent)
+        {
             closed.insert(preorder_stack.pop().expect("non-empty stack"));
         }
         if let Some(parent) = parent {
@@ -520,9 +523,7 @@ pub fn validate_operations(operations: &[Value]) -> Result<()> {
         }
         let path = validate_structural_path(&operation["structuralPath"])?;
         let last = path.last().expect("non-empty structural path");
-        if last["name"].as_str() != Some(name)
-            || last["ordinal"].as_u64() != Some(child_ordinal)
-        {
+        if last["name"].as_str() != Some(name) || last["ordinal"].as_u64() != Some(child_ordinal) {
             return Err(invalid(
                 "Semantic operation name and childOrdinal must match the final path segment",
             ));
@@ -600,7 +601,10 @@ pub fn validate_operations(operations: &[Value]) -> Result<()> {
             .and_then(|value| usize::try_from(value).ok());
         let key = (
             parent,
-            operation["category"].as_str().unwrap_or_default().to_owned(),
+            operation["category"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
             operation["name"].as_str().unwrap_or_default().to_owned(),
         );
         let count = sibling_counts.get(&key).copied().unwrap_or(0);
@@ -733,7 +737,10 @@ fn module_activation_anchor(
     definition_occurrence_index: usize,
     index: &mut OccurrenceIndex,
 ) -> Result<Option<ModuleAnchor>> {
-    if let Some(cached) = index.activation_by_definition.get(&definition_occurrence_index) {
+    if let Some(cached) = index
+        .activation_by_definition
+        .get(&definition_occurrence_index)
+    {
         return Ok(*cached);
     }
     let operations = index.operations;
@@ -791,7 +798,9 @@ fn module_activation_anchor(
     let call_last = call_path
         .last()
         .ok_or_else(|| invalid("Expected a semantic structural path"))?;
-    if body_operation["parent"].as_u64().and_then(|v| usize::try_from(v).ok())
+    if body_operation["parent"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
         != Some(call_occurrence.operation)
         || operation_category(call_operation)? != "module"
         || operation_name(call_operation)?.starts_with('$')
@@ -1077,8 +1086,10 @@ pub fn validate_occurrence_identity(
     let mut scene_ids: HashSet<String> = HashSet::new();
     let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
     let mut group_order: Vec<String> = Vec::new();
-    let mut duplicate_slots: HashMap<(Option<usize>, usize, usize, String, String), Vec<(u64, String)>> =
-        HashMap::new();
+    let mut duplicate_slots: HashMap<
+        (Option<usize>, usize, usize, String, String),
+        Vec<(u64, String)>,
+    > = HashMap::new();
     let mut occurrence_ids: Vec<String> = Vec::with_capacity(occurrences.len());
     let mut rows: Vec<OccurrenceRow> = Vec::with_capacity(occurrences.len());
     let mut reparented_static_roots: Vec<usize> = Vec::new();
@@ -1101,7 +1112,9 @@ pub fn validate_occurrence_identity(
             ],
         )?;
         if occurrence["id"].as_u64() != Some(index as u64) {
-            return Err(invalid("Semantic occurrence IDs must equal array positions"));
+            return Err(invalid(
+                "Semantic occurrence IDs must equal array positions",
+            ));
         }
         let operation = occurrence["operation"]
             .as_u64()
@@ -1151,9 +1164,7 @@ pub fn validate_occurrence_identity(
                 while cursor != Some(referenced) {
                     consume_proof_budget(&mut proof_budget, 1)?;
                     let Some(skipped_index) = cursor else {
-                        return Err(invalid(
-                            "staticParent is not on the runtime ancestor chain",
-                        ));
+                        return Err(invalid("staticParent is not on the runtime ancestor chain"));
                     };
                     let skipped = &rows[skipped_index];
                     if skipped.operation == static_parent_operation {

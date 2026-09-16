@@ -11,6 +11,10 @@
 #![allow(unused_features)]
 pub use math_core::{Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
+pub mod persistent_naming;
+pub use persistent_naming::{
+    ChangeKind, ChangeProvenance, ChangeSet, TopoId, TopoKind, TopologyChange,
+};
 const INVALID_TOPOLOGY: &str = "BREP_INVALID_TOPOLOGY";
 fn invalid(message: impl Into<String>) -> Error {
     Error::new(INVALID_TOPOLOGY, message)
@@ -416,6 +420,14 @@ impl<
             "toleranceMm".into(),
             value_codec::Serialize::to_value(&self.tolerance_mm),
         );
+        if let Ok(context) =
+            cad_predicates::ToleranceContext::from_brep_tolerance_mm(self.tolerance_mm)
+        {
+            object.insert(
+                "toleranceContext".into(),
+                value_codec::Serialize::to_value(&context),
+            );
+        }
         value_codec::Value::Object(object)
     }
 }
@@ -462,11 +474,35 @@ impl<
                 .remove("bodies")
                 .ok_or_else(|| value_codec::error("Missing field bodies"))?,
         )?;
-        let tolerance_mm: f64 = value_codec::Deserialize::from_value(
-            object
-                .remove("toleranceMm")
-                .ok_or_else(|| value_codec::error("Missing field toleranceMm"))?,
-        )?;
+        let legacy_tolerance_mm = object
+            .remove("toleranceMm")
+            .map(value_codec::Deserialize::from_value)
+            .transpose()?;
+        let context: Option<cad_predicates::ToleranceContext> = object
+            .remove("toleranceContext")
+            .map(value_codec::Deserialize::from_value)
+            .transpose()?;
+        let tolerance_mm = match (context, legacy_tolerance_mm) {
+            (Some(context), legacy) => {
+                let on_mm = context.spatial_bounds().on_mm;
+                if legacy.is_some_and(|value: f64| value.to_bits() != on_mm.to_bits()) {
+                    return Err(value_codec::error(
+                        "toleranceMm conflicts with toleranceContext",
+                    ));
+                }
+                on_mm
+            }
+            (None, Some(value)) => {
+                cad_predicates::ToleranceContext::from_brep_tolerance_mm(value)
+                    .map_err(|_| value_codec::error("Invalid legacy toleranceMm"))?;
+                value
+            }
+            (None, None) => {
+                return Err(value_codec::error(
+                    "Missing toleranceContext or legacy toleranceMm",
+                ));
+            }
+        };
         if let Some(key) = object.keys().next() {
             return Err(value_codec::error(format!("Unknown field {key}")));
         }
@@ -493,6 +529,13 @@ impl<C, S, P> Model<C, S, P> {
     }
 }
 impl<C, S, P, V> Model<C, S, P, V> {
+    /// Canonical immutable predicate context derived from this model's legacy
+    /// scalar. New serialized models also carry its versioned specification.
+    pub fn tolerance_context(&self) -> Result<cad_predicates::ToleranceContext> {
+        cad_predicates::ToleranceContext::from_brep_tolerance_mm(self.tolerance_mm)
+            .map_err(|_| invalid("Invalid B-rep tolerance context"))
+    }
+
     /// Validate indexed incidence with application-owned vertex admission.
     /// The callback must validate geometry/provenance in its owning context;
     /// this method alone does not certify geometric or solid validity.
@@ -1107,6 +1150,25 @@ mod tests {
     #[test]
     fn no_geometry_kernel_required() {
         sheet().validate_topology().unwrap();
+    }
+    #[test]
+    fn legacy_tolerance_migrates_to_versioned_context() {
+        let model = sheet();
+        let mut value = value_codec::Serialize::to_value(&model);
+        value.as_object_mut().unwrap().remove("toleranceContext");
+        let restored: Model<(), (), ()> = value_codec::Deserialize::from_value(value).unwrap();
+        let context = restored.tolerance_context().unwrap();
+        assert_eq!(context.spatial_bounds().on_mm, model.tolerance_mm);
+
+        let canonical = value_codec::Serialize::to_value(&restored);
+        assert!(canonical.get("toleranceMm").is_some());
+        assert!(canonical.get("toleranceContext").is_some());
+    }
+    #[test]
+    fn conflicting_legacy_and_context_tolerances_are_rejected() {
+        let mut value = value_codec::Serialize::to_value(&sheet());
+        *value.get_mut("toleranceMm").unwrap() = value_codec::Serialize::to_value(&2e-6_f64);
+        assert!(<Model<(), (), ()> as value_codec::Deserialize>::from_value(value).is_err());
     }
     #[test]
     fn closed_shell_requires_two_opposite_uses() {

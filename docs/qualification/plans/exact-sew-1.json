@@ -1,0 +1,81 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "exact-sew-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for exact-sew/1: At most 4096 paired boundary uses, each carrying a complete boundary-correspondence proof",
+    "forbiddenClaims": [
+      "Endpoint-key-only sewing",
+      "Gap closure",
+      "Duplicate orientation",
+      "Non-manifold incidence"
+    ]
+  },
+  "capability": "exact-sew/1",
+  "dependencies": [
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "At most 4096 paired boundary uses, each carrying a complete boundary-correspondence proof",
+      "Opposite orientation, exact shell ownership, and atomic snapshot publication"
+    ],
+    "excluded": [
+      "Endpoint-key-only sewing",
+      "Gap closure",
+      "Duplicate orientation",
+      "Non-manifold incidence"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "SEW-PROVEN-PAIR",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SEW-ENDPOINT-ONLY",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "SEW-GAP-ATOMIC",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "SEW-DUPLICATE-ORIENTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/trim_sew.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-sew-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -1,0 +1,49 @@
+{
+  "schema": "open-scad-viewer/brep-capability-registry-release",
+  "schemaVersion": 2,
+  "gate": "G8-full",
+  "planId": "brep-capability-registry-release-full-v2",
+  "successorOf": "docs/qualification/brep-capability-registry-release-full-v1.json",
+  "registry": "src/services/geometry/brepCapability.ts",
+  "closedMatrix": "docs/qualification/brep-full-closed-matrix-v2.json",
+  "g8Index": "docs/qualification/plans/g8-full-matrix-index-v2.json",
+  "capabilities": [
+    "planar-csg/1",
+    "analytic-boolean/1",
+    "numeric-evidence-curved-brep/1",
+    "boundary-correspondence/1",
+    "exact-sew/1",
+    "global-solid-audit/1",
+    "persistent-naming/1",
+    "nurbs-boolean-bezier-le3/2",
+    "step-interchange/2",
+    "analytic-multi-edge-fillet/1",
+    "exact-parallel-frame-sweep/1",
+    "certified-brep-tessellation/1",
+    "certified-mass-properties/1"
+  ],
+  "dependencyPolicy": {
+    "requiredMaturity": "Qualified",
+    "transitive": true,
+    "falseCompleteReset": "freeze-source-and-stale-transitive-dependents"
+  },
+  "excludedPendingQualification": [
+    "authorized-heal-gap-le1/1"
+  ],
+  "explicitRefuse": [
+    "analytic-constructors/1",
+    "intersection-queries/1",
+    "nurbs-ss-bezier-le3/1",
+    "nurbs-boolean-bezier-le3/1",
+    "analytic-fillet/1",
+    "analytic-chamfer/1",
+    "analytic-shell/1",
+    "analytic-solid-loft/1",
+    "step-interchange/1",
+    "nurbs-step-bicubic-face/1",
+    "nurbs-step-trimmed-bicubic/1",
+    "nurbs-step-solid/1",
+    "iges-interchange/1"
+  ],
+  "unresolvedInShippedMatrix": []
+}

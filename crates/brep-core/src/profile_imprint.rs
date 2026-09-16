@@ -161,3 +161,35 @@ fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>>
     }
     crate::stepped_prism::boolean(a, b, operation)
 }
+
+/// Exact planar-profile arrangement entry point for the finite NURBS Boolean
+/// contact cell. Callers must first prove that every source face is affine
+/// planar. Unlike [`boolean`], this does not try stepped-prism or frame
+/// fallbacks: one common +Z profile arrangement must author the result.
+pub(crate) fn exact_planar_contact_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    let pa = prism::recognize(a)?.ok_or_else(|| {
+        Error::new(
+            "BREP_PROFILE_IMPRINT_REFUSED",
+            "First NURBS contact operand is not an exact +Z profile prism",
+        )
+    })?;
+    let pb = prism::recognize(b)?.ok_or_else(|| {
+        Error::new(
+            "BREP_PROFILE_IMPRINT_REFUSED",
+            "Second NURBS contact operand is not an exact +Z profile prism",
+        )
+    })?;
+    let tolerance = a.tolerance_mm.max(b.tolerance_mm);
+    if (pa.z_min - pb.z_min).abs() > tolerance || (pa.z_max - pb.z_max).abs() > tolerance {
+        return Err(Error::new(
+            "BREP_PROFILE_IMPRINT_REFUSED",
+            "NURBS contact requires one coincident extrusion span; stepped fallback is forbidden",
+        ));
+    }
+    local_boolean(a, b, operation)?.ok_or_else(|| {
+        Error::new(
+            "BREP_PROFILE_IMPRINT_REFUSED",
+            "NURBS planar contact requires one exact common-axis profile arrangement",
+        )
+    })
+}

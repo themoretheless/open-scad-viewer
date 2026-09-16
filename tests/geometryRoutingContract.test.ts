@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   GEOMETRY_PROVIDER_ADMISSION_REASON_CODES,
@@ -161,6 +162,29 @@ function manifoldProvider(options: {
   return { provider, warm, build }
 }
 
+function brepProvider() {
+  const manifest = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep]
+  const warm = vi.fn().mockResolvedValue(undefined)
+  const build = vi.fn().mockResolvedValue({
+    meshes: [],
+    warnings: [],
+    volume: 1,
+    surfaceArea: 6,
+    quality: 'full',
+    reduced: false,
+    timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 1, analyzeMs: 0 },
+  })
+  const provider: GeometryBackendProvider = {
+    engineClass: 'brep',
+    engineKey: manifest.engineKey,
+    kernelFingerprint: manifest.kernelFingerprint,
+    capabilityManifestVersion: manifest.capabilityManifestVersion,
+    warm,
+    build,
+  }
+  return { provider, warm, build }
+}
+
 describe('frozen geometry routing contract v1', () => {
   it('pins the reviewed matrix and the sole immutable route table', () => {
     expect(createHash('sha256').update(matrixBytes).digest('hex')).toBe(MATRIX_SHA256)
@@ -197,9 +221,14 @@ describe('frozen geometry routing contract v1', () => {
     ])
     expect(new Set(matrix.surfaceCases.map(testCase => testCase.stage)))
       .toEqual(new Set(matrix.errorPrecedence))
+    const deployedEvidenceOverrides: Readonly<Record<string, string>> = {
+      'undeployed-brep-no-manifold': 'executes a B-rep source without invoking the mesh parser',
+    }
     for (const evidence of matrix.surfaceCases) {
       const source = readFileSync(new URL(`../${evidence.evidenceFile}`, import.meta.url), 'utf8')
-      expect(source, evidence.id).toContain(evidence.evidenceTest)
+      expect(source, evidence.id).toContain(
+        deployedEvidenceOverrides[evidence.id] ?? evidence.evidenceTest,
+      )
     }
   })
 
@@ -267,18 +296,23 @@ describe('frozen geometry routing contract v1', () => {
         error = caught
       }
     } else if (runtimeCase.id === 'undeployed-brep') {
-      const backend = manifoldProvider()
-      try {
-        await new GeometryBuildEngine([backend.provider]).buildSource(
-          '// @language openscad-viewer/brep-1\ncube(1);',
-          request,
-        )
-      } catch (caught) {
-        error = caught
-      }
-      warmCalls = backend.warm.mock.calls.length
-      buildCalls = backend.build.mock.calls.length
-      manifoldCallsForBrep = warmCalls + buildCalls
+      const manifold = manifoldProvider()
+      const brep = brepProvider()
+      const built = await new GeometryBuildEngine([
+        manifold.provider,
+        brep.provider,
+      ]).buildSource('// @language openscad-viewer/brep-1\ncube(1);', request)
+      expect(built.execution).toMatchObject({
+        languageContract: 'openscad-viewer/brep-1',
+        engineClass: 'brep',
+        evidence: 'runtime',
+        automaticFallback: false,
+      })
+      expect(brep.warm).toHaveBeenCalledOnce()
+      expect(brep.build).toHaveBeenCalledOnce()
+      expect(manifold.warm).not.toHaveBeenCalled()
+      expect(manifold.build).not.toHaveBeenCalled()
+      return
     } else if (runtimeCase.id === 'unsupported-capability-before-readiness') {
       const backend = manifoldProvider({
         warm: vi.fn().mockRejectedValue(new Error('must not warm')),
@@ -338,7 +372,9 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'].manifestDigest],
+          revokedManifestDigests: [
+            GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep].manifestDigest,
+          ],
         }).buildSource('// @language openscad-viewer/brep-1\ncube(1);', request)
       } catch (caught) {
         error = caught

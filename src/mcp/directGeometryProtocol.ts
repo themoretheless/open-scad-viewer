@@ -1,7 +1,7 @@
 import type { GeometryQuality } from '../core/build'
 import {
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   canonicalJson,
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   MAX_GEOMETRY_SOURCE_CHARACTERS,
@@ -31,7 +31,7 @@ import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
 const currentMeshManifest = GEOMETRY_MANIFEST_ARCHIVE[
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh
 ]
 
 /**
@@ -550,8 +550,8 @@ export function isDirectGeometryCapabilities(
       || candidate.engines.length !== 2) return false
 
     const manifests = [
-      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
-      GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep],
+      GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh],
+      GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep],
     ] as const
     return candidate.engines.every((engineValue, index) => {
       const engine = record(engineValue)

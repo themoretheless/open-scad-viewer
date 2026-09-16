@@ -5,11 +5,12 @@
 //! mutation evidence. Periodic/pole rules refuse non-finite or wrap-ambiguous strata.
 
 use crate::Model;
-use crate::transactions::ModelSnapshot;
+use crate::coverage_verifier::{UvCoverageCertificate, certify_lifted_uv_coverage};
 use crate::trim_sew::{
-    CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate, SewLedgerEntry,
-    SewSnapshot, classify_chart_events, sew_atomic, sew_edge_key,
+    CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate,
+    classify_chart_events, sew_closed_model_edges,
 };
+use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result};
 use std::collections::BTreeMap;
 
@@ -43,6 +44,134 @@ pub struct UvArrangement {
     pub hole_count: usize,
     /// Monotone nesting of imprint intervals (outer contains inner).
     pub nesting: Vec<NestingRecord>,
+}
+
+pub const DEFAULT_UV_RESOURCE_LIMIT: usize = 1024;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiftedUvGeometry {
+    PlaneSegment {
+        start: [f64; 2],
+        end: [f64; 2],
+    },
+    AnalyticCircleArc {
+        center: [f64; 2],
+        radius: f64,
+        /// Lifted angular interval. End may exceed TAU, but span must be < TAU.
+        interval: [f64; 2],
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedUvPrimitive {
+    pub edge_id: usize,
+    pub geometry: LiftedUvGeometry,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UvVertexOrigin {
+    AuthoredEndpoint,
+    ConstructedIntersection { edges: [usize; 2] },
+    PeriodicSeam { edge: usize, shift: i32 },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UvVertex {
+    pub point: [f64; 2],
+    pub origin: UvVertexOrigin,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UvHalfedgeGeometry {
+    Segment,
+    CircleArc {
+        center: [f64; 2],
+        radius: f64,
+        interval: [f64; 2],
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UvHalfedge {
+    pub origin: usize,
+    pub destination: usize,
+    pub twin: usize,
+    pub next: usize,
+    pub cell: usize,
+    pub source_edge: usize,
+    pub geometry: UvHalfedgeGeometry,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WindingLabel {
+    Exterior,
+    Material(i32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UvCell {
+    pub boundary: Vec<usize>,
+    pub signed_area: f64,
+    pub winding: i32,
+    pub label: WindingLabel,
+}
+
+#[derive(Clone, Debug)]
+pub struct LiftedUvArrangement {
+    pub chart: ChartKind,
+    pub context: ToleranceSpecIdentity,
+    pub vertices: Vec<UvVertex>,
+    pub halfedges: Vec<UvHalfedge>,
+    pub cells: Vec<UvCell>,
+    pub coverage: UvCoverageCertificate,
+}
+
+fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
+    a[0] * b[1] - a[1] * b[0]
+}
+
+fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    [a[0] - b[0], a[1] - b[1]]
+}
+
+fn point_key(point: [f64; 2]) -> (u64, u64) {
+    let canonical = |v: f64| if v == 0. { 0f64.to_bits() } else { v.to_bits() };
+    (canonical(point[0]), canonical(point[1]))
+}
+
+fn segment_intersection(
+    a: [f64; 2],
+    b: [f64; 2],
+    c: [f64; 2],
+    d: [f64; 2],
+) -> Result<Option<(f64, f64, [f64; 2])>> {
+    let r = sub(b, a);
+    let s = sub(d, c);
+    let denominator = cross(r, s);
+    let ca = sub(c, a);
+    if denominator == 0. {
+        if cross(ca, r) == 0. {
+            let rr = r[0] * r[0] + r[1] * r[1];
+            let t0 = (ca[0] * r[0] + ca[1] * r[1]) / rr;
+            let da = sub(d, a);
+            let t1 = (da[0] * r[0] + da[1] * r[1]) / rr;
+            if t0.max(t1).min(1.) > t0.min(t1).max(0.) {
+                return Err(refuse("Overlapping UV branches are ambiguous"));
+            }
+        }
+        return Ok(None);
+    }
+    let t = cross(ca, s) / denominator;
+    let u = cross(ca, r) / denominator;
+    if (-1e-15..=1. + 1e-15).contains(&t) && (-1e-15..=1. + 1e-15).contains(&u) {
+        Ok(Some((
+            t.clamp(0., 1.),
+            u.clamp(0., 1.),
+            [a[0] + t * r[0], a[1] + t * r[1]],
+        )))
+    } else {
+        Ok(None)
+    }
 }
 
 fn interval_contains(outer: [f64; 2], inner: [f64; 2]) -> bool {
@@ -149,6 +278,343 @@ fn expand_periodic_intervals(intervals: &[[f64; 2]], period: f64) -> Result<Vec<
     Ok(out)
 }
 
+/// Build a finite context-bound DCEL for the admitted 2D primitive matrix.
+pub fn arrange_lifted_uv(
+    context: &ToleranceContext,
+    chart: ChartKind,
+    primitives: &[LiftedUvPrimitive],
+    resource_limit: usize,
+) -> Result<LiftedUvArrangement> {
+    if chart == ChartKind::Freeform {
+        return Err(refuse(
+            "Generic Freeform curves are not admitted for Complete UV arrangement",
+        ));
+    }
+    if resource_limit == 0 || primitives.len() > resource_limit {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Lifted UV primitive budget exceeded",
+        ));
+    }
+    let mut segments: Vec<(usize, [f64; 2], [f64; 2])> = Vec::new();
+    let mut arcs: Vec<(usize, [f64; 2], f64, [f64; 2])> = Vec::new();
+    for primitive in primitives {
+        match (&primitive.geometry, chart) {
+            (LiftedUvGeometry::PlaneSegment { start, end }, ChartKind::PlanePoly) => {
+                if !start.iter().chain(end).all(|v| v.is_finite()) || start == end {
+                    return Err(refuse("PlanePoly segment must be finite and nondegenerate"));
+                }
+                segments.push((primitive.edge_id, *start, *end));
+            }
+            (
+                LiftedUvGeometry::AnalyticCircleArc {
+                    center,
+                    radius,
+                    interval,
+                },
+                ChartKind::AnalyticCircle,
+            ) => {
+                if !center.iter().chain(interval).all(|v| v.is_finite())
+                    || !radius.is_finite()
+                    || *radius <= 0.
+                    || interval[1] <= interval[0]
+                    || interval[1] - interval[0] >= std::f64::consts::TAU
+                {
+                    return Err(refuse(
+                        "AnalyticCircle arc must be finite and span less than TAU",
+                    ));
+                }
+                arcs.push((primitive.edge_id, *center, *radius, *interval));
+            }
+            _ => return Err(refuse("Lifted primitive does not match its admitted chart")),
+        }
+    }
+
+    // Split PlanePoly segments at every constructed event vertex.
+    let mut split_parameters = vec![vec![0., 1.]; segments.len()];
+    let mut intersections: BTreeMap<(u64, u64), [usize; 2]> = BTreeMap::new();
+    for i in 0..segments.len() {
+        for j in (i + 1)..segments.len() {
+            if let Some((ti, tj, point)) =
+                segment_intersection(segments[i].1, segments[i].2, segments[j].1, segments[j].2)?
+            {
+                split_parameters[i].push(ti);
+                split_parameters[j].push(tj);
+                intersections.insert(
+                    point_key(point),
+                    [
+                        segments[i].0.min(segments[j].0),
+                        segments[i].0.max(segments[j].0),
+                    ],
+                );
+            }
+        }
+    }
+    // Circle arcs may meet at authored endpoints, but overlapping angular
+    // interiors are not a unique branch and are refused.
+    for i in 0..arcs.len() {
+        for j in (i + 1)..arcs.len() {
+            if arcs[i].1 == arcs[j].1 && arcs[i].2.to_bits() == arcs[j].2.to_bits() {
+                let lo = arcs[i].3[0].max(arcs[j].3[0]);
+                let hi = arcs[i].3[1].min(arcs[j].3[1]);
+                if hi > lo {
+                    return Err(refuse("Overlapping periodic arc branches are ambiguous"));
+                }
+            } else {
+                return Err(refuse(
+                    "Intersecting arcs from different analytic circles are outside the admitted matrix",
+                ));
+            }
+        }
+    }
+
+    let mut vertices = Vec::<UvVertex>::new();
+    let mut vertex_ids = BTreeMap::<(u64, u64), usize>::new();
+    let add_vertex = |point: [f64; 2],
+                      origin: UvVertexOrigin,
+                      vertices: &mut Vec<UvVertex>,
+                      ids: &mut BTreeMap<(u64, u64), usize>| {
+        let key = point_key(point);
+        if let Some(&id) = ids.get(&key) {
+            if !matches!(&origin, UvVertexOrigin::AuthoredEndpoint) {
+                vertices[id].origin = origin;
+            }
+            id
+        } else {
+            let id = vertices.len();
+            vertices.push(UvVertex { point, origin });
+            ids.insert(key, id);
+            id
+        }
+    };
+    let mut pieces: Vec<(usize, usize, usize, UvHalfedgeGeometry)> = Vec::new();
+    for (index, (edge, start, end)) in segments.iter().enumerate() {
+        let mut ts = split_parameters[index].clone();
+        ts.sort_by(|a, b| a.total_cmp(b));
+        ts.dedup_by(|a, b| (*a - *b).abs() <= 1e-14);
+        for pair in ts.windows(2) {
+            if pair[1] - pair[0] <= 1e-14 {
+                continue;
+            }
+            let point = |t: f64| {
+                [
+                    start[0] + t * (end[0] - start[0]),
+                    start[1] + t * (end[1] - start[1]),
+                ]
+            };
+            let pa = point(pair[0]);
+            let pb = point(pair[1]);
+            let origin_for = |p: [f64; 2]| {
+                intersections
+                    .get(&point_key(p))
+                    .copied()
+                    .map(|edges| UvVertexOrigin::ConstructedIntersection { edges })
+                    .unwrap_or(UvVertexOrigin::AuthoredEndpoint)
+            };
+            let a = add_vertex(pa, origin_for(pa), &mut vertices, &mut vertex_ids);
+            let b = add_vertex(pb, origin_for(pb), &mut vertices, &mut vertex_ids);
+            pieces.push((*edge, a, b, UvHalfedgeGeometry::Segment));
+        }
+    }
+    for (edge, center, radius, interval) in arcs {
+        let point = |angle: f64| {
+            let snap = |value: f64| {
+                if value.abs() <= 32. * f64::EPSILON {
+                    0.
+                } else if (value - 1.).abs() <= 32. * f64::EPSILON {
+                    1.
+                } else if (value + 1.).abs() <= 32. * f64::EPSILON {
+                    -1.
+                } else {
+                    value
+                }
+            };
+            [
+                center[0] + radius * snap(angle.cos()),
+                center[1] + radius * snap(angle.sin()),
+            ]
+        };
+        let shift = (interval[0] / std::f64::consts::TAU).floor() as i32;
+        let a = add_vertex(
+            point(interval[0]),
+            if shift != 0 {
+                UvVertexOrigin::PeriodicSeam { edge, shift }
+            } else {
+                UvVertexOrigin::AuthoredEndpoint
+            },
+            &mut vertices,
+            &mut vertex_ids,
+        );
+        let end_shift = (interval[1] / std::f64::consts::TAU).floor() as i32;
+        let b = add_vertex(
+            point(interval[1]),
+            if end_shift != shift {
+                UvVertexOrigin::PeriodicSeam {
+                    edge,
+                    shift: end_shift,
+                }
+            } else {
+                UvVertexOrigin::AuthoredEndpoint
+            },
+            &mut vertices,
+            &mut vertex_ids,
+        );
+        pieces.push((
+            edge,
+            a,
+            b,
+            UvHalfedgeGeometry::CircleArc {
+                center,
+                radius,
+                interval,
+            },
+        ));
+    }
+    if pieces.len() > resource_limit.saturating_mul(4) {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Constructed UV halfedge budget exceeded",
+        ));
+    }
+    let mut halfedges = Vec::with_capacity(pieces.len() * 2);
+    for (source_edge, a, b, geometry) in pieces {
+        let forward = halfedges.len();
+        let reverse = forward + 1;
+        halfedges.push(UvHalfedge {
+            origin: a,
+            destination: b,
+            twin: reverse,
+            next: usize::MAX,
+            cell: usize::MAX,
+            source_edge,
+            geometry: geometry.clone(),
+        });
+        let reverse_geometry = match geometry {
+            UvHalfedgeGeometry::CircleArc {
+                center,
+                radius,
+                interval,
+            } => UvHalfedgeGeometry::CircleArc {
+                center,
+                radius,
+                interval: [interval[1], interval[0]],
+            },
+            UvHalfedgeGeometry::Segment => UvHalfedgeGeometry::Segment,
+        };
+        halfedges.push(UvHalfedge {
+            origin: b,
+            destination: a,
+            twin: forward,
+            next: usize::MAX,
+            cell: usize::MAX,
+            source_edge,
+            geometry: reverse_geometry,
+        });
+    }
+    let mut outgoing = vec![Vec::<usize>::new(); vertices.len()];
+    for (id, halfedge) in halfedges.iter().enumerate() {
+        outgoing[halfedge.origin].push(id);
+    }
+    for edges in &mut outgoing {
+        if edges.len() > 4 {
+            return Err(refuse("UV event has ambiguous branch degree"));
+        }
+        edges.sort_by(|&a, &b| {
+            let direction = |id: usize| {
+                let h = &halfedges[id];
+                let p = vertices[h.origin].point;
+                let q = vertices[h.destination].point;
+                (q[1] - p[1]).atan2(q[0] - p[0])
+            };
+            direction(a)
+                .total_cmp(&direction(b))
+                .then_with(|| a.cmp(&b))
+        });
+    }
+    for id in 0..halfedges.len() {
+        let destination = halfedges[id].destination;
+        let twin = halfedges[id].twin;
+        let around = &outgoing[destination];
+        let twin_position = around
+            .iter()
+            .position(|candidate| *candidate == twin)
+            .ok_or_else(|| refuse("DCEL twin is absent from destination star"))?;
+        halfedges[id].next = around[(twin_position + around.len() - 1) % around.len()];
+    }
+    let mut cells = Vec::new();
+    for start in 0..halfedges.len() {
+        if halfedges[start].cell != usize::MAX {
+            continue;
+        }
+        let cell_id = cells.len();
+        let mut boundary = Vec::new();
+        let mut current = start;
+        loop {
+            if boundary.len() > halfedges.len() {
+                return Err(refuse("DCEL next relation does not close"));
+            }
+            if halfedges[current].cell != usize::MAX {
+                if current != start {
+                    return Err(refuse("DCEL branches merge before closing a cell"));
+                }
+                break;
+            }
+            halfedges[current].cell = cell_id;
+            boundary.push(current);
+            current = halfedges[current].next;
+        }
+        let mut twice_area = 0.;
+        for &id in &boundary {
+            let h = &halfedges[id];
+            let p = vertices[h.origin].point;
+            let q = vertices[h.destination].point;
+            twice_area += match h.geometry {
+                UvHalfedgeGeometry::Segment => cross(p, q),
+                UvHalfedgeGeometry::CircleArc {
+                    center,
+                    radius,
+                    interval,
+                } => {
+                    cross(center, q) - cross(center, p)
+                        + radius * radius * (interval[1] - interval[0])
+                }
+            };
+        }
+        let signed_area = 0.5 * twice_area;
+        let winding = if signed_area > 0. { 1 } else { 0 };
+        cells.push(UvCell {
+            boundary,
+            signed_area,
+            winding,
+            label: if winding == 0 {
+                WindingLabel::Exterior
+            } else {
+                WindingLabel::Material(winding)
+            },
+        });
+    }
+    if !cells.iter().any(|cell| cell.winding != 0) {
+        return Err(refuse("UV primitives do not bound a material cell"));
+    }
+    let coverage = certify_lifted_uv_coverage(
+        context,
+        primitives.len(),
+        vertices.len(),
+        halfedges.len(),
+        cells.len(),
+        true,
+        resource_limit,
+    )?;
+    Ok(LiftedUvArrangement {
+        chart,
+        context: context.spec_identity(),
+        vertices,
+        halfedges,
+        cells,
+        coverage,
+    })
+}
+
 /// Build a UV arrangement from imprint curves on a frozen / admitted chart.
 pub fn arrange_imprint_curves(
     chart: ChartKind,
@@ -170,13 +636,9 @@ pub fn arrange_imprint_curves(
             ));
         }
         if chart == ChartKind::Freeform {
-            // Freeform chart touches: require finite ordered intervals and refuse
-            // empty-parameter strata that would claim Complete without work.
-            if curve.parameter_intervals.is_empty() && curve.hole_intervals.is_empty() {
-                return Err(refuse(
-                    "Freeform chart touch requires at least one imprint or hole interval",
-                ));
-            }
+            return Err(refuse(
+                "Interval-only Freeform input cannot publish Complete coverage",
+            ));
         }
         let material = if curve.periodic {
             expand_periodic_intervals(&curve.parameter_intervals, std::f64::consts::TAU)?
@@ -306,55 +768,8 @@ pub fn assert_missed_branch_detected(arrangement: &UvArrangement) -> Result<()> 
 /// Exact sew of a model with transactional rollback on refusal.
 pub fn sew_model_atomic(model: &Model) -> Result<(Model, SewCertificate)> {
     model.validate()?;
-    let snapshot = ModelSnapshot::new(model.clone())?;
-    let scale = model.tolerance_mm.max(1e-9);
-    let mut pending = Vec::new();
-    for (face_a, face) in model.faces.iter().enumerate() {
-        for &wire_id in std::iter::once(&face.outer).chain(face.holes.iter()) {
-            for coedge in &model.loops[wire_id].coedges {
-                let edge = &model.edges[coedge.edge];
-                let a = model.vertices[edge.vertices[0]].point;
-                let b = model.vertices[edge.vertices[1]].point;
-                let key = sew_edge_key(a, b, scale)?;
-                pending.push(SewLedgerEntry {
-                    key,
-                    face_a,
-                    face_b: face_a,
-                    orientation_agree: !coedge.reversed,
-                    displacement: None,
-                });
-            }
-        }
-    }
-    let mut by_key: BTreeMap<_, Vec<_>> = BTreeMap::new();
-    for entry in pending {
-        by_key.entry(entry.key.clone()).or_default().push(entry);
-    }
-    let mut paired = Vec::new();
-    for (_key, entries) in by_key {
-        if entries.len() != 2 {
-            let _ = snapshot;
-            return Err(refuse(
-                "Sew incidence is not a unique pair; model unchanged",
-            ));
-        }
-        paired.push(entries[0].clone());
-        paired.push(SewLedgerEntry {
-            key: entries[1].key.clone(),
-            face_a: entries[1].face_a,
-            face_b: entries[0].face_a,
-            orientation_agree: entries[1].orientation_agree,
-            displacement: None,
-        });
-    }
-    match sew_atomic(SewSnapshot::default(), &paired) {
-        Ok((_snap, cert)) => Ok((model.clone(), cert)),
-        Err(err) => {
-            // Snapshot proves operands/model preimage is retained by caller.
-            let _ = snapshot;
-            Err(err)
-        }
-    }
+    let certificate = sew_closed_model_edges(model)?;
+    Ok((model.clone(), certificate))
 }
 
 #[cfg(test)]
@@ -457,7 +872,7 @@ mod tests {
     }
 
     #[test]
-    fn freeform_chart_touch_arranges() {
+    fn interval_only_freeform_chart_touch_refuses_complete() {
         let curves = [UvImprintCurve {
             chart: ChartKind::Freeform,
             parameter_intervals: vec![[0.15, 0.85]],
@@ -465,15 +880,122 @@ mod tests {
             edge_id: 7,
             periodic: false,
         }];
-        let arr = arrange_imprint_curves(ChartKind::Freeform, &curves).unwrap();
-        assert!(arr.classification.complete);
-        assert_eq!(arr.hole_count, 1);
-        assert_missed_branch_detected(&arr).unwrap();
+        assert!(arrange_imprint_curves(ChartKind::Freeform, &curves).is_err());
     }
 
     #[test]
     fn freeform_empty_refuses() {
         assert!(arrange_imprint_curves(ChartKind::Freeform, &[]).is_err());
+    }
+
+    #[test]
+    fn plane_segments_build_context_bound_dcel_and_detect_missed_branch() {
+        let context = ToleranceContext::default_valid();
+        let points = [[0., 0.], [2., 0.], [2., 1.], [0., 1.]];
+        let primitives = (0..4)
+            .map(|edge_id| LiftedUvPrimitive {
+                edge_id,
+                geometry: LiftedUvGeometry::PlaneSegment {
+                    start: points[edge_id],
+                    end: points[(edge_id + 1) % 4],
+                },
+            })
+            .collect::<Vec<_>>();
+        let arrangement =
+            arrange_lifted_uv(&context, ChartKind::PlanePoly, &primitives, 16).unwrap();
+        assert!(arrangement.coverage.complete);
+        assert_eq!(arrangement.vertices.len(), 4);
+        assert_eq!(arrangement.halfedges.len(), 8);
+        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+            .unwrap();
+
+        let mut missed = arrangement.clone();
+        missed.halfedges.pop();
+        assert!(
+            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&missed, &context)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn lifted_uv_context_overlap_and_resource_mutations_refuse() {
+        let context = ToleranceContext::default_valid();
+        let overlapping = [
+            LiftedUvPrimitive {
+                edge_id: 1,
+                geometry: LiftedUvGeometry::PlaneSegment {
+                    start: [0., 0.],
+                    end: [2., 0.],
+                },
+            },
+            LiftedUvPrimitive {
+                edge_id: 2,
+                geometry: LiftedUvGeometry::PlaneSegment {
+                    start: [1., 0.],
+                    end: [3., 0.],
+                },
+            },
+        ];
+        assert!(arrange_lifted_uv(&context, ChartKind::PlanePoly, &overlapping, 8).is_err());
+        assert_eq!(
+            arrange_lifted_uv(&context, ChartKind::PlanePoly, &overlapping[..1], 0)
+                .unwrap_err()
+                .code,
+            "BREP_TRIM_RESOURCE_LIMIT"
+        );
+
+        let square = [
+            ([0., 0.], [1., 0.]),
+            ([1., 0.], [1., 1.]),
+            ([1., 1.], [0., 1.]),
+            ([0., 1.], [0., 0.]),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(edge_id, (start, end))| LiftedUvPrimitive {
+            edge_id,
+            geometry: LiftedUvGeometry::PlaneSegment { start, end },
+        })
+        .collect::<Vec<_>>();
+        let arrangement = arrange_lifted_uv(&context, ChartKind::PlanePoly, &square, 8).unwrap();
+        let mut spec = context.specification().clone();
+        spec.policy = "foreign-uv-context".into();
+        let foreign = ToleranceContext::new(spec).unwrap();
+        assert!(
+            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &foreign)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn periodic_circle_arcs_close_across_lifted_seam() {
+        let context = ToleranceContext::default_valid();
+        let quarter = std::f64::consts::FRAC_PI_2;
+        let arcs = (0..4)
+            .map(|edge_id| LiftedUvPrimitive {
+                edge_id,
+                geometry: LiftedUvGeometry::AnalyticCircleArc {
+                    center: [0., 0.],
+                    radius: 2.,
+                    interval: [edge_id as f64 * quarter, (edge_id + 1) as f64 * quarter],
+                },
+            })
+            .collect::<Vec<_>>();
+        let arrangement =
+            arrange_lifted_uv(&context, ChartKind::AnalyticCircle, &arcs, 16).unwrap();
+        assert_eq!(arrangement.vertices.len(), 4);
+        assert!(
+            arrangement
+                .vertices
+                .iter()
+                .any(|vertex| matches!(vertex.origin, UvVertexOrigin::PeriodicSeam { .. }))
+        );
+        assert!(
+            arrangement
+                .cells
+                .iter()
+                .any(|cell| cell.label == WindingLabel::Material(1))
+        );
     }
 
     #[test]

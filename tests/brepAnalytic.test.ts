@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createBrepCylinder,createBrepFrustum,createBrepTube,inspectNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
+import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('tessellates exact curved solids without open seams across display resolutions',()=>{
@@ -29,7 +29,11 @@ it('preserves rational solids and identities through transforms and serializatio
  expect(inspectNurbsBrep(result).topologyValid).toBe(true)
  expect(result.topologyIds.faces).toEqual(brep.topologyIds!.faces)
  expect(tessellateNurbsBrep(result,8).report.signedVolumeMm3).toBeCloseTo(built.report.signedVolumeMm3*8,6)
- expect(()=>booleanNurbsBrep(result,createBrepBox([0,0,0],[1,1,1]),'union')).toThrow(/curved|planar|straight/i)
+ const separated=booleanNurbsBrep(result,createBrepBox([0,0,0],[1,1,1]),'union')
+ expect(inspectNurbsBrep(separated).topologyValid).toBe(true)
+ expect(separated.bodies).toHaveLength(2)
+ expect(separated.faces.filter(face=>face.surface.degreeU>1||face.surface.degreeV>1)).toHaveLength(result.faces.filter(face=>face.surface.degreeU>1||face.surface.degreeV>1).length)
+ expect(()=>booleanNurbsBrep(createBrepTorus(4,1),createBrepBox([-1,-1,-1],[1,1,1]),'union')).toThrow(/curved|unsupported|torus/i)
 })
 it('extrudes concave outer boundaries with several holes without filling notches',()=>{
  const profile:[number,number][]=[[0,0],[8,0],[8,3],[4,3],[4,7],[0,7]]

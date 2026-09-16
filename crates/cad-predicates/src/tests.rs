@@ -264,3 +264,34 @@ fn residual_classification_requires_matching_enclosure_and_respects_gray_band() 
     invalid.linear_abs = invalid.max_entity_error * 2.;
     assert!(ToleranceContext::new(invalid).is_err());
 }
+
+#[test]
+fn portable_tolerance_identity_round_trips_and_detects_policy_changes() {
+    let context = ToleranceContext::from_brep_tolerance_mm(1e-6).unwrap();
+    let json = value_codec::to_string(&context).unwrap();
+    let restored: ToleranceContext = value_codec::from_str_strict(&json).unwrap();
+    assert!(context.is_compatible_with(&restored));
+    assert_eq!(context.spec_identity(), restored.spec_identity());
+    assert_eq!(context.spatial_bounds().on_mm, 1e-6);
+    assert_eq!(context.angular_bounds().radians, 1e-9);
+    assert_eq!(context.parametric_bounds().floor, 1e-12);
+    assert_eq!(context.entity_error_bounds().maximum_mm, 1e-6 * 10.);
+
+    let mut changed = context.specification().clone();
+    changed.policy.push_str("-changed");
+    let changed = ToleranceContext::new(changed).unwrap();
+    assert!(!context.is_compatible_with(&changed));
+    assert_ne!(context.spec_identity(), changed.spec_identity());
+}
+
+#[test]
+fn serialized_tolerance_identity_cannot_be_substituted() {
+    let context = ToleranceContext::from_brep_tolerance_mm(1e-6).unwrap();
+    let mut value = value_codec::Serialize::to_value(&context);
+    *value
+        .get_mut("identity")
+        .unwrap()
+        .get_mut("canonical")
+        .unwrap() = value_codec::Value::String("forged".into());
+    assert!(<ToleranceContext as value_codec::Deserialize>::from_value(value).is_err());
+}

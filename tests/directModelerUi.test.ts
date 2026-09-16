@@ -112,20 +112,21 @@ it('binds an edge selection to chamfer and creates a shell with the selected ope
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Shell');await ui.click('Apply · Enter')
  expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1000-6*6*8)
 })
-it('runs authored B-rep fillet and boolean paths from Solid controls',async()=>{
+it('runs authored B-rep boolean and refuses retained fillet without mutation',async()=>{
  const ui=await mount();await ui.click('Box');await ui.click('Box')
  const objectBoxes=ui.all().filter(n=>n.tag==='button'&&ui.text(n).startsWith('Box · 3D'))
  objectBoxes[0].props.onClick({shiftKey:false});await nextTick();objectBoxes[1].props.onClick({shiftKey:true});await nextTick()
  await ui.click('B-rep Union')
  expect(ui.doc().bodies.filter(b=>b.brep)).toHaveLength(1)
+ const before=ui.doc()
  await ui.click('Edges');const edges=ui.all(ui.svg()).filter(n=>n.tag==='polyline'&&n.props.onPointerdown),edge=edges[0],ends=new Set(String(edge.props.points).split(' '))
  await ui.pointer(edge);const connected=edges.slice(1).find(item=>String(item.props.points).split(' ').some(point=>ends.has(point)))!
  connected.props.onPointerdown({...ui.event(connected),shiftKey:true});await nextTick();await ui.click('Fillet 3D')
  const segments=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('Fillet segments'))!
  segments.props['onUpdate:modelValue'](6);await nextTick();await ui.click('Apply · Enter')
- expect(ui.doc().bodies.find(b=>b.brep)?.brep?.faces.length).toBeGreaterThan(11)
- const before=ui.doc().bodies.find(b=>b.brep)?.mesh.indices
- await ui.click('Retessellate');expect(ui.doc().bodies.find(b=>b.brep)?.mesh.indices).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain('refuse faceted fallback')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.doc()).toEqual(before)
 })
 it('authors a full sketch revolve as an explicitly faceted B-rep',async()=>{
  const ui=await mount();await ui.click('Profile');await ui.click('Revolve')
@@ -237,7 +238,7 @@ it('creates rational tube/frustum solids and retains the faceted cylinder option
  expect(ui.doc().bodies.at(-1)?.brep?.faces).toHaveLength(50)
 })
 
-it('preserves authored B-rep while dragging and running native planar edits',async()=>{
+it('preserves authored B-rep for movement and push while refusing retained shell',async()=>{
  const ui=await mount();await ui.click('Box');const original=ui.doc().bodies.at(-1)!
  await ui.click('↔ Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!,0,0)
  svg.props.onPointermove(ui.event(svg,4,3));svg.props.onPointerup(ui.event(svg,4,3));await nextTick()
@@ -246,8 +247,9 @@ it('preserves authored B-rep while dragging and running native planar edits',asy
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Push / Pull');await ui.click('Apply · Enter')
  expect(ui.doc().bodies.find(b=>b.id===original.id)!.brep).toBeDefined()
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Shell');await ui.click('Apply · Enter')
- const shell=ui.doc().bodies.find(b=>b.id===original.id)!
- expect(shell.brep).toBeDefined();expect(inspectPolygonMesh(shell.mesh).signedVolumeMm3).toBeLessThan(8000)
+ expect(ui.text(ui.all()[0])).toContain('refuse faceted fallback')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.doc().bodies.find(b=>b.id===original.id)).toEqual(original)
 })
 
 it('previews and commits retained splits with positive-side identity and reversible history',async()=>{

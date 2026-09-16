@@ -23,6 +23,7 @@ modelgraph-text = { path = "../modelgraph-text", optional = true }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
 brep-core = { path = "../brep-core" }
+cad-predicates = { path = "../cad-predicates" }
 planar-geometry = { path = "../planar-geometry" }
 resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
 subdivision-core = { path = "../subdivision-core" }

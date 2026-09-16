@@ -1,0 +1,81 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "boundary-correspondence-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for boundary-correspondence/1: Two authored uses of one finite rational curve with exact definition, endpoint, parameter-domain, orientation, shell, and context agreement",
+    "forbiddenClaims": [
+      "Endpoint-only proximity",
+      "Curve fitting",
+      "Cross-context correspondence",
+      "More than two uses"
+    ]
+  },
+  "capability": "boundary-correspondence/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Two authored uses of one finite rational curve with exact definition, endpoint, parameter-domain, orientation, shell, and context agreement",
+      "Explicit periodic seam shift and cyclic boundary-use locations"
+    ],
+    "excluded": [
+      "Endpoint-only proximity",
+      "Curve fitting",
+      "Cross-context correspondence",
+      "More than two uses"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "BC-RATIONAL-LINE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BC-ORIENTATION-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BC-CONTEXT-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BC-DEFINITION-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/trim_sew.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/boundary-correspondence-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

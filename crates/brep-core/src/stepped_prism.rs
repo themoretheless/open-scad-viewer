@@ -10,9 +10,9 @@ const MAX_PROFILES: usize = 16;
 
 #[derive(Clone)]
 pub(crate) struct Layer {
-    low: f64,
-    high: f64,
-    profile: Profile,
+    pub(crate) low: f64,
+    pub(crate) high: f64,
+    pub(crate) profile: Profile,
 }
 fn unsupported(message: impl Into<String>) -> Error {
     Error::new("BREP_UNSUPPORTED_OPERATION", message)

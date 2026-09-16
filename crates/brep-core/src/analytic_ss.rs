@@ -149,8 +149,21 @@ pub fn complete_line_plane(
             UnresolvedReason::NearCoincidence,
         ));
     }
-    if let Err(_) =
-        crate::predicate_evidence::require_transverse_line_plane_evidence(start, end, plane)
+    let Ok(tolerance_context) =
+        cad_predicates::ToleranceContext::from_brep_tolerance_mm(options.distance_tolerance)
+    else {
+        return Ok(incomplete_report(
+            vec![0., 1.],
+            UnresolvedReason::NearCoincidence,
+        ));
+    };
+    if crate::predicate_evidence::require_transverse_line_plane_evidence_in_context(
+        start,
+        end,
+        plane,
+        &tolerance_context,
+    )
+    .is_err()
     {
         return Ok(incomplete_report(
             vec![0., 1.],

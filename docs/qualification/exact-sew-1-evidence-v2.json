@@ -1,0 +1,39 @@
+{
+  "$schema": "./brep-capability-evidence-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 2,
+  "evidenceId": "exact-sew-1-evidence-v2",
+  "capability": "exact-sew/1",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/exact-sew-1.json",
+  "runs": [
+    {
+      "id": "focused-native-workspace-2026-09-16",
+      "result": "pass",
+      "artifactHash": "eeca60b8a221ea440cf94e408c7eb75c85e2077980ea70a73c03c92008509cd6"
+    },
+    {
+      "id": "geometry-bridge-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "9c0d57048fb874986a137d1d44628ace23116b222840cd2a62c87cd459bddac3"
+    },
+    {
+      "id": "product-wasm-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "22a96f94997af629cca40ae368973be076c3ef872db1df2a0d373bcdd5ec15eb"
+    }
+  ],
+  "oracles": [
+    "trim_sew::endpoint_only_exact_sew_wrapper_fails_closed",
+    "trim_sew::correspondence_proof_sews_and_mutations_refuse",
+    "trim_sew::sew_gap_refuses_without_mutating_base",
+    "trim_sew::sew_duplicate_and_orientation_refuse",
+    "geometry_bridge::brep::certified_nurbs"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded local native, bridge, and product runs passed; this is not a G0/G1 clean external execution claim."
+  }
+}

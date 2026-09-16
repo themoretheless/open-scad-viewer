@@ -1,0 +1,103 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "authorized-heal-gap-le1-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Candidate finite cell for authorized-heal-gap-le1/1: Explicit endpoint snap or one-to-one rational curve refit with per-entity and cumulative displacement at most one tolerance-context cell",
+    "forbiddenClaims": [
+      "Silent healing",
+      "Edge splitting",
+      "Cross-context authority",
+      "Unbounded cumulative displacement"
+    ]
+  },
+  "capability": "authorized-heal-gap-le1/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Explicit endpoint snap or one-to-one rational curve refit with per-entity and cumulative displacement at most one tolerance-context cell",
+      "Cancellation, rollback, lineage, sew, audit, and idempotence checks"
+    ],
+    "excluded": [
+      "Silent healing",
+      "Edge splitting",
+      "Cross-context authority",
+      "Unbounded cumulative displacement"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "HEAL-ZERO-DISPLACEMENT-TRANSACTION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL-BUDGET-CONTEXT-LINEAGE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL-CANCEL-ROLLBACK-IDEMPOTENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL-POSITIVE-GAP-PRODUCT-SEAM",
+      "expected": "ResearchOnly",
+      "blocksQualification": false
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/transactions.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/authorized-heal-gap-le1-1-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "not-executed",
+    "notes": [
+      "Native zero-displacement and refusal tests exist, but positive-gap bridge/product evidence does not."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "HEAL-POSITIVE-GAP-PRODUCT-SEAM",
+      "status": "open",
+      "resolution": "No native positive-displacement success corpus or bridge/product entry point exists; retain Unavailable."
+    }
+  ]
+}

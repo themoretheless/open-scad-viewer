@@ -6,8 +6,9 @@
 
 use crate::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
-    StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs, is_uniform_bicubic_positive,
-    parse_b_spline_surface, parse_entities, refuse, refuse_mesh_payloads_common, step_header,
+    StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs,
+    is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common, step_header,
+    surface_from_b_spline_args, validate_linked_step_graph,
 };
 use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Result, surface::Surface};
@@ -185,7 +186,25 @@ fn refuse_open_face_payloads(text: &str) -> Result<()> {
 pub fn import_nurbs_step(text: &str) -> Result<(Model, FeatureCertificate)> {
     refuse_open_face_payloads(text)?;
     let entities = parse_entities(text);
-    let surface = parse_b_spline_surface(&entities)?;
+    let graph = validate_linked_step_graph(&entities, StepGraphRoot::OpenShell)?;
+    if graph.faces.len() != 1
+        || !graph.faces[0].hole_vertex_ids.is_empty()
+        || graph.faces[0].outer_vertex_ids.len() != 4
+    {
+        return Err(refuse(
+            "nurbs-step-bicubic-face/1 requires one linked four-edge untrimmed face",
+        ));
+    }
+    let surface_args = &entities
+        .get(&graph.faces[0].surface_id)
+        .ok_or_else(|| refuse("Linked face surface disappeared"))?
+        .1;
+    let surface = surface_from_b_spline_args(&entities, surface_args)?;
+    if !is_uniform_bicubic_positive(&surface) {
+        return Err(refuse(
+            "Imported surface outside freeform NURBS STEP (bicubic w≡1)",
+        ));
+    }
     let model = bicubic_open_face(surface)?;
     Ok((
         model,
@@ -303,6 +322,43 @@ END-ISO-10303-21;
                 "ISO-10303-21;\nDATA;\n#1=FACETED_BREP('',#2);\nENDSEC;\nEND-ISO-10303-21;\n"
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn refuses_orphan_surface_and_wrong_type_edge_reference() {
+        let model = bicubic_open_face(sample_bicubic()).unwrap();
+        let (text, _) = export_nurbs_step(&model).unwrap();
+        let surface_line = text
+            .lines()
+            .find(|line| line.contains("=B_SPLINE_SURFACE_WITH_KNOTS("))
+            .unwrap();
+        let orphan = surface_line.replacen(surface_line.split('=').next().unwrap(), "#999999", 1);
+        let with_orphan = text.replace(
+            "ENDSEC;\nEND-ISO-10303-21;",
+            &format!("{orphan}\nENDSEC;\nEND-ISO-10303-21;"),
+        );
+        assert_eq!(
+            import_nurbs_step(&with_orphan).unwrap_err().code,
+            "BREP_NURBS_STEP_REFUSED"
+        );
+
+        let wrong_type = text.replacen("EDGE_CURVE(", "CARTESIAN_POINT(", 1);
+        assert_eq!(
+            import_nurbs_step(&wrong_type).unwrap_err().code,
+            "BREP_NURBS_STEP_REFUSED"
+        );
+    }
+
+    #[test]
+    fn refuses_oversized_payload() {
+        let text = format!(
+            "ISO-10303-21;{}",
+            " ".repeat(crate::nurbs_step_shared::MAX_STEP_PAYLOAD_BYTES)
+        );
+        assert_eq!(
+            import_nurbs_step(&text).unwrap_err().code,
+            "BREP_NURBS_STEP_REFUSED"
         );
     }
 }

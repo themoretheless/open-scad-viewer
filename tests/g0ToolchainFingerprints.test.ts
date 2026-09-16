@@ -9,14 +9,13 @@ import {
   prepareQualificationRefresh, publishQualificationRefresh, refreshInputPaths,
 } from '../scripts/refresh-qualification-fingerprints.mjs'
 import {
-  G1_AMENDMENTS, G1_EXECUTORS, g1RefreshInputPaths,
-  prepareG1PlanRefresh, publishG1PlanRefresh,
+  G1_AMENDMENTS, g1RefreshInputPaths, prepareG1PlanRefresh,
 } from '../scripts/refresh-g1-plan.mjs'
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const fingerprintPath = resolve(
   repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v3.json',
+  'docs/qualification/g0-toolchain-fingerprints-v7.json',
 )
 const fingerprintV1Path = resolve(
   repositoryRoot,
@@ -59,14 +58,14 @@ describe('G0 toolchain fingerprints', () => {
   it('uses the frozen G0.2 schema id', () => {
     const doc = JSON.parse(readFileSync(fingerprintPath, 'utf8')) as FingerprintDoc
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v3')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v7')
     expect(doc).toMatchObject({
-      previousFingerprintId: 'g0-toolchain-fingerprints-v2',
-      previousFingerprintSha256: 'd040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76',
+      previousFingerprintId: 'g0-toolchain-fingerprints-v6',
+      previousFingerprintSha256: 'ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf',
     })
   })
 
-  it('keeps fingerprints v1 and v2 byte-immutable as historical evidence', () => {
+  it('keeps fingerprints v1 through v6 byte-immutable as historical evidence', () => {
     const v1 = JSON.parse(readFileSync(fingerprintV1Path, 'utf8')) as FingerprintDoc
     expect(v1.fingerprintId).toBe('g0-toolchain-fingerprints-v1')
     expect(v1.artifacts.length).toBeGreaterThan(0)
@@ -74,6 +73,14 @@ describe('G0 toolchain fingerprints', () => {
       .toBe('4c2a286ea9567ddef66d2a0335a4960bddc94921b662c9e34af063b480cb8af3')
     expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v2.json'))))
       .toBe('d040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76')
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v3.json'))))
+      .toBe('c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171')
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v4.json'))))
+      .toBe('38b9fac7b3e03a301b0dfdeadf514572f337feff37b186089d968f3afa9e5a46')
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v5.json'))))
+      .toBe('9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040')
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v6.json'))))
+      .toBe('ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf')
   })
 
   it('matches exact bytes for every listed artifact', () => {
@@ -103,7 +110,7 @@ describe('G0/G1 re-freeze generator', () => {
   }
   function prepare(root: string) {
     return prepareQualificationRefresh({
-      repositoryRoot: root, recordedAt: '2026-09-13',
+      repositoryRoot: root, recordedAt: '2026-09-16',
       reason: 'Test preparation of the current SVG/BRep binding re-freeze with all clean work reset.',
       observedRustcVersionLine: 'rustc 1.100.0-nightly (a36d05efa 2026-09-09)',
     })
@@ -114,7 +121,7 @@ describe('G0/G1 re-freeze generator', () => {
     const first = prepare(root)
     const second = prepare(root)
     expect(first.artifactBytes).toEqual(second.artifactBytes)
-    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v19')
+    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v24')
     expect(first.status).toMatchObject({
       qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
       completedWorkUnits: 0, completedCleanRuns: 0, plannedWorkUnits: 4740,
@@ -171,7 +178,7 @@ describe('G0/G1 re-freeze generator', () => {
   it('refuses a zero-counter freeze when the new candidate already has result bookkeeping', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v19/result.json')
+    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v24/result.json')
     mkdirSync(dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, '{"completedWorkUnits":1}\n')
     expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
@@ -180,26 +187,26 @@ describe('G0/G1 re-freeze generator', () => {
     expect(readFileSync(resultPath, 'utf8')).toBe('{"completedWorkUnits":1}\n')
   })
 
-  it('historical v19 executors retain run-index admission without executing or creating evidence', () => {
+  it('historical v23 executors retain run-index admission without executing or creating evidence', () => {
     const root = fixture()
     const historicalStatus = JSON.parse(readFileSync(resolve(repositoryRoot,
-      'docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json'), 'utf8')) as {
+      'docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json'), 'utf8')) as {
         inputSnapshot: { files: { path: string; sha256: string }[] }
       }
     for (const path of REFRESH_EXECUTORS) {
       // Version-only retargeting is reversible; prove this fixture is the exact
       // recorded executor, rather than merely assuming the old behavior survived.
       const historical = readFileSync(resolve(root, path), 'utf8')
-        .replaceAll('semantic-manifold-g1-plan-v20', 'semantic-manifold-g1-plan-v19')
-        .replaceAll('semantic-manifold-g1-candidate-run-v20', 'semantic-manifold-g1-candidate-run-v19')
-        .replace('G1 v20 clean-run', 'G1 v19 clean-run')
+        .replaceAll('semantic-manifold-g1-plan-v24', 'semantic-manifold-g1-plan-v23')
+        .replaceAll('semantic-manifold-g1-candidate-run-v24', 'semantic-manifold-g1-candidate-run-v23')
+        .replace('G1 v24 clean-run', 'G1 v23 clean-run')
       expect(sha256(Buffer.from(historical)))
         .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
       writeFileSync(resolve(root, path), historical)
     }
     publishQualificationRefresh(prepare(root))
-    // Removing this temporary archive proves neither executor falls back to v18.
-    rmSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v18.json'))
+    // Removing v22 proves the archived executors select v23 directly.
+    rmSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v22.json'))
     for (const path of REFRESH_EXECUTORS) {
       const result = spawnSync(process.execPath, [resolve(root, path),
         '--row', 'oracle-differential', '--env', 'ubuntu-node20', '--run-index', '999',
@@ -211,7 +218,7 @@ describe('G0/G1 re-freeze generator', () => {
   })
 })
 
-describe('G1 v20 append-only re-freeze generator', () => {
+describe('historical G1 v20-only re-freeze generator', () => {
   const temporaryRoots: string[] = []
   afterEach(() => {
     for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true })
@@ -225,71 +232,14 @@ describe('G1 v20 append-only re-freeze generator', () => {
     }
     return root
   }
-  function prepare(root: string) {
-    return prepareG1PlanRefresh({ version: 20, repositoryRoot: root, recordedAt: '2026-09-13',
-      reason: G1_AMENDMENTS[20].reason })
-  }
-
-  it('preserves G0 v3 and every archive while starting a deterministic empty v20 candidate', () => {
+  it('refuses current G0 drift instead of rewriting the frozen v20 candidate', () => {
     const root = fixture()
-    const prepared = prepare(root)
-    expect(prepared.artifactBytes).toEqual(prepare(root).artifactBytes)
-    expect(Object.keys(prepared.artifactBytes)).toEqual(['plan', 'status'])
-    expect(prepared.plan).toMatchObject({planId:'semantic-manifold-g1-plan-v20',
-      processAmendment:{previousPlanId:'semantic-manifold-g1-plan-v19',
-        previousPlanSha256:G1_AMENDMENTS[20].previousPlanSha256,qualificationClaim:'none'}})
-    expect(prepared.status).toMatchObject({completedWorkUnits:0,completedCleanRuns:0,
-      plannedWorkUnits:4740,qualificationClaim:'none',qualificationApproval:'not-approved'})
-    expect(prepared.status.archives).toHaveLength(23)
-    for (const path of Object.values(prepared.outputs)) expect(existsSync(resolve(root,path))).toBe(false)
-    publishG1PlanRefresh(prepared)
-    for (const archive of prepared.status.archives) {
-      expect(sha256(readFileSync(resolve(root, archive.path)))).toBe(archive.sha256)
-    }
-    expect(existsSync(resolve(root, 'output/qualification'))).toBe(false)
-    expect(() => publishG1PlanRefresh(prepared)).toThrow(/Refusing existing artifact/u)
-  })
-
-  it('refuses source races and cannot silently advance a G0 binding or historical snapshot', () => {
-    const root = fixture()
-    const prepared = prepare(root)
-    const source = resolve(root,'src/services/semanticProgramExecutor.ts')
-    writeFileSync(source, `${readFileSync(source,'utf8')}\n`)
-    expect(() => publishG1PlanRefresh(prepared)).toThrow(/changed during re-freeze/u)
-    for (const path of Object.values(prepared.outputs)) expect(existsSync(resolve(root,path))).toBe(false)
-    for (const path of ['package.json',G1_AMENDMENTS[20].previousStatus,
-      'tests/fixtures/manifold-plan-oracle-v1.json']) {
-      const root = fixture()
-      writeFileSync(resolve(root,path), `${readFileSync(resolve(root,path),'utf8')}\n`)
-      expect(() => prepare(root)).toThrow(/G0 binding drift|Historical archive changed|cannot be amended/u)
-    }
+    expect(() => prepareG1PlanRefresh({
+      version: 20, repositoryRoot: root, recordedAt: '2026-09-16',
+      reason: G1_AMENDMENTS[20].reason,
+    })).toThrow(/G0 binding drift/u)
     expect(() => prepareG1PlanRefresh({version:21,repositoryRoot:root,recordedAt:'2026-09-13',
       reason:'Unreviewed future version must be rejected'})).toThrow(/explicit reviewed amendment/u)
-  })
-
-  it('rejects existing v20 counters even if they appear after preparation', () => {
-    const root = fixture()
-    const prepared = prepare(root)
-    const resultPath = resolve(root,'output/qualification/semantic-manifold-g1-candidate-run-v20/result.json')
-    mkdirSync(dirname(resultPath),{recursive:true})
-    writeFileSync(resultPath,'{"completedWorkUnits":1}\n')
-    expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
-    expect(() => publishG1PlanRefresh(prepared)).toThrow(/already has execution bookkeeping/u)
-    expect(readFileSync(resultPath,'utf8')).toBe('{"completedWorkUnits":1}\n')
-  })
-
-  it('active executors read v20 and reject invalid work without importing v19 evidence', () => {
-    const root = fixture()
-    publishG1PlanRefresh(prepare(root))
-    rmSync(resolve(root,'docs/qualification/semantic-manifold-g1-plan-v19.json'))
-    for (const path of G1_EXECUTORS) {
-      const result = spawnSync(process.execPath,[resolve(root,path),
-        '--row','oracle-differential','--env','ubuntu-node20','--run-index','999'],
-      {encoding:'utf8',timeout:5000})
-      expect(result.status,result.stderr).toBe(2)
-      expect(result.stderr).toMatch(/exceeds cleanRunsRequired|Invalid run-index/u)
-      expect(existsSync(resolve(root,'output/qualification'))).toBe(false)
-    }
   })
 })
 

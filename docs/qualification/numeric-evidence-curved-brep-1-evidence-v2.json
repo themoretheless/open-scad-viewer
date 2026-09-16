@@ -1,0 +1,39 @@
+{
+  "$schema": "./brep-capability-evidence-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 2,
+  "evidenceId": "numeric-evidence-curved-brep-1-evidence-v2",
+  "capability": "numeric-evidence-curved-brep/1",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/numeric-evidence-curved-brep-1.json",
+  "runs": [
+    {
+      "id": "focused-native-workspace-2026-09-16",
+      "result": "pass",
+      "artifactHash": "eeca60b8a221ea440cf94e408c7eb75c85e2077980ea70a73c03c92008509cd6"
+    },
+    {
+      "id": "geometry-bridge-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "9c0d57048fb874986a137d1d44628ace23116b222840cd2a62c87cd459bddac3"
+    },
+    {
+      "id": "product-wasm-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "22a96f94997af629cca40ae368973be076c3ef872db1df2a0d373bcdd5ec15eb"
+    }
+  ],
+  "oracles": [
+    "predicate_evidence::evidence_matrix_composes_all_independent_claims",
+    "predicate_evidence::positional_bound_is_scale_aware_and_translation_independent",
+    "predicate_evidence::gray_band_and_context_mismatch_refuse_aggregate",
+    "predicate_evidence::evidence_resource_limit_is_finite",
+    "tests/brepMassProperties.test.ts::publishes finite certified mass and tessellation enclosures"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded local native, bridge, and product runs passed; this is not a G0/G1 clean external execution claim."
+  }
+}

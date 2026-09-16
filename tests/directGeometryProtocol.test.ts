@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   planGeometrySourceExecution,
@@ -101,14 +101,14 @@ function capabilities(): GeometryEngineRegistrySnapshot {
     routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
     engines: [
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
+        ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh],
         availability: 'available',
         unavailableReason: null,
       },
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
-        availability: 'unavailable',
-        unavailableReason: 'The B-rep provider is not deployed.',
+        ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep],
+        availability: 'available',
+        unavailableReason: null,
       },
     ],
   }
@@ -193,9 +193,9 @@ describe('direct production geometry protocol', () => {
   it('identifies the frozen production legacy-direct path without qualification claims', () => {
     expect(DIRECT_GEOMETRY_IDENTITY).toMatchObject({
       executionPath: 'legacy-direct-production',
-      engineKey: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
-      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
-      manifestIsolation: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].isolation,
+      engineKey: GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].engineKey,
+      manifestDigest: GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
+      manifestIsolation: GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].isolation,
       hostIsolation: 'disposable-node-worker-per-job',
       automaticFallback: false,
     })
@@ -203,7 +203,7 @@ describe('direct production geometry protocol', () => {
     expect(Object.isFrozen(DIRECT_GEOMETRY_IDENTITY)).toBe(true)
   })
 
-  it('validates bounded capabilities against both immutable manifests', () => {
+  it('validates bounded capabilities against both current immutable manifests', () => {
     const request = capabilitiesRequest()
     const snapshot = capabilities()
     expect(isDirectGeometryCapabilities(snapshot)).toBe(true)

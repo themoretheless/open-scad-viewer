@@ -1483,6 +1483,10 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     // Curved operands are fail-closed: a rejected analytic certificate must
     // never fall through to prism recognition, polygonal CSG, or Manifold.
     if has_curved_geometry {
+        if crate::nurbs_ss_g6::is_nurbs_boolean_candidate(a, b) {
+            return crate::nurbs_ss_g6::nurbs_boolean_imprint_solids(a, b, operation)
+                .map(|(model, _certificate)| model);
+        }
         if let Some(result) = crate::profile_imprint::boolean(a, b, operation)? {
             crate::solid_audit::audit_solid(&result)?;
             return Ok(result);

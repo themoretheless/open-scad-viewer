@@ -1,0 +1,26 @@
+{
+  "$schema": "./brep-capability-evidence-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 2,
+  "evidenceId": "authorized-heal-gap-le1-1-evidence-v2",
+  "capability": "authorized-heal-gap-le1/1",
+  "maturity": "Unavailable",
+  "state": "not-executed",
+  "plan": "docs/qualification/plans/authorized-heal-gap-le1-1.json",
+  "runs": [],
+  "oracles": [
+    "trim_sew::heal_plan_refuses_budget_context_and_missing_lineage",
+    "trim_sew::heal_transaction_cancel_rollback_and_idempotence"
+  ],
+  "unresolvedRows": [
+    {
+      "id": "HEAL-POSITIVE-GAP-PRODUCT-SEAM",
+      "status": "open",
+      "resolution": "No native positive-displacement success corpus or bridge/product entry point exists; retain Unavailable."
+    }
+  ],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "No positive-gap bridge/product run exists; capability remains Unavailable."
+  }
+}

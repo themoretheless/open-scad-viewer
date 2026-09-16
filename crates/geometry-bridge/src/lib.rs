@@ -22,8 +22,8 @@ pub mod brep_graph;
 pub mod brep_graph_runner;
 pub mod brep_identity;
 mod brep_json_size;
-pub mod brep_profile;
 pub mod brep_production;
+pub mod brep_profile;
 pub mod brep_provenance;
 pub mod brep_result;
 mod brep_scene_plan;
@@ -505,6 +505,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 .and_then(Value::as_u64)
                 .unwrap_or(300000) as usize,
         )?),
+        "brep_nurbs_certified_mass_properties" => {
+            let model: brep_core::Model = field(&v, "model")?;
+            encode(brep_core::analysis::certified_mass_properties(&model)?)
+        }
         "brep_nurbs_cylinder" => encode(brep_core::cylinder(
             field(&v, "radius")?,
             field(&v, "height")?,
@@ -591,6 +595,22 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "radius")?,
             field(&v, "segments")?,
         )?),
+        "brep_nurbs_audited_multi_edge_fillet" => {
+            let model: brep_core::Model = field(&v, "model")?;
+            encode(brep_core::audited_multi_edge_fillet(
+                &model,
+                &field::<Vec<usize>>(&v, "edges")?,
+                field(&v, "radius")?,
+            )?)
+        }
+        "brep_nurbs_audited_parallel_frame_sweep" => {
+            let frame_law: String = field(&v, "frameLaw")?;
+            encode(brep_core::audited_parallel_frame_sweep(
+                &field::<Vec<[f64; 2]>>(&v, "profile")?,
+                &field::<Vec<[f64; 3]>>(&v, "path")?,
+                &frame_law,
+            )?)
+        }
         "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
         "brep_nurbs_export_step" => {
             let (text, cert) = brep_core::export_step(&field(&v, "model")?)?;
@@ -611,6 +631,42 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     "capability": cert.capability,
                     "complete": cert.complete,
                     "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_export_step_v2" => {
+            let (text, cert, identity) = brep_core::export_step_v2(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": identity.preserved,
+                    "source": identity.source,
+                    "preservedCount": identity.preserved_count,
+                    "createdCount": identity.created_count,
+                    "lostCount": identity.lost_count,
+                }
+            }))
+        }
+        "brep_nurbs_import_step_v2" => {
+            let (model, cert, identity) = brep_core::import_step_v2(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": identity.preserved,
+                    "source": identity.source,
+                    "preservedCount": identity.preserved_count,
+                    "createdCount": identity.created_count,
+                    "lostCount": identity.lost_count,
                 }
             }))
         }
@@ -648,7 +704,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_trimmed" => {
-            let (model, cert) = brep_core::import_nurbs_step_trimmed(&field::<String>(&v, "text")?)?;
+            let (model, cert) =
+                brep_core::import_nurbs_step_trimmed(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -680,9 +737,54 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 }
             }))
         }
+        "brep_nurbs_export_step_solid_v2" => {
+            let (text, cert, identity) =
+                brep_core::export_nurbs_step_solid_v2(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": identity.preserved,
+                    "source": identity.source,
+                    "preservedCount": identity.preserved_count,
+                    "createdCount": identity.created_count,
+                    "lostCount": identity.lost_count,
+                }
+            }))
+        }
+        "brep_nurbs_import_step_solid_v2" => {
+            let (model, cert, identity) =
+                brep_core::import_nurbs_step_solid_v2(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": identity.preserved,
+                    "source": identity.source,
+                    "preservedCount": identity.preserved_count,
+                    "createdCount": identity.created_count,
+                    "lostCount": identity.lost_count,
+                }
+            }))
+        }
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }
+        "brep_nurbs_certified_tessellate" => encode(brep::certified_nurbs(
+            &field(&v, "model")?,
+            field(&v, "chordToleranceMm")?,
+            v.get("maxTriangles")
+                .and_then(Value::as_u64)
+                .unwrap_or(20_000) as usize,
+        )?),
         "brep_nurbs_display" => brep_display::dispatch(v),
         "brep_nurbs_to_polygon" => {
             let t = brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;

@@ -6,16 +6,24 @@ import {
   type SelectionTransfer,
   type TopoId,
   type TopoKind,
+  type RustChangeSet,
   isTopoId,
 } from '../../core/topologyLineage'
 
-export type { SelectionTransfer, TopoId, TopoKind, DurableTopologySnapshot }
+export type { SelectionTransfer, TopoId, TopoKind, DurableTopologySnapshot, RustChangeSet }
 
 export type SelectionRole = 'primary' | 'support' | 'derived'
 export type SelectionAnchor = {
   readonly id: TopoId
   readonly role: SelectionRole
   readonly parameterHint?: string
+}
+
+export interface DurableSelectionTransferSnapshot {
+  readonly schema: 1
+  readonly topology: DurableTopologySnapshot
+  readonly roles: readonly { readonly id: TopoId; readonly role: SelectionRole }[]
+  readonly anchors: readonly SelectionAnchor[]
 }
 
 /** Rebuild / ambiguity corpus fixture for N1 qualification evidence notes. */
@@ -31,28 +39,28 @@ export const N1_REBUILD_AMBIGUITY_CORPUS: readonly RebuildAmbiguityCase[] = Obje
   Object.freeze({
     id: 'N1-01-box-parameter-rebuild',
     kind: 'parameter-rebuild' as const,
-    preSelection: 'f:box-top' as TopoId,
+    preSelection: 'f:00000000000000000000000000000001',
     expected: 'unique' as const,
     notes: 'Parameter edit keeps face identity via anchor; no nearest-face',
   }),
   Object.freeze({
     id: 'N1-02-boolean-split',
     kind: 'boolean-split' as const,
-    preSelection: 'f:shared-wall' as TopoId,
+    preSelection: 'f:00000000000000000000000000000002',
     expected: 'ambiguous' as const,
     notes: 'Split must surface confirmation; never silent remap',
   }),
   Object.freeze({
     id: 'N1-03-symmetric-ambiguity',
     kind: 'symmetric-ambiguity' as const,
-    preSelection: 'e:mid-symmetry' as TopoId,
+    preSelection: 'e:00000000000000000000000000000003',
     expected: 'ambiguous' as const,
     notes: 'Symmetric solids refuse unique transfer without authored role',
   }),
   Object.freeze({
     id: 'N1-04-reordered-siblings',
     kind: 'reordered-siblings' as const,
-    preSelection: 'b:body-0' as TopoId,
+    preSelection: 'b:00000000000000000000000000000004',
     expected: 'unique' as const,
     notes: 'Sibling reorder preserves durable id; mesh order is not identity',
   }),
@@ -83,7 +91,9 @@ export function evaluateRebuildAmbiguity(
     return { ok: transfer.status === 'lost', transfer, notes: fixture.notes }
   }
   return {
-    ok: transfer.status === 'ambiguous' || transfer.status === 'lost',
+    ok: transfer.status === 'ambiguous'
+      || transfer.status === 'confirmation-required'
+      || transfer.status === 'lost',
     transfer,
     notes: fixture.notes,
   }
@@ -100,8 +110,26 @@ export class SelectionTransferService {
     return introduced
   }
 
+  /** Consume the authoritative Rust change set; no geometry fallback exists. */
+  applyRustChangeSet(changeSet: RustChangeSet): void {
+    this.lineage.applyChangeSet(changeSet)
+    for (const change of changeSet.changes) {
+      for (const child of change.children) {
+        const role = change.role === 'primary' || change.role === 'support' || change.role === 'derived'
+          ? change.role
+          : 'derived'
+        this.roles.set(child, role)
+        if (change.anchor !== null) {
+          this.anchors.set(child, Object.freeze({ id: child, role, parameterHint: change.anchor }))
+        }
+      }
+    }
+  }
+
   assignRole(id: TopoId, role: SelectionRole): void {
-    if (!isTopoId(id)) return
+    if (!isTopoId(id) || this.lineage.kindOf(id) === undefined) {
+      throw new Error('Cannot assign a role to an unknown topology ID')
+    }
     this.roles.set(id, role)
   }
 
@@ -111,7 +139,9 @@ export class SelectionTransferService {
 
   /** Parameter-rebuild correspondence anchor (no nearest-face guessing). */
   bindAnchor(anchor: SelectionAnchor): void {
-    if (!isTopoId(anchor.id)) return
+    if (!isTopoId(anchor.id) || this.lineage.kindOf(anchor.id) === undefined) {
+      throw new Error('Cannot anchor an unknown topology ID')
+    }
     this.anchors.set(anchor.id, Object.freeze({ ...anchor }))
     this.roles.set(anchor.id, anchor.role)
   }
@@ -156,14 +186,24 @@ export class SelectionTransferService {
     return this.transfer(selection)
   }
 
-  snapshot(selection: TopoId | null = null): DurableTopologySnapshot {
-    return this.lineage.snapshot(selection)
+  snapshot(selection: TopoId | null = null): DurableSelectionTransferSnapshot {
+    return Object.freeze({
+      schema: 1 as const,
+      topology: this.lineage.snapshot(selection),
+      roles: Object.freeze([...this.roles].map(([id, role]) => Object.freeze({ id, role }))),
+      anchors: Object.freeze([...this.anchors.values()].map(anchor => Object.freeze({ ...anchor }))),
+    })
   }
 
-  restore(snapshot: DurableTopologySnapshot): void {
-    this.lineage = TopologyLineage.restore(snapshot)
+  restore(snapshot: DurableSelectionTransferSnapshot | DurableTopologySnapshot): void {
+    const wrapped = 'topology' in snapshot
+    this.lineage = TopologyLineage.restore(wrapped ? snapshot.topology : snapshot)
     this.roles.clear()
     this.anchors.clear()
+    if (wrapped) {
+      for (const { id, role } of snapshot.roles) this.assignRole(id, role)
+      for (const anchor of snapshot.anchors) this.bindAnchor(anchor)
+    }
   }
 }
 

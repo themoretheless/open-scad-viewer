@@ -1,8 +1,8 @@
-use brep_core::{Model, cuboid, cylinder, extrude_polygon, extrude_polygon_with_holes};
+use brep_core::{Model, TopoId, cuboid, cylinder, extrude_polygon, extrude_polygon_with_holes};
 use std::collections::BTreeSet;
 
-fn ids(values: &[String]) -> BTreeSet<String> {
-    values.iter().cloned().collect()
+fn ids(values: &[TopoId]) -> BTreeSet<TopoId> {
+    values.iter().copied().collect()
 }
 
 fn cap(model: &Model, z: f64) -> usize {
@@ -398,7 +398,13 @@ fn frozen_constructor_matrix_validates_and_has_stable_identity_cardinality() {
         assert_eq!(model.1.edges.len(), model.edges.len(), "{name} edge ids");
         assert_eq!(model.1.faces.len(), model.faces.len(), "{name} face ids");
         let again = reindex_clone(&model);
-        again.validate().unwrap_or_else(|e| panic!("{name} reindex: {e}"));
-        assert_eq!(ids(&again.1.faces), ids(&model.1.faces), "{name} face stability");
+        again
+            .validate()
+            .unwrap_or_else(|e| panic!("{name} reindex: {e}"));
+        assert_eq!(
+            ids(&again.1.faces),
+            ids(&model.1.faces),
+            "{name} face stability"
+        );
     }
 }

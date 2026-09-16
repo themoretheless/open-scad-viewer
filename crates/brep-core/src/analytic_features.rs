@@ -8,8 +8,53 @@ use crate::analytic::ruled_loft;
 #[cfg(test)]
 use crate::cylinder;
 use crate::operations::{boolean, extrude_polygon};
-use crate::{Model, cuboid, tube};
+use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use crate::solid_audit::{SolidAuditCertificate, audit_solid};
+use crate::{ChangeSet, Model, cuboid, tube};
+use cad_predicates::ToleranceSpecIdentity;
 use nurbs_core::{Error, Result};
+
+/// Finite successor cell: exact, constant-radius construction on one or more
+/// vertical edges of an audited axis-aligned cuboid.
+pub const AUDITED_MULTI_EDGE_FILLET_CAPABILITY: &str = "analytic-multi-edge-fillet/1";
+/// Finite successor cell: a straight translation sweep. Bent Frenet/RMF paths
+/// remain refused because this author does not construct their exact frame law.
+pub const EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY: &str = "exact-parallel-frame-sweep/1";
+
+#[derive(Clone, Debug)]
+pub struct AuditedFeatureResult {
+    pub model: Model,
+    pub feature: FeatureCertificate,
+    pub context: ToleranceSpecIdentity,
+    pub evidence: ComposedEvidence,
+    pub audit: SolidAuditCertificate,
+    pub change_set: ChangeSet,
+    pub naming_complete: bool,
+}
+impl value_codec::Serialize for AuditedFeatureResult {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::json!({
+            "model":self.model,
+            "certificate":{
+                "capability":self.feature.capability,
+                "complete":self.feature.complete,
+                "notes":self.feature.notes
+            },
+            "context":{
+                "version":self.context.version,
+                "canonical":self.context.canonical
+            },
+            "evidenceClaimCount":self.evidence.claims.len(),
+            "audit":{
+                "ok":self.audit.ok,
+                "bodyCount":self.audit.body_count,
+                "shellCount":self.audit.shell_count
+            },
+            "changeSet":self.change_set,
+            "namingComplete":self.naming_complete
+        })
+    }
+}
 
 #[allow(dead_code)]
 fn unavailable(capability: &str) -> Error {
@@ -37,13 +82,49 @@ impl FeatureCertificate {
 }
 
 fn is_axis_aligned_cuboid(model: &Model) -> bool {
-    model.validate().is_ok()
-        && !model.faces.is_empty()
-        && model
+    if model.validate().is_err()
+        || model.vertices.len() != 8
+        || model.edges.len() != 12
+        || model.faces.len() != 6
+        || model.shells.len() != 1
+        || model.bodies.len() != 1
+        || model
             .faces
             .iter()
-            .all(|f| f.surface.degree_u == 1 && f.surface.degree_v == 1)
-        && model.edges.iter().all(|e| e.curve.degree == 1)
+            .any(|f| f.surface.degree_u != 1 || f.surface.degree_v != 1)
+        || model.edges.iter().any(|e| e.curve.degree != 1)
+    {
+        return false;
+    }
+    let (min, max) = model_bounds(model);
+    if (0..3).any(|axis| !min[axis].is_finite() || max[axis] - min[axis] <= 1e-12) {
+        return false;
+    }
+    let mut corners = std::collections::BTreeSet::new();
+    for vertex in &model.vertices {
+        let mut bits = 0u8;
+        for axis in 0..3 {
+            if (vertex.point[axis] - min[axis]).abs() <= 1e-9 {
+                continue;
+            }
+            if (vertex.point[axis] - max[axis]).abs() <= 1e-9 {
+                bits |= 1 << axis;
+            } else {
+                return false;
+            }
+        }
+        if !corners.insert(bits) {
+            return false;
+        }
+    }
+    model.edges.iter().all(|edge| {
+        let a = model.vertices[edge.vertices[0]].point;
+        let b = model.vertices[edge.vertices[1]].point;
+        (0..3)
+            .filter(|axis| (a[*axis] - b[*axis]).abs() > 1e-9)
+            .count()
+            == 1
+    })
 }
 
 fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
@@ -281,6 +362,49 @@ pub fn analytic_fillet_chain(
         },
     ))
 }
+
+/// Audited successor wrapper around the exact multi-edge fillet author.
+/// The result is published only after context-bound correspondence evidence,
+/// global solid audit, and persistent naming/ChangeSet evidence agree.
+pub fn audited_multi_edge_fillet(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
+    let (result, mut feature) = analytic_fillet_chain(model, edges, radius)?;
+    feature.capability = AUDITED_MULTI_EDGE_FILLET_CAPABILITY;
+    let context = result.tolerance_context()?;
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::correspondence(&context, 0., radius)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "multi-edge fillet authored shared-edge incidence",
+                result.persistent_naming_complete() && !result.1.faces.is_empty(),
+            )?,
+        ],
+    )?;
+    let audit = audit_solid(&result)?;
+    let naming_complete = result.persistent_naming_complete()
+        && result.1.faces.len() == result.faces.len()
+        && result.1.edges.len() == result.edges.len();
+    if !naming_complete {
+        return Err(refuse(
+            "BREP_ANALYTIC_FILLET_REFUSED",
+            "Audited multi-edge fillet lacks complete ChangeSet/naming evidence",
+        ));
+    }
+    Ok(AuditedFeatureResult {
+        change_set: result.1.change_set.clone(),
+        model: result,
+        feature,
+        context: context.spec_identity(),
+        evidence,
+        audit,
+        naming_complete,
+    })
+}
 pub fn analytic_chamfer(
     model: &Model,
     edge: usize,
@@ -339,13 +463,35 @@ pub fn analytic_chamfer(
     }
     let z0 = a[2].min(b[2]);
     let height = len;
-    // Right-triangular prism at the +X/+Y corner removes the edge with a planar bevel.
-    // Outer profile must be counter-clockwise (CCW) for extrusion.
-    let profile = [
-        [max[0] - distance, max[1]],
-        [max[0], max[1] - distance],
-        [max[0], max[1]],
-    ];
+    let x = (a[0] + b[0]) * 0.5;
+    let y = (a[1] + b[1]) * 0.5;
+    let sx = if (x - max[0]).abs() <= 1e-9 {
+        1.
+    } else if (x - min[0]).abs() <= 1e-9 {
+        -1.
+    } else {
+        return Err(refuse(
+            "BREP_ANALYTIC_CHAMFER_REFUSED",
+            "Selected edge is not on a cuboid corner",
+        ));
+    };
+    let sy = if (y - max[1]).abs() <= 1e-9 {
+        1.
+    } else if (y - min[1]).abs() <= 1e-9 {
+        -1.
+    } else {
+        return Err(refuse(
+            "BREP_ANALYTIC_CHAMFER_REFUSED",
+            "Selected edge is not on a cuboid corner",
+        ));
+    };
+    // Right-triangular cutter at the selected corner. Keep its profile CCW.
+    let mut profile = [[x - sx * distance, y], [x, y - sy * distance], [x, y]];
+    let area2 = (profile[1][0] - profile[0][0]) * (profile[2][1] - profile[0][1])
+        - (profile[1][1] - profile[0][1]) * (profile[2][0] - profile[0][0]);
+    if area2 < 0. {
+        profile.swap(0, 1);
+    }
     let cutter = extrude_polygon(&profile, z0, z0 + height)?;
     let result = boolean(model, &cutter, "difference")?;
     result.validate()?;
@@ -545,19 +691,57 @@ pub fn frame_law_ruled_sweep(
         FeatureCertificate {
             capability: "analytic-solid-loft/1",
             complete: true,
-            notes: vec!["frame_law_ruled_sweep_production"],
+            notes: vec!["frame_law_parallel_translation_walking_slice"],
         },
     ))
 }
 
-fn looks_like_finite_cylinder(model: &Model) -> bool {
-    let planar = model
-        .faces
-        .iter()
-        .filter(|f| f.surface.degree_u == 1 && f.surface.degree_v == 1)
-        .count();
-    let curved = model.faces.len().saturating_sub(planar);
-    planar == 2 && (4..=8).contains(&curved)
+/// Certified successor entry point for the only exact frame-law slice authored
+/// here: collinear stations with a constant parallel frame.
+pub fn audited_parallel_frame_sweep(
+    profile: &[[f64; 2]],
+    path: &[[f64; 3]],
+    frame_law: &str,
+) -> Result<AuditedFeatureResult> {
+    if !matches!(frame_law, "fixed" | "rotation-minimizing" | "rmf") {
+        return Err(refuse(
+            "BREP_FRAME_LAW_REFUSED",
+            "Certified successor sweep admits fixed/parallel RMF translation only",
+        ));
+    }
+    let (result, mut feature) = frame_law_ruled_sweep(profile, path, frame_law)?;
+    feature.capability = EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY;
+    let context = result.tolerance_context()?;
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::correspondence(&context, 0., 1.)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "parallel sweep shared section incidence",
+                result.persistent_naming_complete(),
+            )?,
+        ],
+    )?;
+    let audit = audit_solid(&result)?;
+    let naming_complete = result.persistent_naming_complete()
+        && result.1.faces.len() == result.faces.len()
+        && result.1.edges.len() == result.edges.len();
+    if !naming_complete {
+        return Err(refuse(
+            "BREP_FRAME_LAW_REFUSED",
+            "Certified successor sweep lacks complete ChangeSet/naming evidence",
+        ));
+    }
+    Ok(AuditedFeatureResult {
+        change_set: result.1.change_set.clone(),
+        model: result,
+        feature,
+        context: context.spec_identity(),
+        evidence,
+        audit,
+        naming_complete,
+    })
 }
 
 /// AS-01 cuboid (open top or closed offset) plus cylinder wall offset.
@@ -569,17 +753,47 @@ pub fn analytic_shell(model: &Model, thickness: f64) -> Result<(Model, FeatureCe
             "Shell thickness must be finite and positive",
         ));
     }
-    if looks_like_finite_cylinder(model) {
-        let (min, max) = model_bounds(model);
-        let radius = ((max[0] - min[0]).max(max[1] - min[1])) * 0.5;
-        let height = max[2] - min[2];
-        if radius <= thickness + 1e-5 {
+    if let Some(cylinder) = crate::intersections::recognize_cylinder(model)? {
+        if cylinder.radius <= thickness + 1e-5 {
             return Err(refuse(
                 "BREP_ANALYTIC_SHELL_REFUSED",
                 "Cylinder shell thickness collapses the wall",
             ));
         }
-        let result = tube(radius, radius - thickness, height)?;
+        let base = tube(
+            cylinder.radius,
+            cylinder.radius - thickness,
+            cylinder.half_height * 2.,
+        )?;
+        let origin = [
+            cylinder.center[0] - cylinder.axis[0] * cylinder.half_height,
+            cylinder.center[1] - cylinder.axis[1] * cylinder.half_height,
+            cylinder.center[2] - cylinder.axis[2] * cylinder.half_height,
+        ];
+        let result = crate::transform::affine(
+            &base,
+            [
+                [
+                    cylinder.frame[0][0],
+                    cylinder.frame[1][0],
+                    cylinder.axis[0],
+                    origin[0],
+                ],
+                [
+                    cylinder.frame[0][1],
+                    cylinder.frame[1][1],
+                    cylinder.axis[1],
+                    origin[1],
+                ],
+                [
+                    cylinder.frame[0][2],
+                    cylinder.frame[1][2],
+                    cylinder.axis[2],
+                    origin[2],
+                ],
+                [0., 0., 0., 1.],
+            ],
+        )?;
         result.validate()?;
         return Ok((
             result,
@@ -635,14 +849,10 @@ pub fn analytic_solid_loft(sections: &[Model]) -> Result<(Model, FeatureCertific
     let mut profiles = Vec::new();
     for section in sections {
         section.validate()?;
-        if section
-            .faces
-            .iter()
-            .any(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1)
-        {
+        if !is_axis_aligned_cuboid(section) {
             return Err(refuse(
                 "BREP_ANALYTIC_LOFT_REFUSED",
-                "Curved section solids are outside analytic-solid-loft/1 walking slice",
+                "SectionMatch walking slice requires axis-aligned cuboid section carriers",
             ));
         }
         let (min, max) = model_bounds(section);
@@ -980,6 +1190,30 @@ mod tests {
     }
 
     #[test]
+    fn successor_multi_edge_fillet_is_context_audit_and_naming_bound() {
+        let model = cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
+        let edges = model
+            .edges
+            .iter()
+            .enumerate()
+            .filter_map(|(i, edge)| {
+                let a = model.vertices[edge.vertices[0]].point;
+                let b = model.vertices[edge.vertices[1]].point;
+                ((a[0] - b[0]).abs() <= 1e-12 && (a[1] - b[1]).abs() <= 1e-12).then_some(i)
+            })
+            .take(2)
+            .collect::<Vec<_>>();
+        let certified = audited_multi_edge_fillet(&model, &edges, 0.5).unwrap();
+        assert_eq!(
+            certified.feature.capability,
+            AUDITED_MULTI_EDGE_FILLET_CAPABILITY
+        );
+        assert_eq!(certified.context, certified.evidence.context);
+        assert!(certified.audit.ok && certified.naming_complete);
+        assert!(!certified.change_set.changes.is_empty());
+    }
+
+    #[test]
     fn cylinder_shell_offset() {
         let model = cylinder(4., 6.).unwrap();
         let (out, cert) = analytic_shell(&model, 0.5).unwrap();
@@ -1033,6 +1267,35 @@ mod tests {
     }
 
     #[test]
+    fn analytic_chamfer_honors_each_selected_vertical_corner() {
+        let model = cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
+        for [x, y] in [[0., 0.], [10., 0.], [10., 8.], [0., 8.]] {
+            let edge = model
+                .edges
+                .iter()
+                .position(|edge| {
+                    let a = model.vertices[edge.vertices[0]].point;
+                    let b = model.vertices[edge.vertices[1]].point;
+                    (a[0] - b[0]).abs() <= 1e-12
+                        && (a[1] - b[1]).abs() <= 1e-12
+                        && (a[0] - x).abs() <= 1e-9
+                        && (a[1] - y).abs() <= 1e-9
+                })
+                .unwrap();
+            let (out, _) = analytic_chamfer(&model, edge, 1.).unwrap();
+            out.validate().unwrap();
+            assert!(!out.edges.iter().any(|edge| {
+                let a = out.vertices[edge.vertices[0]].point;
+                let b = out.vertices[edge.vertices[1]].point;
+                (a[0] - b[0]).abs() <= 1e-9
+                    && (a[1] - b[1]).abs() <= 1e-9
+                    && (a[0] - x).abs() <= 1e-9
+                    && (a[1] - y).abs() <= 1e-9
+            }));
+        }
+    }
+
+    #[test]
     fn mesh_bevel_cannot_be_claimed_via_curved_chamfer() {
         let model = cylinder(2., 4.).unwrap();
         assert_eq!(
@@ -1050,7 +1313,10 @@ mod tests {
         )
         .unwrap();
         assert!(cert.complete);
-        assert!(cert.notes.contains(&"frame_law_ruled_sweep_production"));
+        assert!(
+            cert.notes
+                .contains(&"frame_law_parallel_translation_walking_slice")
+        );
         out.validate().unwrap();
     }
 
@@ -1069,6 +1335,29 @@ mod tests {
     }
 
     #[test]
+    fn successor_parallel_sweep_certifies_and_bent_rmf_refuses() {
+        let profile = [[0., 0.], [2., 0.], [2., 1.], [0., 1.]];
+        let certified =
+            audited_parallel_frame_sweep(&profile, &[[3., -1., 0.], [3., -1., 4.]], "rmf").unwrap();
+        assert_eq!(
+            certified.feature.capability,
+            EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY
+        );
+        assert!(certified.audit.ok && certified.naming_complete);
+        assert_eq!(certified.context, certified.evidence.context);
+        assert_eq!(
+            audited_parallel_frame_sweep(
+                &profile,
+                &[[0., 0., 0.], [0., 0., 2.], [0., 1., 4.]],
+                "rmf",
+            )
+            .unwrap_err()
+            .code,
+            "BREP_FRAME_LAW_REFUSED"
+        );
+    }
+
+    #[test]
     fn frame_law_refuses_unknown_law() {
         assert_eq!(
             frame_law_ruled_sweep(
@@ -1079,6 +1368,40 @@ mod tests {
             .unwrap_err()
             .code,
             "BREP_FRAME_LAW_REFUSED"
+        );
+    }
+
+    #[test]
+    fn cylinder_shell_preserves_rigid_placement() {
+        let base = cylinder(4., 6.).unwrap();
+        let placed = crate::transform::affine(
+            &base,
+            [
+                [0., 0., 1., 7.],
+                [1., 0., 0., -3.],
+                [0., 1., 0., 5.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let (shelled, _) = analytic_shell(&placed, 0.5).unwrap();
+        let (a_min, a_max) = model_bounds(&placed);
+        let (b_min, b_max) = model_bounds(&shelled);
+        for axis in 0..3 {
+            assert!((a_min[axis] - b_min[axis]).abs() < 1e-8);
+            assert!((a_max[axis] - b_max[axis]).abs() < 1e-8);
+        }
+    }
+
+    #[test]
+    fn solid_loft_refuses_nonrectangular_section_carriers() {
+        let triangle = extrude_polygon(&[[0., 0.], [2., 0.], [0., 2.]], 0., 1.).unwrap();
+        let box_section = cuboid([0., 0., 4.], [2., 2., 5.]).unwrap();
+        assert_eq!(
+            analytic_solid_loft(&[triangle, box_section])
+                .unwrap_err()
+                .code,
+            "BREP_ANALYTIC_LOFT_REFUSED"
         );
     }
 

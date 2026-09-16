@@ -1,0 +1,37 @@
+{
+  "$schema": "./brep-capability-evidence-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 2,
+  "evidenceId": "analytic-multi-edge-fillet-1-evidence-v2",
+  "capability": "analytic-multi-edge-fillet/1",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/analytic-multi-edge-fillet-1.json",
+  "runs": [
+    {
+      "id": "focused-native-workspace-2026-09-16",
+      "result": "pass",
+      "artifactHash": "eeca60b8a221ea440cf94e408c7eb75c85e2077980ea70a73c03c92008509cd6"
+    },
+    {
+      "id": "geometry-bridge-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "9c0d57048fb874986a137d1d44628ace23116b222840cd2a62c87cd459bddac3"
+    },
+    {
+      "id": "product-wasm-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "22a96f94997af629cca40ae368973be076c3ef872db1df2a0d373bcdd5ec15eb"
+    }
+  ],
+  "oracles": [
+    "analytic_features::successor_multi_edge_fillet_is_context_audit_and_naming_bound",
+    "geometry_bridge::tests::audited_feature_successors_cross_the_bridge_with_certificates",
+    "tests/brepMassProperties.test.ts::publishes audited finite feature successors and refuses bent frames"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded local native, bridge, and product runs passed; this is not a G0/G1 clean external execution claim."
+  }
+}

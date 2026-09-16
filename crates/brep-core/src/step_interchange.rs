@@ -10,13 +10,345 @@ use crate::analytic::{cylinder, frustum, sphere, torus, tube};
 use crate::analytic_features::FeatureCertificate;
 use crate::intersections::{recognize_cone, recognize_cylinder, recognize_sphere, recognize_torus};
 use crate::transform;
-use crate::{Model, cuboid};
+use crate::{Model, TopoId, TopoKind, cuboid};
 use nurbs_core::{Error, Result};
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn refuse(message: &str) -> Error {
     Error::new("BREP_STEP_REFUSED", message)
+}
+
+pub const STEP_INTERCHANGE_V2_CAPABILITY: &str = "step-interchange/2";
+
+#[derive(Clone, Debug)]
+pub struct StepIdentityReport {
+    pub preserved: bool,
+    pub source: &'static str,
+    pub preserved_count: usize,
+    pub created_count: usize,
+    pub lost_count: usize,
+}
+
+fn topology_count(model: &Model) -> usize {
+    model.vertices.len()
+        + model.edges.len()
+        + model.loops.len()
+        + model.faces.len()
+        + model.shells.len()
+        + model.bodies.len()
+}
+
+fn metadata_rows(model: &Model) -> [(&'static str, TopoKind, &[TopoId]); 6] {
+    [
+        ("VERTEX_POINT", TopoKind::Vertex, &model.1.vertices),
+        ("EDGE_CURVE", TopoKind::Edge, &model.1.edges),
+        ("EDGE_LOOP", TopoKind::Loop, &model.1.loops),
+        ("ADVANCED_FACE", TopoKind::Face, &model.1.faces),
+        ("CLOSED_SHELL", TopoKind::Shell, &model.1.shells),
+        ("SOLID_BREP", TopoKind::Body, &model.1.bodies),
+    ]
+}
+
+/// Internal AP242 name metadata. The vector index and opaque 128-bit TopoId,
+/// never the Part 21 instance number, are authoritative.
+pub(crate) fn attach_v2_identity(text: &str, model: &Model) -> Result<String> {
+    let mut next = [0usize; 6];
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let mut rewritten = line.to_string();
+        for (slot, (entity_ty, kind, ids)) in metadata_rows(model).iter().enumerate() {
+            let is_body = *entity_ty == "SOLID_BREP"
+                && (line.contains("=MANIFOLD_SOLID_BREP(") || line.contains("=BREP_WITH_VOIDS("));
+            if (!is_body && !line.contains(&format!("={entity_ty}("))) || next[slot] >= ids.len() {
+                continue;
+            }
+            let marker = format!(
+                "OSCAD_TOPO/2|{}|{}|{}",
+                kind.as_str(),
+                next[slot],
+                ids[next[slot]]
+            );
+            let open = line
+                .find('(')
+                .ok_or_else(|| refuse("STEP topology entity has no argument list"))?;
+            let rest = &line[open + 1..];
+            let quote_end = rest
+                .find('\'')
+                .and_then(|first| rest[first + 1..].find('\'').map(|last| first + 1 + last));
+            let Some(quote_end) = quote_end else {
+                return Err(refuse("STEP topology entity has no name field"));
+            };
+            let first_quote = open + 1 + rest.find('\'').unwrap();
+            let last_quote = open + 1 + quote_end;
+            rewritten = format!(
+                "{}'{}'{}",
+                &line[..first_quote],
+                marker,
+                &line[last_quote + 1..]
+            );
+            next[slot] += 1;
+            break;
+        }
+        out.push(rewritten);
+    }
+    for (slot, (_, _, ids)) in metadata_rows(model).iter().enumerate() {
+        if next[slot] != ids.len() {
+            return Err(refuse(
+                "STEP topology graph does not bijectively cover model identities",
+            ));
+        }
+    }
+    Ok(out.join("\n") + "\n")
+}
+
+fn metadata_name(args: &str) -> Option<&str> {
+    let start = args.find('\'')? + 1;
+    let end = args[start..].find('\'')? + start;
+    Some(&args[start..end])
+}
+
+pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepIdentityReport> {
+    let entities = parse_entities(text);
+    let mut found = BTreeMap::<(TopoKind, usize), TopoId>::new();
+    let mut seen_ids = BTreeSet::new();
+    for (ty, args) in entities.values() {
+        let Some(name) = metadata_name(args) else {
+            continue;
+        };
+        let Some(payload) = name.strip_prefix("OSCAD_TOPO/2|") else {
+            continue;
+        };
+        let mut parts = payload.split('|');
+        let kind = TopoKind::parse(parts.next().unwrap_or(""))
+            .ok_or_else(|| refuse("STEP identity metadata has unknown topology kind"))?;
+        let index = parts
+            .next()
+            .ok_or_else(|| refuse("STEP identity metadata is missing index"))?
+            .parse::<usize>()
+            .map_err(|_| refuse("STEP identity metadata index is invalid"))?;
+        let id = TopoId::parse(
+            parts
+                .next()
+                .ok_or_else(|| refuse("STEP identity metadata is missing TopoId"))?,
+        )
+        .map_err(refuse)?;
+        if parts.next().is_some() || id.kind() != kind {
+            return Err(refuse("STEP identity metadata kind mismatch"));
+        }
+        let expected_ty = match kind {
+            TopoKind::Vertex => ty == "VERTEX_POINT",
+            TopoKind::Edge => ty == "EDGE_CURVE",
+            TopoKind::Loop => ty == "EDGE_LOOP",
+            TopoKind::Face => ty == "ADVANCED_FACE",
+            TopoKind::Shell => ty == "CLOSED_SHELL",
+            TopoKind::Body => ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS",
+            TopoKind::ControlPoint => false,
+        };
+        if !expected_ty || found.insert((kind, index), id).is_some() || !seen_ids.insert(id) {
+            return Err(refuse("Duplicate or misplaced STEP identity metadata"));
+        }
+    }
+    if found.is_empty() {
+        let count = topology_count(model);
+        return Ok(StepIdentityReport {
+            preserved: false,
+            source: "external-step",
+            preserved_count: 0,
+            created_count: count,
+            lost_count: count,
+        });
+    }
+    let expected = topology_count(model);
+    if found.len() != expected {
+        return Err(refuse("Partial STEP identity metadata is not admitted"));
+    }
+    let mut remap = BTreeMap::<TopoId, TopoId>::new();
+    let assign = |kind: TopoKind,
+                  target: &mut [TopoId],
+                  remap: &mut BTreeMap<TopoId, TopoId>|
+     -> Result<()> {
+        for (index, value) in target.iter_mut().enumerate() {
+            let replacement = *found
+                .get(&(kind, index))
+                .ok_or_else(|| refuse("STEP identity metadata is not topology-bijective"))?;
+            remap.insert(*value, replacement);
+            *value = replacement;
+        }
+        Ok(())
+    };
+    assign(TopoKind::Vertex, &mut model.1.vertices, &mut remap)?;
+    assign(TopoKind::Edge, &mut model.1.edges, &mut remap)?;
+    assign(TopoKind::Loop, &mut model.1.loops, &mut remap)?;
+    assign(TopoKind::Face, &mut model.1.faces, &mut remap)?;
+    assign(TopoKind::Shell, &mut model.1.shells, &mut remap)?;
+    assign(TopoKind::Body, &mut model.1.bodies, &mut remap)?;
+    model.1.change_set.nodes = model
+        .1
+        .change_set
+        .nodes
+        .iter()
+        .map(|(id, kind)| (remap.get(id).copied().unwrap_or(*id), *kind))
+        .collect();
+    for change in &mut model.1.change_set.changes {
+        for id in change.parents.iter_mut().chain(&mut change.children) {
+            if let Some(replacement) = remap.get(id) {
+                *id = *replacement;
+            }
+        }
+    }
+    for relation in &mut model.1.lineage {
+        for id in relation.parents.iter_mut().chain(&mut relation.children) {
+            if let Some(replacement) = remap.get(id) {
+                *id = *replacement;
+            }
+        }
+    }
+    for (kind, ids) in [
+        (TopoKind::Vertex, model.1.vertices.as_slice()),
+        (TopoKind::Edge, model.1.edges.as_slice()),
+        (TopoKind::Loop, model.1.loops.as_slice()),
+        (TopoKind::Face, model.1.faces.as_slice()),
+        (TopoKind::Shell, model.1.shells.as_slice()),
+        (TopoKind::Body, model.1.bodies.as_slice()),
+    ] {
+        model
+            .1
+            .change_set
+            .nodes
+            .extend(ids.iter().copied().map(|id| (id, kind)));
+    }
+    model
+        .1
+        .change_set
+        .validate()
+        .map_err(|_| refuse("STEP identity metadata produces invalid lineage"))?;
+    Ok(StepIdentityReport {
+        preserved: true,
+        source: "internal-metadata",
+        preserved_count: expected,
+        created_count: 0,
+        lost_count: 0,
+    })
+}
+
+pub(crate) fn add_v2_context(text: &str) -> String {
+    let addition = "#900000000=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));\n\
+#900000001=(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.));\n\
+#900000002=(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT());\n\
+#900000003=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#900000000,#900000001,#900000002))REPRESENTATION_CONTEXT('','3D'));\n";
+    text.replacen(
+        "ENDSEC;\nEND-ISO-10303-21;",
+        &format!("{addition}ENDSEC;\nEND-ISO-10303-21;"),
+        1,
+    )
+}
+
+pub(crate) fn v2_length_scale(text: &str) -> Result<f64> {
+    let upper = text.to_ascii_uppercase().replace(' ', "");
+    let mut scales: Vec<f64> = Vec::new();
+    let mut rest = upper.as_str();
+    while let Some(at) = rest.find("SI_UNIT(") {
+        rest = &rest[at + "SI_UNIT(".len()..];
+        let Some(end) = rest.find(')') else { break };
+        let args = &rest[..end];
+        if args.ends_with(",.METRE.") {
+            let prefix = args.split(',').next().unwrap_or("");
+            scales.push(match prefix {
+                ".MILLI." => 1.,
+                ".CENTI." => 10.,
+                "$" => 1000.,
+                _ => {
+                    return Err(refuse(
+                        "STEP /2 length SI prefix is outside the finite subset",
+                    ));
+                }
+            });
+        }
+        rest = &rest[end + 1..];
+    }
+    if scales.is_empty() || !upper.contains("GLOBAL_UNIT_ASSIGNED_CONTEXT") {
+        return Err(refuse(
+            "STEP /2 requires an SI length unit and global unit context",
+        ));
+    }
+    if scales
+        .iter()
+        .any(|scale| (*scale - scales[0]).abs() > f64::EPSILON)
+    {
+        return Err(refuse("STEP /2 contains conflicting length units"));
+    }
+    Ok(scales[0])
+}
+
+pub(crate) fn validate_v2_finite_subset(text: &str) -> Result<()> {
+    let mut instance_ids = BTreeSet::new();
+    let flat = text.replace(['\n', '\r'], " ");
+    for chunk in flat
+        .split(';')
+        .map(str::trim)
+        .filter(|row| row.starts_with('#'))
+    {
+        let (id, _) = chunk
+            .split_once('=')
+            .ok_or_else(|| refuse("STEP /2 entity row is malformed"))?;
+        let id = id
+            .trim_start_matches('#')
+            .parse::<usize>()
+            .map_err(|_| refuse("STEP /2 entity number is malformed"))?;
+        if !instance_ids.insert(id) {
+            return Err(refuse(
+                "STEP /2 contains a duplicate Part 21 instance number",
+            ));
+        }
+    }
+    let entities = parse_entities(text);
+    let allowed = [
+        "APPLICATION_CONTEXT",
+        "ADVANCED_FACE",
+        "AXIS2_PLACEMENT_3D",
+        "B_SPLINE_SURFACE_WITH_KNOTS",
+        "BREP_WITH_VOIDS",
+        "CARTESIAN_POINT",
+        "CIRCLE",
+        "CLOSED_SHELL",
+        "COMPLEX",
+        "CONICAL_SURFACE",
+        "CYLINDRICAL_SURFACE",
+        "DIRECTION",
+        "EDGE_CURVE",
+        "EDGE_LOOP",
+        "FACE_BOUND",
+        "FACE_OUTER_BOUND",
+        "ITEM_DEFINED_TRANSFORMATION",
+        "LINE",
+        "MANIFOLD_SOLID_BREP",
+        "OPEN_SHELL",
+        "ORIENTED_EDGE",
+        "PCURVE",
+        "PLANE",
+        "SHELL_BASED_SURFACE_MODEL",
+        "SPHERICAL_SURFACE",
+        "SURFACE_CURVE",
+        "TOROIDAL_SURFACE",
+        "VECTOR",
+        "VERTEX_POINT",
+    ];
+    for (ty, args) in entities.values() {
+        if !allowed.contains(&ty.as_str()) {
+            return Err(refuse(&format!(
+                "STEP /2 entity type {ty} is outside the finite subset"
+            )));
+        }
+        if ty == "COMPLEX"
+            && !(args.contains("SI_UNIT") || args.contains("GEOMETRIC_REPRESENTATION_CONTEXT"))
+        {
+            return Err(refuse(
+                "STEP /2 complex entity is outside the unit/context subset",
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug)]
@@ -1109,28 +1441,176 @@ fn refuse_mesh_payloads(text: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_advanced_face_refs(entities: &BTreeMap<usize, (String, String)>) -> Result<()> {
-    for (_id, (ty, args)) in entities {
-        if ty != "ADVANCED_FACE" {
+fn entity_refs(args: &str) -> Vec<usize> {
+    let bytes = args.as_bytes();
+    let mut refs = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'#' {
+            i += 1;
             continue;
         }
-        let refs: Vec<&str> = args.split(',').collect();
-        let surf = refs.iter().rev().find_map(|t| {
-            let t = t.trim().trim_start_matches('#');
-            if t.chars().all(|c| c.is_ascii_digit()) {
-                t.parse::<usize>().ok()
-            } else {
-                None
+        i += 1;
+        let start = i;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            i += 1;
+        }
+        if start < i {
+            if let Ok(id) = args[start..i].parse() {
+                refs.push(id);
             }
-        });
-        let Some(sid) = surf else {
-            return Err(refuse("ADVANCED_FACE missing surface reference"));
-        };
-        if !entities.contains_key(&sid) {
-            return Err(refuse("ADVANCED_FACE surface reference broken"));
         }
     }
+    refs
+}
+
+fn require_entity_type(
+    entities: &BTreeMap<usize, (String, String)>,
+    id: usize,
+    allowed: &[&str],
+    owner: &str,
+) -> Result<()> {
+    let Some((ty, _)) = entities.get(&id) else {
+        return Err(refuse(&format!("{owner} reference #{id} is broken")));
+    };
+    if !allowed.contains(&ty.as_str()) {
+        return Err(refuse(&format!(
+            "{owner} reference #{id} has type {ty}, expected {}",
+            allowed.join("|")
+        )));
+    }
     Ok(())
+}
+
+/// Validate the exact topology chain reachable from MANIFOLD_SOLID_BREP and
+/// return its dependency closure. Orphan entities are deliberately excluded
+/// from surface recognition and the curved CIRCLE gate.
+fn validate_solid_graph(entities: &BTreeMap<usize, (String, String)>) -> Result<BTreeSet<usize>> {
+    let solids: Vec<usize> = entities
+        .iter()
+        .filter_map(|(id, (ty, _))| (ty == "MANIFOLD_SOLID_BREP").then_some(*id))
+        .collect();
+    if solids.len() != 1 {
+        return Err(refuse(
+            "Analytic STEP requires exactly one MANIFOLD_SOLID_BREP",
+        ));
+    }
+    let mut closure = BTreeSet::new();
+    let solid = solids[0];
+    closure.insert(solid);
+    let solid_refs = entity_refs(&entities[&solid].1);
+    if solid_refs.len() != 1 {
+        return Err(refuse(
+            "MANIFOLD_SOLID_BREP must reference exactly one CLOSED_SHELL",
+        ));
+    }
+    let shell = solid_refs[0];
+    require_entity_type(entities, shell, &["CLOSED_SHELL"], "MANIFOLD_SOLID_BREP")?;
+    closure.insert(shell);
+    let faces = entity_refs(&entities[&shell].1);
+    if faces.is_empty() {
+        return Err(refuse("CLOSED_SHELL must reference ADVANCED_FACE entities"));
+    }
+    for face in faces {
+        require_entity_type(entities, face, &["ADVANCED_FACE"], "CLOSED_SHELL")?;
+        closure.insert(face);
+        let refs = entity_refs(&entities[&face].1);
+        if refs.len() < 2 {
+            return Err(refuse(
+                "ADVANCED_FACE requires at least one bound and one surface",
+            ));
+        }
+        let surface = *refs.last().unwrap();
+        require_entity_type(
+            entities,
+            surface,
+            &[
+                "PLANE",
+                "CYLINDRICAL_SURFACE",
+                "CONICAL_SURFACE",
+                "SPHERICAL_SURFACE",
+                "TOROIDAL_SURFACE",
+            ],
+            "ADVANCED_FACE",
+        )?;
+        closure.insert(surface);
+        for bound in &refs[..refs.len() - 1] {
+            require_entity_type(
+                entities,
+                *bound,
+                &["FACE_OUTER_BOUND", "FACE_BOUND"],
+                "ADVANCED_FACE",
+            )?;
+            closure.insert(*bound);
+            let loops = entity_refs(&entities[bound].1);
+            if loops.len() != 1 {
+                return Err(refuse("FACE bound must reference exactly one EDGE_LOOP"));
+            }
+            let loop_id = loops[0];
+            require_entity_type(entities, loop_id, &["EDGE_LOOP"], "FACE bound")?;
+            closure.insert(loop_id);
+            let oriented_edges = entity_refs(&entities[&loop_id].1);
+            if oriented_edges.is_empty() {
+                return Err(refuse("EDGE_LOOP must reference ORIENTED_EDGE entities"));
+            }
+            for oriented in oriented_edges {
+                require_entity_type(entities, oriented, &["ORIENTED_EDGE"], "EDGE_LOOP")?;
+                closure.insert(oriented);
+                let edge_refs = entity_refs(&entities[&oriented].1);
+                if edge_refs.len() != 1 {
+                    return Err(refuse(
+                        "ORIENTED_EDGE must reference exactly one EDGE_CURVE",
+                    ));
+                }
+                let edge = edge_refs[0];
+                require_entity_type(entities, edge, &["EDGE_CURVE"], "ORIENTED_EDGE")?;
+                closure.insert(edge);
+                let geometry_refs = entity_refs(&entities[&edge].1);
+                if geometry_refs.len() != 3 {
+                    return Err(refuse(
+                        "EDGE_CURVE must reference two vertices and one curve",
+                    ));
+                }
+                for vertex in &geometry_refs[..2] {
+                    require_entity_type(entities, *vertex, &["VERTEX_POINT"], "EDGE_CURVE")?;
+                    closure.insert(*vertex);
+                    let point_refs = entity_refs(&entities[vertex].1);
+                    if point_refs.len() != 1 {
+                        return Err(refuse(
+                            "VERTEX_POINT must reference exactly one CARTESIAN_POINT",
+                        ));
+                    }
+                    require_entity_type(
+                        entities,
+                        point_refs[0],
+                        &["CARTESIAN_POINT"],
+                        "VERTEX_POINT",
+                    )?;
+                    closure.insert(point_refs[0]);
+                }
+                let curve = geometry_refs[2];
+                require_entity_type(entities, curve, &["LINE", "CIRCLE"], "EDGE_CURVE")?;
+                closure.insert(curve);
+            }
+        }
+    }
+
+    // Include geometric placement dependencies, but only from already-linked
+    // topology/surface/curve entities.
+    let mut frontier: Vec<usize> = closure.iter().copied().collect();
+    while let Some(id) = frontier.pop() {
+        for reference in entity_refs(&entities[&id].1) {
+            if !entities.contains_key(&reference) {
+                return Err(refuse(&format!(
+                    "Linked STEP entity #{id} has broken dependency #{reference}"
+                )));
+            }
+            if closure.insert(reference) {
+                frontier.push(reference);
+            }
+        }
+    }
+    Ok(closure)
 }
 
 fn curved_requires_circle(kind: &AnalyticKind) -> bool {
@@ -1149,17 +1629,135 @@ pub fn export_step(model: &Model) -> Result<(String, FeatureCertificate)> {
     export_kind(&kind)
 }
 
+fn mat_mul(a: [[f64; 4]; 4], b: [[f64; 4]; 4]) -> [[f64; 4]; 4] {
+    std::array::from_fn(|i| std::array::from_fn(|j| (0..4).map(|k| a[i][k] * b[k][j]).sum()))
+}
+
+fn rigid_axis_matrix(
+    origin: [f64; 3],
+    axis: [f64; 3],
+    reference: [f64; 3],
+) -> Result<[[f64; 4]; 4]> {
+    let normalize = |v: [f64; 3]| -> Result<[f64; 3]> {
+        let n = v[0].hypot(v[1]).hypot(v[2]);
+        if !n.is_finite() || n <= 1e-12 {
+            return Err(refuse("STEP rigid placement has a degenerate direction"));
+        }
+        Ok([v[0] / n, v[1] / n, v[2] / n])
+    };
+    let z = normalize(axis)?;
+    let mut x = normalize(reference)?;
+    let projection = x[0] * z[0] + x[1] * z[1] + x[2] * z[2];
+    x = normalize([
+        x[0] - projection * z[0],
+        x[1] - projection * z[1],
+        x[2] - projection * z[2],
+    ])?;
+    let y = [
+        z[1] * x[2] - z[2] * x[1],
+        z[2] * x[0] - z[0] * x[2],
+        z[0] * x[1] - z[1] * x[0],
+    ];
+    Ok([
+        [x[0], y[0], z[0], origin[0]],
+        [x[1], y[1], z[1], origin[1]],
+        [x[2], y[2], z[2], origin[2]],
+        [0., 0., 0., 1.],
+    ])
+}
+
+fn rigid_inverse(m: [[f64; 4]; 4]) -> [[f64; 4]; 4] {
+    let mut out = [[0.; 4]; 4];
+    for i in 0..3 {
+        for j in 0..3 {
+            out[i][j] = m[j][i];
+        }
+        out[i][3] = -(0..3).map(|j| out[i][j] * m[j][3]).sum::<f64>();
+    }
+    out[3][3] = 1.;
+    out
+}
+
+/// Admits a finite nested chain of standard ITEM_DEFINED_TRANSFORMATION rows.
+/// Each row maps its first AXIS2 frame into its second frame.
+pub(crate) fn v2_nested_placement(text: &str) -> Result<Option<[[f64; 4]; 4]>> {
+    let entities = parse_entities(text);
+    let mut total = [
+        [1., 0., 0., 0.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ];
+    let mut count = 0usize;
+    for (ty, args) in entities.values() {
+        if ty != "ITEM_DEFINED_TRANSFORMATION" {
+            continue;
+        }
+        let refs = entity_refs(args);
+        if refs.len() != 2 {
+            return Err(refuse(
+                "STEP /2 ITEM_DEFINED_TRANSFORMATION requires two AXIS2 frames",
+            ));
+        }
+        let (ao, az, ax) = resolve_axis2(&entities, refs[0])
+            .ok_or_else(|| refuse("STEP /2 transformation source frame is invalid"))?;
+        let (bo, bz, bx) = resolve_axis2(&entities, refs[1])
+            .ok_or_else(|| refuse("STEP /2 transformation target frame is invalid"))?;
+        let from = rigid_axis_matrix(ao, az, ax)?;
+        let to = rigid_axis_matrix(bo, bz, bx)?;
+        total = mat_mul(mat_mul(to, rigid_inverse(from)), total);
+        count += 1;
+        if count > 8 {
+            return Err(refuse("STEP /2 nested placement depth exceeds eight"));
+        }
+    }
+    Ok((count != 0).then_some(total))
+}
+
+/// Successor export. `/1` remains byte/API compatible.
+pub fn export_step_v2(model: &Model) -> Result<(String, FeatureCertificate, StepIdentityReport)> {
+    let (text, _) = export_step(model)?;
+    let text = attach_v2_identity(&add_v2_context(&text), model)?;
+    let count = topology_count(model);
+    Ok((
+        text,
+        FeatureCertificate {
+            capability: STEP_INTERCHANGE_V2_CAPABILITY,
+            complete: true,
+            notes: vec![
+                "si_unit_context",
+                "topology_id_metadata",
+                "identity_preserved",
+                "strict_finite_subset",
+            ],
+        },
+        StepIdentityReport {
+            preserved: true,
+            source: "internal-metadata",
+            preserved_count: count,
+            created_count: 0,
+            lost_count: 0,
+        },
+    ))
+}
+
 /// Import analytic STEP from surfaces + AXIS2 only → constructors.
 pub fn import_step(text: &str) -> Result<(Model, FeatureCertificate)> {
     refuse_mesh_payloads(text)?;
     let entities = parse_entities(text);
-    validate_advanced_face_refs(&entities)?;
-    let kind = kind_from_surfaces(&entities).ok_or_else(|| {
+    let closure = validate_solid_graph(&entities)?;
+    let linked_entities: BTreeMap<usize, (String, String)> = entities
+        .iter()
+        .filter(|(id, _)| closure.contains(id))
+        .map(|(id, entity)| (*id, entity.clone()))
+        .collect();
+    let kind = kind_from_surfaces(&linked_entities).ok_or_else(|| {
         refuse(
             "Incomplete analytic STEP graph; no constructor solid recognized (graph-only; no OSCAD_SOLID; AABB removed)",
         )
     })?;
-    if curved_requires_circle(&kind) && !text.contains("CIRCLE") {
+    let linked_circle = linked_entities.values().any(|(ty, _)| ty == "CIRCLE");
+    if curved_requires_circle(&kind) && !linked_circle {
         return Err(refuse(
             "Curved analytic STEP requires CIRCLE ring edges (graph honesty)",
         ));
@@ -1183,6 +1781,44 @@ pub fn import_step(text: &str) -> Result<(Model, FeatureCertificate)> {
     ))
 }
 
+/// Successor import with explicit SI/context, placement and identity reporting.
+pub fn import_step_v2(text: &str) -> Result<(Model, FeatureCertificate, StepIdentityReport)> {
+    validate_v2_finite_subset(text)?;
+    let scale = v2_length_scale(text)?;
+    let placement = v2_nested_placement(text)?;
+    let (mut model, _) = import_step(text)?;
+    if let Some(matrix) = placement {
+        model = transform::affine(&model, matrix)?;
+    }
+    if (scale - 1.).abs() > f64::EPSILON {
+        model = transform::affine(
+            &model,
+            [
+                [scale, 0., 0., 0.],
+                [0., scale, 0., 0.],
+                [0., 0., scale, 0.],
+                [0., 0., 0., 1.],
+            ],
+        )?;
+    }
+    let identity = restore_v2_identity(text, &mut model)?;
+    model.validate()?;
+    Ok((
+        model,
+        FeatureCertificate {
+            capability: STEP_INTERCHANGE_V2_CAPABILITY,
+            complete: true,
+            notes: vec![
+                "si_unit_context",
+                "nested_rigid_placement",
+                "topology_provenance_mapping",
+                "explicit_identity_report",
+            ],
+        },
+        identity,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1203,6 +1839,104 @@ mod tests {
         assert!(!text.contains("cuboid|"));
         assert!(!text.contains("cylinder|"));
         assert!(!text.contains("tube|"));
+    }
+
+    fn strip_identity_metadata(text: &str) -> String {
+        text.lines()
+            .map(|line| {
+                if let Some(start) = line.find("'OSCAD_TOPO/2|") {
+                    let end = line[start + 1..].find('\'').unwrap() + start + 1;
+                    format!("{}''{}", &line[..start], &line[end + 1..])
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n"
+    }
+
+    #[test]
+    fn successor_identity_units_and_metadata_loss() {
+        let model = cuboid([0., 0., 0.], [3., 2., 1.]).unwrap();
+        let original_ids = model.1.vertices.clone();
+        let (text, cert, exported_identity) = export_step_v2(&model).unwrap();
+        assert_eq!(cert.capability, STEP_INTERCHANGE_V2_CAPABILITY);
+        assert!(text.contains("GLOBAL_UNIT_ASSIGNED_CONTEXT"));
+        assert!(exported_identity.preserved);
+        let (back, _, identity) = import_step_v2(&text).unwrap();
+        assert!(identity.preserved);
+        assert_eq!(back.1.vertices, original_ids);
+
+        let stripped = strip_identity_metadata(&text);
+        let (external, _, loss) = import_step_v2(&stripped).unwrap();
+        assert!(!loss.preserved);
+        assert_eq!(loss.created_count, topology_count(&external));
+        assert_eq!(loss.lost_count, loss.created_count);
+
+        let metres = stripped.replace(".MILLI.,.METRE.", "$,.METRE.");
+        let (converted, _, _) = import_step_v2(&metres).unwrap();
+        let (_, max) = model_bounds(&converted);
+        assert!((max[0] - 3000.).abs() < 1e-7);
+    }
+
+    #[test]
+    fn successor_reordered_entities_duplicate_identity_and_nested_placement() {
+        let model = cuboid([0., 0., 0.], [3., 2., 1.]).unwrap();
+        let (text, _, _) = export_step_v2(&model).unwrap();
+        let duplicate = text.replacen(
+            &model.1.vertices[1].to_string(),
+            &model.1.vertices[0].to_string(),
+            1,
+        );
+        assert!(import_step_v2(&duplicate).is_err());
+
+        let mut entities: Vec<_> = text.lines().filter(|line| line.starts_with('#')).collect();
+        entities.reverse();
+        let reordered = text
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .chain(entities)
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        assert!(import_step_v2(&reordered).is_ok());
+
+        let rows = "\
+#800000001=CARTESIAN_POINT('',(0.,0.,0.));
+#800000002=DIRECTION('',(0.,0.,1.));
+#800000003=DIRECTION('',(1.,0.,0.));
+#800000004=AXIS2_PLACEMENT_3D('',#800000001,#800000002,#800000003);
+#800000005=CARTESIAN_POINT('',(1.,0.,0.));
+#800000006=AXIS2_PLACEMENT_3D('',#800000005,#800000002,#800000003);
+#800000007=CARTESIAN_POINT('',(0.,2.,0.));
+#800000008=AXIS2_PLACEMENT_3D('',#800000007,#800000002,#800000003);
+#800000009=ITEM_DEFINED_TRANSFORMATION('','',#800000004,#800000006);
+#800000010=ITEM_DEFINED_TRANSFORMATION('','',#800000004,#800000008);
+";
+        let placed = text.replacen(
+            "ENDSEC;\nEND-ISO-10303-21;",
+            &format!("{rows}ENDSEC;\nEND-ISO-10303-21;"),
+            1,
+        );
+        let (placed, _, _) = import_step_v2(&placed).unwrap();
+        let (min, _) = model_bounds(&placed);
+        assert!((min[0] - 1.).abs() < 1e-7);
+        assert!((min[1] - 2.).abs() < 1e-7);
+    }
+
+    #[test]
+    fn successor_refuses_arbitrary_graph_entities() {
+        let model = cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let (text, _, _) = export_step_v2(&model).unwrap();
+        let arbitrary = text.replacen(
+            "ENDSEC;\nEND-ISO-10303-21;",
+            "#700000000=BLOCK('third-party',1.,1.,1.);\nENDSEC;\nEND-ISO-10303-21;",
+            1,
+        );
+        let error = import_step_v2(&arbitrary).unwrap_err();
+        assert_eq!(error.code, "BREP_STEP_REFUSED");
+        assert!(error.message.contains("finite subset"));
     }
 
     #[test]
@@ -1365,6 +2099,24 @@ ENDSEC;
 END-ISO-10303-21;
 "#;
         assert_eq!(import_step(text).unwrap_err().code, "BREP_STEP_REFUSED");
+    }
+
+    #[test]
+    fn orphan_or_comment_circle_cannot_satisfy_curved_graph_gate() {
+        let (text, _) = export_step(&cylinder(2., 4.).unwrap()).unwrap();
+        let without_linked_circles = text.replace("CIRCLE(", "LINE(");
+        let with_comment_only = format!("/* CIRCLE */\n{without_linked_circles}");
+        let error = import_step(&with_comment_only).unwrap_err();
+        assert_eq!(error.code, "BREP_STEP_REFUSED");
+        assert!(error.message.contains("CIRCLE ring edges"));
+
+        let with_orphan = without_linked_circles.replace(
+            "ENDSEC;\nEND-ISO-10303-21;",
+            "#999999=CIRCLE('',#1,2.);\nENDSEC;\nEND-ISO-10303-21;",
+        );
+        let error = import_step(&with_orphan).unwrap_err();
+        assert_eq!(error.code, "BREP_STEP_REFUSED");
+        assert!(error.message.contains("CIRCLE ring edges"));
     }
 
     #[test]

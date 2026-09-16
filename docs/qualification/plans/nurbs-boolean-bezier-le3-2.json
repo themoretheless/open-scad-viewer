@@ -1,0 +1,119 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 2,
+  "planId": "nurbs-boolean-bezier-le3-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 2
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified finite cell for nurbs-boolean-bezier-le3/2: Strict partial contact between affine-planar non-rational Bezier profile prisms of degree at most 3 with equal extrusion spans",
+    "forbiddenClaims": [
+      "Containment or identity",
+      "Tangency or coincident overlap",
+      "Unequal extrusion spans",
+      "Degree greater than 3",
+      "Rational weights",
+      "Healing, mesh, prism, or Manifold fallback"
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/2",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Strict partial contact between affine-planar non-rational Bezier profile prisms of degree at most 3 with equal extrusion spans",
+      "Union, difference, and intersection with certified arrangements, sew, audit, naming, and no-heal certificate"
+    ],
+    "excluded": [
+      "Containment or identity",
+      "Tangency or coincident overlap",
+      "Unequal extrusion spans",
+      "Degree greater than 3",
+      "Rational weights",
+      "Healing, mesh, prism, or Manifold fallback"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NB2-PARTIAL-UNION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-PARTIAL-DIFFERENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-PARTIAL-INTERSECTION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-CONTAINMENT",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-TANGENCY",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-UNEQUAL-SPAN",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB2-CERT-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/profile_imprint.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-bezier-le3-2-evidence-v2.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Native, bridge certificate, and product WASM rows passed on the recorded source-bound run.",
+      "Every excluded row remains typed-refuse; no external clean-run claim is made."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

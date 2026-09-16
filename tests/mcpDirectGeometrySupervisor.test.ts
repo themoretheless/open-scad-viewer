@@ -4,7 +4,7 @@ import type { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GeometryQuality } from '../src/core/build'
 import {
-  CURRENT_GEOMETRY_MANIFEST_VERSIONS,
+  ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
   planGeometrySourceExecution,
@@ -165,14 +165,14 @@ function capabilitiesSnapshot(): GeometryEngineRegistrySnapshot {
     routes: GEOMETRY_ENGINE_ROUTES.map(route => ({ ...route })),
     engines: [
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh],
+        ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh],
         availability: 'available',
         unavailableReason: null,
       },
       {
-        ...GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1'],
-        availability: 'unavailable',
-        unavailableReason: 'The Rust B-rep runtime is not deployed.',
+        ...GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep],
+        availability: 'available',
+        unavailableReason: null,
       },
     ],
   }
@@ -245,7 +245,7 @@ describe('DirectGeometrySupervisor', () => {
       automaticFallback: false,
       engines: [
         { engineClass: 'mesh', availability: 'available' },
-        { engineClass: 'brep', availability: 'unavailable' },
+        { engineClass: 'brep', availability: 'available' },
       ],
     })
     expect(supervisor.snapshot()).toMatchObject({ workersStarted: 2, workersJoined: 2 })

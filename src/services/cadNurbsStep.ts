@@ -8,9 +8,23 @@
  */
 import { callGeometryRust } from './geometry/kernel'
 import type { NurbsBrep } from './geometry/brep'
-import type { AnalyticStepCertificate, AnalyticStepExport, AnalyticStepImport } from './cadAnalyticStep'
+import type {
+  AnalyticStepCertificate,
+  AnalyticStepExport,
+  AnalyticStepExportV2,
+  AnalyticStepImport,
+  AnalyticStepImportV2,
+  StepIdentityReport,
+} from './cadAnalyticStep'
 
-export type { AnalyticStepCertificate, AnalyticStepExport, AnalyticStepImport }
+export type {
+  AnalyticStepCertificate,
+  AnalyticStepExport,
+  AnalyticStepExportV2,
+  AnalyticStepImport,
+  AnalyticStepImportV2,
+  StepIdentityReport,
+}
 
 /** Export a bicubic open-face B-rep as B_SPLINE STEP (open shell). */
 export function exportNurbsStepFreeform(model: NurbsBrep): AnalyticStepExport {
@@ -63,4 +77,19 @@ export function importNurbsStepSolid(text: string): AnalyticStepImport {
     )
   }
   return callGeometryRust('brep_nurbs_import_step_solid', { text })
+}
+
+/** `step-interchange/2` freeform solid export; admits multiple bodies and one void per body. */
+export function exportNurbsStepSolidV2(model: NurbsBrep): AnalyticStepExportV2 {
+  return callGeometryRust('brep_nurbs_export_step_solid_v2', { model })
+}
+
+/** Strict successor import with SI, placement, pcurve and identity reporting. */
+export function importNurbsStepSolidV2(text: string): AnalyticStepImportV2 {
+  if (/\bFACETED_BREP\s*\(/i.test(text) && !/\bADVANCED_FACE\s*\(/i.test(text)) {
+    throw new Error(
+      'Freeform NURBS solid importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
+    )
+  }
+  return callGeometryRust('brep_nurbs_import_step_solid_v2', { text })
 }

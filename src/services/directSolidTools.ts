@@ -4,6 +4,11 @@ import type { Vec3, SketchPlane } from './directSketchGeometry'
 import { callGeometryRust } from './geometry/kernel'
 export interface SolidFace { triangles:number[]; normal:Vec3; offset:number; vertices:number[]; center:Vec3 }
 export interface SolidEdge { a:number; b:number; faces:[number,number] }
+export type DirectSolidCapabilityCode =
+ 'BREP_ANALYTIC_CHAMFER_REFUSED'|'BREP_ANALYTIC_FILLET_REFUSED'|'BREP_ANALYTIC_SHELL_REFUSED'
+export class DirectSolidCapabilityError extends Error {
+ constructor(readonly code:DirectSolidCapabilityCode,message:string){super(message);this.name='DirectSolidCapabilityError'}
+}
 export function solidTopology(mesh:PolygonMesh):{faces:SolidFace[];edges:SolidEdge[]} {
  return callGeometryRust('cad_mesh_topology',{mesh})
 }
@@ -20,10 +25,12 @@ export function facePlane(body:DirectBody,face:SolidFace):SketchPlane {
 export function pushPullFace(body:DirectBody,faceIndex:number,distance:number):DirectBody {
  return callGeometryRust('cad_planar_edit',{body,action:'push',faces:[faceIndex],amount:distance})
 }
-/** Native retained-body editing; fillet surfaces are currently planar facets. */
+/** Mesh edge authoring remains available only when no retained B-rep is present. */
 export function bevelBrepBody(body:DirectBody,edges:number[],size:number,kind:'chamfer'|'fillet',segments=16):DirectBody {
  if(body.brep){
-  throw new Error(`Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)`)
+  throw new DirectSolidCapabilityError(
+   kind==='chamfer'?'BREP_ANALYTIC_CHAMFER_REFUSED':'BREP_ANALYTIC_FILLET_REFUSED',
+   `Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)`)
  }
  return callGeometryRust('cad_edge_edit',{body,edges,size,kind,segments})
 }
@@ -32,7 +39,9 @@ export function bevelSolidEdge(body:DirectBody,edgeIndex:number,size:number,kind
 }
 export function shellSolid(body:DirectBody,openingFaces:number[],thickness:number):DirectBody {
  if(body.brep){
-  throw new Error('Mesh shell cannot be claimed as analytic-shell for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)')
+  throw new DirectSolidCapabilityError(
+   'BREP_ANALYTIC_SHELL_REFUSED',
+   'Mesh shell cannot be claimed as analytic-shell for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)')
  }
  return callGeometryRust('cad_planar_edit',{body,action:'shell',faces:openingFaces,amount:thickness})
 }

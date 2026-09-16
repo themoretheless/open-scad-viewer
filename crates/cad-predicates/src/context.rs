@@ -111,6 +111,8 @@ impl SourceArena {
     }
 }
 
+pub const TOLERANCE_SPEC_VERSION: u32 = 1;
+
 #[derive(Clone, Debug)]
 pub struct ToleranceSpec {
     pub linear_abs: f64,
@@ -122,6 +124,50 @@ pub struct ToleranceSpec {
     pub ulp_guard: u32,
     pub max_entity_error: f64,
     pub policy: String,
+}
+
+impl PartialEq for ToleranceSpec {
+    fn eq(&self, other: &Self) -> bool {
+        self.linear_abs.to_bits() == other.linear_abs.to_bits()
+            && self.linear_rel.to_bits() == other.linear_rel.to_bits()
+            && self.on_tol.to_bits() == other.on_tol.to_bits()
+            && self.clear_tol.to_bits() == other.clear_tol.to_bits()
+            && self.angular.to_bits() == other.angular.to_bits()
+            && self.param_floor.to_bits() == other.param_floor.to_bits()
+            && self.ulp_guard == other.ulp_guard
+            && self.max_entity_error.to_bits() == other.max_entity_error.to_bits()
+            && self.policy == other.policy
+    }
+}
+impl Eq for ToleranceSpec {}
+
+/// Stable, portable identity of every tolerance-policy bit. Unlike
+/// `ContextIdentity`, this survives serialization and process boundaries.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ToleranceSpecIdentity {
+    pub version: u32,
+    pub canonical: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SpatialBounds {
+    pub absolute_mm: f64,
+    pub relative: f64,
+    pub on_mm: f64,
+    pub clear_mm: f64,
+    pub ulp_guard: u32,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AngularBounds {
+    pub radians: f64,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParametricBounds {
+    pub floor: f64,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EntityErrorBounds {
+    pub maximum_mm: f64,
 }
 
 #[derive(Debug)]
@@ -170,8 +216,237 @@ impl ToleranceContext {
         })
         .expect("Constant default tolerance is valid")
     }
+    /// Migration profile for legacy B-rep documents that only carry
+    /// `toleranceMm`. The scalar remains the positional on-bound; the other
+    /// named bounds are deterministic policy, not caller-selected epsilons.
+    pub fn from_brep_tolerance_mm(tolerance_mm: f64) -> Result<Self, InputError> {
+        Self::new(ToleranceSpec {
+            linear_abs: tolerance_mm,
+            linear_rel: 1e-12,
+            on_tol: tolerance_mm,
+            clear_tol: tolerance_mm * 10.,
+            angular: 1e-9,
+            param_floor: 1e-12,
+            ulp_guard: 4,
+            max_entity_error: tolerance_mm * 10.,
+            policy: "brep-tolerance-v1".to_owned(),
+        })
+    }
     pub fn specification(&self) -> &ToleranceSpec {
         &self.spec
+    }
+    pub fn spatial_bounds(&self) -> SpatialBounds {
+        SpatialBounds {
+            absolute_mm: self.spec.linear_abs,
+            relative: self.spec.linear_rel,
+            on_mm: self.spec.on_tol,
+            clear_mm: self.spec.clear_tol,
+            ulp_guard: self.spec.ulp_guard,
+        }
+    }
+    pub fn angular_bounds(&self) -> AngularBounds {
+        AngularBounds {
+            radians: self.spec.angular,
+        }
+    }
+    pub fn parametric_bounds(&self) -> ParametricBounds {
+        ParametricBounds {
+            floor: self.spec.param_floor,
+        }
+    }
+    pub fn entity_error_bounds(&self) -> EntityErrorBounds {
+        EntityErrorBounds {
+            maximum_mm: self.spec.max_entity_error,
+        }
+    }
+    pub fn spec_identity(&self) -> ToleranceSpecIdentity {
+        let s = &self.spec;
+        let policy = s
+            .policy
+            .as_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        ToleranceSpecIdentity {
+            version: TOLERANCE_SPEC_VERSION,
+            canonical: format!(
+                "{:016x}:{:016x}:{:016x}:{:016x}:{:016x}:{:016x}:{:08x}:{:016x}:{policy}",
+                s.linear_abs.to_bits(),
+                s.linear_rel.to_bits(),
+                s.on_tol.to_bits(),
+                s.clear_tol.to_bits(),
+                s.angular.to_bits(),
+                s.param_floor.to_bits(),
+                s.ulp_guard,
+                s.max_entity_error.to_bits(),
+            ),
+        }
+    }
+    pub fn is_compatible_with(&self, other: &Self) -> bool {
+        self.spec == other.spec
+    }
+}
+
+impl value_codec::Serialize for ToleranceSpecIdentity {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "version".into(),
+            value_codec::Serialize::to_value(&self.version),
+        );
+        object.insert(
+            "canonical".into(),
+            value_codec::Serialize::to_value(&self.canonical),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for ToleranceSpecIdentity {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected tolerance identity object"))?
+            .clone();
+        let version = value_codec::Deserialize::from_value(
+            object
+                .remove("version")
+                .ok_or_else(|| value_codec::error("Missing tolerance identity version"))?,
+        )?;
+        let canonical = value_codec::Deserialize::from_value(
+            object
+                .remove("canonical")
+                .ok_or_else(|| value_codec::error("Missing canonical tolerance identity"))?,
+        )?;
+        if version != TOLERANCE_SPEC_VERSION || !object.is_empty() {
+            return Err(value_codec::error("Unsupported tolerance identity"));
+        }
+        Ok(Self { version, canonical })
+    }
+}
+
+impl value_codec::Serialize for ToleranceSpec {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert(
+            "version".into(),
+            value_codec::Serialize::to_value(&TOLERANCE_SPEC_VERSION),
+        );
+        object.insert(
+            "linearAbsMm".into(),
+            value_codec::Serialize::to_value(&self.linear_abs),
+        );
+        object.insert(
+            "linearRelative".into(),
+            value_codec::Serialize::to_value(&self.linear_rel),
+        );
+        object.insert(
+            "onMm".into(),
+            value_codec::Serialize::to_value(&self.on_tol),
+        );
+        object.insert(
+            "clearMm".into(),
+            value_codec::Serialize::to_value(&self.clear_tol),
+        );
+        object.insert(
+            "angularRadians".into(),
+            value_codec::Serialize::to_value(&self.angular),
+        );
+        object.insert(
+            "parametricFloor".into(),
+            value_codec::Serialize::to_value(&self.param_floor),
+        );
+        object.insert(
+            "ulpGuard".into(),
+            value_codec::Serialize::to_value(&self.ulp_guard),
+        );
+        object.insert(
+            "maxEntityErrorMm".into(),
+            value_codec::Serialize::to_value(&self.max_entity_error),
+        );
+        object.insert(
+            "policy".into(),
+            value_codec::Serialize::to_value(&self.policy),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for ToleranceSpec {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected tolerance specification object"))?
+            .clone();
+        macro_rules! take {
+            ($name:literal) => {
+                value_codec::Deserialize::from_value(
+                    object
+                        .remove($name)
+                        .ok_or_else(|| value_codec::error(concat!("Missing field ", $name)))?,
+                )?
+            };
+        }
+        let version: u32 = take!("version");
+        if version != TOLERANCE_SPEC_VERSION {
+            return Err(value_codec::error(
+                "Unsupported tolerance specification version",
+            ));
+        }
+        let spec = Self {
+            linear_abs: take!("linearAbsMm"),
+            linear_rel: take!("linearRelative"),
+            on_tol: take!("onMm"),
+            clear_tol: take!("clearMm"),
+            angular: take!("angularRadians"),
+            param_floor: take!("parametricFloor"),
+            ulp_guard: take!("ulpGuard"),
+            max_entity_error: take!("maxEntityErrorMm"),
+            policy: take!("policy"),
+        };
+        if !object.is_empty() {
+            return Err(value_codec::error("Unknown tolerance specification field"));
+        }
+        ToleranceContext::new(spec.clone())
+            .map_err(|_| value_codec::error("Invalid tolerance specification"))?;
+        Ok(spec)
+    }
+}
+
+impl value_codec::Serialize for ToleranceContext {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("spec".into(), value_codec::Serialize::to_value(&self.spec));
+        object.insert(
+            "identity".into(),
+            value_codec::Serialize::to_value(&self.spec_identity()),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for ToleranceContext {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected tolerance context object"))?
+            .clone();
+        let spec: ToleranceSpec = value_codec::Deserialize::from_value(
+            object
+                .remove("spec")
+                .ok_or_else(|| value_codec::error("Missing tolerance context spec"))?,
+        )?;
+        let identity: ToleranceSpecIdentity = value_codec::Deserialize::from_value(
+            object
+                .remove("identity")
+                .ok_or_else(|| value_codec::error("Missing tolerance context identity"))?,
+        )?;
+        if !object.is_empty() {
+            return Err(value_codec::error("Unknown tolerance context field"));
+        }
+        let context = Self::new(spec)
+            .map_err(|_| value_codec::error("Invalid tolerance context specification"))?;
+        if context.spec_identity() != identity {
+            return Err(value_codec::error("Tolerance context identity mismatch"));
+        }
+        Ok(context)
     }
 }
 

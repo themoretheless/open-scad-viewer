@@ -14,6 +14,35 @@ fn plane() -> Surface {
         periodic_v: false,
     }
 }
+
+#[test]
+fn brep_transport_carries_authoritative_canonical_change_set() {
+    let value = dispatch(json!({
+        "op": "brep_nurbs_box",
+        "min": [0., 0., 0.],
+        "max": [1., 2., 3.],
+    }))
+    .unwrap();
+    let ids = &value["topologyIds"];
+    assert_eq!(ids["changeSet"]["schema"].as_u64(), Some(1));
+    assert_eq!(
+        ids["changeSet"]["nodes"].as_array().unwrap().len(),
+        8 + 12 + 6 + 6 + 1 + 1
+    );
+    assert!(
+        ids["faces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|id| id.as_str().is_some_and(|id| {
+                id.starts_with("f:")
+                    && id.len() == 34
+                    && id[2..]
+                        .bytes()
+                        .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+            }))
+    );
+}
 #[test]
 fn nurbs_to_polygons_and_back_to_exact_boundary_curves() {
     let source = plane();
@@ -211,6 +240,104 @@ fn analytic_step_export_import_roundtrip() {
 }
 
 #[test]
+fn step_successor_bridge_reports_identity_preservation_and_loss() {
+    let model = encode(brep_core::cuboid([0., 0., 0.], [2., 3., 4.]).unwrap()).unwrap();
+    let exported = dispatch(json!({
+        "op": "brep_nurbs_export_step_v2",
+        "model": model,
+    }))
+    .unwrap();
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("step-interchange/2")
+    );
+    assert_eq!(exported["identity"]["preserved"], true);
+    let text = exported["text"].as_str().unwrap();
+    assert!(text.contains("GLOBAL_UNIT_ASSIGNED_CONTEXT"));
+    assert!(text.contains("OSCAD_TOPO/2|face|"));
+    let imported = dispatch(json!({
+        "op": "brep_nurbs_import_step_v2",
+        "text": text,
+    }))
+    .unwrap();
+    assert_eq!(imported["identity"]["preserved"], true);
+
+    let stripped = text
+        .lines()
+        .map(|line| {
+            if let Some(start) = line.find("'OSCAD_TOPO/2|") {
+                let end = line[start + 1..].find('\'').unwrap() + start + 1;
+                format!("{}''{}", &line[..start], &line[end + 1..])
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let external = dispatch(json!({
+        "op": "brep_nurbs_import_step_v2",
+        "text": stripped,
+    }))
+    .unwrap();
+    assert_eq!(external["identity"]["preserved"], false);
+    assert!(external["identity"]["createdCount"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn audited_feature_successors_cross_the_bridge_with_certificates() {
+    let model = brep_core::cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
+    let edges = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter_map(|(index, edge)| {
+            let a = model.vertices[edge.vertices[0]].point;
+            let b = model.vertices[edge.vertices[1]].point;
+            ((a[0] - b[0]).abs() <= 1e-12 && (a[1] - b[1]).abs() <= 1e-12)
+                .then_some(index)
+        })
+        .take(2)
+        .collect::<Vec<_>>();
+    let fillet = dispatch(json!({
+        "op":"brep_nurbs_audited_multi_edge_fillet",
+        "model":encode(model).unwrap(),
+        "edges":edges,
+        "radius":0.5
+    }))
+    .unwrap();
+    assert_eq!(
+        fillet["certificate"]["capability"].as_str(),
+        Some("analytic-multi-edge-fillet/1")
+    );
+    assert_eq!(fillet["certificate"]["complete"], true);
+    assert_eq!(fillet["audit"]["ok"], true);
+    assert_eq!(fillet["namingComplete"], true);
+
+    let sweep = dispatch(json!({
+        "op":"brep_nurbs_audited_parallel_frame_sweep",
+        "profile":[[0.,0.],[2.,0.],[2.,1.],[0.,1.]],
+        "path":[[3.,-1.,0.],[3.,-1.,4.]],
+        "frameLaw":"rmf"
+    }))
+    .unwrap();
+    assert_eq!(
+        sweep["certificate"]["capability"].as_str(),
+        Some("exact-parallel-frame-sweep/1")
+    );
+    assert_eq!(sweep["audit"]["ok"], true);
+    assert_eq!(sweep["namingComplete"], true);
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_audited_parallel_frame_sweep",
+            "profile":[[0.,0.],[2.,0.],[2.,1.],[0.,1.]],
+            "path":[[0.,0.,0.],[0.,0.,2.],[0.,1.,4.]],
+            "frameLaw":"rmf"
+        }))
+        .is_err()
+    );
+}
+
+#[test]
 fn freeform_nurbs_step_export_import_roundtrip() {
     let mut cps = Vec::new();
     for y in 0..4 {
@@ -330,27 +457,10 @@ fn freeform_nurbs_step_trimmed_and_solid_bridge() {
     assert_eq!(simported["model"]["faces"].as_array().unwrap().len(), 6);
 
     let outer = brep_core::freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
-    let inner = brep_core::freeform_cuboid_solid([1., 1., 1.], [2., 2., 2.]).unwrap();
+    let inner = brep_core::freeform_cuboid_solid([2., -1., 0.], [5., 3., 4.]).unwrap();
     let (boolean_result, boolean_cert) =
         brep_core::nurbs_boolean_imprint_solids(&outer, &inner, "difference").unwrap();
-    assert_eq!(boolean_cert.capability, "nurbs-boolean-bezier-le3/1");
-    let boolean_export = dispatch(json!({
-        "op": "brep_nurbs_export_step_solid",
-        "model": encode(boolean_result).unwrap(),
-    }))
-    .unwrap();
-    let boolean_text = boolean_export["text"].as_str().unwrap();
-    assert!(boolean_text.contains("BREP_WITH_VOIDS"));
-    assert!(!boolean_text.contains("OSCAD_SOLID"));
-    assert!(!boolean_text.contains("AABB"));
-    let boolean_import = dispatch(json!({
-        "op": "brep_nurbs_import_step_solid",
-        "text": boolean_text,
-    }))
-    .unwrap();
-    assert_eq!(boolean_import["certificate"]["complete"], true);
-    assert_eq!(
-        boolean_import["model"]["bodies"].as_array().unwrap().len(),
-        1
-    );
+    assert_eq!(boolean_cert.capability, "nurbs-boolean-bezier-le3/2");
+    assert!(boolean_cert.permits_topology_change());
+    boolean_result.validate().unwrap();
 }

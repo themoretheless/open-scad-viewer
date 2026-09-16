@@ -27,7 +27,11 @@ const v16PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifol
 const v17PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v17.json')
 const v18PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v18.json')
 const v19PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v19.json')
-const planPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v20.json')
+const v20PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v20.json')
+const v21PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v21.json')
+const v22PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v22.json')
+const v23PlanPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v23.json')
+const planPath = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v24.json')
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as JsonObject
 const v1Plan = JSON.parse(readFileSync(v1PlanPath, 'utf8')) as JsonObject
 const v2Plan = JSON.parse(readFileSync(v2PlanPath, 'utf8')) as JsonObject
@@ -48,6 +52,10 @@ const v16Plan = JSON.parse(readFileSync(v16PlanPath, 'utf8')) as JsonObject
 const v17Plan = JSON.parse(readFileSync(v17PlanPath, 'utf8')) as JsonObject
 const v18Plan = JSON.parse(readFileSync(v18PlanPath, 'utf8')) as JsonObject
 const v19Plan = JSON.parse(readFileSync(v19PlanPath, 'utf8')) as JsonObject
+const v20Plan = JSON.parse(readFileSync(v20PlanPath, 'utf8')) as JsonObject
+const v21Plan = JSON.parse(readFileSync(v21PlanPath, 'utf8')) as JsonObject
+const v22Plan = JSON.parse(readFileSync(v22PlanPath, 'utf8')) as JsonObject
+const v23Plan = JSON.parse(readFileSync(v23PlanPath, 'utf8')) as JsonObject
 const plan = JSON.parse(readFileSync(planPath, 'utf8')) as JsonObject
 const FROZEN_V1_SHA256 = '050a1dd7a30d19dd85a8ed16fd724f7579c2430f1d7bf03ed68009d46bd2cbfa'
 const FROZEN_V2_SHA256 = '90452963dfdc47e492725c6bcd60a2dcdc7ffa748f848e95831c5d5750f5f0a2'
@@ -68,6 +76,10 @@ const FROZEN_V16_SHA256 = 'f421e75e4ef19ffc6cef0d36745428ea086e3797b911ed84dd00a
 const FROZEN_V17_SHA256 = 'ce0f2121aa0014dcc9439e63654e71502fa33f13a07564a65a8e0ec22ff993e4'
 const FROZEN_V18_SHA256 = '7e129bd193d33ee6c4205c26e6f9b5747e13d48cea06800946a1ef639f5f99ce'
 const FROZEN_V19_SHA256 = '14fb0fdc79532dcd9a8bed3a93128f152fe3b68cc56529b6cc83561b5b899ed3'
+const FROZEN_V20_SHA256 = 'c5d903ba5b7383ea79df20626de6f24c1cef9a564bb977adde5b5a362d75b9e6'
+const FROZEN_V21_SHA256 = 'bfb889481c1a1b1f360380599858be9d117500e9f3ceb311cc8a642a7a10682b'
+const FROZEN_V22_SHA256 = '63a55e60751a35af3c676de1a537477e845ea2439db7199cb4e14e89bdd56ea6'
+const FROZEN_V23_SHA256 = 'a62609ebefe2f07994266b3bce8641c368de8280d7ff690d318f411c74810c0d'
 const FROZEN_V19_STATUS_SHA256 = '1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25'
 const FROZEN_G0_V3_SHA256 = 'c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171'
 
@@ -308,10 +320,13 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     expect(validateJsonSchema(schema, v17Plan)).toEqual([])
     expect(validateJsonSchema(schema, v18Plan)).toEqual([])
     expect(validateJsonSchema(schema, v19Plan)).toEqual([])
+    expect(validateJsonSchema(schema, v20Plan)).toEqual([])
+    expect(validateJsonSchema(schema, v21Plan)).toEqual([])
+    expect(validateJsonSchema(schema, v22Plan)).toEqual([])
     expect(validateJsonSchema(schema, plan)).toEqual([])
   })
 
-  it('keeps the v1 -> … -> v19 amendment chain byte-immutable for on-disk plan files', () => {
+  it('keeps the v1 -> … -> v22 amendment chain byte-immutable for on-disk plan files', () => {
     expect(createHash('sha256').update(readFileSync(v1PlanPath)).digest('hex'))
       .toBe(FROZEN_V1_SHA256)
     expect(createHash('sha256').update(readFileSync(v2PlanPath)).digest('hex'))
@@ -350,6 +365,12 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       .toBe(FROZEN_V18_SHA256)
     expect(createHash('sha256').update(readFileSync(v19PlanPath)).digest('hex'))
       .toBe(FROZEN_V19_SHA256)
+    expect(createHash('sha256').update(readFileSync(v20PlanPath)).digest('hex'))
+      .toBe(FROZEN_V20_SHA256)
+    expect(createHash('sha256').update(readFileSync(v21PlanPath)).digest('hex'))
+      .toBe(FROZEN_V21_SHA256)
+    expect(createHash('sha256').update(readFileSync(v22PlanPath)).digest('hex'))
+      .toBe(FROZEN_V22_SHA256)
     expect(frozenFileDigest('docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json').value)
       .toBe(FROZEN_V19_STATUS_SHA256)
     expect(frozenFileDigest('docs/qualification/g0-toolchain-fingerprints-v3.json').value)
@@ -622,35 +643,35 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }
   })
 
-  it('v20 preserves the complete finite v19 contract and starts a separate candidate with zero clean work', () => {
+  it('v24 preserves the complete finite v23 contract and starts a separate candidate with zero clean work', () => {
     expect(plan).toMatchObject({
-      planId: 'semantic-manifold-g1-plan-v20',
+      planId: 'semantic-manifold-g1-plan-v24',
       processAmendment: {
-        previousPlanId: 'semantic-manifold-g1-plan-v19',
-        previousPlanSha256: FROZEN_V19_SHA256,
+        previousPlanId: 'semantic-manifold-g1-plan-v23',
+        previousPlanSha256: FROZEN_V23_SHA256,
         priorEvidenceTreatment: 'discovery-only', qualificationClaim: 'none',
       },
       executionProtocol: {
-        candidateRunId: 'semantic-manifold-g1-candidate-run-v20',
-        resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v20/result.json',
+        candidateRunId: 'semantic-manifold-g1-candidate-run-v24',
+        resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v24/result.json',
         priorResultsMayBeImported: false, plannedWorkUnits: 4740,
       },
     })
-    expect(Object.keys(plan)).toEqual(Object.keys(v19Plan))
-    for (const key of Object.keys(v19Plan)) {
+    expect(Object.keys(plan)).toEqual(Object.keys(v23Plan))
+    for (const key of Object.keys(v23Plan)) {
       if (['planId', 'processAmendment', 'bindings', 'executionProtocol'].includes(key)) continue
-      expect(plan[key], `v20 preserves ${key}`).toEqual(v19Plan[key])
+      expect(plan[key], `v24 preserves ${key}`).toEqual(v23Plan[key])
     }
-    const oldProtocol = objectProperty(v19Plan, 'executionProtocol')
+    const oldProtocol = objectProperty(v23Plan, 'executionProtocol')
     expect(objectProperty(plan, 'executionProtocol')).toEqual({
       ...oldProtocol,
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v20',
-      resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v20/result.json',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v24',
+      resultPath: 'output/qualification/semantic-manifold-g1-candidate-run-v24/result.json',
       cleanRunDefinition: (oldProtocol.cleanRunDefinition as string[]).map((line, index) => (
-        index === 0 ? line.replace('exact v19 frozen artifact', 'exact v20 frozen artifact') : line
+        index === 0 ? line.replace('exact v23 frozen artifact', 'exact v24 frozen artifact') : line
       )),
     })
-    const oldBindings = objectProperty(v19Plan, 'bindings')
+    const oldBindings = objectProperty(v23Plan, 'bindings')
     const newBindings = objectProperty(plan, 'bindings')
     expect(Object.keys(newBindings)).toEqual(Object.keys(oldBindings))
     expect(newBindings.placeholderPolicy).toEqual(oldBindings.placeholderPolicy)
@@ -671,11 +692,11 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
         .toEqual(arrayProperty(oldBindings, 'artifacts').find(row => row.id === id))
     }
     const status = JSON.parse(readFileSync(resolve(repositoryRoot,
-      'docs/qualification/g1-v20-refreeze-status-v1.json'), 'utf8')) as JsonObject
+      'docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json'), 'utf8')) as JsonObject
     expect(status).toMatchObject({
-      statusId: 'g1-v20-refreeze-status-v1', qualificationClaim: 'none',
+      statusId: 'g0-v7-g1-v24-refreeze-status-v1', qualificationClaim: 'none',
       qualificationApproval: 'not-approved', g0Closed: false,
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v20', priorResultsMayBeImported: false,
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v24', priorResultsMayBeImported: false,
       priorEvidenceTreatment: 'discovery-only', completedWorkUnits: 0,
       completedCleanRuns: 0, plannedWorkUnits: 4740,
     })
@@ -683,14 +704,23 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       'docs/qualification/g0-toolchain-fingerprints-v1.json',
       'docs/qualification/g0-toolchain-fingerprints-v2.json',
       'docs/qualification/g0-toolchain-fingerprints-v3.json',
+      'docs/qualification/g0-toolchain-fingerprints-v4.json',
+      'docs/qualification/g0-toolchain-fingerprints-v5.json',
+      'docs/qualification/g0-toolchain-fingerprints-v6.json',
       'docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json',
-      ...Array.from({ length: 19 }, (_, index) => `docs/qualification/semantic-manifold-g1-plan-v${index + 1}.json`),
+      'docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json',
+      'docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json',
+      'docs/qualification/g0-v6-g1-v23-refreeze-review.md',
+      'docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json',
+      'docs/qualification/g1-v20-refreeze-status-v1.json',
+      ...Array.from({ length: 23 }, (_, index) => `docs/qualification/semantic-manifold-g1-plan-v${index + 1}.json`),
     ].sort())
     for (const archive of arrayProperty(status, 'archives')) {
       expect(frozenFileDigest(String(archive.path)).value).toBe(archive.sha256)
     }
     expect(arrayProperty(status, 'artifacts').map(row => row.path)).toEqual([
-      'docs/qualification/semantic-manifold-g1-plan-v20.json',
+      'docs/qualification/g0-toolchain-fingerprints-v7.json',
+      'docs/qualification/semantic-manifold-g1-plan-v24.json',
     ])
     for (const artifact of arrayProperty(status, 'artifacts')) {
       expect(frozenFileDigest(String(artifact.path)))
@@ -712,7 +742,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }))
   })
 
-  it('keeps v20 frozen bindings current and opens clean-rerun admission while qualification stays blocked on u07', () => {
+  it('keeps v24 frozen bindings current and opens clean-rerun admission while qualification stays blocked on u07', () => {
     const bindings = objectProperty(plan, 'bindings')
     const artifacts = arrayProperty(bindings, 'artifacts')
     const changed: string[] = []
@@ -734,7 +764,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       const actual = frozenBundleDigest(paths)
       if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(String(bundle.id))
     }
-    expect(changed, 'v20 frozen bindings must match current repository bytes').toEqual([])
+    expect(changed, 'v24 frozen bindings must match current repository bytes').toEqual([])
     const allBoundPaths = boundPaths(plan)
     expect(new Set(allBoundPaths).size).toBe(allBoundPaths.length)
     expect(allBoundPaths).not.toContain('docs/qualification/semantic-manifold-g1-plan-v5.json')

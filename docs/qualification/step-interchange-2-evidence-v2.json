@@ -1,0 +1,39 @@
+{
+  "$schema": "./brep-capability-evidence-v2.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 2,
+  "evidenceId": "step-interchange-2-evidence-v2",
+  "capability": "step-interchange/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/step-interchange-2.json",
+  "runs": [
+    {
+      "id": "focused-native-workspace-2026-09-16",
+      "result": "pass",
+      "artifactHash": "eeca60b8a221ea440cf94e408c7eb75c85e2077980ea70a73c03c92008509cd6"
+    },
+    {
+      "id": "geometry-bridge-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "9c0d57048fb874986a137d1d44628ace23116b222840cd2a62c87cd459bddac3"
+    },
+    {
+      "id": "product-wasm-certificate-seams-2026-09-16",
+      "result": "pass",
+      "artifactHash": "22a96f94997af629cca40ae368973be076c3ef872db1df2a0d373bcdd5ec15eb"
+    }
+  ],
+  "oracles": [
+    "step_interchange::v2_roundtrip_preserves_identity_and_context",
+    "step_interchange::v2_import_without_metadata_reports_identity_loss",
+    "geometry_bridge::tests::step_successor_bridge_reports_identity_preservation_and_loss",
+    "tests/cadAnalyticStep.test.ts",
+    "tests/cadNurbsStep.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded local native, bridge, and product runs passed; this is not a G0/G1 clean external execution claim."
+  }
+}

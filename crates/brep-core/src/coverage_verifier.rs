@@ -5,6 +5,7 @@
 //! downgrade to NumericallyResolved.
 
 use crate::intersections::{Coverage, Report, UnresolvedReason};
+use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result};
 
 fn refuse(message: &str) -> Error {
@@ -17,6 +18,108 @@ pub struct CoverageAudit {
     pub component_count: usize,
     pub unresolved_count: usize,
     pub notes: Vec<&'static str>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UvCoverageCertificate {
+    pub context: ToleranceSpecIdentity,
+    pub primitive_count: usize,
+    pub event_vertex_count: usize,
+    pub halfedge_count: usize,
+    pub cell_count: usize,
+    pub winding_labels_deterministic: bool,
+    pub complete: bool,
+}
+
+/// Certify a finite lifted UV arrangement. Completeness requires every input
+/// primitive to survive into a nonempty DCEL under the same tolerance context.
+pub fn certify_lifted_uv_coverage(
+    context: &ToleranceContext,
+    primitive_count: usize,
+    event_vertex_count: usize,
+    halfedge_count: usize,
+    cell_count: usize,
+    winding_labels_deterministic: bool,
+    resource_limit: usize,
+) -> Result<UvCoverageCertificate> {
+    if primitive_count == 0
+        || event_vertex_count == 0
+        || halfedge_count < primitive_count.saturating_mul(2)
+        || cell_count == 0
+    {
+        return Err(refuse(
+            "Lifted UV coverage lacks primitive, vertex, halfedge, or cell strata",
+        ));
+    }
+    if primitive_count > resource_limit
+        || event_vertex_count > resource_limit.saturating_mul(4)
+        || halfedge_count > resource_limit.saturating_mul(8)
+    {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Lifted UV coverage exceeds its finite resource budget",
+        ));
+    }
+    if !winding_labels_deterministic {
+        return Err(refuse(
+            "Lifted UV cells do not have deterministic winding labels",
+        ));
+    }
+    Ok(UvCoverageCertificate {
+        context: context.spec_identity(),
+        primitive_count,
+        event_vertex_count,
+        halfedge_count,
+        cell_count,
+        winding_labels_deterministic,
+        complete: true,
+    })
+}
+
+pub fn verify_lifted_uv_arrangement_coverage(
+    arrangement: &crate::uv_arrangement::LiftedUvArrangement,
+    context: &ToleranceContext,
+) -> Result<CoverageAudit> {
+    if arrangement.context != context.spec_identity()
+        || arrangement.coverage.context != arrangement.context
+    {
+        return Err(refuse("Lifted UV arrangement tolerance context mismatch"));
+    }
+    if !arrangement.coverage.complete
+        || arrangement.coverage.event_vertex_count != arrangement.vertices.len()
+        || arrangement.coverage.halfedge_count != arrangement.halfedges.len()
+        || arrangement.coverage.cell_count != arrangement.cells.len()
+    {
+        return Err(refuse(
+            "Lifted UV coverage counts were mutated or are incomplete",
+        ));
+    }
+    for (id, halfedge) in arrangement.halfedges.iter().enumerate() {
+        if halfedge.origin >= arrangement.vertices.len()
+            || halfedge.destination >= arrangement.vertices.len()
+            || halfedge.twin >= arrangement.halfedges.len()
+            || arrangement.halfedges[halfedge.twin].twin != id
+            || halfedge.next >= arrangement.halfedges.len()
+            || halfedge.cell >= arrangement.cells.len()
+        {
+            return Err(refuse("Lifted UV DCEL incidence is invalid"));
+        }
+    }
+    if !arrangement
+        .cells
+        .iter()
+        .any(|cell| matches!(cell.label, crate::uv_arrangement::WindingLabel::Material(_)))
+    {
+        return Err(refuse(
+            "Lifted UV arrangement has no certified material cell",
+        ));
+    }
+    Ok(CoverageAudit {
+        complete: true,
+        component_count: arrangement.cells.len(),
+        unresolved_count: 0,
+        notes: vec!["lifted_uv_dcel_verified"],
+    })
 }
 
 /// Verify that a report claiming `Complete` has an empty unresolved set and at
@@ -73,14 +176,14 @@ pub fn verify_complete_with_strata<T>(
 /// may not claim Complete when the arrangement recorded zero events on Freeform.
 pub fn verify_uv_arrangement_coverage(
     complete: bool,
-    event_count: usize,
+    _event_count: usize,
     cell_count: usize,
     hole_count: usize,
     freeform: bool,
 ) -> Result<CoverageAudit> {
-    if freeform && event_count == 0 {
+    if freeform {
         return Err(refuse(
-            "Freeform UV arrangement cannot be Complete with zero imprint events",
+            "Generic Freeform UV arrangement is outside the Complete matrix",
         ));
     }
     if complete && cell_count == 0 {

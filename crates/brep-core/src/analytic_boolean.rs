@@ -663,6 +663,22 @@ pub fn analytic_boolean(
     ))
 }
 
+/// Typestate-returning production entry point. The compatibility API above
+/// remains available, while callers that publish topology can require the
+/// global audit certificate in the return type.
+pub fn analytic_boolean_audited(
+    a: &Model,
+    b: &Model,
+    operation: &str,
+) -> Result<(
+    crate::solid_audit::GloballyAuditedSolidSet,
+    BooleanCertificate,
+)> {
+    let (model, certificate) = analytic_boolean(a, b, operation)?;
+    let audited = crate::solid_audit::LocallyValidatedModel::new(model)?.audit()?;
+    Ok((audited, certificate))
+}
+
 fn cylinder_pair_boolean(
     a: &Model,
     b: &Model,

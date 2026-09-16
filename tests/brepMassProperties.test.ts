@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {analyzeNurbsBrep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('integrates rational surfaces and trims independently of the display mesh',()=>{
@@ -38,4 +38,42 @@ it('retains B-rep identities and outward orientation through affine reflections'
  expect(analyzeNurbsBrep(reflected).signedVolumeMm3).toBeCloseTo(36*Math.PI*24,5)
  expect(JSON.stringify(source)).toBe(before)
  expect(()=>transformNurbsBrep(source,[[0,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])).toThrow(/singular/)
+})
+
+it('publishes finite certified mass and tessellation enclosures',()=>{
+ for(const [body,volume] of [
+  [createBrepBox([0,0,0],[2,3,4]),24],
+  [createBrepCylinder(3,8),72*Math.PI],
+  [createBrepTube(3,2,8),40*Math.PI],
+ ] as const){
+  const mass=analyzeCertifiedNurbsBrep(body)
+  expect(mass.status).toBe('certified_enclosure')
+  expect(mass.volumeMm3.lower).toBeLessThanOrEqual(volume)
+  expect(mass.volumeMm3.upper).toBeGreaterThanOrEqual(volume)
+  expect(mass.audit.ok).toBe(true)
+  expect(mass.namingComplete).toBe(true)
+ }
+ for(const body of [createBrepBox([0,0,0],[2,3,4]),createBrepCylinder(3,8)]){
+  const certified=tessellateCertifiedNurbsBrep(body,.02)
+  expect(certified.surfaceToMeshDeviationMm).toBeLessThanOrEqual(.02)
+  expect(certified.meshToSurfaceDeviationMm).toBe(certified.surfaceToMeshDeviationMm)
+  expect(certified.coverage).toEqual({sharedEdgeIdentity:true,orientation:true,noTJunctions:true})
+  expect(certified.tessellation.report.closed).toBe(true)
+ }
+ expect(()=>analyzeCertifiedNurbsBrep(createBrepSphere(2))).toThrow(/finite|admits|outside/i)
+ expect(()=>tessellateCertifiedNurbsBrep(createBrepCylinder(100,10),1e-12)).toThrow(/32|budget/i)
+})
+
+it('publishes audited finite feature successors and refuses bent frames',()=>{
+ const box=createBrepBox([0,0,0],[10,8,6])
+ const vertical=box.edges.map((edge,index)=>{
+  const a=box.vertices[edge.vertices[0]].point,b=box.vertices[edge.vertices[1]].point
+  return Math.abs(a[0]-b[0])<=1e-12&&Math.abs(a[1]-b[1])<=1e-12?index:-1
+ }).filter(index=>index>=0).slice(0,2)
+ const fillet=auditedMultiEdgeFillet(box,vertical,.5)
+ expect(fillet).toMatchObject({certificate:{capability:'analytic-multi-edge-fillet/1',complete:true},audit:{ok:true},namingComplete:true})
+ expect(fillet.evidenceClaimCount).toBeGreaterThan(0)
+ const sweep=auditedParallelFrameSweep([[0,0],[2,0],[2,1],[0,1]],[[3,-1,0],[3,-1,4]],'rmf')
+ expect(sweep).toMatchObject({certificate:{capability:'exact-parallel-frame-sweep/1',complete:true},audit:{ok:true},namingComplete:true})
+ expect(()=>auditedParallelFrameSweep([[0,0],[2,0],[2,1],[0,1]],[[0,0,0],[0,0,2],[0,1,4]],'rmf')).toThrow(/straight|collinear|parallel/i)
 })

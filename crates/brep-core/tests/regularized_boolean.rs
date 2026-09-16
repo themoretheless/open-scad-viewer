@@ -1,4 +1,6 @@
-use brep_core::{Model, analysis::mass_properties, boolean, cuboid, cylinder, sphere, tube};
+use brep_core::{
+    Model, TopoId, analysis::mass_properties, boolean, cuboid, cylinder, sphere, tube,
+};
 
 fn translate(mut model: Model, offset: [f64; 3]) -> Model {
     for vertex in &mut model.vertices {
@@ -156,7 +158,7 @@ fn circle_circle_and_circle_line_csg_retains_curved_carriers() {
             reordered.validate().unwrap();
             let mut original = result.clone();
             original.rebuild_topology_ids();
-            let keys = |ids: &[String]| {
+            let keys = |ids: &[TopoId]| {
                 ids.iter()
                     .cloned()
                     .collect::<std::collections::BTreeSet<_>>()
