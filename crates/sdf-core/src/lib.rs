@@ -1378,6 +1378,46 @@ mod tests {
             .sum()
     }
     #[test]
+    fn sculpt_sphere_adds_and_removes_material() {
+        let base = sphere();
+        let added = base.sculpt_sphere([1.5, 0., 0.], 0.5, false).unwrap();
+        assert!(matches!(added, Field::Union { .. }));
+        assert_eq!(base.evaluate([1.5, 0., 0.]).unwrap(), 0.5);
+        assert_eq!(added.evaluate([1.5, 0., 0.]).unwrap(), -0.5);
+        assert_eq!(added.evaluate([0.; 3]).unwrap(), -1.);
+        let removed = base.sculpt_sphere([0.; 3], 0.5, true).unwrap();
+        assert!(matches!(removed, Field::Difference { .. }));
+        assert_eq!(removed.evaluate([0.; 3]).unwrap(), 0.5);
+        assert!(removed.evaluate([0.75, 0., 0.]).unwrap() < 0.);
+        // Chained strokes compose and the result still polygonizes to a closed shell.
+        let strokes = removed
+            .sculpt_sphere([0., 1., 0.], 0.3, false)
+            .unwrap()
+            .sculpt_sphere([0., -1., 0.], 0.3, true)
+            .unwrap();
+        assert!(strokes.evaluate([0., 1., 0.]).unwrap() < 0.);
+        assert!(strokes.evaluate([0., -1., 0.]).unwrap() > 0.);
+        let mesh = polygonize(&strokes, &grid(16)).unwrap();
+        assert!(triangles_closed(&mesh));
+        assert!(triangles_ok(&mesh));
+    }
+    #[test]
+    fn sculpt_sphere_rejects_invalid_strokes() {
+        let base = sphere();
+        for radius in [0., -1., f64::NAN, f64::INFINITY] {
+            assert!(
+                base.sculpt_sphere([0.; 3], radius, false).is_err(),
+                "{radius}"
+            );
+        }
+        assert!(base.sculpt_sphere([f64::NAN, 0., 0.], 1., true).is_err());
+        let invalid = Field::Sphere {
+            center: [0.; 3],
+            radius: -1.,
+        };
+        assert!(invalid.sculpt_sphere([0.; 3], 1., false).is_err());
+    }
+    #[test]
     fn closed_outward_sphere_and_convergence() {
         let coarse = polygonize(&sphere(), &grid(8)).unwrap();
         let fine = polygonize(&sphere(), &grid(16)).unwrap();

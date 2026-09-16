@@ -292,6 +292,60 @@ mod tests {
         assert!(c.validate().is_err());
         assert!(square().subdivide(6).is_err());
     }
+    #[test]
+    fn brush_edits_cage_vertices_locally_and_preserves_faces() {
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let b = geometry_ops::Brush {
+            center: [2., 2., 2.],
+            radius: 0.5,
+            displacement: [0., 0., 1.],
+        };
+        let out = cage.brush(&b).unwrap();
+        assert_eq!(out.faces, cage.faces);
+        assert_eq!(out.vertices.len(), cage.vertices.len());
+        let moved: Vec<_> = cage
+            .vertices
+            .iter()
+            .zip(&out.vertices)
+            .filter(|(a, b)| a != b)
+            .collect();
+        assert_eq!(moved.len(), 1);
+        assert_eq!(*moved[0].0, [2., 2., 2.]);
+        assert_eq!(*moved[0].1, [2., 2., 3.]);
+        assert!(out.subdivide(2).unwrap().triangulate().is_ok());
+    }
+    #[test]
+    fn brush_rejects_invalid_brush_and_invalid_cage() {
+        let b = geometry_ops::Brush {
+            center: [0.; 3],
+            radius: 1.,
+            displacement: [0., 0., 1.],
+        };
+        assert!(
+            square()
+                .brush(&geometry_ops::Brush {
+                    radius: 0.,
+                    ..b.clone()
+                })
+                .is_err()
+        );
+        assert!(
+            square()
+                .brush(&geometry_ops::Brush {
+                    displacement: [f64::NAN; 3],
+                    ..b.clone()
+                })
+                .is_err()
+        );
+        let mut broken = square();
+        broken.faces.push(vec![0, 1, 2]);
+        assert!(broken.brush(&b).is_err());
+        assert_eq!(square().brush(&b).unwrap().vertices[0], [0., 0., 1.]);
+    }
     fn boundary_edges(t: &geometry_ops::Triangles) -> usize {
         let mut edges = BTreeMap::new();
         for tri in t.indices.as_chunks::<3>().0 {

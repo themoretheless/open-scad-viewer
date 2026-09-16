@@ -160,3 +160,73 @@ fn output_budget_is_checked_before_elevation() {
     };
     assert_eq!(c.elevate(25).unwrap_err().code, "NURBS_RESOURCE_LIMIT");
 }
+
+#[test]
+fn brush_edits_move_controls_locally_and_preserve_rational_definition() {
+    let c = circle();
+    let b = geometry_ops::Brush {
+        center: [1., 1., 0.],
+        radius: 0.5,
+        displacement: [0., 0., 2.],
+    };
+    let out = edit::brush_curve(&c, &b).unwrap();
+    assert_eq!(out.degree, c.degree);
+    assert_eq!(out.knots, c.knots);
+    assert_eq!(out.weights, c.weights);
+    assert_eq!(out.control_points[0], c.control_points[0]);
+    assert_eq!(out.control_points[2], c.control_points[2]);
+    near(&out.control_points[1], &[1., 1., 2.]);
+    // Endpoints are interpolated by the clamped curve and remain untouched.
+    near(&out.evaluate(0.).unwrap().point, &[1., 0., 0.]);
+    near(&out.evaluate(1.).unwrap().point, &[0., 1., 0.]);
+    assert!(out.evaluate(0.5).unwrap().point[2] > 0.);
+
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let sb = geometry_ops::Brush {
+        center: [1., 1., 3.],
+        radius: 0.5,
+        displacement: [1., 0., 0.],
+    };
+    let sout = edit::brush_surface(&s, &sb).unwrap();
+    assert_eq!(sout.knots_u, s.knots_u);
+    assert_eq!(sout.knots_v, s.knots_v);
+    assert_eq!(sout.weights, s.weights);
+    let moved = s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(sout.control_points.iter().flatten())
+        .filter(|(a, b)| a != b)
+        .count();
+    assert_eq!(moved, 1, "exactly one control point lies inside the brush");
+    near(
+        &sout.evaluate(0., 0.).unwrap().point,
+        &s.evaluate(0., 0.).unwrap().point,
+    );
+}
+#[test]
+fn brush_edits_reject_invalid_brushes_and_inputs() {
+    let c = circle();
+    let bad = geometry_ops::Brush {
+        center: [0.; 3],
+        radius: 0.,
+        displacement: [1., 0., 0.],
+    };
+    assert!(edit::brush_curve(&c, &bad).is_err());
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    assert!(edit::brush_surface(&s, &bad).is_err());
+    let ok = geometry_ops::Brush { radius: 1., ..bad };
+    let mut flat = c.clone();
+    flat.control_points = flat
+        .control_points
+        .iter()
+        .map(|p| p[..2].to_vec())
+        .collect();
+    assert!(
+        edit::brush_curve(&flat, &ok).is_err(),
+        "2D controls are rejected"
+    );
+    let mut broken = c.clone();
+    broken.knots.pop();
+    assert!(edit::brush_curve(&broken, &ok).is_err());
+}

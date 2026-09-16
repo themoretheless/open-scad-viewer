@@ -354,6 +354,125 @@ mod tests {
         assert_eq!(b.apply([0.; 3]).unwrap(), [0., 0., 2.]);
         assert_eq!(b.apply([1., 0., 0.]).unwrap(), [1., 0., 0.]);
     }
+    #[test]
+    fn brush_falloff_is_smoothstep_monotone_and_isotropic() {
+        let b = Brush {
+            center: [1., 2., 3.],
+            radius: 2.,
+            displacement: [0., 0., 4.],
+        };
+        // Half radius: t = 0.5, w = 0.25 * (3 - 1) = 0.5.
+        let q = b.apply([2., 2., 3.]).unwrap();
+        assert!((q[2] - 5.).abs() < 1e-12 && q[0] == 2. && q[1] == 2.);
+        let mut last = f64::INFINITY;
+        for i in 0..=20 {
+            let d = i as f64 / 10.;
+            let w = b.apply([1. + d, 2., 3.]).unwrap()[2] - 3.;
+            assert!(w <= last + 1e-12, "falloff must not increase with distance");
+            last = w;
+        }
+        for axis in 0..3 {
+            let mut p = b.center;
+            p[axis] += 1.;
+            let q = b.apply(p).unwrap();
+            assert!(
+                (q[2] - p[2] - 2.).abs() < 1e-12,
+                "same weight along every axis"
+            );
+        }
+        assert_eq!(b.apply([3., 2., 3.]).unwrap(), [3., 2., 3.]);
+        assert_eq!(b.apply([10., 2., 3.]).unwrap(), [10., 2., 3.]);
+    }
+    #[test]
+    fn brush_rejects_invalid_parameters_and_points() {
+        let ok = Brush {
+            center: [0.; 3],
+            radius: 1.,
+            displacement: [1., 0., 0.],
+        };
+        assert!(ok.validate().is_ok());
+        for radius in [0., -1., f64::NAN, f64::INFINITY, 1e6 + 1.] {
+            assert!(
+                Brush {
+                    radius,
+                    ..ok.clone()
+                }
+                .validate()
+                .is_err(),
+                "{radius}"
+            );
+        }
+        assert!(
+            Brush {
+                radius: 1e6,
+                ..ok.clone()
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            Brush {
+                center: [f64::NAN, 0., 0.],
+                ..ok.clone()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Brush {
+                displacement: [0., f64::INFINITY, 0.],
+                ..ok.clone()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(ok.apply([f64::NAN, 0., 0.]).is_err());
+        // Coordinates are bounded by 1e6: out-of-range inputs and results are rejected.
+        assert!(
+            Brush {
+                center: [1e6 + 1., 0., 0.],
+                ..ok.clone()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Brush {
+                displacement: [1e6 + 1., 0., 0.],
+                ..ok.clone()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(ok.apply([1e6 + 1., 0., 0.]).is_err());
+        let edge = Brush {
+            center: [1e6, 0., 0.],
+            displacement: [1., 0., 0.],
+            radius: 1.,
+        };
+        assert!(edge.validate().is_ok());
+        assert!(
+            edge.apply([1e6, 0., 0.]).is_err(),
+            "result exceeds coordinate limits"
+        );
+        assert_eq!(edge.apply([1e6 - 1., 0., 0.]).unwrap(), [1e6 - 1., 0., 0.]);
+    }
+    #[test]
+    fn brush_round_trips_through_value_codec() {
+        let b = Brush {
+            center: [1., 2., 3.],
+            radius: 4.,
+            displacement: [5., 6., 7.],
+        };
+        let v = value_codec::to_value(b.clone()).unwrap();
+        let back: Brush = value_codec::from_value(v).unwrap();
+        assert_eq!(back.center, b.center);
+        assert_eq!(back.radius, b.radius);
+        assert_eq!(back.displacement, b.displacement);
+        let mut missing = value_codec::Map::new();
+        missing.insert("center".into(), value_codec::to_value(b.center).unwrap());
+        assert!(value_codec::from_value::<Brush>(value_codec::Value::Object(missing)).is_err());
+    }
 }
 
 /// Neutral triangle buffer. Not a mesh kernel: no validate/inspect/boolean.

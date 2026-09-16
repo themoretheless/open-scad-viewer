@@ -110,3 +110,134 @@ pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Resu
     }
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::solid::modeling::{Profile, extrude};
+    fn cube() -> BuiltMesh {
+        let p = Profile {
+            outer: vec![[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]],
+            holes: vec![],
+        };
+        extrude(&p, [0., 0., 2.]).unwrap()
+    }
+    fn max_z(mesh: &Mesh) -> f64 {
+        mesh.positions
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|p| p[2])
+            .fold(f64::MIN, f64::max)
+    }
+    #[test]
+    fn brush_moves_only_vertices_inside_radius_and_keeps_topology() {
+        let cube = cube();
+        let b = geometry_ops::Brush {
+            center: [1., 1., 2.],
+            radius: 0.5,
+            displacement: [0., 0., 1.],
+        };
+        let out = brush(&cube.mesh, &b).unwrap();
+        assert_eq!(
+            out.mesh.indices, cube.mesh.indices,
+            "brush must not change topology"
+        );
+        assert_eq!(out.mesh.positions.len(), cube.mesh.positions.len());
+        assert!(out.report.closed);
+        assert_eq!(out.report.degenerate_triangles, 0);
+        assert!(
+            (max_z(&out.mesh) - 3.).abs() < 1e-12,
+            "corner under brush center moves by full displacement"
+        );
+        let moved = cube
+            .mesh
+            .positions
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .zip(out.mesh.positions.as_chunks::<3>().0)
+            .filter(|(a, b)| a != b)
+            .count();
+        assert!(
+            moved >= 1 && moved < cube.mesh.positions.len() / 3,
+            "only the local corner is affected"
+        );
+        assert!(
+            out.report.signed_volume_mm3 > cube.report.signed_volume_mm3,
+            "additive brush grows the solid"
+        );
+    }
+    #[test]
+    fn brush_with_negative_displacement_carves_and_wide_brush_translates() {
+        let cube = cube();
+        let miss = geometry_ops::Brush {
+            center: [0.5, 0.5, 2.],
+            radius: 0.1,
+            displacement: [0., 0., -0.5],
+        };
+        let out = brush(&cube.mesh, &miss).unwrap();
+        assert!(out.report.closed);
+        assert_eq!(
+            out.mesh.positions, cube.mesh.positions,
+            "no vertex inside a tiny radius: unchanged"
+        );
+        let carve = geometry_ops::Brush {
+            center: [1., 1., 2.],
+            radius: 0.5,
+            displacement: [0., 0., -0.5],
+        };
+        let carved = brush(&cube.mesh, &carve).unwrap();
+        assert!(carved.report.closed);
+        assert!(
+            carved.report.signed_volume_mm3 < cube.report.signed_volume_mm3,
+            "subtractive brush shrinks the solid"
+        );
+        let wide = geometry_ops::Brush {
+            center: [0., 0., 1.],
+            radius: 1e3,
+            displacement: [3., 0., 0.],
+        };
+        let shifted = brush(&cube.mesh, &wide).unwrap();
+        assert!(
+            (shifted.report.signed_volume_mm3 - cube.report.signed_volume_mm3).abs() < 1e-3,
+            "near-uniform weight ≈ rigid translation"
+        );
+        for (a, b) in cube
+            .mesh
+            .positions
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .zip(shifted.mesh.positions.as_chunks::<3>().0)
+        {
+            assert!((b[0] - a[0] - 3.).abs() < 1e-4 && b[1] == a[1] && b[2] == a[2]);
+        }
+        assert!(shifted.report.closed);
+    }
+    #[test]
+    fn brush_rejects_invalid_brush_and_degenerate_results() {
+        let cube = cube();
+        for radius in [0., -1., f64::NAN] {
+            let b = geometry_ops::Brush {
+                center: [0.; 3],
+                radius,
+                displacement: [0., 0., 1.],
+            };
+            assert!(brush(&cube.mesh, &b).is_err(), "{radius}");
+        }
+        // Collapsing the whole top face onto the bottom creates degenerate triangles.
+        let flatten = geometry_ops::Brush {
+            center: [0., 0., 2.],
+            radius: 1e-3,
+            displacement: [0., 0., -2.],
+        };
+        let mut flat = cube.mesh.clone();
+        for p in flat.positions.as_chunks_mut::<3>().0 {
+            if p[2] == 2. {
+                *p = [0., 0., 2.];
+            }
+        }
+        assert!(brush(&flat, &flatten).is_err());
+    }
+}
