@@ -560,6 +560,7 @@ mod tests {
             let mut source_camera = camera.clone();
             source_camera.translation = [-0.05, 0., 0.];
             let mut sources = [Source {
+                index: 1,
                 image: &gray,
                 camera: &source_camera,
                 rotation: ID,
@@ -660,6 +661,7 @@ mod tests {
         let ray = camera.ray([8., 8.]);
         let make_source = |image| {
             let mut source = Source {
+                index: 1,
                 image,
                 camera: &camera,
                 rotation: ID,

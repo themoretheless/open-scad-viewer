@@ -117,16 +117,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     if std::env::var_os("PHOTO_DENSE").is_some() {
         let mut last = String::new();
-        let mut dense_options = photogrammetry_core::dense::DenseOptions::default();
+        let accuracy = std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on");
+        // PHOTO_ACCURACY=on selects the qualified dense bundle (5x5 patches,
+        // dual-scale pass, sparse depth intervals): analytic mean surface error
+        // -27%, mean F1 +3%. The batched GPU sweep keeps it affordable.
+        let mut dense_options = if accuracy {
+            photogrammetry_core::dense::DenseOptions::accurate()
+        } else {
+            photogrammetry_core::dense::DenseOptions::default()
+        };
         if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
             #[cfg(feature = "gpu")]
             {
                 dense_options.acceleration = photogrammetry_core::Acceleration::Gpu;
             }
-        }
-        if std::env::var("PHOTO_ACCURACY").as_deref() == Ok("on") {
-            // Qualified on the analytic scenes: frontal-scene F1 0.73 -> 0.96.
-            dense_options.sparse_depth_prior = true;
         }
         match std::env::var("PHOTO_DENSE_PROFILE").as_deref() {
             Ok("slanted") => {
@@ -136,6 +140,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             Ok("baseline") | Err(_) => (),
             Ok(other) => return Err(format!("Unknown PHOTO_DENSE_PROFILE: {other}").into()),
         }
+        let dense_started = std::time::Instant::now();
         let dense = photogrammetry_core::dense::densify_with_options(
             &images,
             &result,
@@ -150,7 +155,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             },
         )?;
         eprintln!(
-            "dense_hypotheses={} source_patches={} sampled_source_pixels={}",
+            "dense_elapsed_ms={:.3} dense_hypotheses={} source_patches={} sampled_source_pixels={}",
+            dense_started.elapsed().as_secs_f64() * 1000.,
             dense.diagnostics.evaluated_hypotheses,
             dense.diagnostics.evaluated_source_patches,
             dense.diagnostics.sampled_source_pixels

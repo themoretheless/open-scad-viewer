@@ -24,12 +24,15 @@ the browser. The `reconstruct` example doubles as the reference CLI:
 cargo run --release --manifest-path crates/Cargo.toml -p photogrammetry-core \
   --example reconstruct -- out.ply FOCAL_PIXELS input1.ppm input2.ppm ...
 PHOTO_DENSE=1           # also write out.ply.surface.ply
-PHOTO_ACCURACY=on       # qualified accuracy bundle (more verified points)
+PHOTO_ACCURACY=on       # qualified accuracy bundle; with PHOTO_DENSE also
+                        # DenseOptions::accurate() (5x5 patches, dual scale,
+                        # sparse depth prior: -27% surface error on analytic scenes)
 PHOTO_ACCELERATION=gpu  # requires building with --features gpu (wgpu)
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
-(3.3-18.9x) and the frontoparallel NCC depth sweep (~5x of the dense stage) via
+(3.3-18.9x) and the frontoparallel NCC depth sweep (batched, selection on the
+GPU: ~10x of the dense stage, 31-68 ms on the frozen sets) via
 Metal on macOS and Vulkan on Linux/Windows; `Acceleration::Gpu` is opt-in and
 falls back to the CPU reference without an adapter. CPU defaults stay
 bit-identical with or without the feature. Browser builds keep the feature off;
