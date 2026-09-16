@@ -16,8 +16,8 @@ struct Params {
     ref_w: u32,
     ref_h: u32,
     ref_goff: u32,
-    _p1: u32,
-    _p2: u32,
+    min_corr: f32,
+    margin: f32,
     step: f32,
     ref_f: f32,
     ref_cx: f32,
@@ -29,6 +29,10 @@ struct Params {
 @group(0) @binding(3) var<storage, read> srcm: array<u32>;
 @group(0) @binding(4) var<storage, read> grays: array<f32>;
 @group(0) @binding(5) var<storage, read_write> scores: array<f32>;
+// sweep_select only: per-pixel hypothesis bin range (lo, hi) and the packed
+// selection result (valid, best bin, parabolic offset, score).
+@group(0) @binding(6) var<storage, read> bins: array<u32>;
+@group(0) @binding(7) var<storage, read_write> results: array<vec4<f32>>;
 
 // Gray levels live in [0, 1]; -1 marks an invalid (out-of-frame) sample,
 // matching the CPU's Option-returning bilinear sampler.
@@ -48,22 +52,8 @@ fn sample_gray(offset: u32, w: u32, h: u32, x: f32, y: f32) -> f32 {
     return (1.0 - b) * ((1.0 - a) * p00 + a * p10) + b * ((1.0 - a) * p01 + a * p11);
 }
 
-@compute @workgroup_size(16, 16)
-fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
-    let x = id.x;
-    let y = id.y;
-    if (x >= params.width || y >= params.height) {
-        return;
-    }
-    let base = (y * params.width + x) * params.n_hyp;
-    if (x < 3u || y < 3u || x + 3u >= params.width || y + 3u >= params.height) {
-        for (var d = 0u; d < params.n_hyp; d++) {
-            scores[base + d] = -1.0;
-        }
-        return;
-    }
-    let px = f32(x) * params.step;
-    let py = f32(y) * params.step;
+// Centered reference patch and its energy; returns false for flat patches.
+fn reference_patch(px: f32, py: f32, centered: ptr<function, array<f32, 25>>, energy: ptr<function, f32>) -> bool {
     let ps = params.radius * 2u + 1u;
     var refv: array<f32, 25>;
     for (var i = 0u; i < params.plen; i++) {
@@ -77,74 +67,170 @@ fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
         mean += refv[i];
     }
     mean = mean / f32(params.plen);
+    var e = 0.0;
+    for (var i = 0u; i < params.plen; i++) {
+        (*centered)[i] = refv[i] - mean;
+        e += (*centered)[i] * (*centered)[i];
+    }
+    *energy = e;
+    return e >= 0.0001;
+}
+
+// Mean NCC over the sources supporting depth z at reference pixel (px, py);
+// -1 when fewer than params.needed sources correlate above 0.4.
+fn score_hypothesis(px: f32, py: f32, z: f32, centered: ptr<function, array<f32, 25>>, energy: f32) -> f32 {
+    let ps = params.radius * 2u + 1u;
+    var sum = 0.0;
+    var count = 0u;
+    for (var s = 0u; s < params.n_src; s++) {
+        let fb = s * 16u;
+        let mb = s * 4u;
+        let goff = srcm[mb];
+        let gw = srcm[mb + 1u];
+        let gh = srcm[mb + 2u];
+        let focal = srcf[fb + 12u];
+        let cx = srcf[fb + 13u];
+        let cy = srcf[fb + 14u];
+        var ssum = 0.0;
+        var sq = 0.0;
+        var cov = 0.0;
+        var ok = true;
+        for (var i = 0u; i < params.plen; i++) {
+            let ox = (f32(i % ps) - f32(params.radius)) * params.step;
+            let oy = (f32(i / ps) - f32(params.radius)) * params.step;
+            let rx = (px - params.ref_cx + ox) / params.ref_f;
+            let ry = (py - params.ref_cy + oy) / params.ref_f;
+            let vx = srcf[fb] * rx + srcf[fb + 1u] * ry + srcf[fb + 2u];
+            let vy = srcf[fb + 3u] * rx + srcf[fb + 4u] * ry + srcf[fb + 5u];
+            let vz = srcf[fb + 6u] * rx + srcf[fb + 7u] * ry + srcf[fb + 8u];
+            let wx = vx * z + srcf[fb + 9u];
+            let wy = vy * z + srcf[fb + 10u];
+            let wz = vz * z + srcf[fb + 11u];
+            if (wz <= 0.0) {
+                ok = false;
+                break;
+            }
+            let value = sample_gray(goff, gw, gh, focal * wx / wz + cx, focal * wy / wz + cy);
+            if (value < 0.0) {
+                ok = false;
+                break;
+            }
+            ssum += value;
+            sq += value * value;
+            cov += (*centered)[i] * value;
+        }
+        if (!ok) {
+            continue;
+        }
+        let energy_s = sq - ssum * ssum / f32(params.plen);
+        if (energy_s < 0.0001) {
+            continue;
+        }
+        let ncc = clamp(cov / sqrt(energy * energy_s), -1.0, 1.0);
+        if (ncc > 0.4) {
+            sum += ncc;
+            count++;
+        }
+    }
+    return select(-1.0, sum / f32(count), count >= params.needed);
+}
+
+// Scores for every hypothesis; the host (browser WebGPU path) selects on the CPU.
+@compute @workgroup_size(16, 16)
+fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
+    let x = id.x;
+    let y = id.y;
+    if (x >= params.width || y >= params.height) {
+        return;
+    }
+    let base = (y * params.width + x) * params.n_hyp;
     var centered: array<f32, 25>;
     var energy = 0.0;
-    for (var i = 0u; i < params.plen; i++) {
-        centered[i] = refv[i] - mean;
-        energy += centered[i] * centered[i];
-    }
-    if (energy < 0.0001) {
+    let px = f32(x) * params.step;
+    let py = f32(y) * params.step;
+    if (x < 3u || y < 3u || x + 3u >= params.width || y + 3u >= params.height
+        || !reference_patch(px, py, &centered, &energy)) {
         for (var d = 0u; d < params.n_hyp; d++) {
             scores[base + d] = -1.0;
         }
         return;
     }
     for (var d = 0u; d < params.n_hyp; d++) {
-        let z = hyps[d];
-        var sum = 0.0;
-        var count = 0u;
-        for (var s = 0u; s < params.n_src; s++) {
-            let fb = s * 16u;
-            let mb = s * 4u;
-            let goff = srcm[mb];
-            let gw = srcm[mb + 1u];
-            let gh = srcm[mb + 2u];
-            let focal = srcf[fb + 12u];
-            let cx = srcf[fb + 13u];
-            let cy = srcf[fb + 14u];
-            var ssum = 0.0;
-            var sq = 0.0;
-            var cov = 0.0;
-            var ok = true;
-            for (var i = 0u; i < params.plen; i++) {
-                let ox = (f32(i % ps) - f32(params.radius)) * params.step;
-                let oy = (f32(i / ps) - f32(params.radius)) * params.step;
-                let rx = (px - params.ref_cx + ox) / params.ref_f;
-                let ry = (py - params.ref_cy + oy) / params.ref_f;
-                let vx = srcf[fb] * rx + srcf[fb + 1u] * ry + srcf[fb + 2u];
-                let vy = srcf[fb + 3u] * rx + srcf[fb + 4u] * ry + srcf[fb + 5u];
-                let vz = srcf[fb + 6u] * rx + srcf[fb + 7u] * ry + srcf[fb + 8u];
-                let wx = vx * z + srcf[fb + 9u];
-                let wy = vy * z + srcf[fb + 10u];
-                let wz = vz * z + srcf[fb + 11u];
-                if (wz <= 0.0) {
-                    ok = false;
-                    break;
-                }
-                let value = sample_gray(goff, gw, gh, focal * wx / wz + cx, focal * wy / wz + cy);
-                if (value < 0.0) {
-                    ok = false;
-                    break;
-                }
-                ssum += value;
-                sq += value * value;
-                cov += centered[i] * value;
-            }
-            if (!ok) {
-                continue;
-            }
-            let energy_s = sq - ssum * ssum / f32(params.plen);
-            if (energy_s < 0.0001) {
-                continue;
-            }
-            let ncc = clamp(cov / sqrt(energy * energy_s), -1.0, 1.0);
-            if (ncc > 0.4) {
-                sum += ncc;
-                count++;
+        scores[base + d] = score_hypothesis(px, py, hyps[d], &centered, energy);
+    }
+}
+
+// Last index wins ties, matching the CPU's Iterator::max_by on total order.
+fn argmax(sc: ptr<function, array<f32, 128>>, lo: u32, hi: u32) -> u32 {
+    var best = lo;
+    for (var d = lo; d <= hi; d++) {
+        if ((*sc)[d] >= (*sc)[best]) {
+            best = d;
+        }
+    }
+    return best;
+}
+
+// Native path: scores stay in registers and the CPU's pick_depth logic runs
+// here per pixel (range clamp, uniqueness margin, parabolic sub-bin offset).
+// results = (valid, best bin, offset, score); depth is rebuilt in f64 on the CPU.
+@compute @workgroup_size(16, 16)
+fn sweep_select(@builtin(global_invocation_id) id: vec3<u32>) {
+    let x = id.x;
+    let y = id.y;
+    if (x >= params.width || y >= params.height) {
+        return;
+    }
+    let pixel = y * params.width + x;
+    results[pixel] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var centered: array<f32, 25>;
+    var energy = 0.0;
+    let px = f32(x) * params.step;
+    let py = f32(y) * params.step;
+    if (x < 3u || y < 3u || x + 3u >= params.width || y + 3u >= params.height
+        || !reference_patch(px, py, &centered, &energy)) {
+        return;
+    }
+    var sc: array<f32, 128>;
+    for (var d = 0u; d < params.n_hyp; d++) {
+        sc[d] = score_hypothesis(px, py, hyps[d], &centered, energy);
+    }
+    let last = params.n_hyp - 1u;
+    let bin_lo = bins[pixel * 2u];
+    let bin_hi = bins[pixel * 2u + 1u];
+    let ranged = bin_lo > 0u || bin_hi < last;
+    let best_ranged = argmax(&sc, bin_lo, bin_hi);
+    var best = 0u;
+    var alternative = -1.0;
+    if (ranged && sc[best_ranged] >= params.min_corr) {
+        best = best_ranged;
+        for (var d = 0u; d < params.n_hyp; d++) {
+            if (d + 3u < bin_lo || d > bin_hi + 3u) {
+                alternative = max(alternative, sc[d]);
             }
         }
-        scores[base + d] = select(-1.0, sum / f32(count), count >= params.needed);
+    } else {
+        best = argmax(&sc, 0u, last);
+        for (var d = 0u; d < params.n_hyp; d++) {
+            if (max(d, best) - min(d, best) > 3u) {
+                alternative = max(alternative, sc[d]);
+            }
+        }
     }
+    if (sc[best] < params.min_corr || sc[best] - alternative < params.margin) {
+        return;
+    }
+    var offset = 0.0;
+    if (best > 0u && best < last) {
+        let a = sc[best - 1u];
+        let b = sc[best];
+        let c = sc[best + 1u];
+        let denom = a - 2.0 * b + c;
+        if (a > 0.0 && c > 0.0 && abs(denom) > 1e-8) {
+            offset = clamp(0.5 * (a - c) / denom, -0.5, 0.5);
+        }
+    }
+    results[pixel] = vec4<f32>(1.0, f32(best), offset, sc[best]);
 }
 "#;
 
@@ -251,6 +337,9 @@ impl Correlation<'_> {
 }
 
 pub(super) struct Source<'a> {
+    /// Image index of `image` in the session (GPU gray atlas lookup).
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+    pub(super) index: usize,
     pub(super) image: &'a GrayImage,
     pub(super) camera: &'a Camera,
     pub(super) rotation: M3,
@@ -465,6 +554,7 @@ fn build_view_sources<'a>(
             let camera = sparse.cameras[j].as_ref().unwrap();
             let (rotation, translation) = source_transform(reference, camera);
             Source {
+                index: j,
                 image: grayscale[j].as_ref().unwrap(),
                 camera,
                 rotation,
@@ -518,6 +608,26 @@ pub(super) fn estimate_prepared(
     };
     let mut maps = Vec::new();
     let mut diagnostics = DenseDiagnostics::default();
+    // GPU batch: every frontoparallel view of this pass shares one gray upload
+    // and one submit; coarse-to-fine passes depend on each other and keep the
+    // per-view path inside `sweep_depth`.
+    #[cfg(feature = "gpu")]
+    let mut gpu_batch = (options.acceleration == crate::Acceleration::Gpu
+        && options.estimator == DenseEstimator::FrontoparallelSweep
+        && !options.coarse_to_fine)
+        .then(crate::gpu::sweep::shared)
+        .flatten()
+        .map(|sweep| {
+            let rasters: Vec<Option<(&[f32], usize, usize)>> = grayscale
+                .iter()
+                .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
+                .collect();
+            (sweep, sweep.upload_grays(&rasters))
+        });
+    #[cfg(feature = "gpu")]
+    let mut gpu_jobs: Vec<crate::gpu::sweep::SweepJob> = Vec::new();
+    #[cfg(feature = "gpu")]
+    let mut gpu_pending: Vec<(usize, ViewPreamble, usize)> = Vec::new();
     for (view_number, &(index, reference)) in active.iter().enumerate() {
         cancelled(
             progress,
@@ -529,6 +639,47 @@ pub(super) fn estimate_prepared(
             continue;
         };
         let gray = grayscale[index].as_ref().unwrap();
+        #[cfg(feature = "gpu")]
+        if let Some((_, atlas)) = &gpu_batch {
+            let _ = atlas;
+            let sources = build_view_sources(
+                sparse,
+                grayscale,
+                &preamble,
+                options.patch_radius,
+                preamble.step,
+            );
+            let ranges = if options.sparse_depth_prior {
+                sparse_intervals(
+                    sparse,
+                    index,
+                    reference,
+                    preamble.width,
+                    preamble.height,
+                    preamble.step,
+                    preamble.near,
+                    preamble.far,
+                )
+            } else {
+                None
+            };
+            let hypotheses = hypothesis_grid(preamble.near, preamble.far, options.depth_hypotheses);
+            gpu_jobs.push(gpu_job(
+                index,
+                reference,
+                &sources,
+                preamble.width,
+                preamble.height,
+                preamble.step,
+                &hypotheses[..options.depth_hypotheses],
+                ranges.as_ref(),
+                preamble.near,
+                1. / preamble.near - 1. / preamble.far,
+                options,
+            ));
+            gpu_pending.push((index, preamble, sources.len()));
+            continue;
+        }
         let (width, height, step, near, far) = (
             preamble.width,
             preamble.height,
@@ -678,6 +829,45 @@ pub(super) fn estimate_prepared(
             confidence,
             neighbors: neighbors.clone(),
         });
+    }
+    #[cfg(feature = "gpu")]
+    if let Some((sweep, atlas)) = gpu_batch.take() {
+        let mut batch = sweep.batch(&atlas);
+        for job in &gpu_jobs {
+            batch.push(job);
+        }
+        cancelled(progress, "depth", 0, active.len() * options.max_side)?;
+        let selections = batch.finish();
+        if selections.len() != gpu_pending.len() {
+            return Err(crate::error("GPU sweep returned an unexpected view count"));
+        }
+        for ((index, preamble, source_count), selection) in gpu_pending.into_iter().zip(selections)
+        {
+            count_gpu_work(
+                &mut diagnostics,
+                preamble.width,
+                preamble.height,
+                source_count,
+                options,
+            );
+            let (depth, confidence) =
+                maps_from_selection(&selection, preamble.near, preamble.far, options);
+            maps.push(DepthMap {
+                image: index,
+                width: preamble.width,
+                height: preamble.height,
+                step: preamble.step,
+                depth,
+                confidence,
+                neighbors: preamble.neighbors,
+            });
+        }
+        cancelled(
+            progress,
+            "depth",
+            active.len() * options.max_side,
+            active.len() * options.max_side,
+        )?;
     }
     Ok((maps, diagnostics))
 }
@@ -1069,6 +1259,34 @@ fn select_from_scores(
     Ok((depth, confidence))
 }
 
+/// Inclusive hypothesis-bin interval of one pixel. Maps the depth interval onto
+/// the global hypothesis grid; intervals wider than 15% relative depth can
+/// straddle a depth edge, so they are not trusted and the pixel keeps
+/// full-range behavior. Shared by the CPU selection and the GPU shader input.
+fn bin_range(
+    ranges: Option<&SweepRanges>,
+    pixel: usize,
+    near: f64,
+    inverse_span: f64,
+    options: &DenseOptions,
+) -> (usize, usize) {
+    let last = options.depth_hypotheses - 1;
+    match ranges {
+        Some((lo, hi)) if lo[pixel] > 0. => {
+            let (range_lo, range_hi) = (lo[pixel], hi[pixel]);
+            if range_hi > range_lo * 1.15 {
+                (0, last)
+            } else {
+                let bin_of = |z: f64| (1. / near - 1. / z) / inverse_span * last as f64;
+                let lo_bin = bin_of(range_lo).floor().max(0.) as usize;
+                let hi_bin = (bin_of(range_hi).ceil() as usize).min(last);
+                (lo_bin, hi_bin.max(lo_bin))
+            }
+        }
+        _ => (0, last),
+    }
+}
+
 /// Frontoparallel NCC sweep over inverse-depth hypotheses. Optional per-pixel
 /// ranges restrict peak selection to the geometrically plausible bins and
 /// exclude those bins from the uniqueness alternatives; pixels without a range
@@ -1088,23 +1306,7 @@ fn pick_depth(
     options: &DenseOptions,
 ) -> Option<(f64, f32)> {
     let last = options.depth_hypotheses - 1;
-    // Map the depth interval onto the global hypothesis grid. Intervals
-    // wider than 15% relative depth can straddle a depth edge, so they
-    // are not trusted and the pixel keeps full-range behavior.
-    let (bin_lo, bin_hi) = match ranges {
-        Some((lo, hi)) if lo[pixel] > 0. => {
-            let (range_lo, range_hi) = (lo[pixel], hi[pixel]);
-            if range_hi > range_lo * 1.15 {
-                (0, last)
-            } else {
-                let bin_of = |z: f64| (1. / near - 1. / z) / inverse_span * last as f64;
-                let lo_bin = bin_of(range_lo).floor().max(0.) as usize;
-                let hi_bin = (bin_of(range_hi).ceil() as usize).min(last);
-                (lo_bin, hi_bin.max(lo_bin))
-            }
-        }
-        _ => (0, last),
-    };
+    let (bin_lo, bin_hi) = bin_range(ranges, pixel, near, inverse_span, options);
     // With a per-pixel range the prior vouches for everything inside
     // it; ambiguity only matters at competing depths outside. If the
     // in-range peak is implausible, the range was wrong for this pixel:
@@ -1147,40 +1349,110 @@ fn pick_depth(
     Some((1. / ((1. - f) / near + f / far), scores[best] as f32))
 }
 
-/// Packs one source view for the GPU sweep: appends its gray raster to the
-/// shared block and records the shader payload. Used by both the in-kernel GPU
-/// sweep and the host-split (browser WebGPU) packing.
+/// Smallest f32 not below `x`: for an f32 score `s`, `s < x` and `s >= x` in
+/// f64 are exactly `s < ceil` and `s >= ceil` in f32.
 #[cfg(feature = "gpu")]
-fn source_payload(
-    rotation: [[f64; 3]; 3],
-    translation: [f64; 3],
-    focal: f64,
-    cx: f64,
-    cy: f64,
-    image: &GrayImage,
-    ref_len: usize,
-    grays: &mut Vec<f32>,
-) -> crate::gpu::sweep::SourcePayload {
-    // Offset 0 of the shared gray buffer is the reference image.
-    let gray_offset = (ref_len + grays.len()) as u32;
-    grays.extend_from_slice(&image.values);
-    crate::gpu::sweep::SourcePayload {
-        rotation: rotation.map(|row| row.map(|v| v as f32)),
-        translation: translation.map(|v| v as f32),
-        focal: focal as f32,
-        cx: cx as f32,
-        cy: cy as f32,
-        gray_offset,
-        gray_width: image.width as u32,
-        gray_height: image.height as u32,
+fn ceil_f32(x: f64) -> f32 {
+    let t = x as f32;
+    if (t as f64) < x { t.next_up() } else { t }
+}
+
+/// Packs one view for the GPU sweep-and-select shader. Per-pixel hypothesis
+/// bins come from the same `bin_range` the CPU selection uses.
+#[cfg(feature = "gpu")]
+#[allow(clippy::too_many_arguments)]
+fn gpu_job(
+    ref_index: usize,
+    reference: &Camera,
+    sources: &[Source],
+    width: usize,
+    height: usize,
+    step: f64,
+    hypotheses: &[f64],
+    ranges: Option<&SweepRanges>,
+    near: f64,
+    inverse_span: f64,
+    options: &DenseOptions,
+) -> crate::gpu::sweep::SweepJob {
+    let mut bins = Vec::with_capacity(width * height * 2);
+    for pixel in 0..width * height {
+        let (lo, hi) = bin_range(ranges, pixel, near, inverse_span, options);
+        bins.push(lo as u32);
+        bins.push(hi as u32);
+    }
+    crate::gpu::sweep::SweepJob {
+        ref_image: ref_index,
+        ref_focal: reference.focal as f32,
+        ref_cx: reference.cx as f32,
+        ref_cy: reference.cy as f32,
+        sources: sources
+            .iter()
+            .map(|source| crate::gpu::sweep::SourcePayload {
+                image: source.index,
+                rotation: source.rotation.map(|row| row.map(|v| v as f32)),
+                translation: source.translation.map(|v| v as f32),
+                focal: source.camera.focal as f32,
+                cx: source.camera.cx as f32,
+                cy: source.camera.cy as f32,
+            })
+            .collect(),
+        hypotheses: hypotheses.iter().map(|&z| z as f32).collect(),
+        width,
+        height,
+        patch_radius: options.patch_radius,
+        step: step as f32,
+        needed: sources.len().min(2).max(options.min_support_views),
+        bins,
+        min_correlation: ceil_f32(options.min_correlation),
+        uniqueness_margin: options.uniqueness_margin as f32,
     }
 }
 
-/// Packs the prepared CPU-side view for the GPU sweep and returns the per-pixel
-/// hypothesis scores; None without a GPU adapter (the caller falls back).
+/// Depth/confidence maps from GPU selections; depth is rebuilt in f64 from the
+/// winning bin and its sub-bin offset, exactly as `pick_depth` does.
+#[cfg(feature = "gpu")]
+fn maps_from_selection(
+    selection: &[Option<crate::gpu::sweep::Selection>],
+    near: f64,
+    far: f64,
+    options: &DenseOptions,
+) -> (Vec<f64>, Vec<f32>) {
+    let last = (options.depth_hypotheses - 1) as f64;
+    let mut depth = vec![0.; selection.len()];
+    let mut confidence = vec![0.; selection.len()];
+    for (i, picked) in selection.iter().enumerate() {
+        if let Some(picked) = picked {
+            let f = (picked.bin as f64 + picked.offset as f64) / last;
+            depth[i] = 1. / ((1. - f) / near + f / far);
+            confidence[i] = picked.score;
+        }
+    }
+    (depth, confidence)
+}
+
+/// GPU work counters: the shader evaluates every hypothesis/source/tap
+/// without early exits, so the diagnostics report that full work.
+#[cfg(feature = "gpu")]
+fn count_gpu_work(
+    diagnostics: &mut DenseDiagnostics,
+    width: usize,
+    height: usize,
+    sources: usize,
+    options: &DenseOptions,
+) {
+    let pixels = (width - 6) * (height - 6);
+    let taps = (options.patch_radius * 2 + 1).pow(2);
+    diagnostics.evaluated_hypotheses += pixels * options.depth_hypotheses;
+    diagnostics.evaluated_source_patches += pixels * options.depth_hypotheses * sources;
+    diagnostics.sampled_source_pixels +=
+        (pixels * options.depth_hypotheses * sources * taps) as u64;
+}
+
+/// Single-view GPU sweep (coarse-to-fine passes, which depend on each other,
+/// cannot join the per-pass batch). Uploads only the rasters this view needs.
 #[cfg(feature = "gpu")]
 #[allow(clippy::too_many_arguments)]
-fn gpu_sweep_scores(
+fn gpu_sweep_single(
     gray: &GrayImage,
     reference: &Camera,
     sources: &[Source],
@@ -1188,41 +1460,51 @@ fn gpu_sweep_scores(
     height: usize,
     step: f64,
     hypotheses: &[f64],
+    ranges: Option<&SweepRanges>,
+    near: f64,
+    far: f64,
+    inverse_span: f64,
     options: &DenseOptions,
-) -> Option<Vec<f32>> {
-    let needed = sources.len().min(2).max(options.min_support_views);
-    let mut grays = Vec::new();
-    let mut payloads = Vec::with_capacity(sources.len());
-    let ref_len = gray.values.len();
+) -> Option<(Vec<f64>, Vec<f32>)> {
+    let sweep = crate::gpu::sweep::shared()?;
+    // Local atlas: the reference at slot 0, sources renumbered after it.
+    let mut rasters: Vec<Option<(&[f32], usize, usize)>> =
+        vec![Some((gray.values.as_slice(), gray.width, gray.height))];
+    let mut renumbered = Vec::with_capacity(sources.len());
     for source in sources {
-        payloads.push(source_payload(
-            source.rotation,
-            source.translation,
-            source.camera.focal,
-            source.camera.cx,
-            source.camera.cy,
-            &source.image,
-            ref_len,
-            &mut grays,
-        ));
+        rasters.push(Some((
+            source.image.values.as_slice(),
+            source.image.width,
+            source.image.height,
+        )));
+        renumbered.push(Source {
+            index: rasters.len() - 1,
+            image: source.image,
+            camera: source.camera,
+            rotation: source.rotation,
+            translation: source.translation,
+            offsets: source.offsets,
+            rays: source.rays,
+        });
     }
-    let hypotheses32: Vec<f32> = hypotheses.iter().map(|&z| z as f32).collect();
-    crate::gpu::sweep::sweep_view(
-        &gray.values,
-        gray.width,
-        gray.height,
-        reference.focal,
-        reference.cx,
-        reference.cy,
-        &payloads,
-        &grays,
-        &hypotheses32,
+    let atlas = sweep.upload_grays(&rasters);
+    let job = gpu_job(
+        0,
+        reference,
+        &renumbered,
         width,
         height,
-        options.patch_radius,
         step,
-        needed,
-    )
+        hypotheses,
+        ranges,
+        near,
+        inverse_span,
+        options,
+    );
+    let mut batch = sweep.batch(&atlas);
+    batch.push(&job);
+    let selection = batch.finish().pop()?;
+    Some(maps_from_selection(&selection, near, far, options))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1247,7 +1529,7 @@ fn sweep_depth(
     let mut confidence = vec![0.; width * height];
     #[cfg(feature = "gpu")]
     if options.acceleration == crate::Acceleration::Gpu {
-        if let Some(scores_map) = gpu_sweep_scores(
+        if let Some(maps) = gpu_sweep_single(
             gray,
             reference,
             sources,
@@ -1255,29 +1537,15 @@ fn sweep_depth(
             height,
             step,
             &hypotheses[..options.depth_hypotheses],
+            ranges,
+            near,
+            far,
+            inverse_span,
             options,
         ) {
-            // The GPU evaluates every hypothesis/source/tap without early
-            // exits; counters report that full work (f32 arithmetic, see
-            // DenseOptions::acceleration).
-            let pixels = (width - 6) * (height - 6);
-            let taps = patch_side * patch_side;
-            diagnostics.evaluated_hypotheses += pixels * options.depth_hypotheses;
-            diagnostics.evaluated_source_patches +=
-                pixels * options.depth_hypotheses * sources.len();
-            diagnostics.sampled_source_pixels +=
-                (pixels * options.depth_hypotheses * sources.len() * taps) as u64;
-            return select_from_scores(
-                &scores_map,
-                width,
-                height,
-                ranges,
-                near,
-                far,
-                inverse_span,
-                options,
-                row_progress,
-            );
+            count_gpu_work(diagnostics, width, height, sources.len(), options);
+            row_progress(height - 4)?;
+            return Ok(maps);
         }
     }
     for y in 3..height - 3 {
@@ -1394,6 +1662,7 @@ mod tests {
         };
         let build = |step: f64| {
             vec![Source {
+                index: 1,
                 image: &src_gray,
                 camera: &source_camera,
                 rotation: ID,
@@ -1436,11 +1705,10 @@ mod tests {
             .0
         };
         let cpu = run(crate::Acceleration::Cpu);
-        let Some(gpu_available) = (crate::gpu::GpuContext::new().map(|_| ())) else {
+        if crate::gpu::sweep::shared().is_none() {
             eprintln!("no GPU adapter; skipping");
             return;
-        };
-        let _ = gpu_available;
+        }
         let gpu = run(crate::Acceleration::Gpu);
         let mut valid = 0;
         let mut agree = 0;
@@ -1543,43 +1811,48 @@ mod tests {
         };
         let (views, prepared) =
             prepare_host_views(&images, &sparse, &options, &mut |_, _, _| true).unwrap();
-        let view = views[0].as_ref().expect("view 0 prepared");
-        let run_scores = |view: &HostSweepView| -> Option<Vec<f32>> {
-            let mut flat: Vec<f32> = Vec::new();
-            let mut payloads = Vec::new();
-            for s in &view.sources {
-                payloads.push(source_payload(
-                    s.rotation,
-                    s.translation,
-                    s.focal,
-                    s.cx,
-                    s.cy,
-                    gray[s.image].as_ref().unwrap(),
-                    gray[view.ref_image].as_ref().unwrap().values.len(),
-                    &mut flat,
-                ));
-            }
-            let hyps: Vec<f32> = view.hypotheses.iter().map(|&z| z as f32).collect();
-            crate::gpu::sweep::sweep_view(
-                &gray[view.ref_image].as_ref().unwrap().values,
-                80,
-                80,
-                view.ref_focal,
-                view.ref_cx,
-                view.ref_cy,
-                &payloads,
-                &flat,
-                &hyps,
-                view.map_width,
-                view.map_height,
-                1,
-                view.step,
-                view.needed,
-            )
-        };
-        let Some(_) = run_scores(view) else {
+        assert!(views[0].is_some(), "view 0 prepared");
+        let Some(sweep) = crate::gpu::sweep::shared() else {
             eprintln!("no GPU adapter; skipping");
             return;
+        };
+        let rasters: Vec<Option<(&[f32], usize, usize)>> = gray
+            .iter()
+            .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
+            .collect();
+        let atlas = sweep.upload_grays(&rasters);
+        // The browser-shared `sweep` entry: raw score rows per view.
+        let run_scores = |view: &HostSweepView| -> Option<Vec<f32>> {
+            let job = crate::gpu::sweep::SweepJob {
+                ref_image: view.ref_image,
+                ref_focal: view.ref_focal as f32,
+                ref_cx: view.ref_cx as f32,
+                ref_cy: view.ref_cy as f32,
+                sources: view
+                    .sources
+                    .iter()
+                    .map(|s| crate::gpu::sweep::SourcePayload {
+                        image: s.image,
+                        rotation: s.rotation.map(|row| row.map(|v| v as f32)),
+                        translation: s.translation.map(|v| v as f32),
+                        focal: s.focal as f32,
+                        cx: s.cx as f32,
+                        cy: s.cy as f32,
+                    })
+                    .collect(),
+                hypotheses: view.hypotheses.iter().map(|&z| z as f32).collect(),
+                width: view.map_width,
+                height: view.map_height,
+                patch_radius: view.patch_radius,
+                step: view.step as f32,
+                needed: view.needed,
+                bins: vec![0; view.map_width * view.map_height * 2],
+                min_correlation: 0.,
+                uniqueness_margin: 0.,
+            };
+            let mut batch = sweep.batch(&atlas);
+            batch.push_scores(&job);
+            batch.finish_scores().pop()
         };
         let scores: Vec<Option<Vec<f32>>> = views
             .iter()
@@ -1597,6 +1870,7 @@ mod tests {
         .unwrap();
         // CPU reference sweep for the same view.
         let mut sources = vec![Source {
+            index: 1,
             image: gray[1].as_ref().unwrap(),
             camera: &sparse.cameras[1].as_ref().unwrap(),
             rotation: ID,
@@ -1751,6 +2025,7 @@ mod tests {
         let camera = Camera::identity(1., 0., 0.);
         let patch = Patch::new([0., 0.2, 0.7, 0.3, 0.9, 0.1, 0.8, 0.5, 0.2]).unwrap();
         let mut source = Source {
+            index: 0,
             image: &image,
             camera: &camera,
             rotation: ID,

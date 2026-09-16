@@ -206,3 +206,73 @@ browser lattice path (prepare/finish like SDF) is the documented next step.
 
 The lattice benchmark example lives at crates/geometry-bridge/examples/
 bench_lattice.rs. Evidence hash updated for the rebuilt kernel (a1300675).
+
+## Phase 4: batched GPU sweep with in-shader selection + accurate preset (2026-09-17)
+
+Goal: dense GPU stage ≥30% faster and ≥10% more accurate on the analytic
+ground-truth scenes.
+
+### Speed
+
+Profiling the 256² kernel bench showed the GPU sweep at ~7 ms/view while the
+CPU `select_from_scores` took ~20 ms/view plus a 16 MB score readback per view:
+selection and transfer, not correlation, were the bottleneck. Changes:
+
+- New `sweep_select` WGSL entry point does hypothesis selection on the GPU
+  (best score, uniqueness margin, per-pixel bin range) and returns one `vec4`
+  per pixel instead of `hypotheses` floats. `pick_depth` semantics are
+  replicated in f32 (`s < x` in f64 ⟺ `s < ceil_f32(x)`); the browser's `sweep`
+  entry (raw scores, bindings 0..=5) is unchanged and a permanent test compiles
+  it against the browser's six-binding layout.
+- The gray atlas is uploaded once per densify call; every view's job is pushed
+  into one `SweepBatch` and submitted once, with a single readback.
+- Depth is rebuilt on the CPU in f64 from the selected bin + offset, so the
+  geometry pipeline downstream is untouched.
+
+Measured (M4 Max, Metal, interleaved before/after binaries, medians):
+
+| Case | Before GPU, ms | After GPU, ms | Change | Geometry |
+| --- | ---: | ---: | ---: | --- |
+| Analytic 5 scenes, densify total | ~110 | ~48-56 | −49..−56% | identical F1 / errors |
+| 256² synthetic kernel, densify | ~156 | ~42 | −73% (depth stage 112 → 14) | identical |
+| shell6, densify | 83-127 | 31-40 | ≈ −62% | 10,499 / 6,133 = |
+| monstree6, densify | 90-124 | 33-43 | ≈ −64% | 19,423 / 18,210 = |
+| shell12, densify | 167-246 | 55-68 | ≈ −67% | 17,147 / 10,759 = |
+
+Remaining GPU-mode cost is consistency + fusion on the CPU (256²: fusion
+~18 ms, consistency ~6 ms vs depth 14 ms).
+
+### Accuracy
+
+Probes on the analytic scenes (defaults: mean surface error 0.012463, mean F1
+0.892229): 128 hypotheses collapse F1 to 0.64 (the ±3-bin uniqueness window is
+grid-coupled); sub-bin peak refinement gains only ~0.3% (the error is bias, not
+discretization); radius-2 alone 0.0108 / F1 0.859; sparse prior alone
+0.013 / F1 0.927. The qualified bundle is exposed as `DenseOptions::accurate()`
+= `patch_radius 2 + dual_scale + sparse_depth_prior`:
+
+| Profile | Mean surface error | Mean F1 | GPU, ms | CPU, ms |
+| --- | ---: | ---: | ---: | ---: |
+| default | 0.012463 | 0.892229 | ~48 | ~725 |
+| accurate | 0.009068 (−27%) | 0.921327 (+3.3%) | ~105-119 | ~2,410 |
+
+The accurate preset on the batched GPU path costs about what the default
+preset cost before this phase, i.e. the speed win is what makes the accuracy
+bundle affordable (native CPU is 20-30× slower on the same bundle). Real sets
+with `PHOTO_ACCURACY=on PHOTO_ACCELERATION=gpu`: shell6 69-75 ms, monstree6
+94-97 ms, shell12 133-162 ms (CPU: 1.2-3.4 s); the meshes are denser (e.g.
+shell6 6,133 → 10,281 faces) — no ground truth exists for those sets, so the
+accuracy claim rests on the analytic scenes only.
+
+### Verification
+
+- New `tests/dense_accuracy.rs`: `accurate()` must beat the defaults by ≥15%
+  mean surface error and ≥0.02 F1 on the analytic scenes; with an adapter the
+  GPU and CPU accurate surfaces must agree within 2% of vertices.
+- `browser_sweep_entry_compiles_against_six_binding_layout` (negative-checked:
+  binding `sweep_select` against the same layout fails validation).
+- 117 kernel tests with `--features gpu`, 113 without, 16 WASM adapter tests,
+  photogrammetry vitest subset (46), vue-tsc, regenerated embedded WASM.
+- Bench harness: `cargo run --release -p photogrammetry-core --features gpu
+  --example gpu_dense_bench` (`DENSE_ACCELERATION`, `DENSE_ACCURATE`,
+  `DENSE_KERNEL_SIDE`, `DENSE_REPEAT`, … documented in the file header).
