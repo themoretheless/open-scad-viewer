@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc && vite build && node scripts/verify-dist.mjs",
     "mcp": "node --import tsx src/mcp/server.ts",
+    "convert": "node --import tsx scripts/convert-mesh.ts",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json",
     "test": "vitest run",
@@ -27,6 +28,7 @@
     "pretest": "npm run build:geometry",
     "pretypecheck": "npm run build:geometry",
     "premcp": "npm run build:geometry",
+    "preconvert": "npm run build:geometry",
     "build:geometry": "node scripts/build-geometry-kernels.mjs && node scripts/build-photogrammetry.mjs && node scripts/pack-harfbuzz.mjs",
     "test:geometry": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml --workspace && vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts tests/geometryInterop.test.ts",
     "build:photogrammetry": "node scripts/build-photogrammetry.mjs"

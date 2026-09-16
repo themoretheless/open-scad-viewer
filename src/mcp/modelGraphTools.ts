@@ -6,6 +6,7 @@ import { registerModelGraphGenerate } from './modelGraphGenerate'
 import { MECHANICAL_GENERATOR_EXAMPLES } from '../services/mechanicalGeneratorContract'
 import { registerModelGraphModify } from './modelGraphModify'
 import { registerModelGraphMeshExport } from './modelGraphMeshExport'
+import { registerMeshConvertTool } from './meshConvertTool'
 import { registerModelGraphNurbsTools } from './modelGraphNurbsTools'
 import { registerModelGraphInterference } from './modelGraphInterference'
 import { registerModelGraphReport } from './modelGraphReport'
@@ -23,6 +24,7 @@ export function registerModelGraphTools(server: McpServer, geometry: McpGeometry
   registerModelGraphGenerate(server, geometry)
   registerModelGraphModify(server, geometry)
   registerModelGraphMeshExport(server, geometry)
+  registerMeshConvertTool(server)
   registerModelGraphNurbsTools(server)
   registerModelGraphReport(server, geometry)
   registerModelGraphInterference(server, geometry)
