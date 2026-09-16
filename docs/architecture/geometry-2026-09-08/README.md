@@ -12,7 +12,7 @@
 4. RAG: catalog → wiki search → raw search → выбранные документы. Общий поиск `SDF subdivision` дал омонимы из других проектов; эти результаты исключены. Семантический wiki-поиск дважды завершился timeout; точечный текстовый поиск отработал.
 5. Curvex: текущие `path_offset.rs` и `geometry_predicates.rs` проверены после нахождения через RAG. Переносимый опыт: atomic offset, explicit fill rule, split numeric/UX tolerances. Там используются сторонние Rust-алгоритмы; это не доказательство существования собственной реализации здесь и не предложение автоматически подключить зависимости.
 6. [14 первичных источников по нарезке](../../design/slicing-evidence-2026-09-08.md); дополнительно CGAL robustness и Lévy mesh CSG в основном документе. [Независимая проверка архитектуры](../../design/geometry-architecture-review-2026-09-08.md). Это внутренние независимые контексты проверки, не внешняя сертификация.
-7. Hotpath `#[inline(always)]` в `math-core`: **observed** 2026-09-10 (microbench ~190.7 ms → ~1.2 ms / 2e6 iters); см. `docs/rag-inline-hotpath-optimization.md` / URI `docs://rag-inline-hotpath-optimization`.
+7. Hotpath `#[inline(always)]` в `math-core`: **observed** 2026-09-10 (microbench ~190.7 ms → ~1.2 ms / 2e6 iters); раунд 2 (inline + `unsafe`): `sdf-core` mesh distance 334.6 → 167.4 ms, `polygon-core` edges ~5–8%, bench-примеры `bench_sdf_cpu` / `bench_mesh_kernels`; см. `docs/rag-inline-hotpath-optimization.md` / URI `docs://rag-inline-hotpath-optimization`.
 
 Охват — релевантные знания о текущем проекте, геометрии, топологии, нарезке, исполнении и печати. Это не заявление о прочтении всей базы из 82 844 документов. Идентификаторы запросов/источников, состояние подключения и ограничения поиска: [retrieval.json](retrieval.json).
 

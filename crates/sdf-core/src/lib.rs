@@ -648,12 +648,15 @@ impl<'de> value_codec::Deserialize<'de> for Field {
 fn positive(x: f64) -> bool {
     x.is_finite() && x > 0. && x <= 1e6
 }
+/// Triangle corner positions as `[x, y, z]` rows: one bounds check per corner
+/// instead of three, and the chunk view is hoisted out of the sampling loops.
+#[inline(always)]
+fn corners(mesh: &Triangles) -> &[[f64; 3]] {
+    mesh.positions.as_chunks::<3>().0
+}
+#[inline(always)]
 fn point(mesh: &Triangles, i: usize) -> Point {
-    [
-        mesh.positions[3 * i],
-        mesh.positions[3 * i + 1],
-        mesh.positions[3 * i + 2],
-    ]
+    corners(mesh)[i]
 }
 fn triangles_ok(mesh: &Triangles) -> bool {
     let n = mesh.indices.len() / 3;
@@ -696,13 +699,30 @@ fn finish_triangles(mesh: Triangles) -> Result<Triangles> {
     }
     Ok(mesh)
 }
+/// Closest point on segment `ab` to `p`; `d` is the precomputed `b - a`.
+#[inline(always)]
+fn closest_on_segment(p: Point, a: Point, d: Point) -> Point {
+    let dd = dot(d, d);
+    let t = if dd > 0. {
+        (dot(sub(p, a), d) / dd).clamp(0., 1.)
+    } else {
+        0.
+    };
+    [a[0] + t * d[0], a[1] + t * d[1], a[2] + t * d[2]]
+}
+#[inline]
 fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
     let ab = sub(b, a);
     let ac = sub(c, a);
     let n = cross(ab, ac);
     let nn = dot(n, n);
     if nn > 0. {
-        let q = std::array::from_fn(|k| p[k] - n[k] * dot(sub(p, a), n) / nn);
+        let s = dot(sub(p, a), n);
+        let q = [
+            p[0] - n[0] * s / nn,
+            p[1] - n[1] * s / nn,
+            p[2] - n[2] * s / nn,
+        ];
         let aq = sub(q, a);
         let v = dot(cross(aq, ac), n) / nn;
         let w = dot(cross(ab, aq), n) / nn;
@@ -710,16 +730,11 @@ fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
             return q;
         }
     }
+    // Unrolled a→b, b→c, c→a scan with the original strict-`<` tie-breaking.
     let mut best = a;
     let mut distance = f64::INFINITY;
-    for (a, b) in [(a, b), (b, c), (c, a)] {
-        let d = sub(b, a);
-        let t = if dot(d, d) > 0. {
-            (dot(sub(p, a), d) / dot(d, d)).clamp(0., 1.)
-        } else {
-            0.
-        };
-        let q = std::array::from_fn(|i| a[i] + t * d[i]);
+    for (a, d) in [(a, ab), (b, sub(c, b)), (c, sub(a, c))] {
+        let q = closest_on_segment(p, a, d);
         let dist = length(sub(p, q));
         if dist < distance {
             best = q;
@@ -728,11 +743,13 @@ fn closest_triangle(p: Point, a: Point, b: Point, c: Point) -> Point {
     }
     best
 }
+#[inline]
 fn closest_point(mesh: &Triangles, p: Point) -> (Point, f64) {
+    let corners = corners(mesh);
     let mut best = p;
     let mut distance = f64::INFINITY;
-    for t in mesh.indices.as_chunks::<3>().0 {
-        let q = closest_triangle(p, point(mesh, t[0]), point(mesh, t[1]), point(mesh, t[2]));
+    for &[i, j, k] in mesh.indices.as_chunks::<3>().0 {
+        let q = closest_triangle(p, corners[i], corners[j], corners[k]);
         let d = length(sub(p, q));
         if d < distance {
             best = q;
@@ -741,16 +758,18 @@ fn closest_point(mesh: &Triangles, p: Point) -> (Point, f64) {
     }
     (best, distance)
 }
+#[inline]
 fn signed_distance(mesh: &Triangles, p: Point) -> f64 {
     let (_, d) = closest_point(mesh, p);
     if d == 0. {
         return 0.;
     }
+    let corners = corners(mesh);
     let mut angle = 0.;
-    for t in mesh.indices.as_chunks::<3>().0 {
-        let a = sub(point(mesh, t[0]), p);
-        let b = sub(point(mesh, t[1]), p);
-        let c = sub(point(mesh, t[2]), p);
+    for &[i, j, k] in mesh.indices.as_chunks::<3>().0 {
+        let a = sub(corners[i], p);
+        let b = sub(corners[j], p);
+        let c = sub(corners[k], p);
         let la = length(a);
         let lb = length(b);
         let lc = length(c);
@@ -848,8 +867,13 @@ impl Field {
             }
             Self::Sphere { center, radius } => length(sub(p, *center)) - radius,
             Self::Box { center, half_size } => {
-                let q: Point = std::array::from_fn(|i| (p[i] - center[i]).abs() - half_size[i]);
-                length(q.map(|x| x.max(0.))) + q[0].max(q[1]).max(q[2]).min(0.)
+                let q: Point = [
+                    (p[0] - center[0]).abs() - half_size[0],
+                    (p[1] - center[1]).abs() - half_size[1],
+                    (p[2] - center[2]).abs() - half_size[2],
+                ];
+                length([q[0].max(0.), q[1].max(0.), q[2].max(0.)])
+                    + q[0].max(q[1]).max(q[2]).min(0.)
             }
             Self::Torus {
                 center,

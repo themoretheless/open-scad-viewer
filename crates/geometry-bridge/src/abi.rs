@@ -170,28 +170,46 @@ pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il
     if vl > LIMIT / 4 || il > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
     }
-    // Request buffers are byte-aligned; read unaligned values rather than assuming allocator alignment.
-    let vertices = (0..vl)
-        .map(|i| unsafe { std::ptr::read_unaligned((vp as *const f32).add(i)) })
-        .collect::<Vec<_>>();
-    let indices = (0..il)
-        .map(|i| unsafe { std::ptr::read_unaligned((ip as *const u32).add(i)) })
-        .collect::<Vec<_>>();
+    let vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
     packed(geometry(
         import_cad_mesh(stride, &vertices, &indices).and_then(encode),
     ))
 }
 
-unsafe fn read_f32(ptr: usize, len: usize) -> Vec<f32> {
-    (0..len)
-        .map(|i| unsafe { std::ptr::read_unaligned((ptr as *const f32).add(i)) })
-        .collect()
+/// Copy a caller-owned typed buffer into an owned `Vec` with one bulk memcpy.
+/// Request buffers are byte-aligned, so the copy goes through `u8` pointers and
+/// never assumes `T` alignment; `T` must be a plain-old-data type where every
+/// bit pattern is a valid value (`f32`, `u32`).
+///
+/// # Safety
+/// `ptr` must be readable for `len * size_of::<T>()` bytes for the duration of
+/// the call, or `len` must be zero.
+#[inline]
+unsafe fn read_pod<T: Copy>(ptr: usize, len: usize) -> Vec<T> {
+    if len == 0 || ptr == 0 {
+        return Vec::new();
+    }
+    let mut out = Vec::<T>::with_capacity(len);
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            ptr as *const u8,
+            out.as_mut_ptr() as *mut u8,
+            len * std::mem::size_of::<T>(),
+        );
+        out.set_len(len);
+    }
+    out
 }
 
+#[inline]
+unsafe fn read_f32(ptr: usize, len: usize) -> Vec<f32> {
+    unsafe { read_pod(ptr, len) }
+}
+
+#[inline]
 unsafe fn read_u32(ptr: usize, len: usize) -> Vec<u32> {
-    (0..len)
-        .map(|i| unsafe { std::ptr::read_unaligned((ptr as *const u32).add(i)) })
-        .collect()
+    unsafe { read_pod(ptr, len) }
 }
 
 /// Bake one display mesh into f64 Solid positions and outward triangle indices.

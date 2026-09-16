@@ -1456,6 +1456,7 @@ dependencies = [
  "geometry-ops",
  "osv-math",
  "planar-geometry",
+ "rbench",
  "value-codec",
 ]
 
@@ -1813,6 +1814,7 @@ dependencies = [
  "gpu-compute",
  "osv-math",
  "planar-geometry",
+ "rbench",
  "value-codec",
 ]
 

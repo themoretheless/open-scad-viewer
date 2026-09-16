@@ -41,14 +41,17 @@ pub const FLATTEN_TOLERANCE: f64 = 0.25;
 const ELLIPSE_KAPPA: f64 = 0.552_285;
 use crate::limits::{FLATTEN_POINTS as MAX_FLATTEN_POINTS, PATH_SEGMENTS as MAX_SEGMENTS};
 
+#[inline(always)]
 fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
 }
 
+#[inline(always)]
 fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
     norm2(sub2(a, b))
 }
 
+#[inline]
 fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
     let ab = sub2(b, a);
     let ap = sub2(p, a);

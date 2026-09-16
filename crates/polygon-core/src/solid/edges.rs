@@ -35,6 +35,7 @@ pub struct SemanticEdges {
 /// `Math.hypot(x, y, z)` with V8/fdlibm scaling semantics: infinite arguments
 /// yield infinity, NaN propagates, and the scaled sum is computed in argument
 /// order. A naive `x.hypot(y).hypot(z)` chain has different rounding.
+#[inline]
 fn hypot3(x: f64, y: f64, z: f64) -> f64 {
     if x.is_nan() || y.is_nan() || z.is_nan() {
         if x.is_infinite() || y.is_infinite() || z.is_infinite() {
@@ -58,6 +59,7 @@ fn hypot3(x: f64, y: f64, z: f64) -> f64 {
     m * (sx * sx + sy * sy + sz * sz).sqrt()
 }
 
+#[inline]
 fn find(parent: &mut [u32], mut value: usize) -> usize {
     let mut root = value;
     while parent[root] as usize != root {
@@ -71,6 +73,7 @@ fn find(parent: &mut [u32], mut value: usize) -> usize {
     root
 }
 
+#[inline]
 fn union(parent: &mut [u32], first: usize, second: usize) {
     let first_root = find(parent, first);
     let second_root = find(parent, second);
@@ -85,10 +88,12 @@ fn union(parent: &mut [u32], first: usize, second: usize) {
     }
 }
 
+#[inline(always)]
 fn canonical_float_bits(value: u32) -> u32 {
     if value & 0x7fff_ffff == 0 { 0 } else { value }
 }
 
+#[inline]
 fn same_finite_position(vertices: &[f32], first: usize, second: usize) -> bool {
     let first_offset = first * VERTEX_STRIDE;
     let second_offset = second * VERTEX_STRIDE;
@@ -103,6 +108,40 @@ fn same_finite_position(vertices: &[f32], first: usize, second: usize) -> bool {
         && z == vertices[second_offset + 2]
 }
 
+/// One stable LSD counting-sort pass: histogram `current` by `digit_of`,
+/// prefix-sum, then scatter into `next`. Digits are masked with `radix_mask`
+/// and `counts.len() == radix_mask + 1` is asserted once, so the per-element
+/// bucket lookups skip their bounds checks. The scatter write stays checked:
+/// its index only stays in range while `digit_of` is pure, which this helper
+/// cannot verify locally.
+#[inline(always)]
+fn counting_pass(
+    current: &[u32],
+    next: &mut [u32],
+    counts: &mut [u32],
+    radix_mask: u32,
+    digit_of: impl Fn(u32) -> u32,
+) {
+    assert!(counts.len() == radix_mask as usize + 1);
+    counts.fill(0);
+    for &value in current {
+        let digit = (digit_of(value) & radix_mask) as usize;
+        unsafe { *counts.get_unchecked_mut(digit) += 1 };
+    }
+    let mut offset = 0u32;
+    for digit in counts.iter_mut() {
+        let count = *digit;
+        *digit = offset;
+        offset += count;
+    }
+    for &value in current {
+        let digit = (digit_of(value) & radix_mask) as usize;
+        let slot = unsafe { counts.get_unchecked_mut(digit) };
+        next[*slot as usize] = value;
+        *slot += 1;
+    }
+}
+
 /// Exact-position welding. Six stable 16-bit radix passes group identical
 /// Float32 xyz bits; -0 is canonicalized to +0 and non-finite vertices remain
 /// unwelded. With min-root union and full root compression this yields the
@@ -113,34 +152,22 @@ fn weld_exact_positions(vertices: &[f32], parent: &mut [u32]) {
     if vertex_count == 0 {
         return;
     }
+    // Every vertex id in `current` is below `vertex_count`, so the xyz reads
+    // stay inside `vertices`; checked once here instead of per element.
+    assert!(vertex_count * VERTEX_STRIDE <= vertices.len());
     let mut current: Vec<u32> = (0..vertex_count as u32).collect();
     let mut next: Vec<u32> = vec![0; vertex_count];
     let mut counts = vec![0u32; RADIX_SIZE];
 
-    let bits = |vertex: u32, coordinate: usize| -> u32 {
-        vertices[vertex as usize * VERTEX_STRIDE + coordinate].to_bits()
-    };
     // z, y, x makes x the primary key after stable LSD sorting.
     for coordinate in [2usize, 1, 0] {
         let mut shift = 0;
         while shift < 32 {
-            counts.fill(0);
-            for &vertex in &current {
-                let value = canonical_float_bits(bits(vertex, coordinate));
-                counts[((value >> shift) & RADIX_MASK) as usize] += 1;
-            }
-            let mut offset = 0u32;
-            for digit in counts.iter_mut() {
-                let count = *digit;
-                *digit = offset;
-                offset += count;
-            }
-            for &vertex in &current {
-                let value = canonical_float_bits(bits(vertex, coordinate));
-                let digit = ((value >> shift) & RADIX_MASK) as usize;
-                next[counts[digit] as usize] = vertex;
-                counts[digit] += 1;
-            }
+            counting_pass(&current, &mut next, &mut counts, RADIX_MASK, |vertex| {
+                let i = vertex as usize * VERTEX_STRIDE + coordinate;
+                debug_assert!(i < vertices.len());
+                canonical_float_bits(unsafe { vertices.get_unchecked(i) }.to_bits()) >> shift
+            });
             std::mem::swap(&mut current, &mut next);
             shift += RADIX_BITS;
         }
@@ -191,21 +218,9 @@ fn radix_sort_edge_occurrences(
     for values in [edge_b, edge_a] {
         let mut shift = 0;
         while shift < 32 {
-            counts.fill(0);
-            for &occurrence in &current {
-                counts[((values[occurrence as usize] >> shift) & radix_mask) as usize] += 1;
-            }
-            let mut offset = 0u32;
-            for digit in counts.iter_mut() {
-                let count = *digit;
-                *digit = offset;
-                offset += count;
-            }
-            for &occurrence in &current {
-                let digit = ((values[occurrence as usize] >> shift) & radix_mask) as usize;
-                next[counts[digit] as usize] = occurrence;
-                counts[digit] += 1;
-            }
+            counting_pass(&current, &mut next, &mut counts, radix_mask, |occurrence| {
+                values[occurrence as usize] >> shift
+            });
             std::mem::swap(&mut current, &mut next);
             shift += radix_bits;
         }
@@ -213,6 +228,7 @@ fn radix_sort_edge_occurrences(
     current
 }
 
+#[inline]
 fn classify_edge_group(
     sorted_occurrences: &[u32],
     group_start: usize,

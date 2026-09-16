@@ -4,6 +4,7 @@
 //! simpler repeated insertion algorithm and strict bounded exponent checks.
 use crate::{Algebra, AuthoredScalar, PredicateContext, Reason, Sign};
 
+#[inline(always)]
 fn next_up(value: f64) -> f64 {
     if value == f64::INFINITY {
         return value;
@@ -20,6 +21,7 @@ fn next_up(value: f64) -> f64 {
         value.to_bits() - 1
     })
 }
+#[inline(always)]
 fn next_down(value: f64) -> f64 {
     -next_up(-value)
 }
@@ -202,6 +204,7 @@ impl Approx {
         }
     }
 }
+#[inline(always)]
 fn up_add(a: f64, b: f64) -> f64 {
     let value = a + b;
     if value.is_nan() {
@@ -210,6 +213,7 @@ fn up_add(a: f64, b: f64) -> f64 {
         next_up(value)
     }
 }
+#[inline(always)]
 fn up_mul(a: f64, b: f64) -> f64 {
     let value = a * b;
     if value.is_nan() {
@@ -256,6 +260,7 @@ impl Algebra for Approx {
 #[derive(Clone, Debug)]
 pub(crate) struct Expansion(Vec<f64>);
 
+#[inline(always)]
 fn exponent(value: f64) -> i32 {
     let bits = value.abs().to_bits();
     let encoded = ((bits >> 52) & 0x7ff) as i32;
@@ -265,6 +270,7 @@ fn exponent(value: f64) -> i32 {
         -1074 + (63 - (bits & 0x000f_ffff_ffff_ffff).leading_zeros()) as i32
     }
 }
+#[inline(always)]
 fn least_bit_exponent(value: f64) -> i32 {
     let bits = value.abs().to_bits();
     let encoded = ((bits >> 52) & 0x7ff) as i32;

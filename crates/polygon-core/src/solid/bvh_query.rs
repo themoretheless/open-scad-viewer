@@ -4,12 +4,15 @@ use super::bvh::{LEAF_BIT, MeshBvh};
 use std::collections::BTreeSet;
 
 type V3 = [f64; 3];
+#[inline(always)]
 fn sub(a: V3, b: V3) -> V3 {
-    std::array::from_fn(|i| a[i] - b[i])
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
+#[inline(always)]
 fn dot(a: V3, b: V3) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+#[inline(always)]
 fn cross(a: V3, b: V3) -> V3 {
     [
         a[1] * b[2] - a[2] * b[1],
@@ -17,6 +20,7 @@ fn cross(a: V3, b: V3) -> V3 {
         a[0] * b[1] - a[1] * b[0],
     ]
 }
+#[inline]
 fn normal(a: V3) -> V3 {
     let length = a[0].hypot(a[1]).hypot(a[2]);
     if length > 0. && length.is_finite() {
@@ -53,6 +57,7 @@ pub struct Query<'a> {
     pub excluded: &'a BTreeSet<u32>,
 }
 
+#[inline]
 fn near(bounds: &[f32], node: usize, o: V3, d: V3, mut lo: f64, mut hi: f64) -> Option<f64> {
     for axis in 0..3 {
         let min = bounds[node * 6 + axis] as f64;
