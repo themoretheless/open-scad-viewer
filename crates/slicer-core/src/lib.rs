@@ -21,8 +21,8 @@ use planar_geometry::{
 };
 
 pub use gcode_core::{
-    DIALECT as GCODE_DIALECT, JOB_DIALECT as GCODE_JOB_DIALECT, GcodeBounds, GcodeMove,
-    GcodePreview, JobProfile, MeshBody,
+    DIALECT as GCODE_DIALECT, JOB_DIALECT as GCODE_JOB_DIALECT, DialectInfo, Flavor,
+    Generator, GcodeBounds, GcodeMove, GcodePreview, JobProfile, MeshBody,
 };
 pub use gcode_optimize::OptimizeSettings;
 pub use math_core::{Error, Result};
@@ -548,6 +548,11 @@ pub fn parse_gcode_preview(gcode: &str) -> Result<GcodePreview> {
 
 pub fn parse_gcode_job(gcode: &str) -> Result<GcodePreview> {
     gcode_core::parse_job(gcode).map_err(gcode_error)
+}
+
+/// Native dialects stay strict; other slicers' files use the tolerant reader.
+pub fn parse_gcode_any(gcode: &str) -> Result<(GcodePreview, DialectInfo)> {
+    gcode_core::parse_any(gcode).map_err(gcode_error)
 }
 
 /// Nominal volume estimate; returns NaN for invalid settings or oversized plans.

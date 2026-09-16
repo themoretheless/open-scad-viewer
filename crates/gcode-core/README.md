@@ -22,10 +22,54 @@ printer jobs.
 | | Preview (`print-preview 2`) | Job (`print-job 1`) |
 |---|---|---|
 | First line | `; open-scad-viewer/print-preview 2` | `; open-scad-viewer/print-job 1` |
-| Heat / home / fan | Forbidden | `M140`/`M104`/`M190`/`M109`, optional `G28`, `M106`/`M107` |
+| Heat / home / fan | Forbidden | Flavor-specific heat (see below), optional `G28`, `M106`/`M107` |
 | Retract | Forbidden (E never decreases) | Absolute-E `G1 E…` retract / unretract |
-| Prologue | `G21` `G90` `M82` `M200 D0` `G92 E0` | Same after heat |
+| Prologue | `G21` `G90` `M82` `M200 D0` `G92 E0` | Flavor prologue after heat |
 | Package | Empty `3D/3dmodel.model` | Optional mesh body + `Metadata/plate_1.json` (MD5) |
+
+## Firmware flavors (job dialect)
+
+`JobProfile.flavor` selects the firmware family. Motion, layer markers, retract
+and the `;FILAMENT_DIAMETER_MM:` metadata are identical; only startup, prologue,
+per-layer and shutdown commands differ. The second header line is
+`;FLAVOR:<label>` (Cura convention). Files without it parse as Marlin, so
+earlier `print-job 1` output remains readable. `Flavor::from_name` accepts
+`marlin`/`marlin2`, `klipper`, and `reprapfirmware`/`rrf`/`duet`.
+
+| | Marlin | Klipper | RepRapFirmware |
+|---|---|---|---|
+| Heat | `M140 S` `M104 S` `M190 S` `M109 S` | `SET_HEATER_TEMPERATURE HEATER=heater_bed/extruder TARGET=` + `TEMPERATURE_WAIT SENSOR=… MINIMUM=` | `M140 S`, `G10 P0 S R`, `T0`, `M190 S`, `M116` |
+| Prologue | `G21 G90 M82 M200 D0 G92 E0` | `G21 G90 M82 G92 E0` (no `M200`) | as Marlin |
+| Per layer | — | `SET_PRINT_STATS_INFO TOTAL_LAYER=… CURRENT_LAYER=…` | — |
+| Shutdown | `M107`, `G28 X Y`, `M104 S0`, `M140 S0` | `M107`, `G28 X Y`, `TURN_OFF_HEATERS`, `M84` | as Marlin |
+
+`parse_job` reads `;FLAVOR:` first and then requires exactly that flavor's
+command set: a Klipper body under a Marlin header (or vice versa) is a
+`GCODE_PROLOGUE` error, and an unknown label is `GCODE_FLAVOR`.
+
+## Foreign G-code (tolerant reader)
+
+`parse_foreign` / `parse_any` / `detect` read files produced by other slicers
+for preview only. `parse_any` keeps the two native dialects strict and routes
+everything else to the tolerant reader, returning a `DialectInfo` with the
+detected generator (PrusaSlicer, OrcaSlicer, BambuStudio, SuperSlicer, Cura,
+Slic3r, Simplify3D, ideaMaker, Kiri:Moto), the declared firmware flavor
+(`;FLAVOR:` or `; gcode_flavor =`), and any filament diameter found in the
+header or footer.
+
+Supported: `G0`/`G1` linear moves, `G2`/`G3` XY arcs with `I`/`J` or `R`
+(chorded at 1 mm, ≤64 segments), `G90`/`G91`, `M82`/`M83`, `G92` resets,
+`G20`/`G21` units, `G17`–`G19` plane selection (non-XY arcs fail), `G28`
+(marks homed axes unknown), `N…` line numbers and `*` checksums, compact
+`G1X10Y5` words, `(…)` and `;` comments. Layers come from `;LAYER:`,
+`;LAYER_CHANGE`, `; layer N` or `;BEGIN_LAYER_OBJECT` markers when present;
+otherwise each Z level with extrusion is a layer. Motion before the first
+marker forms a startup layer. All other commands are skipped.
+
+Volume uses the header filament diameter or `ASSUMED_FILAMENT_DIAMETER_MM`
+(1.75) and reports total positive E delta; retractions are ignored. Foreign
+previews are approximate: no checks for heat, homing, build volume or
+firmware validity are made, and the same size/line/move/layer limits apply.
 
 ## Preview contract
 
@@ -126,7 +170,8 @@ expose these shared limits for callers.
 `package_job_3mf` / `emit_gcode_3mf_job` add `Metadata/plate_1.json` (temps,
 filament placeholder, G-code MD5) and may embed a non-empty model from
 `MeshBody`. `extract_gcode_3mf` / `parse_3mf` read the plate G-code back
-(`parse_3mf` dispatches preview vs job by dialect line). This is a file
+(`parse_3mf` dispatches preview vs job by dialect line; job flavor comes from
+`;FLAVOR:`). This is a file
 container, not LAN upload and not a Bambu machine-job certificate.
 
 ## Non-goals

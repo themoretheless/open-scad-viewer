@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue'
 import type { MeshData } from '../core/mesh'
-import type { JobSettingsInput, ToolpathSettingsInput } from '../services/geometry/polygon'
+import { GCODE_FLAVORS, type GcodeFlavor, type JobSettingsInput, type ToolpathSettingsInput } from '../services/geometry/polygon'
 import { downloadCad } from '../services/cadDrawing'
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../services/gcodePreviewGeometry'
 import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../services/gcodePreviewProtocol'
@@ -32,7 +32,17 @@ const jobSettings = reactive({
   retractMinTravelMm: 2,
   fanSpeed: 255,
   homeAxes: true,
+  flavor: 'marlin' as GcodeFlavor,
 })
+const flavorOptions: { value: GcodeFlavor; ru: string; en: string }[] = [
+  { value: 'marlin', ru: 'Marlin (Creality, Prusa Buddy, Ender…)', en: 'Marlin (Creality, Prusa Buddy, Ender…)' },
+  { value: 'klipper', ru: 'Klipper', en: 'Klipper' },
+  { value: 'reprapfirmware', ru: 'RepRapFirmware (Duet)', en: 'RepRapFirmware (Duet)' },
+]
+function setFlavor(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if ((GCODE_FLAVORS as readonly string[]).includes(value)) jobSettings.flavor = value as GcodeFlavor
+}
 const fields: { key: keyof ToolpathSettingsInput; ru: string; en: string; min: number; step: number; max?: number }[] = [
   { key: 'layerHeightMm', ru: 'Высота слоя, мм', en: 'Layer height, mm', min: 0.01, step: 0.05 },
   { key: 'lineWidthMm', ru: 'Ширина линии, мм', en: 'Line width, mm', min: 0.01, step: 0.05 },
@@ -71,6 +81,14 @@ const unavailable = computed(() => !props.ready
   : '')
 const preview = computed(() => result.value?.preview ?? null)
 const isJob = computed(() => !!result.value?.gcode3mfBase64)
+const foreign = computed(() => result.value?.native === false)
+const detected = computed(() => {
+  const doc = result.value
+  if (!doc || doc.native !== false) return ''
+  const parts = [doc.generator && doc.generator !== 'unknown' ? doc.generator : label('неизвестный слайсер', 'unknown slicer')]
+  if (doc.flavor) parts.push(`${label('прошивка', 'firmware')}: ${doc.flavor}`)
+  return parts.join(' · ')
+})
 const layerRange = computed(() => preview.value ? gcodeLayerRange(preview.value, layer.value) : null)
 const sendDisabled = computed(() => companionBusy.value || busy.value || !companionOnline.value || !result.value || !printer.host.trim())
 let revision = 0
@@ -244,20 +262,26 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
       <label>{{ label('Вентилятор 0–255', 'Fan 0–255') }}<input v-model.number="jobSettings.fanSpeed" :aria-label="label('Вентилятор 0–255', 'Fan 0–255')" type="number" min="0" max="255" step="1"></label>
     </div>
     <label><input v-model="jobSettings.homeAxes" type="checkbox">{{ label('Парковка осей (G28) в job', 'Home axes (G28) in job') }}</label>
+    <label>{{ label('Диалект прошивки (job)', 'Firmware flavor (job)') }}
+      <select :value="jobSettings.flavor" :aria-label="label('Диалект прошивки (job)', 'Firmware flavor (job)')" @change="setFlavor">
+        <option v-for="option in flavorOptions" :key="option.value" :value="option.value">{{ label(option.ru, option.en) }}</option>
+      </select>
+    </label>
     <div class="gcode-actions">
       <button type="button" :disabled="busy || !!unavailable" @click="generate('slice')">{{ label('Построить траектории', 'Generate toolpaths') }}</button>
       <button type="button" :disabled="busy || !!unavailable" @click="generate('job')">{{ label('Собрать print job', 'Generate print job') }}</button>
       <button v-if="busy" type="button" @click="cancel">{{ label('Отменить расчёт', 'Cancel processing') }}</button>
     </div>
-    <label class="gcode-file">{{ label('Открыть G-code предпросмотра', 'Open preview G-code') }}
-      <input type="file" accept=".gcode,.gco,text/plain" :aria-label="label('Открыть G-code предпросмотра', 'Open preview G-code')" @change="openPreview">
+    <label class="gcode-file">{{ label('Открыть G-code', 'Open G-code') }}
+      <input type="file" accept=".gcode,.gco,.g,.nc,text/plain" :aria-label="label('Открыть G-code предпросмотра', 'Open preview G-code')" @change="openPreview">
     </label>
-    <small>{{ label('Только диалект предпросмотра этого приложения, до 4 МиБ.', 'Only this app’s preview dialect, up to 4 MiB.') }}</small>
+    <small>{{ label('Собственные диалекты проверяются строго; файлы PrusaSlicer, Orca/Bambu, Cura, Klipper, RepRapFirmware и др. читаются в режиме предпросмотра (G0–G3, G90/G91, M82/M83, G92, G20/G21). До 4 МиБ.', 'Own dialects are validated strictly; PrusaSlicer, Orca/Bambu, Cura, Klipper, RepRapFirmware and other files are read in preview mode (G0–G3, G90/G91, M82/M83, G92, G20/G21). Up to 4 MiB.') }}</small>
     <p v-if="busy" role="status">{{ label('Расчёт траекторий…', 'Processing toolpaths…') }}</p>
     <p v-if="message" role="status">{{ message }}</p>
     <p v-if="error" role="alert">{{ error }}</p>
     <section v-if="preview && result" class="gcode-result" :aria-label="label('Предпросмотр G-code', 'G-code preview')">
-      <p class="gcode-filename">{{ filename }} · {{ result.dialect }}</p>
+      <p class="gcode-filename">{{ filename }} · {{ result.dialect }}<template v-if="isJob && result.flavor"> · {{ result.flavor }}</template></p>
+      <p v-if="foreign" class="gcode-hint" role="note">{{ label('Сторонний файл', 'Foreign file') }}: {{ detected }}. {{ label('Неизвестные команды пропущены; статистика приблизительная, объём — по диаметру филамента из заголовка или 1.75 мм.', 'Unknown commands were skipped; statistics are approximate and volume uses the header filament diameter or 1.75 mm.') }}</p>
       <template v-if="preview.layers && preview.moves.length">
         <label>{{ label('Слой', 'Layer') }} {{ layer + 1 }} / {{ preview.layers }}
           <input v-model.number="layer" :aria-label="label('Слой предпросмотра', 'Preview layer')" type="range" min="0" :max="preview.layers - 1" step="1">
@@ -278,7 +302,7 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
       </dl>
       <small>{{ label('Время при постоянной скорости; без начального позиционирования, ускорений и операций принтера.', 'Time at constant speed; excludes initial positioning, acceleration, and printer operations.') }}</small>
       <div class="gcode-actions">
-        <button type="button" :disabled="busy || !preview.moves.length" @click="download">{{ isJob ? label('Скачать job .gcode', 'Download job .gcode') : label('Скачать G-code предпросмотра', 'Download preview G-code') }}</button>
+        <button type="button" :disabled="busy || !preview.moves.length" @click="download">{{ isJob ? label('Скачать job .gcode', 'Download job .gcode') : foreign ? label('Скачать исходный G-code', 'Download original G-code') : label('Скачать G-code предпросмотра', 'Download preview G-code') }}</button>
         <button v-if="isJob" type="button" :disabled="busy" @click="download3mf">{{ label('Скачать .gcode.3mf', 'Download .gcode.3mf') }}</button>
       </div>
       <section class="gcode-printer" :aria-label="label('Принтер', 'Printer')">

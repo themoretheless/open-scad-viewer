@@ -95,6 +95,9 @@ export interface GcodePreviewMove {
 }
 export const GCODE_PREVIEW_DIALECT = 'open-scad-viewer/print-preview 2'
 export const GCODE_JOB_DIALECT = 'open-scad-viewer/print-job 1'
+/** Firmware families for `mesh_gcode_job`; names follow slicer `gcode_flavor` values. */
+export const GCODE_FLAVORS = ['marlin', 'klipper', 'reprapfirmware'] as const
+export type GcodeFlavor = typeof GCODE_FLAVORS[number]
 export interface GcodePreviewResult {
   layers: number
   extrusionMm: number
@@ -115,6 +118,19 @@ export interface GcodeExportResult {
 export interface GcodeJobExportResult extends GcodeExportResult {
   /** Stored OPC `.gcode.3mf` bytes, standard base64. */
   gcode3mfBase64: string
+  flavor: GcodeFlavor
+}
+/** Result of opening an arbitrary G-code file: preview plus what was detected. */
+export interface GcodeInspectResult {
+  preview: GcodePreviewResult
+  /** Native dialect line, or `"<generator> G-code (tolerant preview)"` for foreign files. */
+  dialect: string
+  /** True for this app's own strict preview/job dialects. */
+  native: boolean
+  generator: string
+  /** Firmware flavor declared by the slicer header, when present. */
+  flavor: string | null
+  filamentDiameterMm: number | null
 }
 export interface JobSettingsInput extends ToolpathSettingsInput {
   nozzleTempC?: number
@@ -125,6 +141,7 @@ export interface JobSettingsInput extends ToolpathSettingsInput {
   retractMinTravelMm?: number
   fanSpeed?: number
   homeAxes?: boolean
+  flavor?: GcodeFlavor
   simplifyToleranceMm?: number
   max2optSwaps?: number
 }
@@ -152,6 +169,7 @@ function jobArguments(settings: JobSettingsInput): JobSettingsInput {
     retractMinTravelMm: settings.retractMinTravelMm,
     fanSpeed: settings.fanSpeed,
     homeAxes: settings.homeAxes,
+    flavor: settings.flavor,
     simplifyToleranceMm: settings.simplifyToleranceMm,
     max2optSwaps: settings.max2optSwaps,
   }
@@ -184,9 +202,13 @@ export function emitPolygonMeshGcodeJob(
   return callGeometryRust('mesh_gcode_job', { mesh, zMin, zMax, ...jobArguments(settings) })
 }
 
-/** Parses preview or job dialect; unsupported commands fail. */
+/** Native dialects parse strictly; other slicers' files use the tolerant reader. */
 export function parseGcodePreview(gcode: string): GcodePreviewResult {
   return callGeometryRust('gcode_preview', { gcode })
+}
+/** Like `parseGcodePreview`, plus detected dialect, generator and firmware flavor. */
+export function inspectGcode(gcode: string): GcodeInspectResult {
+  return callGeometryRust('gcode_parse', { gcode })
 }
 
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}

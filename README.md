@@ -51,8 +51,10 @@ The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge aut
 The CAD workbench also provides [G-code export and layer preview](docs/design/gcode-preview.md)
 from a selected scene body, with configurable toolpaths, worker cancellation,
 file validation and filament/time statistics. The versioned preview dialect
-preserves model coordinates; printer-specific preparation and physical print
-jobs are outside this export contract.
+preserves model coordinates. Print jobs can target Marlin, Klipper or
+RepRapFirmware command sets, and G-code from other slicers (PrusaSlicer,
+Orca/Bambu Studio, Cura, …) opens in a tolerant preview mode that reports the
+detected generator and firmware flavor.
 
 Solid provides exact rational cylinders, apex cones, conical frustums, tubes,
 spheres and tori. Exact profile rotation supports signed partial turns and

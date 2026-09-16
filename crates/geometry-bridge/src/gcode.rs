@@ -2,7 +2,8 @@
 use crate::{Error, Mesh, Result, field, input};
 use base64::Engine;
 use slicer_core::{
-    GcodePreview, JobProfile, MeshBody, OptimizeSettings, ToolpathLayer, ToolpathSettings,
+    Flavor, GcodePreview, JobProfile, MeshBody, OptimizeSettings, ToolpathLayer,
+    ToolpathSettings,
 };
 use value_codec::{Value, json};
 
@@ -90,6 +91,16 @@ fn job_profile(v: &Value, toolpath: &ToolpathSettings) -> Result<JobProfile> {
         Some(Value::Bool(flag)) => *flag,
         Some(_) => return Err(input("homeAxes must be a boolean")),
     };
+    let flavor = match v.get("flavor") {
+        None => defaults.flavor,
+        Some(value) => {
+            let name = value
+                .as_str()
+                .ok_or_else(|| input("flavor must be a string"))?;
+            Flavor::from_name(name)
+                .map_err(|_| input("flavor must be marlin, klipper or reprapfirmware"))?
+        }
+    };
     slicer_core::job_profile(
         toolpath,
         JobProfile {
@@ -114,6 +125,7 @@ fn job_profile(v: &Value, toolpath: &ToolpathSettings) -> Result<JobProfile> {
             )?,
             fan_speed: fan,
             home_axes,
+            flavor,
         },
     )
 }
@@ -249,19 +261,42 @@ pub(crate) fn export_job(v: &Value) -> Result<Value> {
         "gcode": gcode,
         "gcode3mfBase64": base64::engine::general_purpose::STANDARD.encode(packaged),
         "dialect": slicer_core::GCODE_JOB_DIALECT,
+        "flavor": job.flavor.name(),
         "layerCount": layers.len(),
         "preview": preview_value(preview),
     }))
 }
 
-pub(crate) fn parse(v: &Value) -> Result<Value> {
-    let text = v
-        .get("gcode")
+fn gcode_text(v: &Value) -> Result<&str> {
+    v.get("gcode")
         .and_then(Value::as_str)
-        .ok_or_else(|| input("gcode must be a string"))?;
-    if text.lines().next() == Some(format!("; {}", slicer_core::GCODE_JOB_DIALECT).as_str()) {
-        Ok(preview_value(slicer_core::parse_gcode_job(text)?))
+        .ok_or_else(|| input("gcode must be a string"))
+}
+
+/// Flat preview: strict for native dialects, tolerant for other slicers' files.
+pub(crate) fn parse(v: &Value) -> Result<Value> {
+    let (preview, _) = slicer_core::parse_gcode_any(gcode_text(v)?)?;
+    Ok(preview_value(preview))
+}
+
+/// Preview plus detected dialect, generator and flavor for opened files.
+pub(crate) fn inspect(v: &Value) -> Result<Value> {
+    let text = gcode_text(v)?;
+    let (preview, info) = slicer_core::parse_gcode_any(text)?;
+    let first = text.lines().next().unwrap_or("").trim();
+    let dialect = if first == format!("; {}", slicer_core::GCODE_JOB_DIALECT) {
+        slicer_core::GCODE_JOB_DIALECT.to_string()
+    } else if first == format!("; {}", slicer_core::GCODE_DIALECT) {
+        slicer_core::GCODE_DIALECT.to_string()
     } else {
-        Ok(preview_value(slicer_core::parse_gcode_preview(text)?))
-    }
+        format!("{} G-code (tolerant preview)", info.generator.name())
+    };
+    Ok(json!({
+        "preview": preview_value(preview),
+        "dialect": dialect,
+        "native": info.native,
+        "generator": info.generator.name(),
+        "flavor": info.flavor,
+        "filamentDiameterMm": info.filament_diameter_mm,
+    }))
 }

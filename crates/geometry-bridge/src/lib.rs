@@ -573,6 +573,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "mesh_gcode" => gcode::export(&v),
         "mesh_gcode_job" => gcode::export_job(&v),
         "gcode_preview" => gcode::parse(&v),
+        "gcode_parse" => gcode::inspect(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {

@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import type { GcodePreviewResult, JobSettingsInput, ToolpathSettingsInput } from './geometry/polygon'
+import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from './geometry/polygon'
 
 export const GCODE_PREVIEW_MAX_BYTES = 4 * 1024 * 1024
 export const GCODE_PREVIEW_MAX_MESH_BYTES = 16 * 1024 * 1024
@@ -14,6 +14,11 @@ export interface GcodePreviewDocument {
   dialect: string
   /** Present for `kind: 'job'` exports (standard base64 OPC package). */
   gcode3mfBase64?: string
+  /** False when an opened file came from another slicer and was read tolerantly. */
+  native?: boolean
+  generator?: string
+  /** Firmware flavor: the job's target, or the flavor declared in an opened file. */
+  flavor?: string | null
 }
 export interface GcodePreviewRequest { version: 1; id: number; job: GcodePreviewJob }
 export type GcodePreviewResponse =
@@ -50,6 +55,10 @@ function checkJobSettings(settings: JobSettingsInput): JobSettingsInput {
       if (typeof value !== 'boolean') throw new Error('homeAxes must be a boolean.')
       continue
     }
+    if (name === 'flavor') {
+      if (typeof value !== 'string' || !(GCODE_FLAVORS as readonly string[]).includes(value)) throw new Error(`flavor must be one of ${GCODE_FLAVORS.join(', ')}.`)
+      continue
+    }
     if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${name} must be a finite number.`)
     if (name === 'fanSpeed') {
       if (value < 0 || value > 255) throw new Error('fanSpeed must be between 0 and 255.')
@@ -83,6 +92,9 @@ export function isGcodePreviewDocument(value: unknown): value is GcodePreviewDoc
   if (!value || typeof value !== 'object') return false
   const document = value as GcodePreviewDocument, preview = document.preview
   if (document.gcode3mfBase64 !== undefined && typeof document.gcode3mfBase64 !== 'string') return false
+  if (document.native !== undefined && typeof document.native !== 'boolean') return false
+  if (document.generator !== undefined && typeof document.generator !== 'string') return false
+  if (document.flavor !== undefined && document.flavor !== null && typeof document.flavor !== 'string') return false
   return typeof document.gcode === 'string' && typeof document.dialect === 'string' && !!preview
     && Number.isInteger(preview.layers) && preview.layers >= 0 && Array.isArray(preview.moves)
     && [preview.extrusionMm, preview.depositedVolumeMm3, preview.travelDistanceMm, preview.printDistanceMm, preview.estimatedTimeS].every(value => Number.isFinite(value) && value >= 0)
