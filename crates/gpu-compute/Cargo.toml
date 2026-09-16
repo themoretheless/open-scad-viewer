@@ -5,5 +5,19 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+# CUDA driver API on NVIDIA hardware. `nvcuda`/`libcuda` is loaded at run time
+# (libloading), so the CUDA toolkit is not required to build; the kernels are
+# shipped as PTX and JIT-compiled by the driver. cudarc's `nvrtc` feature is
+# only needed for the `load_module` signature and is never dlopen'd unless a
+# caller compiles CUDA C at run time.
+cuda = ["dep:cudarc"]
+
 [dependencies]
 wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }
+cudarc = { version = "0.19", default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12080"], optional = true }
+
+# Windows also exposes NVIDIA/AMD/Intel through DX12; wgpu `Backends::PRIMARY`
+# keeps Vulkan first and DX12 as the second native option.
+[target.'cfg(windows)'.dependencies]
+wgpu = { version = "30", default-features = false, features = ["dx12"] }

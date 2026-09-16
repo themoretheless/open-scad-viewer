@@ -65,9 +65,9 @@ fn median(times: &mut [f64]) -> f64 {
 }
 
 fn main() {
-    let acceleration = match std::env::var("DENSE_ACCELERATION").as_deref() {
-        Ok("cpu") => Acceleration::Cpu,
-        _ => Acceleration::Gpu,
+    let acceleration = match std::env::var("DENSE_ACCELERATION") {
+        Ok(value) => Acceleration::parse(&value).unwrap_or(Acceleration::Gpu),
+        Err(_) => Acceleration::Gpu,
     };
     let repeats = env_usize("DENSE_REPEAT", 5).max(1);
     let accurate = std::env::var_os("DENSE_ACCURATE").is_some();

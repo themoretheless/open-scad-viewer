@@ -54,8 +54,10 @@ correct GPU execution, not a speedup.
 
 Next candidates are a retained private device/pipeline, buffer reuse, threshold
 benchmarks and moving the compute host into a Worker. Removing per-request CPU
-verification requires a separate numerical qualification decision. CUDA and
-other native compute providers are not implemented by this change.
+verification requires a separate numerical qualification decision. This
+browser pilot has no native compute provider; the native Rust kernels have
+their own opt-in placements (`Acceleration::Gpu` via wgpu, `Acceleration::Cuda`
+via the CUDA driver API) — see [native GPU and CUDA acceleration](native-gpu-cuda.md).
 
 ## Verification
 

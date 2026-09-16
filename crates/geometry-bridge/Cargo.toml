@@ -12,6 +12,7 @@ crate-type = ["rlib"]
 default = ["languages"]
 languages = ["dep:openscad-core", "dep:modelgraph-runtime", "dep:modelgraph-text"]
 gpu = ["dep:gpu-compute"]
+cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda"]
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }

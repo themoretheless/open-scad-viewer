@@ -4,12 +4,48 @@ pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
 pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
-/// Compute placement. `Cpu` is the deterministic reference; `Gpu` is opt-in.
+/// Compute placement. `Cpu` is the deterministic reference; the others are
+/// opt-in and fall back to the CPU reference when unavailable.
+///
+/// - `Gpu`: portable compute shaders (wgpu — Vulkan/DX12/Metal natively,
+///   WebGPU in the browser). Reaches NVIDIA hardware through Vulkan/DX12.
+/// - `Cuda`: the CUDA driver API on NVIDIA hardware (native `cuda` feature).
+///   Kernels without a CUDA port run their `Gpu` shader instead, so `Cuda`
+///   is never slower than `Gpu` on the same device; without a CUDA device
+///   the `Gpu` path is tried, then the CPU reference.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Acceleration {
     #[default]
     Cpu,
     Gpu,
+    Cuda,
+}
+
+impl Acceleration {
+    /// True for every device placement (`Gpu` or `Cuda`); kernels that only
+    /// have a portable shader use this instead of comparing against `Gpu`.
+    #[inline]
+    pub const fn is_gpu(self) -> bool {
+        matches!(self, Self::Gpu | Self::Cuda)
+    }
+
+    /// Parses the CLI/environment spelling (`cpu`, `gpu`, `cuda`).
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "cpu" => Some(Self::Cpu),
+            "gpu" | "wgpu" | "webgpu" => Some(Self::Gpu),
+            "cuda" => Some(Self::Cuda),
+            _ => None,
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Cpu => "cpu",
+            Self::Gpu => "gpu",
+            Self::Cuda => "cuda",
+        }
+    }
 }
 
 /// Shared geometry error. Codes stay crate-specific; the type is one.
@@ -272,6 +308,21 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn acceleration_parse_and_placement() {
+        assert_eq!(Acceleration::parse("cpu"), Some(Acceleration::Cpu));
+        assert_eq!(Acceleration::parse(" GPU "), Some(Acceleration::Gpu));
+        assert_eq!(Acceleration::parse("webgpu"), Some(Acceleration::Gpu));
+        assert_eq!(Acceleration::parse("cuda"), Some(Acceleration::Cuda));
+        assert_eq!(Acceleration::parse("opencl"), None);
+        assert!(!Acceleration::Cpu.is_gpu());
+        assert!(Acceleration::Gpu.is_gpu());
+        assert!(Acceleration::Cuda.is_gpu());
+        for mode in [Acceleration::Cpu, Acceleration::Gpu, Acceleration::Cuda] {
+            assert_eq!(Acceleration::parse(mode.label()), Some(mode));
+        }
+        assert_eq!(Acceleration::default(), Acceleration::Cpu);
+    }
     #[test]
     fn eigen_reconstructs() {
         let a = [[3., 1., 0.], [1., 2., 1.], [0., 1., 4.]];

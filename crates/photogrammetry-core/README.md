@@ -27,14 +27,17 @@ PHOTO_DENSE=1           # also write out.ply.surface.ply
 PHOTO_ACCURACY=on       # qualified accuracy bundle; with PHOTO_DENSE also
                         # DenseOptions::accurate() (5x5 patches, dual scale,
                         # sparse depth prior: -27% surface error on analytic scenes)
-PHOTO_ACCELERATION=gpu  # requires building with --features gpu (wgpu)
+PHOTO_ACCELERATION=gpu   # requires building with --features gpu (wgpu)
+PHOTO_ACCELERATION=cuda  # same kernels on NVIDIA via wgpu; see docs/design/native-gpu-cuda.md
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
 (3.3-18.9x) and the frontoparallel NCC depth sweep (batched, selection on the
 GPU: ~10x of the dense stage, 31-68 ms on the frozen sets) via
-Metal on macOS and Vulkan on Linux/Windows; `Acceleration::Gpu` is opt-in and
-falls back to the CPU reference without an adapter. CPU defaults stay
+Metal on macOS and Vulkan/DX12 on Linux/Windows; `Acceleration::Gpu` is opt-in and
+falls back to the CPU reference without an adapter. `Acceleration::Cuda` is
+accepted too: these kernels are portable shaders, so it runs the same wgpu path
+(dedicated PTX ports currently exist in `sdf-core`). CPU defaults stay
 bit-identical with or without the feature. Browser builds keep the feature off;
 there the same WGSL sweep runs through WebGPU from the viewer's worker.
 Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).

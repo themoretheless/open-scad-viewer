@@ -1,7 +1,8 @@
 //! Flat GPU encoding of supported Field trees (feature `gpu`). Translate nodes
 //! fold into leaf parameters during flattening (a pure shift distributes over
-//! every descendant), so the shader needs no coordinate stack. Extrude,
-//! Revolve, Deform and MeshDistance fields stay CPU-only for now.
+//! every descendant; mesh leaves shift their triangles), so the shader needs
+//! no coordinate stack. Extrude, Revolve and Deform fields stay CPU-only for
+//! now.
 use crate::{Field, Point};
 
 pub const KIND_SPHERE: u32 = 0;
@@ -106,11 +107,13 @@ impl Field {
                     walk(input, std::array::from_fn(|i| offset[i] + vector[i]), flat)?;
                 }
                 Field::MeshDistance { mesh, signed } => {
+                    // The translate fold shifts the triangles themselves.
                     let start = (flat.triangles.len() / 9) as u32;
                     for t in mesh.indices.as_chunks::<3>().0 {
                         for &i in t {
                             for k in 0..3 {
-                                flat.triangles.push(mesh.positions[3 * i + k] as f32);
+                                flat.triangles
+                                    .push((mesh.positions[3 * i + k] + offset[k]) as f32);
                             }
                         }
                     }

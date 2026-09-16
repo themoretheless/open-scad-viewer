@@ -449,7 +449,7 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
     let da: Vec<[f32; 128]> = a.iter().map(|x| x.descriptor).collect();
     let db: Vec<[f32; 128]> = b.iter().map(|x| x.descriptor).collect();
     #[cfg(feature = "gpu")]
-    let gpu_done = options.acceleration == crate::Acceleration::Gpu
+    let gpu_done = options.acceleration.is_gpu()
         && match crate::gpu::matching::match_pair(&da, &db) {
             Some((rows, cols)) => {
                 for (i, row) in rows.iter().enumerate() {

@@ -6,8 +6,9 @@ The application uses the repository's Rust CAD implementation in
 `crates/polygon-core` through `crates/geometry-bridge`. It contains no Manifold,
 OpenCascade, CGAL or other external CAD kernel. The repository license is MIT.
 The core geometry libraries use optional `wgpu` in
-`crates/gpu-compute` for native Metal/Vulkan compute (feature `gpu`). WASM builds
-leave that feature off. The document adapter additionally uses the static SVG
+`crates/gpu-compute` for native Metal/Vulkan/DX12 compute (feature `gpu`) and
+optional `cudarc` for the CUDA driver API (feature `cuda`). WASM builds
+leave both features off. The document adapter additionally uses the static SVG
 libraries listed below. A separate compression bootstrap uses the Brotli crates
 listed below; they are not geometry kernels. Document values, binary transport,
 direct WASM bindings and runtime DEFLATE decoding are repository-owned.
@@ -64,8 +65,22 @@ license notice is copied into the browser distribution by Vite's public assets.
 - License: MIT OR Apache-2.0
 
 Used only by `crates/gpu-compute` when the optional `gpu` feature is enabled
-on native hosts (Metal on macOS, Vulkan on Linux/Windows). Browser WebGPU
-does not link this crate.
+on native hosts (Metal on macOS, Vulkan on Linux/Windows, DX12 on Windows).
+Browser WebGPU does not link this crate.
+
+## cudarc
+
+- Crate: `cudarc` (with its `libloading` dependency)
+- Version: `0.19`
+- Source: <https://github.com/coreylowman/cudarc>
+- License: MIT OR Apache-2.0
+
+Used only by `crates/gpu-compute` when the optional `cuda` feature is enabled
+on native hosts. Only the CUDA driver-API bindings are compiled
+(`driver`, `dynamic-loading`); the NVIDIA driver library is loaded at run time
+and nothing from the CUDA toolkit is linked or redistributed. The kernels are
+repository-owned CUDA C (`crates/sdf-core/src/sdf_grid.cu`) committed as PTX.
+Browser and WASM builds do not link this crate.
 
 ## Model Context Protocol TypeScript SDK
 
