@@ -612,7 +612,7 @@ pub(super) fn estimate_prepared(
     // and one submit; coarse-to-fine passes depend on each other and keep the
     // per-view path inside `sweep_depth`.
     #[cfg(feature = "gpu")]
-    let mut gpu_batch = (options.acceleration == crate::Acceleration::Gpu
+    let mut gpu_batch = (options.acceleration.is_gpu()
         && options.estimator == DenseEstimator::FrontoparallelSweep
         && !options.coarse_to_fine)
         .then(crate::gpu::sweep::shared)
@@ -1528,7 +1528,7 @@ fn sweep_depth(
     let mut depth = vec![0.; width * height];
     let mut confidence = vec![0.; width * height];
     #[cfg(feature = "gpu")]
-    if options.acceleration == crate::Acceleration::Gpu {
+    if options.acceleration.is_gpu() {
         if let Some(maps) = gpu_sweep_single(
             gray,
             reference,

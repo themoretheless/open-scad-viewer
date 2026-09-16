@@ -18,6 +18,8 @@ const INVALID_INPUT: &str = "SDF_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)
 }
+#[cfg(feature = "cuda")]
+pub mod cuda;
 pub mod flat;
 #[cfg(feature = "gpu")]
 mod gpu;
@@ -1175,18 +1177,27 @@ pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Res
 /// and CSG trees) sample the grid on the GPU in f32; the snap-to-zero, boundary
 /// validation and marching-tetrahedra extraction stay on the CPU. Everything
 /// else — and any failure — falls back to the CPU reference.
+///
+/// `Acceleration::Cuda` runs the PTX port through the CUDA driver (feature
+/// `cuda`), then the wgpu shader (feature `gpu`), then the CPU reference.
 pub fn polygonize_accelerated(
     field: &Field,
     grid: &Grid,
     #[allow(unused_variables)] acceleration: Acceleration,
 ) -> Result<Triangles> {
     #[cfg(feature = "gpu")]
-    if acceleration == Acceleration::Gpu {
+    if acceleration.is_gpu() {
         check_grid_budget(field, grid)?;
-        if let Some(flat) = field.to_flat()
-            && let Some(values) = gpu::sample_grid_gpu(&flat, grid)
-        {
-            return polygonize_with_values(field, grid, &values);
+        if let Some(flat) = field.to_flat() {
+            #[cfg(feature = "cuda")]
+            if acceleration == Acceleration::Cuda
+                && let Some(values) = cuda::sample_grid_cuda(&flat, grid)
+            {
+                return polygonize_with_values(field, grid, &values);
+            }
+            if let Some(values) = gpu::sample_grid_gpu(&flat, grid) {
+                return polygonize_with_values(field, grid, &values);
+            }
         }
     }
     polygonize(field, grid)
@@ -1335,6 +1346,140 @@ mod tests {
             "inside/outside classification diverges"
         );
         assert!(max_diff < 0.01, "signed distance diverges: {max_diff}");
+    }
+
+    /// CSG tree plus a signed mesh-distance leaf: every node kind the flat
+    /// interpreter implements, so the CUDA port is exercised end to end.
+    #[cfg(feature = "cuda")]
+    fn cuda_fixture() -> (Field, Grid) {
+        let tetra = Triangles {
+            positions: vec![
+                -6., -6., -6., //
+                6., -6., -6., -6., 6., -6., -6., -6., 6.,
+            ],
+            indices: vec![0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3],
+        };
+        let field = Field::Translate {
+            input: Box::new(Field::Difference {
+                a: Box::new(Field::SmoothUnion {
+                    a: Box::new(Field::Sphere {
+                        center: [0., 0., 0.],
+                        radius: 8.,
+                    }),
+                    b: Box::new(Field::Offset {
+                        input: Box::new(Field::Torus {
+                            center: [4., 0., 0.],
+                            major_radius: 4.,
+                            minor_radius: 1.5,
+                        }),
+                        distance: 0.5,
+                    }),
+                    radius: 3.,
+                }),
+                b: Box::new(Field::Intersection {
+                    a: Box::new(Field::Box {
+                        center: [0., 0., 0.],
+                        half_size: [5., 5., 5.],
+                    }),
+                    b: Box::new(Field::from_triangles(tetra, true).unwrap()),
+                }),
+            }),
+            vector: [1., -2., 0.5],
+        };
+        let grid = Grid {
+            min: [-12., -12., -12.],
+            max: [16., 12., 12.],
+            cells: [28, 24, 24],
+        };
+        (field, grid)
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_sampling_matches_cpu_field_within_tolerance() {
+        let (field, grid) = cuda_fixture();
+        let flat = field.to_flat().expect("fixture should flatten");
+        let Some(values) = cuda::sample_grid_cuda(&flat, &grid) else {
+            eprintln!("no CUDA device; skipping");
+            return;
+        };
+        let [nx, ny, nz] = grid.cells;
+        assert_eq!(values.len(), (nx + 1) * (ny + 1) * (nz + 1));
+        let mut max_diff = 0f64;
+        let (mut inside_cpu, mut inside_cuda) = (0, 0);
+        for z in 0..=nz {
+            for y in 0..=ny {
+                for x in 0..=nx {
+                    let p = std::array::from_fn(|i| {
+                        grid.min[i]
+                            + (grid.max[i] - grid.min[i]) * [x, y, z][i] as f64
+                                / grid.cells[i] as f64
+                    });
+                    let cpu = field.sample(p);
+                    let cuda = values[(z * (ny + 1) + y) * (nx + 1) + x] as f64;
+                    max_diff = max_diff.max((cuda - cpu).abs());
+                    inside_cpu += (cpu < 0.) as usize;
+                    inside_cuda += (cuda < 0.) as usize;
+                }
+            }
+        }
+        assert!(inside_cpu > 0);
+        assert_eq!(
+            inside_cpu, inside_cuda,
+            "inside/outside classification diverges"
+        );
+        assert!(max_diff < 0.01, "CUDA field diverges: {max_diff}");
+        let cpu_mesh = polygonize(&field, &grid).unwrap();
+        let cuda_mesh = polygonize_accelerated(&field, &grid, Acceleration::Cuda).unwrap();
+        let cpu_tris = cpu_mesh.indices.len() / 3;
+        let cuda_tris = cuda_mesh.indices.len() / 3;
+        assert!(
+            (cpu_tris as f64 - cuda_tris as f64).abs() <= 0.02 * cpu_tris as f64,
+            "triangle counts diverge: {cpu_tris} vs {cuda_tris}"
+        );
+    }
+
+    /// The PTX and WGSL kernels are ports of the same text; on the same device
+    /// class they should agree to f32 rounding, far tighter than the CPU bound.
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_and_wgpu_samplers_agree() {
+        let (field, grid) = cuda_fixture();
+        let flat = field.to_flat().expect("fixture should flatten");
+        let (Some(cuda), Some(wgpu)) = (
+            cuda::sample_grid_cuda(&flat, &grid),
+            gpu::sample_grid_gpu(&flat, &grid),
+        ) else {
+            eprintln!("CUDA or wgpu unavailable; skipping");
+            return;
+        };
+        assert_eq!(cuda.len(), wgpu.len());
+        let max_diff = cuda
+            .iter()
+            .zip(&wgpu)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0f32, f32::max);
+        assert!(
+            max_diff < 1e-3,
+            "CUDA and wgpu samplers diverge: {max_diff}"
+        );
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_request_without_device_falls_back() {
+        // Whatever the host has, `Cuda` must never fail where the CPU succeeds.
+        let (field, grid) = cuda_fixture();
+        let cpu = polygonize(&field, &grid).unwrap();
+        let cuda = polygonize_accelerated(&field, &grid, Acceleration::Cuda).unwrap();
+        assert!(!cuda.indices.is_empty());
+        let flat = field.to_flat().unwrap();
+        if !cuda::available() && gpu::sample_grid_gpu(&flat, &grid).is_none() {
+            assert_eq!(
+                cpu.indices, cuda.indices,
+                "CPU fallback must be bit-identical"
+            );
+        }
     }
 
     use super::*;

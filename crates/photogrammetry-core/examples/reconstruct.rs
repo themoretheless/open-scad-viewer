@@ -94,14 +94,21 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ..b
             });
     }
-    // PHOTO_ACCELERATION=gpu requires building with --features gpu.
-    if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
+    // PHOTO_ACCELERATION=gpu|cuda requires building with --features gpu. The
+    // photogrammetry kernels are portable shaders, so `cuda` selects the same
+    // wgpu path (Vulkan/DX12 on NVIDIA); see math_core::Acceleration.
+    let acceleration = match std::env::var("PHOTO_ACCELERATION") {
+        Ok(value) => photogrammetry_core::Acceleration::parse(&value)
+            .ok_or_else(|| format!("Unknown PHOTO_ACCELERATION={value} (cpu|gpu|cuda)"))?,
+        Err(_) => photogrammetry_core::Acceleration::Cpu,
+    };
+    if acceleration.is_gpu() {
         #[cfg(feature = "gpu")]
         {
-            options.feature_options.acceleration = photogrammetry_core::Acceleration::Gpu;
+            options.feature_options.acceleration = acceleration;
         }
         #[cfg(not(feature = "gpu"))]
-        return Err("PHOTO_ACCELERATION=gpu requires --features gpu".into());
+        return Err("PHOTO_ACCELERATION=gpu|cuda requires --features gpu".into());
     }
     let outcome = reconstruct_detailed(&images, &options, |stage, n, total| {
         eprintln!("{stage}: {n}/{total}");
@@ -126,10 +133,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             photogrammetry_core::dense::DenseOptions::default()
         };
-        if std::env::var("PHOTO_ACCELERATION").as_deref() == Ok("gpu") {
+        if acceleration.is_gpu() {
             #[cfg(feature = "gpu")]
             {
-                dense_options.acceleration = photogrammetry_core::Acceleration::Gpu;
+                dense_options.acceleration = acceleration;
             }
         }
         match std::env::var("PHOTO_DENSE_PROFILE").as_deref() {

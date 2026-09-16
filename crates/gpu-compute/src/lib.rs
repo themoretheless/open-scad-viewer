@@ -1,8 +1,14 @@
-//! Shared GPU compute foundation (wgpu). Used by kernels behind their own
-//! `gpu` feature flags; the CPU paths remain the deterministic reference and
-//! fallback. wgpu drives Metal on macOS and Vulkan on Linux/Windows (NVIDIA
-//! included) — there is no separate CUDA backend because these kernels are
-//! custom shaders and the CUDA hardware class is covered through Vulkan.
+//! Shared GPU compute foundation. Used by kernels behind their own feature
+//! flags; the CPU paths remain the deterministic reference and fallback.
+//!
+//! - `GpuContext` (always compiled): wgpu compute shaders. wgpu drives Metal on
+//!   macOS, Vulkan on Linux/Windows and DX12 on Windows — NVIDIA/"CUDA-class"
+//!   hardware included, because these kernels are portable WGSL and the same
+//!   text runs in the browser through WebGPU.
+//! - `cuda::CudaDevice` (feature `cuda`): the CUDA driver API on NVIDIA
+//!   hardware for kernels that ship a dedicated PTX port. The driver library
+//!   is dlopen'd at run time, so the feature builds without the CUDA toolkit
+//!   and degrades to `None` (→ wgpu → CPU) on machines without it.
 #![feature(
     try_blocks,
     gen_blocks,
@@ -14,6 +20,9 @@
 #![allow(unused_features)]
 
 pub use wgpu;
+
+#[cfg(feature = "cuda")]
+pub mod cuda;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -44,10 +53,11 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 pub struct GpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
-    /// The wgpu backend actually bound (Metal on macOS, Vulkan elsewhere —
+    /// The wgpu backend actually bound (Metal on macOS, Vulkan/DX12 elsewhere —
     /// including NVIDIA/"CUDA-class" hardware, which wgpu drives through
-    /// Vulkan rather than a dedicated CUDA backend). Kernels that template
-    /// their workgroup size read this to pick a per-backend tuning.
+    /// Vulkan or DX12; the dedicated CUDA path lives in [`cuda`]). Kernels
+    /// that template their workgroup size read this to pick a per-backend
+    /// tuning.
     pub backend: wgpu::Backend,
 }
 
@@ -88,8 +98,8 @@ impl GpuContext {
 /// deferred renderers whose occupancy is limited by threadgroup memory and
 /// per-core execution-unit count; smaller workgroups (aligned to the 32-wide
 /// SIMD-group) keep more threadgroups resident and in flight. NVIDIA GPUs —
-/// which wgpu drives through Vulkan, since there is no separate CUDA backend
-/// for custom shaders — have deep multi-warp schedulers per SM and benefit
+/// which wgpu drives through Vulkan/DX12 (the dedicated CUDA path is
+/// [`cuda`]) — have deep multi-warp schedulers per SM and benefit
 /// from larger workgroups that hide memory latency with more warps in
 /// flight, so every non-Metal backend keeps the larger default.
 ///

@@ -382,8 +382,13 @@ Select a part from a current full build, open **Inspect**, and choose
 **Compute surface area on GPU**. A WebGPU compute shader calculates triangle
 surface area with the object's transform, with CPU verification and an explicit
 CPU fallback. Cancellation and scene/source changes invalidate the analysis.
-This opt-in pilot does not accelerate or replace Rust construction/booleans;
-CUDA is not implemented. See the
+This opt-in pilot does not accelerate or replace Rust construction/booleans.
+The native Rust kernels have their own opt-in placements: `Acceleration::Gpu`
+(wgpu — Vulkan/DX12/Metal) and `Acceleration::Cuda` (CUDA driver API on
+NVIDIA, PTX kernels, no toolkit needed to build) for SDF grid sampling, the
+lattice field and photogrammetry matching/depth sweep, each falling back to
+the CPU reference. See
+[native GPU and CUDA acceleration](docs/design/native-gpu-cuda.md) and the
 [compute boundaries and live smoke checks](docs/design/geometry-compute-pilot.md).
 
 ## Automatic builds and parameter presets

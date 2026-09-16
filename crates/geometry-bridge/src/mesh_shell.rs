@@ -749,7 +749,9 @@ pub fn lattice_accelerated(
     };
     let output = {
         #[cfg(feature = "gpu")]
-        if acceleration == sdf_core::Acceleration::Gpu {
+        if acceleration.is_gpu() {
+            // The lattice field is a BVH closure with only a WGSL port; `Cuda`
+            // therefore runs the wgpu kernel (Vulkan/DX12 on NVIDIA).
             match crate::lattice_gpu::try_gpu(
                 &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
                 blend, &field,

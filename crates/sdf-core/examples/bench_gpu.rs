@@ -1,4 +1,5 @@
-//! Temporary GPU vs CPU sampling benchmark (may be removed after qualification).
+//! GPU/CUDA vs CPU sampling benchmark (may be removed after qualification).
+//! `cargo run --release -p sdf-core --features cuda --example bench_gpu`.
 use sdf_core::{Acceleration, Field, Grid, polygonize, polygonize_accelerated};
 use std::time::Instant;
 
@@ -37,7 +38,63 @@ fn uv_sphere(
     geometry_ops::Triangles { positions, indices }
 }
 
+/// Placements to compare: CPU reference, wgpu shader and (feature `cuda`) the
+/// CUDA driver port. `SDF_BENCH_MODES=cpu,cuda` narrows the set.
+fn modes() -> Vec<Acceleration> {
+    let mut modes = vec![Acceleration::Cpu, Acceleration::Gpu];
+    if cfg!(feature = "cuda") {
+        modes.push(Acceleration::Cuda);
+    }
+    if let Ok(filter) = std::env::var("SDF_BENCH_MODES") {
+        let wanted: Vec<Acceleration> = filter.split(',').filter_map(Acceleration::parse).collect();
+        modes.retain(|mode| wanted.contains(mode));
+    }
+    modes
+}
+
+fn median(times: &mut [f64]) -> f64 {
+    times.sort_by(f64::total_cmp);
+    times[times.len() / 2]
+}
+
+/// Runs every placement `rounds` times (interleaved) and prints the medians.
+fn compare(label: &str, field: &Field, grid: &Grid, rounds: usize) {
+    let modes = modes();
+    let reference = polygonize(field, grid).unwrap();
+    let mut times = vec![Vec::new(); modes.len()];
+    let mut triangles = vec![0usize; modes.len()];
+    for round in 0..rounds {
+        for (index, &acceleration) in modes.iter().enumerate() {
+            let start = Instant::now();
+            let mesh = polygonize_accelerated(field, grid, acceleration).unwrap();
+            times[index].push(start.elapsed().as_secs_f64() * 1000.);
+            triangles[index] = mesh.indices.len() / 3;
+            if round == 0 && acceleration == Acceleration::Cpu {
+                assert_eq!(reference.indices, mesh.indices, "cpu baseline matches");
+            }
+        }
+    }
+    let summary: Vec<String> = modes
+        .iter()
+        .zip(times.iter_mut())
+        .zip(&triangles)
+        .map(|((mode, times), tris)| {
+            format!(
+                "{} median {:.1}ms ({tris} tris)",
+                mode.label(),
+                median(times)
+            )
+        })
+        .collect();
+    println!("{label}: {}", summary.join(", "));
+}
+
 fn main() {
+    #[cfg(feature = "cuda")]
+    println!(
+        "cuda device: {}",
+        sdf_core::cuda::device_name().unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
+    );
     let field = Field::SmoothUnion {
         a: Box::new(Field::Sphere {
             center: [0., 0., 0.],
@@ -54,39 +111,7 @@ fn main() {
         max: [16., 12., 12.],
         cells: [64, 64, 64],
     };
-    let mut cpu_times = Vec::new();
-    let mut gpu_times = Vec::new();
-    for i in 0..6 {
-        let (acceleration, label) = if i % 2 == 0 {
-            (Acceleration::Cpu, "cpu")
-        } else {
-            (Acceleration::Gpu, "gpu")
-        };
-        let start = Instant::now();
-        let mesh = polygonize_accelerated(&field, &grid, acceleration).unwrap();
-        let ms = start.elapsed().as_secs_f64() * 1000.;
-        (if label == "cpu" {
-            &mut cpu_times
-        } else {
-            &mut gpu_times
-        })
-        .push(ms);
-        if i == 0 {
-            let reference = polygonize(&field, &grid).unwrap();
-            println!(
-                "triangles cpu={} alt={}",
-                reference.indices.len() / 3,
-                mesh.indices.len() / 3
-            );
-        }
-    }
-    cpu_times.sort_by(f64::total_cmp);
-    gpu_times.sort_by(f64::total_cmp);
-    println!(
-        "primitive field: cpu median {:.1}ms gpu median {:.1}ms",
-        cpu_times[cpu_times.len() / 2],
-        gpu_times[gpu_times.len() / 2]
-    );
+    compare("primitive field (64^3)", &field, &grid, 3);
 
     // Mesh-distance field (the dominant production case; budget-capped grid).
     let mesh = uv_sphere([0., 0., 0.], 10., 17, 34);
@@ -97,34 +122,10 @@ fn main() {
         max: [12., 12., 12.],
         cells: [16, 16, 16],
     };
-    let mut cpu_times = Vec::new();
-    let mut gpu_times = Vec::new();
-    for i in 0..4 {
-        let acceleration = if i % 2 == 0 {
-            Acceleration::Cpu
-        } else {
-            Acceleration::Gpu
-        };
-        let start = Instant::now();
-        let out = polygonize_accelerated(&field, &grid, acceleration).unwrap();
-        let ms = start.elapsed().as_secs_f64() * 1000.;
-        if i == 0 {
-            let reference = polygonize(&field, &grid).unwrap();
-            assert_eq!(reference.indices, out.indices, "cpu baseline matches");
-        }
-        (if i % 2 == 0 {
-            &mut cpu_times
-        } else {
-            &mut gpu_times
-        })
-        .push(ms);
-    }
-    cpu_times.sort_by(f64::total_cmp);
-    gpu_times.sort_by(f64::total_cmp);
-    println!(
-        "mesh field ({} tris, 16^3): cpu median {:.1}ms gpu median {:.1}ms",
-        triangles,
-        cpu_times[cpu_times.len() / 2],
-        gpu_times[gpu_times.len() / 2]
+    compare(
+        &format!("mesh field ({triangles} tris, 16^3)"),
+        &field,
+        &grid,
+        2,
     );
 }

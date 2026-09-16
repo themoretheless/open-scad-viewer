@@ -7,6 +7,8 @@ publish.workspace = true
 
 [features]
 gpu = ["dep:gpu-compute"]
+# CUDA driver-API port of the grid sampler; includes the wgpu path as fallback.
+cuda = ["gpu", "gpu-compute/cuda"]
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
