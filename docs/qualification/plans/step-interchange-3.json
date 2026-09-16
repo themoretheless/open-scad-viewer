@@ -1,0 +1,118 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 3,
+  "planId": "step-interchange-3",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 3
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Candidate finite V3 successor cell for step-interchange/3: Direct bounded Part 21 topology translation for analytic, rational, multi-span, trimmed, multi-body, and multi-cavity B-rep graphs",
+    "forbiddenClaims": [
+      "Constructor or AABB reconstruction",
+      "FACETED_BREP, STL, or OBJ",
+      "Silent identity preservation",
+      "Unknown reachable geometry",
+      "Unchecked cycles, depth, forward references, or resource accounting",
+      "Parasolid parity"
+    ]
+  },
+  "capability": "step-interchange/3",
+  "successorOf": "step-interchange/2",
+  "dependencies": [
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "step-interchange/2",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Direct bounded Part 21 topology translation for LINE, CIRCLE, ELLIPSE, parameter-TRIMMED_CURVE, PLANE, rational multi-span B-spline, multi-body, and multi-cavity B-rep graphs",
+      "Topology-preserving import and export with shared edges, senses, holes, cavity shells, placements, units, stable entity-bound identity, and explicit identity-loss reporting",
+      "SI prefixes and bounded positive conversion-unit chains including inch; only selected-representation-reachable right-handed rigid ITEM_DEFINED_TRANSFORMATION chains",
+      "Checked aggregate budgets of 16 MiB, 65536 instances, parser depth 32, graph depth 64, 4096 topology entities, 256 faces, and 8192 coedges"
+    ],
+    "excluded": [
+      "Constructor or AABB reconstruction",
+      "FACETED_BREP, STL, or OBJ",
+      "Silent identity preservation",
+      "Unknown reachable geometry",
+      "Unchecked cycles, depth, forward references, or resource accounting",
+      "CYLINDRICAL_SURFACE, CONICAL_SURFACE, SPHERICAL_SURFACE, and TOROIDAL_SURFACE whose angular or pole parameterization cannot map one-to-one to the current finite rational surface topology",
+      "TRIMMED_CURVE point selectors, poles/degenerate edges, non-rigid transforms, assemblies, external references, and open/nonmanifold shells",
+      "Parasolid parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "STEP3-DIRECT-TOPOLOGY-ROUNDTRIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-MULTIBODY-MULTICAVITY-RATIONAL-MULTISPAN",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-REORDERED-ENTITY-IDENTITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-METADATA-FREE-IDENTITY-LOSS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-MALFORMED-REACHABLE-GRAPH",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-AGGREGATE-RESOURCE-OVERFLOW",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP3-BRIDGE-PRODUCT-SEAM",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/step_interchange.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "tests/brepDirectStepV3.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/step-interchange-3-evidence-v3.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is deliberately narrowed to the coherent direct finite graph subset in scope.included; periodic analytic surface parameterizations remain explicit typed refusals."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

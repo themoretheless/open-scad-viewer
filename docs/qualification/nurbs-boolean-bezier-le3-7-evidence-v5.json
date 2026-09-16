@@ -1,0 +1,29 @@
+{
+  "$schema": "./brep-capability-evidence-v5.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 5,
+  "evidenceId": "nurbs-boolean-bezier-le3-7-evidence-v5",
+  "capability": "nurbs-boolean-bezier-le3/7",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-7.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-product-mutation-2026-09-17",
+      "result": "pass",
+      "artifactHash": "25ac0f15b7bc72064102708da2d8b27bc56f4fdbe4d425855bf7fb10faff949c"
+    }
+  ],
+  "oracles": [
+    "nurbs_ss_g6::tests::general_multispan_boolean_authors_intersection_and_two_component_difference",
+    "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+    "geometry_bridge::tests::general_multispan_boolean_bridge_is_strict_and_audited",
+    "tests/brepGeneralNurbsBoolean.test.ts",
+    "tests/brepQualificationV5.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded after successful native, bridge, rebuilt-WASM product, refusal, atomicity, and mutation runs; no union, reversed-difference, unsupported-boundary, or general-NURBS claim is made."
+  }
+}

@@ -36,6 +36,7 @@ pub mod sketch;
 pub mod solid_audit;
 mod sphere_boolean;
 pub mod step_interchange;
+pub mod step_interchange_v3;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
@@ -54,8 +55,19 @@ pub use analytic_features::{
 };
 pub use nurbs_ss_g6::{
     G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,
-    NURBS_BOOLEAN_CAPABILITY_V1, NURBS_BOOLEAN_V1_MATURITY, NurbsBooleanImprintCertificate,
-    narrow_transverse_bezier_le3, narrow_transverse_bicubic, nurbs_boolean_imprint_solids,
+    NURBS_BOOLEAN_CAPABILITY_V1, NURBS_BOOLEAN_CAPABILITY_V3, NURBS_BOOLEAN_CAPABILITY_V4,
+    NURBS_BOOLEAN_CAPABILITY_V5, NURBS_BOOLEAN_CAPABILITY_V7, NURBS_BOOLEAN_V1_MATURITY,
+    ContainedGraphBooleanCertificate,
+    BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
+    CertifiedBranchFragment, CurvedGraphBooleanCertificate, NurbsBooleanImprintCertificate,
+    GeneralNurbsBooleanCertificate, GeneralNurbsBooleanNaming, GENERAL_NURBS_BOOLEAN_AUTHORITY,
+    RationalBezierDecomposition, RationalBezierPatchSpan, TensorSpanId, TransverseSpanEvidence,
+    author_general_nurbs_boolean, canonical_bezier_graph_solid,
+    canonical_multispan_graph_solid, canonical_rational_graph_solid, certify_multispan_ss,
+    decompose_rational_bezier_spans, join_certified_multispan_fragments,
+    narrow_transverse_bezier_le3, narrow_transverse_bicubic, nurbs_boolean_graph_containment_v4,
+    nurbs_boolean_graph_patch_unequal_v4, nurbs_boolean_graph_patch_v3,
+    nurbs_boolean_imprint_solids, nurbs_boolean_rational_graph_patch_v5,
     nurbs_boolean_transverse_bicubic,
 };
 pub use nurbs_step_interchange::{
@@ -77,6 +89,9 @@ pub use operations::{
 pub use step_interchange::{
     STEP_INTERCHANGE_V2_CAPABILITY, StepIdentityReport, export_step, export_step_v2, import_step,
     import_step_v2,
+};
+pub use step_interchange_v3::{
+    STEP_INTERCHANGE_V3_CAPABILITY, StepV3Report, export_step_v3, import_step_v3,
 };
 
 pub use brep_topology::{

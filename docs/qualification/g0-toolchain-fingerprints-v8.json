@@ -1,0 +1,163 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v8",
+  "recordedAt": "2026-09-16",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v7",
+  "purpose": "Bind final Geometry Closure V3 own-Rust source and rebuilt WASM bytes after release qualification, preserving all prior archives and resetting every external clean-run counter.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line",
+      "Exact SHA-256 of the Geometry Closure V3 own-Rust source bundle and rebuilt WASM"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v7 or G1 v1 through v24",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "e237f8637b562afa3a4826c314c752e4bf347ff5a5b30088dc9547bad39e9935",
+      "byteLength": 2800
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
+      "byteLength": 73806
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+      "byteLength": 5950
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "fe611e00ab8d0b92872f41ff627961d509d7803bd9ff8be224b12d5d6684dffe",
+      "byteLength": 1798
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c",
+      "byteLength": 72167
+    },
+    {
+      "id": "own-rust-cad-v2-evidence",
+      "path": "docs/qualification/own-rust-cad-v2.json",
+      "sha256": "e26b432bb46aa58b76155702936bf2a716f97f99c9aea7bcbdf5548c1f0c31fe",
+      "byteLength": 1874
+    },
+    {
+      "id": "geometry-v3-source-01",
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "cae4372c3faf4e4719544604cfed8b1d8dcda9feaeae8937a4471c75929af4fb",
+      "byteLength": 65668
+    },
+    {
+      "id": "geometry-v3-source-02",
+      "path": "crates/brep-core/src/nurbs_ss_g6.rs",
+      "sha256": "9a2f5a2fe984ed76861066ec614422563c42ec74c7c28a9930a39253893ce9ee",
+      "byteLength": 108695
+    },
+    {
+      "id": "geometry-v3-source-03",
+      "path": "crates/brep-core/src/operations.rs",
+      "sha256": "525adc6d04472e407e7f02bdaad944a6f77439b56d6d469f69a706c08bcfc420",
+      "byteLength": 95564
+    },
+    {
+      "id": "geometry-v3-source-04",
+      "path": "crates/brep-core/src/solid_audit.rs",
+      "sha256": "464c9c2d79803c896050b0abcb31752773811e39afa464dbe9c5c1de791c7b54",
+      "byteLength": 25234
+    },
+    {
+      "id": "geometry-v3-source-05",
+      "path": "crates/brep-core/src/step_interchange_v3.rs",
+      "sha256": "614a06b7f4a64acb11a0ca79a9975a73c8b6b46055049f08f1112d0f5bea6fa2",
+      "byteLength": 68135
+    },
+    {
+      "id": "geometry-v3-source-06",
+      "path": "crates/brep-core/src/transactions.rs",
+      "sha256": "2de0d9b474d314dc7c87ce37b6c23c3dbfbd7261d60c25ca07a1f98fb4e6e4bc",
+      "byteLength": 16903
+    },
+    {
+      "id": "geometry-v3-source-07",
+      "path": "crates/brep-core/src/trim_sew.rs",
+      "sha256": "4ea4ece611873a6bec84858dce4dd3175610e770a31feffc36f800fac7a0f039",
+      "byteLength": 87242
+    },
+    {
+      "id": "geometry-v3-source-08",
+      "path": "crates/brep-core/src/uv_arrangement.rs",
+      "sha256": "a3cf98e0014921c7c90df22653e623689903fe37ecc404f46d96ec490441ea6a",
+      "byteLength": 43044
+    },
+    {
+      "id": "geometry-v3-source-09",
+      "path": "crates/brep-topology/src/lib.rs",
+      "sha256": "fce4a3a3780e97b3b9fd3a0ccc1307a61f0af865ca44847bf2f1c05b91848227",
+      "byteLength": 45204
+    },
+    {
+      "id": "geometry-v3-source-10",
+      "path": "crates/geometry-bridge/src/lib.rs",
+      "sha256": "48f5a7d72f4c1838f263d0c6dec34676345a264b4481bb1bd89673f81a1e67df",
+      "byteLength": 48054
+    },
+    {
+      "id": "geometry-v3-source-11",
+      "path": "src/core/ownRustCadEvidence.ts",
+      "sha256": "7e315b73862dc985da53a1092a44705bb30ad456f844df3c439e0dbe03ea696c",
+      "byteLength": 474
+    },
+    {
+      "id": "geometry-v3-source-12",
+      "path": "src/services/cadNurbsStep.ts",
+      "sha256": "691a2d22234dfd2d423958ad0c3fe3682d15160e2dc8d61387d9a0f5d6b8f149",
+      "byteLength": 4909
+    },
+    {
+      "id": "geometry-v3-source-13",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "dda61982b97cf37f328b49f807e27f7c4e282457900fa43db51a8e9db6f17627",
+      "byteLength": 13862
+    },
+    {
+      "id": "geometry-v3-source-14",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "27213e44b6f884b733a481f4797ece6e9a0c0d6804163231732387795fbdbde9",
+      "byteLength": 12745
+    }
+  ],
+  "knownDrift": [],
+  "previousFingerprintSha256": "6a364833e07040d59cd47564bfb791ff97f9bca812239b5f72ce19423a23dcbf"
+}

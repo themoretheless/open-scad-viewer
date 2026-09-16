@@ -49,8 +49,12 @@ const limits = new Map([
 // Release-qualified-v2 adds context-bound evidence, correspondence/sew/audit/
 // naming, partial-contact Boolean, STEP identity, audited feature, tessellation,
 // and mass certificates. The source-bound packed chunk measures 2651548 bytes;
-// retain a bounded 18452-byte margin.
-const geometryChunkBudget = 2_670_000
+// retain a bounded 18452-byte margin. Geometry Closure V3 adds proof-bound
+// healing, finite graph-patch Boolean successors, and direct STEP topology;
+// the final packed chunk is 2728218 bytes. Retain a bounded 21782-byte margin.
+// The bounded multi-span Boolean certificate and exact branch/UV proof payload
+// produce a 2759353-byte chunk. Retain a bounded 40647-byte margin.
+const geometryChunkBudget = 2_800_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
@@ -147,8 +151,10 @@ for (const [name, artifact, compression] of [
 // analytic SS cell) adds ~0.6 kB packed and the same to the total
 // (4777287 -> 4777922 bytes measured; chunk 2458753 -> 2459388 bytes);
 // both budgets unchanged.
-// Release-qualified-v2 measures 5137553 bytes across 68 artifacts. Retain a
-// bounded 22447-byte distribution margin alongside the chunk-specific gate.
-const totalBudget = 5_160_000
+// Release-qualified-v2 measures 5137553 bytes across 68 artifacts. Geometry
+// Closure V3 measures 5215998 bytes across the same 68 artifacts. Retain a
+// bounded distribution margin alongside the chunk-specific gate. The bounded
+// multi-span Boolean successor remains capped by the stricter chunk gate above.
+const totalBudget = 5_300_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

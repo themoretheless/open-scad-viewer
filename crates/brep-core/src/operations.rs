@@ -1483,6 +1483,29 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     // Curved operands are fail-closed: a rejected analytic certificate must
     // never fall through to prism recognition, polygonal CSG, or Manifold.
     if has_curved_geometry {
+        if crate::nurbs_ss_g6::is_general_nurbs_boolean_candidate(a, b) {
+            return crate::nurbs_ss_g6::author_general_nurbs_boolean(a, b, operation)
+                .map(|(model, _certificate)| model);
+        }
+        if crate::nurbs_ss_g6::is_nurbs_boolean_v5_candidate(a, b) {
+            return crate::nurbs_ss_g6::nurbs_boolean_rational_graph_patch_v5(a, b, operation)
+                .map(|(model, _certificate)| model);
+        }
+        if crate::nurbs_ss_g6::is_nurbs_boolean_v3_candidate(a, b) {
+            if crate::nurbs_ss_g6::canonical_graph_is_first(a)
+                && let Ok((model, _certificate)) =
+                    crate::nurbs_ss_g6::nurbs_boolean_graph_containment_v4(a, b, operation)
+            {
+                return Ok(model);
+            }
+            if let Ok((model, _certificate)) =
+                crate::nurbs_ss_g6::nurbs_boolean_graph_patch_unequal_v4(a, b, operation)
+            {
+                return Ok(model);
+            }
+            return crate::nurbs_ss_g6::nurbs_boolean_graph_patch_v3(a, b, operation)
+                .map(|(model, _certificate)| model);
+        }
         if crate::nurbs_ss_g6::is_nurbs_boolean_candidate(a, b) {
             return crate::nurbs_ss_g6::nurbs_boolean_imprint_solids(a, b, operation)
                 .map(|(model, _certificate)| model);

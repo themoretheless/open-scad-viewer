@@ -67,12 +67,31 @@ export interface CertifiedBrepMassProperties {
  changeSet:RustChangeSet
  namingComplete:true
 }
+export type AuthorizedHealOperation =
+  | {kind:'endpointSnap';vertex:number;to:[number,number,number]}
+  | {kind:'rationalRefit';edge:number;replacement:NurbsCurve}
+export interface AuthorizedHealResult {
+ model:NurbsBrep
+ certificate:{
+  capability:'authorized-heal-gap-le1/2'
+  status:'Complete'
+  context:{version:number;canonical:string}
+  displacementLedger:{operation:number;actualMm:number;cumulativeMm:number}[]
+  cumulativeDisplacementMm:number
+  sew:{matched:number;complete:true;displacementBudgetOk:true}
+  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
+  changeSet:RustChangeSet
+  namingComplete:true
+ }
+}
 /** Integrates authored NURBS and trim curves; independent of display tessellation. */
 export const pushNurbsBrepFace=(model:NurbsBrep,face:number,distance:number):NurbsBrep=>callGeometryRust('brep_nurbs_push_face',{model,face,distance})
 export const shellNurbsBrep=(model:NurbsBrep,openings:number[],thickness:number):NurbsBrep=>callGeometryRust('brep_nurbs_shell',{model,openings,thickness})
 export const splitNurbsBrep=(model:NurbsBrep,normal:[number,number,number],offset:number):[NurbsBrep,NurbsBrep]=>callGeometryRust('brep_nurbs_split',{model,normal,offset})
 export const analyzeNurbsBrep=(model:NurbsBrep,relativeTolerance=1e-7,maxEvaluations=300000):BrepMassProperties=>callGeometryRust('brep_nurbs_mass_properties',{model,relativeTolerance,maxEvaluations})
 export const analyzeCertifiedNurbsBrep=(model:NurbsBrep):CertifiedBrepMassProperties=>callGeometryRust('brep_nurbs_certified_mass_properties',{model})
+/** Strict native transaction: correspondence and topology evidence are derived in Rust. */
+export const authorizedHealNurbsBrep=(model:NurbsBrep,operation:AuthorizedHealOperation):AuthorizedHealResult=>callGeometryRust('brep_nurbs_authorized_heal_v2',{model,operation})
 export const createBrepTube=(outerRadius:number,innerRadius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_tube',{outerRadius,innerRadius,height})
 /** Exact extrusion of oriented 2D NURBS line/circular-arc loops; outer CCW, holes CW. */
 export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_curves',{loops,zMin,zMax})
@@ -91,6 +110,82 @@ export const createFacetedBrepCylinder=(radius:number,height:number,segments=48)
 /** Planar-faced B-rep approximation, not an analytic sphere. */
 export const createFacetedBrepSphere=(radius:number,radialSegments=16,latitudeSegments=8):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_sphere',{radius,radialSegments,latitudeSegments})
 export type BrepBooleanOperation='union'|'difference'|'intersection'|'xor'
+export interface CertifiedCurvedGraphBoolean {
+ model:NurbsBrep
+ certificate:{
+  capability:'nurbs-boolean-bezier-le3/3'
+  status:'Complete'
+  operation:'intersection'|'difference'
+  axis:'U'|'V'
+  fixedParameter:number
+  lineage:{sourceFace:string;retainedFace:string;deletedRegion:string;generatedIntersectionEdge:string}
+  tensorCells:number
+  exactCorrespondence:true
+  sew:{matched:number;complete:true;displacementBudgetOk:true}
+  audit:{ok:true;bodyCount:1;shellCount:1;selfIntersectionPairsChecked:number;notes:string[]}
+  changeSet:RustChangeSet
+  namingComplete:true
+  noFallback:true
+  separationProof:true
+ }
+}
+export const createCanonicalBezierGraphSolid=(degreeU:2|3,degreeV:2|3):NurbsBrep=>callGeometryRust('brep_nurbs_canonical_graph_solid_v3',{degreeU,degreeV})
+export const certifiedCurvedGraphBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):CertifiedCurvedGraphBoolean=>callGeometryRust('brep_nurbs_boolean_bezier_le3_v3',{a,b,operation})
+export interface CertifiedSuccessorGraphBoolean extends Omit<CertifiedCurvedGraphBoolean,'certificate'>{
+ certificate:Omit<CertifiedCurvedGraphBoolean['certificate'],'capability'> & {
+  capability:'nurbs-boolean-bezier-le3/4'|'nurbs-boolean-bezier-le3/5'
+  homogeneousRootProof:boolean
+  denominatorLowerBound:number
+  weightConditionNumber:number
+  resourceBound:number
+ }
+}
+export interface CertifiedContainedGraphBoolean {
+ model:NurbsBrep
+ certificate:{
+  capability:'nurbs-boolean-bezier-le3/4'
+  status:'Complete'
+  operation:'union'|'intersection'|'difference'
+  relation:'graph-strictly-contains-affine-cutter'
+  strictUvMargin:number
+  floorClearance:number
+  roofClearance:number
+  cavityProof:boolean
+  separationProof:true
+  audit:{ok:true;bodyCount:number;shellCount:number;notes:string[]}
+  changeSet:RustChangeSet
+  namingComplete:true
+  noFallback:true
+ }
+}
+export const createCanonicalRationalGraphSolid=(degreeU:2|3,degreeV:2|3):NurbsBrep=>callGeometryRust('brep_nurbs_canonical_rational_graph_solid_v5',{degreeU,degreeV})
+export const certifiedUnequalSpanGraphBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):CertifiedSuccessorGraphBoolean=>callGeometryRust('brep_nurbs_boolean_bezier_le3_v4_unequal',{a,b,operation})
+export const certifiedContainedGraphBoolean=(graph:NurbsBrep,cutter:NurbsBrep,operation:'union'|'intersection'|'difference'):CertifiedContainedGraphBoolean=>callGeometryRust('brep_nurbs_boolean_bezier_le3_v4_containment',{graph,cutter,operation})
+export const certifiedRationalGraphBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):CertifiedSuccessorGraphBoolean=>callGeometryRust('brep_nurbs_boolean_bezier_le3_v5_rational',{a,b,operation})
+export interface GeneralNurbsBooleanResult {
+ model:NurbsBrep
+ certificate:{
+  capability:'nurbs-boolean-bezier-le3/7'
+  authority:'author-general-nurbs-boolean'
+  status:'Complete'
+  operation:'intersection'|'difference'
+  branchGraph:{components:number;fragments:number;candidateSpanPairs:number;sourceSpanCount:[number,number];denominatorLowerBound:number;complete:true}
+  uv:{tensorCells:number;branches:number;materialCells:number;holeCells:number;complete:true}
+  exactCurvePcurveCount:number
+  sew:{matched:number;complete:true;displacementBudgetOk:true}
+  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
+  changeSet:RustChangeSet
+  naming:{split:number;retained:number;deleted:number;generated:number;operationStable:true}
+  resultComponents:number
+  resultFaces:number
+  noFallback:true
+ }
+}
+export const createCanonicalMultispanGraphSolid=(spansU:1|2,spansV:1|2):NurbsBrep=>callGeometryRust('brep_nurbs_canonical_multispan_graph_solid',{spansU,spansV})
+/** Strict certificate-bearing product operation; never crosses to mesh/Manifold. */
+export const generalNurbsBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):GeneralNurbsBooleanResult=>callGeometryRust('brep_nurbs_boolean_general',{a,b,operation})
+/** Model-only compatibility projection delegates to the strict product operation. */
+export const generalNurbsBooleanModel=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):NurbsBrep=>generalNurbsBoolean(a,b,operation).model
 export const booleanNurbsBrep=(a:NurbsBrep,b:NurbsBrep,operation:BrepBooleanOperation):NurbsBrep=>callGeometryRust('brep_nurbs_boolean',{a,b,operation})
 export const chamferNurbsBrep=(model:NurbsBrep,edge:number,size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer',{model,edge,size})
 export const chamferNurbsBrepEdges=(model:NurbsBrep,edges:number[],size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer_edges',{model,edges,size})

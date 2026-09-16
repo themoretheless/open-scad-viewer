@@ -5,7 +5,7 @@
 //! roll back atomically. No mesh weld, tolerance growth, or auto-heal.
 
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
-use nurbs_core::{Error, Result, curve::Curve};
+use nurbs_core::{Error, Result, curve::Curve, surface::Axis, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::predicate_evidence::{
@@ -21,6 +21,9 @@ fn refuse(code: &'static str, message: &str) -> Error {
 pub enum ChartKind {
     PlanePoly,
     AnalyticCircle,
+    /// Finite tensor rectangle containing only its four exact boundaries and
+    /// strict-interior constant-U/V Bezier graph traces.
+    TensorBezierGraph,
     /// Admitted freeform chart touch for UV arrange walking slice (F3).
     /// Out-of-matrix freeform DCEL still refuses Complete without strata.
     Freeform,
@@ -203,6 +206,75 @@ impl RationalCurveDefinition {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CurvePcurveSupport {
+    CurvedIsoU,
+    CurvedIsoV,
+    AffinePlanar,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CurvePcurveAuthority {
+    curve: RationalCurveDefinition,
+    pcurve: RationalCurveDefinition,
+    support: CurvePcurveSupport,
+    parameter_domain_bits: [u64; 2],
+    orientation: ParameterOrientation,
+    owner: BoundaryUse,
+    context: ToleranceSpecIdentity,
+}
+
+/// Exact 3D rational-curve/pcurve authority for a single owned support use.
+/// No sampled residual or endpoint snap participates in authorization.
+#[derive(Clone, Debug)]
+pub struct CurvePcurveCorrespondence {
+    pub curve: Curve,
+    pub pcurve: Curve,
+    pub support: CurvePcurveSupport,
+    pub parameter_domain_bits: [u64; 2],
+    pub orientation: ParameterOrientation,
+    pub owner: BoundaryUse,
+    pub context: ToleranceSpecIdentity,
+    pub evidence: ComposedEvidence,
+    pub no_snapping: bool,
+    authority: CurvePcurveAuthority,
+}
+
+impl CurvePcurveCorrespondence {
+    pub fn permits_exact_correspondence(&self) -> bool {
+        let Ok(curve) = RationalCurveDefinition::from_curve(&self.curve) else {
+            return false;
+        };
+        let Ok(pcurve) = RationalCurveDefinition::from_curve(&self.pcurve) else {
+            return false;
+        };
+        self.no_snapping
+            && self.context == self.evidence.context
+            && self
+                .evidence
+                .claims
+                .iter()
+                .any(|claim| matches!(claim, EvidenceClaim::Correspondence { .. }))
+            && self.evidence.claims.iter().any(|claim| {
+                matches!(
+                    claim,
+                    EvidenceClaim::TopologyPreservation { invariant }
+                        if invariant == "curve_pcurve_parameter_orientation_context_owner"
+                )
+            })
+            && self.authority
+                == CurvePcurveAuthority {
+                    curve,
+                    pcurve,
+                    support: self.support,
+                    parameter_domain_bits: self.parameter_domain_bits,
+                    orientation: self.orientation,
+                    owner: self.owner.clone(),
+                    context: self.context.clone(),
+                }
+    }
+}
+
 /// Exact curve authority. Canonical construction identities are reserved for
 /// constructors which guarantee the same rational definition by contract.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -239,6 +311,9 @@ pub struct BoundaryCorrespondence {
     pub shell: usize,
     pub uses: [BoundaryUse; 2],
     pub evidence: ComposedEvidence,
+    /// Native-only binding to the complete serialized heal recipe. Generic sew
+    /// proofs leave this absent and therefore cannot authorize mutation.
+    heal_recipe: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -281,7 +356,7 @@ impl HealOperation {
             | Self::EdgeSplit { correspondence, .. } => correspondence,
         }
     }
-    fn displacement(&self, model: &Model) -> Result<f64> {
+    pub(crate) fn displacement(&self, model: &Model) -> Result<f64> {
         match self {
             Self::EndpointSnap {
                 vertex,
@@ -373,6 +448,151 @@ impl HealOperation {
             }
         }
     }
+
+    fn recipe_bytes(&self) -> Vec<u8> {
+        fn push_usize(bytes: &mut Vec<u8>, value: usize) {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        fn push_text(bytes: &mut Vec<u8>, value: &str) {
+            push_usize(bytes, value.len());
+            bytes.extend_from_slice(value.as_bytes());
+        }
+        let mut bytes = Vec::new();
+        match self {
+            Self::EndpointSnap {
+                vertex,
+                expected_id,
+                to,
+                ..
+            } => {
+                bytes.extend_from_slice(b"endpoint-snap\0");
+                push_usize(&mut bytes, *vertex);
+                push_text(&mut bytes, &expected_id.to_string());
+                for value in to {
+                    bytes.extend_from_slice(&value.to_bits().to_le_bytes());
+                }
+            }
+            Self::CurveRefit {
+                edge,
+                expected_id,
+                replacement,
+                ..
+            } => {
+                bytes.extend_from_slice(b"curve-refit\0");
+                push_usize(&mut bytes, *edge);
+                push_text(&mut bytes, &expected_id.to_string());
+                push_usize(&mut bytes, replacement.degree);
+                push_usize(&mut bytes, replacement.knots.len());
+                for knot in &replacement.knots {
+                    bytes.extend_from_slice(&knot.to_bits().to_le_bytes());
+                }
+                push_usize(&mut bytes, replacement.control_points.len());
+                for point in &replacement.control_points {
+                    push_usize(&mut bytes, point.len());
+                    for coordinate in point {
+                        bytes.extend_from_slice(&coordinate.to_bits().to_le_bytes());
+                    }
+                }
+                push_usize(&mut bytes, replacement.weights.len());
+                for weight in &replacement.weights {
+                    bytes.extend_from_slice(&weight.to_bits().to_le_bytes());
+                }
+                bytes.push(u8::from(replacement.periodic));
+            }
+            Self::EdgeSplit {
+                edge,
+                expected_id,
+                parameter,
+                ..
+            } => {
+                bytes.extend_from_slice(b"edge-split\0");
+                push_usize(&mut bytes, *edge);
+                push_text(&mut bytes, &expected_id.to_string());
+                bytes.extend_from_slice(&parameter.to_bits().to_le_bytes());
+            }
+        }
+        bytes
+    }
+
+    fn recipe_identity(&self) -> String {
+        TopoId::derive(
+            TopoKind::Body,
+            "authorized-heal-recipe",
+            "native",
+            "complete-bytes",
+            &self.recipe_bytes(),
+        )
+        .to_string()
+    }
+
+    pub(crate) fn write_set(&self, model: &Model) -> BTreeSet<(TopoKind, usize)> {
+        let mut writes = BTreeSet::new();
+        match self {
+            Self::EndpointSnap { vertex, .. } => {
+                writes.insert((TopoKind::Vertex, *vertex));
+                for (edge, value) in model.edges.iter().enumerate() {
+                    if value.vertices.contains(vertex) {
+                        writes.insert((TopoKind::Edge, edge));
+                    }
+                }
+            }
+            Self::CurveRefit { edge, .. } | Self::EdgeSplit { edge, .. } => {
+                writes.insert((TopoKind::Edge, *edge));
+            }
+        }
+        writes
+    }
+
+    pub fn bind_native_proof(mut self) -> Self {
+        let identity = self.recipe_identity();
+        match &mut self {
+            Self::EndpointSnap { correspondence, .. }
+            | Self::CurveRefit { correspondence, .. }
+            | Self::EdgeSplit { correspondence, .. } => {
+                correspondence.heal_recipe = Some(identity);
+            }
+        }
+        self
+    }
+
+    fn proof_matches_model(&self, model: &Model, context: &ToleranceContext) -> bool {
+        let matches = |left: &BoundaryCorrespondence, right: &BoundaryCorrespondence| {
+            left.context == right.context
+                && left.authority == right.authority
+                && left.endpoints_bits == right.endpoints_bits
+                && left.parameter_domain_bits == right.parameter_domain_bits
+                && left.orientation == right.orientation
+                && left.seam_shift == right.seam_shift
+                && left.shell == right.shell
+                && left.uses == right.uses
+        };
+        match self {
+            Self::EndpointSnap {
+                vertex,
+                correspondence,
+                ..
+            } => model
+                .edges
+                .iter()
+                .enumerate()
+                .filter(|(_, edge)| edge.vertices.contains(vertex))
+                .filter_map(|(edge, _)| {
+                    prove_model_edge_correspondence(model, context, edge).ok()
+                })
+                .any(|proof| matches(correspondence, &proof)),
+            Self::CurveRefit {
+                edge,
+                correspondence,
+                ..
+            }
+            | Self::EdgeSplit {
+                edge,
+                correspondence,
+                ..
+            } => prove_model_edge_correspondence(model, context, *edge)
+                .is_ok_and(|proof| matches(correspondence, &proof)),
+        }
+    }
 }
 
 /// Immutable, context-bound authority for gap repair of at most one context cell.
@@ -440,6 +660,18 @@ impl AuthorizedHealPlan {
                     "Heal requires full correspondence and topology-preservation evidence",
                 ));
             }
+            if proof.heal_recipe.as_deref() != Some(operation.recipe_identity().as_str()) {
+                return Err(refuse(
+                    "BREP_HEAL_PROOF_RECIPE_MISMATCH",
+                    "Boundary proof is not bound to the complete endpoint/refit recipe",
+                ));
+            }
+            if !operation.proof_matches_model(model, context) {
+                return Err(refuse(
+                    "BREP_HEAL_PROOF_UNRELATED",
+                    "Boundary proof is stale, foreign, or unrelated to the target entity",
+                ));
+            }
             let displacement = operation.displacement(model)?;
             if displacement > per_entity_limit_mm {
                 return Err(refuse(
@@ -447,29 +679,19 @@ impl AuthorizedHealPlan {
                     "Per-entity physical displacement budget exceeded",
                 ));
             }
-            let changed_entity_count = match operation {
-                HealOperation::EndpointSnap { vertex, .. } => {
-                    1 + model
-                        .edges
-                        .iter()
-                        .filter(|edge| edge.vertices.contains(vertex))
-                        .count()
-                }
-                _ => 1,
-            };
-            cumulative += displacement * changed_entity_count as f64;
-            let key = match operation {
-                HealOperation::EndpointSnap { expected_id, .. } => (TopoKind::Vertex, *expected_id),
-                HealOperation::CurveRefit { expected_id, .. }
-                | HealOperation::EdgeSplit { expected_id, .. } => (TopoKind::Edge, *expected_id),
-            };
-            if !touched.insert(key) {
+            let writes = operation.write_set(model);
+            cumulative += displacement * writes.len() as f64;
+            if writes.iter().any(|write| touched.contains(write)) {
                 return Err(refuse(
-                    "BREP_HEAL_PLAN_INVALID",
-                    "Entity appears more than once in heal plan",
+                    "BREP_HEAL_WRITESET_OVERLAP",
+                    "Implicit and explicit heal write sets overlap",
                 ));
             }
-            signature.push_str(&format!("|{}:{:016x}", key.1, displacement.to_bits()));
+            touched.extend(writes);
+            signature.push('|');
+            signature.push_str(&operation.recipe_identity());
+            signature.push(':');
+            signature.push_str(&format!("{:016x}", displacement.to_bits()));
         }
         if cumulative > cumulative_limit_mm {
             return Err(refuse(
@@ -513,6 +735,14 @@ impl AuthorizedHealPlan {
 }
 
 pub(crate) fn apply_authorized_heal(model: &Model, plan: &AuthorizedHealPlan) -> Result<Model> {
+    apply_authorized_heal_checked(model, plan, |_| Ok(()))
+}
+
+pub(crate) fn apply_authorized_heal_checked(
+    model: &Model,
+    plan: &AuthorizedHealPlan,
+    mut before_operation: impl FnMut(usize) -> Result<()>,
+) -> Result<Model> {
     model.validate()?;
     let context = model
         .tolerance_context()
@@ -533,7 +763,23 @@ pub(crate) fn apply_authorized_heal(model: &Model, plan: &AuthorizedHealPlan) ->
         return Ok(model.clone());
     }
     let mut next = model.clone();
-    for operation in &plan.operations {
+    for (operation_index, operation) in plan.operations.iter().enumerate() {
+        before_operation(operation_index)?;
+        operation.displacement(&next)?;
+        if operation.correspondence().heal_recipe.as_deref()
+            != Some(operation.recipe_identity().as_str())
+        {
+            return Err(refuse(
+                "BREP_HEAL_PROOF_RECIPE_MISMATCH",
+                "Boundary proof no longer matches the complete heal recipe",
+            ));
+        }
+        if !operation.proof_matches_model(&next, &context) {
+            return Err(refuse(
+                "BREP_HEAL_PROOF_UNRELATED",
+                "Boundary proof is stale, foreign, or unrelated to the target entity",
+            ));
+        }
         let (kind, index, old_id) = match operation {
             HealOperation::EndpointSnap {
                 vertex,
@@ -636,6 +882,7 @@ pub(crate) fn apply_authorized_heal(model: &Model, plan: &AuthorizedHealPlan) ->
             role: "authorized-heal".into(),
             anchor: None,
         });
+        before_operation(operation_index)?;
     }
     next.validate()?;
     sew_closed_model_edges(&next)?;
@@ -689,6 +936,228 @@ fn point_bits(point: [f64; 3]) -> Result<[u64; 3]> {
         ));
     }
     Ok(point.map(f64::to_bits))
+}
+
+fn exact_iso_pcurve(surface: &Surface, pcurve: &Curve) -> Result<Option<(Curve, CurvePcurveSupport)>> {
+    let u = [
+        surface.knots_u[surface.degree_u],
+        surface.knots_u[surface.control_points.len()],
+    ];
+    let v = [
+        surface.knots_v[surface.degree_v],
+        surface.knots_v[surface.control_points[0].len()],
+    ];
+    let degree = pcurve.degree;
+    for fixed_u in [true, false] {
+        let fixed_axis = usize::from(!fixed_u);
+        let varying_axis = usize::from(fixed_u);
+        let fixed = pcurve.control_points[0][fixed_axis];
+        let varying_domain = if fixed_u { v } else { u };
+        let fixed_domain = if fixed_u { u } else { v };
+        if !(fixed >= fixed_domain[0] && fixed <= fixed_domain[1])
+            || pcurve
+                .control_points
+                .iter()
+                .any(|point| point[fixed_axis].to_bits() != fixed.to_bits())
+            || pcurve.control_points.iter().enumerate().any(|(i, point)| {
+                let expected = varying_domain[0]
+                    + (varying_domain[1] - varying_domain[0]) * i as f64 / degree as f64;
+                point[varying_axis].to_bits() != expected.to_bits()
+            })
+            || pcurve.domain().map(f64::to_bits) != varying_domain.map(f64::to_bits)
+            || pcurve.weights.windows(2).any(|pair| pair[0] != pair[1])
+        {
+            continue;
+        }
+        let curve = surface.iso(if fixed_u { Axis::U } else { Axis::V }, fixed)?;
+        return Ok(Some((
+            curve,
+            if fixed_u {
+                CurvePcurveSupport::CurvedIsoU
+            } else {
+                CurvePcurveSupport::CurvedIsoV
+            },
+        )));
+    }
+    Ok(None)
+}
+
+fn affine_planar_lift(
+    surface: &Surface,
+    pcurve: &Curve,
+    context: &ToleranceContext,
+) -> Result<Option<Curve>> {
+    let o = surface.evaluate(
+        surface.knots_u[surface.degree_u],
+        surface.knots_v[surface.degree_v],
+    )?.point;
+    let u_domain = [
+        surface.knots_u[surface.degree_u],
+        surface.knots_u[surface.control_points.len()],
+    ];
+    let v_domain = [
+        surface.knots_v[surface.degree_v],
+        surface.knots_v[surface.control_points[0].len()],
+    ];
+    let pu = surface.evaluate(u_domain[1], v_domain[0])?.point;
+    let pv = surface.evaluate(u_domain[0], v_domain[1])?.point;
+    let eu: [f64; 3] =
+        std::array::from_fn(|axis| (pu[axis] - o[axis]) / (u_domain[1] - u_domain[0]));
+    let ev: [f64; 3] =
+        std::array::from_fn(|axis| (pv[axis] - o[axis]) / (v_domain[1] - v_domain[0]));
+    let tol = context.spatial_bounds().on_mm;
+    for i in 0..=surface.degree_u {
+        for j in 0..=surface.degree_v {
+            let u = u_domain[0]
+                + (u_domain[1] - u_domain[0]) * i as f64 / surface.degree_u as f64;
+            let v = v_domain[0]
+                + (v_domain[1] - v_domain[0]) * j as f64 / surface.degree_v as f64;
+            let expected: [f64; 3] =
+                std::array::from_fn(|axis| o[axis] + (u - u_domain[0]) * eu[axis]
+                    + (v - v_domain[0]) * ev[axis]);
+            let residual = surface.control_points[i][j]
+                .iter()
+                .zip(expected)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<f64>()
+                .sqrt();
+            if residual > tol {
+                return Ok(None);
+            }
+        }
+    }
+    let lifted = Curve {
+        degree: pcurve.degree,
+        knots: pcurve.knots.clone(),
+        control_points: pcurve
+            .control_points
+            .iter()
+            .map(|point| {
+                (0..3)
+                    .map(|axis| {
+                        o[axis]
+                            + (point[0] - u_domain[0]) * eu[axis]
+                            + (point[1] - v_domain[0]) * ev[axis]
+                    })
+                    .collect()
+            })
+            .collect(),
+        weights: pcurve.weights.clone(),
+        periodic: false,
+    };
+    lifted.validate()?;
+    Ok(Some(lifted))
+}
+
+/// Prove exact 3D rational curve correspondence to either an exact curved
+/// constant-U/V pcurve or an affine-planar pcurve. Generic freeform lifts,
+/// periodic and multispan inputs refuse.
+pub fn prove_curve_pcurve_correspondence(
+    context: &ToleranceContext,
+    curve: &Curve,
+    surface: &Surface,
+    pcurve: &Curve,
+    orientation: ParameterOrientation,
+    owner: BoundaryUse,
+) -> Result<CurvePcurveCorrespondence> {
+    curve.validate()?;
+    surface.validate()?;
+    pcurve.validate()?;
+    if curve.control_points[0].len() != 3
+        || pcurve.control_points[0].len() != 2
+        || curve.periodic
+        || pcurve.periodic
+        || curve.decompose()?.len() != 1
+        || pcurve.decompose()?.len() != 1
+        || curve.domain().map(f64::to_bits) != pcurve.domain().map(f64::to_bits)
+    {
+        return Err(refuse(
+            "BREP_SEW_PARAMETERIZATION",
+            "Curve/pcurve proof requires matching non-periodic single-span domains",
+        ));
+    }
+    let (lifted, support) = if let Some((iso, support)) = exact_iso_pcurve(surface, pcurve)? {
+        (iso, support)
+    } else if let Some(lifted) = affine_planar_lift(surface, pcurve, context)? {
+        (lifted, CurvePcurveSupport::AffinePlanar)
+    } else {
+        return Err(refuse(
+            "BREP_SEW_CURVE_MISMATCH",
+            "Pcurve is neither an exact support iso nor an affine-planar lift",
+        ));
+    };
+    let expected = match orientation {
+        ParameterOrientation::Same => lifted,
+        ParameterOrientation::Reversed => lifted.reverse()?,
+    };
+    let curve_definition = RationalCurveDefinition::from_curve(curve)?;
+    let expected_definition = RationalCurveDefinition::from_curve(&expected)?;
+    let coefficient_residual = curve
+        .control_points
+        .iter()
+        .zip(&expected.control_points)
+        .map(|(left, right)| {
+            left.iter()
+                .zip(right)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<f64>()
+                .sqrt()
+        })
+        .fold(0., f64::max);
+    let same_rational_basis = curve.degree == expected.degree
+        && curve.knots == expected.knots
+        && curve.weights == expected.weights
+        && curve.periodic == expected.periodic
+        && curve.control_points.len() == expected.control_points.len();
+    if curve_definition != expected_definition
+        && !(support == CurvePcurveSupport::AffinePlanar && same_rational_basis)
+    {
+        return Err(refuse(
+            "BREP_SEW_CURVE_MISMATCH",
+            "3D rational definition does not equal the oriented pcurve lift",
+        ));
+    }
+    let pcurve_definition = RationalCurveDefinition::from_curve(pcurve)?;
+    let parameter_domain_bits = curve.domain().map(f64::to_bits);
+    let evidence = compose_predicate_evidence(
+        context,
+        [
+            PredicateEvidence::correspondence(context, coefficient_residual, 1.)?,
+            PredicateEvidence::topology_preservation(
+                context,
+                "curve_pcurve_parameter_orientation_context_owner",
+                true,
+            )?,
+        ],
+    )?;
+    let authority = CurvePcurveAuthority {
+        curve: curve_definition,
+        pcurve: pcurve_definition,
+        support,
+        parameter_domain_bits,
+        orientation,
+        owner: owner.clone(),
+        context: context.spec_identity(),
+    };
+    let certificate = CurvePcurveCorrespondence {
+        curve: curve.clone(),
+        pcurve: pcurve.clone(),
+        support,
+        parameter_domain_bits,
+        orientation,
+        owner,
+        context: context.spec_identity(),
+        evidence,
+        no_snapping: true,
+        authority,
+    };
+    if !certificate.permits_exact_correspondence() {
+        return Err(refuse(
+            "BREP_SEW_CORRESPONDENCE_REQUIRED",
+            "Curve/pcurve certificate failed its retained authority check",
+        ));
+    }
+    Ok(certificate)
 }
 
 /// Construct a boundary proof from two authored uses of one rational curve.
@@ -805,7 +1274,68 @@ pub fn prove_boundary_correspondence(
         shell,
         uses,
         evidence,
+        heal_recipe: None,
     })
+}
+
+/// Derive correspondence authority from the model's own two manifold edge
+/// uses. Bridge callers cannot provide or override any evidence fields.
+pub fn prove_model_edge_correspondence(
+    model: &Model,
+    context: &ToleranceContext,
+    edge_index: usize,
+) -> Result<BoundaryCorrespondence> {
+    let edge = model.edges.get(edge_index).ok_or_else(|| {
+        refuse("BREP_HEAL_RECIPE_INVALID", "Heal edge index is out of range")
+    })?;
+    let mut uses = Vec::new();
+    for (face_index, face) in model.faces.iter().enumerate() {
+        for &wire_index in std::iter::once(&face.outer).chain(&face.holes) {
+            for (cyclic_index, coedge) in model.loops[wire_index].coedges.iter().enumerate() {
+                if coedge.edge == edge_index {
+                    uses.push(BoundaryUse {
+                        face: face_index,
+                        wire: wire_index,
+                        cyclic_index,
+                        reversed: coedge.reversed,
+                    });
+                }
+            }
+        }
+    }
+    if uses.len() != 2 || uses[0].reversed == uses[1].reversed {
+        return Err(refuse(
+            "BREP_HEAL_PROOF_REQUIRED",
+            "Heal requires exactly two native opposite manifold boundary uses",
+        ));
+    }
+    let authored = [
+        model.vertices[edge.vertices[0]].point,
+        model.vertices[edge.vertices[1]].point,
+    ];
+    let endpoints = |use_: &BoundaryUse| {
+        if use_.reversed {
+            [authored[1], authored[0]]
+        } else {
+            authored
+        }
+    };
+    let shell = model
+        .shells
+        .iter()
+        .position(|shell| shell.faces.iter().any(|use_| use_.face == uses[0].face))
+        .ok_or_else(|| refuse("BREP_HEAL_PROOF_REQUIRED", "Boundary face has no shell owner"))?;
+    prove_boundary_correspondence(
+        context,
+        &edge.curve,
+        &edge.curve,
+        endpoints(&uses[0]),
+        endpoints(&uses[1]),
+        ParameterOrientation::Reversed,
+        0,
+        shell,
+        [uses[0].clone(), uses[1].clone()],
+    )
 }
 
 /// Compatibility wrapper. Endpoint keys do not contain enough information to
@@ -1368,6 +1898,149 @@ mod tests {
         );
     }
 
+    fn curved_graph_and_plane() -> (Surface, Surface) {
+        let mut graph = Surface {
+            degree_u: 2,
+            degree_v: 3,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: (0..3)
+                .map(|i| {
+                    (0..4)
+                        .map(|j| vec![i as f64 * 1.5, j as f64, 0.])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 4]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        graph.control_points[1][1][2] = 0.2;
+        let plane = Surface {
+            degree_u: 3,
+            degree_v: 3,
+            knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: (0..4)
+                .map(|i| {
+                    (0..4)
+                        .map(|j| {
+                            vec![
+                                1.5,
+                                -1. + j as f64 * 5. / 3.,
+                                -1. + i as f64 * 5. / 3.,
+                            ]
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 4]; 4],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        (graph, plane)
+    }
+
+    #[test]
+    fn exact_curve_pcurve_correspondence_covers_curved_and_planar_supports() {
+        let context = ToleranceContext::default_valid();
+        let (graph, plane) = curved_graph_and_plane();
+        let seam =
+            crate::nurbs_ss_g6::certify_exact_planar_iso_intersection(&graph, &plane, &context)
+                .unwrap();
+        let owner = BoundaryUse {
+            face: 3,
+            wire: 5,
+            cyclic_index: 1,
+            reversed: false,
+        };
+        let curved = prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &graph,
+            &seam.uv_traces[0],
+            ParameterOrientation::Same,
+            owner.clone(),
+        )
+        .unwrap();
+        assert_eq!(curved.support, CurvePcurveSupport::CurvedIsoU);
+        assert!(curved.permits_exact_correspondence());
+        let planar = prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &plane,
+            &seam.uv_traces[1],
+            ParameterOrientation::Same,
+            owner,
+        )
+        .unwrap();
+        assert_eq!(planar.support, CurvePcurveSupport::AffinePlanar);
+        assert!(planar.permits_exact_correspondence());
+    }
+
+    #[test]
+    fn curve_pcurve_orientation_context_definition_and_mutations_refuse() {
+        let context = ToleranceContext::default_valid();
+        let (graph, plane) = curved_graph_and_plane();
+        let seam =
+            crate::nurbs_ss_g6::certify_exact_planar_iso_intersection(&graph, &plane, &context)
+                .unwrap();
+        let owner = BoundaryUse {
+            face: 3,
+            wire: 5,
+            cyclic_index: 1,
+            reversed: false,
+        };
+        assert!(prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &graph,
+            &seam.uv_traces[0],
+            ParameterOrientation::Reversed,
+            owner.clone()
+        )
+        .is_err());
+        let mut foreign_spec = context.specification().clone();
+        foreign_spec.policy = "foreign-pcurve-context".into();
+        let foreign = ToleranceContext::new(foreign_spec).unwrap();
+        let mut certificate = prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &plane,
+            &seam.uv_traces[1],
+            ParameterOrientation::Same,
+            owner,
+        )
+        .unwrap();
+        certificate.context = foreign.spec_identity();
+        assert!(!certificate.permits_exact_correspondence());
+        let mut certificate = prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &plane,
+            &seam.uv_traces[1],
+            ParameterOrientation::Same,
+            certificate.owner.clone(),
+        )
+        .unwrap();
+        certificate.pcurve.control_points[1][0] += 1e-9;
+        assert!(!certificate.permits_exact_correspondence());
+        certificate.no_snapping = false;
+        assert!(!certificate.permits_exact_correspondence());
+
+        let mut periodic = seam.uv_traces[1].clone();
+        periodic.periodic = true;
+        assert!(prove_curve_pcurve_correspondence(
+            &context,
+            &seam.curve,
+            &plane,
+            &periodic,
+            ParameterOrientation::Same,
+            certificate.owner
+        )
+        .is_err());
+    }
+
     #[test]
     fn sew_gap_refuses_without_mutating_base() {
         let key = sew_edge_key([0., 0., 0.], [1., 0., 0.], 1e-9).unwrap();
@@ -1463,38 +2136,9 @@ mod tests {
     }
 
     fn heal_fixture() -> (Model, ToleranceContext, BoundaryCorrespondence) {
-        let model = crate::cylinder(2., 4.).unwrap();
+        let model = crate::cuboid([0.; 3], [2.; 3]).unwrap();
         let context = model.tolerance_context().unwrap();
-        let edge = &model.edges[0];
-        let endpoints = [
-            model.vertices[edge.vertices[0]].point,
-            model.vertices[edge.vertices[1]].point,
-        ];
-        let proof = prove_boundary_correspondence(
-            &context,
-            &edge.curve,
-            &edge.curve,
-            endpoints,
-            [endpoints[1], endpoints[0]],
-            ParameterOrientation::Reversed,
-            0,
-            0,
-            [
-                BoundaryUse {
-                    face: 0,
-                    wire: 0,
-                    cyclic_index: 0,
-                    reversed: false,
-                },
-                BoundaryUse {
-                    face: 1,
-                    wire: 1,
-                    cyclic_index: 0,
-                    reversed: true,
-                },
-            ],
-        )
-        .unwrap();
+        let proof = prove_model_edge_correspondence(&model, &context, 0).unwrap();
         (model, context, proof)
     }
 
@@ -1509,7 +2153,8 @@ mod tests {
             expected_id: model.1.vertices[vertex],
             to,
             correspondence: proof.clone(),
-        };
+        }
+        .bind_native_proof();
         assert_eq!(
             AuthorizedHealPlan::new(
                 &model,
@@ -1542,7 +2187,8 @@ mod tests {
             expected_id: TopoId::derive(TopoKind::Vertex, "bad", "bad", "bad", b"bad"),
             to,
             correspondence: proof,
-        };
+        }
+        .bind_native_proof();
         assert_eq!(
             AuthorizedHealPlan::new(
                 &model,
@@ -1570,7 +2216,8 @@ mod tests {
                 expected_id: model.1.vertices[vertex],
                 to,
                 correspondence: proof,
-            }],
+            }
+            .bind_native_proof()],
             context.spatial_bounds().absolute_mm,
             context.spatial_bounds().absolute_mm,
         )
@@ -1597,8 +2244,267 @@ mod tests {
         assert!(transaction.staged().is_none());
         let twice = apply_authorized_heal(&once, &plan).unwrap();
         assert_eq!(
-            once.1.change_set.changes.len(),
-            twice.1.change_set.changes.len()
+            value_codec::Serialize::to_value(&once),
+            value_codec::Serialize::to_value(&twice)
+        );
+    }
+
+    #[test]
+    fn heal_positive_endpoint_snap_returns_complete_native_certificate() {
+        let (model, context, proof) = heal_fixture();
+        let vertex = model.edges[0].vertices[0];
+        let mut to = model.vertices[vertex].point;
+        to[0] += context.spatial_bounds().absolute_mm
+            / (1 + model.edges.iter().filter(|edge| edge.vertices.contains(&vertex)).count())
+                as f64
+            * 0.25;
+        let plan = AuthorizedHealPlan::new(
+            &model,
+            &context,
+            vec![HealOperation::EndpointSnap {
+                vertex,
+                expected_id: model.1.vertices[vertex],
+                to,
+                correspondence: proof,
+            }
+            .bind_native_proof()],
+            context.spatial_bounds().absolute_mm,
+            context.spatial_bounds().absolute_mm,
+        )
+        .unwrap();
+        let mut transaction = crate::transactions::AuthorizedHealTransaction::begin(
+            crate::transactions::ModelSnapshot::new(model.clone()).unwrap(),
+            crate::transactions::HealCancellation::default(),
+        );
+        transaction.apply(&plan).unwrap();
+        let result = transaction.commit().unwrap();
+        assert_eq!(result.status, "Complete");
+        assert!(result.displacement[0].actual_mm > 0.);
+        assert!(result.cumulative_displacement_mm <= context.spatial_bounds().absolute_mm);
+        assert!(result.sew.complete && result.audit.ok && result.naming_complete);
+        assert_ne!(
+            value_codec::Serialize::to_value(&model),
+            value_codec::Serialize::to_value(&result.model)
+        );
+    }
+
+    #[test]
+    fn heal_budget_exact_boundary_accepts_and_boundary_ulp_refuses() {
+        let (model, context, proof) = heal_fixture();
+        let vertex = model.edges[0].vertices[0];
+        let writes =
+            1 + model.edges.iter().filter(|edge| edge.vertices.contains(&vertex)).count();
+        let exact = context.spatial_bounds().absolute_mm / writes as f64;
+        let operation = |delta: f64| {
+            let mut to = model.vertices[vertex].point;
+            to[1] += delta;
+            HealOperation::EndpointSnap {
+                vertex,
+                expected_id: model.1.vertices[vertex],
+                to,
+                correspondence: proof.clone(),
+            }
+            .bind_native_proof()
+        };
+        AuthorizedHealPlan::new(
+            &model,
+            &context,
+            vec![operation(exact)],
+            context.spatial_bounds().absolute_mm,
+            context.spatial_bounds().absolute_mm,
+        )
+        .unwrap();
+        let above = f64::from_bits(exact.to_bits() + 1);
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![operation(above)],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_BUDGET_EXCEEDED"
+        );
+    }
+
+    #[test]
+    fn heal_positive_one_to_one_rational_refit_is_complete() {
+        let (model, context, proof) = heal_fixture();
+        let edge_index = 0;
+        let mut replacement = model.edges[edge_index].curve.clone();
+        replacement.control_points[1][2] += context.spatial_bounds().absolute_mm * 0.25;
+        let plan = AuthorizedHealPlan::new(
+            &model,
+            &context,
+            vec![HealOperation::CurveRefit {
+                edge: edge_index,
+                expected_id: model.1.edges[edge_index],
+                replacement,
+                correspondence: proof,
+            }
+            .bind_native_proof()],
+            context.spatial_bounds().absolute_mm,
+            context.spatial_bounds().absolute_mm,
+        )
+        .unwrap();
+        let mut transaction = crate::transactions::AuthorizedHealTransaction::begin(
+            crate::transactions::ModelSnapshot::new(model).unwrap(),
+            crate::transactions::HealCancellation::default(),
+        );
+        transaction.apply(&plan).unwrap();
+        let result = transaction.commit().unwrap();
+        assert!(result.displacement[0].actual_mm > 0.);
+        assert!(result.audit.ok && result.naming_complete);
+    }
+
+    #[test]
+    fn heal_refuses_unbound_stale_and_overlapping_recipes() {
+        let (model, context, proof) = heal_fixture();
+        let vertex = model.edges[0].vertices[0];
+        let to = model.vertices[vertex].point;
+        let unbound = HealOperation::EndpointSnap {
+            vertex,
+            expected_id: model.1.vertices[vertex],
+            to,
+            correspondence: proof.clone(),
+        };
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![unbound],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_PROOF_RECIPE_MISMATCH"
+        );
+        let mut stale = HealOperation::EndpointSnap {
+            vertex,
+            expected_id: model.1.vertices[vertex],
+            to,
+            correspondence: proof.clone(),
+        }
+        .bind_native_proof();
+        if let HealOperation::EndpointSnap { to, .. } = &mut stale {
+            to[2] = f64::from_bits(to[2].to_bits() + 1);
+        }
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![stale],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_PROOF_RECIPE_MISMATCH"
+        );
+        let snap = HealOperation::EndpointSnap {
+            vertex,
+            expected_id: model.1.vertices[vertex],
+            to,
+            correspondence: proof.clone(),
+        }
+        .bind_native_proof();
+        let refit = HealOperation::CurveRefit {
+            edge: 0,
+            expected_id: model.1.edges[0],
+            replacement: model.edges[0].curve.clone(),
+            correspondence: proof,
+        }
+        .bind_native_proof();
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![snap, refit],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_WRITESET_OVERLAP"
+        );
+        let unrelated = HealOperation::CurveRefit {
+            edge: 1,
+            expected_id: model.1.edges[1],
+            replacement: model.edges[1].curve.clone(),
+            correspondence: prove_model_edge_correspondence(&model, &context, 0).unwrap(),
+        }
+        .bind_native_proof();
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![unrelated],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_PROOF_UNRELATED"
+        );
+    }
+
+    #[test]
+    fn heal_refit_requires_exact_rational_cardinality_degree_knots_and_weights() {
+        let (model, context, proof) = heal_fixture();
+        let assert_refused = |replacement: Curve| {
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![HealOperation::CurveRefit {
+                    edge: 0,
+                    expected_id: model.1.edges[0],
+                    replacement,
+                    correspondence: proof.clone(),
+                }
+                .bind_native_proof()],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code
+        };
+        let mut cardinality = model.edges[0].curve.clone();
+        cardinality.control_points.push(cardinality.control_points[0].clone());
+        cardinality.weights.push(1.);
+        let code = assert_refused(cardinality);
+        assert!(code.starts_with("NURBS_") || code == "BREP_HEAL_REFIT_REFUSED");
+        let mut degree = model.edges[0].curve.clone();
+        degree.degree += 1;
+        let code = assert_refused(degree);
+        assert!(code.starts_with("NURBS_") || code == "BREP_HEAL_REFIT_REFUSED");
+        let mut knot = model.edges[0].curve.clone();
+        knot.knots[0] = f64::from_bits(knot.knots[0].to_bits() + 1);
+        let code = assert_refused(knot);
+        assert!(code.starts_with("NURBS_") || code == "BREP_HEAL_REFIT_REFUSED");
+        let mut weight = model.edges[0].curve.clone();
+        weight.weights[0] = f64::from_bits(weight.weights[0].to_bits() + 1);
+        assert_eq!(assert_refused(weight), "BREP_HEAL_REFIT_REFUSED");
+        let split = HealOperation::EdgeSplit {
+            edge: 0,
+            expected_id: model.1.edges[0],
+            parameter: model.edges[0].curve.domain().iter().sum::<f64>() * 0.5,
+            correspondence: proof,
+        }
+        .bind_native_proof();
+        assert_eq!(
+            AuthorizedHealPlan::new(
+                &model,
+                &context,
+                vec![split],
+                context.spatial_bounds().absolute_mm,
+                context.spatial_bounds().absolute_mm,
+            )
+            .unwrap_err()
+            .code,
+            "BREP_HEAL_SPLIT_REFUSED"
         );
     }
 }

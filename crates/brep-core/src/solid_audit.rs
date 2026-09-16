@@ -252,6 +252,9 @@ fn isolated_outward_shell(model: &Model, shell_id: usize, cavity_role: bool) -> 
 fn supported_cavity_containment(model: &Model, outer: usize, inner: usize) -> Result<bool> {
     let outer = isolated_outward_shell(model, outer, false)?;
     let inner = isolated_outward_shell(model, inner, true)?;
+    if crate::nurbs_ss_g6::graph_affine_strict_containment_bounds(&outer, &inner)?.is_some() {
+        return Ok(true);
+    }
     if let Some((local_outer, local_inner, _)) = crate::prism_frame::localize(&outer, &inner)? {
         if let (Some(outer_layers), Some(inner_layers)) = (
             crate::stepped_prism::recognize(&local_outer)?,

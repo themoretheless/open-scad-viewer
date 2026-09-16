@@ -1,0 +1,114 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 3,
+  "planId": "authorized-heal-gap-le1-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 3
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Candidate finite V3 successor cell for authorized-heal-gap-le1/2: Proof-bound positive endpoint snap and one-to-one rational refit with per-entity and cumulative displacement at most one tolerance-context cell",
+    "forbiddenClaims": [
+      "Silent healing",
+      "Edge splitting",
+      "Cross-context authority",
+      "Overlapping implicit or explicit write sets",
+      "Unbounded cumulative displacement"
+    ]
+  },
+  "capability": "authorized-heal-gap-le1/2",
+  "successorOf": "authorized-heal-gap-le1/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Proof-bound positive endpoint snap and one-to-one rational refit with per-entity and cumulative displacement at most one tolerance-context cell",
+      "Atomic native, bridge, and product transactions with cancellation, rollback, exact write sets, sew, audit, naming, and idempotence certificates"
+    ],
+    "excluded": [
+      "Silent healing",
+      "Edge splitting",
+      "Cross-context authority",
+      "Overlapping implicit or explicit write sets",
+      "Unbounded cumulative displacement"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "HEAL2-ENDPOINT-SNAP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL2-RATIONAL-REFIT",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL2-EXACT-BUDGET-AND-LINEAGE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL2-CANCEL-ROLLBACK-IDEMPOTENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL2-BUDGET-CONTEXT-WRITESET-MUTATION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "HEAL2-BRIDGE-PRODUCT-SEAM",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "tests/brepAuthorizedHealV2.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/authorized-heal-gap-le1-2-evidence-v3.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "All finite-cell native, bridge, actual WASM product, negative, mutation, cancellation, rollback, and idempotence rows passed."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

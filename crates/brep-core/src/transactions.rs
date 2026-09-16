@@ -1,9 +1,14 @@
 //! Native transactions retaining complete geometry and topology identity tables.
 //! Admission uses the existing kernel validator, not a certified solid proof.
 use crate::Model;
-use crate::solid_audit::{GloballyAuditedSolidSet, LocallyValidatedModel};
-use crate::trim_sew::{AuthorizedHealPlan, apply_authorized_heal};
+use crate::solid_audit::{SolidAuditCertificate, LocallyValidatedModel};
+use crate::trim_sew::{
+    AuthorizedHealPlan, HealOperation, SewCertificate, apply_authorized_heal,
+    apply_authorized_heal_checked, prove_model_edge_correspondence,
+};
+use crate::ChangeSet;
 use brep_topology::RevisionState;
+use cad_predicates::ToleranceSpecIdentity;
 use nurbs_core::{Error, Result};
 use std::sync::{
     Arc,
@@ -63,6 +68,8 @@ impl HealCancellation {
 pub struct AuthorizedHealTransaction {
     original: ModelSnapshot,
     staged: Option<Model>,
+    staged_plan: Option<AuthorizedHealPlan>,
+    displacement: Vec<HealDisplacementLedgerEntry>,
     cancellation: HealCancellation,
 }
 impl AuthorizedHealTransaction {
@@ -70,17 +77,52 @@ impl AuthorizedHealTransaction {
         Self {
             original,
             staged: None,
+            staged_plan: None,
+            displacement: Vec::new(),
             cancellation,
         }
     }
     pub fn apply(&mut self, plan: &AuthorizedHealPlan) -> Result<()> {
+        self.staged = None;
+        self.staged_plan = None;
+        self.displacement.clear();
         if self.cancellation.is_cancelled() {
             return Err(Error::new(
                 "BREP_HEAL_CANCELLED",
                 "Authorized heal was cancelled",
             ));
         }
-        let staged = apply_authorized_heal(self.original.model(), plan)?;
+        let mut cumulative = 0.;
+        let displacement = plan
+            .operations()
+            .iter()
+            .enumerate()
+            .map(|(operation, recipe)| {
+                if self.cancellation.is_cancelled() {
+                    return Err(Error::new(
+                        "BREP_HEAL_CANCELLED",
+                        format!("Authorized heal was cancelled before operation {operation}"),
+                    ));
+                }
+                let actual = recipe.displacement(self.original.model())?;
+                cumulative += actual * recipe.write_set(self.original.model()).len() as f64;
+                Ok(HealDisplacementLedgerEntry {
+                    operation,
+                    actual_mm: actual,
+                    cumulative_mm: cumulative,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let staged = apply_authorized_heal_checked(self.original.model(), plan, |operation| {
+            if self.cancellation.is_cancelled() {
+                Err(Error::new(
+                    "BREP_HEAL_CANCELLED",
+                    format!("Authorized heal was cancelled at operation {operation}"),
+                ))
+            } else {
+                Ok(())
+            }
+        })?;
         if self.cancellation.is_cancelled() {
             return Err(Error::new(
                 "BREP_HEAL_CANCELLED",
@@ -88,15 +130,19 @@ impl AuthorizedHealTransaction {
             ));
         }
         self.staged = Some(staged);
+        self.staged_plan = Some(plan.clone());
+        self.displacement = displacement;
         Ok(())
     }
     pub fn rollback(&mut self) {
         self.staged = None;
+        self.staged_plan = None;
+        self.displacement.clear();
     }
     pub fn staged(&self) -> Option<&Model> {
         self.staged.as_ref()
     }
-    pub fn commit(mut self) -> Result<GloballyAuditedSolidSet> {
+    pub fn commit(mut self) -> Result<AuthorizedHealResult> {
         if self.cancellation.is_cancelled() {
             return Err(Error::new(
                 "BREP_HEAL_CANCELLED",
@@ -107,8 +153,173 @@ impl AuthorizedHealTransaction {
             .staged
             .take()
             .ok_or_else(|| Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal is staged"))?;
-        LocallyValidatedModel::new(model)?.audit()
+        let plan = self
+            .staged_plan
+            .take()
+            .ok_or_else(|| Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal plan is staged"))?;
+        let audited = LocallyValidatedModel::new(model)?.audit()?;
+        let sew = audited.certificate().sew.clone();
+        let audit = audited.certificate().clone();
+        let model = audited.into_model();
+        if !model.persistent_naming_complete() {
+            return Err(Error::new(
+                "BREP_HEAL_NAMING_INCOMPLETE",
+                "Authorized heal produced incomplete persistent naming",
+            ));
+        }
+        let reapplied = apply_authorized_heal(&model, &plan)?;
+        use value_codec::Serialize;
+        if model.to_value() != reapplied.to_value() {
+            return Err(Error::new(
+                "BREP_HEAL_NOT_IDEMPOTENT",
+                "Byte/idempotent reapplication changed the healed model",
+            ));
+        }
+        let context = model.tolerance_context()?.spec_identity();
+        let change_set = model.1.change_set.clone();
+        change_set.validate().map_err(|error| Error::new(error.code, error.message))?;
+        let cumulative_displacement_mm = self
+            .displacement
+            .last()
+            .map(|entry| entry.cumulative_mm)
+            .unwrap_or(0.);
+        Ok(AuthorizedHealResult {
+            model,
+            capability: "authorized-heal-gap-le1/2",
+            status: "Complete",
+            context,
+            displacement: self.displacement,
+            cumulative_displacement_mm,
+            sew,
+            audit,
+            change_set,
+            naming_complete: true,
+        })
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct HealDisplacementLedgerEntry {
+    pub operation: usize,
+    pub actual_mm: f64,
+    pub cumulative_mm: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct AuthorizedHealResult {
+    pub model: Model,
+    pub capability: &'static str,
+    pub status: &'static str,
+    pub context: ToleranceSpecIdentity,
+    pub displacement: Vec<HealDisplacementLedgerEntry>,
+    pub cumulative_displacement_mm: f64,
+    pub sew: SewCertificate,
+    pub audit: SolidAuditCertificate,
+    pub change_set: ChangeSet,
+    pub naming_complete: bool,
+}
+impl value_codec::Serialize for AuthorizedHealResult {
+    fn to_value(&self) -> value_codec::Value {
+        value_codec::json!({
+            "model":self.model,
+            "certificate":{
+                "capability":self.capability,
+                "status":self.status,
+                "context":{
+                    "version":self.context.version,
+                    "canonical":self.context.canonical
+                },
+                "displacementLedger":self.displacement.iter().map(|entry| value_codec::json!({
+                    "operation":entry.operation,
+                    "actualMm":entry.actual_mm,
+                    "cumulativeMm":entry.cumulative_mm
+                })).collect::<Vec<_>>(),
+                "cumulativeDisplacementMm":self.cumulative_displacement_mm,
+                "sew":{
+                    "matched":self.sew.matched,
+                    "complete":self.sew.complete,
+                    "displacementBudgetOk":self.sew.displacement_budget_ok
+                },
+                "audit":{
+                    "ok":self.audit.ok,
+                    "bodyCount":self.audit.body_count,
+                    "shellCount":self.audit.shell_count,
+                    "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
+                },
+                "changeSet":self.change_set,
+                "namingComplete":self.naming_complete
+            }
+        })
+    }
+}
+
+pub fn authorized_heal_endpoint(
+    model: &Model,
+    vertex: usize,
+    to: [f64; 3],
+) -> Result<AuthorizedHealResult> {
+    let context = model.tolerance_context()?;
+    let expected_id = *model
+        .1
+        .vertices
+        .get(vertex)
+        .ok_or_else(|| Error::new("BREP_HEAL_RECIPE_INVALID", "Vertex index is out of range"))?;
+    let proof = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, edge)| edge.vertices.contains(&vertex))
+        .find_map(|(edge, _)| prove_model_edge_correspondence(model, &context, edge).ok())
+        .ok_or_else(|| {
+            Error::new(
+                "BREP_HEAL_PROOF_REQUIRED",
+                "Vertex has no native opposite manifold boundary proof",
+            )
+        })?;
+    let operation = HealOperation::EndpointSnap {
+        vertex,
+        expected_id,
+        to,
+        correspondence: proof,
+    }
+    .bind_native_proof();
+    execute_native_plan(model, &context, vec![operation])
+}
+
+pub fn authorized_heal_refit(
+    model: &Model,
+    edge: usize,
+    replacement: nurbs_core::curve::Curve,
+) -> Result<AuthorizedHealResult> {
+    let context = model.tolerance_context()?;
+    let expected_id = *model
+        .1
+        .edges
+        .get(edge)
+        .ok_or_else(|| Error::new("BREP_HEAL_RECIPE_INVALID", "Edge index is out of range"))?;
+    let proof = prove_model_edge_correspondence(model, &context, edge)?;
+    let operation = HealOperation::CurveRefit {
+        edge,
+        expected_id,
+        replacement,
+        correspondence: proof,
+    }
+    .bind_native_proof();
+    execute_native_plan(model, &context, vec![operation])
+}
+
+fn execute_native_plan(
+    model: &Model,
+    context: &cad_predicates::ToleranceContext,
+    operations: Vec<HealOperation>,
+) -> Result<AuthorizedHealResult> {
+    let cell = context.spatial_bounds().absolute_mm;
+    let plan = AuthorizedHealPlan::new(model, context, operations, cell, cell)?;
+    let snapshot = ModelSnapshot::new(model.clone())?;
+    let mut transaction =
+        AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
+    transaction.apply(&plan)?;
+    transaction.commit()
 }
 
 /// Maximum encoded snapshot size; decoding checks this before JSON allocation.

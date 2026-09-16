@@ -1,0 +1,63 @@
+{
+  "$schema": "./brep-capability-evidence-v4.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 4,
+  "evidenceId": "nurbs-boolean-bezier-le3-6-evidence-v4",
+  "capability": "nurbs-boolean-bezier-le3/6",
+  "maturity": "Unavailable",
+  "state": "not-executed",
+  "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-6.json",
+  "runs": [],
+  "oracles": [],
+  "unresolvedRows": [
+    {
+      "id": "NB6-EXACT-PER-SPAN-BEZIER-DECOMPOSITION",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-MULTISPAN-MULTIBRANCH-TRANSVERSE-WALK",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-HALF-OPEN-KNOT-OWNERSHIP",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-BRANCH-JOIN-CHAINS-AND-CYCLES",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-OPERAND-UV-DCEL",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-CLOSED-SOLID-BOOLEAN-AUTHORSHIP",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-RESOURCE-AND-CERTIFICATE-MUTATIONS",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-TANGENCY-COINCIDENCE-SINGULAR-PERIODIC-HIGH-DEGREE",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    },
+    {
+      "id": "NB6-NATIVE-BRIDGE-WASM-PRODUCT",
+      "status": "open",
+      "resolution": "No implementation and executable native, bridge, WASM, and product evidence exist for this V4 candidate row."
+    }
+  ],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Append-only candidate skeleton only; no implementation, run, oracle, or qualification is claimed."
+  }
+}

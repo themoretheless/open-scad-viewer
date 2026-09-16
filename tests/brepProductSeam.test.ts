@@ -36,13 +36,19 @@ describe('B-rep product seam', () => {
       'global-solid-audit/1',
       'persistent-naming/1',
       'nurbs-boolean-bezier-le3/2',
+      'nurbs-boolean-bezier-le3/3',
       'step-interchange/2',
       'analytic-multi-edge-fillet/1',
       'exact-parallel-frame-sweep/1',
       'certified-brep-tessellation/1',
       'certified-mass-properties/1',
+      'step-interchange/3',
     ]) expect(brepCapability(id)?.maturity, id).toBe('Qualified')
     expect(brepCapability('authorized-heal-gap-le1/1')?.maturity).toBe('Unavailable')
+    expect(brepCapability('authorized-heal-gap-le1/2')?.maturity).toBe('Qualified')
+    expect(() => assertBrepCapabilityAllowsTopology('step-interchange/3')).toThrow(
+      /does not permit topology change/,
+    )
     expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(
       /does not permit topology change/,
     )
@@ -51,6 +57,7 @@ describe('B-rep product seam', () => {
       /Unavailable; refuse topology change/,
     )
     expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/2')).not.toThrow()
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/3')).not.toThrow()
     expect(() => assertBrepCapabilityAllowsTopology('analytic-multi-edge-fillet/1')).not.toThrow()
     expect(() => assertBrepCapabilityAllowsTopology('exact-parallel-frame-sweep/1')).not.toThrow()
     expect(() => assertBrepCapabilityAllowsTopology('planar-csg/1')).not.toThrow()

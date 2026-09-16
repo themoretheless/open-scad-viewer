@@ -1,0 +1,42 @@
+{
+  "id": "own-rust-cad-v2",
+  "successorOf": "docs/qualification/own-rust-cad-v1.json",
+  "previousSha256": "b93d59d510877f01828390b6be2da00a05a2dc9972dd70e15e124e3636dfeb89",
+  "recordedAt": "2026-09-16",
+  "purpose": "Append-only current-byte fingerprint for the Geometry Closure V3 own-Rust kernel.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "c333607331eb460510911e43f4350befdd374f6cf765d2aa69b47cd0d8321bd6",
+    "byteLength": 8749489
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "c2f38ec77caca7c9ce094762a8f94ad90d8b4a9b4d725214adc1e04743f1cb97",
+    "paths": [
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/core/ownRustCadEvidence.ts",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It does not approve G0, G1, production cutover, or capability scope beyond the V3 release artifacts."
+  ]
+}

@@ -48,6 +48,20 @@ pub struct UvArrangement {
 
 pub const DEFAULT_UV_RESOURCE_LIMIT: usize = 1024;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TensorAxis {
+    U,
+    V,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TensorBoundary {
+    UMin,
+    UMax,
+    VMin,
+    VMax,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiftedUvGeometry {
     PlaneSegment {
@@ -59,6 +73,15 @@ pub enum LiftedUvGeometry {
         radius: f64,
         /// Lifted angular interval. End may exceed TAU, but span must be < TAU.
         interval: [f64; 2],
+    },
+    TensorIsoLine {
+        axis: TensorAxis,
+        fixed: f64,
+        interval: [f64; 2],
+    },
+    TensorRectangleBoundary {
+        side: TensorBoundary,
+        domain: [[f64; 2]; 2],
     },
 }
 
@@ -278,12 +301,12 @@ fn expand_periodic_intervals(intervals: &[[f64; 2]], period: f64) -> Result<Vec<
     Ok(out)
 }
 
-/// Build a finite context-bound DCEL for the admitted 2D primitive matrix.
-pub fn arrange_lifted_uv(
+fn arrange_lifted_uv_impl(
     context: &ToleranceContext,
     chart: ChartKind,
     primitives: &[LiftedUvPrimitive],
     resource_limit: usize,
+    tensor_admitted: bool,
 ) -> Result<LiftedUvArrangement> {
     if chart == ChartKind::Freeform {
         return Err(refuse(
@@ -325,6 +348,33 @@ pub fn arrange_lifted_uv(
                     ));
                 }
                 arcs.push((primitive.edge_id, *center, *radius, *interval));
+            }
+            (
+                LiftedUvGeometry::TensorIsoLine {
+                    axis,
+                    fixed,
+                    interval,
+                },
+                ChartKind::TensorBezierGraph,
+            ) if tensor_admitted => {
+                let (start, end) = match axis {
+                    TensorAxis::U => ([*fixed, interval[0]], [*fixed, interval[1]]),
+                    TensorAxis::V => ([interval[0], *fixed], [interval[1], *fixed]),
+                };
+                segments.push((primitive.edge_id, start, end));
+            }
+            (
+                LiftedUvGeometry::TensorRectangleBoundary { side, domain },
+                ChartKind::TensorBezierGraph,
+            ) if tensor_admitted => {
+                let [[umin, umax], [vmin, vmax]] = *domain;
+                let (start, end) = match side {
+                    TensorBoundary::UMin => ([umin, vmax], [umin, vmin]),
+                    TensorBoundary::UMax => ([umax, vmin], [umax, vmax]),
+                    TensorBoundary::VMin => ([umin, vmin], [umax, vmin]),
+                    TensorBoundary::VMax => ([umax, vmax], [umin, vmax]),
+                };
+                segments.push((primitive.edge_id, start, end));
             }
             _ => return Err(refuse("Lifted primitive does not match its admitted chart")),
         }
@@ -613,6 +663,385 @@ pub fn arrange_lifted_uv(
         cells,
         coverage,
     })
+}
+
+/// Build a finite context-bound DCEL for the admitted 2D primitive matrix.
+/// TensorBezierGraph is intentionally reachable only through the stricter
+/// rectangle validator below.
+pub fn arrange_lifted_uv(
+    context: &ToleranceContext,
+    chart: ChartKind,
+    primitives: &[LiftedUvPrimitive],
+    resource_limit: usize,
+) -> Result<LiftedUvArrangement> {
+    arrange_lifted_uv_impl(context, chart, primitives, resource_limit, false)
+}
+
+/// Exact finite chart for one tensor rectangle and its complete set of
+/// constant-U/V iso branches. Diagonals, partial branches and generic
+/// Freeform curves are not representable in this entry point.
+pub fn arrange_tensor_bezier_graph_uv(
+    context: &ToleranceContext,
+    domain: [[f64; 2]; 2],
+    primitives: &[LiftedUvPrimitive],
+    expected_iso_branches: usize,
+    resource_limit: usize,
+) -> Result<LiftedUvArrangement> {
+    let [[umin, umax], [vmin, vmax]] = domain;
+    if !domain.iter().flatten().all(|value| value.is_finite())
+        || umin >= umax
+        || vmin >= vmax
+        || expected_iso_branches == 0
+        || expected_iso_branches > resource_limit
+    {
+        return Err(refuse("Tensor chart domain or branch budget is invalid"));
+    }
+    if primitives.len() > resource_limit {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Tensor UV primitive budget exceeded",
+        ));
+    }
+    let mut boundaries = BTreeMap::<TensorBoundary, usize>::new();
+    let mut branches = BTreeMap::<(TensorAxis, u64), usize>::new();
+    for primitive in primitives {
+        match &primitive.geometry {
+            LiftedUvGeometry::TensorRectangleBoundary {
+                side,
+                domain: actual,
+            } if *actual == domain => {
+                if boundaries.insert(*side, primitive.edge_id).is_some() {
+                    return Err(refuse("Tensor rectangle boundary is duplicated"));
+                }
+            }
+            LiftedUvGeometry::TensorIsoLine {
+                axis,
+                fixed,
+                interval,
+            } => {
+                let (fixed_domain, varying_domain) = match axis {
+                    TensorAxis::U => ([umin, umax], [vmin, vmax]),
+                    TensorAxis::V => ([vmin, vmax], [umin, umax]),
+                };
+                if !fixed.is_finite()
+                    || !(*fixed > fixed_domain[0] && *fixed < fixed_domain[1])
+                    || *interval != varying_domain
+                    || branches
+                        .insert((*axis, fixed.to_bits()), primitive.edge_id)
+                        .is_some()
+                {
+                    return Err(refuse(
+                        "Tensor iso branch must be unique, strict-interior and span the whole rectangle",
+                    ));
+                }
+            }
+            _ => {
+                return Err(refuse(
+                    "Tensor chart accepts exact rectangle boundaries and U/V iso lines only",
+                ));
+            }
+        }
+    }
+    if boundaries.len() != 4
+        || branches.len() != expected_iso_branches
+        || ![
+            TensorBoundary::UMin,
+            TensorBoundary::UMax,
+            TensorBoundary::VMin,
+            TensorBoundary::VMax,
+        ]
+        .iter()
+        .all(|side| boundaries.contains_key(side))
+    {
+        return Err(refuse(
+            "Tensor chart missed a rectangle boundary or certified iso branch",
+        ));
+    }
+    let arrangement = arrange_lifted_uv_impl(
+        context,
+        ChartKind::TensorBezierGraph,
+        primitives,
+        resource_limit,
+        true,
+    )?;
+    if arrangement.coverage.primitive_count != primitives.len() {
+        return Err(refuse("Tensor chart coverage missed an authored branch"));
+    }
+    Ok(arrangement)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MultiSpanUvAuthority {
+    context: ToleranceSpecIdentity,
+    knot_bits: [Vec<u64>; 2],
+    branch_keys: Vec<(TensorAxis, u64, usize)>,
+    primitive_count: usize,
+    cell_count: usize,
+    tensor_cell_count: usize,
+    material_cell_count: usize,
+    hole_cell_count: usize,
+}
+
+/// Global tensor-chart result for a certified BranchGraph. Internal knot lines
+/// are represented explicitly, so coverage and cell classification span the
+/// complete tensor grid rather than being repeated independently per patch.
+#[derive(Clone, Debug)]
+pub struct MultiSpanUvArrangement {
+    pub arrangement: LiftedUvArrangement,
+    pub tensor_cell_count: usize,
+    pub branch_count: usize,
+    pub material_cell_count: usize,
+    pub hole_cell_count: usize,
+    pub global_coverage_complete: bool,
+    pub context: ToleranceSpecIdentity,
+    authority: MultiSpanUvAuthority,
+}
+
+impl MultiSpanUvArrangement {
+    pub fn permits_trim_classification(&self) -> bool {
+        let material = self
+            .arrangement
+            .cells
+            .iter()
+            .filter(|cell| matches!(cell.label, WindingLabel::Material(_)))
+            .count();
+        self.global_coverage_complete
+            && self.context == self.authority.context
+            && self.arrangement.context == self.context
+            && self.arrangement.coverage.complete
+            && self.arrangement.coverage.primitive_count == self.authority.primitive_count
+            && self.arrangement.cells.len() == self.authority.cell_count
+            && self.material_cell_count == material
+            && self.material_cell_count == self.authority.material_cell_count
+            && self.hole_cell_count == self.authority.hole_cell_count
+            && self.branch_count == self.authority.branch_keys.len()
+            && self.tensor_cell_count == self.authority.tensor_cell_count
+            && self.tensor_cell_count
+                == (self.authority.knot_bits[0].len() - 1)
+                    * (self.authority.knot_bits[1].len() - 1)
+    }
+}
+
+fn exact_line_trace(
+    curve: &nurbs_core::curve::Curve,
+) -> Result<(TensorAxis, f64, [f64; 2])> {
+    curve.validate()?;
+    if curve.degree != 1 || curve.control_points.len() != 2 {
+        return Err(refuse(
+            "Multi-span tensor arrangement accepts exact linear iso pcurves only",
+        ));
+    }
+    let a = [curve.control_points[0][0], curve.control_points[0][1]];
+    let b = [curve.control_points[1][0], curve.control_points[1][1]];
+    if a[0].to_bits() == b[0].to_bits() && a[1] != b[1] {
+        Ok((TensorAxis::U, a[0], [a[1], b[1]]))
+    } else if a[1].to_bits() == b[1].to_bits() && a[0] != b[0] {
+        Ok((TensorAxis::V, a[1], [a[0], b[0]]))
+    } else {
+        Err(refuse(
+            "Multi-span tensor branch is not an exact constant-U/V trace",
+        ))
+    }
+}
+
+fn validate_breaks(breaks: &[f64]) -> Result<()> {
+    if breaks.len() < 2
+        || breaks.iter().any(|value| !value.is_finite())
+        || breaks.windows(2).any(|pair| pair[0] >= pair[1])
+    {
+        return Err(refuse("Tensor knot partition must be finite and strictly increasing"));
+    }
+    Ok(())
+}
+
+/// Arrange multiple disjoint certified branches over all tensor knot cells.
+/// Branches are required to cover the complete chart in their varying
+/// parameter. Duplicate, crossing, partial, missed, or certificate-mutated
+/// branches refuse before DCEL construction.
+pub fn arrange_multispan_branch_graph_uv(
+    context: &ToleranceContext,
+    knot_breaks: [&[f64]; 2],
+    graph: &crate::nurbs_ss_g6::BranchGraph,
+    support_index: usize,
+    resource_limit: usize,
+) -> Result<MultiSpanUvArrangement> {
+    validate_breaks(knot_breaks[0])?;
+    validate_breaks(knot_breaks[1])?;
+    if support_index > 1
+        || !graph.permits_topology_authorship()
+        || graph.certificate.context != context.spec_identity()
+    {
+        return Err(refuse(
+            "Tensor arrangement requires an intact context-bound BranchGraph",
+        ));
+    }
+    let domain = [
+        [knot_breaks[0][0], *knot_breaks[0].last().unwrap()],
+        [knot_breaks[1][0], *knot_breaks[1].last().unwrap()],
+    ];
+    let tensor_cell_count = (knot_breaks[0].len() - 1)
+        .checked_mul(knot_breaks[1].len() - 1)
+        .ok_or_else(|| Error::new("BREP_TRIM_RESOURCE_LIMIT", "Tensor cell count overflow"))?;
+    if tensor_cell_count > resource_limit {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Tensor cell budget exceeded",
+        ));
+    }
+    let mut branch_keys = Vec::new();
+    for component in &graph.components {
+        if component.closed || component.fragments.is_empty() {
+            return Err(refuse(
+                "Closed or empty branch needs periodic topology outside this tensor chart",
+            ));
+        }
+        let mut traces = component
+            .fragments
+            .iter()
+            .map(|fragment| exact_line_trace(&fragment.pcurves[support_index]))
+            .collect::<Result<Vec<_>>>()?;
+        let axis = traces[0].0;
+        let fixed = traces[0].1;
+        if traces
+            .iter()
+            .any(|trace| trace.0 != axis || trace.1.to_bits() != fixed.to_bits())
+        {
+            return Err(refuse(
+                "Joined component changed iso axis or fixed parameter",
+            ));
+        }
+        for trace in &mut traces {
+            if trace.2[0] > trace.2[1] {
+                trace.2.reverse();
+            }
+        }
+        traces.sort_by(|a, b| a.2[0].total_cmp(&b.2[0]));
+        let varying_domain = match axis {
+            TensorAxis::U => domain[1],
+            TensorAxis::V => domain[0],
+        };
+        if traces[0].2[0].to_bits() != varying_domain[0].to_bits()
+            || traces.last().unwrap().2[1].to_bits() != varying_domain[1].to_bits()
+            || traces
+                .windows(2)
+                .any(|pair| pair[0].2[1].to_bits() != pair[1].2[0].to_bits())
+        {
+            return Err(refuse(
+                "Certified branch has missed or duplicate tensor-cell coverage",
+            ));
+        }
+        branch_keys.push((axis, fixed.to_bits(), component.component_id));
+    }
+    branch_keys.sort();
+    if branch_keys
+        .windows(2)
+        .any(|pair| pair[0].0 == pair[1].0 && pair[0].1 == pair[1].1)
+    {
+        return Err(refuse("Duplicate certified tensor branch"));
+    }
+    if branch_keys
+        .iter()
+        .enumerate()
+        .any(|(i, branch)| branch_keys[i + 1..].iter().any(|other| branch.0 != other.0))
+    {
+        return Err(refuse("Certified tensor branches cross inside the chart"));
+    }
+    let mut primitives = [
+        TensorBoundary::UMin,
+        TensorBoundary::UMax,
+        TensorBoundary::VMin,
+        TensorBoundary::VMax,
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(edge_id, side)| LiftedUvPrimitive {
+        edge_id,
+        geometry: LiftedUvGeometry::TensorRectangleBoundary { side, domain },
+    })
+    .collect::<Vec<_>>();
+    let mut edge_id = 4;
+    for fixed in &knot_breaks[0][1..knot_breaks[0].len() - 1] {
+        primitives.push(LiftedUvPrimitive {
+            edge_id,
+            geometry: LiftedUvGeometry::TensorIsoLine {
+                axis: TensorAxis::U,
+                fixed: *fixed,
+                interval: domain[1],
+            },
+        });
+        edge_id += 1;
+    }
+    for fixed in &knot_breaks[1][1..knot_breaks[1].len() - 1] {
+        primitives.push(LiftedUvPrimitive {
+            edge_id,
+            geometry: LiftedUvGeometry::TensorIsoLine {
+                axis: TensorAxis::V,
+                fixed: *fixed,
+                interval: domain[0],
+            },
+        });
+        edge_id += 1;
+    }
+    for (axis, fixed, _) in &branch_keys {
+        primitives.push(LiftedUvPrimitive {
+            edge_id,
+            geometry: LiftedUvGeometry::TensorIsoLine {
+                axis: *axis,
+                fixed: f64::from_bits(*fixed),
+                interval: match axis {
+                    TensorAxis::U => domain[1],
+                    TensorAxis::V => domain[0],
+                },
+            },
+        });
+        edge_id += 1;
+    }
+    if primitives.len() > resource_limit {
+        return Err(Error::new(
+            "BREP_TRIM_RESOURCE_LIMIT",
+            "Global tensor primitive budget exceeded",
+        ));
+    }
+    let expected_iso = primitives.len() - 4;
+    let arrangement = arrange_tensor_bezier_graph_uv(
+        context,
+        domain,
+        &primitives,
+        expected_iso,
+        resource_limit,
+    )?;
+    let material_cell_count = arrangement
+        .cells
+        .iter()
+        .filter(|cell| matches!(cell.label, WindingLabel::Material(_)))
+        .count();
+    let authority = MultiSpanUvAuthority {
+        context: context.spec_identity(),
+        knot_bits: [
+            knot_breaks[0].iter().map(|value| value.to_bits()).collect(),
+            knot_breaks[1].iter().map(|value| value.to_bits()).collect(),
+        ],
+        branch_keys,
+        primitive_count: primitives.len(),
+        cell_count: arrangement.cells.len(),
+        tensor_cell_count,
+        material_cell_count,
+        hole_cell_count: 0,
+    };
+    let result = MultiSpanUvArrangement {
+        tensor_cell_count,
+        branch_count: authority.branch_keys.len(),
+        material_cell_count,
+        hole_cell_count: 0,
+        global_coverage_complete: true,
+        context: context.spec_identity(),
+        arrangement,
+        authority,
+    };
+    if !result.permits_trim_classification() {
+        return Err(refuse("Global tensor arrangement failed its authority check"));
+    }
+    Ok(result)
 }
 
 /// Build a UV arrangement from imprint curves on a frozen / admitted chart.
@@ -917,6 +1346,104 @@ mod tests {
         );
     }
 
+    fn tensor_primitives() -> Vec<LiftedUvPrimitive> {
+        let domain = [[0., 1.], [0., 1.]];
+        let mut primitives = [
+            TensorBoundary::UMin,
+            TensorBoundary::UMax,
+            TensorBoundary::VMin,
+            TensorBoundary::VMax,
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(edge_id, side)| LiftedUvPrimitive {
+            edge_id,
+            geometry: LiftedUvGeometry::TensorRectangleBoundary { side, domain },
+        })
+        .collect::<Vec<_>>();
+        primitives.push(LiftedUvPrimitive {
+            edge_id: 4,
+            geometry: LiftedUvGeometry::TensorIsoLine {
+                axis: TensorAxis::U,
+                fixed: 0.5,
+                interval: [0., 1.],
+            },
+        });
+        primitives
+    }
+
+    #[test]
+    fn tensor_rectangle_iso_chart_builds_bounded_dcel() {
+        let context = ToleranceContext::default_valid();
+        let arrangement = arrange_tensor_bezier_graph_uv(
+            &context,
+            [[0., 1.], [0., 1.]],
+            &tensor_primitives(),
+            1,
+            16,
+        )
+        .unwrap();
+        assert_eq!(arrangement.chart, ChartKind::TensorBezierGraph);
+        assert!(arrangement.coverage.complete);
+        assert_eq!(arrangement.coverage.primitive_count, 5);
+        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+            .unwrap();
+    }
+
+    #[test]
+    fn tensor_chart_refuses_diagonal_missed_branch_and_resource_mutations() {
+        let context = ToleranceContext::default_valid();
+        let mut missed = tensor_primitives();
+        missed.pop();
+        assert!(arrange_tensor_bezier_graph_uv(
+            &context,
+            [[0., 1.], [0., 1.]],
+            &missed,
+            1,
+            16
+        )
+        .is_err());
+        let mut partial = tensor_primitives();
+        if let LiftedUvGeometry::TensorIsoLine { interval, .. } =
+            &mut partial.last_mut().unwrap().geometry
+        {
+            *interval = [0.1, 0.9];
+        }
+        assert!(arrange_tensor_bezier_graph_uv(
+            &context,
+            [[0., 1.], [0., 1.]],
+            &partial,
+            1,
+            16
+        )
+        .is_err());
+        assert_eq!(
+            arrange_tensor_bezier_graph_uv(
+                &context,
+                [[0., 1.], [0., 1.]],
+                &tensor_primitives(),
+                1,
+                4
+            )
+            .unwrap_err()
+            .code,
+            "BREP_TRIM_RESOURCE_LIMIT"
+        );
+        assert!(arrange_lifted_uv(
+            &context,
+            ChartKind::TensorBezierGraph,
+            &[LiftedUvPrimitive {
+                edge_id: 9,
+                geometry: LiftedUvGeometry::PlaneSegment {
+                    start: [0., 0.],
+                    end: [1., 1.]
+                }
+            }],
+            8
+        )
+        .is_err());
+    }
+
     #[test]
     fn lifted_uv_context_overlap_and_resource_mutations_refuse() {
         let context = ToleranceContext::default_valid();
@@ -996,6 +1523,163 @@ mod tests {
                 .iter()
                 .any(|cell| cell.label == WindingLabel::Material(1))
         );
+    }
+
+    fn ss_wave(swap: bool) -> nurbs_core::surface::Surface {
+        let mut control_points = vec![vec![vec![0.; 3]; 3]; 3];
+        for u in 0..3 {
+            for v in 0..3 {
+                let signed = if (if swap { v } else { u }) % 2 == 0 {
+                    -1.
+                } else {
+                    1.
+                };
+                control_points[u][v] = if swap {
+                    vec![signed, u as f64, v as f64]
+                } else {
+                    vec![signed, u as f64, v as f64]
+                };
+            }
+        }
+        nurbs_core::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 2., 2.],
+            knots_v: vec![0., 0., 1., 2., 2.],
+            control_points,
+            weights: vec![vec![1.; 3]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+
+    fn ss_plane() -> nurbs_core::surface::Surface {
+        nurbs_core::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 0., 2.]],
+                vec![vec![0., 2., 0.], vec![0., 2., 2.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+
+    #[test]
+    fn multispan_branch_graph_builds_global_tensor_cells() {
+        let context = ToleranceContext::default_valid();
+        let graph = crate::nurbs_ss_g6::certify_multispan_ss(
+            &ss_wave(false),
+            &ss_plane(),
+            [1, 2],
+            &context,
+            32,
+        )
+        .unwrap();
+        let arrangement = arrange_multispan_branch_graph_uv(
+            &context,
+            [&[0., 1., 2.], &[0., 1., 2.]],
+            &graph,
+            0,
+            32,
+        )
+        .unwrap();
+        assert!(arrangement.permits_trim_classification());
+        assert_eq!(arrangement.tensor_cell_count, 4);
+        assert_eq!(arrangement.branch_count, 2);
+        assert_eq!(arrangement.hole_cell_count, 0);
+        assert!(arrangement.material_cell_count >= 6);
+        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(
+            &arrangement.arrangement,
+            &context,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn multispan_uv_rejects_missed_crossing_resource_and_certificate_mutations() {
+        let context = ToleranceContext::default_valid();
+        let graph = crate::nurbs_ss_g6::certify_multispan_ss(
+            &ss_wave(false),
+            &ss_plane(),
+            [1, 2],
+            &context,
+            32,
+        )
+        .unwrap();
+        assert_eq!(
+            arrange_multispan_branch_graph_uv(
+                &context,
+                [&[0., 1., 2.], &[0., 1., 2.]],
+                &graph,
+                0,
+                4
+            )
+            .unwrap_err()
+            .code,
+            "BREP_TRIM_RESOURCE_LIMIT"
+        );
+        let mut missed = graph.clone();
+        missed.components[0].fragments.pop();
+        assert!(arrange_multispan_branch_graph_uv(
+            &context,
+            [&[0., 1., 2.], &[0., 1., 2.]],
+            &missed,
+            0,
+            32
+        )
+        .is_err());
+
+        let vertical = crate::nurbs_ss_g6::certify_multispan_ss(
+            &ss_wave(true),
+            &ss_plane(),
+            [3, 4],
+            &context,
+            32,
+        )
+        .unwrap();
+        let fragments = graph
+            .components
+            .iter()
+            .chain(&vertical.components)
+            .flat_map(|component| component.fragments.clone())
+            .collect();
+        let crossing = crate::nurbs_ss_g6::join_certified_multispan_fragments(
+            fragments,
+            &context,
+            [8, 2],
+            16,
+            1.,
+            32,
+        )
+        .unwrap();
+        assert!(arrange_multispan_branch_graph_uv(
+            &context,
+            [&[0., 1., 2.], &[0., 1., 2.]],
+            &crossing,
+            0,
+            32
+        )
+        .is_err());
+
+        let arrangement = arrange_multispan_branch_graph_uv(
+            &context,
+            [&[0., 1., 2.], &[0., 1., 2.]],
+            &graph,
+            0,
+            32,
+        )
+        .unwrap();
+        let mut duplicate_mutation = arrangement.clone();
+        duplicate_mutation.branch_count += 1;
+        assert!(!duplicate_mutation.permits_trim_classification());
+        let mut coverage_mutation = arrangement;
+        coverage_mutation.global_coverage_complete = false;
+        assert!(!coverage_mutation.permits_trim_classification());
     }
 
     #[test]

@@ -1,0 +1,34 @@
+{
+  "$schema": "./brep-capability-evidence-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 3,
+  "evidenceId": "step-interchange-3-evidence-v3",
+  "capability": "step-interchange/3",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/step-interchange-3.json",
+  "runs": [
+    {
+      "id": "direct-step-v3-native-bridge-wasm-product-2026-09-16",
+      "result": "pass",
+      "artifactHash": "c19ebd6a0eb4e16f738ad8a759eedbbc8f2e86b0a9880f19b33b56b36d1c8295"
+    }
+  ],
+  "oracles": [
+    "step_interchange_v3::tests::direct_roundtrip_preserves_topology_and_identity",
+    "step_interchange_v3::tests::direct_more_than_32_bodies_and_metadata_free_identity",
+    "step_interchange_v3::tests::entity_reorder_preserves_digest_bound_identity",
+    "step_interchange_v3::tests::multiple_cavities_shared_edges_senses_and_metadata_mutation",
+    "step_interchange_v3::tests::parses_self_authored_analytic_and_conversion_fixtures",
+    "step_interchange_v3::tests::periodic_analytic_surfaces_have_specific_typed_refusals",
+    "step_interchange_v3::tests::only_representation_reachable_rigid_transform_moves_geometry",
+    "step_interchange_v3::tests::aggregate_parser_and_graph_budgets_refuse",
+    "geometry_bridge::tests::direct_step_v3_bridge_preserves_exact_graph",
+    "tests/brepDirectStepV3.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Qualified for the plan's narrowed coherent direct finite graph subset. Periodic/angular CYLINDRICAL_SURFACE, CONICAL_SURFACE, SPHERICAL_SURFACE and TOROIDAL_SURFACE mappings, poles, and TRIMMED_CURVE point selectors are explicit typed refusals because current native parameterization cannot preserve a one-to-one independent pcurve correspondence."
+  }
+}

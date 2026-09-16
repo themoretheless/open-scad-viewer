@@ -16,7 +16,7 @@ export interface BrepCapabilityDescriptor {
 }
 
 /**
- * Full-matrix registry (`brep-full-closed-matrix-v1` / G8-full).
+ * Append-only full-matrix registry (`brep-full-closed-matrix-v4` / G8-full).
  * Maturity bumps only after walking-slice evidence is green.
  */
 export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Object.freeze([
@@ -70,6 +70,13 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     qualificationPlan: 'docs/qualification/plans/authorized-heal-gap-le1-1.json',
   }),
   Object.freeze({
+    id: 'authorized-heal-gap-le1/2',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Native proof-bound endpoint snap and one-to-one rational refit with atomic audit, naming, and displacement certificate',
+    qualificationPlan: 'docs/qualification/plans/authorized-heal-gap-le1-2.json',
+  }),
+  Object.freeze({
     id: 'analytic-constructors/1',
     maturity: 'ResearchOnly' as const,
     permitsTopologyChange: false,
@@ -113,6 +120,41 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     permitsTopologyChange: true,
     notes: 'Strict partial contact between affine-planar Bezier profile prisms; union/difference/intersection only; no containment, tangency, healing, or fallback',
     qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-2.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/3',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Finite canonical unit-weight degree-2/3 graph-patch cell: exact strict-interior U/V intersection and source-minus-cutter difference; union and reversed difference typed-refuse',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-3.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/4',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Finite unit-weight graph successor: unequal-span transverse intersection/source-difference plus strict-contained affine cutter union/intersection/cavity difference',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-4.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/5',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Finite bounded positive rational graph successor: homogeneous strict iso root, denominator >=0.25, condition <=8, <=16 coefficients; intersection/source-difference only',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-5.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/6',
+    maturity: 'Unavailable' as const,
+    permitsTopologyChange: true,
+    notes: 'Frozen broader candidate remains unavailable and is superseded by the narrower /7 finite cell; its union and reversed-difference expectations were not weakened',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-6.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/7',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Bounded non-periodic positive-weight degree<=3 multi-span graph/affine-slab cell with exactly two disjoint transverse branches; intersection and source-difference only; union and reversed difference typed-refuse',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-7.json',
   }),
   Object.freeze({
     id: 'analytic-fillet/1',
@@ -169,6 +211,13 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     permitsTopologyChange: false,
     notes: 'Finite AP214/AP242 successor with explicit SI context, rigid placement, multiple bounded bodies, one cavity per body, and opaque identity preservation/loss reporting',
     qualificationPlan: 'docs/qualification/plans/step-interchange-2.json',
+  }),
+  Object.freeze({
+    id: 'step-interchange/3',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Direct bounded Part 21 topology: B-spline and planar surfaces, line/circle/ellipse/parameter-trimmed curves, multi-body/cavity, SI/conversion units, reachable rigid placement, graph-bound identity; periodic analytic surface parameterizations and poles typed-refuse',
+    qualificationPlan: 'docs/qualification/plans/step-interchange-3.json',
   }),
   Object.freeze({
     id: 'certified-brep-tessellation/1',

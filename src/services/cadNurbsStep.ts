@@ -93,3 +93,36 @@ export function importNurbsStepSolidV2(text: string): AnalyticStepImportV2 {
   }
   return callGeometryRust('brep_nurbs_import_step_solid_v2', { text })
 }
+
+export interface DirectStepV3Report extends StepIdentityReport {
+  ignoredEntities: string[]
+  instanceCount: number
+  reachableCount: number
+}
+
+export interface DirectStepV3Export extends AnalyticStepExport {
+  identity: StepIdentityReport
+  ignoredEntities: string[]
+  instanceCount: number
+  reachableCount: number
+}
+
+export interface DirectStepV3Import extends AnalyticStepImport {
+  identity: StepIdentityReport
+  ignoredEntities: string[]
+  instanceCount: number
+  reachableCount: number
+}
+
+/** Direct bounded `step-interchange/3` export; never constructor/AABB recognition. */
+export function exportDirectStepV3(model: NurbsBrep): DirectStepV3Export {
+  return callGeometryRust('brep_nurbs_export_step_v3', { model })
+}
+
+/** Direct bounded `step-interchange/3` topology import with explicit identity reporting. */
+export function importDirectStepV3(text: string): DirectStepV3Import {
+  if (/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL)\b/i.test(text)) {
+    throw new Error('step-interchange/3 refuses faceted, tessellated, CSG, and open-shell roots')
+  }
+  return callGeometryRust('brep_nurbs_import_step_v3', { text })
+}

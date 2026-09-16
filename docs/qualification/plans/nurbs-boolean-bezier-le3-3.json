@@ -1,0 +1,132 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 3,
+  "planId": "nurbs-boolean-bezier-le3-3",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 3
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Candidate finite V3 successor cell for nurbs-boolean-bezier-le3/3: One unit-weight degree-at-most-3 Bezier graph-patch solid cut by one affine-planar cutter at a strict interior transverse seam",
+    "forbiddenClaims": [
+      "Boundary roots, multiple roots, tangency, or coincident overlap",
+      "Containment or unequal spans",
+      "Positive rational weights or multi-span surfaces",
+      "Generic freeform arrangements",
+      "Union and cutter-minus-graph difference",
+      "Healing, mesh, prism, or Manifold fallback",
+      "Parasolid parity"
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/3",
+  "successorOf": "nurbs-boolean-bezier-le3/2",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "nurbs-boolean-bezier-le3/2",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "One unit-weight degree-at-most-3 Bezier graph-patch solid cut by one affine-planar cutter at a strict interior transverse seam",
+      "Certified exact retained iso traces, curved UV arrangement, correspondence, audited topology authorship, explicit lineage, and serialized bridge/product certificate"
+    ],
+    "excluded": [
+      "Boundary roots, multiple roots, tangency, or coincident overlap",
+      "Containment or unequal spans",
+      "Positive rational weights or multi-span surfaces",
+      "Generic freeform arrangements",
+      "Union and cutter-minus-graph difference",
+      "Healing, mesh, prism, or Manifold fallback",
+      "Parasolid parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NB3-TRANSVERSE-GRAPH-PATCH-INTERSECTION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-TRANSVERSE-GRAPH-PATCH-DIFFERENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-TRANSVERSE-GRAPH-PATCH-UNION",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-UV-SEW-AUDIT-LINEAGE-MUTATIONS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-BOUNDARY-MULTIROOT-TANGENCY-COINCIDENCE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-RATIONAL-MULTISPAN-RESOURCE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB3-BRIDGE-PRODUCT-SEAM",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/profile_imprint.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "tests/brepCurvedGraphBooleanV3.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-bezier-le3-3-evidence-v3.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Intersection and source-minus-cutter difference are Complete for the exact finite cell; union and reversed difference typed-refuse."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

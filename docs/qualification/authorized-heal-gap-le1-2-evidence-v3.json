@@ -1,0 +1,32 @@
+{
+  "$schema": "./brep-capability-evidence-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 3,
+  "evidenceId": "authorized-heal-gap-le1-2-evidence-v3",
+  "capability": "authorized-heal-gap-le1/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/authorized-heal-gap-le1-2.json",
+  "runs": [
+    {
+      "id": "focused-native-bridge-product-2026-09-16",
+      "result": "pass",
+      "artifactHash": "20e083bd3c68bf8e2308795150eb6a81ca4eeb29c65dcff714f8ee41deae1c2c"
+    }
+  ],
+  "oracles": [
+    "trim_sew::tests::heal_positive_endpoint_snap_returns_complete_native_certificate",
+    "trim_sew::tests::heal_positive_one_to_one_rational_refit_is_complete",
+    "trim_sew::tests::heal_budget_exact_boundary_accepts_and_boundary_ulp_refuses",
+    "trim_sew::tests::heal_refuses_unbound_stale_and_overlapping_recipes",
+    "trim_sew::tests::heal_refit_requires_exact_rational_cardinality_degree_knots_and_weights",
+    "trim_sew::tests::heal_transaction_cancel_rollback_and_idempotence",
+    "geometry_bridge::tests::authorized_heal_v2_bridge_derives_evidence_and_preserves_source",
+    "tests/brepAuthorizedHealV2.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded local native, bridge, and actual WASM product runs passed; no JavaScript evidence or fallback path is accepted."
+  }
+}

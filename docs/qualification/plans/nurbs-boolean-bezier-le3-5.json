@@ -1,0 +1,71 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 3,
+  "planId": "nurbs-boolean-bezier-le3-5",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 3},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Finite successor for positive rational degree-2/3 graph patches whose bounded denominator and factored homogeneous signed-distance polynomial prove one strict interior iso root",
+    "forbiddenClaims": [
+      "Non-positive, below-0.25, above-2, or condition-number-above-8 weights",
+      "Non-factorable weight fields, multi-span surfaces, or more than 16 tensor coefficients",
+      "Tangency, coincidence, boundary roots, multiple roots, or singular UV topology",
+      "Union, reversed difference, or generic freeform arrangements",
+      "Healing, mesh, prism, or Manifold fallback"
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/5",
+  "successorOf": "nurbs-boolean-bezier-le3/4",
+  "dependencies": [
+    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
+    {"capability": "boundary-correspondence/1", "requiredMaturity": "Qualified"},
+    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"},
+    {"capability": "nurbs-boolean-bezier-le3/4", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "Intersection and source-minus-cutter difference for one bounded positive rational single-span graph and one affine cutter",
+      "Weights in [0.25,2], condition number at most 8, at most 16 coefficients, constant weights on the root axis, homogeneous numerator factorization, denominator convex-hull lower bound, exact rational iso and pcurves",
+      "Operation-specific ChangeSet provenance, curved UV arrangement, exact correspondence, sew, audit, bridge, WASM, and product certificates"
+    ],
+    "excluded": [
+      "Non-positive, below-0.25, above-2, or condition-number-above-8 weights",
+      "Non-factorable weight fields, multi-span surfaces, or more than 16 tensor coefficients",
+      "Tangency, coincidence, boundary roots, multiple roots, or singular UV topology",
+      "Union, reversed difference, or generic freeform arrangements",
+      "Healing, mesh, prism, or Manifold fallback"
+    ]
+  },
+  "matrix": [
+    {"id": "NB5-RATIONAL-INTERSECTION", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB5-RATIONAL-SOURCE-DIFFERENCE", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB5-HOMOGENEOUS-ROOT-DENOMINATOR-PCURVES", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB5-WEIGHT-CONDITION-RESOURCE-LIMITS", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "NB5-TANGENCY-COINCIDENCE-SINGULAR-UV", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "NB5-CERTIFICATE-MUTATIONS", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "NB5-BRIDGE-WASM-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/profile_imprint.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "tests/brepNurbsSuccessorCellsV3.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-bezier-le3-5-evidence-v3.json"
+  },
+  "evidence": {"state": "qualified", "notes": ["All finite rational-cell native, bridge, WASM, product, negative, and mutation rows passed."]},
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

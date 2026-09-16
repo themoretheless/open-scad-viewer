@@ -1,0 +1,17 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Redistributable OpenSCAD Viewer STEP /3 parser fixture'),'2;1');
+FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'));
+ENDSEC;
+DATA;
+/* Forward references, escaped quote, mixed case, D exponent, analytic curves. */
+#20=trimmed_curve('quarter ''arc''',#10,(0.0D0),(1.5707963267948966D0),.T.,.PARAMETER.);
+#10=CIRCLE('',#4,2.0D0);
+#4=AXIS2_PLACEMENT_3D('',#1,#2,#3);
+#1=CARTESIAN_POINT('',(0.,0.,0.));
+#2=DIRECTION('',(0.,0.,1.));
+#3=DIRECTION('',(1.,0.,0.));
+#21=ELLIPSE('',#4,3.,1.);
+#30=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+ENDSEC;
+END-ISO-10303-21;

@@ -37,8 +37,14 @@ describe('B-rep G8 release gate', () => {
     const excluded = new Set([
       'brep-capability-qualification-plan.schema.json',
       'brep-capability-qualification-plan-v2.schema.json',
+      'brep-capability-qualification-plan-v3.schema.json',
+      'brep-capability-qualification-plan-v4.schema.json',
+      'brep-capability-qualification-plan-v5.schema.json',
       'g8-full-matrix-index-v1.json',
       'g8-full-matrix-index-v2.json',
+      'g8-full-matrix-index-v3.json',
+      'g8-full-matrix-index-v4.json',
+      'g8-full-matrix-index-v5.json',
       'analytic-boolean-1-g8.json',
       'analytic-chamfer-1-g8.json',
       'iges-interchange-1-g8.json',
@@ -47,9 +53,15 @@ describe('B-rep G8 release gate', () => {
     for (const name of readdirSync(plansDir).filter(name => name.endsWith('.json'))) {
       if (excluded.has(name)) continue
       const plan = readJson(`docs/qualification/plans/${name}`)
-      const expectedSchema = plan.schemaVersion === 2
-        ? './brep-capability-qualification-plan-v2.schema.json'
-        : './brep-capability-qualification-plan.schema.json'
+      const expectedSchema = plan.schemaVersion === 5
+        ? './brep-capability-qualification-plan-v5.schema.json'
+        : plan.schemaVersion === 4
+        ? './brep-capability-qualification-plan-v4.schema.json'
+        : plan.schemaVersion === 3
+          ? './brep-capability-qualification-plan-v3.schema.json'
+        : plan.schemaVersion === 2
+          ? './brep-capability-qualification-plan-v2.schema.json'
+          : './brep-capability-qualification-plan.schema.json'
       expect(plan.$schema, name).toBe(expectedSchema)
       expect(plan.schema, name).toBe('open-scad-viewer/brep-capability-qualification-plan')
       expect(typeof plan.planId, name).toBe('string')
@@ -84,5 +96,119 @@ describe('B-rep G8 release gate', () => {
       const runtime = BREP_CAPABILITY_MATRIX.find(capability => capability.id === row.id)
       expect(runtime?.maturity, row.id).toBe('Qualified')
     }
+  })
+
+  it('ships only qualified V3 successors without changing frozen V2 artifacts', () => {
+    const v2Release = readJson('docs/qualification/brep-capability-registry-release-full-v2.json')
+    const matrix = readJson('docs/qualification/brep-full-closed-matrix-v3.json')
+    const release = readJson('docs/qualification/brep-capability-registry-release-full-v3.json')
+    const index = readJson('docs/qualification/plans/g8-full-matrix-index-v3.json')
+    const successors = [
+      'authorized-heal-gap-le1/2',
+      'nurbs-boolean-bezier-le3/3',
+      'nurbs-boolean-bezier-le3/4',
+      'nurbs-boolean-bezier-le3/5',
+      'step-interchange/3',
+    ]
+    const qualifiedSuccessors = new Set([
+      'authorized-heal-gap-le1/2',
+      'nurbs-boolean-bezier-le3/3',
+      'nurbs-boolean-bezier-le3/4',
+      'nurbs-boolean-bezier-le3/5',
+      'step-interchange/3',
+    ])
+    const indexed = index.capabilities as Array<{
+      id: string
+      plan: string
+      evidence: string
+      maturity: string
+      releaseState: 'shipped' | 'candidate'
+      dependencies: string[]
+    }>
+    const byId = new Map(indexed.map(row => [row.id, row]))
+    const released = new Set(release.capabilities as string[])
+    const assertQualifiedClosure = (id: string, seen = new Set<string>()): void => {
+      if (seen.has(id)) return
+      seen.add(id)
+      const row = byId.get(id)
+      expect(row, id).toBeDefined()
+      expect(row?.maturity, id).toBe('Qualified')
+      for (const dependency of row?.dependencies ?? []) {
+        expect(byId.has(dependency), `${id} -> ${dependency}`).toBe(true)
+        assertQualifiedClosure(dependency, seen)
+      }
+    }
+
+    expect(release.successorOf).toBe(
+      'docs/qualification/brep-capability-registry-release-full-v2.json',
+    )
+    expect(release.capabilities).toEqual([
+      ...(v2Release.capabilities as string[]),
+      ...successors.filter(id => qualifiedSuccessors.has(id)),
+    ])
+    expect(matrix.admittedOps).toEqual(release.capabilities)
+    expect(release.unresolvedInShippedMatrix).toEqual([])
+    expect(matrix.unresolvedInShippedMatrix).toEqual([])
+    for (const row of indexed) {
+      for (const dependency of row.dependencies) {
+        expect(byId.has(dependency), `${row.id} -> ${dependency}`).toBe(true)
+      }
+      expect(released.has(row.id), row.id).toBe(row.releaseState === 'shipped')
+      if (released.has(row.id)) assertQualifiedClosure(row.id)
+    }
+
+    for (const id of successors) {
+      const row = byId.get(id)
+      const qualified = qualifiedSuccessors.has(id)
+      expect(row, id).toMatchObject({
+        maturity: qualified ? 'Qualified' : 'Unavailable',
+        releaseState: qualified ? 'shipped' : 'candidate',
+      })
+      expect((release.excludedPendingQualification as string[]).includes(id)).toBe(!qualified)
+      expect((matrix.pendingQualification as string[]).includes(id)).toBe(!qualified)
+      expect(BREP_CAPABILITY_MATRIX.find(capability => capability.id === id), id)
+        .toMatchObject({
+          maturity: qualified ? 'Qualified' : 'Unavailable',
+          permitsTopologyChange: id.startsWith('nurbs-boolean-bezier-le3/'),
+        })
+
+      const plan = readJson(row?.plan ?? '')
+      const evidence = readJson(row?.evidence ?? '')
+      expect(plan).toMatchObject({
+        schemaVersion: 3,
+        lifecycle: {
+          status: 'qualified',
+          qualificationClaim: id === 'step-interchange/3' ? 'qualified' : 'finite-cell',
+        },
+        evidence: { state: 'qualified' },
+      })
+      expect(evidence).toMatchObject(qualified ? {
+        schemaVersion: 3,
+        capability: id,
+        maturity: 'Qualified',
+        state: 'qualified',
+        unresolvedRows: [],
+        attestation: { fabricatedRuns: false },
+      } : {
+        schemaVersion: 3,
+        capability: id,
+        maturity: 'Unavailable',
+        state: 'not-executed',
+        runs: [],
+        oracles: [],
+        attestation: { fabricatedRuns: false },
+      })
+      if (!qualified) expect((evidence.unresolvedRows as unknown[]).length).toBeGreaterThan(0)
+    }
+
+    expect((readJson(byId.get('authorized-heal-gap-le1/2')?.plan ?? '')
+      .bindings as { implementation: string[] }).implementation)
+      .toContain('crates/brep-core/src/transactions.rs')
+    expect((readJson(byId.get('nurbs-boolean-bezier-le3/3')?.plan ?? '')
+      .bindings as { implementation: string[] }).implementation)
+      .toEqual(expect.arrayContaining([
+        'crates/brep-core/src/profile_imprint.rs',
+        'crates/brep-core/src/operations.rs',
+      ]))
   })
 })

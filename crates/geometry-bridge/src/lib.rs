@@ -116,6 +116,19 @@ fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
 fn encode(v: impl Serialize) -> Result<Value> {
     value_codec::to_value(v).map_err(|e| input(e.to_string()))
 }
+fn require_exact_fields(value: &Value, expected: &[&str], label: &str) -> Result<()> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| input(format!("{label} must be an object")))?;
+    if object.len() != expected.len()
+        || !expected.iter().all(|field| object.contains_key(*field))
+    {
+        return Err(input(format!(
+            "{label} contains missing or unauthorized fields"
+        )));
+    }
+    Ok(())
+}
 
 fn response(result: Result<Value>) -> String {
     match result {
@@ -123,6 +136,137 @@ fn response(result: Result<Value>) -> String {
         Err(error) => json!({"ok":false,"error":error_json(&error)}),
     }
     .to_string()
+}
+
+fn curved_graph_boolean_value(
+    model: brep_core::Model,
+    certificate: brep_core::CurvedGraphBooleanCertificate,
+) -> Result<Value> {
+    let axis = match certificate.axis {
+        brep_core::nurbs_ss_g6::ExactIsoAxis::U => "U",
+        brep_core::nurbs_ss_g6::ExactIsoAxis::V => "V",
+    };
+    Ok(json!({
+        "model": encode(model)?,
+        "certificate": {
+            "capability": certificate.capability,
+            "status": certificate.status,
+            "operation": certificate.operation,
+            "axis": axis,
+            "fixedParameter": certificate.fixed_parameter,
+            "lineage": {
+                "sourceFace": certificate.source_face,
+                "retainedFace": certificate.retained_face,
+                "deletedRegion": certificate.deleted_region,
+                "generatedIntersectionEdge": certificate.intersection_edge
+            },
+            "tensorCells": certificate.tensor_cells,
+            "exactCorrespondence": certificate.exact_correspondence,
+            "sew": {
+                "matched": certificate.sew.matched,
+                "complete": certificate.sew.complete,
+                "displacementBudgetOk": certificate.sew.displacement_budget_ok
+            },
+            "audit": {
+                "ok": certificate.audit.ok,
+                "bodyCount": certificate.audit.body_count,
+                "shellCount": certificate.audit.shell_count,
+                "selfIntersectionPairsChecked": certificate.audit.self_intersection_pairs_checked,
+                "notes": certificate.audit.notes
+            },
+            "changeSet": encode(certificate.change_set)?,
+            "namingComplete": certificate.naming_complete,
+            "noFallback": certificate.no_fallback,
+            "separationProof": certificate.separation_proof,
+            "homogeneousRootProof": certificate.homogeneous_root_proof,
+            "denominatorLowerBound": certificate.denominator_lower_bound,
+            "weightConditionNumber": certificate.weight_condition_number,
+            "resourceBound": certificate.resource_bound
+        }
+    }))
+}
+
+fn contained_graph_boolean_value(
+    model: brep_core::Model,
+    certificate: brep_core::ContainedGraphBooleanCertificate,
+) -> Result<Value> {
+    Ok(json!({
+        "model": encode(model)?,
+        "certificate": {
+            "capability": certificate.capability,
+            "status": certificate.status,
+            "operation": certificate.operation,
+            "relation": certificate.relation,
+            "strictUvMargin": certificate.strict_uv_margin,
+            "floorClearance": certificate.floor_clearance,
+            "roofClearance": certificate.roof_clearance,
+            "cavityProof": certificate.cavity_proof,
+            "separationProof": certificate.separation_proof,
+            "audit": {
+                "ok": certificate.audit.ok,
+                "bodyCount": certificate.audit.body_count,
+                "shellCount": certificate.audit.shell_count,
+                "notes": certificate.audit.notes
+            },
+            "changeSet": encode(certificate.change_set)?,
+            "namingComplete": certificate.naming_complete,
+            "noFallback": certificate.no_fallback
+        }
+    }))
+}
+
+fn general_nurbs_boolean_value(
+    model: brep_core::Model,
+    certificate: brep_core::GeneralNurbsBooleanCertificate,
+) -> Result<Value> {
+    Ok(json!({
+        "model": encode(model)?,
+        "certificate": {
+            "capability": certificate.capability,
+            "authority": certificate.authority,
+            "status": certificate.status,
+            "operation": certificate.operation,
+            "branchGraph": {
+                "components": certificate.branch_graph.certificate.component_count,
+                "fragments": certificate.branch_graph.certificate.fragment_count,
+                "candidateSpanPairs": certificate.branch_graph.certificate.candidate_span_pairs,
+                "sourceSpanCount": certificate.branch_graph.certificate.source_span_count,
+                "denominatorLowerBound": certificate.branch_graph.certificate.denominator_lower_bound,
+                "complete": certificate.branch_graph.permits_topology_authorship()
+            },
+            "uv": {
+                "tensorCells": certificate.uv.tensor_cell_count,
+                "branches": certificate.uv.branch_count,
+                "materialCells": certificate.uv.material_cell_count,
+                "holeCells": certificate.uv.hole_cell_count,
+                "complete": certificate.uv.permits_trim_classification()
+            },
+            "exactCurvePcurveCount": certificate.exact_curve_pcurve_count,
+            "sew": {
+                "matched": certificate.sew.matched,
+                "complete": certificate.sew.complete,
+                "displacementBudgetOk": certificate.sew.displacement_budget_ok
+            },
+            "audit": {
+                "ok": certificate.audit.ok,
+                "bodyCount": certificate.audit.body_count,
+                "shellCount": certificate.audit.shell_count,
+                "selfIntersectionPairsChecked": certificate.audit.self_intersection_pairs_checked,
+                "notes": certificate.audit.notes
+            },
+            "changeSet": encode(certificate.change_set)?,
+            "naming": {
+                "split": certificate.naming.split,
+                "retained": certificate.naming.retained,
+                "deleted": certificate.naming.deleted,
+                "generated": certificate.naming.generated,
+                "operationStable": certificate.naming.operation_stable
+            },
+            "resultComponents": certificate.result_components,
+            "resultFaces": certificate.result_faces,
+            "noFallback": certificate.no_fallback
+        }
+    }))
 }
 
 pub struct NurbsSurfaceAdapter {
@@ -509,6 +653,44 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let model: brep_core::Model = field(&v, "model")?;
             encode(brep_core::analysis::certified_mass_properties(&model)?)
         }
+        "brep_nurbs_authorized_heal_v2" => {
+            require_exact_fields(&v, &["op", "model", "operation"], "heal request")?;
+            let model: brep_core::Model = field(&v, "model")?;
+            let operation = v
+                .get("operation")
+                .ok_or_else(|| input("Missing operation"))?;
+            let kind = operation
+                .get("kind")
+                .and_then(Value::as_str)
+                .ok_or_else(|| input("Invalid operation kind"))?;
+            match kind {
+                "endpointSnap" => {
+                    require_exact_fields(
+                        operation,
+                        &["kind", "vertex", "to"],
+                        "endpoint snap",
+                    )?;
+                    encode(brep_core::transactions::authorized_heal_endpoint(
+                        &model,
+                        field(operation, "vertex")?,
+                        field(operation, "to")?,
+                    )?)
+                }
+                "rationalRefit" => {
+                    require_exact_fields(
+                        operation,
+                        &["kind", "edge", "replacement"],
+                        "rational refit",
+                    )?;
+                    encode(brep_core::transactions::authorized_heal_refit(
+                        &model,
+                        field(operation, "edge")?,
+                        field(operation, "replacement")?,
+                    )?)
+                }
+                _ => Err(input("Unsupported authorized heal operation")),
+            }
+        }
         "brep_nurbs_cylinder" => encode(brep_core::cylinder(
             field(&v, "radius")?,
             field(&v, "height")?,
@@ -566,6 +748,73 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "radialSegments")?,
             field(&v, "latitudeSegments")?,
         )?),
+        "brep_nurbs_canonical_graph_solid_v3" => encode(
+            brep_core::canonical_bezier_graph_solid(
+                field(&v, "degreeU")?,
+                field(&v, "degreeV")?,
+            )?,
+        ),
+        "brep_nurbs_canonical_rational_graph_solid_v5" => encode(
+            brep_core::canonical_rational_graph_solid(
+                field(&v, "degreeU")?,
+                field(&v, "degreeV")?,
+            )?,
+        ),
+        "brep_nurbs_canonical_multispan_graph_solid" => {
+            require_exact_fields(&v, &["op", "spansU", "spansV"], "multispan graph request")?;
+            encode(brep_core::canonical_multispan_graph_solid(
+                field(&v, "spansU")?,
+                field(&v, "spansV")?,
+            )?)
+        }
+        "brep_nurbs_boolean_bezier_le3_v3" => {
+            require_exact_fields(&v, &["op", "a", "b", "operation"], "V3 graph Boolean request")?;
+            let a: brep_core::Model = field(&v, "a")?;
+            let b: brep_core::Model = field(&v, "b")?;
+            let operation = v
+                .get("operation")
+                .and_then(Value::as_str)
+                .ok_or_else(|| input("Invalid operation"))?;
+            let (model, certificate) =
+                brep_core::nurbs_boolean_graph_patch_v3(&a, &b, operation)?;
+            curved_graph_boolean_value(model, certificate)
+        }
+        "brep_nurbs_boolean_bezier_le3_v4_unequal" => {
+            require_exact_fields(&v, &["op", "a", "b", "operation"], "V4 unequal graph Boolean request")?;
+            let (model, certificate) = brep_core::nurbs_boolean_graph_patch_unequal_v4(
+                &field(&v, "a")?,
+                &field(&v, "b")?,
+                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+            )?;
+            curved_graph_boolean_value(model, certificate)
+        }
+        "brep_nurbs_boolean_bezier_le3_v4_containment" => {
+            require_exact_fields(&v, &["op", "graph", "cutter", "operation"], "V4 containment graph Boolean request")?;
+            let (model, certificate) = brep_core::nurbs_boolean_graph_containment_v4(
+                &field(&v, "graph")?,
+                &field(&v, "cutter")?,
+                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+            )?;
+            contained_graph_boolean_value(model, certificate)
+        }
+        "brep_nurbs_boolean_bezier_le3_v5_rational" => {
+            require_exact_fields(&v, &["op", "a", "b", "operation"], "V5 rational graph Boolean request")?;
+            let (model, certificate) = brep_core::nurbs_boolean_rational_graph_patch_v5(
+                &field(&v, "a")?,
+                &field(&v, "b")?,
+                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+            )?;
+            curved_graph_boolean_value(model, certificate)
+        }
+        "brep_nurbs_boolean_general" => {
+            require_exact_fields(&v, &["op", "a", "b", "operation"], "general NURBS Boolean request")?;
+            let (model, certificate) = brep_core::author_general_nurbs_boolean(
+                &field(&v, "a")?,
+                &field(&v, "b")?,
+                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+            )?;
+            general_nurbs_boolean_value(model, certificate)
+        }
         "brep_nurbs_boolean" => encode(brep_core::boolean(
             &field(&v, "a")?,
             &field(&v, "b")?,
@@ -668,6 +917,49 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     "createdCount": identity.created_count,
                     "lostCount": identity.lost_count,
                 }
+            }))
+        }
+        "brep_nurbs_export_step_v3" => {
+            let (text, cert, report) = brep_core::export_step_v3(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": report.identity.preserved,
+                    "source": report.identity.source,
+                    "preservedCount": report.identity.preserved_count,
+                    "createdCount": report.identity.created_count,
+                    "lostCount": report.identity.lost_count,
+                },
+                "ignoredEntities": report.ignored_entities,
+                "instanceCount": report.instance_count,
+                "reachableCount": report.reachable_count,
+            }))
+        }
+        "brep_nurbs_import_step_v3" => {
+            let (model, cert, report) =
+                brep_core::import_step_v3(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                },
+                "identity": {
+                    "preserved": report.identity.preserved,
+                    "source": report.identity.source,
+                    "preservedCount": report.identity.preserved_count,
+                    "createdCount": report.identity.created_count,
+                    "lostCount": report.identity.lost_count,
+                },
+                "ignoredEntities": report.ignored_entities,
+                "instanceCount": report.instance_count,
+                "reachableCount": report.reachable_count,
             }))
         }
         "brep_nurbs_export_step_freeform" => {

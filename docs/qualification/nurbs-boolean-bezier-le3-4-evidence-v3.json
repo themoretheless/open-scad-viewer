@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 3,
+  "evidenceId": "nurbs-boolean-bezier-le3-4-evidence-v3",
+  "capability": "nurbs-boolean-bezier-le3/4",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-4.json",
+  "runs": [
+    {
+      "id": "focused-native-bridge-product-2026-09-16",
+      "result": "pass",
+      "artifactHash": "0d396b9a055660816123ae46be7660649fedce9023ed38dc868b537e5830f9a3"
+    }
+  ],
+  "oracles": [
+    "nurbs_ss_g6::tests::v4_unequal_span_and_containment_operations_are_independently_certified",
+    "nurbs_ss_g6::tests::v4_containment_boundary_and_reversed_difference_refuse",
+    "geometry_bridge::tests::curved_graph_boolean_v4_v5_bridge_serializes_cell_specific_authority",
+    "tests/brepNurbsSuccessorCellsV3.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Complete only for the listed unequal-span transverse and strict-contained affine-cutter operations; all excluded contacts and directions typed-refuse."
+  }
+}

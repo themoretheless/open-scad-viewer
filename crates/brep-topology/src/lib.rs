@@ -110,6 +110,30 @@ impl<'de, C: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Ed
     }
 }
 /// A face-local use of an edge. pcurve follows the traversal direction in UV.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CoedgeTrim {
+    /// Parameter interval on the independently represented three-dimensional curve.
+    pub curve_parameter: [f64; 2],
+    /// Parameter interval on the face-local pcurve.
+    pub pcurve_parameter: [f64; 2],
+    /// Integer lifts applied to periodic surface coordinates at the interval ends.
+    pub periodic_lift: [[i32; 2]; 2],
+}
+
+impl CoedgeTrim {
+    pub fn validate(self) -> Result<()> {
+        require(
+            self.curve_parameter.iter().chain(&self.pcurve_parameter).all(|v| v.is_finite()),
+            "Coedge trim parameters must be finite",
+        )?;
+        require(
+            self.curve_parameter[0] != self.curve_parameter[1]
+                && self.pcurve_parameter[0] != self.pcurve_parameter[1],
+            "Coedge trim intervals must be non-empty",
+        )
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Coedge<P> {
     pub edge: usize,

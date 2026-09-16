@@ -1,0 +1,141 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v5.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 5,
+  "planId": "nurbs-boolean-bezier-le3-7",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 5
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified bounded multi-span, exactly-two-branch NURBS graph/affine-slab intersection and source-difference finite cell.",
+    "forbiddenClaims": [
+      "Tangency, higher-order contact, coincidence, overlap intervals or regions, gray-band contact, branch junctions, and ambiguous joins.",
+      "Singular poles, zero or negative weights, an uncertified positive denominator lower bound, degenerate knot spans, and invalid knot multiplicities.",
+      "Periodic or closed parameter seams, seam-crossing ownership, and pole or seam singularities.",
+      "Degree above 3 in either parameter, implicit degree reduction, fitting, sampling, approximation, and unsupported rational boundary parameterizations.",
+      "Union, tool-minus-source reversed difference, open-shell output, healing, mesh, prism, Manifold, or any other fallback.",
+      "Resource overflow, unchecked or unbounded work, and any certificate, correspondence, sew, audit, naming, or no-fallback mutation."
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/7",
+  "successorOf": "nurbs-boolean-bezier-le3/6",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "nurbs-boolean-bezier-le3/5",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Finite bounded cell: exactly one positive-weight, non-periodic tensor-product graph solid of degree 2 or 3 with one or two non-degenerate knot spans per parameter, and one bounded affine-planar closed cutter solid.",
+      "Exact knot-insertion decomposition, half-open knot-cell ownership, and exactly two disjoint regular transverse strict-interior iso branches crossing the admitted source spans.",
+      "Exact one-to-one branch joining, operand-local UV arrangement, trimming, sew, global closed-solid audit, persistent naming, and atomic no-fallback authorship.",
+      "Closed-solid intersection in either operand order and source-minus-tool difference only; one intersection component or two separated source-difference components.",
+      "Checked finite limits of 64 tensor spans, candidate span pairs, fragments, joined branches, UV records, authored topology records, and certificate records."
+    ],
+    "excluded": [
+      "Tangency, higher-order contact, coincidence, overlap intervals or regions, gray-band contact, branch junctions, and ambiguous joins.",
+      "Singular poles, zero or negative weights, an uncertified positive denominator lower bound, degenerate knot spans, and invalid knot multiplicities.",
+      "Periodic or closed parameter seams, seam-crossing ownership, and pole or seam singularities.",
+      "Degree above 3 in either parameter, implicit degree reduction, fitting, sampling, approximation, and unsupported rational boundary parameterizations.",
+      "Union, tool-minus-source reversed difference, open-shell output, healing, mesh, prism, Manifold, or any other fallback.",
+      "Resource overflow, unchecked or unbounded work, and any certificate, correspondence, sew, audit, naming, or no-fallback mutation."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NB7-EXACT-MULTISPAN-DECOMPOSITION-AND-OWNERSHIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-TWO-BRANCH-TRANSVERSE-WALK-AND-JOIN",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-UV-SEW-AUDIT-NAMING-AUTHORSHIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-INTERSECTION-AND-SOURCE-DIFFERENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-UNION-REVERSED-DIFFERENCE-AND-CONTACT-REFUSALS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-PERIODIC-POLE-DEGREE-RATIONAL-BOUNDARY-REFUSALS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-RESOURCE-CERTIFICATE-AND-ATOMICITY-MUTATIONS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB7-NATIVE-BRIDGE-WASM-PRODUCT",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "src/services/geometry/kernel.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-bezier-le3-7-evidence-v5.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is limited to the exact finite cell and operations stated in scope; /6 remains unavailable.",
+      "The certificate-bearing product API is authoritative; the model-only API delegates to it and cannot bypass certification."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

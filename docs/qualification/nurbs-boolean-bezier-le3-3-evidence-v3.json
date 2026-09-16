@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v3.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 3,
+  "evidenceId": "nurbs-boolean-bezier-le3-3-evidence-v3",
+  "capability": "nurbs-boolean-bezier-le3/3",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-3.json",
+  "runs": [
+    {
+      "id": "focused-native-bridge-product-2026-09-16",
+      "result": "pass",
+      "artifactHash": "5a70f79aab5ddfe3209978782603cdedf0488d250c264073b29787633feb35fb"
+    }
+  ],
+  "oracles": [
+    "nurbs_ss_g6::tests::v3_graph_patch_u_v_degree_2_3_intersection_and_difference",
+    "nurbs_ss_g6::tests::v3_graph_patch_transform_reflection_swap_and_refusals",
+    "geometry_bridge::tests::curved_graph_boolean_v3_bridge_serializes_audited_authority",
+    "tests/brepCurvedGraphBooleanV3.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Qualified only for exact intersection and source-minus-cutter difference; union and reversed difference are typed refusals."
+  }
+}

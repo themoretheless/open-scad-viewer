@@ -284,6 +284,32 @@ fn step_successor_bridge_reports_identity_preservation_and_loss() {
 }
 
 #[test]
+fn direct_step_v3_bridge_preserves_exact_graph() {
+    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let expected = encode(model).unwrap();
+    let exported = dispatch(json!({
+        "op": "brep_nurbs_export_step_v3",
+        "model": expected,
+    }))
+    .unwrap();
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("step-interchange/3")
+    );
+    assert_eq!(exported["identity"]["preserved"], true);
+    let imported = dispatch(json!({
+        "op": "brep_nurbs_import_step_v3",
+        "text": exported["text"],
+    }))
+    .unwrap();
+    assert_eq!(imported["identity"]["preserved"], true);
+    assert_eq!(imported["model"]["vertices"].as_array().unwrap().len(), 8);
+    assert_eq!(imported["model"]["edges"].as_array().unwrap().len(), 12);
+    assert_eq!(imported["model"]["faces"].as_array().unwrap().len(), 6);
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(), 1);
+}
+
+#[test]
 fn audited_feature_successors_cross_the_bridge_with_certificates() {
     let model = brep_core::cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
     let edges = model
@@ -463,4 +489,206 @@ fn freeform_nurbs_step_trimmed_and_solid_bridge() {
     assert_eq!(boolean_cert.capability, "nurbs-boolean-bezier-le3/2");
     assert!(boolean_cert.permits_topology_change());
     boolean_result.validate().unwrap();
+}
+
+#[test]
+fn authorized_heal_v2_bridge_derives_evidence_and_preserves_source() {
+    let model = brep_core::cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+    let vertex = model.edges[0].vertices[0];
+    let incident = model
+        .edges
+        .iter()
+        .filter(|edge| edge.vertices.contains(&vertex))
+        .count();
+    let mut to = model.vertices[vertex].point;
+    to[1] += model.tolerance_context().unwrap().spatial_bounds().absolute_mm
+        / (incident + 1) as f64
+        * 0.25;
+    let source = encode(model).unwrap();
+    let before = source.clone();
+    let result = dispatch(json!({
+        "op":"brep_nurbs_authorized_heal_v2",
+        "model":source,
+        "operation":{"kind":"endpointSnap","vertex":vertex,"to":to}
+    }))
+    .unwrap();
+    assert_eq!(source, before);
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("authorized-heal-gap-le1/2")
+    );
+    assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
+    assert_eq!(result["certificate"]["namingComplete"].as_bool(), Some(true));
+    assert!(
+        result["certificate"]["displacementLedger"][0]["actualMm"]
+            .as_f64()
+            .unwrap()
+            > 0.
+    );
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_authorized_heal_v2",
+            "model":source,
+            "operation":{"kind":"endpointSnap","vertex":vertex,"to":to,"evidence":true}
+        }))
+        .unwrap_err()
+        .message
+        .contains("unauthorized fields")
+    );
+}
+
+#[test]
+fn curved_graph_boolean_v3_bridge_serializes_audited_authority() {
+    let graph = dispatch(json!({
+        "op":"brep_nurbs_canonical_graph_solid_v3",
+        "degreeU":3,
+        "degreeV":2
+    }))
+    .unwrap();
+    let cutter = encode(brep_core::cuboid([0.5, -1., -1.], [2., 2., 3.]).unwrap()).unwrap();
+    let result = dispatch(json!({
+        "op":"brep_nurbs_boolean_bezier_le3_v3",
+        "a":graph,
+        "b":cutter,
+        "operation":"intersection"
+    }))
+    .unwrap();
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("nurbs-boolean-bezier-le3/3")
+    );
+    assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
+    assert_eq!(result["certificate"]["axis"].as_str(), Some("U"));
+    assert_eq!(result["certificate"]["tensorCells"].as_u64(), Some(3));
+    assert_eq!(
+        result["certificate"]["lineage"]["generatedIntersectionEdge"]
+            .as_str()
+            .map(str::is_empty),
+        Some(false)
+    );
+    assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
+    assert_eq!(result["certificate"]["namingComplete"].as_bool(), Some(true));
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_boolean_bezier_le3_v3",
+            "a":graph,
+            "b":cutter,
+            "operation":"union"
+        }))
+        .is_err()
+    );
+}
+
+#[test]
+fn curved_graph_boolean_v4_v5_bridge_serializes_cell_specific_authority() {
+    let graph = dispatch(json!({
+        "op":"brep_nurbs_canonical_graph_solid_v3",
+        "degreeU":3,
+        "degreeV":3
+    }))
+    .unwrap();
+    let unequal = encode(brep_core::cuboid([0.5, -2., -3.], [2., 3., 4.]).unwrap()).unwrap();
+    let v4 = dispatch(json!({
+        "op":"brep_nurbs_boolean_bezier_le3_v4_unequal",
+        "a":graph,
+        "b":unequal,
+        "operation":"intersection"
+    }))
+    .unwrap();
+    assert_eq!(
+        v4["certificate"]["capability"].as_str(),
+        Some("nurbs-boolean-bezier-le3/4")
+    );
+
+    let inner = encode(brep_core::cuboid([0.2; 3], [0.8; 3]).unwrap()).unwrap();
+    let contained = dispatch(json!({
+        "op":"brep_nurbs_boolean_bezier_le3_v4_containment",
+        "graph":graph,
+        "cutter":inner,
+        "operation":"difference"
+    }))
+    .unwrap();
+    assert_eq!(contained["certificate"]["cavityProof"].as_bool(), Some(true));
+    assert_eq!(contained["certificate"]["audit"]["shellCount"].as_u64(), Some(2));
+
+    let rational = dispatch(json!({
+        "op":"brep_nurbs_canonical_rational_graph_solid_v5",
+        "degreeU":3,
+        "degreeV":3
+    }))
+    .unwrap();
+    let v5 = dispatch(json!({
+        "op":"brep_nurbs_boolean_bezier_le3_v5_rational",
+        "a":rational,
+        "b":unequal,
+        "operation":"difference"
+    }))
+    .unwrap();
+    assert_eq!(
+        v5["certificate"]["capability"].as_str(),
+        Some("nurbs-boolean-bezier-le3/5")
+    );
+    assert_eq!(
+        v5["certificate"]["homogeneousRootProof"].as_bool(),
+        Some(true)
+    );
+    assert!(v5["certificate"]["denominatorLowerBound"].as_f64().unwrap() >= 0.25);
+    assert!(v5["certificate"]["weightConditionNumber"].as_f64().unwrap() <= 8.);
+    assert!(v5["certificate"]["resourceBound"].as_u64().unwrap() <= 16);
+}
+
+#[test]
+fn general_multispan_boolean_bridge_is_strict_and_audited() {
+    for (u, v) in [(2, 1), (1, 2), (2, 2)] {
+        let graph = dispatch(json!({
+            "op":"brep_nurbs_canonical_multispan_graph_solid",
+            "spansU":u,
+            "spansV":v
+        }))
+        .unwrap();
+        let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap())
+            .unwrap();
+        for (operation, components, faces) in
+            [("intersection", 1, 6), ("difference", 2, 12)]
+        {
+            let result = dispatch(json!({
+                "op":"brep_nurbs_boolean_general",
+                "a":graph,
+                "b":cutter,
+                "operation":operation
+            }))
+            .unwrap();
+            assert_eq!(
+                result["certificate"]["capability"].as_str(),
+                Some("nurbs-boolean-bezier-le3/7")
+            );
+            assert_eq!(
+                result["certificate"]["authority"].as_str(),
+                Some("author-general-nurbs-boolean")
+            );
+            assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
+            assert_eq!(result["certificate"]["branchGraph"]["components"].as_u64(), Some(2));
+            assert_eq!(result["certificate"]["branchGraph"]["complete"].as_bool(), Some(true));
+            assert_eq!(result["certificate"]["uv"]["complete"].as_bool(), Some(true));
+            assert_eq!(result["certificate"]["resultComponents"].as_u64(), Some(components));
+            assert_eq!(result["certificate"]["resultFaces"].as_u64(), Some(faces));
+            assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
+            assert_eq!(result["certificate"]["noFallback"].as_bool(), Some(true));
+        }
+        assert!(dispatch(json!({
+            "op":"brep_nurbs_boolean_general",
+            "a":graph,
+            "b":cutter,
+            "operation":"union"
+        }))
+        .is_err());
+        assert!(dispatch(json!({
+            "op":"brep_nurbs_boolean_general",
+            "a":graph,
+            "b":cutter,
+            "operation":"intersection",
+            "fallback":"mesh"
+        }))
+        .is_err());
+    }
 }
